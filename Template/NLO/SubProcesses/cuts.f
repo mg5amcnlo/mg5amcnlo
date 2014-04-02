@@ -59,6 +59,7 @@ c Sort array of results: ismode>0 for real, isway=0 for ascending order
       parameter (isway=0)
       parameter (izero=0)
 c The UNLOPS cut
+      double precision p_unlops(0:3,nexternal)
       include "run.inc" ! includes the ickkw parameter
       logical passUNLOPScuts
 c logicals that define if particles are leptons, jets or photons. These
@@ -164,7 +165,12 @@ c more than the Born).
 c The UNLOPS cut:
       if (ickkw.eq.4 .and. ptj.gt.0d0) then
 c Use special pythia pt cut for minimal pT
-         call pythia_UNLOPS(p,.false.,passUNLOPScuts)
+         do i=1,nexternal
+            do j=0,3
+               p_unlops(j,i)=p(j,i)
+            enddo
+         enddo
+         call pythia_UNLOPS(p_unlops,passUNLOPScuts)
          if (.not. passUNLOPScuts) then
             passcuts_user=.false.
             return

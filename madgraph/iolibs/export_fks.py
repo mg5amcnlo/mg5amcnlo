@@ -486,6 +486,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'mint.inc',
                      'montecarlocounter.f',
                      'q_es.inc',
+                     'recluster.cc',
+                     'Boosts.h',
                      'reweight.inc',
                      'reweight0.inc',
                      'reweight1.inc',

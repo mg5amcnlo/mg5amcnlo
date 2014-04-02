@@ -1945,11 +1945,6 @@ c Set the ybst_til_tolab before applying the cuts.
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
      &     nbody)goto 550
 
-      if (ickkw.eq.4) then
-         call pythia_UNLOPS(pp,.true.,passUNLOPScut)
-         if (.not.passUNLOPScut) goto 550
-      endif
-
       call cpu_time(tBefore)
       deltaTPDF = tPDF
       deltaTFJ  = tFastJet

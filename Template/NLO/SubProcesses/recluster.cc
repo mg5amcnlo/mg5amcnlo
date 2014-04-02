@@ -366,9 +366,9 @@ State cluster(int Rad, int Rec, int Emt, double eCM, const State& state) {
   Particle RecBefore = Particle( state[Rec] );
 
   // Find flavour of radiator before splitting
-  int radID = getRadBeforeFlav(Rad, Emt, state);
-  int radCol1 = getRadBeforeCol(Rad, Emt, state);
-  int radCol2 = getRadBeforeAcol(Rad, Emt, state);
+  int radID = 21;  //getRadBeforeFlav(Rad, Emt, state);
+  int radCol1 = 0; //getRadBeforeCol(Rad, Emt, state);
+  int radCol2 = 0; //getRadBeforeAcol(Rad, Emt, state);
 
   int recID = state[Rec].id();
   Particle RadBefore = Particle( state[Rad] );
@@ -651,6 +651,7 @@ double pTpythia(const Particle& RadAfterBranch,
 // inEvent
 double minPythiaSep( const State& inEvent, int& iradMin, int& iemtMin, int& irecMin, int& typeMin ){
 
+
   // Find all electroweak decayed bosons in the state.
   vector<int> ewResonancePos;
   ewResonancePos.clear();
@@ -698,7 +699,7 @@ double minPythiaSep( const State& inEvent, int& iradMin, int& iemtMin, int& irec
   double ptmin = 1e15;
   int irad, iemt, irec, itype;
   irad = iemt = irec = itype = 0;
-
+  
   for(int i=0; i < int(FinalPartPos.size()); ++i){
 
     double pt12  = ptmin;
@@ -786,76 +787,36 @@ extern "C" {
 //Fortran interface
 
   void pythia_unlops_cluster_(const double * p, const int & npart,
-			      const int * id, const int * ist, double * pclus){
+			      const int * id, const int * ist, double & pTmin1,
+			      double & pTmin2 ){
     // This is our working copy.
     State* originalState = new State();
 
     for (int i=0; i<npart*5; i=i+5) {
-      // Write information stored in reader.
-      std::cout << " " << setw(8) << id[i/5]
-	   << " " << setw(2) << ist[i/5]
-	   << " " << setw(14) << p[i+0]
-	   << " " << setw(14) << p[i+1]
-	   << " " << setw(14) << p[i+2]
-	   << " " << setw(14) << p[i+3]
-	   << " " << setw(14) << p[i+4] << std::endl;
       // Store information in a State.
       double pup0 = (abs(p[i+0]) < TINY) ? 0.: p[i+0];
       double pup1 = (abs(p[i+1]) < TINY) ? 0.: p[i+1];
       double pup2 = (abs(p[i+2]) < TINY) ? 0.: p[i+2];
       double pup3 = (abs(p[i+3]) < TINY) ? 0.: p[i+3];
       double pup4 = (abs(p[i+4]) < TINYMASS) ? 0.: p[i+4];
+      // color information not known
       int col1 = 0;
       int col2 = 0;
-      if ( abs(ist[i]) == 1)
-        originalState->append(Particle(id[i], ist[i], col1, col2,
+      if ( abs(ist[i/5]) == 1)
+        originalState->append(Particle(id[i/5], ist[i/5], col1, col2,
           pup4, 0.0, pup3, pup0, pup1, pup2));
     }
-    // Get minimal pT
+
+    // Get minimal pT for first clustering
     int irad, iemt, irec, type;
     irad = iemt = irec = type = 0;
-    double pTmin = minPythiaSep(*originalState,irad,iemt,irec,type);
+    pTmin1 = minPythiaSep(*originalState,irad,iemt,irec,type);
     // Perform clustering of lowest-pT triple.
     // Clustering inputs: Radiator, Recoiler, Emitted, eCM, State to be clustered.
     State clusteredState = State(cluster(irad,irec,iemt,7000.,*originalState));
-
-    // Now list information separately, to show how to convert back to e.g. fortran
-    // data structures.
-    // List incoming first.
-    for ( int i = 0; i < int(clusteredState.size()); ++i ) {
-      if (clusteredState[i].status() > 0) continue;
-      std::cout << clusteredState[i].id() << " " << clusteredState[i].status()
-        << " " << clusteredState[i].col() << " " << clusteredState[i].acol()
-        << " " << clusteredState[i].e()
-        << " " << clusteredState[i].px()
-        << " " << clusteredState[i].py()
-        << " " << clusteredState[i].pz()
-        << " " << clusteredState[i].m()
-        << " " << clusteredState[i].m0() << std::endl;
-      pclus[i+0]=clusteredState[i].px();
-      pclus[i+1]=clusteredState[i].py();
-      pclus[i+2]=clusteredState[i].pz();
-      pclus[i+3]=clusteredState[i].e();
-      pclus[i+4]=clusteredState[i].m();
-    }
-    // ... now outgoing.
-    for ( int i = 0; i < int(clusteredState.size()); ++i ) {
-      if (clusteredState[i].status() < 0) continue;
-      std::cout << clusteredState[i].id() << " " << clusteredState[i].status()
-        << " " << clusteredState[i].col() << " " << clusteredState[i].acol()
-        << " " << clusteredState[i].e()
-        << " " << clusteredState[i].px()
-        << " " << clusteredState[i].py()
-        << " " << clusteredState[i].pz()
-        << " " << clusteredState[i].m()
-        << " " << clusteredState[i].m0() << std::endl;
-      pclus[i+0]=clusteredState[i].px();
-      pclus[i+1]=clusteredState[i].py();
-      pclus[i+2]=clusteredState[i].pz();
-      pclus[i+3]=clusteredState[i].e();
-      pclus[i+4]=clusteredState[i].m();
-     }
-
+    // Get minimal pT for second clustering
+    irad = iemt = irec = type = 0;
+    pTmin2 = minPythiaSep(clusteredState,irad,iemt,irec,type);
   }
 }
 
