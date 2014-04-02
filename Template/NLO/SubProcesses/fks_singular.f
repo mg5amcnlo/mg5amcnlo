@@ -5191,7 +5191,11 @@ c$$$      include "born_conf.inc"
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
       common/cparticle_types/i_type,j_type,m_type
+      double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
+      common /c_charges/particle_charge
+      common /c_charges_born/particle_charge_born
       INTEGER NBORN
       COMMON/C_NBORN/NBORN
       double precision zero
@@ -5321,34 +5325,9 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
 c Set color types of i_fks, j_fks and fks_mother.
          i_type=particle_type(i_fks)
          j_type=particle_type(j_fks)
-         if (abs(i_type).eq.abs(j_type)) then
-            m_type=8
-            if ( (j_fks.le.nincoming .and.
-     &           abs(i_type).eq.3 .and. j_type.ne.i_type) .or.
-     &           (j_fks.gt.nincoming .and.
-     &           abs(i_type).eq.3 .and. j_type.ne.-i_type)) then
-               write(*,*)'Flavour mismatch #1 in setfksfactor',
-     &              i_fks,j_fks,i_type,j_type
-               stop
-            endif
-         elseif(abs(i_type).eq.3 .and. j_type.eq.8)then
-            if(j_fks.le.nincoming)then
-               m_type=-i_type
-            else
-               write (*,*) 'Error in setfksfactor: (i,j)=(q,g)'
-               stop
-            endif
-         elseif(i_type.eq.8 .and. abs(j_type).eq.3)then
-            if (j_fks.le.nincoming) then
-               m_type=j_type
-            else
-               m_type=j_type
-            endif
-         else
-            write(*,*)'Flavour mismatch #2 in setfksfactor',
-     &           i_type,j_type,m_type
-            stop
-         endif
+         ch_i=particle_charge(i_fks)
+         ch_j=particle_charge(j_fks)
+         call get_mother_col_charge(i_type,ch_i,j_type,ch_j,m_type,ch_m) 
          i_type_FKS(nFKSprocess)=i_type
          j_type_FKS(nFKSprocess)=j_type
          m_type_FKS(nFKSprocess)=m_type
@@ -5359,7 +5338,8 @@ c Set color types of i_fks, j_fks and fks_mother.
       m_type=m_type_FKS(nFKSprocess)
 
 c Set matrices used by MC counterterms
-      call set_mc_matrices
+      write(*,*) 'FIX SET_MC_MATRICES'
+c      call set_mc_matrices
 
       fac_i=fac_i_FKS(nFKSprocess)
       fac_j=fac_j_FKS(nFKSprocess)
@@ -5420,6 +5400,67 @@ c Check to see if this channel needs to be included in the multi-channeling
  14   continue
       diagramsymmetryfactor=1d0
       goto 12
+      end
+
+
+      subroutine get_mother_col_charge(i_type, ch_i, j_type, ch_j, m_type, ch_m)
+C viven the type (color representation) and charges of i and j, return
+C the type and charges of the mother particle
+      implicit none
+      integer i_type, j_type, m_type
+      double precision ch_i, ch_j, ch_m
+      include 'nexternal.inc'
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
+      if (abs(i_type).eq.abs(j_type) .and. 
+     &    abs(ch_i).eq.abs(ch_j) .and. 
+     &    abs(i_type).gt.1) then
+        ! neutral color octet splitting
+         write(*,*) 'FIX COLOR OCTET SPLITTING!!!!!!'
+         m_type=8
+         ch_m = 0d0
+         if ( (j_fks.le.nincoming .and.
+     &         abs(i_type).eq.3 .and. j_type.ne.i_type) .or.
+     &        (j_fks.gt.nincoming .and.
+     &         abs(i_type).eq.3 .and. j_type.ne.-i_type)) then
+            write(*,*)'Flavour mismatch #1col in get_mother_col_charge',
+     &                 i_fks,j_fks,i_type,j_type
+            stop
+         endif
+      elseif (abs(i_type).eq.abs(j_type) .and. 
+     &        dabs(ch_i).eq.dabs(ch_j).and.abs(i_type).eq.1) then
+        ! neutral color singlet splitting
+         m_type=1
+         ch_m = 0d0
+         if ( (j_fks.le.nincoming .and.
+     &         dabs(ch_i).gt.0d0 .and. ch_j.ne.ch_i) .or.
+     &        (j_fks.gt.nincoming .and.
+     &         dabs(ch_i).gt.0d0 .and. ch_j.ne.-ch_i)) then
+            write(*,*)'Flavour mismatch #1chg in get_mother_col_charge',
+     &                 i_fks,j_fks,ch_i,ch_j
+            stop
+         endif
+      elseif ((abs(i_type).eq.3 .and. j_type.eq.8) .or.
+     &        (dabs(ch_i).gt.0d0 .and. ch_j.eq.0d0) ) then
+         if(i_fks.le.nincoming)then
+            m_type=-i_type
+            if (m_type.eq.-1) m_type=1
+            ch_m = -ch_i
+         else
+            write (*,*) 'Error in get_mother_col_charge: (i,j)=(q,g)'
+            stop
+         endif
+      elseif ((i_type.eq.8 .and. abs(j_type).eq.3) .or.
+     &         (dabs(ch_i).eq.0d0 .and. ch_j.gt.0d0) ) then
+         m_type=j_type
+         ch_m= ch_j
+      else
+         write(*,*)'Flavour mismatch #2 in get_mother_col_charge',
+     &      i_type,j_type,m_type
+         stop
+      endif
+      return
       end
 
 

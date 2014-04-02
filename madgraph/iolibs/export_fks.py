@@ -1030,14 +1030,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             implicit none
             include 'nexternal.inc'
             double precision p(0:3, nexternal)
-            double precision wgt(0:%d)
+            double precision wgt
             integer nfksprocess
             common/c_nfksprocess/nfksprocess
             real*4 tbefore, tAfter
             real*4 tTot, tOLP, tFastJet, tPDF
             common/timings/tTot, tOLP, tFastJet, tPDF
             call cpu_time(tbefore)
-            """ % maxsqso
+            """ 
         # the pdf wrapper
         text1 = \
             """\n\ndouble precision function dlum()
@@ -1081,7 +1081,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for n, info in enumerate(matrix_element.get_fks_info_list()):
             text += \
                 """if (nfksprocess.eq.%(n)d) then
-                call smatrix%(n_me)d_splitorders(p, wgt)
+                call smatrix%(n_me)d(p, wgt)
                 else""" % {'n': n + 1, 'n_me' : info['n_me']}
             text1 += \
                 """if (nfksprocess.eq.%(n)d) then
@@ -1144,24 +1144,24 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             implicit none
             include 'nexternal.inc'
             double precision p(0:3, nexternal)
-            double complex wgt(2, 0:%d)
+            double precision wgt
             integer nborn
             common/c_nborn/nborn
             real*4 tbefore, tAfter
             real*4 tTot, tOLP, tFastJet, tPDF
             common/timings/tTot, tOLP, tFastJet, tPDF
             call cpu_time(tbefore)
-            """ % maxsqso
+            """
         
         # the sborn (color/charge links) wrapper
         text1 = """\n\n subroutine sborn_sf(p,m,n,wgt)
           implicit none
           include 'nexternal.inc'
-          double precision p(0:3,nexternal-1), wgt(0:%d)
+          double precision p(0:3,nexternal-1), wgt
           integer m,n
           integer nborn
           common/c_nborn/nborn
-             """ % maxsqso
+             """
 
         # the wrapper to the function which returns the number of squared 
         # split orders
@@ -1200,7 +1200,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for n in range(nborns):
             text += \
                 """if (nborn.eq.%(n)d) then
-                call sborn%(n)d_splitorders(p, wgt)
+                call sborn%(n)d(p, wgt)
                 else""" % {'n': n + 1}
             text1 += \
                 """if (nborn.eq.%(n)d) then
@@ -1962,7 +1962,12 @@ Parameters              %(params)s\n\
                     call sb%(iborn)d_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
                     % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1}
 
-        replace_dict['iflines_col'] += 'endif\n'
+        
+        if replace_dict['iflines_col']:
+            replace_dict['iflines_col'] += 'endif\n'
+        else:
+            # this is when no color links are there
+            replace_dict['iflines_col'] += 'write(*,*) \'Error in sborn%d_sf, no color links\'\nstop\n' % (iborn + 1)
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/sborn_sf_fks.inc')).read()

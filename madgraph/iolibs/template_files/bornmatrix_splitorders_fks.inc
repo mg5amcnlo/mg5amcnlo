@@ -40,7 +40,7 @@ if (firsttime) then
  do i = 1, nsqampso
 C this is for the orders of the born to integrate
   do j = 1, nsplitorders
-   if(GETORDPOWFROMINDEX_B%(proc_prefix)s(I, J) .gt. nlo_orders(i)) then
+   if(GETORDPOWFROMINDEX_B%(proc_prefix)s(j, i) .gt. born_orders(j)) then
     keep_order(i) = .false.
     EXIT 
    endif
@@ -55,7 +55,7 @@ C this is for the orders of the counterterms
     else
      ord_subtract=0
     endif
-    if(GETORDPOWFROMINDEX_B%(proc_prefix)s(I, k) .gt. nlo_orders(i)-ord_subtract) then
+    if(GETORDPOWFROMINDEX_B%(proc_prefix)s(k, i) .gt. nlo_orders(k)-ord_subtract) then
      keep_order_cnt(j,i) = .false.
      EXIT 
     endif
@@ -69,12 +69,12 @@ C this is for the orders of the counterterms
  enddo
 
  do j = 1, nsplitorders
-  write(*,*) 'counterterm S.O', j
+  write(*,*) 'counterterm S.O', j, ordernames(j)
   do i = 1, nsqampso
    if (keep_order_cnt(j,i)) then
-    write(*,*) 'BORN %(proc_prefix)s: keeping split order', i, 'for cnt', j, ordernames(j)
+    write(*,*) 'BORN %(proc_prefix)s: keeping split order', i
    else
-    write(*,*) 'BORN %(proc_prefix)s: not keeping split order', i, 'for cnt', j
+    write(*,*) 'BORN %(proc_prefix)s: not keeping split order', i
    endif
   enddo
  enddo
@@ -506,13 +506,13 @@ C
 C BEGIN CODE
 C
       IF (IORDER.GT.NSPLITORDERS.OR.IORDER.LT.1) THEN
-      WRITE(*,*) "INVALID IORDER ", IORDER
+      WRITE(*,*) "INVALID IORDER B%(proc_prefix)s", IORDER
       WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSPLITORDERS
       STOP
       ENDIF
 
       IF (INDX.GT.NSQAMPSO.OR.INDX.LT.1) THEN
-      WRITE(*,*) "INVALID INDX ", INDX
+      WRITE(*,*) "INVALID INDX B%(proc_prefix)s", INDX
       WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSQAMPSO
       STOP
       ENDIF

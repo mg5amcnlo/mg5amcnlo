@@ -36,7 +36,7 @@ if (firsttime) then
  do i = 1, nsqampso
 C this is for the orders of the born to integrate
   do j = 1, nsplitorders
-   if(GETORDPOWFROMINDEX_B%(proc_prefix)s(I, J) .gt. nlo_orders(i)) then
+   if(GETORDPOWFROMINDEX_B%(proc_prefix)s(j, i) .gt. born_orders(j)) then
     keep_order(i) = .false.
     EXIT 
    endif

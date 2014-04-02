@@ -36,6 +36,7 @@ C check if need color or charge links
       wgt = wgt_col
       else if (need_charge_links) then
       chargeprod = charges_born(m) * charges_born(n)
+      if ((m.le.nincoming.and.n.gt.nincoming) .or. (n.le.nincoming.and.m.gt.nincoming)) chargeprod = - chargeprod
       wgt = dble(ans_cnt(1, qed_pos)) * chargeprod
       endif
 

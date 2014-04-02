@@ -105,6 +105,10 @@ c
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i, ch_j, ch_m
+      double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
+      common /c_charges/particle_charge
+      common /c_charges_born/particle_charge_born
 
 c
 c     External
@@ -201,34 +205,9 @@ c
 c Set color types of i_fks, j_fks and fks_mother.
       i_type=particle_type(i_fks)
       j_type=particle_type(j_fks)
-      if (abs(i_type).eq.abs(j_type)) then
-         m_type=8
-         if ( (j_fks.le.nincoming .and.
-     &        abs(i_type).eq.3 .and. j_type.ne.i_type) .or.
-     &        (j_fks.gt.nincoming .and.
-     &        abs(i_type).eq.3 .and. j_type.ne.-i_type)) then
-            write(*,*)'Flavour mismatch #1 in setfksfactor',
-     &           i_fks,j_fks,i_type,j_type
-            stop
-         endif
-      elseif(abs(i_type).eq.3 .and. j_type.eq.8)then
-         if(j_fks.le.nincoming)then
-            m_type=-i_type
-         else
-            write (*,*) 'Error in setfksfactor: (i,j)=(q,g)'
-            stop
-         endif
-      elseif(i_type.eq.8 .and. abs(j_type).eq.3)then
-         if (j_fks.le.nincoming) then
-            m_type=j_type
-         else
-            m_type=j_type
-         endif
-      else
-         write(*,*)'Flavour mismatch #2 in setfksfactor',
-     &        i_type,j_type,m_type
-         stop
-      endif
+      ch_i=particle_charge(i_fks)
+      ch_j=particle_charge(j_fks)
+      call get_mother_col_charge(i_type,ch_i,j_type,ch_j,m_type,ch_m) 
 
 
 c     

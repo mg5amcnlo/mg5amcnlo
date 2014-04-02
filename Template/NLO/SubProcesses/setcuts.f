@@ -197,7 +197,8 @@ c
 
       if(.not.IS_A_J(NEXTERNAL))then
         write(*,*)'Fatal error in set_tau_min'
-        stop
+        write(*,*) 'IGNORING'
+cc        stop
       endif
 c The following assumes that light QCD particles are at the end of the
 c list. Exclude one of them to set tau bound at the Born level This

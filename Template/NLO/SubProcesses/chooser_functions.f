@@ -241,33 +241,7 @@ c
             j_type=particle_type(j_fks)
             ch_i=particle_charge(i_fks)
             ch_j=particle_charge(j_fks)
-            if (abs(i_type).eq.abs(j_type)) then
-               m_type=8
-               ch_m = 0d0
-               if ( (j_fks.le.nincoming .and.
-     &              abs(i_type).eq.3 .and. j_type.ne.i_type) .or.
-     &              (j_fks.gt.nincoming .and.
-     &              abs(i_type).eq.3 .and. j_type.ne.-i_type)) then
-                  write(*,*)'Flavour mismatch #1 in fks_inc_chooser',
-     &                 i_fks,j_fks,i_type,j_type
-                  stop
-               endif
-            elseif(abs(i_type).eq.3 .and. j_type.eq.8)then
-               if(j_fks.le.nincoming)then
-                  m_type=-i_type
-                  ch_m = -ch_i
-               else
-                  write (*,*) 'Error in fks_inc_chooser: (i,j)=(q,g)'
-                  stop
-               endif
-            elseif(i_type.eq.8 .and. abs(j_type).eq.3)then
-               m_type=j_type
-               ch_m= ch_j
-            else
-               write(*,*)'Flavour mismatch #2 in fks_inc_chooser',
-     &              i_type,j_type,m_type
-               stop
-            endif
+            call get_mother_col_charge(i_type,ch_i,j_type,ch_j,m_type,ch_m) 
             particle_type_born(i)=m_type
             particle_charge_born(i)=ch_m
          elseif (i.ne.max(i_fks,j_fks)) then

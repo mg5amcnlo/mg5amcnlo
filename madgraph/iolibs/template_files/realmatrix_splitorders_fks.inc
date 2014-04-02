@@ -35,7 +35,7 @@ C look for orders which match the nlo order constraint
 if (firsttime) then
  do i = 1, nsqampso
   do j = 1, nsplitorders
-   if(GETORDPOWFROMINDEX%(proc_prefix)s(I, J) .gt. nlo_orders(i)) then
+   if(GETORDPOWFROMINDEX%(proc_prefix)s(j, i) .gt. nlo_orders(j)) then
     keep_order(i) = .false.
     EXIT 
    endif
@@ -331,13 +331,13 @@ C
 C BEGIN CODE
 C
       IF (IORDER.GT.NSPLITORDERS.OR.IORDER.LT.1) THEN
-      WRITE(*,*) "INVALID IORDER ", IORDER
+      WRITE(*,*) "INVALID IORDER %(proc_prefix)s", IORDER
       WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSPLITORDERS
       STOP
       ENDIF
 
       IF (INDX.GT.NSQAMPSO.OR.INDX.LT.1) THEN
-      WRITE(*,*) "INVALID INDX ", INDX
+      WRITE(*,*) "INVALID INDX %(proc_prefix)s", INDX
       WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSQAMPSO
       STOP
       ENDIF
