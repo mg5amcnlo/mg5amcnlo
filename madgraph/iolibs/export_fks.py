@@ -520,14 +520,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = 'orders.inc'
         self.write_orders_file(writers.FortranWriter(filename),
                                     matrix_element)
-
-        filename = 'qcd_qed_pos.inc'
-        self.write_qcd_qed_pos_file(writers.FortranWriter(filename),
-                                    matrix_element)
-
-        filename = 'nsplitcouplings.inc'
-        self.write_nsplitcouplings_file(writers.FortranWriter(filename),
-                                    matrix_element)
     
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -772,47 +764,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         writer.writelines(lines2+lines)
 
 
-    def write_nsplitcouplings_file(self, writer, matrix_element):
-        """writes the include file with numbers of couplings that take part to the orders
-        splitting
-        e.g. 1 if split_orders=[QCD], 2 if split_orders=[QCD,QED].
-        Also include infos about the order name."""
-
-        split_orders = \
-                matrix_element.born_me_list[0]['processes'][0]['split_orders']
-
-        text = 'integer nsplitcouplings\n' 
-        text += 'C the order of the coupling orders is %s\n' % ', '.join(split_orders)
-        text += 'parameter (nsplitcouplings = %d)\n' % len(split_orders)
-        text += 'character*3 ordernames(nsplitcouplings)\n'
-        text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
-        writer.writelines(text)
-
-
-    def write_qcd_qed_pos_file(self, writer, matrix_element):
-        """writes the include file which gives the info of the position of QCD and QED
-        in the split orders"""
-
-        split_orders = \
-                matrix_element.born_me_list[0]['processes'][0]['split_orders']
-        qcd_pos = -1
-        qed_pos = -1
-        if 'QCD' in split_orders:
-            qcd_pos = split_orders.index('QCD') + 1
-        if 'QED' in split_orders:
-            qed_pos = split_orders.index('QED') + 1
-
-
-        text = """integer qcd_pos, qed_pos
-C if = -1, then it is not in the split_orders
-                  parameter (qcd_pos = %d)
-                  parameter (qed_pos = %d)
-        """ % (qcd_pos, qed_pos)
-        writer.writelines(text)
-
-
     def write_orders_file(self, writer, matrix_element):
-        """writes the include file with the order constraints requested by the user
+        """writes the include file with the informations about coupling orders.
+        In particular this file should contain the constraints requested by the user
         for all the orders which are split"""
 
         born_orders = {}
@@ -874,13 +828,30 @@ C if = -1, then it is not in the split_orders
             if o in pert_orders:
                 max_nlo_orders[o] += 2
 
+        # keep track also of the position of QED, QCD in the order array
+        # might be useful in the fortran code
+        qcd_pos = -1
+        qed_pos = -1
+        if 'QCD' in split_orders:
+            qcd_pos = split_orders.index('QCD') + 1
+        if 'QED' in split_orders:
+            qed_pos = split_orders.index('QED') + 1
+
         text = 'C The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
+        text += 'character*3 ordernames(nsplitorders)\n'
+        text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
         text += 'C the order of the coupling orders is %s\n' % ', '.join(split_orders)
         text += 'data born_orders / %s /\n' % ', '.join([str(max_born_orders[o]) for o in split_orders])
         text += 'data nlo_orders / %s /\n' % ', '.join([str(max_nlo_orders[o]) for o in split_orders])
+        text += 'C The position of the QCD /QED orders in the array\n'
+        text += 'integer qcd_pos, qed_pos\n'
+        text += 'C if = -1, then it is not in the split_orders\n'
+        text += 'parameter (qcd_pos = %d)\n' % qcd_pos
+        text += 'parameter (qed_pos = %d)' % qed_pos
+
         writer.writelines(text)
 
 
@@ -1982,13 +1953,13 @@ Parameters              %(params)s\n\
                 replace_dict['iflines_col'] += \
                 "c link partons %(m)d and %(n)d \n\
                     %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
-                    call sb%(iborn)d_sf_%(ilink)3.3d_splitorders(p_born,wgt_col)\n" \
+                    call sb%(iborn)d_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
                     % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1}
             else:
                 replace_dict['iflines_col'] += \
                 "c link partons %(m)d and %(n)d \n\
                     %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
-                    call sb%(iborn)d_sf_%(ilink)3.3d_splitorders(p_born,wgt_col)\n" \
+                    call sb%(iborn)d_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
                     % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1}
 
         replace_dict['iflines_col'] += 'endif\n'
@@ -2204,6 +2175,12 @@ Parameters              %(params)s\n\
         charge_lines = []
         fks_j_from_i_lines = []
         split_type_lines = []
+        replace_dict['need_color_links'] = ', '.join(\
+                [bool_dict[info['fks_info']['need_color_links']] for \
+                info in fks_info_list ])
+        replace_dict['need_charge_links'] = ', '.join(\
+                [bool_dict[info['fks_info']['need_charge_links']] for \
+                info in fks_info_list ])
         for i, info in enumerate(fks_info_list):
             col_lines.append( \
                 'DATA (PARTICLE_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \

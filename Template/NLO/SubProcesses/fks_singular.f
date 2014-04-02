@@ -2559,10 +2559,8 @@ c Born and multiplies with the AP splitting function or eikonal factors.
 
       double precision zero,tiny
       parameter (zero=0d0)
-
-c Particle types (=color) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
 
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -2597,15 +2595,11 @@ c entering this function
             wgt=0d0
          endif
       elseif (xi_i_fks.lt.tiny)then
-         if (i_type.eq.8 .and. pmass(i_fks).eq.0d0)then
-c i_fks is gluon
+         if (need_color_links.or.need_charge_links)then
+c has soft singularities
             call sbornsoft(pp,xi_i_fks,y_ij_fks,wgt)
-         elseif (abs(i_type).eq.3)then
-c i_fks is (anti-)quark
-            wgt=0d0
          else
-            write(*,*) 'FATAL ERROR #1 in sreal',i_type,i_fks
-            stop
+            wgt=0d0
          endif
       else
          call smatrix_real(pp,wgt)
@@ -3185,10 +3179,6 @@ c Factor two to fix the limits.
       end
 
 
-
-
-
-
       subroutine eikonal_reduced(pp,m,n,i_fks,j_fks,xi_i_fks,y_ij_fks,eik)
 c     Returns the eikonal factor
       implicit none
@@ -3211,6 +3201,9 @@ c     Returns the eikonal factor
      #                        sqrtshat,shat
 
       real*8 phat_i_fks(0:3)
+
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
 
       double precision zero,pmass(nexternal),tiny
       parameter(zero=0d0)
@@ -3265,7 +3258,14 @@ c Calculate the eikonal factor
 
       eik = dotnm/(dotni*dotmi)*fact
 
-      eik = eik * g**2
+      if (need_color_links) then
+          eik = eik * g**2
+      else if (need_charge_links) then
+          eik = eik * dble(gal(1))**2 
+      else
+          write(*,*) 'Error #4 in eikonal reduced'
+          stop
+      endif
 
       return
       end

@@ -1,48 +1,42 @@
 subroutine sborn%(iborn)d_sf(p_born,m,n,wgt)
           implicit none
           include "nexternal.inc"
-          double precision p_born(0:3,nexternal-1), wgt(0:%(nsqorders)d)
+          double precision p_born(0:3,nexternal-1), wgt
+          integer nsqampso
+          parameter (nsqampso = %(nsqorders)d)
 
 C return the color-linked borns if i_fks is a color octet, 
 C the charge-linked if it is a color singlet
-          double complex wgt_born(2,0:%(nsqorders)d)
-          double precision wgt_col(0:%(nsqorders)d)
+          double complex wgt_born(2,0:nsqampso)
+          double precision wgt_col
           double precision chargeprod
           integer i,m,n 
-C FKS stuff:
-      integer i_fks, j_fks
-      common/fks_indices/i_fks, j_fks
-      integer fks_j_from_i(nexternal,0:nexternal), particle_type(nexternal), pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i, particle_type, pdg_type
+      include 'orders.inc'
+      COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
+      common /c_born_cnt/ ans_cnt
+      LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
+      common /c_keep_order_cnt/ keep_order_cnt 
       double precision charges_born(nexternal-1)
       common /c_charges_born/charges_born
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
       include 'coupl.inc'
       double precision pmass(nexternal), zero
       parameter (zero=0d0)
-      include 'pmass.inc'
 
-      do i = 0, %(nsqorders)d
-      wgt(i) = 0d0
-      wgt_col(i) = 0d0
-      wgt_born(1, i) = (0d0, 0d0)
-      wgt_born(2, i) = (0d0, 0d0)
-      enddo
       chargeprod = 0d0
 
-C check if i_fks is singlet or octet
-      if (particle_type(i_fks).eq.8) then
-%(iflines_col)s
-      do i = 0, %(nsqorders)d
-      wgt(i) = wgt_col(i)
-      enddo
-      else if (particle_type(i_fks).eq.1) then
-      if (pmass(j_fks).gt.0 .or. m.ne.n) then 
-      call sborn%(iborn)d_splitorders(p_born, wgt_born)
-      chargeprod = charges_born(m) * charges_born(n)
+      if (need_color_links.and.need_charge_links) then
+         write(*,*) 'ERROR IN SBORN_SF, both color and charged links are needed'
+         stop
       endif
-      do i = 0, %(nsqorders)d
-      wgt(i) = dble(wgt_born(1,i)) * chargeprod
-      enddo
+C check if need color or charge links
+      if (need_color_links) then
+%(iflines_col)s
+      wgt = wgt_col
+      else if (need_charge_links) then
+      chargeprod = charges_born(m) * charges_born(n)
+      wgt = dble(ans_cnt(1, qed_pos)) * chargeprod
       endif
 
       return 

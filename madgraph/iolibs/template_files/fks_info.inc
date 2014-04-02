@@ -4,9 +4,13 @@
       INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
       REAL*8 PARTICLE_CHARGE_D(%(nconfs)d, NEXTERNAL)
       LOGICAL SPLIT_TYPE_D(%(nconfs)d, %(nsplitorders)d)
+      LOGICAL NEED_COLOR_LINKS_D(%(nconfs)d), NEED_CHARGE_LINKS_D(%(nconfs)d)
       
 data fks_i_D / %(fks_i_values)s /
 data fks_j_D / %(fks_j_values)s /
+
+data need_color_links_d / %(need_color_links)s /
+data need_charge_links_d / %(need_charge_links)s /
 
 %(fks_j_from_i_lines)s
 

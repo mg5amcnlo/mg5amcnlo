@@ -1,7 +1,7 @@
       SUBROUTINE SB%(iborn)d_SF_%(ilink)3.3d(P,ANS_SUMMED)
 C
-C     Simple routine wrapper to provide the same interface for
-C     backward compatibility for usage without split orders.
+C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
+C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
 C
 C  
 C CONSTANTS
@@ -18,13 +18,21 @@ C
 C VARIABLES
 C
       INTEGER I
-	  REAL*8 ANS(0:NSQAMPSO)
+      include 'orders.inc'
+      REAL*8 ANS(0:NSQAMPSO)
+      LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
+      common /c_keep_order_cnt/ keep_order_cnt 
 C
 C BEGIN CODE
 C
 	  CALL SB%(iborn)d_SF_%(ilink)3.3d_SPLITORDERS(P,ANS)
-	  ANS_SUMMED=ANS(0)
+C color-linked borns are called for QCD-type emissions
+      ans_summed = 0d0
+      do i = 1, nsqampso
+        if (keep_order_cnt(qcd_pos, nsqampso)) ANS_SUMMED = ans_summed + ANS(I)
+      enddo
 
+return
 END
 
 

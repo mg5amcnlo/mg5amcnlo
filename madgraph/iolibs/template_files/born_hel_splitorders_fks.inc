@@ -1,7 +1,7 @@
       SUBROUTINE SBORN%(proc_prefix)s_HEL(P,ANS_SUMMED)
 C
-C     Simple routine wrapper to provide the same interface for
-C     backward compatibility for usage without split orders.
+C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
+C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
 C
 C  
 C CONSTANTS
@@ -17,14 +17,42 @@ C
 C
 C VARIABLES
 C
-      INTEGER I
-	  REAL*8 ANS(0:NSQAMPSO)
+      INTEGER I, J
+      include 'orders.inc'
+      REAL*8 ANS(0:NSQAMPSO)
+      LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
+      data keep_order / NSQAMPSO * .TRUE. /
+      data firsttime / .TRUE. /
+C
+C     FUNCTIONS
+C
+      integer GETORDPOWFROMINDEX_B%(proc_prefix)s
 C
 C BEGIN CODE
 C
-	  CALL SBORN%(proc_prefix)s_HEL_SPLITORDERS(P,ANS)
-	  ANS_SUMMED=ANS(0)
+C look for orders which match the born order constraint 
 
+if (firsttime) then
+ do i = 1, nsqampso
+C this is for the orders of the born to integrate
+  do j = 1, nsplitorders
+   if(GETORDPOWFROMINDEX_B%(proc_prefix)s(I, J) .gt. nlo_orders(i)) then
+    keep_order(i) = .false.
+    EXIT 
+   endif
+  enddo
+ enddo
+ firsttime = .false.
+endif
+
+C look for orders which match the born order constraint 
+	  CALL SBORN%(proc_prefix)s_HEL_SPLITORDERS(P,ANS)
+ans_summed = 0d0
+do i = 1, nsqampso
+ if (keep_order(i)) ANS_SUMMED = ANS_SUMMED + ANS(I)
+enddo
+
+return
 END
 
 

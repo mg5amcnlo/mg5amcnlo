@@ -24,6 +24,8 @@ C
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
       data keep_order / NSQAMPSO * .TRUE. /
       common /c_keep_order_cnt/ keep_order_cnt 
+      common /c_born_cnt/ ans_cnt
+      integer ord_subtract
       data firsttime / .TRUE. /
 C
 C     FUNCTIONS
@@ -70,7 +72,7 @@ C this is for the orders of the counterterms
   write(*,*) 'counterterm S.O', j
   do i = 1, nsqampso
    if (keep_order_cnt(j,i)) then
-    write(*,*) 'BORN %(proc_prefix)s: keeping split order', i, 'for cnt', j
+    write(*,*) 'BORN %(proc_prefix)s: keeping split order', i, 'for cnt', j, ordernames(j)
    else
     write(*,*) 'BORN %(proc_prefix)s: not keeping split order', i, 'for cnt', j
    endif
@@ -99,6 +101,7 @@ do j = 1, nsplitorders
  enddo
 enddo
 
+return
 END
 
 
