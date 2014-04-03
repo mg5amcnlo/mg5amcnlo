@@ -1318,11 +1318,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 wf_number = wf_number - 1
                 # Need to replace wavefunction in number_to_wavefunctions
                 # (in case this wavefunction is in another of the dicts)
-                for n_to_wf_dict in number_to_wavefunctions:
-                    if new_wf in n_to_wf_dict.values():
-                        for key in n_to_wf_dict.keys():
-                            if n_to_wf_dict[key] == new_wf:
-                                n_to_wf_dict[key] = new_wf
+                if self.get('is_loop'):
+                    # fix a bug for the g g > go go g [virt=QCD]
+                    # when there is a wf dropped
+                    # but it is the mothers of the remaining wfs in diagram_wavefunctions
+                    for wf in diagram_wavefunctions:
+                        for i,mother_wf in enumerate(wf.get('mothers')):
+                            if mother_wf.get('number')==new_wf_number:
+                                wf.get('mothers')[i]=new_wf
+                else:
+                    for n_to_wf_dict in number_to_wavefunctions:
+                        if new_wf in n_to_wf_dict.values():
+                            for key in n_to_wf_dict.keys():
+                                if n_to_wf_dict[key] == new_wf:
+                                    n_to_wf_dict[key] = new_wf
             except ValueError:
                 pass
 
