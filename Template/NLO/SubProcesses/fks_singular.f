@@ -2587,9 +2587,9 @@ c entering this function
       endif
 
       if (1d0-y_ij_fks.lt.tiny)then
-         if (pmass(j_fks).eq.zero.and.j_fks.le.2)then
+         if (pmass(j_fks).eq.zero.and.j_fks.le.nincoming)then
             call sborncol_isr(pp,xi_i_fks,y_ij_fks,wgt)
-         elseif (pmass(j_fks).eq.zero.and.j_fks.ge.3)then
+         elseif (pmass(j_fks).eq.zero.and.j_fks.gt.nincoming)then
             call sborncol_fsr(pp,xi_i_fks,y_ij_fks,wgt)
          else
             wgt=0d0
@@ -2653,21 +2653,29 @@ C
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 
-      integer i,imother_fks
-      double precision t,z,ap,E_j_fks,E_i_fks,Q,cphi_mother,
-     # sphi_mother,pi(0:3),pj(0:3)
-      double complex wgt1(2),W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
+      integer i,imother_fks,iord
+C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
+      double precision t,z,ap(2),E_j_fks,E_i_fks,Q(2),cphi_mother,
+     # sphi_mother,pi(0:3),pj(0:3),wgt_born
+      double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
       double complex azifact
 
-c Particle types (=color) of i_fks, j_fks and fks_mother
+c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision zero,vtiny
       parameter (zero=0d0)
       parameter (vtiny=1d-8)
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
+
+      include 'orders.inc'
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
+      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
+      common /c_born_cnt/ ans_cnt
 C  
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
@@ -2689,57 +2697,67 @@ c might flip when rotating the momenta.
      #                          cthbe,sthbe,cphibe,sphibe)
         enddo
         CalculatedBorn=.false.
-        call sborn(p_born_rot,wgt1)
+        call sborn(p_born_rot,wgt_born)
         CalculatedBorn=.false.
       else
-        call sborn(p_born,wgt1)
+        call sborn(p_born,wgt_born)
       endif
-      call AP_reduced(j_type,i_type,t,z,ap)
-      if (abs(j_type).eq.3 .and. i_type.eq.8) then
-         Q=0d0
-         wgt1(2)=0d0
-      elseif (m_type.eq.8) then
+      call AP_reduced(j_type,i_type,ch_j,ch_i,t,z,ap)
+      write(*,*) 'RESTORE CALL'
+c      call Qterms_reduced_timelike(j_type, i_type, t, z, Q)
+      wgt=0d0
+      do iord = 1, nsplitorders
+        if (.not.split_type(i).or.(i.ne.qed_pos.and.i.ne.qcd_pos)) cycle
+        wgt1(1) = ans_cnt(1,i)
+        wgt1(2) = ans_cnt(2,i)
+        if ((abs(j_type).eq.3 .and.i_type.eq.8) .or.
+     #      (dabs(ch_j).ne.0d0 .and.ch_i.eq.0d0)) then
+           Q(1)=0d0
+           Q(2)=0d0
+           wgt1(2)=0d0
+        elseif (m_type.eq.8.or.ch_m.eq.0d0) then
 c Insert <ij>/[ij] which is not included by sborn()
-         if (1d0-y_ij_fks.lt.vtiny)then
-            azifact=xij_aor
-         else
-            do i=0,3
-               pi(i)=p_i_fks_ev(i)
-               pj(i)=p(i,j_fks)
-            enddo
-            if(rotategranny)then
-              call trp_rotate_invar(pi,pi,cthbe,sthbe,cphibe,sphibe)
-              call trp_rotate_invar(pj,pj,cthbe,sthbe,cphibe,sphibe)
-            endif
-            CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
-            CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
-            CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
-            CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
-            Wij_angle=(0d0,0d0)
-            Wij_recta=(0d0,0d0)
-            do i=1,4
-               Wij_angle = Wij_angle + W1(i)*W2(i)
-               Wij_recta = Wij_recta + W3(i)*W4(i)
-            enddo
-            azifact=Wij_angle/Wij_recta
-         endif
+           if (1d0-y_ij_fks.lt.vtiny)then
+              azifact=xij_aor
+           else
+              do i=0,3
+                pi(i)=p_i_fks_ev(i)
+                pj(i)=p(i,j_fks)
+              enddo
+              if(rotategranny)then
+                call trp_rotate_invar(pi,pi,cthbe,sthbe,cphibe,sphibe)
+                call trp_rotate_invar(pj,pj,cthbe,sthbe,cphibe,sphibe)
+              endif
+              CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
+              CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
+              CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
+              CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
+              Wij_angle=(0d0,0d0)
+              Wij_recta=(0d0,0d0)
+              do i=1,4
+                 Wij_angle = Wij_angle + W1(i)*W2(i)
+                 Wij_recta = Wij_recta + W3(i)*W4(i)
+              enddo
+              azifact=Wij_angle/Wij_recta
+           endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
-         imother_fks=min(i_fks,j_fks)
-         if(rotategranny)then
-           call getaziangles(p_born_rot(0,imother_fks),
+           imother_fks=min(i_fks,j_fks)
+           if(rotategranny)then
+             call getaziangles(p_born_rot(0,imother_fks),
      #                       cphi_mother,sphi_mother)
-         else
-           call getaziangles(p_born(0,imother_fks),
+           else
+             call getaziangles(p_born(0,imother_fks),
      #                       cphi_mother,sphi_mother)
-         endif
-         wgt1(2) = -(cphi_mother-ximag*sphi_mother)**2 *
+           endif
+           wgt1(2) = -(cphi_mother-ximag*sphi_mother)**2 *
      #             wgt1(2) * azifact
-         call Qterms_reduced_timelike(j_type, i_type, t, z, Q)
-      else
-         write(*,*) 'FATAL ERROR in sborncol_fsr',i_type,j_type,i_fks,j_fks
-         stop
-      endif
-      wgt=dble(wgt1(1)*ap+wgt1(2)*Q)
+        else
+           write(*,*) 'FATAL ERROR in sborncol_fsr',i_type,j_type,i_fks,j_fks
+           stop
+        endif
+        if (i.eq.qcd_pos) wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
+        if (i.eq.qed_pos) wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
+      enddo
       return
       end
 
@@ -2771,15 +2789,18 @@ C
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 
-c Particle types (=color) of i_fks, j_fks and fks_mother
+c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision p_born_rot(0:3,nexternal-1)
 
-      integer i
-      double precision t,z,ap,Q,cphi_mother,sphi_mother,pi(0:3),pj(0:3)
-      double complex wgt1(2),W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
+      integer i, iord
+C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
+      double precision t,z,ap(2),Q(2),cphi_mother,sphi_mother,
+     $ pi(0:3),pj(0:3),wgt_born
+      double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
       double complex azifact
 
       double precision zero,vtiny
@@ -2787,6 +2808,12 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtiny=1d-8)
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
+
+      include 'orders.inc'
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
+      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
+      common /c_born_cnt/ ans_cnt
 C  
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
@@ -2813,101 +2840,121 @@ c might flip when rotating the momenta.
           p_born_rot(3,i)=-p_born(3,i)
         enddo
         CalculatedBorn=.false.
-        call sborn(p_born_rot,wgt1)
+        call sborn(p_born_rot,wgt_born)
         CalculatedBorn=.false.
       else
-        call sborn(p_born,wgt1)
+        call sborn(p_born,wgt_born)
       endif
-      call AP_reduced(m_type,i_type,t,z,ap)
-      if (abs(m_type).eq.3) then
-         Q=0d0
-         wgt1(2)=0d0
-      else
+      call AP_reduced(m_type,i_type,ch_m,ch_i,t,z,ap)
+      write(*,*) 'RESTORE CALL'
+c      call Qterms_reduced_spacelike(m_type, i_type, t, z, Q)
+
+      wgt=0d0
+      do iord = 1, nsplitorders
+        if (.not.split_type(i).or.(i.ne.qed_pos.and.i.ne.qcd_pos)) cycle
+        wgt1(1) = ans_cnt(1,i)
+        wgt1(2) = ans_cnt(2,i)
+        if (abs(m_type).eq.3.or.ch_m.ne.0d0) then
+           Q(1)=0d0
+           Q(2)=0d0
+           wgt1(2)=0d0
+        else
 c Insert <ij>/[ij] which is not included by sborn()
-         if (1d0-y_ij_fks.lt.vtiny)then
-            azifact=xij_aor
-         else
-            do i=0,3
-               pi(i)=p_i_fks_ev(i)
-               pj(i)=p(i,j_fks)
-            enddo
-            if(j_fks.eq.2)then
+           if (1d0-y_ij_fks.lt.vtiny)then
+              azifact=xij_aor
+           else
+              do i=0,3
+                 pi(i)=p_i_fks_ev(i)
+                 pj(i)=p(i,j_fks)
+              enddo
+              if(j_fks.eq.2)then
 c Rotation according to innerpin.m. Use rotate_invar() if a more 
 c general rotation is needed
-               pi(1)=-pi(1)
-               pi(3)=-pi(3)
-               pj(1)=-pj(1)
-               pj(3)=-pj(3)
-            endif
-            CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
-            CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
-            CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
-            CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
-            Wij_angle=(0d0,0d0)
-            Wij_recta=(0d0,0d0)
-            do i=1,4
-               Wij_angle = Wij_angle + W1(i)*W2(i)
-               Wij_recta = Wij_recta + W3(i)*W4(i)
-            enddo
-            azifact=Wij_angle/Wij_recta
-         endif
+                 pi(1)=-pi(1)
+                 pi(3)=-pi(3)
+                 pj(1)=-pj(1)
+                 pj(3)=-pj(3)
+              endif
+              CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
+              CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
+              CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
+              CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
+              Wij_angle=(0d0,0d0)
+              Wij_recta=(0d0,0d0)
+              do i=1,4
+                 Wij_angle = Wij_angle + W1(i)*W2(i)
+                 Wij_recta = Wij_recta + W3(i)*W4(i)
+              enddo
+              azifact=Wij_angle/Wij_recta
+           endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
-         if(j_fks.eq.2)then
-           cphi_mother=-1.d0
-           sphi_mother=0.d0
-         else
-           cphi_mother=1.d0
-           sphi_mother=0.d0
-         endif
-         wgt1(2) = -(cphi_mother+ximag*sphi_mother)**2 *
+           if(j_fks.eq.2)then
+             cphi_mother=-1.d0
+             sphi_mother=0.d0
+           else
+             cphi_mother=1.d0
+             sphi_mother=0.d0
+           endif
+           wgt1(2) = -(cphi_mother+ximag*sphi_mother)**2 *
      #             wgt1(2) * dconjg(azifact)
-         call Qterms_reduced_spacelike(m_type, i_type, t, z, Q)
-      endif
-      wgt=dble(wgt1(1)*ap+wgt1(2)*Q)
+        endif
+        if (i.eq.qcd_pos) wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
+        if (i.eq.qed_pos) wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
+      enddo
       return
       end
 
 
 
-      subroutine AP_reduced(part1, part2, t, z, ap)
+      subroutine AP_reduced(col1, col2, ch1, ch2, t, z, ap)
 c Returns Altarelli-Parisi splitting function summed/averaged over helicities
 c times prefactors such that |M_n+1|^2 = ap * |M_n|^2. This means
-c    AP_reduced = (1-z) P_{S(part1,part2)->part1+part2}(z) * gS^2/t
+c    AP_reduced = (1-z) P_{S(part1,part2)->part1+part2}(z) * g^2/t
+C the first entry in AP is QCD, the second QED
 c Therefore, the labeling conventions for particle IDs are not as in FKS:
 c part1 and part2 are the two particles emerging from the branching.
 c part1 and part2 can be either gluon (8) or (anti-)quark (+-3). z is the
 c fraction of the energy of part1 and t is the invariant mass of the mother.
       implicit none
 
-      integer part1, part2
-      double precision z,ap,t
+      integer col1, col2
+      double precision ch1, ch2
+      double precision z,ap(2),t
 
       double precision CA,TR,CF
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
 
-      if (part1.eq.8 .and. part2.eq.8)then
+      if (col1.eq.8 .and. col2.eq.8)then
 c g->gg splitting
-         ap = 2d0 * CA * ( (1d0-z)**2/z + z + z*(1d0-z)**2 )
+         ap(1) = 2d0 * CA * ( (1d0-z)**2/z + z + z*(1d0-z)**2 )
+         ap(2) = 0d0
 
-      elseif(abs(part1).eq.3 .and. abs(part2).eq.3)then
-c g->qqbar splitting
-         ap = TR * ( z**2 + (1d0-z)**2 )*(1d0-z)
-         
-      elseif(abs(part1).eq.3 .and. part2.eq.8)then
-c q->qg splitting
-         ap = CF * (1d0+z**2)
+      elseif ((abs(col1).eq.3 .and. abs(col2).eq.3) .or.
+     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
+c g/a->qqbar splitting
+         ap(1) = TR * ( z**2 + (1d0-z)**2 )*(1d0-z)
+         ap(2) = ch1 * ch2 * ( z**2 + (1d0-z)**2 )*(1d0-z)
 
-      elseif(part1.eq.8 .and. abs(part2).eq.3)then
+      elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
+     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
+c q->q g/a splitting
+         ap(1) = CF * (1d0+z**2)
+         ap(2) = ch1**2 * (1d0+z**2) 
+
+      elseif ((col1.eq.8 .and. abs(col2).eq.3) .or.
+     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
 c q->gq splitting
-         ap = CF * (1d0+(1d0-z)**2)*(1d0-z)/z
+         ap(1) = CF * (1d0+(1d0-z)**2)*(1d0-z)/z
+         ap(2) = ch1**2 * (1d0+(1d0-z)**2)*(1d0-z)/z
       else
-         write (*,*) 'Fatal error in AP_reduced',part1,part2
+         write (*,*) 'Fatal error in AP_reduced',col1,col2
          stop
       endif
 
-      ap = ap*g**2/t
+      ap(1) = ap(1)*g**2/t
+      ap(2) = ap(2)*dble(gal(1))**2/t
 
       return
       end
@@ -2916,15 +2963,17 @@ c q->gq splitting
 
       subroutine AP_reduced_prime(part1, part2, t, z, apprime)
 c Returns (1-z)*P^\prime * gS^2/t, with the same conventions as AP_reduced
+C the first entry in APprime is QCD, the second QED
       implicit none
 
       integer part1, part2
-      double precision z,apprime,t
+      double precision z,apprime(2),t
 
       double precision CA,TR,CF
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
+      write(*,*) 'FIX AP_REDUCED_PRIME'
 
       if (part1.eq.8 .and. part2.eq.8)then
 c g->gg splitting
@@ -2956,15 +3005,17 @@ c q->gq splitting
       subroutine Qterms_reduced_timelike(part1, part2, t, z, Qterms)
 c Eq's B.31 to B.34 of FKS paper, times (1-z)*gS^2/t. The labeling
 c conventions for particle IDs are the same as those in AP_reduced
+C the first entry in Qterms is QCD, the second QED
       implicit none
 
       integer part1, part2
-      double precision z,Qterms,t
+      double precision z,Qterms(2),t
 
       double precision CA,TR,CF
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
+      write(*,*) 'FIX QTERMS_REDUCED_TIMELIKE'
 
       if (part1.eq.8 .and. part2.eq.8)then
 c g->gg splitting
@@ -2996,17 +3047,19 @@ c q->gq splitting
       subroutine Qterms_reduced_spacelike(part1, part2, t, z, Qterms)
 c Eq's B.42 to B.45 of FKS paper, times (1-z)*gS^2/t. The labeling
 c conventions for particle IDs are the same as those in AP_reduced.
+C the first entry in Qterms is QCD, the second QED
 c Thus, part1 has momentum fraction z, and it is the one off-shell
 c (see (FKS.B.41))
       implicit none
 
       integer part1, part2
-      double precision z,Qterms,t
+      double precision z,Qterms(2),t
 
       double precision CA,TR,CF
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
+      write(*,*) 'FIX QTERMS_REDUCED_TIMELIKE'
 
       if (part1.eq.8 .and. part2.eq.8)then
 c g->gg splitting
@@ -3302,9 +3355,10 @@ c Calculate the eikonal factor
      # apprime,xkkern,xnorm
       external dot
 
-c Particle types (=color) of i_fks, j_fks and fks_mother
+c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i, ch_j, ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
       
       double precision one,pi
       parameter (one=1.d0)
@@ -5244,7 +5298,7 @@ c$$$      include "born_conf.inc"
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born
