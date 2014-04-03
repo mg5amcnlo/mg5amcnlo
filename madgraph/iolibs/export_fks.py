@@ -15,7 +15,6 @@
 """Methods and classes to export matrix elements to fks format."""
 
 from distutils import dir_util
-import fractions
 import glob
 import logging
 import os
@@ -2195,7 +2194,7 @@ Parameters              %(params)s\n\
                 % (i + 1, ', '.join('%d' % pdg for pdg in info['pdgs'])))
             charge_lines.append(\
                 'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
-                % (i + 1, ', '.join('%fd0' % float(fractions.Fraction(charg))
+                % (i + 1, ', '.join('%19.15fd0' % charg
                                     for charg in fksborn.real_processes[info['n_me']-1].charges) ))
             fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
                                                                    i + 1))
