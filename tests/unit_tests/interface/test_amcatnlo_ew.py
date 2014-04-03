@@ -59,6 +59,17 @@ class TestAMCatNLOEW(unittest.TestCase):
                             {'QED':2, 'QCD':2},
                             {'QED':2, 'QCD':2}]
 
+        # perturbation couplings
+        pert_couplings_list = [['QCD'],
+                               ['QED'],
+                               ['QED','QCD'],
+                               ['QCD'],
+                               ['QED'],
+                               ['QED','QCD'],
+                               ['QCD'],
+                               ['QED'],
+                               ['QED','QCD']]
+
         # expected squared_orders (should take into
         #  account the perturbation
         squared_orders_list = [{'QED':0, 'QCD':6},
@@ -103,8 +114,8 @@ class TestAMCatNLOEW(unittest.TestCase):
                            [17, 17, 17, 17, 17, 17]]
 
 
-        for cmd, born_orders, squared_orders, nborndiag, nrealproc, nrealdiags in \
-                zip(cmd_list, born_orders_list, squared_orders_list, nborndiag_list, 
+        for cmd, born_orders, squared_orders, pert_couplings, nborndiag, nrealproc, nrealdiags in \
+                zip(cmd_list, born_orders_list, squared_orders_list, pert_couplings_list, nborndiag_list, 
                         nrealproc_list, nrealdiags_list):
             self.interface.do_generate(cmd)
 
@@ -114,6 +125,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
             self.assertEqual(born_orders, fksprocess.born_amp_list[0]['process']['born_orders'])
             self.assertEqual(squared_orders, fksprocess.born_amp_list[0]['process']['squared_orders'])
+            self.assertEqual(pert_couplings, fksprocess.born_amp_list[0]['process']['perturbation_couplings'])
 
             self.assertEqual(len(fksprocess.born_amp_list[0]['diagrams']), nborndiag)
             self.assertEqual(len(fksprocess.real_amps), nrealproc)
