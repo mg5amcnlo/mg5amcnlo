@@ -4962,6 +4962,9 @@ c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
+      common /c_charges/particle_charge
+      common /c_charges_born/particle_charge_born
       include 'coupl.inc'
       include 'q_es.inc'
       double precision p(0:3,nexternal),xmu2,double,single
@@ -4973,18 +4976,28 @@ c      include "fks.inc"
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double complex wgt1(2)
-      double precision born,wgt,kikj,dot,vij,aso2pi
-      integer aj,i,j,m,n
+      double precision born,wgt,kikj,dot,vij,aso2pi,aeo2pi
+      double precision contr1, contr2
+      integer aj,i,j,m,n,ilink
       double precision pmass(nexternal),zero,pi
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
+      include 'orders.inc'
+      complex*16 ans_cnt(2, nsplitorders)
+      common /c_born_cnt/ ans_cnt
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
       include "pmass.inc"
 c
       double=0.d0
       single=0.d0
-c Born terms
+      aso2pi=g**2/(8*pi**2)
+      aeo2pi=dble(gal(1))**2/(8*pi**2)
       call sborn(p_born,wgt1)
-      born=dble(wgt1(1))
+c QCD Born terms
+      contr1 = 0d0
+      contr2 = 0d0
+      born=dble(ans_cnt(1,qcd_pos))
       do i=1,nexternal
         if(i.ne.i_fks .and. particle_type(i).ne.1)then
           if (particle_type(i).eq.8) then
@@ -4993,52 +5006,91 @@ c Born terms
              aj=1
           endif
           if(pmass(i).eq.ZERO)then
-            double=double-c(aj)
-            single=single-gamma(aj)
+            contr2=contr2-c(aj)
+            contr1=contr1-gamma(aj)
           else
-            single=single-c(aj)
+            contr1=contr1-c(aj)
           endif
         endif
       enddo
+      double=double+contr2*born*aso2pi
+      single=single+contr1*born*aso2pi
 
-      double=double*born
-      single=single*born
-c Colour-linked Born terms
-      do i=1,fks_j_from_i(i_fks,0)
-        do j=1,i
-          m=fks_j_from_i(i_fks,i)
-          n=fks_j_from_i(i_fks,j)
-          if( m.ne.n .and. n.ne.i_fks .and. m.ne.i_fks )then
-            call sborn_sf(p_born,m,n,wgt)
+c QED Born terms
+      contr1 = 0d0
+      contr2 = 0d0
+      born=dble(ans_cnt(1,qed_pos))
+      do i=1,nexternal
+        if(i.ne.i_fks .and. particle_type(i).ne.1)then
+          if (particle_type(i).eq.1.and.pmass(i).eq.0d0.and.
+     &        particle_charge(i).eq.0d0) then
+             aj=0
+          elseif(particle_charge(i).ne.0d0) then
+             aj=1
+          endif
+          if(pmass(i).eq.ZERO)then
+            contr2=contr2-particle_charge(i)**2
+            contr1=contr1-3d0/2d0*particle_charge(i)**2
+          else
+            contr1=contr1-particle_charge(i)**2
+          endif
+        endif
+      enddo
+      double=double+contr2*born*aeo2pi
+      single=single+contr1*born*aeo2pi
+
+c Colour and charge-linked Born terms
+      do ilink = 1, 2
+        if (ilink.eq.1) then
+          need_color_links = .true.
+          need_charge_links = .false.
+        else
+          need_color_links = .false.
+          need_charge_links = .true.
+        endif
+        contr1=0d0
+        do i=1,fks_j_from_i(i_fks,0)
+          do j=1,i
+            m=fks_j_from_i(i_fks,i)
+            n=fks_j_from_i(i_fks,j)
+            if( m.ne.n .and. n.ne.i_fks .and. m.ne.i_fks )then
+              call sborn_sf(p_born,m,n,wgt)
 c The factor -2 compensate for that missing in sborn_sf
-            wgt=-2*wgt
-            if(wgt.ne.0.d0)then
-              if(pmass(m).eq.zero.and.pmass(n).eq.zero)then
-                kikj=dot(p(0,n),p(0,m))
-                single=single+log(2*kikj/QES2)*wgt
-              elseif(pmass(m).ne.zero.and.pmass(n).eq.zero)then
-                single=single-0.5d0*log(pmass(m)**2/QES2)*wgt
-                kikj=dot(p(0,n),p(0,m))
-                single=single+log(2*kikj/QES2)*wgt
-              elseif(pmass(m).eq.zero.and.pmass(n).ne.zero)then
-                single=single-0.5d0*log(pmass(n)**2/QES2)*wgt
-                kikj=dot(p(0,n),p(0,m))
-                single=single+log(2*kikj/QES2)*wgt
-              elseif(pmass(m).ne.zero.and.pmass(n).ne.zero)then
-                kikj=dot(p(0,n),p(0,m))
-                vij=sqrt(1-(pmass(n)*pmass(m)/kikj)**2)
-                single=single+0.5d0*1/vij*log((1+vij)/(1-vij))*wgt
-              else
-                write(*,*)'Error in getpoles',i,j,n,m,pmass(n),pmass(m)
-                stop
+              wgt=-2*wgt
+              if(wgt.ne.0.d0)then
+                if(pmass(m).eq.zero.and.pmass(n).eq.zero)then
+                  kikj=dot(p(0,n),p(0,m))
+                  contr1=contr1+log(2*kikj/QES2)*wgt
+                elseif(pmass(m).ne.zero.and.pmass(n).eq.zero)then
+                  contr1=contr1-0.5d0*log(pmass(m)**2/QES2)*wgt
+                  kikj=dot(p(0,n),p(0,m))
+                  contr1=contr1+log(2*kikj/QES2)*wgt
+                elseif(pmass(m).eq.zero.and.pmass(n).ne.zero)then
+                  contr1=contr1-0.5d0*log(pmass(n)**2/QES2)*wgt
+                  kikj=dot(p(0,n),p(0,m))
+                  contr1=contr1+log(2*kikj/QES2)*wgt
+                elseif(pmass(m).ne.zero.and.pmass(n).ne.zero)then
+                  kikj=dot(p(0,n),p(0,m))
+                  vij=sqrt(1-(pmass(n)*pmass(m)/kikj)**2)
+                  contr1=contr1+0.5d0*1/vij*log((1+vij)/(1-vij))*wgt
+                else
+                  write(*,*)'Error in getpoles',i,j,n,m,pmass(n),pmass(m)
+                  stop
+                endif
               endif
             endif
-          endif
+          enddo
         enddo
+        if (ilink.eq.1) then
+          single=single+contr1*aso2pi
+        else
+          single=single+contr1*aeo2pi
+        endif
       enddo
-      aso2pi=g**2/(8*pi**2)
-      double=double*aso2pi
-      single=single*aso2pi
+
+C restore need_color/charge_links
+      call fks_inc_chooser()
+
       if(.not.fksprefact)single=single+double*log(xmu2/QES2)
 c
       return
@@ -5411,6 +5463,7 @@ C the type and charges of the mother particle
       double precision ch_i, ch_j, ch_m
       include 'nexternal.inc'
       integer i_fks,j_fks
+
       common/fks_indices/i_fks,j_fks
 
       if (abs(i_type).eq.abs(j_type) .and. 
@@ -5448,7 +5501,7 @@ C the type and charges of the mother particle
             if (m_type.eq.-1) m_type=1
             ch_m = -ch_i
          else
-            write (*,*) 'Error in get_mother_col_charge: (i,j)=(q,g)'
+            write(*,*) 'Error in get_mother_col_charge: (i,j)=(q,g)'
             stop
          endif
       elseif ((i_type.eq.8 .and. abs(j_type).eq.3) .or.
