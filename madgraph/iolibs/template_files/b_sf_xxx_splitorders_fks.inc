@@ -29,7 +29,7 @@ C
 C color-linked borns are called for QCD-type emissions
       ans_summed = 0d0
       do i = 1, nsqampso
-        if (keep_order_cnt(qcd_pos, nsqampso)) ANS_SUMMED = ans_summed + ANS(I)
+        if (keep_order_cnt(qcd_pos, i)) ANS_SUMMED = ans_summed + ANS(I)
       enddo
 
 return

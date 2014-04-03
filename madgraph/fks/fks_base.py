@@ -358,6 +358,9 @@ class FKSRealProcess(object):
                                'need_charge_links': need_charge_links})
 
         self.process = copy.copy(born_proc)
+        for o in splitting_type:
+            if o not in self.process['perturbation_couplings']:
+                self.process['perturbation_couplings'].append(o)
         # set the orders to empty, to force the use of the squared_orders
         self.process['orders'] = copy.copy(born_proc['orders'])
         self.process['orders'] = {}

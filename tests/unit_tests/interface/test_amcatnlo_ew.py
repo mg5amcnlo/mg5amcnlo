@@ -118,5 +118,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             self.assertEqual(len(fksprocess.born_amp_list[0]['diagrams']), nborndiag)
             self.assertEqual(len(fksprocess.real_amps), nrealproc)
             for amp, n in zip(fksprocess.real_amps, nrealdiags):
+                # check that the fks_j_from i have also been set
+                self.assertNotEqual(amp.fks_j_from_i, {})
                 self.assertEqual(n, len(amp.amplitude['diagrams']))
 
