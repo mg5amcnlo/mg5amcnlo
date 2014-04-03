@@ -5452,7 +5452,7 @@ C the type and charges of the mother particle
             stop
          endif
       elseif ((i_type.eq.8 .and. abs(j_type).eq.3) .or.
-     &         (dabs(ch_i).eq.0d0 .and. ch_j.gt.0d0) ) then
+     &         (ch_i.eq.0d0 .and. dabs(ch_j).gt.0d0) ) then
          m_type=j_type
          ch_m= ch_j
       else
