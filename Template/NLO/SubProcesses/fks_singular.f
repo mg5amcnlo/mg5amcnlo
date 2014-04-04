@@ -3088,7 +3088,7 @@ c q->qg/a splitting
      &       (dabs(ch1).eq.0d0 .and. dabs(ch2).gt.0d0)) then
 c q->g/a q splitting
          Qterms(1) = -4d0 * CF * (1d0-z)**2/z
-         Qterms(2) = -4d0 * ch1 * ch2 * (1d0-z)**2/z
+         Qterms(2) = -4d0 * ch2**2 * (1d0-z)**2/z
       else
          write (*,*) 'Fatal error in Qterms_reduced_spacelike',col1,col2,ch1,ch2
          stop
