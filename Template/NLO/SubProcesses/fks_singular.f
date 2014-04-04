@@ -2703,13 +2703,12 @@ c might flip when rotating the momenta.
         call sborn(p_born,wgt_born)
       endif
       call AP_reduced(j_type,i_type,ch_j,ch_i,t,z,ap)
-      write(*,*) 'RESTORE CALL'
-c      call Qterms_reduced_timelike(j_type, i_type, t, z, Q)
+      call Qterms_reduced_timelike(j_type,i_type,ch_i,ch_j,t,z,Q)
       wgt=0d0
       do iord = 1, nsplitorders
-        if (.not.split_type(i).or.(i.ne.qed_pos.and.i.ne.qcd_pos)) cycle
-        wgt1(1) = ans_cnt(1,i)
-        wgt1(2) = ans_cnt(2,i)
+        if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
+        wgt1(1) = ans_cnt(1,iord)
+        wgt1(2) = ans_cnt(2,iord)
         if ((abs(j_type).eq.3 .and.i_type.eq.8) .or.
      #      (dabs(ch_j).ne.0d0 .and.ch_i.eq.0d0)) then
            Q(1)=0d0
@@ -2755,8 +2754,8 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
            write(*,*) 'FATAL ERROR in sborncol_fsr',i_type,j_type,i_fks,j_fks
            stop
         endif
-        if (i.eq.qcd_pos) wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
-        if (i.eq.qed_pos) wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
+        if (iord.eq.qcd_pos) wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
+        if (iord.eq.qed_pos) wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
       enddo
       return
       end
@@ -2846,14 +2845,12 @@ c might flip when rotating the momenta.
         call sborn(p_born,wgt_born)
       endif
       call AP_reduced(m_type,i_type,ch_m,ch_i,t,z,ap)
-      write(*,*) 'RESTORE CALL'
-c      call Qterms_reduced_spacelike(m_type, i_type, t, z, Q)
-
+      call Qterms_reduced_spacelike(m_type,i_type,ch_m,ch_i,t,z,Q)
       wgt=0d0
       do iord = 1, nsplitorders
-        if (.not.split_type(i).or.(i.ne.qed_pos.and.i.ne.qcd_pos)) cycle
-        wgt1(1) = ans_cnt(1,i)
-        wgt1(2) = ans_cnt(2,i)
+        if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
+        wgt1(1) = ans_cnt(1,iord)
+        wgt1(2) = ans_cnt(2,iord)
         if (abs(m_type).eq.3.or.ch_m.ne.0d0) then
            Q(1)=0d0
            Q(2)=0d0
@@ -2898,12 +2895,11 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
            wgt1(2) = -(cphi_mother+ximag*sphi_mother)**2 *
      #             wgt1(2) * dconjg(azifact)
         endif
-        if (i.eq.qcd_pos) wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
-        if (i.eq.qed_pos) wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
+        if (iord.eq.qcd_pos) wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
+        if (iord.eq.qed_pos) wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
       enddo
       return
       end
-
 
 
       subroutine AP_reduced(col1, col2, ch1, ch2, t, z, ap)
@@ -2944,107 +2940,117 @@ c q->q g/a splitting
          ap(2) = ch1**2 * (1d0+z**2) 
 
       elseif ((col1.eq.8 .and. abs(col2).eq.3) .or.
-     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
+     &       (dabs(ch1).eq.0d0 .and. dabs(ch2).gt.0d0)) then
 c q->gq splitting
          ap(1) = CF * (1d0+(1d0-z)**2)*(1d0-z)/z
-         ap(2) = ch1**2 * (1d0+(1d0-z)**2)*(1d0-z)/z
+         ap(2) = ch2**2 * (1d0+(1d0-z)**2)*(1d0-z)/z
       else
-         write (*,*) 'Fatal error in AP_reduced',col1,col2
+         write (*,*) 'Fatal error in AP_reduced',col1,col2,ch1,ch2
          stop
       endif
 
       ap(1) = ap(1)*g**2/t
       ap(2) = ap(2)*dble(gal(1))**2/t
-
       return
       end
 
 
-
-      subroutine AP_reduced_prime(part1, part2, t, z, apprime)
+      subroutine AP_reduced_prime(col1,col2,ch1,ch2,t,z,apprime)
 c Returns (1-z)*P^\prime * gS^2/t, with the same conventions as AP_reduced
 C the first entry in APprime is QCD, the second QED
       implicit none
 
-      integer part1, part2
+      integer col1, col2
+      double precision ch1, ch2
       double precision z,apprime(2),t
 
       double precision CA,TR,CF
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
-      write(*,*) 'FIX AP_REDUCED_PRIME'
 
-      if (part1.eq.8 .and. part2.eq.8)then
+      if (col1.eq.8 .and. col2.eq.8) then
 c g->gg splitting
-         apprime = 0d0
+         apprime(1) = 0d0
+         apprime(2) = 0d0
 
-      elseif(abs(part1).eq.3 .and. abs(part2).eq.3)then
-c g->qqbar splitting
-         apprime = -2 * TR * z * (1d0-z)**2
+      elseif ((abs(col1).eq.3 .and. abs(col2).eq.3) .or.
+     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
+c g/a->qqbar splitting
+         apprime(1) = -2 * TR * z * (1d0-z)**2
+         apprime(2) = -2 * ch1 * ch2 * z * (1d0-z)**2
          
-      elseif(abs(part1).eq.3 .and. part2.eq.8)then
-c q->qg splitting
-         apprime = - CF * (1d0-z)**2
+      elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
+     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
+c q->q g/a splitting
+         apprime(1) = - CF * (1d0-z)**2
+         apprime(2) = - ch1**2 * (1d0-z)**2
 
-      elseif(part1.eq.8 .and. abs(part2).eq.3)then
-c q->gq splitting
-         apprime = - CF * z * (1d0-z)
+      elseif ((col1.eq.8 .and. abs(col2).eq.3) .or.
+     &       (dabs(ch1).eq.0d0 .and. dabs(ch2).gt.0d0)) then
+c q->g/a q splitting
+         apprime(1) = - CF * z * (1d0-z)
+         apprime(2) = - ch2**2 * (1d0-z)**2
       else
-         write (*,*) 'Fatal error in AP_reduced_prime',part1,part2
+         write (*,*) 'Fatal error in AP_reduced_prime',col1,col2,ch1,ch2
          stop
       endif
 
-      apprime = apprime*g**2/t
-
+      apprime(1) = apprime(1)*g**2/t
+      apprime(2) = apprime(2)*dble(gal(1))**2/t
       return
       end
 
 
-
-      subroutine Qterms_reduced_timelike(part1, part2, t, z, Qterms)
-c Eq's B.31 to B.34 of FKS paper, times (1-z)*gS^2/t. The labeling
+      subroutine Qterms_reduced_timelike(col1,col2,ch1,ch2,t,z,Qterms)
+c Eq's B.31 to B.34 of FKS paper, times (1-z)*g^2/t. The labeling
 c conventions for particle IDs are the same as those in AP_reduced
 C the first entry in Qterms is QCD, the second QED
       implicit none
 
-      integer part1, part2
+      integer col1, col2
+      double precision ch1, ch2
       double precision z,Qterms(2),t
 
       double precision CA,TR,CF
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
-      write(*,*) 'FIX QTERMS_REDUCED_TIMELIKE'
 
-      if (part1.eq.8 .and. part2.eq.8)then
+      if (col1.eq.8 .and. col2.eq.8) then
 c g->gg splitting
-         Qterms = -4d0 * CA * z*(1d0-z)**2
+         Qterms(1) = -4d0 * CA * z*(1d0-z)**2
+         Qterms(2) = 0d0
 
-      elseif(abs(part1).eq.3 .and. abs(part2).eq.3)then
-c g->qqbar splitting
-         Qterms = 4d0 * TR * z*(1d0-z)**2
+      elseif ((abs(col1).eq.3 .and. abs(col2).eq.3) .or.
+     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
+c g/a ->qqbar splitting
+         Qterms(1) = 4d0 * TR * z*(1d0-z)**2
+         Qterms(2) = 4d0 * ch1 * ch2 * z*(1d0-z)**2
          
-      elseif(abs(part1).eq.3 .and. part2.eq.8)then
-c q->qg splitting
-         Qterms = 0d0
+      elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
+     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
+c q->q g/a splitting
+         Qterms(1) = 0d0
+         Qterms(2) = 0d0
 
-      elseif(part1.eq.8 .and. abs(part2).eq.3)then
-c q->gq splitting
-         Qterms = 0d0
+      elseif ((col1.eq.8 .and. abs(col2).eq.3) .or.
+     &       (dabs(ch1).eq.0d0 .and. dabs(ch2).gt.0d0)) then
+c q->g/a q splitting
+         Qterms(1) = 0d0
+         Qterms(2) = 0d0
       else
-         write (*,*) 'Fatal error in Qterms_reduced_timelike',part1,part2
+         write (*,*) 'Fatal error in Qterms_reduced_timelike',col1,col2,ch1,ch2
          stop
       endif
 
-      Qterms = Qterms*g**2/t
-
+      Qterms(1) = Qterms(1)*g**2/t
+      Qterms(2) = Qterms(2)*dble(gal(1))**2/t
       return
       end
 
 
-
-      subroutine Qterms_reduced_spacelike(part1, part2, t, z, Qterms)
+      subroutine Qterms_reduced_spacelike(col1,col2,ch1,ch2,t,z,Qterms)
 c Eq's B.42 to B.45 of FKS paper, times (1-z)*gS^2/t. The labeling
 c conventions for particle IDs are the same as those in AP_reduced.
 C the first entry in Qterms is QCD, the second QED
@@ -3052,37 +3058,44 @@ c Thus, part1 has momentum fraction z, and it is the one off-shell
 c (see (FKS.B.41))
       implicit none
 
-      integer part1, part2
+      integer col1, col2
+      double precision ch1, ch2
       double precision z,Qterms(2),t
 
       double precision CA,TR,CF
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
-      write(*,*) 'FIX QTERMS_REDUCED_TIMELIKE'
 
-      if (part1.eq.8 .and. part2.eq.8)then
+      if (col1.eq.8 .and. col2.eq.8)then
 c g->gg splitting
-         Qterms = -4d0 * CA * (1d0-z)**2/z
+         Qterms(1) = -4d0 * CA * (1d0-z)**2/z
+         Qterms(2) = 0d0
 
-      elseif(abs(part1).eq.3 .and. abs(part2).eq.3)then
-c g->qqbar splitting
-         Qterms = 0d0
+      elseif ((abs(col1).eq.3 .and. abs(col2).eq.3) .or.
+     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
+c g/a->qqbar splitting
+         Qterms(1) = 0d0
+         Qterms(2) = 0d0
          
-      elseif(abs(part1).eq.3 .and. part2.eq.8)then
-c q->qg splitting
-         Qterms = 0d0
+      elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
+     &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
+c q->qg/a splitting
+         Qterms(1) = 0d0
+         Qterms(2) = 0d0
 
-      elseif(part1.eq.8 .and. abs(part2).eq.3)then
-c q->gq splitting
-         Qterms = -4d0 * CF * (1d0-z)**2/z
+      elseif ((col1.eq.8 .and. abs(col2).eq.3) .or.
+     &       (dabs(ch1).eq.0d0 .and. dabs(ch2).gt.0d0)) then
+c q->g/a q splitting
+         Qterms(1) = -4d0 * CF * (1d0-z)**2/z
+         Qterms(2) = -4d0 * ch1 * ch2 * (1d0-z)**2/z
       else
-         write (*,*) 'Fatal error in Qterms_reduced_spacelike',part1,part2
+         write (*,*) 'Fatal error in Qterms_reduced_spacelike',col1,col2,ch1,ch2
          stop
       endif
 
-      Qterms = Qterms*g**2/t
-
+      Qterms(1) = Qterms(1)*g**2/t
+      Qterms(2) = Qterms(2)*dble(gal(1))**2/t
       return
       end
 
@@ -3102,6 +3115,7 @@ c part2==colour(i_fks)
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
+      write(*,*) 'FIX AP REDUCED SUSY'
 
       if (part2.ne.8)then
          write (*,*) 'Fatal error #0 in AP_reduced_SUSY',part1,part2
@@ -3127,7 +3141,6 @@ c sq->sqg splitting
       end
 
 
-
       subroutine AP_reduced_massive(part1, part2, t, z, q2, m2, ap)
 c Returns massive Altarelli-Parisi splitting function summed/averaged over helicities
 c times prefactors such that |M_n+1|^2 = ap * |M_n|^2. This means
@@ -3145,6 +3158,7 @@ c fraction of the energy of part1 and t is the invariant mass of the mother.
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
+      write(*,*) 'FIX AP REDUCED MASSIVE'
 
       if (part1.eq.8 .and. part2.eq.8)then
 c g->gg splitting
