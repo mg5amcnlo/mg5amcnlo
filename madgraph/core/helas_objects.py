@@ -1012,6 +1012,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Finally, the mother numbers
         array_rep.extend([mother['number'] for \
                           mother in self['mothers']])
+        
         return array_rep
 
     def get_pdg_code(self):
@@ -1052,11 +1053,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # Add minus sign to coupling of color octet Majorana
         # particles to g for FVI vertex
+        if self.get('is_loop') and self.get_spin_state_number()==-2:
+            print " I am in set_octet_majorana_coupling_sign with self.get_spin_state_number()==",self.get_spin_state_number()
         if self.get('color') == 8 and \
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8] and \
                not self.get('coupling')[0].startswith('-'):
+            if self.get('is_loop') and self.get_spin_state_number()==-2:
+                print " SEEETTING TO MINUS"
             self.set('coupling', ['-%s' % c 
                                               for c in self.get('coupling')])
         
@@ -1301,12 +1306,19 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                            ['incoming', 'outgoing'])[0])
                 new_wf.set('is_part', not new_wf.get('is_part'))
             try:
+                # Because we are not using the number_to_wavefunction 
+                # list for loop wavefunctions, we cannot correct for the 
+                # side effect that would be introduced when substituting the
+                # new_wf in the diagram_wavefunctions by the one in wavefunctions.
+                # It is suboptimal not to do it, but nonetheless working (I think :/)
+                if new_wf.get('is_loop'):
+                   raise ValueError
                 # Use the copy in wavefunctions instead.
                 # Remove this copy from diagram_wavefunctions
                 new_wf_number = new_wf.get('number')
                 new_wf = wavefunctions[wavefunctions.index(new_wf)]
                 diagram_wf_numbers = [w.get('number') for w in \
-                                      diagram_wavefunctions]
+                                                          diagram_wavefunctions]
                 index = diagram_wf_numbers.index(new_wf_number)
                 diagram_wavefunctions.pop(index)
                 # We need to decrease the wf number for later
@@ -1316,13 +1328,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         wf.set('number', wf.get('number') - 1)
                 # Since we reuse the old wavefunction, reset wf_number
                 wf_number = wf_number - 1
+
                 # Need to replace wavefunction in number_to_wavefunctions
                 # (in case this wavefunction is in another of the dicts)
                 for n_to_wf_dict in number_to_wavefunctions:
                     if new_wf in n_to_wf_dict.values():
                         for key in n_to_wf_dict.keys():
                             if n_to_wf_dict[key] == new_wf:
-                                n_to_wf_dict[key] = new_wf
+                                n_to_wf_dict[key] = new_wf          
+
             except ValueError:
                 pass
 
@@ -1487,7 +1501,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     
         #fixed argument
         for i, coup in enumerate(self.get_with_flow('coupling')):
-            output['coup%d'%i] = coup
+            # We do not include the - sign in front of the coupling of loop
+            # wavefunctions (only the loop ones, the tree ones are treated normally)
+            # in the non optimized output because this sign was already applied to
+            # the coupling passed in argument when calling the loop amplitude.
+            if not OptimizedOutput and self.get('is_loop'):
+                output['coup%d'%i] = coup[1:] if coup.startswith('-') else coup  
+            else:
+                output['coup%d'%i] = coup
+              
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
         output['W'] = self.get('width')

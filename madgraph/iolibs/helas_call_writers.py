@@ -999,6 +999,24 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         else:
             return '%s%s)'%(prefix, number)       
 
+    def get_amplitude_call(self, amplitude,**opts):
+        """ We overwrite this function here because we must call 
+        set_octet_majorana_coupling_sign for all wavefunction taking part in
+        this loopHelasAmplitude. This is not necessary in the optimized mode"""        
+
+        # Special feature: For octet Majorana fermions, need an extra
+        # minus sign in the FVI (and FSI?) wavefunction in UFO
+        # models.
+        if isinstance(amplitude,loop_helas_objects.LoopHelasAmplitude):
+            for lwf in amplitude.get('wavefunctions'):
+                lwf.set_octet_majorana_coupling_sign()
+            amplitude.set('coupling',amplitude.get_couplings())
+        
+        return super(FortranUFOHelasCallWriter, self).get_amplitude_call(
+                                                               amplitude,**opts)        
+        
+
+
     def generate_loop_amplitude_call(self, loopamp):
         """ Routine for automatic generation of a call to CutTools for loop
         amplitudes."""
@@ -1018,16 +1036,25 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                                                      .format(i+1,self.mp_prefix)
         for i in range(len(loopamp.get('coupling'))):
             call = call + \
-                   "%(LoopCoupling{0})s,{1}%(LoopCoupling{0})s,"\
-                                                     .format(i+1,self.mp_prefix)
+                   "%(LoopCoupling{0})s,%(MPLoopCoupling{0})s,".format(i+1)
         call = call + "%(LoopRank)d,"
         call = call + "%(LoopSymmetryFactor)d,"
         call = call + "%(ampNumber)d,AMPL(1,%(ampNumber)d),S(%(ampNumber)d))"
         
-        # We add here the placeholde for the proc_prefix
-        call_function = lambda amp: 'CALL %(proc_prefix)s'+\
-                                                call % amp.get_helas_call_dict()
-        self.add_amplitude(loopamp.get_call_key(), call_function)
+        def create_loop_amp(amplitude):
+            helas_dict = amplitude.get_helas_call_dict()
+            # Make sure the potential minus sign on coupling appears at the
+            # right place when specifying the mp_coupling. It must be
+            # -MP__GC10 and not MP__-GC10
+            for i in range(len(loopamp.get('coupling'))):
+                coupl = helas_dict['LoopCoupling%i'%(i+1)] 
+                helas_dict['MPLoopCoupling%i'%(i+1)]= \
+                   '-%s%s'%(self.mp_prefix,coupl[1:]) if coupl.startswith('-') \
+                                              else '%s%s'%(self.mp_prefix,coupl)
+            # We add here the placeholde for the proc_prefix
+            return 'CALL %(proc_prefix)s'+call%helas_dict
+
+        self.add_amplitude(loopamp.get_call_key(), create_loop_amp)
         return
 
     def generate_helas_call(self, argument, startingExternalWFNumber=0):
@@ -1271,6 +1298,15 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
     """ Version of FortranUFOHelasCallWriter meeting the needs of the optimized
     output for loop processes """
+
+    def get_amplitude_call(self, *args, **opts):
+        """ We overwrite this function here because in the optimized mode one
+        does not need to call the function set_octet_majorana_coupling_sign
+        for the wavefunctions of the loop amplitudes. So we directly call
+        the mother of the mother, namely UFOHelasCallWriter. """
+        
+        return super(FortranUFOHelasCallWriter, self).get_amplitude_call(
+                                                                   *args,**opts)
 
     def format_helas_object(self, prefix, number):
         """ Returns the string for accessing the wavefunction with number in

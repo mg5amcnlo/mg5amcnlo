@@ -272,7 +272,9 @@ C BEGIN CODE
 C ----------
       LPASS=.TRUE.
       IF(NLOOPLINE.LT.RANK.OR.RANK.GT.5
-     $     .OR.NLOOPLINE.GT.6.OR.complex_mass)LPASS=.FALSE.
+     $.OR.NLOOPLINE.GT.6.OR.complex_mass.OR.NLOOPLINE.eq.1) THEN
+        LPASS=.FALSE.
+      ENDIF
       RETURN
       END
 
