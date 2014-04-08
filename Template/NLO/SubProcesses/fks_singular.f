@@ -3227,6 +3227,7 @@ c
             n=fks_j_from_i(i_fks,j)
             if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)) .and.
      &           n.ne.i_fks.and.m.ne.i_fks) then
+C wgt includes the gs/w^2 
                call sborn_sf(p_born,m,n,wgt)
                if (wgt.ne.0d0) then
                   call eikonal_reduced(pp,m,n,i_fks,j_fks,
@@ -3268,9 +3269,6 @@ c     Returns the eikonal factor
      #                        sqrtshat,shat
 
       real*8 phat_i_fks(0:3)
-
-      logical need_color_links, need_charge_links
-      common /c_need_links/need_color_links, need_charge_links
 
       double precision zero,pmass(nexternal),tiny
       parameter(zero=0d0)
@@ -3324,16 +3322,6 @@ c Calculate the eikonal factor
       endif
 
       eik = dotnm/(dotni*dotmi)*fact
-
-      if (need_color_links) then
-          eik = eik * g**2
-      else if (need_charge_links) then
-          eik = eik * dble(gal(1))**2 
-      else
-          write(*,*) 'Error #4 in eikonal reduced'
-          stop
-      endif
-
       return
       end
 
@@ -3347,12 +3335,13 @@ c Calculate the eikonal factor
       include 'q_es.inc'
       include "run.inc"
       include 'reweight.inc'
+      include "orders.inc"
 
+      integer iord, iap
       double precision p(0:3,nexternal),collrem_xi,collrem_lxi
       double precision xi_i_fks,y_ij_fks
 
-      double complex wgt1(2)
-      double precision p_born(0:3,nexternal-1)
+      double precision p_born(0:3,nexternal-1), wgt_born
       common/pborn/p_born
 
       integer i_fks,j_fks
@@ -3365,14 +3354,16 @@ c Calculate the eikonal factor
       double precision delta_used
       common /cdelta_used/delta_used
 
-      double precision rwgt,shattmp,dot,born_wgt,oo2pi,z,t,ap,
-     # apprime,xkkern,xnorm
+      double precision rwgt,shattmp,dot,born_wgt,oo2pi,z,t,ap(2),
+     # apprime(2),xkkern,xnorm
       external dot
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       double precision ch_i, ch_j, ch_m
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
+      common /c_born_cnt/ ans_cnt
       
       double precision one,pi
       parameter (one=1.d0)
@@ -3412,40 +3403,49 @@ c entering this function
         stop
       endif
 
-      call sborn(p_born,wgt1)
-      born_wgt=dble(wgt1(1))
+      call sborn(p_born,wgt_born)
 
 c A factor gS^2 is included in the Altarelli-Parisi kernels
       oo2pi=one/(8d0*PI**2)
 
       z = 1d0 - xi_i_fks
       t = one
-      call AP_reduced(m_type,i_type,t,z,ap)
-      call AP_reduced_prime(m_type,i_type,t,z,apprime)
+      call AP_reduced(m_type,i_type,ch_m,ch_i,t,z,ap)
+      call AP_reduced_prime(m_type,i_type,ch_m,ch_i,t,z,apprime)
+
+      do iord = 1, nsplitorders
+        if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
+        wgt1(1) = ans_cnt(1,iord)
+        wgt1(2) = ans_cnt(2,iord)
+        
 
 c Insert here proper functions for PDF change of scheme. With xkkern=0.d0
 c one assumes MSbar
-      xkkern=0.d0
+        xkkern=0.d0
 
-      collrem_xi=ap*log(shat*delta_used/(2*q2fact(j_fks))) -
-     #           apprime - xkkern 
-      collrem_lxi=2*ap
+        if (iord.eq.qcd_pos) iap = 1
+        if (iord.eq.qed_pos) iap = 2
+        collrem_xi=ap(iap)*log(shat*delta_used/(2*q2fact(j_fks))) -
+     #           apprime(iap) - xkkern 
+        collrem_lxi=2*ap(iap)
 
 c The partonic flux 1/(2*s) is inserted in genps. Thus, an extra 
 c factor z (implicit in the flux of the reduced Born in FKS) 
 c has to be inserted here
-      xnorm=1.d0/z
+        xnorm=1.d0/z
 
-      collrem_xi=oo2pi * born_wgt * collrem_xi * xnorm
-      collrem_lxi=oo2pi * born_wgt * collrem_lxi * xnorm
+        collrem_xi=oo2pi * dble(wgt1(1)) * collrem_xi * xnorm
+        collrem_lxi=oo2pi * dble(wgt1(1)) * collrem_lxi * xnorm
 
-      if(doreweight)then
-        wgtdegrem_xi=ap*log(shat*delta_used/(2*QES2)) -
-     #               apprime - xkkern 
-        wgtdegrem_xi=oo2pi * born_wgt * wgtdegrem_xi * xnorm
-        wgtdegrem_lxi=collrem_lxi
-        wgtdegrem_muF= - oo2pi * born_wgt * ap * xnorm
-      endif
+        if(doreweight)then
+          write(*,*) 'FIX REWEIGHT'
+          wgtdegrem_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
+     #               apprime(iap) - xkkern 
+          wgtdegrem_xi=oo2pi * dble(wgt1(1)) * wgtdegrem_xi * xnorm
+          wgtdegrem_lxi=collrem_lxi
+          wgtdegrem_muF= - oo2pi * dble(wgt1(1)) * ap(iap) * xnorm
+        endif
+      enddo
 
       return
       end
@@ -4255,10 +4255,11 @@ c      include "fks.inc"
       double precision p(0:3,nexternal),bsv_wgt,born_wgt
       double precision pp(0:3,nexternal)
       
-      double complex wgt1(2)
-      double precision rwgt,ao2pi,Q,Ej,wgt,contr,eikIreg,m1l_W_finite_CDR
+      double precision wgt1
+      double precision rwgt,Q,Ej,wgt,contr,eikIreg,m1l_W_finite_CDR
+      double precision aso2pi, aeo2pi
       double precision shattmp,dot
-      integer i,j,aj,m,n,k
+      integer i,j,aj,m,n,k,iord,ipos_ord
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -4274,6 +4275,7 @@ c      include "fks.inc"
 
       double precision c(0:1),gamma(0:1),gammap(0:1)
       common/fks_colors/c,gamma,gammap
+      double precision c_used, gamma_used, gammap_used
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       double precision double,single,xmu2
@@ -4334,274 +4336,43 @@ c For the MINT folding
       double precision pmass(nexternal),zero,tiny
       parameter (zero=0d0)
       parameter (tiny=1d-6)
+      include 'orders.inc'
+      logical firsttime
+      data firsttime / .true. /
+      logical need_color_links_used, need_charge_links_used
+      data need_color_links_used / .false. /
+      data need_charge_links_used / .false. /
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
+      complex*16 ans_cnt(2, nsplitorders)
+      common /c_born_cnt/ ans_cnt
+      double precision oneo8pi2
+      parameter(oneo8pi2 = 1d0/(8d0*pi**2))
+      include 'nFKSconfigs.inc'
+      INTEGER nFKSprocess, nFKSprocess_save
+      COMMON/c_nFKSprocess/nFKSprocess
       include "pmass.inc"
 
-      ao2pi=g**2/(8d0*PI**2)
-
-      if (particle_type(i_fks).eq.8 .or. abrv.eq.'grid') then
-
-c Consistency check -- call to set_cms_stuff() must be done prior to
-c entering this function
-         shattmp=2d0*dot(p(0,1),p(0,2))
-         if(abs(shattmp/shat-1.d0).gt.1.d-5)then
-           write(*,*)'Error in sreal: inconsistent shat'
-           write(*,*)shattmp,shat
-           stop
-         endif
-
-         call sborn(p_born,wgt1)
-
-c Born contribution:
-         bsv_wgt=dble(wgt1(1))
-         born_wgt=dble(wgt1(1))
-         virt_wgt=0d0
-
-         if (abrv.eq.'born' .or. abrv.eq.'grid') goto 549
-         if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
-     #       abrv.eq.'viLC') goto 547
-
-c Q contribution eq 5.5 and 5.6 of FKS
-         Q=0d0
-         do i=nincoming+1,nexternal
-            if (i.ne.i_fks .and. particle_type(i).ne.1 .and. 
-     #          pmass(i).eq.ZERO)then
-               if (particle_type(i).eq.8) then
-                  aj=0
-               elseif(abs(particle_type(i)).eq.3) then
-                  aj=1
-               endif
-               Ej=p(0,i)
-               if(abrv.eq.'novA')then
-c 2+3+4
-                  Q = Q
-     &             -2*dlog(shat/QES2)*dlog(xicut_used)*c(aj)
-     &             -( dlog(deltaO/2d0)*( gamma(aj)-
-     &                      2d0*c(aj)*dlog(2d0*Ej/xicut_used/sqrtshat) )
-     &               +2*dlog(xicut_used)**2*c(aj) )
-     &             +gammap(aj)
-     &             +2d0*c(aj)*dlog(2d0*Ej/sqrtshat)**2
-     &             -2d0*gamma(aj)*dlog(2d0*Ej/sqrtshat)
-               elseif(abrv.eq.'novB')then
-c 2+3+4_mu
-                  Q = Q
-     &             -2*dlog(shat/QES2)*dlog(xicut_used)*c(aj)
-     &             -( dlog(deltaO/2d0)*( gamma(aj)-
-     &                      2d0*c(aj)*dlog(2d0*Ej/xicut_used/sqrtshat) )
-     &               +2*dlog(xicut_used)**2*c(aj) )
-               elseif(abrv.eq.'viSA')then
-c 1                
-                  Q = Q
-     &              -dlog(shat/QES2)*( gamma(aj)-
-     &                      2d0*c(aj)*dlog(2d0*Ej/sqrtshat) )
-               elseif(abrv.eq.'viSB')then
-c 1+4_L
-                  Q = Q
-     &              -dlog(shat/QES2)*( gamma(aj)-
-     &                      2d0*c(aj)*dlog(2d0*Ej/sqrtshat) )
-     &             +gammap(aj)
-     &             +2d0*c(aj)*dlog(2d0*Ej/sqrtshat)**2
-     &             -2d0*gamma(aj)*dlog(2d0*Ej/sqrtshat)
-               elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #                abrv.ne.'viLC')then
-c 1+2+3+4
-                  Q = Q+gammap(aj)
-     &              -dlog(shat*deltaO/2d0/QES2)*( gamma(aj)-
-     &                      2d0*c(aj)*dlog(2d0*Ej/xicut_used/sqrtshat) )
-     &              +2d0*c(aj)*( dlog(2d0*Ej/sqrtshat)**2
-     &              -dlog(xicut_used)**2 )
-     &              -2d0*gamma(aj)*dlog(2d0*Ej/sqrtshat)
-               else
-                  write(*,*)'Error in bornsoftvirtual'
-                  write(*,*)'abrv in Q:',abrv
-                  stop
-               endif
-            endif
+      if (firsttime) then
+C check if any real emission need cahrge/color links
+         nFKSprocess_save = nFKSprocess
+         do nFKSprocess = 1, FKS_configs
+            call fks_inc_chooser()
+            need_color_link_used = need_color_link_used .or. need_color_links
+            need_charge_link_used = need_charge_link_used .or. need_charge_links
          enddo
-c
-         do i=1,nincoming
-            if (particle_type(i).ne.1)then
-               if (particle_type(i).eq.8) then
-                  aj=0
-               elseif(abs(particle_type(i)).eq.3) then
-                  aj=1
-               endif
-               if(abrv.eq.'novA'.or.abrv.eq.'novB')then
-c 2+3+4 or 2+3+4_mu
-                  Q=Q-2*dlog(shat/QES2)*dlog(xicut_used)*c(aj)
-     &               -dlog(q2fact(i)/shat)*(
-     &                  gamma(aj)+2d0*c(aj)*dlog(xicut_used) )
-               elseif(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
-c 1 or 1+4_L
-                  Q=Q-dlog(shat/QES2)*gamma(aj)
-               elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #                abrv.ne.'viLC')then
-c 1+2+3+4
-                  Q=Q-dlog(q2fact(i)/QES2)*(
-     &                 gamma(aj)+2d0*c(aj)*dlog(xicut_used))
-               else
-                  write(*,*)'Error in bornsoftvirtual'
-                  write(*,*)'abrv in Q:',abrv
-                  stop
-               endif
-            endif
-         enddo
+         firsttime = .false.
+         nFKSprocess = nFKSprocess_save
+         call fks_inc_chooser()
+      enddo
+         
 
-         bsv_wgt=bsv_wgt+ao2pi*Q*dble(wgt1(1))
+      aso2pi=g**2/(8*pi**2)
+      aeo2pi=dble(gal(1))**2/(8*pi**2)
 
-c        If doing MC over helicities, must sum over the two
-c        helicity contributions for the Q-terms of collinear limit.
- 547     continue
-         if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
-     #       abrv.eq.'viLC') goto 548
-c
-c I(reg) terms, eq 5.5 of FKS
-         contr=0d0
-         do i=1,fks_j_from_i(i_fks,0)
-            do j=1,i
-               m=fks_j_from_i(i_fks,i)
-               n=fks_j_from_i(i_fks,j)
-               if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)).and.
-     &              n.ne.i_fks.and.m.ne.i_fks) then
-c To be sure that color-correlated Borns work well, we need to have
-c *always* a call to sborn(p_born,wgt) just before. This is okay,
-c because there is a call above in this subroutine
-                  call sborn_sf(p_born,m,n,wgt)
-                  if (wgt.ne.0d0) then
-                     call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
-                     contr=contr+wgt*eikIreg
-                  endif
-               endif
-            enddo
-         enddo
-
-C WARNING: THE FACTOR -2 BELOW COMPENSATES FOR THE MISSING -2 IN THE
-C COLOUR LINKED BORN -- SEE ALSO SBORNSOFT().
-C If the colour-linked Borns were normalized as reported in the paper
-c we should set
-c   bsv_wgt=bsv_wgt+ao2pi*contr  <-- DO NOT USE THIS LINE
-c
-         bsv_wgt=bsv_wgt-2*ao2pi*contr
-
- 548     continue
-c Finite part of one-loop corrections
-c convert to Binoth Les Houches Accord standards
-         virt_wgt=0d0
-         if (fold.eq.0) then
-            if ((ran2().le.virtual_fraction .and.
-     $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
-               call cpu_time(tBefore)
-               Call BinothLHA(p_born,born_wgt,virt_wgt)
-               call cpu_time(tAfter)
-               tOLP=tOLP+(tAfter-tBefore)
-               virtual_over_born=virt_wgt/(born_wgt*ao2pi)
-               virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
-               if (abrv.ne.'virt') then
-                  virt_wgt=virt_wgt/virtual_fraction
-               endif
-               virt_wgt_save=virt_wgt
-c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
-            endif
-         elseif(fold.eq.1) then
-            virt_wgt=virt_wgt_save
-c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
-         endif
-         if (abrv(1:4).ne.'virt')
-     &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*ao2pi
-
-c eq.(MadFKS.C.13)
-         if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
-           bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(shat/QES2)*
-     #                       ao2pi*dble(wgt1(1))
-         elseif(abrv.eq.'novA'.or.abrv.eq.'novB')then
-           bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(q2fact(1)/shat)*
-     #                       ao2pi*dble(wgt1(1))
-         elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #          abrv.ne.'viLC')then
-           bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(q2fact(1)/QES2)*
-     #                       ao2pi*dble(wgt1(1))
-         endif
-c eq.(MadFKS.C.14)
-         if(abrv(1:2).ne.'vi')then
-           bsv_wgt=bsv_wgt - 2*pi*beta0*wgtbpower*
-     #                       log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
-         endif
-
-
- 549     continue
-
-         if(doreweight)then
-           wgtwnstmpmuf=0.d0
-           if(abrv.ne.'born' .and. abrv.ne.'grid')then
-             if(abrv(1:2).eq.'vi')then
-               wgtwnstmpmur=0.d0
-             else
-               do i=1,nincoming
-                 if (particle_type(i).ne.1)then
-                   if (particle_type(i).eq.8) then
-                     aj=0
-                   elseif(abs(particle_type(i)).eq.3) then
-                     aj=1
-                   endif
-                   wgtwnstmpmuf=wgtwnstmpmuf-
-     #                   ( gamma(aj)+2d0*c(aj)*dlog(xicut_used) )
-                 endif
-               enddo
-               wgtwnstmpmuf=ao2pi*wgtwnstmpmuf*dble(wgt1(1))
-               wgtwnstmpmur=2*pi*beta0*wgtbpower*ao2pi*dble(wgt1(1))
-             endif
-c bsv_wgt here always contains the Born; must subtract it, since 
-c we need the pure NLO terms only
-             wgtnstmp=bsv_wgt+virt_wgt-born_wgt-
-     #                wgtwnstmpmuf*log(q2fact(1)/QES2)-
-     #                wgtwnstmpmur*log(scale**2/QES2)
-           else
-             wgtnstmp=0d0
-             wgtwnstmpmur=0.d0
-           endif
-         endif
-
-
-         if (abrv(1:2).eq.'vi') then
-            bsv_wgt=bsv_wgt-born_wgt
-
-            if(doVirtTest .and. iminmax.eq.0)then
-              if(born_wgt.ne.0.d0)then
-                vrat=bsv_wgt/(ao2pi*born_wgt)
-                if(vrat.gt.vobmax)vobmax=vrat
-                if(vrat.lt.vobmin)vobmin=vrat
-                vNsumw=vNsumw+xnormsv
-                vAsumw=vAsumw+vrat*xnormsv
-                vSsumw=vSsumw+vrat**2*xnormsv
-                vNsumf=vNsumf+1.d0
-                vAsumf=vAsumf+vrat
-                vSsumf=vSsumf+vrat**2
-              else
-                if(bsv_wgt.ne.0.d0)nvtozero=nvtozero+1
-              endif
-            endif
-
-            born_wgt=0d0
-         endif
-
-         if (ComputePoles) then
-            call sborn(p_born,wgt1)
-            born_wgt=dble(wgt1(1))
-
-            print*,"           "
-            write(*,123)((p(i,j),i=0,3),j=1,nexternal)
-            xmu2=q2fact(1)
-            call getpoles(p,xmu2,double,single,fksprefact)
-            print*,"BORN",born_wgt!/conv
-            print*,"DOUBLE",double/born_wgt/ao2pi
-            print*,"SINGLE",single/born_wgt/ao2pi
-c            print*,"LOOP",virt_wgt!/born_wgt/ao2pi*2d0
-c            print*,"LOOP2",(virtcor+born_wgt*4d0/3d0-double*pi**2/6d0)
-c            stop
- 123        format(4(1x,d22.16))
-         endif
-
-
-      else
+      if (.not.(need_color_links_used.or.need_charge_links_used
+     #    .or.abrv.eq.'grid')) then
+C just return 0
          bsv_wgt=0d0
          virt_wgt=0d0
          born_wgt=0d0
@@ -4610,8 +4381,299 @@ c            stop
            wgtwnstmpmuf=0d0
            wgtwnstmpmur=0d0
          endif
+         goto 999
       endif
 
+c Consistency check -- call to set_cms_stuff() must be done prior to
+c entering this function
+      shattmp=2d0*dot(p(0,1),p(0,2))
+      if(abs(shattmp/shat-1.d0).gt.1.d-5)then
+         write(*,*)'Error in bornsoftvirtual: inconsistent shat'
+         write(*,*)shattmp,shat
+         stop
+      endif
+
+      call sborn(p_born,wgt1)
+
+c Born contribution:
+      bsv_wgt=wgt1
+      born_wgt=wgt1
+      virt_wgt=0d0
+
+      if (abrv.eq.'born' .or. abrv.eq.'grid') goto 549
+      if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
+     #       abrv.eq.'viLC') goto 547
+
+c Q contribution eq 5.5 and 5.6 of FKS
+      Q=0d0
+C loop over QCD/QED (iord=1,2 respectively)
+      do iord= 1,2
+C skype what we don't need
+         if ((iord.eq.1.and..not.need_color_links_used) .or.
+     #       (iord.eq.2.and..not.need_charge_links_used)) cycle
+         if (iord.eq.1) ipos_ord = qcd_pos
+         if (iord.eq.2) ipos_ord = qed_pos
+         do i=nincoming+1,nexternal
+            if (i.ne.i_fks .and. particle_type(i).ne.1 .and. 
+     #          pmass(i).eq.ZERO)then
+            !FIXIFIXIFXIX
+            write(*,*) 'FIXIFIXFIXFIX'
+               if (particle_type(i).eq.8) then
+                  aj=0
+               elseif(abs(particle_type(i)).eq.3) then
+                  aj=1
+               endif
+               Ej=p(0,i)
+               if (ipos_ord.eq.qcd_pos) then
+C                 set colour factors
+                  c_used = c(aj)
+                  gamma_used = gamma(aj)
+                  gammap_used = gammap(aj)
+               else if (ipos_ord.eq.qed_pos) then
+                  write(*,*) 'SETSETSET'
+C                 set charge factors
+                  c_used = 0d0!!!c(aj)
+                  gamma_used = 0d0!!!gamma(aj)
+                  gammap_used = 0d0!!!gammap(aj)
+               endif
+               if(abrv.eq.'novA')then
+c 2+3+4
+                  Q = Q
+     &             -2*dlog(shat/QES2)*dlog(xicut_used)*c_used
+     &             -( dlog(deltaO/2d0)*( gamma_used-
+     &                     2d0*c_used*dlog(2d0*Ej/xicut_used/sqrtshat) )
+     &               +2*dlog(xicut_used)**2*c_used )
+     &             +gammap_used
+     &             +2d0*c_used*dlog(2d0*Ej/sqrtshat)**2
+     &             -2d0*gamma_used*dlog(2d0*Ej/sqrtshat)
+               elseif(abrv.eq.'novB')then
+c 2+3+4_mu
+                  Q = Q
+     &             -2*dlog(shat/QES2)*dlog(xicut_used)*c_used
+     &             -( dlog(deltaO/2d0)*( gamma_used-
+     &                     2d0*c_used*dlog(2d0*Ej/xicut_used/sqrtshat) )
+     &               +2*dlog(xicut_used)**2*c_used )
+               elseif(abrv.eq.'viSA')then
+c 1                
+                  Q = Q
+     &              -dlog(shat/QES2)*( gamma_used-
+     &                      2d0*c_used*dlog(2d0*Ej/sqrtshat) )
+               elseif(abrv.eq.'viSB')then
+c 1+4_L
+                  Q = Q
+     &              -dlog(shat/QES2)*( gamma_used-
+     &                      2d0*c_used*dlog(2d0*Ej/sqrtshat) )
+     &             +gammap_used
+     &             +2d0*c_used*dlog(2d0*Ej/sqrtshat)**2
+     &             -2d0*gamma_used*dlog(2d0*Ej/sqrtshat)
+               elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
+     #                abrv.ne.'viLC')then
+c 1+2+3+4
+                  Q = Q+gammap_used
+     &              -dlog(shat*deltaO/2d0/QES2)*( gamma_used-
+     &                     2d0*c_used*dlog(2d0*Ej/xicut_used/sqrtshat) )
+     &              +2d0*c_used*( dlog(2d0*Ej/sqrtshat)**2
+     &              -dlog(xicut_used)**2 )
+     &              -2d0*gamma_used*dlog(2d0*Ej/sqrtshat)
+               else
+                  write(*,*)'Error in bornsoftvirtual'
+                  write(*,*)'abrv in Q:',abrv
+                  stop
+               endif
+            endif
+
+            if(abrv.eq.'novA'.or.abrv.eq.'novB')then
+c 2+3+4 or 2+3+4_mu
+               Q=Q-2*dlog(shat/QES2)*dlog(xicut_used)*c_used
+     &            -dlog(q2fact(i)/shat)*(
+     &              gamma_used+2d0*c_used*dlog(xicut_used) )
+            elseif(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
+c 1 or 1+4_L
+               Q=Q-dlog(shat/QES2)*gamma_used
+            elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
+     #             abrv.ne.'viLC')then
+c 1+2+3+4
+               Q=Q-dlog(q2fact(i)/QES2)*(
+     &               gamma_used+2d0*c_used*dlog(xicut_used))
+            else
+               write(*,*)'Error in bornsoftvirtual'
+               write(*,*)'abrv in Q:',abrv
+               stop
+            endif
+         enddo
+         if (ipos_ord.eq.qcd_pos) bsv_wgt =
+     $      bsv_wgt+aso2pi*Q*dble(ans_cnt(1,qcd_pos))
+         if (ipos_ord.eq.qed_pos) bsv_wgt =
+     $      bsv_wgt+aeo2pi*Q*dble(ans_cnt(1,qed_pos))
+
+      enddo
+
+
+c     If doing MC over helicities, must sum over the two
+c     helicity contributions for the Q-terms of collinear limit.
+ 547  continue
+      if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
+     #    abrv.eq.'viLC') goto 548
+c
+c I(reg) terms, eq 5.5 of FKS
+      contr=0d0
+      do i=1,fks_j_from_i(i_fks,0)
+         do j=1,i
+            m=fks_j_from_i(i_fks,i)
+            n=fks_j_from_i(i_fks,j)
+            if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)).and.
+     &           n.ne.i_fks.and.m.ne.i_fks) then
+c To be sure that color-correlated Borns work well, we need to have
+c *always* a call to sborn(p_born,wgt) just before. This is okay,
+c because there is a call above in this subroutine
+C wgt includes the gs/w^2 
+               call sborn_sf(p_born,m,n,wgt)
+               if (wgt.ne.0d0) then
+                  call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
+                  contr=contr+wgt*eikIreg
+               endif
+            endif
+         enddo
+      enddo
+
+C WARNING: THE FACTOR -2 BELOW COMPENSATES FOR THE MISSING -2 IN THE
+C COLOUR LINKED BORN -- SEE ALSO SBORNSOFT().
+C If the colour-linked Borns were normalized as reported in the paper
+c we should set
+c   bsv_wgt=bsv_wgt+ao2pi*contr  <-- DO NOT USE THIS LINE
+c
+      bsv_wgt=bsv_wgt-2*oneo8pi2*contr
+
+CCCCCC FROM HERE BELOW STILL TO BE FIXED (and uncommented)
+      write(*,*) 'FIXFIXFIX'
+ 548  continue
+c Finite part of one-loop corrections
+c convert to Binoth Les Houches Accord standards
+      virt_wgt=0d0
+      if (fold.eq.0) then
+         if ((ran2().le.virtual_fraction .and.
+     $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
+            call cpu_time(tBefore)
+            Call BinothLHA(p_born,born_wgt,virt_wgt)
+            call cpu_time(tAfter)
+            tOLP=tOLP+(tAfter-tBefore)
+            virtual_over_born=virt_wgt/(born_wgt*ao2pi)
+            virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
+            if (abrv.ne.'virt') then
+               virt_wgt=virt_wgt/virtual_fraction
+            endif
+            virt_wgt_save=virt_wgt
+c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
+         endif
+      elseif(fold.eq.1) then
+         virt_wgt=virt_wgt_save
+c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
+      endif
+      if (abrv(1:4).ne.'virt')
+     &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*ao2pi
+
+c eq.(MadFKS.C.13)
+      if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
+          write(*,*) 'FIX visA, visB'
+C        bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(shat/QES2)*
+C     #                       ao2pi*dble(wgt1(1))
+C      elseif(abrv.eq.'novA'.or.abrv.eq.'novB')then
+C        bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(q2fact(1)/shat)*
+C     #                       ao2pi*dble(wgt1(1))
+C      elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
+C     #       abrv.ne.'viLC')then
+C         bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(q2fact(1)/QES2)*
+C     #                       ao2pi*dble(wgt1(1))
+      endif
+c eq.(MadFKS.C.14)
+      if(abrv(1:2).ne.'vi')then
+        
+        if (dabs(log(q2fact(1)/scale**2)).gt.1d-6) then
+            ! fix the next line and remove the if statement (all points)
+            write(*,*) 'FIX muR!=muF'
+            bsv_wgt=bsv_wgt - 2*pi*beta0*wgtbpower*
+     #                       log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
+        endif
+      endif
+
+
+ 549  continue
+
+      if(doreweight)then
+        write(*,*) 'FIX REWEIGHT!!!!!'
+        ! the following lines have to be uncommented and fixed
+C        wgtwnstmpmuf=0.d0
+C        if(abrv.ne.'born' .and. abrv.ne.'grid')then
+C          if(abrv(1:2).eq.'vi')then
+C            wgtwnstmpmur=0.d0
+C          else
+C               do i=1,nincoming
+C               if (particle_type(i).ne.1)then
+C                  if (particle_type(i).eq.8) then
+C                    aj=0
+C                   elseif(abs(particle_type(i)).eq.3) then
+C                    aj=1
+C                   endif
+C                wgtwnstmpmuf=wgtwnstmpmuf-
+C     #                   ( gamma(aj)+2d0*c(aj)*dlog(xicut_used) )
+C              endif
+C               enddo
+C               wgtwnstmpmuf=ao2pi*wgtwnstmpmuf*dble(wgt1(1))
+C               wgtwnstmpmur=2*pi*beta0*wgtbpower*ao2pi*dble(wgt1(1))
+C             endif
+c bsv_wgt here always contains the Born; must subtract it, since 
+c we need the pure NLO terms only
+C             wgtnstmp=bsv_wgt+virt_wgt-born_wgt-
+C     #                wgtwnstmpmuf*log(q2fact(1)/QES2)-
+C     #                wgtwnstmpmur*log(scale**2/QES2)
+C           else
+C             wgtnstmp=0d0
+C             wgtwnstmpmur=0.d0
+C           endif
+         endif
+
+CCCC FROM HERE ON  SHOULD BE OK
+
+      if (abrv(1:2).eq.'vi') then
+         bsv_wgt=bsv_wgt-born_wgt
+
+         if(doVirtTest .and. iminmax.eq.0)then
+           if(born_wgt.ne.0.d0)then
+             vrat=bsv_wgt/(aso2pi*born_wgt)
+             if(vrat.gt.vobmax)vobmax=vrat
+             if(vrat.lt.vobmin)vobmin=vrat
+             vNsumw=vNsumw+xnormsv
+             vAsumw=vAsumw+vrat*xnormsv
+             vSsumw=vSsumw+vrat**2*xnormsv
+             vNsumf=vNsumf+1.d0
+             vAsumf=vAsumf+vrat
+             vSsumf=vSsumf+vrat**2
+           else
+             if(bsv_wgt.ne.0.d0)nvtozero=nvtozero+1
+           endif
+         endif
+
+         born_wgt=0d0
+      endif
+
+      if (ComputePoles) then
+         call sborn(p_born,wgt1)
+
+         print*,"           "
+         write(*,123)((p(i,j),i=0,3),j=1,nexternal)
+         xmu2=q2fact(1)
+         call getpoles(p,xmu2,double,single,fksprefact)
+         print*,"BORN",born_wgt!/conv
+         print*,"DOUBLE",double
+         print*,"SINGLE",single
+c         print*,"LOOP",virt_wgt!/born_wgt/ao2pi*2d0
+c         print*,"LOOP2",(virtcor+born_wgt*4d0/3d0-double*pi**2/6d0)
+c         stop
+ 123     format(4(1x,d22.16))
+      endif
+
+
+ 999  continue
       return
       end
 
@@ -5055,6 +5117,8 @@ c      include "fks.inc"
       common /c_born_cnt/ ans_cnt
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
+      double precision oneo8pi2
+      parameter(oneo8pi2 = 1d0/(8d0*pi**2))
       include "pmass.inc"
 c
       double=0.d0
@@ -5122,6 +5186,7 @@ c Colour and charge-linked Born terms
             m=fks_j_from_i(i_fks,i)
             n=fks_j_from_i(i_fks,j)
             if( m.ne.n .and. n.ne.i_fks .and. m.ne.i_fks )then
+C wgt includes the gs/w^2 factor
               call sborn_sf(p_born,m,n,wgt)
 c The factor -2 compensate for that missing in sborn_sf
               wgt=-2*wgt
@@ -5149,11 +5214,7 @@ c The factor -2 compensate for that missing in sborn_sf
             endif
           enddo
         enddo
-        if (ilink.eq.1) then
-          single=single+contr1*aso2pi
-        else
-          single=single+contr1*aeo2pi
-        endif
+        single=single+contr1*oneo8pi2
       enddo
 
 C restore need_color/charge_links

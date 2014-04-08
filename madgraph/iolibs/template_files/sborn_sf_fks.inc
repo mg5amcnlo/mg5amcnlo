@@ -1,6 +1,7 @@
 subroutine sborn%(iborn)d_sf(p_born,m,n,wgt)
           implicit none
           include "nexternal.inc"
+          include 'coupl.inc'        
           double precision p_born(0:3,nexternal-1), wgt
           integer nsqampso
           parameter (nsqampso = %(nsqorders)d)
@@ -20,7 +21,6 @@ C the charge-linked if it is a color singlet
       common /c_charges_born/charges_born
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
-      include 'coupl.inc'
       double precision pmass(nexternal), zero
       parameter (zero=0d0)
 
@@ -30,14 +30,14 @@ C the charge-linked if it is a color singlet
          write(*,*) 'ERROR IN SBORN_SF, both color and charged links are needed'
          stop
       endif
-C check if need color or charge links
+C check if need color or charge links, and include the gs/w**2 term here
       if (need_color_links) then
 %(iflines_col)s
-      wgt = wgt_col
+      wgt = wgt_col * g**2
       else if (need_charge_links) then
       chargeprod = charges_born(m) * charges_born(n)
       if ((m.le.nincoming.and.n.gt.nincoming) .or. (n.le.nincoming.and.m.gt.nincoming)) chargeprod = - chargeprod
-      wgt = dble(ans_cnt(1, qed_pos)) * chargeprod
+      wgt = dble(ans_cnt(1, qed_pos)) * chargeprod * dble(gal(1))**2
       endif
 
       return 

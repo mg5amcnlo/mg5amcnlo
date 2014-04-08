@@ -19,6 +19,7 @@ C VARIABLES
 C
       INTEGER I,J,K
       include 'orders.inc'
+      include 'coupl.inc'
       double precision ans_summed
       COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
