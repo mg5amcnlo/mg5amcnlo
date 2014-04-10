@@ -1609,7 +1609,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 wf_mother_arrays.extend([wf.to_array() for wf in struct_wfs])
                 if self.optimized_output:
                     wavefunctions.extend(loop_wfs)
-                    wf_mother_arrays.extend([wf.to_array() for wf  in loop_wfs])
+                    wf_mother_arrays.extend([wf.to_array() for wf in loop_wfs])
             else:
                 wavefunctionNumber = len(process.get('legs'))
                 if self.optimized_output:

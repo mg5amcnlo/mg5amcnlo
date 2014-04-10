@@ -1097,8 +1097,8 @@ call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
             replace_dict['actualize_ans']='\n'.join(actualize_ans)
         else:
             replace_dict['actualize_ans']=\
-            ("""C We add two powers to the reference value to loosen a bit the vanishing pole check.
-               IF(.NOT.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)).AND..NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),REF*(10.0d0**2),-1,H)) THEN
+            ("""C We add five powers to the reference value to loosen a bit the vanishing pole check.
+               IF(.NOT.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)).AND..NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),ABS(ANS(1))*(10.0d0**2),-1,H)) THEN
                  WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
                  WRITE(*,*) 'Finite contribution         = ',ANS(1)
                  WRITE(*,*) 'single pole contribution    = ',ANS(2)
@@ -1269,7 +1269,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop_optimized')
     # The option below controls wether one wants to group together in one single
     # CutTools/TIR call the loops with same denominator structure
-    group_loops=False
+    group_loops=True
     # TIR things
     all_tir=['pjfry','iregi']
     tir_available_dict={'pjfry':True,'iregi':True}

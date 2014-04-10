@@ -753,7 +753,11 @@ IF(CHECKPHASE.OR..NOT.HELDOUBLECHECKED) THEN
   RET_CODE_T=RET_CODE_T+2
   ACCURACY=-1.0d0
 ENDIF
-RET_CODE_U=0
+IF (RET_CODE_H.eq.4) THEN
+  RET_CODE_U=0
+ELSE
+  RET_CODE_U=1
+ENDIF
 
 C Reinitialize the default threshold if it was specified by the user
 IF (USER_STAB_PREC.GT.0.0d0) THEN

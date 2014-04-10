@@ -1053,17 +1053,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # Add minus sign to coupling of color octet Majorana
         # particles to g for FVI vertex
-        if self.get('is_loop') and self.get_spin_state_number()==-2:
-            print " I am in set_octet_majorana_coupling_sign with self.get_spin_state_number()==",self.get_spin_state_number()
         if self.get('color') == 8 and \
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8] and \
                not self.get('coupling')[0].startswith('-'):
-            if self.get('is_loop') and self.get_spin_state_number()==-2:
-                print " SEEETTING TO MINUS"
-            self.set('coupling', ['-%s' % c 
-                                              for c in self.get('coupling')])
+            self.set('coupling', ['-%s' % c for c in self.get('coupling')])
         
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
@@ -1306,13 +1301,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                            ['incoming', 'outgoing'])[0])
                 new_wf.set('is_part', not new_wf.get('is_part'))
             try:
-                # Because we are not using the number_to_wavefunction 
-                # list for loop wavefunctions, we cannot correct for the 
-                # side effect that would be introduced when substituting the
-                # new_wf in the diagram_wavefunctions by the one in wavefunctions.
-                # It is suboptimal not to do it, but nonetheless working (I think :/)
-                if new_wf.get('is_loop'):
-                   raise ValueError
                 # Use the copy in wavefunctions instead.
                 # Remove this copy from diagram_wavefunctions
                 new_wf_number = new_wf.get('number')
@@ -1330,12 +1318,21 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 wf_number = wf_number - 1
 
                 # Need to replace wavefunction in number_to_wavefunctions
-                # (in case this wavefunction is in another of the dicts)
+                # (in case this wavefunction is in another of the dicts) 
                 for n_to_wf_dict in number_to_wavefunctions:
                     if new_wf in n_to_wf_dict.values():
                         for key in n_to_wf_dict.keys():
                             if n_to_wf_dict[key] == new_wf:
                                 n_to_wf_dict[key] = new_wf          
+ 
+                if self.get('is_loop'):
+                    # fix a bug for the g g > go go g [virt=QCD]
+                    # when there is a wf dropped
+                    # but it is the mothers of the remaining wfs in diagram_wavefunctions
+                    for wf in diagram_wavefunctions:
+                        for i,mother_wf in enumerate(wf.get('mothers')):
+                            if mother_wf.get('number')==new_wf_number:
+                                wf.get('mothers')[i]=new_wf
 
             except ValueError:
                 pass

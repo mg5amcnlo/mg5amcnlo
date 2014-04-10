@@ -328,8 +328,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
             valid_diag = True
             i=i+1
             
-            if any([abs(i)!=1000021 for i in diag.get_loop_lines_pdgs()]):
-                valid_diag=False
+#            if any([abs(i)!=1000021 for i in diag.get_loop_lines_pdgs()]):
+#                valid_diag=False
             
             # Ex. 0: Chose a specific diagram number, here the 8th one for ex.     
 #            if i not in [1051,1084]:
