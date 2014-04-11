@@ -1098,12 +1098,12 @@ call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
         else:
             replace_dict['actualize_ans']=\
             ("""C We add five powers to the reference value to loosen a bit the vanishing pole check.
-               IF(.NOT.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)).AND..NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),ABS(ANS(1))*(10.0d0**2),-1,H)) THEN
-                 WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
-                 WRITE(*,*) 'Finite contribution         = ',ANS(1)
-                 WRITE(*,*) 'single pole contribution    = ',ANS(2)
-                 WRITE(*,*) 'double pole contribution    = ',ANS(3)
-               ENDIF""")%replace_dict
+C               IF(.NOT.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)).AND..NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),ABS(ANS(1))*(10.0d0**5),-1,H)) THEN
+C                 WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
+C                 WRITE(*,*) 'Finite contribution         = ',ANS(1)
+C                 WRITE(*,*) 'single pole contribution    = ',ANS(2)
+C                 WRITE(*,*) 'double pole contribution    = ',ANS(3)
+C               ENDIF""")%replace_dict
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
