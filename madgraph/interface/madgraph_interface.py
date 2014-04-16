@@ -5949,7 +5949,10 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             for mode, expr in particle.partial_widths.items():
                 tmp_mass = mass
                 for p in mode:
-                    tmp_mass -= abs(eval(str(p.mass), data))
+                    try:
+                        tmp_mass -= abs(eval(str(p.mass), data))
+                    except Exception:
+                        tmp_mass -= abs(eval("mdl_"+str(p.mass), data))
                 if tmp_mass <=0:
                     continue
 
