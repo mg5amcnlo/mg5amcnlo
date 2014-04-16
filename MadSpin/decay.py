@@ -2355,7 +2355,8 @@ class decay_all_events(object):
             for nb in range(125):
                 tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
                                         True, self.pid2width, self.pid2mass, BW_cut,self.Ecollider)
-
+                if not tree:
+                    continue
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
                     '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
                                                                   if i in tree))
