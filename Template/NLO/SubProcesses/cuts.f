@@ -121,6 +121,21 @@ c DeltaR and invariant mass cuts
                            return
                         endif
                      endif
+                     if (ipdg(i).eq.-ipdg(j)) then
+                        if (drll_sf.gt.0d0) then
+                           if (R2_04(p(0,i),p(0,j)).lt.drll_sf**2) then
+                              passcuts_user=.false.
+                              return
+                           endif
+                        endif
+                        if (mll_sf.gt.0d0) then
+                           if (invm2_04(p(0,i),p(0,j),1d0).lt.mll_sf**2)
+     $                          then
+                              passcuts_user=.false.
+                              return
+                           endif
+                        endif
+                     endif
                   endif
                enddo
             endif
