@@ -3908,6 +3908,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                                self._curr_model)
             else:
                 prefix = not '--noprefix' in args
+                if prefix:
+                    aloha.aloha_prefix='mdl_'
+                else:
+                    aloha.aloha_prefix=''
+                
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix)
                 except import_ufo.UFOImportError, error:
