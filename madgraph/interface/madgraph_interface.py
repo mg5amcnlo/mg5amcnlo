@@ -5303,8 +5303,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 1
 
             if res != 0 or error:
-                logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
+                        'executable (v3+). We will use fjcore instead. Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
                 self.options[args[0]] = None
                 self.history.pop()
             elif int(output.split('.')[0]) < 3:
