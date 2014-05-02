@@ -2944,7 +2944,7 @@ Integrated cross-section
                 raise aMCatNLOError, 'Event file not present in %s' % \
                         pjoin(self.me_dir, 'Events', self.run_name)
             # the output files
-            output_files.append('mactnlo_run.log')
+            output_files.append('mcatnlo_run.log')
             if args[1] == 'HEP':
                 if shower in ['PYTHIA8', 'HERWIGPP']:
                     output_files.append('events.hepmc.gz')
