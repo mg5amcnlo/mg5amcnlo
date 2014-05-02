@@ -2347,22 +2347,34 @@ Integrated cross-section
             hep_file = '%s_%s_0.%s.gz' % \
                     (pjoin(os.path.dirname(evt_file), 'events'), shower, ext)
             count = 0
-            while os.path.exists(hep_file):
+            # check existing results with or without event splitting
+            while os.path.exists(hep_file) or \
+                  os.path.exists(hep_file.replace('.%s.gz' % ext, '__1.%s.gz' % ext)) :
                 count +=1
                 hep_file = '%s_%s_%d.%s.gz' % \
                     (pjoin(os.path.dirname(evt_file), 'events'), shower, count, ext)
 
             try:
-                files.mv(os.path.join(rundir, 'events.%s.gz' % ext), hep_file) 
+                if self.shower_card['nsplit_jobs'] == 1:
+                    files.mv(os.path.join(rundir, 'events.%s.gz' % ext), hep_file) 
+                    message = ('The file %s has been generated. \nIt contains showered' + \
+                     ' and hadronized events in the %s format obtained' + \
+                     ' showering the parton-level event file %s.gz with %s') % \
+                     (hep_file, hep_format, evt_file, shower)
+                else:
+                    hep_list = []
+                    for i in range(self.shower_card['nsplit_jobs']):
+                        hep_list.append(hep_file.replace('.%s.gz' % ext, '__%d.%s.gz' % (i + 1, ext)))
+                        files.mv(os.path.join(rundir, 'events_%d.%s.gz' % (i + 1, ext)), hep_list[-1]) 
+                    message = ('The files \n%s\nhave been generated. \nThey contain showered' + \
+                     ' and hadronized events in the %s format obtained' + \
+                     ' showering the (split) parton-level event file %s.gz with %s') % \
+                     ('\n'.join(hep_list), hep_format, evt_file, shower)
+
             except OSError, IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
 
-            message = ('The file %s has been generated. \nIt contains showered' + \
-                    ' and hadronized events in the %s format obtained' + \
-                    ' showering the parton-level event file %s.gz with %s') % \
-                    (hep_file, hep_format, evt_file, shower)
-            
         else:
             #copy the topdrawer file(s) back in events
             top_tar = tarfile.TarFile(pjoin(rundir, 'topfiles.tar'))
