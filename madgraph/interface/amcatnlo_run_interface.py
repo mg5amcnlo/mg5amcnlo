@@ -2229,14 +2229,15 @@ Integrated cross-section
             open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc'), 'w').write(\
                     '\n'.join(fjwrapper_lines) + '\n')
 
+        extrapaths = self.shower_card['extrapaths'].split()
+        if shower == 'HERWIGPP':
+            extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
+
         if 'LD_LIBRARY_PATH' in os.environ.keys():
             ldlibrarypath = os.environ['LD_LIBRARY_PATH']
         else:
             ldlibrarypath = ''
-        for path in self.shower_card['extrapaths'].split():
-            ldlibrarypath += ':%s' % path
-        if shower == 'HERWIGPP':
-            ldlibrarypath += ':%s' % pjoin(self.options['hepmc_path'], 'lib')
+        ldlibrarypath += ':' + ':'.join(extrapaths)
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
 
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
@@ -2247,12 +2248,14 @@ Integrated cross-section
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
+
         exe = 'MCATNLO_%s_EXE' % shower
         if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
             not os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe')):
             print open(mcatnlo_log).read()
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
+
         # create an empty dir where to run
         count = 1
         while os.path.isdir(pjoin(self.me_dir, 'MCatNLO', 'RUN_%s_%d' % \
@@ -2268,10 +2271,11 @@ Integrated cross-section
         if shower != 'PYTHIA8':
             files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
-        # special treatment for pythia8
         else:
+        # special treatment for pythia8
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
+            files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -2283,34 +2287,34 @@ Integrated cross-section
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
 
         evt_name = os.path.basename(evt_file)
-        files.ln(os.path.split(evt_file)[0], rundir, self.run_name)
-        # special treatment for pythia8
-        if shower=='PYTHIA8':
-            open(pjoin(rundir, exe), 'w').write(\
-                 '#!/bin/bash\nsource %s\n./Pythia8.exe Pythia8.cmd\n'\
-                % pjoin(self.options['pythia8_path'], 'examples', 'config.sh'))
-            os.system('chmod  +x %s' % pjoin(rundir,exe))
-            misc.call(['./%s' % exe], cwd = rundir, 
-                stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
+        files.ln(evt_file, rundir, 'events.lhe')
+
+        if not self.shower_card['analyse']:
+            # an hep/hepmc file as output
+            out_id = 'HEP'
         else:
-            misc.call(['./%s' % exe], cwd = rundir, 
-                stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
-                stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
-        
+            # one or more .top file(s) as output
+            out_id = 'TOP'
+
+        # write the executable
+        open(pjoin(rundir, 'shower.sh'), 'w').write(\
+                open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
+                % {'extralibs': ':'.join(extrapaths)})
+
+        args = [shower, out_id, self.run_name]
+
+        subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
+
+        self.run_exe('shower.sh', args, 'shower', cwd=rundir)
+        self.njobs = 1
+        self.wait_for_complete('shower')
+
         # now collect the results
         message = ''
         warning = ''
-        to_gzip = []
+        to_gzip = [evt_file]
         if not self.shower_card['analyse']:
             #copy the showered stdhep/hepmc file back in events
-            showerfile_dict = \
-                {'HERWIG6': pjoin(rundir, self.run_name, evt_name + '.hep'),
-                 'PYTHIA6Q': pjoin(rundir, self.run_name, evt_name + '.hep'),
-                 'PYTHIA6PT': pjoin(rundir, self.run_name, evt_name + '.hep'),
-                 'PYTHIA8': pjoin(rundir, 'Pythia8.hep'),
-                 'HERWIGPP': pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')}
             if shower in ['PYTHIA8', 'HERWIGPP']:
                 hep_format = 'HEPMC'
                 ext = 'hepmc'
@@ -2318,30 +2322,31 @@ Integrated cross-section
                 hep_format = 'StdHEP'
                 ext = 'hep'
 
-            hep_file = '%s_%s_0.%s' % (evt_file[:-4], shower, ext)
+            hep_file = '%s_%s_0.%s.gz' % \
+                    (pjoin(os.path.dirname(evt_file), 'events'), shower, ext)
             count = 0
-            while os.path.exists(hep_file + '.gz'):
+            while os.path.exists(hep_file):
                 count +=1
-                hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
+                hep_file = '%s_%s_%d.%s.gz' % \
+                    (pjoin(os.path.dirname(evt_file), 'events'), shower, count, ext)
 
             try:
-                files.mv(showerfile_dict[shower], hep_file) 
+                files.mv(os.path.join(rundir, 'events.%s.gz' % ext), hep_file) 
             except OSError, IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
 
-            to_gzip.extend([evt_file, hep_file])
-
-            message = ('The file %s.gz has been generated. \nIt contains showered' + \
+            message = ('The file %s has been generated. \nIt contains showered' + \
                     ' and hadronized events in the %s format obtained' + \
                     ' showering the parton-level event file %s.gz with %s') % \
                     (hep_file, hep_format, evt_file, shower)
             
         else:
             #copy the topdrawer file(s) back in events
-            topfiles = [n for n in os.listdir(pjoin(rundir)) \
-                                            if n.lower().endswith('.top')]
-            to_gzip.append(evt_file)
+            top_tar = tarfile.TarFile(pjoin(rundir, 'topfiles.tar'))
+            topfiles = top_tar.getnames()
+            top_tar.extractall(path = rundir) 
+
             if not topfiles:
                 waarning = 'No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir
@@ -2372,7 +2377,7 @@ Integrated cross-section
                         evt_file, shower)
                 
         # Now arxiv the shower card used if RunMaterial is present
-        run_dir_path = pjoin(rundir,self.run_name)
+        run_dir_path = pjoin(rundir, self.run_name)
         if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
             misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
             files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
@@ -2562,7 +2567,7 @@ Integrated cross-section
             mass = float(line.split()[1])
             mcmass_dict[pdg] = mass
 
-        content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
+        content = 'EVPREFIX=%s\n' % pjoin(os.path.split(evt_file)[1])
         content += 'NEVENTS=%s\n' % nevents
         content += 'NEVENTS_TOT=%s\n' % self.banner.get_detail('run_card', 'nevents')
         content += 'MCMODE=%s\n' % shower
@@ -2883,8 +2888,11 @@ Integrated cross-section
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
                                 min([1, self.njobs - self.ijob]),
                                 self.ijob, run_type), level='parton')
+
+        #this is for the cluster/multicore run
         elif 'reweight' in exe:
-            #Find the correct PDF input file
+            # a reweight run
+            # Find the correct PDF input file
             input_files, output_files = [], []
             pdfinput = self.get_pdf_input_filename()
             if os.path.exists(pdfinput):
@@ -2898,8 +2906,8 @@ Integrated cross-section
             return self.cluster.submit2(exe, args, cwd=cwd, 
                              input_files=input_files, output_files=output_files) 
 
-        #this is for the cluster/multicore run
         elif 'ajob' in exe:
+            # the 'standard' amcatnlo job
             # check if args is a list of string 
             if type(args[0]) == str:
                 input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
@@ -2910,6 +2918,45 @@ Integrated cross-section
                 # keep track of folders and arguments for splitted evt gen
                 if len(args) == 4 and '_' in output_files[-1]:
                     self.split_folders[pjoin(cwd,output_files[-1])] = [exe] + args
+
+        elif 'shower' in exe:
+            # a shower job
+            # args are [shower, output(HEP or TOP), run_name]
+            # cwd is the shower rundir, where the executable are found
+            input_files, output_files = [], []
+            shower = args[0]
+            # the input files
+            if shower == 'PYTHIA8':
+                input_files.append(pjoin(cwd, 'Pythia8.exe'))
+                input_files.append(pjoin(cwd, 'Pythia8.cmd'))
+                input_files.append(pjoin(cwd, 'config.sh'))
+            else:
+                input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
+                input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
+            if shower == 'HERWIGPP':
+                input_files.append(pjoin(cwd, 'Herwig++'))
+
+            if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')):
+                input_files.append(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz'))
+            elif os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')):
+                input_files.append(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe'))
+            else:
+                raise aMCatNLOError, 'Event file not present in %s' % \
+                        pjoin(self.me_dir, 'Events', self.run_name)
+            # the output files
+            output_files.append('mactnlo_run.log')
+            if args[1] == 'HEP':
+                if shower in ['PYTHIA8', 'HERWIGPP']:
+                    output_files.append('events.hepmc.gz')
+                else:
+                    output_files.append('events.hep.gz')
+            elif args[1] == 'TOP':
+                output_files.append('topfiles.tar')
+            else:
+                raise aMCatNLOError, 'Not a valid output argument for shower job :  %d' % args[1]
+            #submitting
+            self.cluster.submit2(exe, args, cwd=cwd, 
+                         input_files=input_files, output_files=output_files)
 
         else:
             return self.cluster.submit(exe, args, cwd=cwd)
