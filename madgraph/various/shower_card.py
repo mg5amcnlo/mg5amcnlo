@@ -34,7 +34,7 @@ class ShowerCard(dict):
     for i in range(1,100):
         dmstring='dm_'+str(i)
         string_vars.append(dmstring)
-    int_vars = ['maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
+    int_vars = ['nsplit_jobs', 'maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
     float_vars = ['maxerrs', 'lambda_5', 'b_mass']
 
     # names_dict has the following structure:

@@ -5,10 +5,22 @@ SHOWER=$1
 #TOP-> top
 OUTPUT=$2
 RUN_NAME=$3
+NFILE=$4
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%(extralibs)s
 
-# this is for a cluster run
+# if one is splitting file cd to a new dir and link all files here
+if [[ "$NFILE" != "" ]]; then
+    mkdir run_$NFILE
+    cd run_$NFILE
+    mv ../events_$NFILE.lhe events.lhe
+    if [ $SHOWER == "PYTHIA8" ] ; then
+        cp ../Pythia8.exe ../Pythia8.cmd ../config.sh .
+    else
+        cp ../MCATNLO_$SHOWER\_EXE ../MCATNLO_$SHOWER\_input .
+    fi
+fi
+
 if [ -e events.lhe.gz ] ; then
     gunzip $RUN_NAME/events.lhe.gz
 fi
@@ -23,20 +35,36 @@ fi
 
 if [ "$OUTPUT" == "HEP" ] ; then
     # hep or hepmc output
+    # this is for the final filename
+    if [[ "$NFILE" != "" ]]; then
+        NAME="../events_$NFILE"
+    else
+        NAME="events"
+    fi
     # at the end a file called events.hep.gz or events.hepmc.gz will be delivered
     if [ "$SHOWER" == "HERWIG6" ] || [ "$SHOWER" == "PYTHIA6Q" ] || [ "$SHOWER" == "PYTHIA6PT" ] ; then
-        mv events.lhe.hep events.hep
-        gzip events.hep
+        mv events.lhe.hep $NAME.hep
+        gzip $NAME.hep
     elif [ "$SHOWER" == "HERWIGPP" ] ; then
-        mv MCATNLO_HERWIGPP.hepmc events.hepmc
-        gzip events.hepmc
+        mv MCATNLO_HERWIGPP.hepmc $NAME.hepmc
+        gzip $NAME.hepmc
     elif [ "$SHOWER" == "PYTHIA8" ] ; then
-        mv Pythia8.hep events.hepmc
-        gzip events.hepmc
+        mv Pythia8.hep $NAME.hepmc
+        gzip $NAME.hepmc
     fi
 
 elif [ "$OUTPUT" == "TOP" ] ; then
-    #top, just tar all the topfiles which are found
-    tar -cf topfiles.tar *.top
+    #top output 
+    # this is for the final filename
+    if [[ "$NFILE" != "" ]]; then
+        NAME="../topfiles_$NFILE"
+    else
+        NAME="topfiles"
+    fi
+    # just tar all the topfiles which are found
+    tar -cf $NAME.tar *.top
 fi
 
+if [[ "$NFILE" != "" ]]; then
+    mv mcatnlo_run.log ../mcatnlo_run_$NFILE.log
+fi
