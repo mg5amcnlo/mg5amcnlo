@@ -46,3 +46,15 @@ h1 = Particle(pdg_code = 9000006,
               GhostNumber = 0,
               LeptonNumber = 0)
 
+A = Particle(pdg_code = 22,
+             name = 'A',
+             antiname = 'A',
+             spin = 3,
+             color = 1,
+             mass = Param.ZERO,
+             width = Param.ZERO,
+             texname = 'A',
+             antitexname = 'A',
+             charge = 0,
+             GhostNumber = 0,
+             LeptonNumber = 0)
