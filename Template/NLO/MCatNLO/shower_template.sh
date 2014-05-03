@@ -13,7 +13,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%(extralibs)s
 if [[ "$NFILE" != "" ]]; then
     mkdir run_$NFILE
     cd run_$NFILE
-    mv ../events_$NFILE.lhe events.lhe
+    cp -H ../events_$NFILE.lhe events.lhe
     if [ $SHOWER == "PYTHIA8" ] ; then
         cp ../Pythia8.exe ../Pythia8.cmd ../config.sh .
     else
@@ -57,12 +57,12 @@ elif [ "$OUTPUT" == "TOP" ] ; then
     #top output 
     # this is for the final filename
     if [[ "$NFILE" != "" ]]; then
-        NAME="../topfiles_$NFILE"
+        NAME="../topfile_$NFILE"
     else
-        NAME="topfiles"
+        NAME="topfile"
     fi
     # just tar all the topfiles which are found
-    tar -cf $NAME.tar *.top
+    tar -cf $NAME.tar *.top *.TOP > tarlog.txt 2>&1
 fi
 
 if [[ "$NFILE" != "" ]]; then

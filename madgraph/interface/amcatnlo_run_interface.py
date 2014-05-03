@@ -2276,6 +2276,7 @@ Integrated cross-section
             misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'))
             p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'split_events')],
                             stdin=subprocess.PIPE,
+                            stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
                             cwd=pjoin(self.me_dir, 'Events', self.run_name))
             p.communicate(input = 'events.lhe\n%d\n' % self.shower_card['nsplit_jobs'])
             event_files = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
@@ -2335,7 +2336,7 @@ Integrated cross-section
         message = ''
         warning = ''
         to_gzip = [evt_file]
-        if not self.shower_card['analyse']:
+        if out_id == 'HEP':
             #copy the showered stdhep/hepmc file back in events
             if shower in ['PYTHIA8', 'HERWIGPP']:
                 hep_format = 'HEPMC'
@@ -2347,6 +2348,8 @@ Integrated cross-section
             hep_file = '%s_%s_0.%s.gz' % \
                     (pjoin(os.path.dirname(evt_file), 'events'), shower, ext)
             count = 0
+
+            # find the first available name for the output:
             # check existing results with or without event splitting
             while os.path.exists(hep_file) or \
                   os.path.exists(hep_file.replace('.%s.gz' % ext, '__1.%s.gz' % ext)) :
@@ -2366,32 +2369,46 @@ Integrated cross-section
                     for i in range(self.shower_card['nsplit_jobs']):
                         hep_list.append(hep_file.replace('.%s.gz' % ext, '__%d.%s.gz' % (i + 1, ext)))
                         files.mv(os.path.join(rundir, 'events_%d.%s.gz' % (i + 1, ext)), hep_list[-1]) 
-                    message = ('The files \n%s\nhave been generated. \nThey contain showered' + \
+                    message = ('The following files have been generated:\n  %s\nThey contain showered' + \
                      ' and hadronized events in the %s format obtained' + \
                      ' showering the (split) parton-level event file %s.gz with %s') % \
-                     ('\n'.join(hep_list), hep_format, evt_file, shower)
+                     ('\n  '.join(hep_list), hep_format, evt_file, shower)
 
             except OSError, IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
 
-        else:
+        elif out_id == 'TOP':
             #copy the topdrawer file(s) back in events
-            top_tar = tarfile.TarFile(pjoin(rundir, 'topfiles.tar'))
-            topfiles = top_tar.getnames()
-            top_tar.extractall(path = rundir) 
+            topfiles = []
+            top_tars = [tarfile.TarFile(f) for f in glob.glob(pjoin(rundir, 'topfile*.tar'))]
+            for top_tar in top_tars:
+                topfiles.extend(top_tar.getnames())
+
+            # safety check
+            if len(top_tars) != self.shower_card['nsplit_jobs']:
+                raise aMCatNLOError('%d job(s) expected, %d file(s) found' % \
+                                     (self.shower_card['nsplit_jobs'], len(top_tars)))
+
+            # find the first available name for the output:
+            # check existing results with or without event splitting
+            filename = 'plot_%s_%d_' % (shower, 1)
+            count = 1
+            while os.path.exists(pjoin(self.me_dir, 'Events', 
+                      self.run_name, '%s0.top' % filename)) or \
+                  os.path.exists(pjoin(self.me_dir, 'Events', 
+                      self.run_name, '%s0__1.top' % filename)):
+                count += 1
+                filename = 'plot_%s_%d_' % (shower, count)
 
             if not topfiles:
+                # if no topfiles are found just warn the user
                 waarning = 'No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir
 
-	    else:    
-                filename = 'plot_%s_%d_' % (shower, 1)
-                count = 1
-                while os.path.exists(pjoin(self.me_dir, 'Events', 
-                    self.run_name, '%s0.top' % filename)):
-                    count += 1
-                    filename = 'plot_%s_%d_' % (shower, count)
+            elif self.shower_card['nsplit_jobs'] == 1:
+                # only one job for the shower
+                top_tars[0].extractall(path = rundir) 
                 plotfiles = [] 
                 for i, file in enumerate(topfiles):
                     plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
@@ -2408,6 +2425,23 @@ Integrated cross-section
                 message = ('The %s %s %s been generated, with histograms in the' + \
                         ' TopDrawer format, obtained by showering the parton-level' + \
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
+                        evt_file, shower)
+            else:
+                # many jobs for the shower have been run
+                topfiles_set = set(topfiles)
+                plotfiles = [] 
+                for j, top_tar in enumerate(top_tars):
+                    top_tar.extractall(path = rundir) 
+                    for i, file in enumerate(topfiles_set):
+                        plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
+                                  '%s%d__%d.top' % (filename, i, j + 1))
+                        files.mv(pjoin(rundir, file), plotfile) 
+                        plotfiles.append(plotfile)
+
+                message = ('The following files have been generated:\n  %s\n' + \
+                        'They contain histograms in the' + \
+                        ' TopDrawer format, obtained by showering the parton-level' + \
+                        ' file %s.gz with %s') % ('\n  '.join(plotfiles), \
                         evt_file, shower)
                 
         # Now arxiv the shower card used if RunMaterial is present
@@ -2593,8 +2627,11 @@ Integrated cross-section
         nevents = self.shower_card['nevents']
         init_dict = self.get_init_dict(evt_file)
 
-        if nevents < 0 or nevents > self.banner.get_detail('run_card', 'nevents'):
-            nevents = self.banner.get_detail('run_card', 'nevents')
+        if nevents < 0 or \
+           nevents > int(self.banner.get_detail('run_card', 'nevents')) /\
+                         self.shower_card['nsplit_jobs']:
+            nevents = int(self.banner.get_detail('run_card', 'nevents')) /\
+                      self.shower_card['nsplit_jobs']
         mcmass_dict = {}
         for line in [l for l in self.banner['montecarlomasses'].split('\n') if l]:
             pdg = int(line.split()[0])
@@ -2602,8 +2639,9 @@ Integrated cross-section
             mcmass_dict[pdg] = mass
 
         content = 'EVPREFIX=%s\n' % pjoin(os.path.split(evt_file)[1])
-        content += 'NEVENTS=%s\n' % nevents
-        content += 'NEVENTS_TOT=%s\n' % self.banner.get_detail('run_card', 'nevents')
+        content += 'NEVENTS=%d\n' % nevents
+        content += 'NEVENTS_TOT=%d\n' % (int(self.banner.get_detail('run_card', 'nevents')) /\
+                                             self.shower_card['nsplit_jobs'])
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
@@ -2658,7 +2696,6 @@ Integrated cross-section
             content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
         if self.options['hepmc_path']:
             content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
-
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
         output.write(content)
