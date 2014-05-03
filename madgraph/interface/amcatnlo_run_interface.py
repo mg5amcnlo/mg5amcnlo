@@ -1290,7 +1290,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         folder_names['noshowerLO'] = folder_names['aMC@LO']
         job_dict = {}
         p_dirs = [d for d in \
-                open(pjoin(self.me_dir, 'SubPorcesses', 'subproc.mg')).read().split('\n') if d]
+                open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
         #find jobs and clean previous results
         if not options['only_generation'] and not options['reweightonly']:
             self.update_status('Cleaning previous results', level=None)
@@ -3225,7 +3225,7 @@ Integrated cross-section
 
         #directory where to compile exe
         p_dirs = [d for d in \
-                open(pjoin(self.me_dir, 'SubPorcesses', 'subproc.mg')).read().split('\n') if d]
+                open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
         # create param_card.inc and run_card.inc
         self.do_treatcards('', amcatnlo=True)
         # if --nocompile option is specified, check here that all exes exists. 
