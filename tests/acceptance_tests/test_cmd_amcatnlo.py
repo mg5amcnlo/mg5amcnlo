@@ -410,7 +410,8 @@ class TestMECmdShell(unittest.TestCase):
 
     def test_generate_events_shower_scripts(self):
         """test if the generate_events and successively the shower script in 
-        the bin directory works fine"""
+        the bin directory works fine.
+        Also check the splitting of the shower for bot hep and top output"""
         
         self.generate_production()
         # to check that the cleaning of files work well
@@ -437,6 +438,29 @@ class TestMECmdShell(unittest.TestCase):
                         os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path))
         self.assertTrue(os.path.getsize('%s/Events/run_01/events_HERWIG6_1.hep.gz' % self.path) > \
                         os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path))
+
+        #splitting of the shower
+        # 1) hep output
+        shower_card = open('%s/Cards/shower_card.dat' % self.path).read()
+        shower_card = shower_card.replace('nsplit_jobs= 1', 'nsplit_jobs= 4')
+        open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
+        misc.call([pjoin('.','bin','shower'), 'run_01', '-f'], cwd='%s' % self.path,
+                stdout = open(os.devnull, 'w'))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__1.hep.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__2.hep.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__3.hep.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__4.hep.gz' % self.path))
+
+        # 2) top output
+        shower_card = shower_card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   =')  
+        shower_card = shower_card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwan_pp_lvl.o mcatnlo_hbook_gfortran8.o')  
+        open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
+        misc.call([pjoin('.','bin','shower'), 'run_01', '-f'], cwd='%s' % self.path,
+                stdout = open(os.devnull, 'w'))
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__1.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__2.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__3.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__4.top' % self.path))
 
 
     def test_generate_events_name(self):
