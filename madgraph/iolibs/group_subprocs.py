@@ -359,7 +359,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "Argument to group_amplitudes must be AmplitudeList"
 
-        if criteria in ['matrix', 'standalone','pythia8','standalone_cpp']:
+        if criteria in ['matrix', 'standalone','pythia8','standalone_cpp','matchbox']:
             criteria = 'madevent'
         assert criteria in ['madevent', 'madweight']
 

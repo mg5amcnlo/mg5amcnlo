@@ -974,6 +974,18 @@ class ProcessExporterMatchbox(ProcessExporterCPP):
     # Static variables (for inheritance)
     process_class_template = 'matchbox_class.inc'
     single_process_template = 'matchbox_matrix.inc'
+    process_definition_template = 'matchbox_function_definitions.inc'
+
+    def get_initProc_lines(self, matrix_element, color_amplitudes):
+        """Get initProc_lines for function definition for Pythia 8 .cc file"""
+
+        initProc_lines = []
+
+        initProc_lines.append("// Set external particle masses for this matrix element")
+
+        for part in matrix_element.get_external_wavefunctions():
+            initProc_lines.append("mME.push_back(pars->%s);" % part.get('mass'))
+        return "\n".join(initProc_lines)
 
 
     def get_class_specific_definition_matrix(self, converter, matrix_element):
