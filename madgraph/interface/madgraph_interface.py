@@ -3416,6 +3416,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           "Multiparticle %s is or-multiparticle" % part_name + \
                           " which can be used only for required s-channels"
                 mylegids.extend(self._multiparticles[part_name])
+            elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():
+                if int(part_name) in self._curr_model.get('particle_dict'):
+                    mylegids.append(int(part_name))
+                else:
+                    raise self.InvalidCmd, \
+                      "No pdg_code %s in model" % part_name
             else:
                 mypart = self._curr_model['particles'].get_copy(part_name)
                 if mypart:
