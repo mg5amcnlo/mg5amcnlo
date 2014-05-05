@@ -1217,6 +1217,12 @@ This will take effect only in a NEW terminal
             if args[1] not in MadGraphCmd._OLP_supported:
                 raise self.InvalidCmd('timeout values should be a integer')
 
+        if args[0].lower() in ['ewscheme']:
+            if not self._curr_model:
+                raise self.InvalidCmd("ewscheme acts on the current model please load one first.")
+            if args[1] not in ['external']:
+                raise self.InvalidCmd('Only valid ewscheme is "external". To restore default, please re-import the model.')
+
 
     def check_open(self, args):
         """ check the validity of the line """
@@ -2084,7 +2090,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         # Format
         if len(args) == 1:
-            opts = self.options.keys()
+            opts = list(set(self.options.keys() + self._set_options))
             return self.list_completion(text, opts)
 
         if len(args) == 2:
@@ -2093,6 +2099,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
+            elif args[1].lower() == 'ewscheme':
+                return self.list_completion(text, ["external"])
             elif args[1] == 'gauge':
                 return self.list_completion(text, ['unitary', 'Feynman','default'])
             elif args[1] == 'OLP':
@@ -2329,7 +2337,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'fortran_compiler',
                     'loop_optimized_output',
                     'complex_mass_scheme',
-                    'gauge']
+                    'gauge',
+                    'EWscheme']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
     _OLP_supported = ['MadLoop', 'GoSam']
 
@@ -5080,7 +5089,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             logging.getLogger('madevent').setLevel(level)
             if log:
                 logger.info('set output information to level: %s' % level)
-
+        elif args[0].lower() == "ewscheme":
+            logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
+                                              (self._curr_model.get('name'), args[1]))
+            logger.info("Importing a model will restore the default scheme")
+            self._curr_model.change_electroweak_mode(args[1])
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]]
             self.options[args[0]] = eval(args[1])
