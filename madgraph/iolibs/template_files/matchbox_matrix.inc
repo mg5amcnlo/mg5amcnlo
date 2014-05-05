@@ -4,10 +4,7 @@
 # 1 "/Users/omatt/Downloads/cpp_process_matrix.inc"
 
 
-std::complex<double> %(process_class_name)s::jamp(int i) {
-  const int ncolor = %(ncolor)d;
-  std::complex<double> jamp[ncolor];
-%(jamp_lines)s
+std::complex<double> %(process_class_name)s::get_jamp(int i) {
 return jamp[i];
 }
 

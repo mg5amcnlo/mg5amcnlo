@@ -7,12 +7,12 @@
 %(process_lines)s
 //--------------------------------------------------------------------------
 
-class CPPProcess
+class %(ClassName)s
 {
 public:
 
   // Constructor.
-  CPPProcess() {}
+  %(ClassName)s() {}
 
   // Initialize process. 
   virtual void initProc(string param_card_name); 
@@ -21,7 +21,7 @@ public:
   void setMomenta(vector<double*>& momenta){p = momenta;}
 
   // Get amplitude for one colorflow
-  std::complex<double> jamp(int T);
+  std::complex<double> get_jamp(int T);
   
   // Info on number of colorflows
   int NCol();
@@ -47,5 +47,8 @@ public:
 
   // vector with momenta (to be changed each event)
   vector<double*> p;
+
+  // Color flows, used when selecting color
+  std::complex<double> jamp[%(ncolor)d];
 
 };

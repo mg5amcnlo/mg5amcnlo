@@ -433,6 +433,11 @@ class ProcessExporterCPP(object):
         replace_dict['process_code'] = self.process_number
         replace_dict['nexternal'] = self.nexternal
         replace_dict['nprocesses'] = self.nprocesses
+        
+        
+        color_amplitudes = self.matrix_elements[0].get_color_amplitudes()
+        # Number of color flows
+        replace_dict['ncolor'] = len(color_amplitudes)
 
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
@@ -908,7 +913,7 @@ class ProcessExporterCPP(object):
                 common_factor = True
                 global_factor = diff_fracs[0]
                 res = res + '%s(' % coeff(1, global_factor, False, 0)
-
+	    print coeff_list
             for (coefficient, amp_number) in coeff_list:
                 if common_factor:
                     res = res + "%samp[%d]" % (coeff(coefficient[0],
@@ -999,6 +1004,28 @@ class ProcessExporterMatchbox(ProcessExporterCPP):
                                      
         return converter
         
+    def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
+        """Get sigmaKin_process for all subprocesses for MAtchbox .cc file"""
+
+        ret_lines = []
+        if self.single_helicities:
+            ret_lines.append(\
+                "void %s::calculate_wavefunctions(const int perm[], const int hel[]){" % \
+                class_name)
+            ret_lines.append("// Calculate wavefunctions for all processes")
+            ret_lines.append(self.get_calculate_wavefunctions(\
+                self.wavefunctions, self.amplitudes))
+	    ret_lines.append(self.get_jamp_lines(color_amplitudes[0]))
+            ret_lines.append("}")
+        else:
+            ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
+                                  for i, me in enumerate(self.matrix_elements)])
+        ret_lines.extend([self.get_matrix_single_process(i, me,
+                                                         color_amplitudes[i],
+                                                         class_name) \
+                                for i, me in enumerate(self.matrix_elements)])
+        return "\n".join(ret_lines)
+
 
     def get_color_string_lines(self, matrix_element):
         """Return the color matrix definition lines for this matrix element. Split
