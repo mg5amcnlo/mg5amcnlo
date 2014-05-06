@@ -823,6 +823,9 @@ c From dsample_fks
       common/mc_int2/volh,mc_hel,ihel,fillh
       double precision double_check(nintegrals)
       save double_check
+      logical foundB(2)
+      integer nFKSprocessBorn(2)
+      save nFKSprocessBorn,foundB
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          if (ickkw.eq.4) then
@@ -832,6 +835,8 @@ c Find the nFKSprocess for which we compute the Born-like contributions
          endif
          firsttime=.false.
          maxproc_save=0
+         foundB(1)=.false.
+         foundB(2)=.false.
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
 c Set Bjorken x's to some random value before calling the dlum() function
@@ -843,6 +848,17 @@ c Set Bjorken x's to some random value before calling the dlum() function
                call reweight_settozero()
                call reweight_settozero_all(nFKSprocess*2,.true.)
                call reweight_settozero_all(nFKSprocess*2-1,.true.)
+            endif
+            if (sum.eq.0) then
+               if (particle_type(i_fks).eq.8) then
+                  if (j_fks.le.nincoming) then
+                     foundB(1)=.true.
+                     nFKSprocessBorn(1)=nFKSprocess
+                  else
+                     foundB(2)=.true.
+                     nFKSprocessBorn(2)=nFKSprocess
+                  endif
+               endif
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
@@ -1034,8 +1050,28 @@ c
 c Compute the Born-like contributions with nbody=.true.
 c     
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-c Pick the first one because that's the one with the soft singularity.
-         nFKSprocess=proc_map(proc_map(0,1),1)
+         if (j_fks.le.nincoming .and. sum.eq.0) then
+c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
+            if (.not.foundB(1)) then
+               write(*,*) 'Trying to generate Born momenta with '/
+     &              /'initial state j_fks, but there is no '/
+     &              /'configuration with i_fks a gluon and j_fks '/
+     &              /'initial state'
+               stop
+            endif
+            nFKSprocess=nFKSprocessBorn(1)
+         elseif( sum.eq.0) then
+            if (.not.foundB(2)) then
+               write(*,*) 'Trying to generate Born momenta with '/
+     &              /'final state j_fks, but there is no configuration'/
+     &              /' with i_fks a gluon and j_fks final state'
+               stop
+            endif
+            nFKSprocess=nFKSprocessBorn(2)
+         elseif (sum.eq.3) then
+c For sum=3, pick the first one because that's the one with the soft singularity.
+            nFKSprocess=proc_map(proc_map(0,1),1)
+         endif
          nFKSprocess_all=nFKSprocess
          call fks_inc_chooser()
          nbody=.true.

@@ -1092,7 +1092,7 @@ c Multi channel stuff:
       common/ccalculatedBorn/calculatedBorn
 
       double precision ev_enh,enhance,rwgt,unwgtfun,enhanceS,enhanceH
-      logical firsttime,passcuts,passUNLOPScut
+      logical firsttime,passcuts
       data firsttime /.true./
       integer inoborn_ev,inoborn_cnt
       double precision xnoborn_ev,xnoborn_cnt
@@ -1435,6 +1435,7 @@ c
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi' .or. nbody) goto 540
 
+c For UNLOPS, skip MC counter events
       if (ickkw.eq.4) goto 540
 
       call set_cms_stuff(mohdr)
@@ -1944,7 +1945,6 @@ c
 c Set the ybst_til_tolab before applying the cuts. 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
      &     nbody)goto 550
-
       call cpu_time(tBefore)
       deltaTPDF = tPDF
       deltaTFJ  = tFastJet
@@ -1990,7 +1990,7 @@ com-- muR-dependent fac is reweighted here
                 unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
      &               +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
 com-- muR-dependent fac is reweighted here
-             else
+             else         ! for UNLOPS, add the H-events to the S-events
                 unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
      &               +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
 com-- muR-dependent fac is reweighted here
@@ -2150,6 +2150,7 @@ c Update the shower starting scale with the shape from montecarlocounter
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
 
+c Add the H-events to the S-events for UNLOPS
          if (ickkw.eq.4) then
             dsigS=dsigS+totH_wgt*fkssymmetryfactor
          endif
@@ -2311,6 +2312,7 @@ c Plot observables for counterevents and Born
      &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_born)
          endif
 
+c For UNLOPS, the H-events are already added to the S-events
          if (ickkw.eq.4) return
 
          dsigH = totH_wgt*fkssymmetryfactor
@@ -6001,5 +6003,3 @@ c
       IF(SEED.LE.0) SEED = SEED + M
       FK88RANDOM = SEED*MINV
       END
-
-

@@ -196,6 +196,7 @@ c Bypass normal jet cuts
 
 
       if (ptj.gt.0d0.and.nQCD.gt.1) then
+
 c Cut some peculiar momentum configurations, i.e. two partons very soft.
 c This is needed to get rid of numerical instabilities in the Real emission
 c matrix elements when the Born has a massless final-state parton, but
@@ -370,6 +371,7 @@ c End of loop over photons
  444     continue
 c End photon isolation
       endif
+
 C***************************************************************
 C***************************************************************
 C PUT HERE YOUR USER-DEFINED CUTS
