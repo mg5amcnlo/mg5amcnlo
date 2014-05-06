@@ -652,7 +652,7 @@ class RunCard(dict):
             self.add_line('iseed', 'int', 0, fortran_name='iseed')
         #number of events
         self.add_line('nevents', 'int', 10000)
-        self.add_line('gevents', 'int', 2000, log=10)
+        #self.add_line('gevents', 'int', 2000, log=10)
             
         # Renormalizrion and factorization scales
         self.add_line('fixed_ren_scale', 'bool', True)
@@ -762,8 +762,10 @@ class RunCardNLO(RunCard):
         self.add_line('etal', 'float', -1.0)
         # minimum delta_r
         self.add_line('drll', 'float', 0.4)     
+        self.add_line('drll_sf', 'float', 0.4)     
         # minimum invariant mass for pairs
         self.add_line('mll', 'float', 0.0)
+        self.add_line('mll_sf', 'float', 0.0)
         #inclusive cuts
         # Jet measure cuts 
         self.add_line("jetradius", 'float', 0.7, log=10)

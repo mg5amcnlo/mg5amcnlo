@@ -72,18 +72,18 @@ c
 c     Get requested number of events
 c
       include 'run_card.inc'
-c      call load_para(npara,param,value)
-c      call get_logical(npara,param,value," gridrun ",gridrun,.false.)
-c      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
-      if (gridrun.and.gridpack) then
-          nreq = gevents
-c         call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
-      else
-          nreq = nevents
-c         call get_integer(npara,param,value," nevents "  ,nreq  ,10000   )
-      endif
-c      call get_logical(npara,param,value," use_syst ",use_syst,.false.)
 
+      if (gridpack) then
+c        load the gridpack file
+         call load_gridpack_para(npara,param,value)
+         call get_logical(npara,param,value," gridrun ",gridrun,.false.)
+      endif
+
+      if (gridrun.and.gridpack) then
+        call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
+      else
+        nreq = nevents
+      endif
 c   Get information for the <init> block
       param_card_name = '%(param_card_name)s'
       call setrun

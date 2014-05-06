@@ -221,6 +221,18 @@ class CmdExtended(cmd.Cmd):
 
         self.history = banner_module.ProcCard()
 
+
+    def default(self, line):
+        """Default action if line is not recognized"""
+
+        # Faulty command
+        log=True
+        if line.startswith('p') or line.startswith('e'):
+            logger.warning("Command %s not recognized. Did you mean \'generate %s\'?. Please try again" %
+                           (line.split()[0], line))
+            log=False
+        return super(CmdExtended,self).default(line, log=log)
+
     def postcmd(self,stop, line):
         """ finishing a command
         This looks if the command add a special post part.
@@ -3896,6 +3908,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                                self._curr_model)
             else:
                 prefix = not '--noprefix' in args
+                if prefix:
+                    aloha.aloha_prefix='mdl_'
+                else:
+                    aloha.aloha_prefix=''
+                
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix)
                 except import_ufo.UFOImportError, error:
@@ -5286,8 +5303,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 1
 
             if res != 0 or error:
-                logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
+                        'executable (v3+). We will use fjcore instead. Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
                 self.options[args[0]] = None
                 self.history.pop()
             elif int(output.split('.')[0]) < 3:
@@ -5937,7 +5954,10 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             for mode, expr in particle.partial_widths.items():
                 tmp_mass = mass
                 for p in mode:
-                    tmp_mass -= abs(eval(str(p.mass), data))
+                    try:
+                        tmp_mass -= abs(eval(str(p.mass), data))
+                    except Exception:
+                        tmp_mass -= abs(eval("mdl_"+str(p.mass), data))
                 if tmp_mass <=0:
                     continue
 

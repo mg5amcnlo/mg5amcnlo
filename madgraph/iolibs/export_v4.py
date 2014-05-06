@@ -4227,7 +4227,7 @@ class UFO_model_to_mg4(object):
             logger.critical('aS not define as external parameter adding it!')
             #self.model['parameters']['aS'] = base_objects.ParamCardVariable('aS', 0.138,'DUMMY',(1,))
             self.params_indep.append( base_objects. ModelVariable('aS', '0.138','real'))
-            
+            self.params_indep.append( base_objects. ModelVariable('G', '4.1643','real'))
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
@@ -4500,8 +4500,9 @@ class UFO_model_to_mg4(object):
             already_def.add(particle.get('width').lower())
             if self.opt['complex_mass']:
                 already_def.add('cmass_%s' % particle.get('mass').lower())
-
-        is_valid = lambda name: name!='G' and name!='MU_R' and name.lower() not in already_def
+        
+        is_valid = lambda name: name.lower() not in ['g', 'mu_r', 'zero'] and \
+                                                 name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'

@@ -414,7 +414,7 @@ from object_library import all_propagators, Propagator
                 
                 if not os.path.exists(pjoin(outputdir, 'Fortran')):
                     os.mkdir(pjoin(outputdir, 'Fortran'))
-                fsock = open(pjoin(outputdir, 'Fortran'),'a')
+                fsock = open(pjoin(outputdir, 'Fortran','functions.f'),'a')
                 fsock.write(text)
                 fsock.close()
                 
@@ -789,10 +789,11 @@ from object_library import all_propagators, Propagator
         self.new_external = []
         if path:
             model = ufomodels.load_model(path) 
-        
+                
         if not model:
             raise USRMODERROR, 'Need a valid Model'
-        
+        else:
+            path = model.__path__[0]
         # Check the validity of the model. Too old UFO (before UFO 1.0)
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR, 'Add-on Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
@@ -819,6 +820,7 @@ from object_library import all_propagators, Propagator
             self.add_interaction(vertex)
         
         self.all_path.append(path)
+        
         
         return
 

@@ -36,8 +36,10 @@ import aloha.aloha_parsers as aloha_parsers
 import aloha.aloha_fct as aloha_fct
 try:
     import madgraph.iolibs.files as files
+    import madgraph.various.misc as misc
 except Exception:
     import aloha.files as files
+    import aloha.misc as misc
     
 aloha_path = os.path.dirname(os.path.realpath(__file__))
 logger = logging.getLogger('ALOHA')
@@ -395,12 +397,32 @@ in presence of majorana particle/flow violation"""
         lorentz.tag = set(aloha_lib.KERNEL.use_tag)
         return lorentz     
 
+    @staticmethod
+    def mod_propagator_expression(tag, text):
+        """Change the index of the propagator to match the current need"""
+        data = re.split(r'(\b[a-zA-Z]\w*?)\(([\'\w,\s]*?)\)',text)
+
+        pos=-2
+        while pos +3 < len(data):
+            pos = pos+3
+            ltype = data[pos]
+            if ltype != 'complex':
+                for old, new in tag.items():
+                    if isinstance(new, str):
+                        new='\'%s\'' % new
+                    else:
+                        new = str(new)
+                    data[pos+1] = re.sub(r'\b%s\b' % old, new, data[pos+1])
+            data[pos+1] = '(%s)' % data[pos+1]
+        text=''.join(data)
+        return text
+
     def get_custom_propa(self, propa, spin, id):
-        
+        """Return the ALOHA object associated to the user define propagator"""
+
         propagator = getattr(self.model.propagators, propa)
         numerator = propagator.numerator
-        denominator = propagator.denominator
-        
+        denominator = propagator.denominator      
 
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
@@ -439,16 +461,10 @@ in presence of majorana particle/flow violation"""
             tag = {'1': _spin2_mult + id, '2': 2 * _spin2_mult + id, 
                    '51': 'I2', '52': 'I3', 'id':id}
         
-        for old, new in tag.items():
-            if isinstance(new, str):
-                new='\'%s\'' % new
-            else:
-                new = str(new)
-            numerator = re.sub(r'\b%s\b' % old, new,numerator)
-            if denominator:
-                denominator = re.sub(r'\b%s\b' % old, new, denominator)
-        
-        
+        numerator = self.mod_propagator_expression(tag, numerator)
+        if denominator:
+            denominator = self.mod_propagator_expression(tag, denominator)      
+                
         numerator = self.parse_expression(numerator, needPflipping)
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)

@@ -1,6 +1,14 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.1.1(xx/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
+2.1.2(xx/yy/zz) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
+                OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)
+                OM: Fixing a bug preventing MadWidth to run due to the model prefixing (depending
+                    on the way it was called)
+                OM: Fixing a bug in MadSpin in the mssm model
+		RF: Added the invariant mass and DeltaR cuts for *same flavour* opposite sign lepton
+                    pairs to the run_card for NLO-type generations.
+
+2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be
                     bypassed by using the option --noprefix when importing the model.
                 OM: New command "add model XXX" supported. This command creates a new UFO model from two UFO model.

@@ -267,6 +267,9 @@ c**************************************************
       integer ipdg(n_max_cl),ipart(2,n_max_cl)
       logical isjet
       external isjet
+      integer iddgluon, iddother, idgluon, idother
+      logical isqcd
+      external isqcd
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
@@ -349,19 +352,43 @@ c     gluon -> quark anti-quark: use both, but take hardest as 1
             ipart(1,imo)=ipart(1,ida2)
             ipart(2,imo)=ipart(1,ida1)
          endif
-      else if(idmo.eq.21)then
-c     gluon -> higgs gluon
-         if ( idda1.eq.21 ) then
-            ipart(1,imo)=ipart(1,ida1)
-            ipart(2,imo)=ipart(2,ida1)
-         elseif ( idda2.eq.21 ) then
-            ipart(1,imo)=ipart(1,ida2)
-            ipart(2,imo)=ipart(2,ida2)
+      else if(idmo.eq.21.and.(idda1.eq.21.or.idda2.eq.21))then
+         if(idda1.eq.21) then
+            iddgluon = idda1
+            idgluon = ida1
+            iddother = idda2
+            idother = ida2
          else
-            write (*,*) "ERROR in ipartupdate: unknown coupling",idmo
-     $           ,idda1,idda2
-            stop
+            iddgluon = idda2
+            iddother = idda1
+            idgluon = ida2
+            idother = ida1
          endif
+         if (isqcd(idother))then
+c        gluon -> gluon + scalar octet Choose hardest one
+            if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $         p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+               ipart(1,imo)=ipart(1,ida1)
+               ipart(2,imo)=ipart(2,ida1)
+            else
+               ipart(1,imo)=ipart(1,ida2)
+               ipart(2,imo)=ipart(2,ida2)
+            endif
+         else
+c        gluon -> gluon + Higgs use the gluon one
+               ipart(1,imo)=ipart(1,idgluon)
+               ipart(2,imo)=ipart(2,idgluon)
+         endif
+      else if(idmo.eq.21) then
+c     gluon > octet octet Choose hardest one
+            if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $         p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+               ipart(1,imo)=ipart(1,ida1)
+               ipart(2,imo)=ipart(2,ida1)
+            else
+               ipart(1,imo)=ipart(1,ida2)
+               ipart(2,imo)=ipart(2,ida2)
+            endif
       else if(idmo.eq.idda1.or.idmo.eq.idda1+sign(1,idda2))then
 c     quark -> quark-gluon or quark-Z or quark-h or quark-W
          ipart(1,imo)=ipart(1,ida1)
@@ -422,8 +449,8 @@ c     Check if ida1 is outgoing parton or ida2 is outgoing parton
         return
       endif        
 c     Final State clustering
-      if(isjet(idda1).and.(isjet(idmo).or.idmo.eq.idda2).or.
-     $   isjet(idda2).and.(isjet(idmo).or.idmo.eq.idda1)) then
+      if((isjet(idda1).and.(isjet(idmo).or.idmo.eq.idda2)).or.(
+     $   isjet(idda2).and.(isjet(idmo).or.idmo.eq.idda1))) then
          isjetvx=.true.
       else
          isjetvx=.false.
@@ -814,7 +841,7 @@ c     gives leg number if daughter is FS particle, otherwise 0
 c     Flag mother as good jet if PDG is jet and both daughters are jets
             goodjet(imocl(n))=
      $           (isjet(ipdgcl(imocl(n),igraphs(1),nFKSprocess)).and.
-     $           goodjet(idacl(n,1)).and.goodjet(idacl(n,1)))
+     $           goodjet(idacl(n,1)).and.goodjet(idacl(n,2)))
          endif
       enddo
 

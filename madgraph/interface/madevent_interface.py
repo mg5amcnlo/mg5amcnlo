@@ -2409,7 +2409,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         if mode in ['param', 'all']:
             model = self.find_model_name()
-            if model == 'mssm' or model.startswith('mssm-'):
+            tmp_model = os.path.basename(model)
+            if tmp_model == 'mssm' or tmp_model.startswith('mssm-'):
                 if not '--param_card=' in line:
                     param_card = pjoin(self.me_dir, 'Cards','param_card.dat')
                     mg5_param = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')

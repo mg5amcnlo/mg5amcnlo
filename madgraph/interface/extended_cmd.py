@@ -924,11 +924,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """If empty line, do nothing. Default is repeat previous command."""
         pass
     
-    def default(self, line):
+    def default(self, line, log=True):
         """Default action if line is not recognized"""
 
         # Faulty command
-        logger.warning("Command \"%s\" not recognized, please try again" % \
+        if log:
+            logger.warning("Command \"%s\" not recognized, please try again" % \
                                                                 line.split()[0])
         if line.strip() in ['q', '.q', 'stop']:
             logger.info("If you want to quit mg5 please type \"exit\".")
