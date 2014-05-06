@@ -328,6 +328,15 @@ c Prepare the MINT folding
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2)
+         
+c If integrating the virtuals alone, in update_unwgt_table we include
+c the virtuals in ans(1). Therefore, no need to have them in ans(5) and
+c we have to set them to zero.
+         if (only_virt) then
+            ans(3)=0d0 ! virtual Xsec
+            ans(5)=0d0 ! ABS virtual Xsec
+         endif
+
          open(unit=58,file='res_1',status='unknown')
          write(58,*)'Final result [ABS]:',ans(1)+ans(5),' +/-'
      $        ,sqrt(unc(1)**2+unc(5)**2)
@@ -428,8 +437,13 @@ c determine how many events for the virtual and how many for the no-virt
             else
                if (ran2().lt.ans(5)/(ans(1)+ans(5)) .or. only_virt) then
                   abrv='virt'
-                  vn=1
-                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  if (only_virt) then
+                     vn=2
+                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  else
+                     vn=1
+                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  endif
                else
                   abrv='novi'
                   vn=2
@@ -445,8 +459,8 @@ c Uncomment the next to lines to plot the integral from the PS points
 c trown during event generation. This corresponds only to the cross
 c section if these points are thrown flat, so not using the xmmm() stuff
 c in mint.
-c$$$         write (*,*) 'Integral from novi points computed',x(2),x(3)
-c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
+c         write (*,*) 'Integral from novi points computed',x(2),x(3)
+c         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif

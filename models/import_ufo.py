@@ -122,7 +122,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
         
-        if model_name == 'mssm':
+        if model_name == 'mssm' or os.path.basename(model_name) == 'mssm':
             keep_external=True
         else:
             keep_external=False
@@ -1181,7 +1181,8 @@ class RestrictModel(model_reader.ModelReader):
         the model.
         keep_external if the param_card need to be kept intact
         """
-
+        if self.get('name') == "mssm" and not keep_external:
+            raise Exception
         self.restrict_card = param_card
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))

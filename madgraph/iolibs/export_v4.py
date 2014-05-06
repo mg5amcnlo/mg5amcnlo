@@ -4227,7 +4227,7 @@ class UFO_model_to_mg4(object):
             logger.critical('aS not define as external parameter adding it!')
             #self.model['parameters']['aS'] = base_objects.ParamCardVariable('aS', 0.138,'DUMMY',(1,))
             self.params_indep.append( base_objects. ModelVariable('aS', '0.138','real'))
-            
+            self.params_indep.append( base_objects. ModelVariable('G', '4.1643','real'))
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""

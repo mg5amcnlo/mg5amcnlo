@@ -1946,9 +1946,15 @@ class decay_all_events(object):
         # now we can write the param_card.dat:
         # Note that the width of each resonance in the    
         # decay chain should be >0 , we will check that later on
+        model_name = os.path.basename(self.model.get('name'))
         param=open(pjoin(self.path_me,'param_card.dat'),"w")
         param.write(param_card)
-        param.close()     
+        param.close()   
+        if model_name == 'mssm' or model_name.startswith('mssm-'):
+            #need to convert to SLHA2 format
+            import models.check_param_card as check_param_card
+            check_param_card.convert_to_mg5card(pjoin(self.path_me,'param_card.dat'))
+  
         
         self.list_branches = ms_interface.list_branches
         decay_ids = [self.pid2label[key] for key in self.list_branches \
@@ -1967,18 +1973,6 @@ class decay_all_events(object):
         resonances = self.width_estimator.resonances
         logger.debug('List of resonances: %s' % resonances)
         self.extract_resonances_mass_width(resonances) 
-
-        # now overwrite the param_card.dat in Cards:
-        param_card=self.banner['slha']
-        #param_card=decay_tools.check_param_card( param_card)
-
-        # now we can write the param_card.dat:
-        # Note that the width of each resonance in the    
-        # decay chain should be >0 , we will check that later on
-        param=open(pjoin(self.path_me,'param_card.dat'),"w")
-        param.write(param_card)
-        param.close()
-
 
         self.compile()
         
@@ -2361,7 +2355,8 @@ class decay_all_events(object):
             for nb in range(125):
                 tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
                                         True, self.pid2width, self.pid2mass, BW_cut,self.Ecollider)
-
+                if not tree:
+                    continue
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
                     '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
                                                                   if i in tree))
@@ -2765,7 +2760,7 @@ class decay_all_events(object):
         file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
         shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" )) 
         misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
-        misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')                   
+        misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')     
 
         file=pjoin(path_me, 'param_card.dat')
         shutil.copyfile(file,pjoin(path_me,mode,"Cards","param_card.dat")) 
@@ -2836,7 +2831,7 @@ class decay_all_events(object):
                     misc.call('./init', cwd=new_path)
                     shutil.copyfile(pjoin(new_path,'parameters.inc'), 
                                pjoin(new_path,os.path.pardir, 'parameters.inc'))
-                if mode == 'production_me':   
+                if mode == 'production_me':
                     misc.compile(cwd=new_path, mode='fortran')
                 else:
                     misc.compile(cwd=new_path, mode='fortran')
