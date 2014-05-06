@@ -7,12 +7,12 @@
 %(process_lines)s
 //--------------------------------------------------------------------------
 
-class %(ClassName)s
+class CPPProcess
 {
 public:
 
   // Constructor.
-  %(ClassName)s() {}
+  CPPProcess() {}
 
   // Initialize process. 
   virtual void initProc(string param_card_name); 
