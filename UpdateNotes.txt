@@ -7,6 +7,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Fixing a bug in MadSpin in the mssm model
 		RF: Added the invariant mass and DeltaR cuts for *same flavour* opposite sign lepton
                     pairs to the run_card for NLO-type generations.
+		RF: Prevent an infinite loop in MadSpin by forcing the correct sign to the invariants
 
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be

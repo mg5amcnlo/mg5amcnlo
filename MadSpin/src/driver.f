@@ -741,14 +741,22 @@ c            write(*,*) 'd2 full',itree(2,i)-ns_channel_decay
          keep_inv(i-ns_channel_decay)=.TRUE.
  
          if (i.ne.(-ns_channel-nt_channel-1)) then
-           fixedinv(i-ns_channel_decay)=dot(p(0,i-ns_channel_decay),p(0,i-ns_channel_decay))
+c Due to numerical instabilities, sometimes the computation of the
+c invariant gets the wrong sign. This happens only when the invariant is
+c close to zero. If this is the case, the code might go into an infinite
+c loop (because no momenta can be generated later). Simply fix it by
+c forcing the correct sign for the invariants.
+           if (nt_channel.ne.0.and.i .lt.-ns_channel) then
+           fixedinv(i-ns_channel_decay)=-abs(dot(p(0,i-ns_channel_decay),p(0,i-ns_channel_decay)))
+           else
+           fixedinv(i-ns_channel_decay)= abs(dot(p(0,i-ns_channel_decay),p(0,i-ns_channel_decay)))
+           endif
            qmass_full(i-ns_channel_decay)=qmass(i)
            qwidth_full(i-ns_channel_decay)=qwidth(i)
          endif
 
-
+         
       enddo 
-
 c
 c        MODIF March 5, 2014 (P.A.) 
 c        overwrite last t-channel invariant to avoid numerical unstabilities
@@ -795,6 +803,8 @@ c              write(*,*) d1, d2, itree(1, last_branch), itree(2, last_branch)
            endif
            endif
          endif
+
+
 
 c     END MODIF MARCH 5, 2014
  
