@@ -817,6 +817,7 @@ extern "C" {
     // Get minimal pT for second clustering
     irad = iemt = irec = type = 0;
     pTmin2 = minPythiaSep(clusteredState,irad,iemt,irec,type);
+    delete originalState;
   }
 }
 
