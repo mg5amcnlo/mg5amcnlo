@@ -499,7 +499,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         else:
             # ensure that this is running with NO central disk !!!
             if not self.options['cluster_temp_path'] and not self.options['cluster_type'] == 'condor':
-                raise self.ConfigurationError, 'MadWeight requires temp_cluste_path options to be define'
+                raise self.ConfigurationError, 'MadWeight requires temp_cluster_path options to be define'
             self.cluster.submit2(exe, args, cwd, input_files=input_files, output_files=output_file)
 
 
@@ -711,6 +711,9 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                  'transfer_card.dat', 'input.lhco']
         if not self.force:
             self.ask_edit_cards(cards, mode='fixed', plot=False)
+        else:
+            self.configured = 0
+            self.configure()
         with misc.chdir(self.me_dir): 
             if not os.path.exists(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile'])):
                 raise self.InvalidCmd('Please specify a valid LHCO File')

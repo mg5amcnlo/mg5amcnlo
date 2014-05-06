@@ -18,7 +18,7 @@ C----------------------------------------------------------------------
       integer j,kk,l,i
       PARAMETER (PI=3.14159265358979312D0)
       character*5 cc(2)
-      data cc/'     ','     '/
+      data cc/'     ','Born '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis

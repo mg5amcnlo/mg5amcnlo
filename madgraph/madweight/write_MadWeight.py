@@ -123,8 +123,9 @@ class MG_diagram(diagram_class.MG_diagram):
                 return output 
         
         fsock = open(pjoin(self.directory, 'permutation_weight.f'), 'w')
-        if self.MWparam['mw_perm']['preselect'] == 'None':
-            fsock.write(""" subroutine GET_PERM_WEIGHT()
+        if self.MWparam['mw_perm']['preselect'].lower() == 'none':
+            fsock.write(""" 
+            subroutine GET_PERM_WEIGHT()
             return
             end
             """
@@ -169,7 +170,8 @@ class MG_diagram(diagram_class.MG_diagram):
                 content = [p.MG for p in get_all_child(part)]
                 content.append(0)
                 initcontent = "\n".join("""          content(%i) = %i""" % (a+1, b) for a,b in enumerate(content))
-
+                if mass.lower() == 'zero' or width.lower() == 'zero':
+                    continue
                 dico = {'pid': part.pid, 
                              'mass': mass,
                              'width': width,

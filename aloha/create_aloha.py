@@ -130,7 +130,7 @@ class AbstractRoutineBuilder(object):
               >0 defines the outgoing part (start to count at 1)
         """
 
-        self.spins = [abs(s) for s  in lorentz.spins]
+        self.spins = [s for s  in lorentz.spins]
         self.name = lorentz.name
         self.conjg = []
         self.tag = []
@@ -304,7 +304,7 @@ in presence of majorana particle/flow violation"""
                 
                 
                 
-                if spin == 1: 
+                if spin in [1,-1]: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift and flip the tag if we multiply by C matrices
@@ -347,10 +347,10 @@ in presence of majorana particle/flow violation"""
                                              2 * _spin2_mult + id,'I2','I3', id)
                 else:
                     raise self.AbstractALOHAError(
-                                'The spin value %s is not supported yet' % spin)
+                                'The spin value %s (2s+1) is not supported yet' % spin)
             else:
                 # This is an incoming particle
-                if spin == 1:
+                if spin in [1,-1]:
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
@@ -373,7 +373,7 @@ in presence of majorana particle/flow violation"""
                     lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
                     raise self.AbstractALOHAError(
-                                'The spin value %s is not supported yet' % spin)                    
+                                'The spin value %s (2s+1) is not supported yet' % spin)                    
 
         # If no particle OffShell
         if not outgoing:
@@ -404,7 +404,7 @@ in presence of majorana particle/flow violation"""
 
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
-        if spin == 1:
+        if spin in [1,-1]:
             tag = {'id': id}         
         elif spin == 2:
             # shift and flip the tag if we multiply by C matrices
@@ -485,7 +485,7 @@ in presence of majorana particle/flow violation"""
 
         # Compute the variable from which we need to split the expression
         var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
-        spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
+        spin = aloha_writers.WriteALOHA.type_to_variable[abs(self.spins[l_in-1])]
         size = aloha_writers.WriteALOHA.type_to_size[spin]-1
         var_veto += ['%s%s_%s' % (spin,l_in,i) for i in range(1,size)]
         # compute their unique identifiant
@@ -1066,8 +1066,8 @@ class AbstractALOHAModel(dict):
             if len(vertex.lorentz) == 1:
                 continue
             #remove ghost
-            if -1 in vertex.lorentz[0].spins:
-                continue
+            #if -1 in vertex.lorentz[0].spins:
+            #    continue
             
             # assign each order/color to a set of lorentz routine
             combine = {}

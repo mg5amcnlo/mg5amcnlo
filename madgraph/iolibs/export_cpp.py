@@ -913,7 +913,7 @@ class ProcessExporterCPP(object):
                 common_factor = True
                 global_factor = diff_fracs[0]
                 res = res + '%s(' % coeff(1, global_factor, False, 0)
-	    print coeff_list
+
             for (coefficient, amp_number) in coeff_list:
                 if common_factor:
                     res = res + "%samp[%d]" % (coeff(coefficient[0],

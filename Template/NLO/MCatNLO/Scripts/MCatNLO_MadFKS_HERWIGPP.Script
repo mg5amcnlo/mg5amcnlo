@@ -321,6 +321,9 @@ SMASSHW=$SMASS
 CMASSHW=$CMASS
 if (( $(bc <<< "$B_MASS <  0.0") )); then BMASSHW=$BMASS; fi
 if (( $(bc <<< "$B_MASS >= 0.0") )); then BMASSHW=$B_MASS; fi
+EMASSHW=$EMASS
+MUMASSHW=$MUMASS
+TAUMASSHW=$TAUMASS
 GMASSHW=$GMASS
 
 if [ $BEAM1 == 1 ]; then PART1="P"; elif [ $BEAM1 == -1 ]; then PART1="PBAR";
@@ -456,21 +459,27 @@ set /Herwig/EventHandlers/LHEReader:FileName $SCRTCH$EVPREFIX
 
 # TODO set the correct incoming particles
 
-# set the masses and widths
+# set masses and widths
+set /Herwig/Particles/e-:NominalMass $EMASSHW
+set /Herwig/Particles/e+:NominalMass $EMASSHW
+set /Herwig/Particles/mu-:NominalMass $MUMASSHW
+set /Herwig/Particles/mu+:NominalMass $MUMASSHW
+set /Herwig/Particles/tau-:NominalMass $TAUMASSHW
+set /Herwig/Particles/tau+:NominalMass $TAUMASSHW
 set /Herwig/Particles/W+:NominalMass $WMASS
-set /Herwig/Particles/W+:Width $WWIDTH
 set /Herwig/Particles/W-:NominalMass $WMASS
-set /Herwig/Particles/W-:Width $WWIDTH
 set /Herwig/Particles/Z0:NominalMass $ZMASS
-set /Herwig/Particles/Z0:Width $ZWIDTH
 set /Herwig/Particles/t:NominalMass $TMASS
-set /Herwig/Particles/t:Width $TWIDTH
 set /Herwig/Particles/tbar:NominalMass $TMASS
-set /Herwig/Particles/tbar:Width $TWIDTH
 set /Herwig/Particles/h0:NominalMass $HGGMASS
+set /Herwig/Particles/b:NominalMass $BMASSHW
+set /Herwig/Particles/bbar:NominalMass $BMASSHW
+set /Herwig/Particles/W+:Width $WWIDTH
+set /Herwig/Particles/W-:Width $WWIDTH
+set /Herwig/Particles/Z0:Width $ZWIDTH
+set /Herwig/Particles/t:Width $TWIDTH
+set /Herwig/Particles/tbar:Width $TWIDTH
 set /Herwig/Particles/h0:Width $HGGWIDTH
-#set /Herwig/Particles/b:NominalMass $BMASS
-#set /Herwig/Particles/bbar:NominalMass $BMASS
 # --------------------------------------------------------------------- #
 # 3.) ADDITIONAL SETTINGS
 

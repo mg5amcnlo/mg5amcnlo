@@ -221,6 +221,18 @@ class CmdExtended(cmd.Cmd):
 
         self.history = banner_module.ProcCard()
 
+
+    def default(self, line):
+        """Default action if line is not recognized"""
+
+        # Faulty command
+        log=True
+        if line.startswith('p') or line.startswith('e'):
+            logger.warning("Command %s not recognized. Did you mean \'generate %s\'?. Please try again" %
+                           (line.split()[0], line))
+            log=False
+        return super(CmdExtended,self).default(line, log=log)
+
     def postcmd(self,stop, line):
         """ finishing a command
         This looks if the command add a special post part.
@@ -299,7 +311,7 @@ class HelpToCmd(cmd.HelpCmd):
               " FILENAME",'$MG:color:BLUE')
         logger.info("-- imports file(s) in various formats",'$MG:color:GREEN')
         logger.info("")
-        logger.info("   import model MODEL[-RESTRICTION] [--modelname]:",'$MG:color:BLACK')
+        logger.info("   import model MODEL[-RESTRICTION] [OPTIONS]:",'$MG:color:BLACK')
         logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
         logger.info("      Model restrictions are specified by MODEL-RESTRICTION")
@@ -533,7 +545,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   can still handle these.")
 
     def help_add(self):
-
+        logger.info("-- generate diagrams for a process and add to existing processes",'$MG:color:BLUE')
+        logger.info("   OR merge two model",'$MG:color:BLUE')
+        logger.info('')
         logger.info("-- generate diagrams for a process and add to existing processes",'$MG:color:BLUE')
         logger.info("General leading-order syntax:",'$MG:color:BLACK')
         logger.info(" o add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
@@ -567,6 +581,17 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   the 'virt=' NLO mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")
         logger.info("   can still handle these.")
 
+        logger.info("--  merge two model to create a new one", '$MG:color:BLUE')
+        logger.info("syntax:",'$MG:color:BLACK')
+        logger.info(" o add model MODELNAME [OPTIONS]")
+        logger.info(" o Example: add model taudecay",'$MG:color:GREEN')
+        logger.info(" > Merge the two model in a single one. If that same merge was done before.")
+        logger.info(" > Just reload the previous merge. (WARNING: This doesn't check if those model are modified)")
+        logger.info(" > Options:")
+        logger.info("   --output=  : Specify the name of the directory where the merge is done.")
+        logger.info("                This allow to do \"import NAME\" to load that merge.")
+        logger.info("   --recreate : Force to recreated the merge model even if the merge model directory already exists.")
+        
     def help_compute_widths(self):
         logger.info("syntax: calculate_width PART [other particles] [OPTIONS]")
         logger.info("  Computes the width and partial width for a set of particles")
@@ -673,7 +698,18 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > (default 'MadLoop') [Used for virtual generation]")
         logger.info(" > Chooses what One-Loop Program to use for the virtual")
         logger.info(" > matrix element generation via the BLAH accord.")
-
+        logger.info("output_dependencies <mode>",'$MG:color:BLACK')
+        logger.info(" > (default 'external') [Use for NLO outputs]")
+        logger.info(" > Choses how the external dependences (such as CutTools)")
+        logger.info(" > of NLO outputs are handled. Possible values are:")
+        logger.info("     o external: Some of the libraries the output depends")
+        logger.info("       on are links to their installation in MG5 root dir.")
+        logger.info("     o internal: All libraries the output depends on are")
+        logger.info("       copied and compiled locally in the output directory.")
+        logger.info("     o environment_paths: The location of all libraries the ")
+        logger.info("       output depends on should be found in your env. paths.")        
+        
+        
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -685,37 +721,22 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_add(self, args):
         """check the validity of line
-        syntax: add process PROCESS
+        syntax: add process PROCESS | add model MODELNAME
         """
 
         if len(args) < 2:
             self.help_add()
             raise self.InvalidCmd('\"add\" requires at least two arguments')
-
-        if args[0] != 'process':
-            raise self.InvalidCmd('\"add\" requires the argument \"process\"')
-
-        if not self._curr_model:
-            logger.info("No model currently active, so we import the Standard Model")
-            self.do_import('model sm')
-
-        if args[-1].startswith('--optimize'):
-            if args[2] != '>':
-                raise self.InvalidCmd('optimize mode valid only for 1->N processes. (See model restriction for 2->N)')
-            if '=' in args[-1]:
-                path = args[-1].split('=',1)[1]
-                if not os.path.exists(path) or \
-                                self.detect_file_type(path) != 'param_card':
-                    raise self.InvalidCmd('%s is not a valid param_card')
-            else:
-                path=None
-            # Update the default value of the model here.
-            if not isinstance(self._curr_model, model_reader.ModelReader):
-                self._curr_model = model_reader.ModelReader(self._curr_model)
-            self._curr_model.set_parameters_and_couplings(path)
-            self.check_process_format(' '.join(args[1:-1]))
-        else:
-            self.check_process_format(' '.join(args[1:]))
+        
+        if args[0] not in  ['model', 'process']:
+            raise self.InvalidCmd('\"add\" requires the argument \"process\" or \"model\"')    
+    
+        if args[0] == 'process':
+            return self.check_generate(args)
+    
+        if args[0] == 'model':
+            pass
+            
 
     def check_define(self, args):
         """check the validity of line
@@ -837,8 +858,29 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_generate(self, args):
         """check the validity of args"""
-        # Not called anymore see check_add
-        return self.check_add(args)
+
+        if not self._curr_model:
+            logger.info("No model currently active, so we import the Standard Model")
+            self.do_import('model sm')
+        
+        if args[-1].startswith('--optimize'):
+            if args[2] != '>':
+                raise self.InvalidCmd('optimize mode valid only for 1->N processes. (See model restriction for 2->N)')
+            if '=' in args[-1]:
+                path = args[-1].split('=',1)[1]
+                if not os.path.exists(path) or \
+                                self.detect_file_type(path) != 'param_card':
+                    raise self.InvalidCmd('%s is not a valid param_card')
+            else:
+                path=None
+            # Update the default value of the model here.
+            if not isinstance(self._curr_model, model_reader.ModelReader):
+                self._curr_model = model_reader.ModelReader(self._curr_model)
+            self._curr_model.set_parameters_and_couplings(path)
+            self.check_process_format(' '.join(args[1:-1]))
+        else:
+            self.check_process_format(' '.join(args[1:]))
+    
 
     def check_process_format(self, process):
         """ check the validity of the string given to describe a format """
@@ -898,12 +940,17 @@ class CheckValidForCmd(cmd.CheckCmd):
         """check the validity of line"""
 
         modelname = False
+        prefix = True
         if '-modelname' in args:
             args.remove('-modelname')
             modelname = True
         elif '--modelname' in args:
             args.remove('--modelname')
             modelname = True
+            
+        if '--noprefix' in args:
+            args.remove('--noprefix')
+            prefix = False  
 
         if not args:
             self.help_import()
@@ -928,6 +975,9 @@ class CheckValidForCmd(cmd.CheckCmd):
             if self.history[-1].startswith('import'):
                 self.history[-1] = 'import %s %s' % \
                                 (format, ' '.join(self.history[-1].split()[1:]))
+
+        if not prefix:
+            args.append('--noprefix')
 
         if modelname:
             args.append('-modelname')
@@ -1215,7 +1265,8 @@ This will take effect only in a NEW terminal
 
         if args[0] in ['OLP']:
             if args[1] not in MadGraphCmd._OLP_supported:
-                raise self.InvalidCmd('timeout values should be a integer')
+                raise self.InvalidCmd('OLP value should be one of %s'\
+                                               %str(MadGraphCmd._OLP_supported))
 
         if args[0].lower() in ['ewscheme']:
             if not self._curr_model:
@@ -1223,6 +1274,10 @@ This will take effect only in a NEW terminal
             if args[1] not in ['external']:
                 raise self.InvalidCmd('Only valid ewscheme is "external". To restore default, please re-import the model.')
 
+        if args[0] in ['output_dependencies']:
+            if args[1] not in MadGraphCmd._output_dependencies_supported:
+                raise self.InvalidCmd('output_dependencies value should be one of %s'\
+                               %str(MadGraphCmd._output_dependencies_supported))
 
     def check_open(self, args):
         """ check the validity of the line """
@@ -1788,18 +1843,15 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) == 1:
             return self.list_completion(text, self._add_opts)
 
-        return self.complete_generate(text, " ".join(args[1:]), begidx, endidx)
-
-        # Return list of particle names and multiparticle names, as well as
-        # coupling orders and allowed symbols
-        couplings = []
-        if len(args) > 2 and args[-1] != '>':
-            couplings = ['>']
-        if '>' in args and args.index('>') < len(args) - 1:
-            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
-        return self.list_completion(text, self._particle_names + \
-                                    self._multiparticles.keys() + couplings)
-
+        if args[1] == 'process':
+            return self.complete_generate(text, " ".join(args[1:]), begidx, endidx)
+        
+        elif args[1] == 'model':
+            completion_categories = self.complete_import(text, line, begidx, endidx, 
+                                                         allow_restrict=False, treat_completion=False)
+            completion_categories['options'] = self.list_completion(text,['--modelname=','--recreate'])
+            return self.deal_multiple_categories(completion_categories) 
+            
     def complete_customize_model(self, text, line, begidx, endidx):
         "Complete the customize_model command"
 
@@ -2105,6 +2157,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, ['unitary', 'Feynman','default'])
             elif args[1] == 'OLP':
                 return self.list_completion(text, MadGraphCmd._OLP_supported)
+            elif args[1] == 'output_dependencies':
+                return self.list_completion(text, 
+                                     MadGraphCmd._output_dependencies_supported)
             elif args[1] == 'stdout_level':
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR',
                                                           'CRITICAL','default'])
@@ -2128,8 +2183,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.path_completion(text,
                         pjoin(*[a for a in args if a.endswith(os.path.sep)]),
                         only_dirs = True)
-
-    def complete_import(self, text, line, begidx, endidx):
+        
+    def complete_import(self, text, line, begidx, endidx, allow_restrict=True,
+                        treat_completion=True):
         "Complete the import command"
 
         args=self.split_arg(line[0:begidx])
@@ -2233,12 +2289,15 @@ class CompleteForCmd(cmd.CompleteCmd):
 
                 if mode == 'model_v4':
                     completion_categories['model name'] = model_list
-                else:
+                elif allow_restrict:
                     # need to update the  list with the possible restriction
                     all_name = []
                     for model_name in model_list:
                         all_name += self.find_restrict_card(model_name,
                                             base_dir=pjoin(MG5DIR,'models'))
+                else:
+                    all_name = model_list
+                    
                 if mode == 'all':
                     cur_path = pjoin(*[a for a in args \
                                                         if a.endswith(os.path.sep)])
@@ -2255,11 +2314,15 @@ class CompleteForCmd(cmd.CompleteCmd):
             if not text and not completion_categories:
                 return ['--modelname']
             elif not (os.path.sep in args[-1] and line[-1] != ' '):
-                completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname'])
+                completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname','--noprefix'])
         if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
-        return self.deal_multiple_categories(completion_categories)
-
+        
+        if treat_completion:
+            return self.deal_multiple_categories(completion_categories) 
+        else:
+            #this means this function is called as a subgroup of another completion
+            return completion_categories
 
 
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
@@ -2318,7 +2381,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams',
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz',
                      'checks', 'parameters', 'options', 'coupling_order','variable']
-    _add_opts = ['process']
+    _add_opts = ['process', 'model']
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
     _switch_opts = ['mg5','aMC@NLO','ML5']
@@ -2341,6 +2404,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'EWscheme']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
     _OLP_supported = ['MadLoop', 'GoSam']
+    _output_dependencies_supported = ['external', 'internal','environment_paths']
 
     # The three options categories are treated on a different footage when a
     # set/save configuration occur. current value are kept in self.options
@@ -2369,7 +2433,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
-                       'cluster_retry_wait':300
+                       'cluster_retry_wait':300,
+                       'output_dependencies':'external'
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -2377,7 +2442,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
                           'stdout_level':None,
-                          'loop_optimized_output':True}
+                          'loop_optimized_output':True
+                        }
 
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
@@ -2481,10 +2547,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def do_add(self, line):
         """Generate an amplitude for a given process and add to
         existing amplitudes
+        or merge two model
         """
 
         args = self.split_arg(line)
 
+        
         warning_duplicate = True
         if '--no_warning=duplicate' in args:
             warning_duplicate = False
@@ -2493,6 +2561,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check the validity of the arguments
         self.check_add(args)
 
+        if args[0] == 'model':
+            return self.add_model(args[1:])
+        
         # special option for 1->N to avoid generation of kinematically forbidden
         #decay.
         if args[-1].startswith('--optimize'):
@@ -2575,8 +2646,58 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
             logger.info("Total: %i processes with %i diagrams" % \
-                  (len(self._curr_amps), ndiags))       
-
+                  (len(self._curr_amps), ndiags))        
+                
+    def add_model(self, args):
+        """merge two model"""
+        
+        model_path = args[0]
+        recreate = ('--recreate' in args)
+        output_dir = [a.split('=',1)[1] for a in args if a.startswith('--output')]
+        if output_dir:
+            output_dir = output_dir[0]
+            recreate = True
+            restrict_name = ''
+        else:
+            name = os.path.basename(self._curr_model.get('modelpath'))
+            restrict_name = self._curr_model.get('restrict_name')
+            output_dir = pjoin(MG5DIR, 'models', '%s__%s' % (name,
+                                                  os.path.basename(model_path)))
+        
+        if os.path.exists(output_dir):
+            if recreate:
+                shutil.rmtree(output_dir)
+            else:
+                logger.info('Model already created! Loading it from %s' % output_dir)
+                oldmodel = self._curr_model.get('modelpath')
+                new_model_name = output_dir
+                if restrict_name:
+                    new_model_name = '%s-%s' % (output_dir, restrict_name)
+                try:
+                    self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
+                              printcmd=False, precmd=True, postcmd=True)
+                except Exception, error:
+                    logger.debug('fail to load model %s with error:\n %s' % (output_dir, error))
+                    logger.warning('Fail to load the model. Restore previous model')
+                    self.exec_cmd('import model %s' % oldmodel, errorhandling=False, 
+                              printcmd=False, precmd=True, postcmd=True)                    
+                    raise Exception('Invalid Model! Please retry with the option \'--recreate\'.')
+                else:
+                    return
+        
+        #Need to do the work!!!        
+        import models.usermod as usermod
+        base_model = usermod.UFOModel(self._curr_model.get('modelpath'))
+        base_model.add_model(path=model_path)
+        base_model.write(output_dir)
+        
+        new_model_name = output_dir
+        if restrict_name:
+            new_model_name = '%s-%s' % (output_dir, restrict_name)
+        self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
+                              printcmd=False, precmd=True, postcmd=True)         
+        
+        
     # Define a multiparticle label
     def do_define(self, line, log=True):
         """Define a multiparticle"""
@@ -3808,8 +3929,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                       helas_call_writers.FortranHelasCallWriter(\
                                                                self._curr_model)
             else:
+                prefix = not '--noprefix' in args
                 try:
-                    self._curr_model = import_ufo.import_model(args[1])
+                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix)
                 except import_ufo.UFOImportError, error:
                     if 'not a valid UFO model' in str(error):
                         logger_stderr.warning('WARNING: %s' % error)
@@ -3849,7 +3971,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
                         return
-
+                
                 self._curr_fortran_model = \
                       helas_call_writers.FortranUFOHelasCallWriter(\
                                                                self._curr_model)
@@ -4264,8 +4386,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
                 os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
-                    logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
-                Please follow instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
+                    logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
+                In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
+                instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
+                self.options['td_path'] = pjoin(MG5DIR,'td')
 
             if not misc.which('gs'):
                 logger.warning('''gosthscript not install on your system. This is not required to run MA.
@@ -5158,7 +5282,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                    ' and QCD corrections in the unitary gauge.')
 
             #re-init all variable
-            model_name = self._curr_model.get('version_tag').split('##')[0]
+            model_name = self._curr_model.get('modelpath+restriction')
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -5248,6 +5372,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = None
             self.options[args[0]] = args[1]
 
+        elif args[0] =='output_dependencies':
+            self.options[args[0]] = args[1]
+        
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -5361,7 +5488,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         options = config[self._export_format]
         # check
         if os.path.realpath(self._export_dir) == os.getcwd():
-            if not args[0] in ['.', '-f']:
+            if len(args) == 0:
+                i=0
+                while 1:
+                    if os.path.exists('Pythia8_proc_%i' %i):
+                        i+=1
+                    else:
+                        break
+                os.mkdir('Pythia8_proc_%i' %i) 
+                self._export_dir = pjoin(self._export_dir, 'Pythia8_proc_%i' %i)
+                logger.info('Create output in %s' % self._export_dir)
+            elif not args[0] in ['.', '-f']:
                 raise self.InvalidCmd, 'Wrong path directory to create in local directory use \'.\''
         elif not noclean and os.path.isdir(self._export_dir) and options['check']:
             if not force:
@@ -5702,52 +5839,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'])
+                                           self.options['fortran_compiler'],
+              output_dependencies = self.options['output_dependencies'],
+                                           MG5DIR = MG5DIR)
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
-            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']
+            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
+                                                                    'hepmc_path']
             to_keep = {}
             for opt in opts_to_keep:
                 if self.options[opt]:
                     to_keep[opt] = self.options[opt]
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
                     to_keep = to_keep)
-
-            # check if stdhep has to be compiled (only the first time)
-            if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
-                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a')):
-                logger.info('Compiling StdHEP. This has to be done only once.')
-                # this is for 64-bit systems
-                if sys.maxsize > 2**32:
-                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
-                    text = open(path).read()
-                    text = text.replace('MBITS=32','MBITS=64')
-                    open(path, 'w').writelines(text)
-                # Set the correct fortran compiler
-                if 'FC' not in os.environ or not os.environ['FC']:
-                    if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
-                        compiler = self.options['fortran_compiler']
-                    elif misc.which('gfortran'):
-                        compiler = 'gfortran'
-                    elif misc.which('g77'):
-                        compiler = 'g77'
-                    else:
-                        raise self.InvalidCmd('Require g77 or Gfortran compiler')
-                    path = None
-                    base_compiler= ['FC=g77','FC=gfortran']
-                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
-                    text = open(path).read()
-                    for base in base_compiler:
-                        text = text.replace(base,'FC=%s' % compiler)
-                    open(path, 'w').writelines(text)
-
-                misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
-                logger.info('Done.')
-            #then link the libraries in the exported dir
-            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a'), \
-               pjoin(self._export_dir, 'MCatNLO', 'lib'))
-            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'), \
-               pjoin(self._export_dir, 'MCatNLO', 'lib'))
 
         elif self._export_format in ['madevent', 'madweight']:          
             # Create configuration file [path to executable] for madevent
@@ -5911,7 +6015,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             return
 
         # Do the MadEvent integration!!
-        with misc.TMP_directory() as path:
+        with misc.TMP_directory(dir=os.getcwd()) as path:
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):

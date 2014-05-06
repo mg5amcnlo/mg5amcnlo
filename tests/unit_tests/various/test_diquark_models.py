@@ -342,8 +342,8 @@ class TestColorTripletModel(unittest.TestCase):
         self.full_model = model_reader.ModelReader(self.base_model)
         self.full_model.set_parameters_and_couplings()
         # Set top quark mass to 0 to compare with literature expression
-        self.full_model.get('parameter_dict')['MT'] = 0.
-        self.full_model.get('parameter_dict')['WT'] = 0.
+        self.full_model.get('parameter_dict')['mdl_MT'] = 0.
+        self.full_model.get('parameter_dict')['mdl_WT'] = 0.
 
     
     def test_ut_to_antitrip_g(self):
@@ -520,13 +520,13 @@ def uu_Dg(P, color_rep, full_model):
         C_D = 10./3.
         lamb = abs(full_model.get('coupling_dict')['GC_24'])
         G = full_model.get('coupling_dict')['GC_4']
-        M_D = full_model.get('parameter_dict')['MSIX']
+        M_D = full_model.get('parameter_dict')['mdl_MSIX']
     else:
         N_D = 3.
         C_D = 4./3.
         lamb = abs(full_model.get('coupling_dict')['GC_12'])
         G = full_model.get('coupling_dict')['GC_4']
-        M_D = full_model.get('parameter_dict')['MSIX']
+        M_D = full_model.get('parameter_dict')['mdl_MSIX']
 
     # Define auxiliary quantities
     shat=dot(P[0],P[0])+dot(P[1],P[1])+2*dot(P[0],P[1])
@@ -563,9 +563,9 @@ def gu_uxD(P, color_rep, full_model):
     # Define auxiliary quantities
     shat=dot(P[0],P[0])+dot(P[1],P[1])+2*dot(P[0],P[1])
     if color_rep == 6:
-        tau=full_model.get('parameter_dict')['MSIX']**2/shat
+        tau=full_model.get('parameter_dict')['mdl_MSIX']**2/shat
     else:
-        tau=full_model.get('parameter_dict')['MANTI3']**2/shat        
+        tau=full_model.get('parameter_dict')['mdl_MANTI3']**2/shat        
     costheta=dot3(P[0],P[2])/math.sqrt(dot3(P[0],P[0])*dot3(P[2],P[2]))
     beta=(1-tau)/(1+tau)
 

@@ -68,7 +68,7 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_name, decay=False, restrict=True):
+def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
     """ a practical and efficient way to import a model"""
     
     # check if this is a valid path or if this include restriction file       
@@ -103,13 +103,10 @@ def import_model(model_name, decay=False, restrict=True):
                 raise Exception, "%s is not a valid path for restrict file" % restrict
     
     #import the FULL model
-    model = import_full_model(model_path, decay) 
+    model = import_full_model(model_path, decay, prefix) 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name
-    path = os.path.dirname(os.path.realpath(model_path))
-    path = os.path.join(path, model.get('name'))
-    model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     
     #restrict it if needed       
     if restrict_file:
@@ -136,13 +133,14 @@ def import_model(model_name, decay=False, restrict=True):
     return model
 
 _import_once = []
-def import_full_model(model_path, decay=False):
+def import_full_model(model_path, decay=False, prefix=''):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
 
-
     assert model_path == find_ufo_path(model_path)
-            
+    if prefix is True:
+        prefix='mdl_'
+        
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py']
@@ -159,8 +157,10 @@ def import_full_model(model_path, decay=False):
         pickle_name = 'model.pkl'
     else:
         pickle_name = 'model_Feynman.pkl'
-        
+    
+    allow_reload = False
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
+        allow_reload = True
         try:
             model = save_load_object.load_from_file( \
                                           os.path.join(model_path, pickle_name))
@@ -169,24 +169,48 @@ def import_full_model(model_path, decay=False):
         else:
             # We don't care about the restrict_card for this comparison
             if model.has_key('version_tag') and not model.get('version_tag') is None and \
-              model.get('version_tag').startswith(os.path.realpath(model_path)) and \
-              model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
-                _import_once.append((model_path, aloha.unitary_gauge))
-                return model
+                model.get('version_tag').startswith(os.path.realpath(model_path)) and \
+                model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
+                #check if the prefix is correct one.
+                for key in model.get('parameters'):
+                    for param in model['parameters'][key]:
+                        value = param.name.lower()
+                        if value in ['as','mu_r', 'zero','aewm1']:
+                            continue
+                        if prefix:
+                            if value.startswith(prefix):
+                                _import_once.append((model_path, aloha.unitary_gauge, prefix))
+                                return model
+                            else:
+                                logger.info('reload from .py file')
+                                break
+                        else:
+                            if value.startswith('mdl_'):
+                                logger.info('reload from .py file')
+                                break                   
+                            else:
+                                _import_once.append((model_path, aloha.unitary_gauge, prefix))
+                                return model
+                    else:
+                        continue
+                    break                                         
+            else:
+                logger.info('reload from .py file')
 
-    if (model_path, aloha.unitary_gauge) in _import_once:
-        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch MG5_aMC' 
-
+    if (model_path, aloha.unitary_gauge, prefix) in _import_once and not allow_reload:
+        raise MadGraph5Error, 'This model %s is modified on disk. To reload it you need to quit/relaunch MG5_aMC ' % model_path
+     
     # Load basic information
     ufo_model = ufomodels.load_model(model_path, decay)
-    ufo2mg5_converter = UFOMG5Converter(ufo_model)
+    ufo2mg5_converter = UFOMG5Converter(ufo_model)    
     model = ufo2mg5_converter.load_model()
-    
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-
-    # Load the Parameter/Coupling in a convinient format.
-    parameters, couplings = OrganizeModelExpression(ufo_model).main()
+    
+    # Load the Parameter/Coupling in a convenient format.
+    parameters, couplings = OrganizeModelExpression(ufo_model).main(\
+             additional_couplings = ufo2mg5_converter.wavefunction_CT_couplings)
+    
     model.set('parameters', parameters)
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)
@@ -203,7 +227,12 @@ def import_full_model(model_path, decay=False):
             elif p and not hasattr(p, 'partial_widths'):
                 p.partial_widths = {}
             # might be None for ghost
-            
+    if prefix:
+        model.change_parameter_name_with_prefix()
+        
+    path = os.path.dirname(os.path.realpath(model_path))
+    path = os.path.join(path, model.get('name'))
+    model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     # save in a pickle files to fasten future usage
     if ReadWrite:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
@@ -215,18 +244,16 @@ def import_full_model(model_path, decay=False):
     #    model.restrict_model(restrict_file)
 
     return model
-    
 
 class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
-
-
 
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
        
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
+        self.wavefunction_CT_couplings = []
                         
         # Check here if we can extract the couplings perturbed in this model
         # which indicate a loop model or if this model is only meant for 
@@ -394,7 +421,7 @@ class UFOMG5Converter(object):
                     particle.set(key,abs(value))
                     if value<0:
                         particle.set('ghost',True)
-                elif key == 'propagator':
+                elif key == 'propagator' and value:
                     if aloha.unitary_gauge:
                         particle.set(key, str(value[0]))
                     else: 
@@ -442,7 +469,12 @@ class UFOMG5Converter(object):
             if len([1 for k in key[:-1] if k==1])==1 and \
                not any(k>1 for k in key[:-1]):
                 newParticleCountertermKey=[None,\
-                  tuple([tuple([abs(part.pdg_code) for part in loop_parts]) for\
+#                  The line below is for loop UFO Model with the 'attribute' 
+#                  'loop_particles' of the Particle objects to be defined with
+#                  instances of the particle class. The new convention is to use
+#                  pdg numbers instead.
+#                  tuple([tuple([abs(part.pdg_code) for part in loop_parts]) for\
+                  tuple([tuple(loop_parts) for\
                     loop_parts in loop_particles[key[-1]]])]
                 for i, order in enumerate(self.ufomodel.all_orders[:-1]):
                     if key[i]==1:
@@ -450,13 +482,14 @@ class UFOMG5Converter(object):
                 newCouplingName='UVWfct_'+particle_info.name+'_'+str(key[-1])
                 particle_counterterms[tuple(newParticleCountertermKey)]=\
                   dict([(key,newCouplingName+('' if key==0 else '_'+str(-key)+'eps'))\
-                        for key in counterterm.keys()])
+                        for key in counterterm])
                 # We want to create the new coupling for this wavefunction
                 # renormalization.
                 self.ufomodel.object_library.Coupling(\
                     name = newCouplingName,
                     value = counterterm,
                     order = {newParticleCountertermKey[0]:2})
+                self.wavefunction_CT_couplings.append(self.ufomodel.all_couplings.pop())
 
         particle.set('counterterm',particle_counterterms)
         self.particles.append(particle)
@@ -506,8 +539,7 @@ class UFOMG5Converter(object):
                     if poleOrder!=0:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
                     newCoupling.value=coupling.pole(poleOrder)
-                    new_couplings[key[2]][poleOrder][(key[0],key[1])]=\
-                      newCoupling
+                    new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling
         
         # Now we can add an interaction for each.         
         for i, all_couplings in enumerate(new_couplings):
@@ -523,14 +555,15 @@ class UFOMG5Converter(object):
                                                      'eps')),loop_particles)
 
 
-    def find_color_anti_color_rep(self):
+    def find_color_anti_color_rep(self, output=None):
         """find which color are in the 3/3bar states"""
         # method look at the 3 3bar 8 configuration.
         # If the color is T(3,2,1) and the interaction F1 F2 V
         # Then set F1 to anticolor (and F2 to color)
         # if this is T(3,1,2) set the opposite
-        output = {}
-        
+        if not output:
+            output = {}
+             
         for interaction_info in self.ufomodel.all_vertices:
             if len(interaction_info.particles) != 3:
                 continue
@@ -539,7 +572,22 @@ class UFOMG5Converter(object):
                 if 'T(3,2,1)' in interaction_info.color:
                     color, anticolor, other = interaction_info.particles
                 elif 'T(3,1,2)' in interaction_info.color:
-                    anticolor, color, other = interaction_info.particles
+                    anticolor, color, _ = interaction_info.particles
+                elif 'Identity(1,2)' in interaction_info.color  or \
+                     'Identity(2,1)' in interaction_info.color:
+                    first, second, _ = interaction_info.particles
+                    if first.pdg_code in output:
+                        if output[first.pdg_code] == 3:
+                            color, anticolor = first, second
+                        else:
+                            color, anticolor = second, first
+                    elif second.pdg_code in output:
+                        if output[second.pdg_code] == 3:
+                            color, anticolor = second, first                        
+                        else:
+                            color, anticolor = first, second
+                    else:
+                        continue
                 else:
                     continue
             elif colors[1:] == [3,3]:
@@ -547,6 +595,21 @@ class UFOMG5Converter(object):
                     other, anticolor, color = interaction_info.particles
                 elif 'T(1,3,2)' in interaction_info.color:
                     other, color, anticolor = interaction_info.particles
+                elif 'Identity(2,3)' in interaction_info.color  or \
+                     'Identity(3,2)' in interaction_info.color:
+                    _, first, second = interaction_info.particles
+                    if first.pdg_code in output:
+                        if output[first.pdg_code] == 3:
+                            color, anticolor = first, second
+                        else:
+                            color, anticolor = second, first
+                    elif second.pdg_code in output:
+                        if output[second.pdg_code] == 3:
+                            color, anticolor = second, first                        
+                        else:
+                            color, anticolor = first, second
+                    else:
+                        continue
                 else:
                     continue                  
                
@@ -555,6 +618,21 @@ class UFOMG5Converter(object):
                     color, other, anticolor = interaction_info.particles
                 elif 'T(2,1,3)' in interaction_info.color:
                     anticolor, other, color = interaction_info.particles
+                elif 'Identity(1,3)' in interaction_info.color  or \
+                     'Identity(3,1)' in interaction_info.color:
+                    first, _, second = interaction_info.particles
+                    if first.pdg_code in output:
+                        if output[first.pdg_code] == 3:
+                            color, anticolor = first, second
+                        else:
+                            color, anticolor = second, first
+                    elif second.pdg_code in output:
+                        if output[second.pdg_code] == 3:
+                            color, anticolor = second, first                        
+                        else:
+                            color, anticolor = first, second
+                    else:
+                        continue
                 else:
                     continue                 
             else:
@@ -709,7 +787,7 @@ class UFOMG5Converter(object):
 
         switch = {}
         for i in range(1, nb_fermion+1):
-            if not i in flow.keys():
+            if not i in flow:
                 continue
             switch[i] = len(switch)
             switch[flow[i]] = len(switch)
@@ -798,12 +876,23 @@ class UFOMG5Converter(object):
                     factor *= 2
                 elif particle.color in [-3,3]:
                     if particle.pdg_code not in color_info:
-                        logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle.name)
-                        color_info[particle.pdg_code] = particle.color
+                        #try to find it one more time 3 -3 1 might help
+                        logger.debug('fail to find 3/3bar representation: Retry to find it')
+                        color_info = self.find_color_anti_color_rep(color_info)
+                        if particle.pdg_code not in color_info:
+                            logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle.name)
+                            color_info[particle.pdg_code] = particle.color
+                        else:
+                            logger.debug('succeed')
                     if particle2.pdg_code not in color_info:
-                        logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle2.name)
-                        color_info[particle2.pdg_code] = particle2.color                    
-                
+                        #try to find it one more time 3 -3 1 might help
+                        logger.debug('fail to find 3/3bar representation: Retry to find it')
+                        color_info = self.find_color_anti_color_rep(color_info)
+                        if particle2.pdg_code not in color_info:
+                            logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle2.name)
+                            color_info[particle2.pdg_code] = particle2.color                    
+                        else:
+                            logger.debug('succeed')
                 
                     if color_info[particle.pdg_code] == 3 :
                         output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
@@ -852,7 +941,7 @@ class OrganizeModelExpression:
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
     
     #RE expression for is_event_dependent
-    separator = re.compile(r'''[+,\-*/()]''')
+    separator = re.compile(r'''[+,\-*/()\s]*''')
     
     def __init__(self, model):
     
@@ -868,12 +957,13 @@ class OrganizeModelExpression:
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
     
-    def main(self):
+    def main(self, additional_couplings = []):
         """Launch the actual computation and return the associate 
-        params/couplings."""
+        params/couplings. Possibly consider additional_couplings in addition
+        to those defined in the UFO model attribute all_couplings """
         
         self.analyze_parameters()
-        self.analyze_couplings()
+        self.analyze_couplings(additional_couplings = additional_couplings)
         return self.params, self.couplings
 
 
@@ -900,7 +990,7 @@ class OrganizeModelExpression:
         
         assert isinstance(parameter, base_objects.ModelVariable)
         
-        if parameter.name in self.all_expr.keys():
+        if parameter.name in self.all_expr:
             return
         
         self.all_expr[parameter.name] = parameter
@@ -915,7 +1005,7 @@ class OrganizeModelExpression:
         
         assert isinstance(coupling, base_objects.ModelVariable)
         
-        if coupling.name in self.all_expr.keys():
+        if coupling.name in self.all_expr:
             return
         self.all_expr[coupling.value] = coupling
         try:
@@ -925,27 +1015,27 @@ class OrganizeModelExpression:
         
                 
 
-    def analyze_couplings(self):
+    def analyze_couplings(self,additional_couplings=[]):
         """creates the shortcut for all special function/parameter
         separate the couplings dependent of track variables of the others"""
         
         # First expand the couplings on all their non-zero contribution to the 
         # three laurent orders 0, -1 and -2.
         if self.perturbation_couplings:
-            new_couplings_list=[]
-            for coupling in self.model.all_couplings:
+            couplings_list=[]
+            for coupling in self.model.all_couplings + additional_couplings:
                 for poleOrder in range(0,3):
                     newCoupling=copy.deepcopy(coupling)
                     if poleOrder!=0:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
                     if newCoupling.pole(poleOrder)!='ZERO':                    
                         newCoupling.value=newCoupling.pole(poleOrder)
-                        new_couplings_list.append(newCoupling)
-            self.model.all_couplings=new_couplings_list
-                        
+                        couplings_list.append(newCoupling)
+        else:
+            couplings_list = self.model.all_couplings + additional_couplings                        
                                         
         
-        for coupling in self.model.all_couplings:
+        for coupling in couplings_list:
             # shorten expression, find dependencies, create short object
             expr = self.shorten_expr(coupling.value)
             depend_on = self.find_dependencies(expr)
@@ -969,14 +1059,14 @@ class OrganizeModelExpression:
         
         # Split the different part of the expression in order to say if a 
         #subexpression is dependent of one of tracked variable
-        expr = self.separator.sub(' ',expr)
+        expr = self.separator.split(expr)
         
         # look for each subexpression
-        for subexpr in expr.split():
+        for subexpr in expr:
             if subexpr in self.track_dependant:
                 depend_on.add(subexpr)
                 
-            elif subexpr in self.all_expr.keys() and self.all_expr[subexpr].depend:
+            elif subexpr in self.all_expr and self.all_expr[subexpr].depend:
                 [depend_on.add(value) for value in self.all_expr[subexpr].depend 
                                 if  self.all_expr[subexpr].depend != ('external',)]
         if depend_on:
@@ -1277,7 +1367,7 @@ class RestrictModel(model_reader.ModelReader):
         keep external force to keep the param_card untouched (up to comment)"""
             
         logger_mod.debug('Parameters set to identical values: %s '% \
-                 ', '.join(['%s*%s' % (f, obj.name) for (obj,f) in parameters]))
+                 ', '.join(['%s*%s' % (f, obj.name.replace('mdl_','')) for (obj,f) in parameters]))
         
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
@@ -1285,7 +1375,8 @@ class RestrictModel(model_reader.ModelReader):
             # Keeped intact the first one and store information
             if i == 0:
                 obj.info = 'set of param :' + \
-                                     ', '.join([str(f)+'*'+param.name for (param, f) in parameters])
+                                     ', '.join([str(f)+'*'+param.name.replace('mdl_','')
+                                                 for (param, f) in parameters])
                 expr = obj.name
                 continue
             # Add a Rule linked to the param_card
@@ -1508,6 +1599,9 @@ class RestrictModel(model_reader.ModelReader):
             data.remove(param_info[param]['obj'])
 
                 
+
+
+
                 
         
         
