@@ -5,7 +5,7 @@
 //--------------------------------------------------------------------------
 // Initialize process. 
   
-void %(ClassName)s::initProc(string param_card_name) {
+void CPPProcess::initProc(string param_card_name) {
 // Instantiate the model class and set parameters that stay fixed during run
     pars = Parameters_%(model_name)s::getInstance();
     SLHAReader slha(param_card_name);
