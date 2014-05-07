@@ -136,7 +136,7 @@ def generate_subprocess_directory_standalone_cpp(matrix_element,
     if format == 'standalone_cpp':
         process_exporter_cpp = ProcessExporterCPP(matrix_element,
                                               cpp_helas_call_writer)
-    elif format == 'matchbox':
+    elif format == 'matchbox_cpp':
         process_exporter_cpp = ProcessExporterMatchbox(matrix_element,
                                               cpp_helas_call_writer)
     else:

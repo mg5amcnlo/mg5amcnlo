@@ -71,9 +71,7 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_output(self,args)
         
-        if args and args[0] in ['standalone']:
-            self._export_format = args.pop(0)
-        else:
+        if self._export_format not in ["standalone", "matchbox"]: 
             self._export_format = 'standalone'
 
     def check_launch(self, args, options):
@@ -387,8 +385,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         aloha_original_quad_mode = aloha.mp_precision
         aloha.mp_precision = True
 
-        if self._export_format not in ['standalone']:
-            raise self.InvalidCmd('ML5 only support standalone as export format.')
+        if self._export_format not in ['standalone', 'matchbox']:
+            raise self.InvalidCmd('ML5 only support standalone/matchbox as export format.')
 
         if not os.path.isdir(self._export_dir) and \
            self._export_format in ['matrix']:
@@ -416,10 +414,15 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                      'loop-induced processes. Now setting this option to False.')
             self.do_set('loop_optimized_output False')
 
-        self._curr_exporter = export_v4.ExportV4Factory(self, \
-                                                 noclean, output_type='madloop')
+        if self._export_format == 'standalone':
+            output_type = 'madloop'
+        elif self._export_format == 'matchbox':
+            output_type = 'madloop_matchbox'
 
-        if self._export_format in ['standalone']:
+        self._curr_exporter = export_v4.ExportV4Factory(self, \
+                                                 noclean, output_type=output_type)
+
+        if self._export_format in ['standalone', 'matchbox']:
             self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
 
         # Reset _done_export, since we have new directory
@@ -477,7 +480,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone']:
+        if self._export_format in ['standalone','matchbox']:
             path = pjoin(path, 'SubProcesses')
             
         cpu_time1 = time.time()
@@ -487,7 +490,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                         self._curr_matrix_elements.get_matrix_elements()
 
         # Fortran MadGraph5_aMC@NLO Standalone
-        if self._export_format == 'standalone':
+        if self._export_format in ['standalone', 'matchbox']:
             for me in matrix_elements:
                 calls = calls + \
                         self._curr_exporter.generate_subprocess_directory_v4(\
@@ -548,7 +551,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         """Copy necessary sources and output the ps representation of 
         the diagrams, if needed"""
 
-        if self._export_format in ['standalone']:
+        if self._export_format in ['standalone','matchbox']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
@@ -559,7 +562,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                                            wanted_lorentz,
                                            wanted_couplings)
 
-        if self._export_format in ['standalone']:
+        if self._export_format in ['standalone', 'matchbox']:
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
                                            [self.history_header] + \
@@ -568,7 +571,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                                            online,
                                            self.options['fortran_compiler'])
 
-        if self._export_format in ['standalone']:
+        if self._export_format in ['standalone','matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
     def do_launch(self, line, *args,**opt):

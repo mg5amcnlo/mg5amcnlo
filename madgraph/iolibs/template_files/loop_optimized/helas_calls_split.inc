@@ -1,4 +1,4 @@
-      SUBROUTINE %(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
+      SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
 C  
       IMPLICIT NONE
 C  
@@ -41,25 +41,25 @@ C
 	  INTEGER HELOFFSET	  
 	  INTEGER GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPGROUPS)
-	  common/Filters/GOODAMP,GOODHEL,HELOFFSET
+	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL,HELOFFSET
 
       %(dp_born_amps_decl)s
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
-	  common/W/W
+	  common/%(proc_prefix)sW/W
 
 	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
-	  common/WL/WL,PL
+	  common/%(proc_prefix)sWL/WL,PL
 
 	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
-	  common/LCOEFS/LOOPCOEFS
+	  common/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
       %(complex_dp_format)s AMPL(3,NCTAMPS)
-	  common/AMPL/AMPL
+	  common/%(proc_prefix)sAMPL/AMPL
 
       %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
 	  LOGICAL S(NLOOPGROUPS)
-	  common/LOOPRES/LOOPRES,S
+	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
 C
 C ----------
 C BEGIN CODE

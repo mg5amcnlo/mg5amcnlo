@@ -71,10 +71,14 @@ class LoopExporterFortran(object):
         ProcessExporterFortran but give access to arguments like dir_path and
         clean using options. This avoids method resolution object ambiguity"""
 
+
+
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
+        if not hasattr(self, "proc_prefix"):
+            self.proc_prefix = ''
         if opt:
             self.opt = opt
         else: 
@@ -487,7 +491,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
-
+        self.proc_prefix = 'P%i_' % matrix_element.get('processes')[0].get('id')
         try:
             os.mkdir(dirpath)
         except os.error as error:
@@ -653,6 +657,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             dict['copy_mp_to_dp_born_amps'] = ''
             dict['mp_born_amps_decl'] = ''
             dict['nbornamps_decl'] = ''
+        
+        dict['proc_prefix'] = self.proc_prefix
         
         return dict
     
@@ -957,6 +963,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                          noSplit=False):
         """Create the loop_matrix.f file."""
         
+        print 960, "self.template_dir", self.template_dir, self.proc_prefix
+        
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
@@ -1100,7 +1108,7 @@ C                ENDIF
             return len(filter(lambda call: call.find('CALL LOOP') != 0, \
                               loop_amp_helas_calls)), file
                   
-    def write_bornmatrix(self, writer, matrix_element, fortran_model):
+    def write_bornmatrix(self, writer, matrix_element, fortran_model, write=True):
         """Create the born_matrix.f file for the born process as for a standard
         tree-level computation."""
         
@@ -1133,7 +1141,7 @@ C                ENDIF
         bornME.optimization = True
         
         return super(LoopProcessExporterFortranSA,self).\
-          write_matrix_element_v4(writer,bornME,fortran_model)
+          write_matrix_element_v4(writer,bornME,fortran_model, write=write)
 
     def write_born_amps_and_wfs(self, writer, matrix_element, fortran_model,\
                                 noSplit=False): 
@@ -1218,7 +1226,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
               ' work with a UFO Fortran model'
         OptimizedFortranModel=\
           helas_call_writers.FortranUFOHelasCallWriterOptimized(\
-          fortran_model.get('model'),False)
+          fortran_model.get('model'),False, proc_prefix=self.proc_prefix)
 
         # Compute the analytical information of the loop wavefunctions in the
         # loop helas matrix elements using the cached aloha model to reuse
@@ -1339,10 +1347,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
-                                             matrix_element.get_max_loop_rank())
+                                             matrix_element.get_max_loop_rank(),
+                                             sub_prefix=self.proc_prefix)
         mp_poly_writer=q_polynomial.FortranPolynomialRoutines(
                     matrix_element.get_max_loop_rank(),coef_format='complex*32',
-                                                               sub_prefix='MP_')
+                                          sub_prefix='MP_%s' % self.proc_prefix)
         # The eval subroutine
         subroutines.append(poly_writer.write_polynomial_evaluator())
         subroutines.append(mp_poly_writer.write_polynomial_evaluator())
@@ -1446,6 +1455,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False):
         """Create the loop_matrix.f file."""
+        
+        print 1450, "self.template_dir", self.template_dir, self.proc_prefix
         
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -1573,9 +1584,87 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 #===============================================================================
 # LoopProcessExporterFortranSA
 #===============================================================================
-class LoopProcessExporterFortranMatchBox(LoopExporterFortran,
-                                   export_v4.ProcessExporterFortranSA):
+class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
                                    
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
+    
+    #specific template of the born
+    matrix_template = "matrix_standalone_matchbox.inc"
+    
+    def __init__(self, mgme_dir="", dir_path = "", opt=None):
+        super(LoopProcessExporterFortranMatchBox, self).__init__(mgme_dir, dir_path, opt)
 
+    
+    def write_bornmatrix(self, writer, matrix_element, fortran_model, write=True):
+        """Create the born_matrix.f file for the born process as for a standard
+        tree-level computation."""
+
+        replace_dict = super(LoopProcessExporterFortranMatchBox, self).write_bornmatrix(writer,
+                                 matrix_element, fortran_model, write=False)
+        
+        # need to add the matchbox dedicated output:
+        replace_dict["proc_prefix"] = self.proc_prefix
+        replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
+        
+        if write:
+            path = pjoin(_file_path, 'iolibs', 'template_files', self.matrix_template)
+            content = open(path).read()
+            content = content % replace_dict
+            # Write the file
+            writer.writelines(content)
+        else:
+            return replace_dict # for subclass update   
+        
+    def get_color_string_lines(self, matrix_element):
+        """Return the color matrix definition lines for this matrix element. Split
+        rows in chunks of size n."""
+
+        if not matrix_element.get('color_matrix'):
+            return "\n".join(["out = 1"])
+        
+        #start the real work
+        color_denominators = matrix_element.get('color_matrix').\
+                                                         get_line_denominators()
+        matrix_strings = []
+        my_cs = color.ColorString()
+                
+        for i_color in xrange(len(color_denominators)):
+            # Then write the numerators for the matrix elements
+            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
+            t_str=repr(my_cs)
+            t_match=re.compile(r"(\w+)\(([\s\d+\,]*)\)")
+            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2,1) T(1,2)' returns with findall:
+            # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
+            all_matches = t_match.findall(t_str)
+            output = {}
+            for i,match in enumerate(all_matches):
+                ctype, arg = match[0], [m.strip() for m in match[1].split(',')]
+                if ctype not in ['T', 'Tr']:
+                    raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
+                arg += ['0']
+                for j, v in enumerate(arg):
+                    output[(i,j)] = v
+          
+        
+        matrix_strings=[]
+        for i,key in enumerate(output):
+            if i == 0:
+                #first entry
+                matrix_strings.append(""" 
+                if (in1.eq.%s.and.in2.eq.%s)then
+                out = %s
+                """  % (key[0], key[1], output[key]))
+            else:
+                #first entry
+                matrix_strings.append(""" 
+                elseif (in1.eq.%s.and.in2.eq.%s)then
+                out = %s
+                """  % (key[0], key[1], output[key]))                
+        matrix_strings.append(" else \n stop 1 \n endif")
+        return "\n".join(matrix_strings) 
+
+
+
+        
+        

@@ -1324,6 +1324,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadGraph v4 StandAlone format."""
 
+    matrix_template = "matrix_standalone_v4.inc"
+
     def __init__(self, *args, **opts):
         """add the format information compare to standard init"""
         
@@ -1580,8 +1582,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #===========================================================================
     # write_matrix_element_v4
     #===========================================================================
-    def write_matrix_element_v4(self, writer, matrix_element, fortran_model):
-        """Export a matrix element to a matrix.f file in MG4 standalone format"""
+    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
+                                write=True):
+        """Export a matrix element to a matrix.f file in MG4 standalone format
+        if write is on False, just return the replace_dict and not write anything."""
 
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -1654,25 +1658,24 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
+        matrix_template = self.matrix_template
+        
+
         if self.opt['export_format']=='standalone_msP' :
-            file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_msP_v4.inc')).read()
-
+            matrix_template = 'matrix_standalone_msP_v4.inc'
         elif self.opt['export_format']=='standalone_msF':
-            file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_msF_v4.inc')).read()
+            matrix_template = 'matrix_standalone_msF_v4.inc'
+            
 
+        if write:
+            path = pjoin(_file_path, 'iolibs', 'template_files', self.matrix_template)
+            content = open(path).read()
+            content = content % replace_dict
+            # Write the file
+            writer.writelines(content)
+            return len(filter(lambda call: call.find('#') != 0, helas_calls))
         else:
-            file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_v4.inc')).read()
-
-        file = file % replace_dict
-
-        # Write the file
-        writer.writelines(file)
-
-        return len(filter(lambda call: call.find('#') != 0, helas_calls))
-
+            return replace_dict # for subclass update
 #===============================================================================
 # ProcessExporterFortranMW
 #===============================================================================
@@ -5022,7 +5025,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
     group_subprocesses = cmd.options['group_subprocesses']
     
     # First treat the MadLoop5 standalone case
-    if output_type=='madloop':
+    if output_type.startswith('madloop'):
         import madgraph.loop.loop_exporters as loop_exporters
         if os.path.isdir(os.path.join(cmd._mgme_dir, 'Template/loop_material')):
             ExporterClass=None
@@ -5039,7 +5042,12 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
                 ExporterClass=loop_exporters.LoopProcessExporterFortranSA
             else:
                 if all([amp['process']['has_born'] for amp in cmd._curr_amps]):
-                    ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                    if output_type == "madloop":
+                        ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                    elif output_type == "madloop_matchbox":
+                        ExporterClass=loop_exporters.LoopProcessExporterFortranMatchBox
+                    else:
+                        raise Exception, "output_type not recognize %s" % output_type
                     options['export_format'] = 'madloop_optimized'
                 else:
                     logger.warning('ML5 can only exploit the optimized output for '+\

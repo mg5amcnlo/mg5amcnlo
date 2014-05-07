@@ -1361,7 +1361,7 @@ This will take effect only in a NEW terminal
                     raise self.InvalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'standalone', 'standalone_cpp', 'matchbox', 'madweight']:
+                     ['madevent', 'standalone', 'standalone_cpp', 'matchbox_cpp', 'madweight']:
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
@@ -1519,7 +1519,7 @@ This will take effect only in a NEW terminal
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
-        elif self._export_format == 'matchbox':
+        elif self._export_format == 'matchbox_cpp':
             name_dir = lambda i: 'PROC_MATCHBOX_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
@@ -2064,7 +2064,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
                             'mg5', 'DECAY', 'EventConverter', 'Models',
                             'ExRootAnalysis', 'HELAS', 'Transfer_Fct', 'aloha',
-                            'matchbox']
+                            'matchbox', 'matchbox_cpp', 'tests']
 
         #name of the run =>proposes old run name
         args = self.split_arg(line[0:begidx])
@@ -2393,7 +2393,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
-                                            'matchbox']
+                                            'matchbox_cpp']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
@@ -5482,7 +5482,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         config['standalone_rw'] =  {'check': False, 'exporter': 'v4',  'output':'Template'}
         config['standalone_cpp'] = {'check': False, 'exporter': 'cpp', 'output': 'Template'}
         config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
-        config['matchbox'] =       {'check': False, 'exporter': 'cpp', 'output': 'Template'}
+        config['matchbox_cpp'] =   {'check': True, 'exporter': 'cpp', 'output': 'Template'}
         config['madweight'] =      {'check': True, 'exporter': 'v4',  'output':'Template'}
 
         options = config[self._export_format]
@@ -5631,7 +5631,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         path = self._export_dir
         if self._export_format in ['standalone_cpp', 'madevent', 'standalone',
                                    'standalone_msP', 'standalone_msF', 'standalone_rw',
-                                   'matchbox', 'madweight']:
+                                   'matchbox_cpp', 'madweight']:
             path = pjoin(path, 'SubProcesses')
 
         cpu_time1 = time.time()
@@ -5742,7 +5742,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     me, self._curr_fortran_model)
 
         # C++ standalone
-        if self._export_format in ['standalone_cpp', 'matchbox']:
+        if self._export_format in ['standalone_cpp', 'matchbox_cpp']:
             for me in matrix_elements:
                 export_cpp.generate_subprocess_directory_standalone_cpp(\
                               me, self._curr_cpp_model,
@@ -5803,7 +5803,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                                wanted_lorentz,
                                                wanted_couplings)
-        if self._export_format in ['standalone_cpp', 'matchbox']:
+        if self._export_format in ['standalone_cpp', 'matchbox_cpp']:
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
