@@ -1456,8 +1456,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                          noSplit=False):
         """Create the loop_matrix.f file."""
         
-        print 1450, "self.template_dir", self.template_dir, self.proc_prefix
-        
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
