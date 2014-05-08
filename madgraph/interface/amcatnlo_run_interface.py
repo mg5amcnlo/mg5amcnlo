@@ -3613,7 +3613,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
                     logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
                     raise self.InvalidCmd(error)
-                elif self.run_card['parton_shower'].upper() != 'HERWIG6' or self.run_card['parton_shower'].upper() != 'PYTHIA8':
+                elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8':
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
                     answers = ['n','y']

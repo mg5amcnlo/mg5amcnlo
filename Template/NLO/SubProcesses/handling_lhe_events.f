@@ -468,6 +468,7 @@ c
      &        (npNLO.lt.10.or.npNLO.ge.0)) then
             write(ifile,'(a,i1,a,i1,a)') "  <event npLO=' ",npLO
      $           ," ' npNLO=' ",npNLO," '>"
+         endif
       else
          write(ifile,'(a)') '  <event>'
       endif
