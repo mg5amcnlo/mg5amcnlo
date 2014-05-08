@@ -707,13 +707,13 @@ double minPythiaSep( const State& inEvent, int& iradMin, int& iemtMin, int& irec
     if(inEvent[in1].id() == 21 || abs(inEvent[in1].id()) < 10) {
       double temp = pTpythia( inEvent[in1],
                       inEvent[FinalPartPos[i]], inEvent[in2], -1 );
-      if (temp > 1e-5 && pt12 > temp) { irad = in1; iemt = FinalPartPos[i]; irec = in2; itype = -1;}
+      if (temp > 0e0 && pt12 > temp) { irad = in1; iemt = FinalPartPos[i]; irec = in2; itype = -1;}
       pt12 = min(pt12, temp);
     }
     // Compute pythia ISR separation i-jet and second incoming
     if(inEvent[in2].id() == 21 || abs(inEvent[in2].id()) < 10) {
       double temp = pTpythia( inEvent[in2], inEvent[FinalPartPos[i]], inEvent[in1], -1 );
-      if (temp > 1e-5 && pt12 > temp) { irad = in2; iemt = FinalPartPos[i]; irec = in1; itype = -1;}
+      if (temp > 0e0 && pt12 > temp) { irad = in2; iemt = FinalPartPos[i]; irec = in1; itype = -1;}
       pt12 = min(pt12, temp);
     }
 
@@ -730,7 +730,7 @@ double minPythiaSep( const State& inEvent, int& iradMin, int& iemtMin, int& irec
           temp = pTpythia( inEvent[FinalPartPos[i]],
                             inEvent[FinalPartPos[j]],
                             inEvent[FinalPartPos[k]], 1 );
-          if (temp > 1e-5 && pt12 > temp) { irad = FinalPartPos[i]; iemt = FinalPartPos[j]; irec = FinalPartPos[k]; itype = 1;}
+          if (temp > 0e0 && pt12 > temp) { irad = FinalPartPos[i]; iemt = FinalPartPos[j]; irec = FinalPartPos[k]; itype = 1;}
           pt12 = min(pt12, temp);
         } // if allowed triple
       } // loop over k
@@ -747,13 +747,13 @@ double minPythiaSep( const State& inEvent, int& iradMin, int& iemtMin, int& irec
           double temp = pTpythia( inEvent[FinalPartPos[i]],
                                   inEvent[FinalPartPos[j]],
                                   inEvent[in1], 1 );
-          if (temp > 1e-5 && pt12 > temp) { irad = FinalPartPos[i]; iemt = FinalPartPos[j]; irec = in1; itype = 1;}
+          if (temp > 0e0 && pt12 > temp) { irad = FinalPartPos[i]; iemt = FinalPartPos[j]; irec = in1; itype = 1;}
           pt12 = min(pt12, temp);
           // Check with second initial as recoiler
           temp        = pTpythia( inEvent[FinalPartPos[i]],
                                   inEvent[FinalPartPos[j]],
                                   inEvent[in2], 1 );
-          if (temp > 1e-5 && pt12 > temp) { irad = FinalPartPos[i]; iemt = FinalPartPos[j]; irec = in2; itype = 1;}
+          if (temp > 0e0 && pt12 > temp) { irad = FinalPartPos[i]; iemt = FinalPartPos[j]; irec = in2; itype = 1;}
           pt12 = min(pt12, temp);
         }
       } // loop over j
@@ -778,8 +778,8 @@ double minPythiaSep( const State& inEvent, int& iradMin, int& iemtMin, int& irec
 
 
 // Small values used to cut off momenta
-const double TINY      = 1e-6;
-const double TINYMASS  = 1e-3;
+const double TINY      = 1e-15;
+const double TINYMASS  = 1e-8;
 
 
 
