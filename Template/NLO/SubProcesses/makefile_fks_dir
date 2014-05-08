@@ -64,13 +64,7 @@ TEST= $(FILES) BinothLHADummy.o cuts.o
 SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
-RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
-	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
-	cuts.o $(fastjetfortran_madfks) boostwdir2.o 			\
-	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
-	reweight.o get_color.o iproc_map.o fks_inc_chooser.o 		\
-	leshouche_inc_chooser.o pythia_unlops.o recluster.o		\
-	add_write_info.o
+RWGFILES=$(RUN) reweight_xsec_events.o handling_lhe_events.o iproc_map.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. $<
@@ -119,8 +113,8 @@ madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
-reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)
+reweight_xsec_events: $(RWGFILES) $(libmadloop) makefile $(LIBS)
+	$(FC) $(LDFLAGS) -o reweight_xsec_events $(RWGFILES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
