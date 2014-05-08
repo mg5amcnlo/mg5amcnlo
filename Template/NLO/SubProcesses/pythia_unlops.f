@@ -46,8 +46,16 @@ c convert momenta to pythia8 c++ format
          else
             ist(npart)=1
          endif
-         id(npart)=idup(i,1)
       enddo
+      if (npart.eq.nexternal) then
+         call get_ID_H(id)
+      elseif (npart.eq.nexternal-1) then
+         call get_ID_S(id)
+      else
+         write (*,*) 'Error: wrong number of particles in'/
+     $        /' pythia_unlops.f',npart,nexternal
+         stop
+      endif
 
       call pythia_unlops_cluster(pin,npart,id,ist,ptmin1,ptmin2)
 

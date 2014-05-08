@@ -33,11 +33,12 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
 	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
 	 reweight.o get_color.o FKSParamReader.o pythia_unlops.o	\
-	 recluster.o MC_integer.o $(reweight_xsec_events_pdf_dummy)
+	 recluster.o MC_integer.o $(reweight_xsec_events_pdf_dummy)	\
+	 add_write_info.o
 
 # Files needed for vegas, mint & mintMC
-RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o	\
-	madfks_plot.o fill_MC_mshell.o born_hel.o open_output_files.o
+RUN= $(FO_ANALYSE) $(FILES) cuts.o BinothLHA.o madfks_plot.o		\
+	fill_MC_mshell.o born_hel.o open_output_files.o
 
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
@@ -68,7 +69,8 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	cuts.o $(fastjetfortran_madfks) boostwdir2.o 			\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	reweight.o get_color.o iproc_map.o fks_inc_chooser.o 		\
-	leshouche_inc_chooser.o pythia_unlops.o recluster.o
+	leshouche_inc_chooser.o pythia_unlops.o recluster.o		\
+	add_write_info.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. $<
