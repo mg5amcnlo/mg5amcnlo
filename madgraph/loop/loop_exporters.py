@@ -666,6 +666,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f and loop_num.f only"""
         
+        misc.sprint("calling LoopExporterFortranSA.write_matrix_element_v4")
         # Create the necessary files for the loop matrix element subroutine
 
         if not isinstance(fortran_model,\
@@ -1582,7 +1583,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 #===============================================================================
 # LoopProcessExporterFortranSA
 #===============================================================================
-class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
+class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
+                                      export_v4.ProcessExporterFortranMatchBox):
                                    
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
@@ -1593,76 +1595,22 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         super(LoopProcessExporterFortranMatchBox, self).__init__(mgme_dir, dir_path, opt)
 
-    
-    def write_bornmatrix(self, writer, matrix_element, fortran_model, write=True):
-        """Create the born_matrix.f file for the born process as for a standard
-        tree-level computation."""
 
-        replace_dict = super(LoopProcessExporterFortranMatchBox, self).write_bornmatrix(writer,
-                                 matrix_element, fortran_model, write=False)
+    def link_files_from_Subprocesses(self,proc_name=""):
+        """ To link required files from the Subprocesses directory to the
+        different P* ones"""
         
-        # need to add the matchbox dedicated output:
-        replace_dict["proc_prefix"] = self.proc_prefix
-        replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
+        linkfiles = ['coupl.inc', 'makefile',
+                     'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
+                     'mp_coupl_same_name.inc']
         
-        if write:
-            path = pjoin(_file_path, 'iolibs', 'template_files', self.matrix_template)
-            content = open(path).read()
-            content = content % replace_dict
-            # Write the file
-            writer.writelines(content)
-        else:
-            return replace_dict # for subclass update   
-        
-    def get_color_string_lines(self, matrix_element):
-        """Return the color matrix definition lines for this matrix element. Split
-        rows in chunks of size n."""
+        for file in linkfiles:
+            ln('../%s' % file)
 
-        if not matrix_element.get('color_matrix'):
-            return "\n".join(["out = 1"])
-        
-        #start the real work
-        color_denominators = matrix_element.get('color_matrix').\
-                                                         get_line_denominators()
-        matrix_strings = []
-        my_cs = color.ColorString()
-                
-        for i_color in xrange(len(color_denominators)):
-            # Then write the numerators for the matrix elements
-            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
-            t_str=repr(my_cs)
-            t_match=re.compile(r"(\w+)\(([\s\d+\,]*)\)")
-            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2,1) T(1,2)' returns with findall:
-            # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
-            all_matches = t_match.findall(t_str)
-            output = {}
-            for i,match in enumerate(all_matches):
-                ctype, arg = match[0], [m.strip() for m in match[1].split(',')]
-                if ctype not in ['T', 'Tr']:
-                    raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
-                arg += ['0']
-                for j, v in enumerate(arg):
-                    output[(i,j)] = v
-          
-        
-        matrix_strings=[]
-        for i,key in enumerate(output):
-            if i == 0:
-                #first entry
-                matrix_strings.append(""" 
-                if (in1.eq.%s.and.in2.eq.%s)then
-                out = %s
-                """  % (key[0], key[1], output[key]))
-            else:
-                #first entry
-                matrix_strings.append(""" 
-                elseif (in1.eq.%s.and.in2.eq.%s)then
-                out = %s
-                """  % (key[0], key[1], output[key]))                
-        matrix_strings.append(" else \n stop 1 \n endif")
-        return "\n".join(matrix_strings) 
-
-
-
+        # The mp module
+        ln('../../lib/mpmodule.mod')
+            
+        # For convenience also link the madloop param card
+        ln('../../Cards/MadLoopParams.dat')
         
         

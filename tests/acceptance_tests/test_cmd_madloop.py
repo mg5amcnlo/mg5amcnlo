@@ -22,6 +22,7 @@ import copy
 import sys
 import logging
 import time
+import tests.IOTests as IOTests
 
 logger = logging.getLogger('test_cmd')
 
@@ -232,3 +233,33 @@ class TestCmdLoop(unittest.TestCase):
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
+
+class TestCmdMatchBox(IOTests.IOTestManager):
+    
+    def setUp(self):
+        """ Initialize the test """
+        self.interface = MGCmd.MasterCmd()
+        # Below the key is the name of the logger and the value is a tuple with
+        # first the handlers and second the level.
+        self.logger_saved_info = {}       
+
+    @IOTests.createIOTest()
+    def testIO_MatchBoxOutput(self):
+        """ target: TEST/SubProcesses/P1_uux_uux/[.+\.(inc|f)]
+            target: TEST/SubProcesses/P0_wpwm_wpwm/[.+\.(inc|f)]"""
+        
+        cmd = """
+        import model sm
+        generate w+ w- > w+ w- @0
+        output matchbox %(path)s/TEST --postpone_model
+        generate u u~ > u u~ [virt=QCD] @1
+        output matchbox %(path)s/TEST -f
+        """ % {'path': self.IOpath}
+        
+        for line in cmd.split('\n'):
+            self.interface.exec_cmd(line)
+ 
+        
+        
+        

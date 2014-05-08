@@ -5426,6 +5426,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         noclean = '-noclean' in args
         force = '-f' in args
         nojpeg = '-nojpeg' in args
+        flaglist = []
+        if '--postpone_model' in args:
+            flaglist.append('store_model')
+        
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
@@ -5484,6 +5488,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         config['standalone_cpp'] = {'check': False, 'exporter': 'cpp', 'output': 'Template'}
         config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
         config['matchbox_cpp'] =   {'check': True, 'exporter': 'cpp', 'output': 'Template'}
+        config['matchbox'] =       {'check': True, 'exporter': 'v4',  'output': 'Template'}
         config['madweight'] =      {'check': True, 'exporter': 'v4',  'output':'Template'}
 
         options = config[self._export_format]
@@ -5532,7 +5537,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.export(nojpeg, main_file_name, args)
 
         # Automatically run finalize
-        self.finalize(nojpeg)
+        self.finalize(nojpeg, flaglist=flaglist)
 
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
@@ -5632,7 +5637,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         path = self._export_dir
         if self._export_format in ['standalone_cpp', 'madevent', 'standalone',
                                    'standalone_msP', 'standalone_msF', 'standalone_rw',
-                                   'matchbox_cpp', 'madweight']:
+                                   'matchbox_cpp', 'madweight', 'matchbox']:
             path = pjoin(path, 'SubProcesses')
 
         cpu_time1 = time.time()
@@ -5721,7 +5726,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                 me, self._curr_fortran_model, me_number)
 
         # Fortran MadGraph5_aMC@NLO Standalone
-        if self._export_format in ['standalone', 'standalone_msP', 'standalone_msF', 'standalone_rw']:
+        if self._export_format in ['standalone', 'standalone_msP', 
+                                   'standalone_msF', 'standalone_rw', 'matchbox']:
             for me in matrix_elements[:]:
                 new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
@@ -5781,12 +5787,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                [me.get('base_amplitude') for me in \
                 matrix_elements])
 
-    def finalize(self, nojpeg, online = False):
+    def finalize(self, nojpeg, online = False, flaglist=[]):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
 
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
-                                   'standalone_msF', 'standalone_rw', 'NLO', 'madweight']:
+                                   'standalone_msF', 'standalone_rw', 'NLO', 'madweight',
+                                   'matchbox']:
 
             # For v4 models, copy the model/HELAS information.
             if self._model_v4_path:
@@ -5801,7 +5808,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # these processes
                 wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
                 wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-                self._curr_exporter.convert_model_to_mg4(self._curr_model,
+                # For a unique output of multiple type of exporter need to store this
+                # information.             
+                if hasattr(self, 'previous_lorentz'):
+                        wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
+                        wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                        del self.previous_lorentz
+                        del self.previous_couplings
+                        
+                if 'store_model' in flaglist:
+                    self.previous_lorentz = wanted_lorentz
+                    self.previous_couplings = wanted_couplings
+                else:
+                    self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                                wanted_lorentz,
                                                wanted_couplings)
         if self._export_format in ['standalone_cpp', 'matchbox_cpp']:
@@ -5861,7 +5880,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                          to_keep={'mg5_path':MG5DIR})
 
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 'standalone_msF',
-                                   'standalone_rw', 'madweight']:
+                                   'standalone_rw', 'madweight', 'matchbox']:
 
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
@@ -5871,7 +5890,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            online,
                                            self.options['fortran_compiler'])
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
         if self._export_format in ['madevent', 'NLO']:
