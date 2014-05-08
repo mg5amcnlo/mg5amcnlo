@@ -3038,9 +3038,9 @@ Integrated cross-section
                     output_files.append(fname + '.hep.gz')
             elif args[1] == 'TOP':
                 if len(args) == 3:
-                    fname = 'topfiles'
+                    fname = 'topfile'
                 else:
-                    fname = 'topfiles_%s' % args[3]
+                    fname = 'topfile_%s' % args[3]
                 output_files.append(fname + '.tar')
             else:
                 raise aMCatNLOError, 'Not a valid output argument for shower job :  %d' % args[1]
