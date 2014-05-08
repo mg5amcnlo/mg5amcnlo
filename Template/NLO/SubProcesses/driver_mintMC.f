@@ -759,6 +759,9 @@ c From dsample_fks
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
       include 'run.inc'
+      include 'cuts.inc'
+      double precision zero
+      parameter       (ZERO = 0d0)
       integer ndim,ipole
       common/tosigint/ndim,ipole
       integer           iconfig
@@ -823,6 +826,14 @@ c From dsample_fks
       common/mc_int2/volh,mc_hel,ihel,fillh
       double precision double_check(nintegrals)
       save double_check
+      integer nattr,npNLO,npLO
+      common/event_attributes/nattr,npNLO,npLO
+c PDG codes of particles
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+      common /c_leshouche_inc/idup,mothup,icolup
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
@@ -970,6 +981,35 @@ c For the S-events, we can combine processes when they give identical
 c processes at the Born. Make sure we check that we get indeed identical
 c IRPOC's
          call find_iproc_map()
+c
+c For FxFx or UNLOPS matching with pythia8, set the correct attributes
+c for the <event> tag in the LHEF file. "npNLO" are the number of Born
+c partons in this multiplicity when running the code at NLO accuracy
+c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
+c "npNLO".
+         if (MonteCarlo.eq.'PYTHIA8' .and. (ickkw.eq.3.or.ickkw.eq.4))
+     $        then
+            nattr=2
+            nFKSprocess=1 ! just pick the first nFKSprocess
+            call fks_inc_chooser()
+            call leshouche_inc_chooser()
+            npNLO=0
+            npLO=-1
+            do i=nincoming+1,nexternal
+c include all quarks (except top quark) and the gluon.
+               if(abs(idup(i,1)).le.5 .or. idup(i,1).eq.21)
+     &              npNLO=npNLO+1
+            enddo
+            npNLO=npNLO-1
+            if (npNLO.gt.99) then
+               write (*,*) 'Too many partons',npNLO
+               stop
+            endif
+            if (abrv.eq.'born') then
+               npLO=npNLO
+               npNLO=-1
+            endif
+         endif
       endif
 
       fold=ifl

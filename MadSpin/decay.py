@@ -162,7 +162,7 @@ class Event:
         """ return a string with the information of the event written 
                 in the lhe format.
         """
-        line="<event> \n"
+        line=self.event_init_line         # This is the <event> line
         line1=' %2d %6d %+13.7e %14.8e %14.8e %14.8e' % \
         (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
         line+=line1+"\n"
@@ -274,8 +274,10 @@ class Event:
             if line[0]=="#":
                 self.diese+=line
                 continue
-            if '<event>' in line:
+            if '<event' in line:
                 #start new_event
+                #Get the right attributes (e.g. <event id='123' npNLO='-1'>)
+                self.event_init_line=line.replace('nplo','npLO').replace('npnlo','npNLO')
                 line_type = 'init'
                 continue
             elif '<rwgt>' in line:
@@ -301,6 +303,7 @@ class Event:
             # read the line and assign the date accordingly                
             elif line_type == 'init':
                 line_type = 'event'
+                #Extra information for FxFx and UNLOPS
                 self.assign_scale_line(line)         
                 # initialize some local variable
                 index_prod=0
@@ -3343,6 +3346,7 @@ class decay_all_events(object):
         decayed_event.aqcd=curr_event.aqcd
         decayed_event.diese=curr_event.diese
         decayed_event.rwgt=curr_event.rwgt
+        decayed_event.event_init_line=curr_event.event_init_line
 
         part_number=0
         external=0
