@@ -1536,10 +1536,13 @@ class Model(PhysicsObject):
         try:
             sw2 = self.get_parameter('sw2')
         except KeyError:
-            sw2=None
+            try:
+                sw2 = self.get_parameter('mdl_sw2')
+            except KeyError:
+                sw2=None
         
         if sw2:
-            newsw2 = ParamCardVariable('sw2',sw2.value, 'SMINPUTS', [4])
+            newsw2 = ParamCardVariable(sw2.name,sw2.value, 'SMINPUTS', [4])
             if not newsw2.value:
                 newsw2.value = 0.222246485786
             #remove the old definition
