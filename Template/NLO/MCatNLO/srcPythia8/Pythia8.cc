@@ -9,6 +9,7 @@
 #include "HepMC/HEPEVT_Wrapper.h"
 #include "fstream"
 #include "LHEFRead.h"
+#include "../examples/CombineMatchingInput.h"
 
 using namespace Pythia8;
 
@@ -27,6 +28,7 @@ extern "C" {
 
 int main() {
   Pythia pythia;
+
   int cwgtinfo_nn;
   char cwgtinfo_weights_info[250][15];
   double cwgt_ww[250];
@@ -34,6 +36,13 @@ int main() {
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
   pythia.readFile(inputname.c_str());
+
+  //Create UserHooks pointer for the FxFX matching. Stop if it failed. Pass pointer to Pythia.
+  CombineMatchingInput combined;
+  UserHooks* matching = combined.getHook(pythia);
+  if (!matching) return 1;
+  pythia.setUserHooksPtr(matching);
+
   pythia.init();
   string filename = pythia.word("Beams:LHEF");
 
@@ -52,6 +61,33 @@ int main() {
   int iEventtot_norm=iEventtot;
   if (evt_norm == "average"){
     iEventtot_norm=1;
+  }
+
+  //FxFx merging
+  bool isFxFx=pythia.flag("JetMatching:doFxFx");
+  if (isFxFx) {
+    int nJnow=pythia.mode("JetMatching:nPartonsNow");
+    int nJmax=pythia.mode("JetMatching:nJetMax");
+    int iExcl=pythia.mode("JetMatching:exclusive");
+    double Qcut=pythia.parm("JetMatching:qCut");
+    double PTcut=pythia.parm("JetMatching:qCutME");
+    if (Qcut <= PTcut || Qcut <= 0.) {
+      std::cout << " \n";
+      std::cout << "Merging scale (shower_card.dat) smaller than pTcut (run_card.dat)"
+		<< Qcut << " " << PTcut << "\n";
+      return 0;
+    }
+    if (nJnow >= 10 || nJnow < 0 || nJmax >= 10 || nJmax < 0 || nJnow > nJmax) {
+      std::cout << " \n";
+      std::cout << "Wrong inputs njmax and/or njnow in shower_card.dat "
+		<< nJmax << " " << nJnow << "\n";
+      return 0;
+    }
+    if (nJnow != nJmax && iExcl == 0) {
+      std::cout << " \n";
+      std::cout << "Inclusive merging required for a sample with non-max multiplicity\n";
+      return 0;
+    }
   }
 
   HepMC::IO_BaseClass *_hepevtio;
@@ -94,5 +130,8 @@ int main() {
   pyaend_(iEventtot_norm);
 
   pythia.stat();
+
+  delete matching;
+
   return 0;
 }

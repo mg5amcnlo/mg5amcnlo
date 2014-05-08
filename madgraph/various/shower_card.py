@@ -29,13 +29,14 @@ class ShowerCard(dict):
     false = ['.false.', 'f', 'false', '0']
     logical_vars = ['ue_enabled', 'hadronize', 'b_stable', 'pi_stable', 'wp_stable', 
                     'wm_stable', 'z_stable', 'h_stable', 'tap_stable', 'tam_stable', 
-                    'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar']
+                    'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar', 'incl_merg']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
     for i in range(1,100):
         dmstring='dm_'+str(i)
         string_vars.append(dmstring)
-    int_vars = ['maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
-    float_vars = ['maxerrs', 'lambda_5', 'b_mass']
+    int_vars = ['maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'njmax',
+                'njnow', 'modbos_1', 'modbos_2']
+    float_vars = ['maxerrs', 'lambda_5', 'b_mass', 'qcut']
 
     # names_dict has the following structure:
     # var : {PYTHIA6: varpy6, HERWIG6: varhw6, HERWIGPP: varhwpp, PYTHIA8: varpy8}
@@ -67,7 +68,12 @@ class ShowerCard(dict):
             'maxerrs' : {'HERWIG6':'err_fr_hw', 'PYTHIA6': 'err_fr_py', 'HERWIGPP': 'err_fr_hwpp', 'PYTHIA8': 'err_fr_py8'},
             'lambda_5' : {'HERWIG6':'lambdaherw', 'PYTHIA6': 'lambdapyth', 'HERWIGPP': 'lambdaherw', 'PYTHIA8': 'lambdapyth'},
             'b_mass' : {'HERWIG6':'b_mass', 'PYTHIA6': 'b_mass', 'HERWIGPP': 'b_mass', 'PYTHIA8': 'b_mass'},
-            'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi', 'PYTHIA8':'py8uti'}}
+            'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi', 'PYTHIA8':'py8uti'},
+            'qcut' : {'PYTHIA8':'qcut'},
+            'incl_merg' : {'PYTHIA8':'incl_merg'},
+            'njmax' : {'PYTHIA8':'njmax'},
+            'njnow' : {'PYTHIA8':'njnow'}}
+    
     stdhep_dict = {'HERWIG6':'mcatnlo_hwan_stdhep.o', 'PYTHIA6':'mcatnlo_pyan_stdhep.o'}
     
     def __init__(self, card=None, testing=False):

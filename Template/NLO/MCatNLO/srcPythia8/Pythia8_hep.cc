@@ -4,14 +4,23 @@
 #include "Pythia8/Pythia8ToHepMC.h"
 #include "HepMC/GenEvent.h"
 #include "HepMC/IO_GenEvent.h"
+#include "../examples/CombineMatchingInput.h"
 
 using namespace Pythia8;
 
 int main() {
   Pythia pythia;
+
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
   pythia.readFile(inputname.c_str());
+
+  //Create UserHooks pointer for the FxFX matching. Stop if it failed. Pass pointer to Pythia.
+  CombineMatchingInput combined;
+  UserHooks* matching = combined.getHook(pythia);
+  if (!matching) return 1;
+  pythia.setUserHooksPtr(matching);
+
   pythia.init();
 
   int nAbort=10;
@@ -19,6 +28,33 @@ int main() {
   int iAbort=0;
   int iPrintLHA=0;
   int iEventshower=pythia.mode("Main:spareMode1");
+
+  //FxFx merging
+  bool isFxFx=pythia.flag("JetMatching:doFxFx");
+  if (isFxFx) {
+    int nJnow=pythia.mode("JetMatching:nPartonsNow");
+    int nJmax=pythia.mode("JetMatching:nJetMax");
+    int iExcl=pythia.mode("JetMatching:exclusive");
+    double Qcut=pythia.parm("JetMatching:qCut");
+    double PTcut=pythia.parm("JetMatching:qCutME");
+    if (Qcut <= PTcut || Qcut <= 0.) {
+      std::cout << " \n";
+      std::cout << "Merging scale (shower_card.dat) smaller than pTcut (run_card.dat)"
+		<< Qcut << " " << PTcut << "\n";
+      return 0;
+    }
+    if (nJnow >= 10 || nJnow < 0 || nJmax >= 10 || nJmax < 0 || nJnow > nJmax) {
+      std::cout << " \n";
+      std::cout << "Wrong inputs njmax and/or njnow in shower_card.dat "
+		<< nJmax << " " << nJnow << "\n";
+      return 0;
+    }
+    if (nJnow != nJmax && iExcl == 0) {
+      std::cout << " \n";
+      std::cout << "Inclusive merging required for a sample with non-max multiplicity\n";
+      return 0;
+    }
+  }
 
   HepMC::Pythia8ToHepMC ToHepMC;
   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
@@ -45,5 +81,8 @@ int main() {
   }
 
   pythia.stat();
+
+  delete matching;
+
   return 0;
 }

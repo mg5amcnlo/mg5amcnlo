@@ -17,6 +17,9 @@ c
       logical rwgt_skip
       common /crwgt_skip/ rwgt_skip
       data rwgt_skip /.false./
+      integer nattr,npNLO,npLO
+      common/event_attributes/nattr,npNLO,npLO
+      data nattr,npNLO,npLO /0,-1,-1/
       end
 
       subroutine write_lhef_header(ifile,nevents,MonteCarlo)
@@ -415,6 +418,8 @@ c
       common /c_event_id/ event_id
       integer i_process
       common/c_addwrite/i_process
+      integer nattr,npNLO,npLO
+      common/event_attributes/nattr,npNLO,npLO
       include 'reweight_all.inc'
       include 'unlops.inc'
 c     if event_id is zero or positive (that means that there was a call
@@ -446,6 +451,24 @@ c
             write (ifile,*) "ERROR: EVENT ID TOO LARGE",event_id
             write (*,*) "ERROR: EVENT ID TOO LARGE",event_id
             stop
+         endif
+      elseif(nattr.eq.2) then
+         if ( (npLO.ge.10.or.npLO.lt.0) .and.
+     &        (npNLO.ge.10.or.npNLO.lt.0)) then
+            write(ifile,'(a,i2,a,i2,a)') "  <event npLO=' ",npLO
+     $           ," ' npNLO=' ",npNLO," '>"
+         elseif( (npLO.lt.10.or.npLO.ge.0) .and.
+     &        (npNLO.ge.10.or.npNLO.lt.0)) then
+            write(ifile,'(a,i1,a,i2,a)') "  <event npLO=' ",npLO
+     $           ," ' npNLO=' ",npNLO," '>"
+         elseif( (npLO.ge.10.or.npLO.lt.0) .and.
+     &        (npNLO.lt.10.or.npNLO.ge.0)) then
+            write(ifile,'(a,i2,a,i1,a)') "  <event npLO=' ",npLO
+     $           ," ' npNLO=' ",npNLO," '>"
+         elseif( (npLO.lt.10.or.npLO.ge.0) .and.
+     &        (npNLO.lt.10.or.npNLO.ge.0)) then
+            write(ifile,'(a,i1,a,i1,a)') "  <event npLO=' ",npLO
+     $           ," ' npNLO=' ",npNLO," '>"
          endif
       else
          write(ifile,'(a)') '  <event>'
@@ -658,10 +681,23 @@ c
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       integer i_process
       common/c_addwrite/i_process
+      integer nattr,npNLO,npLO
+      common/event_attributes/nattr,npNLO,npLO
       include 'reweight_all.inc'
       include 'unlops.inc'
 c
       read(ifile,'(a)')string
+      nattr=0
+      npNLO=-1
+      npLO=-1
+      if (index(string,'npLO').ne.0) then
+         nattr=2
+         read(string(index(string,'npLO')+6:),*) npLO
+      endif
+      if (index(string,'npNLO').ne.0) then
+         nattr=2
+         read(string(index(string,'npNLO')+7:),*) npNLO
+      endif
       read(ifile,*)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
       do i=1,nup
         read(ifile,*)IDUP(I),ISTUP(I),MOTHUP(1,I),MOTHUP(2,I),
@@ -875,6 +911,8 @@ c Same as read_lhef_event, except for the end-of-file catch
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       integer i_process
       common/c_addwrite/i_process
+      integer nattr,npNLO,npLO
+      common/event_attributes/nattr,npNLO,npLO
       include 'reweight_all.inc'
       include 'unlops.inc'
 c
@@ -888,6 +926,17 @@ c
           write(*,*)string(1:len_trim(string))
           stop
         endif
+      endif
+      nattr=0
+      npNLO=-1
+      npLO=-1
+      if (index(string,'npLO').ne.0) then
+         nattr=2
+         read(string(index(string,'npLO')+6:),*) npLO
+      endif
+      if (index(string,'npNLO').ne.0) then
+         nattr=2
+         read(string(index(string,'npNLO')+7:),*) npNLO
       endif
       read(ifile,*)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
       do i=1,nup
