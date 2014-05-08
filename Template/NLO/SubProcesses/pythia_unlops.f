@@ -8,7 +8,7 @@
       double precision zero
       parameter (zero=0d0)
 c arguments
-      double precision p(0:3,nexternal)
+      double precision p(0:3,nexternal),eCM
       logical passUNLOPScuts
       INTEGER I, J
       integer maxflow
@@ -57,7 +57,9 @@ c convert momenta to pythia8 c++ format
          stop
       endif
 
-      call pythia_unlops_cluster(pin,npart,id,ist,ptmin1,ptmin2)
+      eCM=sqrt(4d0*ebeam(1)*ebeam(2))
+
+      call pythia_unlops_cluster(eCM,pin,npart,id,ist,ptmin1,ptmin2)
 
       if (npart.eq.nexternal-1) then
          ptmin2=ptmin1
@@ -67,7 +69,8 @@ c convert momenta to pythia8 c++ format
      $        /' more than 1 zero-energy particle',npart,nexternal
          stop
       endif
-      if (ptmin2 .lt. pt_pythia .or. ptmin1 .gt. pt_pythia)  THEN
+      if (max(ptmin1,ptmin2) .lt. pt_pythia .or. min(ptmin1,ptmin2) .gt.
+     $     pt_pythia)  THEN
          passUNLOPScuts = .FALSE.
          RETURN
       ENDIF

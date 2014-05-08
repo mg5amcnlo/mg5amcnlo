@@ -786,7 +786,7 @@ const double TINYMASS  = 1e-3;
 extern "C" {   
 //Fortran interface
 
-  void pythia_unlops_cluster_(const double * p, const int & npart,
+  void pythia_unlops_cluster_(const double & eCM, const double * p, const int & npart,
 			      const int * id, const int * ist, double & pTmin1,
 			      double & pTmin2 ){
     // This is our working copy.
@@ -813,7 +813,7 @@ extern "C" {
     pTmin1 = minPythiaSep(*originalState,irad,iemt,irec,type);
     // Perform clustering of lowest-pT triple.
     // Clustering inputs: Radiator, Recoiler, Emitted, eCM, State to be clustered.
-    State clusteredState = State(cluster(irad,irec,iemt,7000.,*originalState));
+    State clusteredState = State(cluster(irad,irec,iemt,eCM,*originalState));
     // Get minimal pT for second clustering
     irad = iemt = irec = type = 0;
     pTmin2 = minPythiaSep(clusteredState,irad,iemt,irec,type);
