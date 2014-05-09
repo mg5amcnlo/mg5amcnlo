@@ -1022,7 +1022,7 @@ C                ENDIF
                          ANS(3)=ANS(3)+DBLE(CFTOT*AMPL(3,I))+DIMAG(CFTOT*AMPL(3,I))                         
                        ENDIF"""      
         else:
-            replace_dict['set_reference']='call %(proc_prefix)ssmatrix(p,ref)'%self.proc_prefix
+            replace_dict['set_reference']='call %ssmatrix(p,ref)'%self.proc_prefix
             replace_dict['loop_induced_helas_calls'] = ""
             replace_dict['loop_induced_finalize'] = ""
             replace_dict['loop_induced_setup'] = ""
@@ -1499,7 +1499,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     'ANS(1)=ANS(1)+DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'
                     
         else:
-            replace_dict['set_reference']='call smatrix(p,ref)'
+            replace_dict['set_reference']='call %ssmatrix(p,ref)'%self.proc_prefix
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join(['DO K=1,3',
