@@ -558,6 +558,14 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
+            # For a unique output of multiple type of exporter model information
+            # are save in memory
+            if hasattr(self, 'previous_lorentz'):
+                wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
+                wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                del self.previous_lorentz
+                del self.previous_couplings
+            
             self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)

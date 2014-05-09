@@ -5811,11 +5811,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # For a unique output of multiple type of exporter need to store this
                 # information.             
                 if hasattr(self, 'previous_lorentz'):
-                        wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
-                        wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
-                        del self.previous_lorentz
-                        del self.previous_couplings
-                        
+                    wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
+                    wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                    del self.previous_lorentz
+                    del self.previous_couplings
                 if 'store_model' in flaglist:
                     self.previous_lorentz = wanted_lorentz
                     self.previous_couplings = wanted_couplings
