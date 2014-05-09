@@ -89,7 +89,7 @@ c or counter-event, we only need one scale.
             if (i.eq.i_fks) cycle
             npart=npart+1
             do j=1,4
-               pin(j,npart)=p_born(mod(j,4),i)
+               pin(j,npart)=p_born(mod(j,4),npart)
             enddo
             pin(5,npart)=pmass(i)
             if (i.le.nincoming) then
