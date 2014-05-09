@@ -66,7 +66,7 @@ C ----------
       COMPLEX*16  JAMP(NCOLOR), ONEJAMP
       COMMON/%(proc_prefix)sJAMP/JAMP
 	
-	ONEJAMP = JAMP[njamp+1] ! +1 since njamp start at zero (c convention)
+	ONEJAMP = JAMP(njamp+1) ! +1 since njamp start at zero (c convention)
 	END
 
      SUBROUTINE %(proc_prefix)sGET_NCOLOR(in1, in2, out)
