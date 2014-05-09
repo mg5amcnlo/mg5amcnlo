@@ -1022,7 +1022,7 @@ C                ENDIF
                          ANS(3)=ANS(3)+DBLE(CFTOT*AMPL(3,I))+DIMAG(CFTOT*AMPL(3,I))                         
                        ENDIF"""      
         else:
-            replace_dict['set_reference']='call smatrix(p,ref)'
+            replace_dict['set_reference']='call %(proc_prefix)ssmatrix(p,ref)'%self.proc_prefix
             replace_dict['loop_induced_helas_calls'] = ""
             replace_dict['loop_induced_finalize'] = ""
             replace_dict['loop_induced_setup'] = ""

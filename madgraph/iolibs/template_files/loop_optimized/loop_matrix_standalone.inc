@@ -127,8 +127,8 @@ C     Below are variables to bypass the checkphase and insure stability check to
 C
 C FUNCTIONS
 C
-      INTEGER ISSAME
-      LOGICAL ISZERO
+      INTEGER %(proc_prefix)sISSAME
+      LOGICAL %(proc_prefix)sISZERO
 C  
 C GLOBAL VARIABLES
 C  
@@ -514,7 +514,7 @@ C SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING THE HELICITY FI
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
 	  HEL_INCONSISTENT=.FALSE.
-      IF(ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
+      IF(%(proc_prefix)sISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
@@ -530,7 +530,7 @@ C   SET THE HELICITY FILTER
 	    DO H=1,HELPICKED-1
 		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C           Be looser for helicity check, bring a factor 100
-		    DUMMY=ISSAME(ANS,HELSAVED(1,H),REF,.FALSE.)
+		    DUMMY=%(proc_prefix)sISSAME(ANS,HELSAVED(1,H),REF,.FALSE.)
 		    IF(DUMMY.NE.0) THEN
 		      IF(NTRY.EQ.1) THEN
 C               Set the matching helicity to be contributing once more
@@ -581,7 +581,7 @@ C In particular, it is the only thing to do if the helicity was flagged not cont
 C   SET THE LOOP FILTER
     IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
   	  DO I=1,NLOOPGROUPS
-        IF(.NOT.ISZERO(ABS(LOOPRES(1,I))+ABS(LOOPRES(2,I))+ABS(LOOPRES(3,I)),(REF*1.0d-4),I)) THEN
+        IF(.NOT.%(proc_prefix)sISZERO(ABS(LOOPRES(1,I))+ABS(LOOPRES(2,I))+ABS(LOOPRES(3,I)),(REF*1.0d-4),I)) THEN
           IF(NTRY.EQ.1) THEN
 	        GOODAMP(I)=.TRUE.
 		    LOOPFILTERBUFF(I)=.TRUE.
@@ -600,7 +600,7 @@ C   SET THE LOOP FILTER
   ELSEIF (.NOT.HELDOUBLECHECKED.AND.NTRY.NE.0)THEN
 C   DOUBLE CHECK THE HELICITY FILTER
     IF (GOODHEL(HELPICKED).EQ.-HELOFFSET) THEN
-	  IF (.NOT.ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
+	  IF (.NOT.%(proc_prefix)sISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected what are the zero helicity configurations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -611,7 +611,7 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	  ENDIF
 	ENDIF
 	IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-	  IF(ISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
+	  IF(%(proc_prefix)sISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -789,7 +789,7 @@ ENDIF
       END
 
 
-	  logical function IsZero(toTest, reference_value, loop)
+	  logical function %(proc_prefix)sIsZero(toTest, reference_value, loop)
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -812,22 +812,22 @@ C ----------
 C BEGIN CODE
 C ----------
 	  IF(abs(reference_value).eq.0.0d0) then
-	    IsZero=.FALSE.
+	    %(proc_prefix)sIsZero=.FALSE.
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
 		STOP 1
 	  else
-	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
+	    %(proc_prefix)sIsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
 	  endif
       
 	  IF(loop.NE.-1) THEN
-	    IF((.NOT.ISZERO).AND.(.NOT.S(loop))) THEN
+	    IF((.NOT.%(proc_prefix)sISZERO).AND.(.NOT.S(loop))) THEN
 	      write(*,*) '##W01 WARNING Contribution ',loop,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
 	    ENDIF
 	  ENDIF
 
 	  end
 
-      integer function ISSAME(resA,resB,ref,useMax)
+      integer function %(proc_prefix)sISSAME(resA,resB,ref,useMax)
 	  IMPLICIT NONE
 C     This function compares the result from two different helicity configuration A and B
 C     It returns 0 if they are not related and (+/-wgt) if A=(+/-wgt)*B.
@@ -847,7 +847,7 @@ C
 C  
 C LOCAL VARIABLES
 C
-      LOGICAL ISZERO
+      LOGICAL %(proc_prefix)sISZERO
       integer I,J
 	  integer N_WGT_TO_TRY
       integer WGT_TO_TRY(MAX_WGT_TO_TRY)
@@ -859,7 +859,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      ISSAME=0
+      %(proc_prefix)sISSAME=0
 
 C If the helicity can be constructed progressively while allowing inconsistency, then we only allow for weight one comparisons.
 	  IF (.NOT.HELINITSTARTOVER.AND..NOT.USEMAX) THEN
@@ -870,16 +870,16 @@ C If the helicity can be constructed progressively while allowing inconsistency,
 
 	  DO I=1,N_WGT_TO_TRY
 	    DO J=1,3
-		  IF (IsZero(ABS(resB(J)),ref,-1)) THEN
-		    IF(.NOT.IsZero(ABS(resB(J))+ABS(resA(J)),ref,-1)) THEN
+		  IF (%(proc_prefix)sIsZero(ABS(resB(J)),ref,-1)) THEN
+		    IF(.NOT.%(proc_prefix)sIsZero(ABS(resB(J))+ABS(resA(J)),ref,-1)) THEN
 		      GOTO 1231
 			ENDIF
 C         Be loser for helicity comparison, so bring a factor 100
-		  ELSEIF(.NOT.IsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref*100.0d0,-1)) THEN
+		  ELSEIF(.NOT.%(proc_prefix)sIsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref*100.0d0,-1)) THEN
 		    GOTO 1231		    
 		  ENDIF
 		ENDDO
-		ISSAME = WGT_TO_TRY(I)
+		%(proc_prefix)sISSAME = WGT_TO_TRY(I)
 		RETURN
  1231   CONTINUE
       ENDDO
