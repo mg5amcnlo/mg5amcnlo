@@ -2424,7 +2424,7 @@ Integrated cross-section
 
                 message = ('The %s %s %s been generated, with histograms in the' + \
                         ' TopDrawer format, obtained by showering the parton-level' + \
-                        ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
+                        ' file %s.gz with %s.') % (ffiles, ', '.join(plotfiles), have, \
                         evt_file, shower)
             else:
                 # many jobs for the shower have been run
@@ -2438,11 +2438,61 @@ Integrated cross-section
                         files.mv(pjoin(rundir, file), plotfile) 
                         plotfiles.append(plotfile)
 
-                message = ('The following files have been generated:\n  %s\n' + \
-                        'They contain histograms in the' + \
-                        ' TopDrawer format, obtained by showering the parton-level' + \
-                        ' file %s.gz with %s') % ('\n  '.join(plotfiles), \
-                        evt_file, shower)
+                # check if the user asked to combine the .top into a single file
+                if self.shower_card['combine_td']:
+                    misc.compile(['sum_plots'], cwd = pjoin(self.me_dir, 'Utilities'))
+
+                    if self.banner.get('run_card', 'event_norm').lower() == 'sum':
+                        norm = 1.
+                    elif self.banner.get('run_card', 'event_norm').lower() == 'average':
+                        norm = 1./float(self.shower_card['nsplit_jobs'])
+
+                    plotfiles = []
+                    for i, file in enumerate(topfiles_set):
+                        filelist = ['%s%d__%d.top' % (filename, i, j + 1) \
+                                    for j in range(self.shower_card['nsplit_jobs'])]
+                        infile="%d\n%s\n%s\n" % \
+                                (self.shower_card['nsplit_jobs'],
+                                 '\n'.join(filelist),
+                                 '\n'.join([str(norm)] * self.shower_card['nsplit_jobs']))
+
+                        p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'sum_plots')],
+                                        stdin=subprocess.PIPE,
+                                        stdout=os.open(os.devnull, os.O_RDWR), 
+                                        cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                        p.communicate(input = infile)
+                        files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
+                                 pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
+                        plotfiles.append(pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
+                        tar = tarfile.open(
+                                pjoin(self.me_dir, 'Events', self.run_name, '%s%d.tar.gz' % (filename, i)), 'w:gz')
+                        for f in filelist:
+                            tar.add(pjoin(self.me_dir, 'Events', self.run_name, f), arcname=f)
+                        files.rm([pjoin(self.me_dir, 'Events', self.run_name, f) for f in filelist])
+
+                    tar.close()
+
+                    ffiles = 'files'
+                    have = 'have'
+                    if len(plotfiles) == 1:
+                        ffiles = 'file'
+                        have = 'has'
+
+                    message = ('The %s %s %s been generated, with histograms in the' + \
+                            ' TopDrawer format, obtained by showering the parton-level' + \
+                            ' file %s.gz with %s.\n' + \
+                            'The files from the different shower ' + \
+                            'jobs (before combining them) can be found inside %s.') % \
+                            (ffiles, ', '.join(plotfiles), have, \
+                             evt_file, shower, 
+                             ', '.join([f.replace('top', 'tar.gz') for f in plotfiles]))
+
+                else:
+                    message = ('The following files have been generated:\n  %s\n' + \
+                            'They contain histograms in the' + \
+                            ' TopDrawer format, obtained by showering the parton-level' + \
+                            ' file %s.gz with %s.') % ('\n  '.join(plotfiles), \
+                            evt_file, shower)
                 
         # Now arxiv the shower card used if RunMaterial is present
         run_dir_path = pjoin(rundir, self.run_name)

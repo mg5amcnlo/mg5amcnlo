@@ -36,6 +36,7 @@ class TestShowerCard(unittest.TestCase):
 #
 nevents    = -1     # number of events to shower. If negative, shower all events
 nsplit_jobs= 1      # numer of jobs to be run on parallel or on a cluster (<999)
+combine_td = T      # combine or not the td files if splitting
 ue_enabled = F      # underlying event on (T)/ off (F) (is MSTP(81) 0/1 for PY6)
 pdfcode    = 0      # pdf code: 0 = internal pdf, 1 = same as NLO, other = lhaglue
 hadronize  = T      # hadronization on/off (is MSTP(111) 0/1 for PY6) 
@@ -118,6 +119,7 @@ ANALYSE     =                       # User's analysis and histogramming routines
 #
 nevents    = -1     # number of events to shower. If negative, shower all events
 nsplit_jobs= 1      # numer of jobs to be run on parallel or on a cluster (<999)
+combine_td = T      # combine or not the td files if splitting
 ue_enabled = F      # underlying event on (T)/ off (F) (is MSTP(81) 0/1 for PY6)
 pdfcode    = 0      # pdf code: 0 = internal pdf, 1 = same as NLO, other = lhaglue
 hadronize  = T      # hadronization on/off (is MSTP(111) 0/1 for PY6) 
