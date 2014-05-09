@@ -1,4 +1,4 @@
-# This file was automatically created by FeynRules 1.7.69
+# This file was automatically created by FeynRules 2.0 (static file)
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
 # Date: Mon 1 Oct 2012 14:58:26
 
