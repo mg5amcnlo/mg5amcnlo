@@ -156,7 +156,7 @@ class LoopHelasUVCTAmplitude(helas_objects.HelasAmplitude):
                                     'type': self['type']})
         
     def get_helas_call_dict(self, index=1, OptimizedOutput=False,\
-                                                               specifyHel=True):
+                                                        specifyHel=True, **opt):
         """ return a dictionary to be used for formatting
         HELAS call. """
         
@@ -164,6 +164,7 @@ class LoopHelasUVCTAmplitude(helas_objects.HelasAmplitude):
         out = helas_objects.HelasAmplitude.get_helas_call_dict(self, 
                 index=index,OptimizedOutput=OptimizedOutput)
         out['uvct'] = self.get_UVCT_couplings()
+        out.update(opt)
         return out
 
 #===============================================================================
@@ -404,7 +405,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
              +sum([amp.get('coupling') for amp in self.get('amplitudes') if \
              amp.get('coupling')!=['none']],[]))
 
-    def get_helas_call_dict(self, OptimizedOutput=False,specifyHel=True):
+    def get_helas_call_dict(self, OptimizedOutput=False,specifyHel=True,**opt):
         """ return a dictionary to be used for formatting
         HELAS call. """
         output = {}
@@ -434,6 +435,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         for i , coupling in enumerate(self.get('coupling')):
             output["LoopCoupling%d"%(i+1)]=coupling
         output["LoopSymmetryFactor"]=self.get('loopsymmetryfactor')
+        output.update(**opt)
         return output
 
     def get_call_key(self):

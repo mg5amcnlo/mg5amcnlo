@@ -1404,7 +1404,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return return_dict
 
     def get_helas_call_dict(self, index=1, OptimizedOutput=False,
-                                                               specifyHel=True):
+                                            specifyHel=True,**opt):
         """ return a dictionary to be used for formatting
         HELAS call. The argument index sets the flipping while optimized output
         changes the wavefunction specification in the arguments."""
@@ -1478,6 +1478,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['CM'] = '%s' % self.get('mass') 
             else: 
                 output['CM'] ='CMASS_%s' % self.get('mass')
+        output.update(opt)
         return output
     
     def get_spin_state_number(self, flip=False):
@@ -2770,7 +2771,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return vertex_leg_numbers
 
-    def get_helas_call_dict(self,index=1,OptimizedOutput=False,specifyHel=True):
+    def get_helas_call_dict(self,index=1,OptimizedOutput=False,
+                                 specifyHel=True,**opt):
         """ return a dictionary to be used for formatting
         HELAS call."""
         
@@ -2797,6 +2799,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         output['out'] = self.get('number') - flip
         output['propa'] = ''
+        output.update(opt)
         return output
 
 

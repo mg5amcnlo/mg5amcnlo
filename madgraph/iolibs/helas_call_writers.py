@@ -224,10 +224,11 @@ class HelasCallWriter(base_objects.PhysicsObject):
         corresponding to the key"""
 
         try:
-            call = self["amplitudes"][amplitude.get_call_key()](amplitude)
-            return call
+            call = self["amplitudes"][amplitude.get_call_key()]
         except KeyError, error:
             return ""
+        else:
+            return call(amplitude)
 
     def add_wavefunction(self, key, function):
         """Set the function for writing the wavefunction
@@ -1353,7 +1354,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         call = call + "LOOPRES(1,%(loopNumber)d),S(%(loopNumber)d),%(loopNumber)d)"
         
         call_function = lambda amp: call % amp.get_helas_call_dict(\
-                                                           OptimizedOutput=True)
+                                            OptimizedOutput=True,
+                                            proc_prefix=self.proc_prefix)
         self.add_amplitude(loopamp.get_call_key(), call_function)
         return
 
@@ -1439,9 +1441,11 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             call += "\n CALL %(proc_prefix)sUPDATE_WL_%(loop_mother_rank)d_%(vertex_rank)d("
             call += "WL(1,0,1,%(loop_mother_number)d),%(lcut_size)d,COEFS,"
             call += "%(in_size)d,%(out_size)d,WL(1,0,1,%(out)d))"
+            
+            
         # Now we have a line correctly formatted
         call_function = lambda wf: call % wf.get_helas_call_dict(\
-          OptimizedOutput=True, specifyHel=self.hel_sum)
+          OptimizedOutput=True, specifyHel=self.hel_sum, proc_prefix = self.proc_prefix)
 
         # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument, helas_objects.HelasWavefunction):
