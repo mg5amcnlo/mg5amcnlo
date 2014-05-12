@@ -33,8 +33,8 @@ C
 C  
 C CONSTANTS
 C
-      CHARACTER*64 paramFileName
-      PARAMETER ( paramFileName='%(proc_path)sMadLoopParams.dat')
+      CHARACTER*128 paramFileName
+      PARAMETER ( paramFileName=                                     '%(proc_path)sMadLoopParams.dat')
 	  %(nbornamps_decl)s
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d) 

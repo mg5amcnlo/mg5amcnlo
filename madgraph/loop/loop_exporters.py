@@ -1631,8 +1631,8 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
 
         out = super(LoopProcessExporterFortranMatchBox, self).write_CT_interface(writer, matrix_element, optimized_output=optimized_output)
 
-        #write the common file in SubProcesses:
-        path = pjoin(os.path.dirname(writer.name), 'CT_interface_common.f')
+        #write the common file in SOURCE:
+        path = pjoin(os.path.dirname(writer.name),"../../Source/", 'CT_interface_common.f')
         misc.sprint(path)
         new_writer = writer.__class__(path) 
         
@@ -1646,7 +1646,7 @@ C
       real*8 THRS
       LOGICAL EXT_NUM_FOR_R1
       LOGICAL INIT
-      DATA INIT /.FALSE./
+      DATA INIT /.TRUE./
       SAVE INIT
 C  
 C GLOBAL VARIABLES 
@@ -1669,13 +1669,13 @@ C MADLOOP'S NUMERATOR IN THE DEFAULT OUTPUT IS SLOWER THAN THE RECONSTRUCTED ONE
       EXT_NUM_FOR_R1=.FALSE.
 C -------------------------------      
 
-    if(INIT) THEN
-
+      if(INIT) THEN
+       INIT=.FALSE.
 C The initialization below is for CT v1.8.+
       CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
 C The initialization below is for the older stable CT v1.7, still used for now in the beta release.
 C      CALL CTSINIT(THRS,LOOPLIB)
-    ENDIF
+      ENDIF
 
 
       END
