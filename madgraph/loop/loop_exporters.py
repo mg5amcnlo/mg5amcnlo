@@ -79,6 +79,7 @@ class LoopExporterFortran(object):
 
         if not hasattr(self, "proc_prefix"):
             self.proc_prefix = ''
+        self.full_path_to_dat = False
         if opt:
             self.opt = opt
         else: 
@@ -186,7 +187,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
        Fortran format."""
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
-
+    CT_interface_template = "CT_interface.inc"
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
@@ -659,6 +660,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             dict['nbornamps_decl'] = ''
         
         dict['proc_prefix'] = self.proc_prefix
+        if self.full_path_to_dat:
+            dict['proc_path'] = pjoin('SubProcesses', "P%s" % matrix_element.get('processes')[0].shell_string(),'')
+        else:
+            dict['proc_path'] = ''
         
         return dict
     
@@ -830,7 +835,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             replace_dict['finalize_CT']='\n'.join([\
                      'RES(%d)=NORMALIZATION*RES(%d)'%(i,i) for i in range(1,4)])
         
-        file = open(os.path.join(self.template_dir,'CT_interface.inc')).read()  
+        file = open(os.path.join(self.template_dir, self.CT_interface_template)).read()  
 
         file = file % replace_dict
         files.append(file)
@@ -1315,7 +1320,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         file = file % replace_dict
         writer.writelines(file)
 
-    def write_CT_interface(self, writer, matrix_element):
+    def write_CT_interface(self, writer, matrix_element,optimized_output=True):
         """ We can re-use the mother one for the loop optimized output."""
         LoopProcessExporterFortranSA.write_CT_interface(\
                             self, writer, matrix_element,optimized_output=True)
@@ -1588,9 +1593,10 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
     
     #specific template of the born
     matrix_template = "matrix_standalone_matchbox.inc"
-    
+    CT_interface_template = "CT_interface_matchbox.inc"
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         super(LoopProcessExporterFortranMatchBox, self).__init__(mgme_dir, dir_path, opt)
+        self.full_path_to_dat = True
 
     def generate_loop_subprocess(self, matrix_element, fortran_model):
         """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
@@ -1619,4 +1625,62 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
         # For convenience also link the madloop param card
         ln('../../Cards/MadLoopParams.dat')
         
+    def write_CT_interface(self, writer, matrix_element, optimized_output=False):
+        """ Create the file CT_interface.f which contains the subroutine defining
+        the loop HELAS-like calls along with the general interfacing subroutine. """
+
+        out = super(LoopProcessExporterFortranMatchBox, self).write_CT_interface(writer, matrix_element, optimized_output=optimized_output)
+
+        #write the common file in SubProcesses:
+        path = pjoin(os.path.dirname(writer.name), 'CT_interface_common.f')
+        misc.sprint(path)
+        new_writer = writer.__class__(path) 
+        
+        text= """  
+         SUBROUTINE INITCT()
+C 
+C INITIALISATION OF CUTTOOLS
+C  
+C LOCAL VARIABLES 
+C
+      real*8 THRS
+      LOGICAL EXT_NUM_FOR_R1
+      LOGICAL INIT
+      DATA INIT /.FALSE./
+      SAVE INIT
+C  
+C GLOBAL VARIABLES 
+C
+      include 'MadLoopParams.inc'
+C ----------
+C BEGIN CODE
+C ----------
+
+C DEFAULT PARAMETERS FOR CUTTOOLS
+C -------------------------------  
+C THRS1 IS THE PRECISION LIMIT BELOW WHICH THE MP ROUTINES ACTIVATES
+      THRS=CTSTABTHRES
+C LOOPLIB SET WHAT LIBRARY CT USES
+C 1 -> LOOPTOOLS
+C 2 -> AVH
+C 3 -> QCDLOOP
+      LOOPLIB=CTLOOPLIBRARY
+C MADLOOP'S NUMERATOR IN THE DEFAULT OUTPUT IS SLOWER THAN THE RECONSTRUCTED ONE IN CT. SO WE BETTER USE CT ONE IN THIS CASE.
+      EXT_NUM_FOR_R1=.FALSE.
+C -------------------------------      
+
+    if(INIT) THEN
+
+C The initialization below is for CT v1.8.+
+      CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
+C The initialization below is for the older stable CT v1.7, still used for now in the beta release.
+C      CALL CTSINIT(THRS,LOOPLIB)
+    ENDIF
+
+
+      END
+"""
+        new_writer.write(text)
+        return out
+   
         
