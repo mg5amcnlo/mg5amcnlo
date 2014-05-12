@@ -135,8 +135,8 @@ C      stability check to take place
 C     
 C     FUNCTIONS
 C     
-      INTEGER ISSAME
-      LOGICAL ISZERO
+      INTEGER P1_ISSAME
+      LOGICAL P1_ISZERO
 C     
 C     GLOBAL VARIABLES
 C     
@@ -447,7 +447,7 @@ C       um conservation)
         ENDDO
       ENDDO
 
-      CALL SMATRIX(P,REF)
+      CALL P1_SMATRIX(P,REF)
 
       DO K=1, 3
         BUFFR(K)=0.0D0
@@ -604,149 +604,231 @@ C         Counter-term amplitude(s) for loop diagram number 28
             ENDDO
           ENDDO
 C         Coefficient construction for loop diagram with ID 3
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,5),GC_5,ZERO,ZERO,PL(0,1),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,1))
+          CALL FFV1L2_1(PL(0,1),W(1,7),GC_5,ZERO,ZERO,PL(0,2),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,1),4,COEFS,4,4,WL(1,0,1,2))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,2),2,4,LOOPCOEFS(0,1),1
      $     ,55,H)
 C         Coefficient construction for loop diagram with ID 4
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,6),GC_5,ZERO,ZERO,PL(0,3),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,3))
+          CALL FFV1L2_1(PL(0,3),W(1,8),GC_5,ZERO,ZERO,PL(0,4),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,3),4,COEFS,4,4,WL(1,0,1,4))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,4),2,4,LOOPCOEFS(0,2),1
      $     ,56,H)
 C         Coefficient construction for loop diagram with ID 5
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,5),GC_5,ZERO,ZERO,PL(0,5),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,5))
+          CALL FFV1L2_1(PL(0,5),W(1,7),GC_5,ZERO,ZERO,PL(0,6),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,5),4,COEFS,4,4,WL(1,0,1,6))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,6),2,4,LOOPCOEFS(0,3),1
      $     ,57,H)
 C         Coefficient construction for loop diagram with ID 6
-
-
-
+          CALL FFV1L1P0_3(PL(0,0),W(1,3),GC_5,ZERO,ZERO,PL(0,7),COEFS)
+          CALL P1_UPDATE_WL_0_0(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,7))
+          CALL FFV1L3_2(PL(0,7),W(1,4),GC_5,ZERO,ZERO,PL(0,8),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,7),4,COEFS,4,4,WL(1,0,1,8))
+          CALL FFV1L1_2(PL(0,8),W(1,5),GC_5,ZERO,ZERO,PL(0,9),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,8),4,COEFS,4,4,WL(1,0,1,9))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,9),2,4,LOOPCOEFS(0,4),1
      $     ,58,H)
 C         Coefficient construction for loop diagram with ID 7
-
-
-
+          CALL FFV1L3_1(PL(0,0),W(1,3),GC_5,ZERO,ZERO,PL(0,10),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,10))
+          CALL FFV1L2P0_3(PL(0,10),W(1,4),GC_5,ZERO,ZERO,PL(0,11)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_0(WL(1,0,1,10),4,COEFS,4,4,WL(1,0,1,11))
+          CALL VVV1L2P0_1(PL(0,11),W(1,5),GC_4,ZERO,ZERO,PL(0,12)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,11),4,COEFS,4,4,WL(1,0,1,12))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,12),2,4,LOOPCOEFS(0,5),1
      $     ,59,H)
 C         Coefficient construction for loop diagram with ID 8
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,6),GC_5,ZERO,ZERO,PL(0,13),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,13))
+          CALL FFV1L2_1(PL(0,13),W(1,8),GC_5,ZERO,ZERO,PL(0,14),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,13),4,COEFS,4,4,WL(1,0,1,14))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,14),2,4,LOOPCOEFS(0,6),1
      $     ,60,H)
 C         Coefficient construction for loop diagram with ID 9
-
-
-
+          CALL FFV1L1P0_3(PL(0,0),W(1,2),GC_5,ZERO,ZERO,PL(0,15),COEFS)
+          CALL P1_UPDATE_WL_0_0(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,15))
+          CALL FFV1L3_2(PL(0,15),W(1,4),GC_5,ZERO,ZERO,PL(0,16),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,15),4,COEFS,4,4,WL(1,0,1,16))
+          CALL FFV1L1_2(PL(0,16),W(1,6),GC_5,ZERO,ZERO,PL(0,17),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,16),4,COEFS,4,4,WL(1,0,1,17))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,17),2,4,LOOPCOEFS(0,7),1
      $     ,61,H)
 C         Coefficient construction for loop diagram with ID 10
-
-
-
+          CALL FFV1L3_1(PL(0,0),W(1,2),GC_5,ZERO,ZERO,PL(0,18),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,18))
+          CALL FFV1L2P0_3(PL(0,18),W(1,4),GC_5,ZERO,ZERO,PL(0,19)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_0(WL(1,0,1,18),4,COEFS,4,4,WL(1,0,1,19))
+          CALL VVV1L2P0_1(PL(0,19),W(1,6),GC_4,ZERO,ZERO,PL(0,20)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,19),4,COEFS,4,4,WL(1,0,1,20))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,20),2,4,LOOPCOEFS(0,8),1
      $     ,62,H)
 C         Coefficient construction for loop diagram with ID 11
-
-
-
+          CALL FFV1L2P0_3(PL(0,0),W(1,1),GC_5,ZERO,ZERO,PL(0,21),COEFS)
+          CALL P1_UPDATE_WL_0_0(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,21))
+          CALL FFV1L3_1(PL(0,21),W(1,3),GC_5,ZERO,ZERO,PL(0,22),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,21),4,COEFS,4,4,WL(1,0,1,22))
+          CALL FFV1L2_1(PL(0,22),W(1,8),GC_5,ZERO,ZERO,PL(0,23),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,22),4,COEFS,4,4,WL(1,0,1,23))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,23),2,4,LOOPCOEFS(0,9),1
      $     ,63,H)
 C         Coefficient construction for loop diagram with ID 12
-
-
-
+          CALL FFV1L3_2(PL(0,0),W(1,1),GC_5,ZERO,ZERO,PL(0,24),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,24))
+          CALL FFV1L1P0_3(PL(0,24),W(1,3),GC_5,ZERO,ZERO,PL(0,25)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_0(WL(1,0,1,24),4,COEFS,4,4,WL(1,0,1,25))
+          CALL VVV1L2P0_1(PL(0,25),W(1,8),GC_4,ZERO,ZERO,PL(0,26)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,25),4,COEFS,4,4,WL(1,0,1,26))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,26),2,4,LOOPCOEFS(0,10),1
      $     ,64,H)
 C         Coefficient construction for loop diagram with ID 13
-
-
-
+          CALL FFV1L1P0_3(PL(0,24),W(1,2),GC_5,ZERO,ZERO,PL(0,27)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_0(WL(1,0,1,24),4,COEFS,4,4,WL(1,0,1,27))
+          CALL FFV1L3_2(PL(0,27),W(1,4),GC_5,ZERO,ZERO,PL(0,28),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,27),4,COEFS,4,4,WL(1,0,1,28))
+          CALL FFV1L1P0_3(PL(0,28),W(1,3),GC_5,ZERO,ZERO,PL(0,29)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_2_0(WL(1,0,1,28),4,COEFS,4,4,WL(1,0,1,29))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,29),2,4,LOOPCOEFS(0,11),1
      $     ,65,H)
 C         Coefficient construction for loop diagram with ID 14
-
-
+          CALL FFV1L3_1(PL(0,27),W(1,3),GC_5,ZERO,ZERO,PL(0,30),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,27),4,COEFS,4,4,WL(1,0,1,30))
+          CALL FFV1L2P0_3(PL(0,30),W(1,4),GC_5,ZERO,ZERO,PL(0,31)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_2_0(WL(1,0,1,30),4,COEFS,4,4,WL(1,0,1,31))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,31),2,4,LOOPCOEFS(0,12),1
      $     ,66,H)
 C         Coefficient construction for loop diagram with ID 15
-
+          CALL VVV1L2P0_1(PL(0,27),W(1,7),GC_4,ZERO,ZERO,PL(0,32)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,27),4,COEFS,4,4,WL(1,0,1,32))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,32),2,4,LOOPCOEFS(0,13),1
      $     ,67,H)
 C         Coefficient construction for loop diagram with ID 16
-
-
+          CALL FFV1L3_1(PL(0,21),W(1,2),GC_5,ZERO,ZERO,PL(0,33),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,21),4,COEFS,4,4,WL(1,0,1,33))
+          CALL FFV1L2_1(PL(0,33),W(1,7),GC_5,ZERO,ZERO,PL(0,34),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,33),4,COEFS,4,4,WL(1,0,1,34))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,34),2,4,LOOPCOEFS(0,14),1
      $     ,68,H)
 C         Coefficient construction for loop diagram with ID 17
-
-
+          CALL FFV1L2P0_3(PL(0,33),W(1,4),GC_5,ZERO,ZERO,PL(0,35)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_0(WL(1,0,1,33),4,COEFS,4,4,WL(1,0,1,35))
+          CALL FFV1L3_1(PL(0,35),W(1,3),GC_5,ZERO,ZERO,PL(0,36),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,35),4,COEFS,4,4,WL(1,0,1,36))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,36),2,4,LOOPCOEFS(0,15),1
      $     ,69,H)
 C         Coefficient construction for loop diagram with ID 18
-
-
+          CALL FFV1L3_1(PL(0,25),W(1,2),GC_5,ZERO,ZERO,PL(0,37),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,25),4,COEFS,4,4,WL(1,0,1,37))
+          CALL FFV1L2P0_3(PL(0,37),W(1,4),GC_5,ZERO,ZERO,PL(0,38)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_2_0(WL(1,0,1,37),4,COEFS,4,4,WL(1,0,1,38))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,38),2,4,LOOPCOEFS(0,16),1
      $     ,70,H)
 C         Coefficient construction for loop diagram with ID 19
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,5),GC_5,ZERO,ZERO,PL(0,39),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,39))
+          CALL FFV1L2_1(PL(0,39),W(1,7),GC_5,ZERO,ZERO,PL(0,40),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,39),4,COEFS,4,4,WL(1,0,1,40))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,40),2,4,LOOPCOEFS(0,17),1
      $     ,71,H)
 C         Coefficient construction for loop diagram with ID 20
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,6),GC_5,ZERO,ZERO,PL(0,41),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,41))
+          CALL FFV1L2_1(PL(0,41),W(1,8),GC_5,ZERO,ZERO,PL(0,42),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,41),4,COEFS,4,4,WL(1,0,1,42))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,42),2,4,LOOPCOEFS(0,18),1
      $     ,72,H)
 C         Coefficient construction for loop diagram with ID 21
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,5),GC_5,ZERO,ZERO,PL(0,43),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,43))
+          CALL FFV1L2_1(PL(0,43),W(1,7),GC_5,ZERO,ZERO,PL(0,44),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,43),4,COEFS,4,4,WL(1,0,1,44))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,44),2,4,LOOPCOEFS(0,19),1
      $     ,73,H)
 C         Coefficient construction for loop diagram with ID 22
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,6),GC_5,ZERO,ZERO,PL(0,45),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,45))
+          CALL FFV1L2_1(PL(0,45),W(1,8),GC_5,ZERO,ZERO,PL(0,46),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,45),4,COEFS,4,4,WL(1,0,1,46))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,46),2,4,LOOPCOEFS(0,20),1
      $     ,74,H)
 C         Coefficient construction for loop diagram with ID 23
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,5),GC_5,MDL_MB,ZERO,PL(0,47),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,47))
+          CALL FFV1L2_1(PL(0,47),W(1,7),GC_5,MDL_MB,ZERO,PL(0,48)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,47),4,COEFS,4,4,WL(1,0,1,48))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,48),2,4,LOOPCOEFS(0,21),1
      $     ,75,H)
 C         Coefficient construction for loop diagram with ID 24
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,6),GC_5,MDL_MB,ZERO,PL(0,49),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,49))
+          CALL FFV1L2_1(PL(0,49),W(1,8),GC_5,MDL_MB,ZERO,PL(0,50)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,49),4,COEFS,4,4,WL(1,0,1,50))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,50),2,4,LOOPCOEFS(0,22),1
      $     ,76,H)
 C         Coefficient construction for loop diagram with ID 25
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,5),GC_5,MDL_MT,MDL_WT,PL(0,51)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,51))
+          CALL FFV1L2_1(PL(0,51),W(1,7),GC_5,MDL_MT,MDL_WT,PL(0,52)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,51),4,COEFS,4,4,WL(1,0,1,52))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,52),2,4,LOOPCOEFS(0,23),1
      $     ,77,H)
 C         Coefficient construction for loop diagram with ID 26
-
-
+          CALL FFV1L2_1(PL(0,0),W(1,6),GC_5,MDL_MT,MDL_WT,PL(0,53)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,53))
+          CALL FFV1L2_1(PL(0,53),W(1,8),GC_5,MDL_MT,MDL_WT,PL(0,54)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,53),4,COEFS,4,4,WL(1,0,1,54))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,54),2,4,LOOPCOEFS(0,24),1
      $     ,78,H)
 C         Coefficient construction for loop diagram with ID 27
-
-
+          CALL VVV1L2P0_1(PL(0,0),W(1,5),GC_4,ZERO,ZERO,PL(0,55),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,55))
+          CALL VVV1L2P0_1(PL(0,55),W(1,7),GC_4,ZERO,ZERO,PL(0,56)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,55),4,COEFS,4,4,WL(1,0,1,56))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,56),2,4,LOOPCOEFS(0,25),2
      $     ,79,H)
 C         Coefficient construction for loop diagram with ID 28
-
-
+          CALL VVV1L2P0_1(PL(0,0),W(1,6),GC_4,ZERO,ZERO,PL(0,57),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,57))
+          CALL VVV1L2P0_1(PL(0,57),W(1,8),GC_4,ZERO,ZERO,PL(0,58)
+     $     ,COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,57),4,COEFS,4,4,WL(1,0,1,58))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,58),2,4,LOOPCOEFS(0,26),2
      $     ,80,H)
 C         Coefficient construction for loop diagram with ID 29
-
-
+          CALL GHGHGL2_1(PL(0,0),W(1,5),GC_4,ZERO,ZERO,PL(0,59),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),1,COEFS,1,1,WL(1,0,1,59))
+          CALL GHGHGL2_1(PL(0,59),W(1,7),GC_4,ZERO,ZERO,PL(0,60),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,59),1,COEFS,1,1,WL(1,0,1,60))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,60),2,1,LOOPCOEFS(0,27),1
      $     ,81,H)
 C         Coefficient construction for loop diagram with ID 30
-
-
+          CALL GHGHGL2_1(PL(0,0),W(1,6),GC_4,ZERO,ZERO,PL(0,61),COEFS)
+          CALL P1_UPDATE_WL_0_1(WL(1,0,1,0),1,COEFS,1,1,WL(1,0,1,61))
+          CALL GHGHGL2_1(PL(0,61),W(1,8),GC_4,ZERO,ZERO,PL(0,62),COEFS)
+          CALL P1_UPDATE_WL_1_1(WL(1,0,1,61),1,COEFS,1,1,WL(1,0,1,62))
           CALL P1_CREATE_LOOP_COEFS(WL(1,0,1,62),2,1,LOOPCOEFS(0,28),1
      $     ,82,H)
         ENDIF
@@ -781,31 +863,44 @@ C         Coefficient construction for loop diagram with ID 30
       ENDIF
 
 C     CutTools call for loop numbers 1,3,17,19,25,27
-
+      CALL P1_LOOP_2(1,5,7,DCMPLX(ZERO),DCMPLX(ZERO),2,LOOPRES(1,1)
+     $ ,S(1),1)
 C     CutTools call for loop numbers 2,6,18,20,26,28
-
+      CALL P1_LOOP_2(2,6,8,DCMPLX(ZERO),DCMPLX(ZERO),2,LOOPRES(1,2)
+     $ ,S(2),2)
 C     CutTools call for loop numbers 4,5
-
+      CALL P1_LOOP_3(4,3,4,5,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
+     $ ,LOOPRES(1,3),S(3),3)
 C     CutTools call for loop numbers 7,8
-
+      CALL P1_LOOP_3(7,2,4,6,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
+     $ ,LOOPRES(1,4),S(4),4)
 C     CutTools call for loop numbers 9,10
-
+      CALL P1_LOOP_3(9,1,3,8,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
+     $ ,LOOPRES(1,5),S(5),5)
 C     CutTools call for loop numbers 11,15
-
+      CALL P1_LOOP_4(11,1,2,4,3,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(ZERO),2,LOOPRES(1,6),S(6),6)
 C     CutTools call for loop numbers 12
-
+      CALL P1_LOOP_4(12,1,2,3,4,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(ZERO),2,LOOPRES(1,7),S(7),7)
 C     CutTools call for loop numbers 13,14
-
+      CALL P1_LOOP_3(13,1,2,7,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
+     $ ,LOOPRES(1,8),S(8),8)
 C     CutTools call for loop numbers 16
-
+      CALL P1_LOOP_4(16,1,3,2,4,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(ZERO),2,LOOPRES(1,9),S(9),9)
 C     CutTools call for loop numbers 21
-
+      CALL P1_LOOP_2(21,5,7,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,LOOPRES(1
+     $ ,10),S(10),10)
 C     CutTools call for loop numbers 22
-
+      CALL P1_LOOP_2(22,6,8,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,LOOPRES(1
+     $ ,11),S(11),11)
 C     CutTools call for loop numbers 23
-
+      CALL P1_LOOP_2(23,5,7,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,LOOPRES(1
+     $ ,12),S(12),12)
 C     CutTools call for loop numbers 24
-
+      CALL P1_LOOP_2(24,6,8,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,LOOPRES(1
+     $ ,13),S(13),13)
 
       DO I=1,NLOOPGROUPS
         ANS(1)=ANS(1)+LOOPRES(1,I)
@@ -836,7 +931,7 @@ C        THE HELICITY FILTER SETUP
 C         SET THE HELICITY FILTER
           IF(.NOT.FOUNDHELFILTER) THEN
             HEL_INCONSISTENT=.FALSE.
-            IF(ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF
+            IF(P1_ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF
      $       /DBLE(NCOMB),-1)) THEN
               IF(NTRY.EQ.1) THEN
                 GOODHEL(HELPICKED)=-HELOFFSET
@@ -856,7 +951,7 @@ C         SET THE HELICITY FILTER
               DO H=1,HELPICKED-1
                 IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C                 Be looser for helicity check, bring a factor 100
-                  DUMMY=ISSAME(ANS,HELSAVED(1,H),REF,.FALSE.)
+                  DUMMY=P1_ISSAME(ANS,HELSAVED(1,H),REF,.FALSE.)
                   IF(DUMMY.NE.0) THEN
                     IF(NTRY.EQ.1) THEN
 C                     Set the matching helicity to be contributing
@@ -923,7 +1018,7 @@ C              helicity was flagged not contributing.
 C         SET THE LOOP FILTER
           IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
             DO I=1,NLOOPGROUPS
-              IF(.NOT.ISZERO(ABS(LOOPRES(1,I))+ABS(LOOPRES(2,I))
+              IF(.NOT.P1_ISZERO(ABS(LOOPRES(1,I))+ABS(LOOPRES(2,I))
      $         +ABS(LOOPRES(3,I)),(REF*1.0D-4),I)) THEN
                 IF(NTRY.EQ.1) THEN
                   GOODAMP(I)=.TRUE.
@@ -946,7 +1041,7 @@ C         SET THE LOOP FILTER
         ELSEIF (.NOT.HELDOUBLECHECKED.AND.NTRY.NE.0)THEN
 C         DOUBLE CHECK THE HELICITY FILTER
           IF (GOODHEL(HELPICKED).EQ.-HELOFFSET) THEN
-            IF (.NOT.ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF
+            IF (.NOT.P1_ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF
      $       /DBLE(NCOMB),-1)) THEN
               WRITE(*,*) '##W15 Helicity filter could not be successful
      $         ly double checked.'
@@ -962,8 +1057,8 @@ C         DOUBLE CHECK THE HELICITY FILTER
             ENDIF
           ENDIF
           IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-            IF(ISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)
-     $       ),REF,.TRUE.).EQ.0) THEN
+            IF(P1_ISSAME(ANS,HELSAVED(1,ABS(GOODHEL(HELPICKED)
+     $       +HELOFFSET)),REF,.TRUE.).EQ.0) THEN
               WRITE(*,*) '##W15 Helicity filter could not be successful
      $         ly double checked.'
               WRITE(*,*) 'One reason for this is that you might have
@@ -1159,7 +1254,7 @@ C      bypassed
       END
 
 
-      LOGICAL FUNCTION ISZERO(TOTEST, REFERENCE_VALUE, LOOP)
+      LOGICAL FUNCTION P1_ISZERO(TOTEST, REFERENCE_VALUE, LOOP)
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -1182,16 +1277,16 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       IF(ABS(REFERENCE_VALUE).EQ.0.0D0) THEN
-        ISZERO=.FALSE.
+        P1_ISZERO=.FALSE.
         WRITE(*,*) '##E02 ERRROR Reference value for comparison is
      $    zero.'
         STOP 1
       ELSE
-        ISZERO=((ABS(TOTEST)/ABS(REFERENCE_VALUE)).LT.ZEROTHRES)
+        P1_ISZERO=((ABS(TOTEST)/ABS(REFERENCE_VALUE)).LT.ZEROTHRES)
       ENDIF
 
       IF(LOOP.NE.-1) THEN
-        IF((.NOT.ISZERO).AND.(.NOT.S(LOOP))) THEN
+        IF((.NOT.P1_ISZERO).AND.(.NOT.S(LOOP))) THEN
           WRITE(*,*) '##W01 WARNING Contribution ',LOOP,' is detected
      $      as contributing with CR=',(ABS(TOTEST)/ABS(REFERENCE_VALUE
      $     )),' but is unstable.'
@@ -1200,7 +1295,7 @@ C     ----------
 
       END
 
-      INTEGER FUNCTION ISSAME(RESA,RESB,REF,USEMAX)
+      INTEGER FUNCTION P1_ISSAME(RESA,RESB,REF,USEMAX)
       IMPLICIT NONE
 C     This function compares the result from two different helicity
 C      configuration A and B
@@ -1223,7 +1318,7 @@ C
 C     
 C     LOCAL VARIABLES
 C     
-      LOGICAL ISZERO
+      LOGICAL P1_ISZERO
       INTEGER I,J
       INTEGER N_WGT_TO_TRY
       INTEGER WGT_TO_TRY(MAX_WGT_TO_TRY)
@@ -1235,7 +1330,7 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
-      ISSAME=0
+      P1_ISSAME=0
 
 C     If the helicity can be constructed progressively while allowing
 C      inconsistency, then we only allow for weight one comparisons.
@@ -1247,17 +1342,17 @@ C      inconsistency, then we only allow for weight one comparisons.
 
       DO I=1,N_WGT_TO_TRY
         DO J=1,3
-          IF (ISZERO(ABS(RESB(J)),REF,-1)) THEN
-            IF(.NOT.ISZERO(ABS(RESB(J))+ABS(RESA(J)),REF,-1)) THEN
+          IF (P1_ISZERO(ABS(RESB(J)),REF,-1)) THEN
+            IF(.NOT.P1_ISZERO(ABS(RESB(J))+ABS(RESA(J)),REF,-1)) THEN
               GOTO 1231
             ENDIF
 C           Be loser for helicity comparison, so bring a factor 100
-          ELSEIF(.NOT.ISZERO((RESA(J)/RESB(J))-DBLE(WGT_TO_TRY(I)),REF
-     $     *100.0D0,-1)) THEN
+          ELSEIF(.NOT.P1_ISZERO((RESA(J)/RESB(J))-DBLE(WGT_TO_TRY(I))
+     $     ,REF*100.0D0,-1)) THEN
             GOTO 1231
           ENDIF
         ENDDO
-        ISSAME = WGT_TO_TRY(I)
+        P1_ISSAME = WGT_TO_TRY(I)
         RETURN
  1231   CONTINUE
       ENDDO

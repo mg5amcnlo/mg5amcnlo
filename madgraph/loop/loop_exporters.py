@@ -491,7 +491,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
-        self.proc_prefix = 'P%i_' % matrix_element.get('processes')[0].get('id')
+
         try:
             os.mkdir(dirpath)
         except os.error as error:
@@ -666,7 +666,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f and loop_num.f only"""
         
-        misc.sprint("calling LoopExporterFortranSA.write_matrix_element_v4")
         # Create the necessary files for the loop matrix element subroutine
 
         if not isinstance(fortran_model,\
@@ -963,8 +962,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False):
         """Create the loop_matrix.f file."""
-        
-        print 960, "self.template_dir", self.template_dir, self.proc_prefix
         
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -1594,6 +1591,15 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
     
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         super(LoopProcessExporterFortranMatchBox, self).__init__(mgme_dir, dir_path, opt)
+
+    def generate_loop_subprocess(self, matrix_element, fortran_model):
+        """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
+        including the necessary loop_matrix.f, born_matrix.f and include files.
+        Notice that this is too different from generate_subprocess_directory_v4
+        so that there is no point reusing this mother function."""
+
+        self.proc_prefix = 'P%i_' % matrix_element.get('processes')[0].get('id')
+        return super(LoopProcessExporterFortranMatchBox, self).generate_loop_subprocess(matrix_element, fortran_model)
 
 
     def link_files_from_Subprocesses(self,proc_name=""):

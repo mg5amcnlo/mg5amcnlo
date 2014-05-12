@@ -21,6 +21,7 @@ import models.check_param_card as check_param_card
 import aloha.aloha_writers as aloha_writers
 import aloha
 from madgraph import MadGraph5Error
+import madgraph.various.misc as misc
 
 class HelasWriterError(Exception):
     """Class for the error of this module """
@@ -985,7 +986,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         call = call + "%(LoopSymmetryFactor)d,"
         call = call + "%(ampNumber)d,AMPL(1,%(ampNumber)d),S(%(ampNumber)d))"
         
-        call_function = lambda amp: call % amp.get_helas_call_dict()
+        call_function = lambda amp: call % amp.get_helas_call_dict(proc_prefix=self.proc_prefix)
         self.add_amplitude(loopamp.get_call_key(), call_function)
         return
 

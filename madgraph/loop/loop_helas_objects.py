@@ -435,7 +435,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         for i , coupling in enumerate(self.get('coupling')):
             output["LoopCoupling%d"%(i+1)]=coupling
         output["LoopSymmetryFactor"]=self.get('loopsymmetryfactor')
-        output.update(**opt)
+        output.update(opt)
         return output
 
     def get_call_key(self):

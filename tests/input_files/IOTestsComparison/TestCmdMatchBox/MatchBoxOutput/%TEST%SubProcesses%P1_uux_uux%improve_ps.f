@@ -56,7 +56,7 @@ C
 C     
 C     FUNCTIONS
 C     
-      LOGICAL MP_IS_PHYSICAL
+      LOGICAL MP_P1_IS_PHYSICAL
 C     
 C     SAVED VARIABLES
 C     
@@ -90,7 +90,7 @@ C
       ENDDO
 
 C     Check the sanity of the original PS point
-      IF (.NOT.MP_IS_PHYSICAL(NEWP,WARNED)) THEN
+      IF (.NOT.MP_P1_IS_PHYSICAL(NEWP,WARNED)) THEN
         ERRCODE = 1
         WRITE(*,*) 'ERROR:: The input PS point is not precise enough.'
         GOTO 100
@@ -146,7 +146,7 @@ C     Report to the user or update the PS point.
       END
 
 
-      FUNCTION MP_IS_CLOSE(P,NEWP,WARNED)
+      FUNCTION MP_P1_IS_CLOSE(P,NEWP,WARNED)
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -161,7 +161,7 @@ C
 C     ARGUMENTS 
 C     
       REAL*16 P(0:3,NEXTERNAL), NEWP(0:3,NEXTERNAL)
-      LOGICAL MP_IS_CLOSE
+      LOGICAL MP_P1_IS_CLOSE
       INTEGER WARNED
 C     
 C     LOCAL VARIABLES 
@@ -171,7 +171,7 @@ C
 
 C     NOW MAKE SURE THE SHIFTED POINT IS NOT TOO FAR FROM THE ORIGINAL
 C      ONE
-      MP_IS_CLOSE = .TRUE.
+      MP_P1_IS_CLOSE = .TRUE.
       REF  = ZERO
       REF2 = ZERO
       DO J=1,NEXTERNAL
@@ -182,7 +182,7 @@ C      ONE
       ENDDO
 
       IF ((REF/REF2).GT.THRS_CLOSE) THEN
-        MP_IS_CLOSE = .FALSE.
+        MP_P1_IS_CLOSE = .FALSE.
         IF (WARNED.LT.20) THEN
           WRITE(*,*) 'WARNING:: The improved PS point is too far from
      $      the original one',(REF/REF2)
@@ -192,7 +192,7 @@ C      ONE
 
       END
 
-      FUNCTION MP_IS_PHYSICAL(P,WARNED)
+      FUNCTION MP_P1_IS_PHYSICAL(P,WARNED)
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -217,7 +217,7 @@ C
 C     ARGUMENTS 
 C     
       REAL*16 P(0:3,NEXTERNAL)
-      LOGICAL MP_IS_PHYSICAL
+      LOGICAL MP_P1_IS_PHYSICAL
       INTEGER WARNED
 C     
 C     LOCAL VARIABLES 
@@ -239,7 +239,7 @@ C     ----------
 C     BEGIN CODE
 C     ----------
 
-      MP_IS_PHYSICAL = .TRUE.
+      MP_P1_IS_PHYSICAL = .TRUE.
 
 C     WE FIRST CHECK THAT THE INPUT PS POINT IS REASONABLY PHYSICAL
 C     FOR THAT WE NEED A REFERENCE SCALE
@@ -262,7 +262,7 @@ C     FOR THAT WE NEED A REFERENCE SCALE
             CALL MP_P1_WRITE_MOM(P)
             WARNED=WARNED+1
           ENDIF
-          MP_IS_PHYSICAL = .FALSE.
+          MP_P1_IS_PHYSICAL = .FALSE.
         ENDIF
       ENDDO
       REF = REF / (ONE*NEXTERNAL)
@@ -278,7 +278,7 @@ C     FOR THAT WE NEED A REFERENCE SCALE
             CALL MP_P1_WRITE_MOM(P)
             WARNED=WARNED+1
           ENDIF
-          MP_IS_PHYSICAL = .FALSE.
+          MP_P1_IS_PHYSICAL = .FALSE.
         ENDIF
       ENDDO
 
@@ -292,7 +292,7 @@ C     FOR THAT WE NEED A REFERENCE SCALE
       PARAMETER (NINITIAL=2)
       DOUBLE PRECISION ZERO
       PARAMETER (ZERO=0.0D0)
-      DOUBLE PRECISION MDOT
+      DOUBLE PRECISION P1_MDOT
 
       INTEGER I,J
 
@@ -313,18 +313,18 @@ C
       WRITE (*,*) '    ---------------------'
       WRITE (*,*) '    E | px | py | pz | m '
       DO I=1,NEXTERNAL
-        WRITE (*,'(1x,5e27.17)') P(0,I),P(1,I),P(2,I),P(3,I),SQRT(ABS(M
-     $   DOT(P(0,I),P(0,I))))
+        WRITE (*,'(1x,5e27.17)') P(0,I),P(1,I),P(2,I),P(3,I),SQRT(ABS(P
+     $   1_MDOT(P(0,I),P(0,I))))
       ENDDO
       WRITE (*,*) '    Four-momentum conservation sum:'
       WRITE (*,'(1x,4e27.17)') PSUM(0),PSUM(1),PSUM(2),PSUM(3)
       WRITE (*,*) '   ---------------------'
       END
 
-      DOUBLE PRECISION FUNCTION MDOT(P1,P2)
+      DOUBLE PRECISION FUNCTION P1_MDOT(P1,P2)
       IMPLICIT NONE
       DOUBLE PRECISION P1(0:3),P2(0:3)
-      MDOT=P1(0)*P2(0)-P1(1)*P2(1)-P1(2)*P2(2)-P1(3)*P2(3)
+      P1_MDOT=P1(0)*P2(0)-P1(1)*P2(1)-P1(2)*P2(2)-P1(3)*P2(3)
       RETURN
       END
 
@@ -336,7 +336,7 @@ C
       PARAMETER (NINITIAL=2)
       REAL*16 ZERO
       PARAMETER (ZERO=0.0E+00_16)
-      REAL*16 MP_MDOT
+      REAL*16 MP_P1_MDOT
 
       INTEGER I,J
 
@@ -370,7 +370,7 @@ C      therefore perform the cast by hand
       WRITE (*,*) '    ---------------------'
       WRITE (*,*) '    E | px | py | pz | m '
       DO I=1,NEXTERNAL
-        DOT=SQRT(ABS(MP_MDOT(P(0,I),P(0,I))))
+        DOT=SQRT(ABS(MP_P1_MDOT(P(0,I),P(0,I))))
         DP_DOT=DOT
         WRITE (*,'(1x,5e27.17)') DP_P(0,I),DP_P(1,I),DP_P(2,I),DP_P(3
      $   ,I),DP_DOT
@@ -381,10 +381,10 @@ C      therefore perform the cast by hand
       WRITE (*,*) '   ---------------------'
       END
 
-      REAL*16 FUNCTION MP_MDOT(P1,P2)
+      REAL*16 FUNCTION MP_P1_MDOT(P1,P2)
       IMPLICIT NONE
       REAL*16 P1(0:3),P2(0:3)
-      MP_MDOT=P1(0)*P2(0)-P1(1)*P2(1)-P1(2)*P2(2)-P1(3)*P2(3)
+      MP_P1_MDOT=P1(0)*P2(0)-P1(1)*P2(1)-P1(2)*P2(2)-P1(3)*P2(3)
       RETURN
       END
 
@@ -521,7 +521,7 @@ C
 C     
 C     FUNCTIONS
 C     
-      LOGICAL MP_IS_CLOSE
+      LOGICAL MP_P1_IS_CLOSE
 C     
 C     LOCAL VARIABLES 
 C     
@@ -641,7 +641,7 @@ C
         NEWP(J,P1) = REF
       ENDDO
 
-      IF (.NOT.MP_IS_CLOSE(P,NEWP,WARNED)) THEN
+      IF (.NOT.MP_P1_IS_CLOSE(P,NEWP,WARNED)) THEN
         ERRCODE=999
         GOTO 100
       ENDIF
@@ -692,7 +692,7 @@ C
 C     
 C     FUNCTIONS
 C     
-      LOGICAL MP_IS_CLOSE
+      LOGICAL MP_P1_IS_CLOSE
 C     
 C     LOCAL VARIABLES 
 C     
@@ -807,7 +807,7 @@ C     Consistency check
         GOTO 1000
       ENDIF
 
-      IF (.NOT.MP_IS_CLOSE(P,NEWP,WARNED)) THEN
+      IF (.NOT.MP_P1_IS_CLOSE(P,NEWP,WARNED)) THEN
         ERRCODE=999
         GOTO 1000
       ENDIF
