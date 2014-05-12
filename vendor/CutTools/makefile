@@ -14,7 +14,7 @@ else
 endif
 
 # These flags are vital for CT, so we enforce them here
-FFLAGS += -fno-automatic -O2 -funroll-all-loops
+FFLAGS += -fno-automatic -O2 -funroll-all-loops -fPIC
 #FFLAGS += -fno-automatic -Ofast -funroll-all-loops  
 
 EXE = 

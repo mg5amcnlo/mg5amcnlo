@@ -44,7 +44,7 @@ C
       include 'coupl.inc'
 	  INTEGER CTMODE
 	  %(real_dp_format)s LSCALE
-      common/CT/LSCALE,CTMODE
+      common/%(proc_prefix)sCT/LSCALE,CTMODE
 
       INTEGER ID,R
       COMMON/%(proc_prefix)sLOOP/ID,R
