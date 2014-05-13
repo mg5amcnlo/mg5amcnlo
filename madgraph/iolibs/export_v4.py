@@ -1729,30 +1729,30 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
             # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
             all_matches = t_match.findall(t_str)
             output = {}
+            arg=[]
             for i,match in enumerate(all_matches):
-                ctype, arg = match[0], [m.strip() for m in match[1].split(',')]
+                ctype, tmparg = match[0], [m.strip() for m in match[1].split(',')]
                 if ctype not in ['T', 'Tr']:
                     raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
-                arg += ['0']
-                for j, v in enumerate(arg):
-                    output[(i,j)] = v
-          
-        
-        matrix_strings=[]
-        for i,key in enumerate(output):
-            if i == 0:
+                tmparg += ['0']
+                arg +=tmparg
+            for j, v in enumerate(arg):
+                    output[(i_color,j)] = v
+
+            for i,key in enumerate(output):
+              if matrix_strings == []:
                 #first entry
                 matrix_strings.append(""" 
                 if (in1.eq.%s.and.in2.eq.%s)then
                 out = %s
                 """  % (key[0], key[1], output[key]))
-            else:
+              else:
                 #first entry
                 matrix_strings.append(""" 
                 elseif (in1.eq.%s.and.in2.eq.%s)then
                 out = %s
                 """  % (key[0], key[1], output[key]))                
-        matrix_strings.append(" else \n stop 1 \n endif")
+        matrix_strings.append(" else \n out = - 1 \n endif")
         return "\n".join(matrix_strings)
     
     def make(self,*args,**opts):
