@@ -879,3 +879,45 @@ c-----
       invm2_04 = dot(ptot,ptot)
       RETURN
       END
+
+
+      subroutine get_ID_H(IDUP_tmp)
+      implicit none
+      include "genps.inc"
+      include 'nexternal.inc'
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+c      include 'leshouche.inc'
+      common /c_leshouche_inc/idup,mothup,icolup
+      integer IDUP_tmp(nexternal),i
+c
+      do i=1,nexternal
+         IDUP_tmp(i)=IDUP(i,1)
+      enddo
+c
+      return
+      end
+
+      subroutine get_ID_S(IDUP_tmp)
+      implicit none
+      include "genps.inc"
+      include 'nexternal.inc'
+      integer    maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
+      include 'born_leshouche.inc'
+      integer IDUP_tmp(nexternal),i
+c
+      do i=1,nexternal-1
+         IDUP_tmp(i)=IDUP(i,1)
+      enddo
+      IDUP_tmp(nexternal)=0
+c
+      return
+      end
+
+

@@ -488,3 +488,62 @@ c Write the accumulated results to a file
 c Dummy subroutine (normally used with vegas/mint when resuming plots)
       subroutine resume()
       end
+
+
+      subroutine set_cms_stuff(icountevts)
+      implicit none
+      include "run.inc"
+
+      integer icountevts
+
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     #                        sqrtshat,shat
+
+      double precision sqrtshat_ev,shat_ev
+      common/parton_cms_ev/sqrtshat_ev,shat_ev
+
+      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
+      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
+
+      double precision tau_ev,ycm_ev
+      common/cbjrk12_ev/tau_ev,ycm_ev
+
+      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
+      common/cbjrk12_cnt/tau_cnt,ycm_cnt
+
+      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
+      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+
+c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to lab frame --
+c same for event and counterevents
+c This is the rapidity that enters in the arguments of the sinh() and
+c cosh() of the boost, in such a way that
+c       y(k)_lab = y(k)_tilde - ybst_til_tolab
+c where y(k)_lab and y(k)_tilde are the rapidities computed with a generic
+c four-momentum k, in the lab frame and in the \tilde{k}_1+\tilde{k}_2 
+c c.m. frame respectively
+      ybst_til_tolab=-ycm_cnt(0)
+      if(icountevts.eq.-100)then
+c set Bjorken x's in run.inc for the computation of PDFs in auto_dsig
+        xbk(1)=xbjrk_ev(1)
+        xbk(2)=xbjrk_ev(2)
+c shat=2*k1.k2 -- consistency of this assignment with momenta checked
+c in phspncheck_nocms
+        shat=shat_ev
+        sqrtshat=sqrtshat_ev
+c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to 
+c k_1+k_2 c.m. frame
+        ybst_til_tocm=ycm_ev-ycm_cnt(0)
+      else
+c do the same as above for the counterevents
+        xbk(1)=xbjrk_cnt(1,icountevts)
+        xbk(2)=xbjrk_cnt(2,icountevts)
+        shat=shat_cnt(icountevts)
+        sqrtshat=sqrtshat_cnt(icountevts)
+        ybst_til_tocm=ycm_cnt(icountevts)-ycm_cnt(0)
+      endif
+      return
+      end
+
+
