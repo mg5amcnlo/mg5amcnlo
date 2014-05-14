@@ -26,6 +26,7 @@ c
       ifile=34
       open(unit=ifile,file=event_file,status='old')
       call read_lhef_header_full(ifile,maxevt,isc,ipdf,MonteCarlo)
+      numPDFpairs=ipdf/2
       numscales=int(sqrt(dble(isc)))
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
