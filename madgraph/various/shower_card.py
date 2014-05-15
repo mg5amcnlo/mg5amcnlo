@@ -29,13 +29,13 @@ class ShowerCard(dict):
     false = ['.false.', 'f', 'false', '0']
     logical_vars = ['ue_enabled', 'hadronize', 'b_stable', 'pi_stable', 'wp_stable', 
                     'wm_stable', 'z_stable', 'h_stable', 'tap_stable', 'tam_stable', 
-                    'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar', 'incl_merg']
+                    'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
     for i in range(1,100):
         dmstring='dm_'+str(i)
         string_vars.append(dmstring)
     int_vars = ['maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'njmax',
-                'njnow', 'modbos_1', 'modbos_2']
+                'modbos_1', 'modbos_2']
     float_vars = ['maxerrs', 'lambda_5', 'b_mass', 'qcut']
 
     # names_dict has the following structure:
@@ -70,9 +70,7 @@ class ShowerCard(dict):
             'b_mass' : {'HERWIG6':'b_mass', 'PYTHIA6': 'b_mass', 'HERWIGPP': 'b_mass', 'PYTHIA8': 'b_mass'},
             'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi', 'PYTHIA8':'py8uti'},
             'qcut' : {'PYTHIA8':'qcut'},
-            'incl_merg' : {'PYTHIA8':'incl_merg'},
-            'njmax' : {'PYTHIA8':'njmax'},
-            'njnow' : {'PYTHIA8':'njnow'}}
+            'njmax' : {'PYTHIA8':'njmax'}}
     
     stdhep_dict = {'HERWIG6':'mcatnlo_hwan_stdhep.o', 'PYTHIA6':'mcatnlo_pyan_stdhep.o'}
     
