@@ -2,6 +2,7 @@ C Driver, to be modified by the user (keeping the read statements).
 C Should be backward compatible with v3.1 and v3.2 (thanks to B. Kersevan)
       PROGRAM HWIGPR
       INCLUDE 'HERWIG65.INC'
+      INCLUDE 'JIMMY.INC'
       INTEGER N,NSTEP,I,JPR0,JPR,NUMDM,II,NBODIES(100),JJ,IMATCH
       INTEGER IMOTH(100),IDAUGHT(100,5),NMOTH,ARRMOTH(100),III,KK
       DOUBLE PRECISION BR(100),BRR(100,100),SUMBR(100,100)
@@ -19,11 +20,11 @@ C QQIN IS THE EVENT FILE
       LOGICAL LHACRTL,OLDFORM,PI_STABLE,WP_STABLE,WM_STABLE,Z_STABLE,
      &TAUP_STABLE,TAUM_STABLE,MUP_STABLE,MUM_STABLE,H_STABLE
       PARAMETER (LHACRTL=.TRUE.)
-      LOGICAL ENDOFRUN,IS_ST,IS_BB
+      LOGICAL ENDOFRUN,IS_ST,IS_BB,ABORT
       COMMON/CENDOFRUN/ENDOFRUN
       INTEGER MAXEVV
       COMMON/CMAXEVV/MAXEVV
-c
+C
       ENDOFRUN=.FALSE.
       OLDFORM=.FALSE.
       WRITE(*,*)'Enter filename for events'
@@ -48,6 +49,8 @@ C---PROCESS
       IPROC=-18000
 C---INITIALISE OTHER COMMON BLOCKS
       CALL HWIGIN
+C     JIMMY initialization
+      CALL JIMMIN
 C---USER CAN RESET PARAMETERS AT
 C   THIS POINT, OTHERWISE DEFAULT
 C   VALUES IN HWIGIN WILL BE USED.
@@ -58,24 +61,49 @@ C---OR HIGHER (SEE MC@NLO MANUAL, APPENDIX A.8, PAGE 25)
       PRESPL=.FALSE.
 C************************************************************************
 C UNDERLYING EVENT
-      WRITE(*,*)'Enter .TRUE. for Underlying event, .FALSE. otherwise'
+      WRITE(*,*)'Enter .TRUE. for underlying event, .FALSE. otherwise'
       READ(*,*)LHSOFT
       WRITE(*,*)
       IF(LHSOFT)WRITE(*,*)'Underlying event WILL be generated'
       IF(.NOT.LHSOFT)WRITE(*,*)'Underlying event WILL NOT be generated'
       WRITE(*,*)
-
+C
       WRITE(*,*)'Enter decay modes for gauge bosons'
       READ(*,*)MODBOS(1),MODBOS(2)
 C
-      IF(IPDF.EQ.1)THEN
-         DO I=1,2
-            WRITE(*,*)'   Incoming particle # ',I
-            WRITE(*,*)'Enter PDF group name (AUTPDF)'
-            READ(*,*)AUTPDF(I)
-            WRITE(*,*)'Enter PDF set number (MODPDF)'
-            READ(*,*)MODPDF(I)
-         ENDDO
+      IF(LHSOFT.AND.IPDF.NE.1)THEN
+         WRITE(*,*)' '
+         WRITE(*,*)'Underlying event requires external PDF sets'
+         WRITE(*,*)'Please set PDFCODE != 0 in shower_card.dat'
+         STOP
+      ENDIF
+      IF(IPDF.EQ.1.OR.LHSOFT)THEN
+         IF(IPDF.EQ.1)THEN
+            DO I=1,2
+               WRITE(*,*)'   Incoming particle # ',I
+               WRITE(*,*)'Enter PDF group name (AUTPDF)'
+               READ(*,*)AUTPDF(I)
+               WRITE(*,*)'Enter PDF set number (MODPDF)'
+               READ(*,*)MODPDF(I)
+            ENDDO
+         ENDIF
+         IF(LHSOFT)THEN
+C---JIMMY UNDERLYING EVENT OVERRIDES PDF ASSIGNMENTS: MUST USE LO**
+            WRITE(*,*)' '
+            WRITE(*,*)'JIMMY underlying event requires PDFs=LO**'
+            DO I=1,2
+               IF(AUTPDF(I).NE.'LHAPDF'.AND.AUTPDF(I).NE.'LHAEXT')THEN
+                  WRITE(*,*)'PDF error 1 in MG5_aMC@NLO'
+                  STOP
+               ENDIF
+               IF(MODPDF(I).NE.20651)THEN
+                  WRITE(*,*)'Forcing PDFs to be 20651'
+                  MODPDF(I)=20651
+               ENDIF
+            ENDDO
+         ENDIF
+         WRITE(*,*)' '
+
 C---SET LHACRTL TO FALSE IF LHAPDF DEFAULTS FOR 16, 18, AND 19 ARE OK
          IF(LHACRTL.AND.
      #      (AUTPDF(1).EQ.'LHAPDF'.OR.AUTPDF(1).EQ.'LHAEXT'))THEN
@@ -88,6 +116,7 @@ C---MODERN VERSIONS OF LHAPDF REQUIRE THE FOLLOWING SETTING
             ENDDO
          ENDIF
       ENDIF
+
       WRITE(*,*)'Enter Lambda_QCD, <0 for Herwig default'
       READ(*,*)TMPLAM
 C
@@ -304,19 +333,33 @@ C---EVENTS ARE NORMALIZED TO SUM OR AVERAGE TO THE TOTAL CROSS SECTION
 c     not need to multiply by the number of events
          MQQ=1
       endif
+      MSFLAG=0
+      IF (LHSOFT) THEN
+c     Minimum PT of secondary scatters
+         PTJIM=2.5
+C---  Turn MI on(1) or off(0)
+         MSFLAG=1
+         CALL JMINIT
+      ENDIF
 
-C---USER'S INITIAL CALCULATIONS
-      CALL HWABEG
 C---INITIALISE ELEMENTARY PROCESS
       CALL HWEINI
+C---USER'S INITIAL CALCULATIONS
+      CALL HWABEG
 C---LOOP OVER EVENTS
       DO 100 N=1,MAXEV
+ 50      CONTINUE
 C---INITIALISE EVENT
          CALL HWUINE
 C---GENERATE HARD SUBPROCESS
          CALL HWEPRO
 C---GENERATE PARTON CASCADES
          CALL HWBGEN
+C---  GENERATE MULTIPARTON INTERACTIONS
+         IF (MSFLAG.EQ.1) THEN
+            CALL HWMSCT(ABORT)
+            IF (ABORT) GOTO 50
+         ENDIF
 C---DO HEAVY OBJECT DECAYS
          CALL HWDHOB
 c         CALL HWUDPR
@@ -341,6 +384,8 @@ c            CALL HWAEND
   100 CONTINUE
 C---TERMINATE ELEMENTARY PROCESS
       CALL HWEFIN
+C     Finish off JIMMY
+      IF (LHSOFT) CALL JMEFIN
 C---USER'S TERMINAL CALCULATIONS
       WRITE(*,*)'# of events processed=',NEVHEP
       ENDOFRUN=.TRUE.
