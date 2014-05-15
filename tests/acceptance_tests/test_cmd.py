@@ -146,6 +146,7 @@ class TestCmdShell1(unittest.TestCase):
                     'group_subprocesses': 'Auto',
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
+                    'output_dependencies': 'external',
                     'lhapdf': 'lhapdf-config',  
                     'loop_optimized_output': True,
                     'fastjet': 'fastjet-config',

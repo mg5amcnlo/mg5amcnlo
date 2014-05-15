@@ -47,7 +47,7 @@ class Category(list):
             self.append(current_rule)
             first=False
 
-        
+
         
         
         

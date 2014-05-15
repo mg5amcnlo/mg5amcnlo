@@ -438,9 +438,6 @@ c
          endif
       enddo
 
-      sigint=0d0
-
-c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
          foundB(1)=.false.
@@ -461,7 +458,8 @@ c Find the nFKSprocess for which we compute the Born-like contributions
          write (*,*) 'For the Born we use nFKSprocesses  #',
      &        nFKSprocessBorn
       endif
-         
+
+      sigint=0d0
 c
 c Compute the Born-like contributions with nbody=.true.
 c THIS CAN BE OPTIMIZED

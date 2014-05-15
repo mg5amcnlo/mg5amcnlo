@@ -122,7 +122,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
         
-        if model_name == 'mssm':
+        if model_name == 'mssm' or os.path.basename(model_name) == 'mssm':
             keep_external=True
         else:
             keep_external=False
@@ -136,7 +136,6 @@ _import_once = []
 def import_full_model(model_path, decay=False, prefix=''):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
-
 
     assert model_path == find_ufo_path(model_path)
     
@@ -204,13 +203,15 @@ def import_full_model(model_path, decay=False, prefix=''):
      
     # Load basic information
     ufo_model = ufomodels.load_model(model_path, decay)
-    ufo2mg5_converter = UFOMG5Converter(ufo_model)
+    ufo2mg5_converter = UFOMG5Converter(ufo_model)    
     model = ufo2mg5_converter.load_model()
-    
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-    # Load the Parameter/Coupling in a convinient format.
-    parameters, couplings = OrganizeModelExpression(ufo_model).main()
+    
+    # Load the Parameter/Coupling in a convenient format.
+    parameters, couplings = OrganizeModelExpression(ufo_model).main(\
+             additional_couplings = ufo2mg5_converter.wavefunction_CT_couplings)
+    
     model.set('parameters', parameters)
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)
@@ -246,18 +247,16 @@ def import_full_model(model_path, decay=False, prefix=''):
     #    model.restrict_model(restrict_file)
 
     return model
-    
 
 class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
-
-
 
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
        
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
+        self.wavefunction_CT_couplings = []
                         
         # Check here if we can extract the couplings perturbed in this model
         # which indicate a loop model or if this model is only meant for 
@@ -425,7 +424,7 @@ class UFOMG5Converter(object):
                     particle.set(key,abs(value))
                     if value<0:
                         particle.set('ghost',True)
-                elif key == 'propagator':
+                elif key == 'propagator' and value:
                     if aloha.unitary_gauge:
                         particle.set(key, str(value[0]))
                     else: 
@@ -473,7 +472,12 @@ class UFOMG5Converter(object):
             if len([1 for k in key[:-1] if k==1])==1 and \
                not any(k>1 for k in key[:-1]):
                 newParticleCountertermKey=[None,\
-                  tuple([tuple([abs(part.pdg_code) for part in loop_parts]) for\
+#                  The line below is for loop UFO Model with the 'attribute' 
+#                  'loop_particles' of the Particle objects to be defined with
+#                  instances of the particle class. The new convention is to use
+#                  pdg numbers instead.
+#                  tuple([tuple([abs(part.pdg_code) for part in loop_parts]) for\
+                  tuple([tuple(loop_parts) for\
                     loop_parts in loop_particles[key[-1]]])]
                 for i, order in enumerate(self.ufomodel.all_orders[:-1]):
                     if key[i]==1:
@@ -488,6 +492,7 @@ class UFOMG5Converter(object):
                     name = newCouplingName,
                     value = counterterm,
                     order = {newParticleCountertermKey[0]:2})
+                self.wavefunction_CT_couplings.append(self.ufomodel.all_couplings.pop())
 
         particle.set('counterterm',particle_counterterms)
         self.particles.append(particle)
@@ -537,8 +542,7 @@ class UFOMG5Converter(object):
                     if poleOrder!=0:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
                     newCoupling.value=coupling.pole(poleOrder)
-                    new_couplings[key[2]][poleOrder][(key[0],key[1])]=\
-                      newCoupling
+                    new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling
         
         # Now we can add an interaction for each.         
         for i, all_couplings in enumerate(new_couplings):
@@ -956,11 +960,13 @@ class OrganizeModelExpression:
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
     
-    def main(self):
+    def main(self, additional_couplings = []):
         """Launch the actual computation and return the associate 
-        params/couplings."""
+        params/couplings. Possibly consider additional_couplings in addition
+        to those defined in the UFO model attribute all_couplings """
+        
         self.analyze_parameters()
-        self.analyze_couplings()
+        self.analyze_couplings(additional_couplings = additional_couplings)
         return self.params, self.couplings
 
 
@@ -1021,26 +1027,29 @@ class OrganizeModelExpression:
         
                 
 
-    def analyze_couplings(self):
+    def analyze_couplings(self,additional_couplings=[]):
         """creates the shortcut for all special function/parameter
         separate the couplings dependent of track variables of the others"""
         
         # First expand the couplings on all their non-zero contribution to the 
         # three laurent orders 0, -1 and -2.
         if self.perturbation_couplings:
-            new_couplings_list=[]
-            for coupling in self.model.all_couplings:
+            couplings_list=[]
+            for coupling in self.model.all_couplings + additional_couplings:
                 for poleOrder in range(0,3):
                     newCoupling=copy.deepcopy(coupling)
                     if poleOrder!=0:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
                     if newCoupling.pole(poleOrder)!='ZERO':                    
                         newCoupling.value=newCoupling.pole(poleOrder)
-                        new_couplings_list.append(newCoupling)
-            self.model.all_couplings=new_couplings_list                
+                        couplings_list.append(newCoupling)
+            # This is not necessary anymore (!check!)
+            # self.model.all_couplings=copy.copy(couplings_list)             
+        else:
+            couplings_list = self.model.all_couplings + additional_couplings                        
                                         
         
-        for coupling in self.model.all_couplings:
+        for coupling in couplings_list:
             # shorten expression, find dependencies, create short object
             expr = self.shorten_expr(coupling.value)
             depend_on = self.find_dependencies(expr)
@@ -1185,7 +1194,8 @@ class RestrictModel(model_reader.ModelReader):
         the model.
         keep_external if the param_card need to be kept intact
         """
-
+        if self.get('name') == "mssm" and not keep_external:
+            raise Exception
         self.restrict_card = param_card
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))
@@ -1608,6 +1618,9 @@ class RestrictModel(model_reader.ModelReader):
             data.remove(param_info[param]['obj'])
 
                 
+
+
+
                 
         
         

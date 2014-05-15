@@ -65,12 +65,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.decay = madspin.decay_misc()
         self.model = None
         
-        self.options = {'max_weight': -1, 'BW_effect': 1, 
+        self.options = {'max_weight': -1, 
                         'curr_dir': os.path.realpath(os.getcwd()),
                         'Nevents_for_max_weigth': 0,
                         'max_weight_ps_point': 400,
                         'BW_cut':-1,
-                        'zeromass_for_max_weight':5,
                         'nb_sigma':0,
                         'ms_dir':None,
                         'max_running_process':100}

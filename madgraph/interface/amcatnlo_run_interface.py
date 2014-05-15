@@ -1236,17 +1236,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         """Update random number seed with the value from the run_card. 
         If this is 0, update the number according to a fresh one"""
         iseed = int(self.run_card['iseed'])
-        if iseed != 0:
-            misc.call(['echo "r=%d" > %s' \
-                    % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit'))],
-                    cwd=self.me_dir, shell=True)
-        else:
+        if iseed == 0:
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
             iseed = int(randinit.read()[2:]) + 1
             randinit.close()
-            randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
-            randinit.write('r=%d' % iseed)
-            randinit.close()
+        randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
+        randinit.write('r=%d' % iseed)
+        randinit.close()
 
 
     def get_characteristics(self, file):
@@ -1376,7 +1372,20 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
-            self.print_summary(options, 1, mode)
+
+            # collect the scale and PDF uncertainties
+            scale_pdf_info={}
+            if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
+                data_files=[]
+                for dir in p_dirs:
+                    for obj in folder_names[mode]:
+                        for file in os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)):
+                            if file.startswith(obj[:-1]) and \
+                                    (os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file,'scale_pdf_dependence.dat'))):
+                                data_files.append(pjoin(dir,file,'scale_pdf_dependence.dat'))
+                scale_pdf_info = self.pdf_scale_from_reweighting(data_files)
+            # print the results:
+            self.print_summary(options, 1, mode, scale_pdf_info)
 
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'res.txt'),
                      pjoin(self.me_dir, 'Events', self.run_name))
@@ -1684,6 +1693,14 @@ Integrated cross-section
                 message = '\n      ' + status[step] + proc_info + \
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
+                if self.run_card['reweight_scale']=='.true.':
+                    message = message + \
+                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
+                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
+                if self.run_card['reweight_PDF']=='.true.':
+                    message = message + \
+                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
+                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
         
         if (mode in ['NLO', 'LO'] and step!=1) or \
            (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
@@ -2034,7 +2051,7 @@ Integrated cross-section
         timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
                      "(?P<time>[\d\+-Eed\.]*)\s*")
 
-        for logf in all_log_files:
+        for logf in log_GV_files:
             logfile=open(logf,'r')
             log = logfile.read()
             logfile.close()
@@ -2165,7 +2182,7 @@ Integrated cross-section
                     'The event file has not been created. Check collect_events.log')
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
-        misc.call(['gzip %s' % evt_file], shell=True)
+        misc.call(['gzip', evt_file])
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
@@ -2176,11 +2193,11 @@ Integrated cross-section
 
 
     def run_mcatnlo(self, evt_file):
-        """runs mcatnlo on the generated event file, to produce showered-events"""
+        """runs mcatnlo on the generated event file, to produce showered-events
+        """
         logger.info('Prepairing MCatNLO run')
-
         try:
-            misc.call(['gunzip %s.gz' % evt_file], shell=True)
+            misc.call(['gunzip', evt_file])
         except Exception:
             pass
 
@@ -2279,8 +2296,7 @@ Integrated cross-section
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
-                misc.call(['ln -s %s %s' % \
-                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
+                files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
             except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
@@ -2288,8 +2304,7 @@ Integrated cross-section
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
 
         evt_name = os.path.basename(evt_file)
-        misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], 
-            pjoin(rundir,self.run_name))], shell=True)
+        files.ln(os.path.split(evt_file)[0], rundir, self.run_name)
         # special treatment for pythia8
         if shower=='PYTHIA8':
             open(pjoin(rundir, exe), 'w').write(\
@@ -2298,85 +2313,59 @@ Integrated cross-section
             os.system('chmod  +x %s' % pjoin(rundir,exe))
             misc.call(['./%s' % exe], cwd = rundir, 
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                shell=True)
+                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
         else:
             misc.call(['./%s' % exe], cwd = rundir, 
                 stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
                 stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
-        #copy the showered stdhep file back in events
+        
+        # now collect the results
+        message = ''
+        warning = ''
+        to_gzip = []
         if not self.shower_card['analyse']:
-            if os.path.exists(pjoin(rundir, self.run_name, evt_name + '.hep')):
-                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
-                count = 0
-                while os.path.exists(hep_file + '.gz'):
-                    count +=1
-                    hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
-
-                misc.call(['mv %s %s' % (pjoin(rundir, self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                misc.call(['gzip %s' % hep_file], shell=True)
-
-                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                            ' and hadronized events in the StdHEP format obtained' + \
-                            ' showering the parton-level event file %s.gz with %s') % \
-                            (hep_file, evt_file, shower))
-            #this is for hw++
-            elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
-                hep_file = '%s_%s_0.hepmc' % (evt_file[:-4], shower)
-                count = 0
-                while os.path.exists(hep_file + '.gz'):
-                    count +=1
-                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
-
-                misc.call(['mv %s %s' % \
-                    (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                misc.call(['gzip %s' % hep_file], shell=True)
-                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                            ' and hadronized events in the HEPMC format obtained' + \
-                            ' showering the parton-level event file %s.gz with %s') % \
-                            (hep_file, evt_file, shower))
-            #this is for pythia8
-            elif os.path.exists(pjoin(rundir, 'Pythia8.hep')):
-                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
-                count = 0
-                while os.path.exists(hep_file + '.gz'):
-                    count +=1
-                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
-
-                misc.call(['mv %s %s' % \
-                    (pjoin(rundir, 'Pythia8.hep'), hep_file)], shell=True) 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                misc.call(['gzip %s' % hep_file], shell=True)
-                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                            ' and hadronized events in the HEPMC format obtained' + \
-                            ' showering the parton-level event file %s.gz with %s') % \
-                            (hep_file, evt_file, shower))
-
+            #copy the showered stdhep/hepmc file back in events
+            showerfile_dict = \
+                {'HERWIG6': pjoin(rundir, self.run_name, evt_name + '.hep'),
+                 'PYTHIA6Q': pjoin(rundir, self.run_name, evt_name + '.hep'),
+                 'PYTHIA6PT': pjoin(rundir, self.run_name, evt_name + '.hep'),
+                 'PYTHIA8': pjoin(rundir, 'Pythia8.hep'),
+                 'HERWIGPP': pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')}
+            if shower in ['PYTHIA8', 'HERWIGPP']:
+                hep_format = 'HEPMC'
+                ext = 'hepmc'
             else:
+                hep_format = 'StdHEP'
+                ext = 'hep'
+
+            hep_file = '%s_%s_0.%s' % (evt_file[:-4], shower, ext)
+            count = 0
+            while os.path.exists(hep_file + '.gz'):
+                count +=1
+                hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
+
+            try:
+                files.mv(showerfile_dict[shower], hep_file) 
+            except OSError, IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
-                
-            # Now arxiv the shower card used if RunMaterial is present
-            run_dir_path = pjoin(rundir,self.run_name)
-            if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
-                misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
-                files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
-                   pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
-                                                              %(shower, count)))
-                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
-                                                               cwd=run_dir_path)
-                shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+
+            to_gzip.extend([evt_file, hep_file])
+
+            message = ('The file %s.gz has been generated. \nIt contains showered' + \
+                    ' and hadronized events in the %s format obtained' + \
+                    ' showering the parton-level event file %s.gz with %s') % \
+                    (hep_file, hep_format, evt_file, shower)
             
         else:
+            #copy the topdrawer file(s) back in events
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
+            to_gzip.append(evt_file)
             if not topfiles:
-                misc.call(['gzip %s' % evt_file], shell=True)
-                logger.warning('No .top file has been generated. For the results of your ' +\
-                               'run, please check inside %s' % rundir)
+                waarning = 'No .top file has been generated. For the results of your ' +\
+                               'run, please check inside %s' % rundir
 
 	    else:    
                 filename = 'plot_%s_%d_' % (shower, 1)
@@ -2389,9 +2378,7 @@ Integrated cross-section
                 for i, file in enumerate(topfiles):
                     plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
                               '%s%d.top' % (filename, i))
-                    misc.call(['mv %s %s' % \
-                        (pjoin(rundir, file), plotfile)], shell=True) 
-
+                    files.mv(pjoin(rundir, file), plotfile) 
                     plotfiles.append(plotfile)
 
                 ffiles = 'files'
@@ -2400,11 +2387,28 @@ Integrated cross-section
                     ffiles = 'file'
                     have = 'has'
 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                logger.info(('The %s %s %s been generated, with histograms in the' + \
+                message = ('The %s %s %s been generated, with histograms in the' + \
                         ' TopDrawer format, obtained by showering the parton-level' + \
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
-                        evt_file, shower))
+                        evt_file, shower)
+                
+        # Now arxiv the shower card used if RunMaterial is present
+        run_dir_path = pjoin(rundir,self.run_name)
+        if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
+            misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
+            files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
+               pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
+                                                          %(shower, count)))
+            misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
+                                                           cwd=run_dir_path)
+            shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+        # end of the run, gzip files and print out the message/warning
+        for f in to_gzip:
+            misc.call(['gzip', f])
+        if message:
+            logger.info(message)
+        if warning:
+            logger.warning(warning)
 
         self.update_status('Run complete', level='shower', update_results=True)
 
@@ -2608,14 +2612,20 @@ Integrated cross-section
         content += 'SMASS=%s\n' % mcmass_dict[3]
         content += 'CMASS=%s\n' % mcmass_dict[4]
         content += 'BMASS=%s\n' % mcmass_dict[5]
+        content += 'EMASS=%s\n' % mcmass_dict[11]
+        content += 'MUMASS=%s\n' % mcmass_dict[13]
+        content += 'TAUMASS=%s\n' % mcmass_dict[15]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
-        if pdlabel =='\'lhapdf\'':
+        if pdlabel == 'lhapdf':
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
-            lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
+                          stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
+            pdfsetsdir = self.get_lhapdf_pdfsetsdir()
+            lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+            self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         else:
             #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
@@ -2673,9 +2683,9 @@ Integrated cross-section
 
         #check that the new event files are complete
         for evt_file in evt_files:
-            last_line = subprocess.Popen('tail -n1 %s.rwgt ' % \
-                    pjoin(self.me_dir, 'SubProcesses', evt_file), \
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            last_line = subprocess.Popen(['tail',  '-n1', '%s.rwgt' % \
+                    pjoin(self.me_dir, 'SubProcesses', evt_file)], \
+                    stdout = subprocess.PIPE).stdout.read().strip()
             if last_line != "</LesHouchesEvents>":
                 raise aMCatNLOError('An error occurred during reweight. Check the' + \
                         '\'reweight_xsec_events.output\' files inside the ' + \
@@ -2693,7 +2703,7 @@ Integrated cross-section
     def pdf_scale_from_reweighting(self, evt_files):
         """This function takes the files with the scale and pdf values
         written by the reweight_xsec_events.f code
-        (P*/G*/pdf_scale_uncertainty.dat) and computes the overall
+        (P*/G*/pdf_scale_dependence.dat) and computes the overall
         scale and PDF uncertainty (the latter is computed using the
         Hessian method (if lhaid<90000) or Gaussian (if lhaid>90000))
         and returns it in percents.  The expected format of the file
@@ -2824,9 +2834,9 @@ Integrated cross-section
         for dir in self.split_folders.keys():
             last_line = ''
             try:
-                last_line = subprocess.Popen('tail -n1 %s ' % \
-                    pjoin(dir, 'events.lhe'), \
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+                last_line = subprocess.Popen(
+                        ['tail', '-n1', pjoin(dir, 'events.lhe')], \
+                    stdout = subprocess.PIPE).stdout.read().strip()
             except IOError:
                 pass
 
@@ -2895,17 +2905,19 @@ Integrated cross-section
                                 min([1, self.njobs - self.ijob]),
                                 self.ijob, run_type), level='parton')
         elif 'reweight' in exe:
-                #Find the correct PDF input file
-                input_files, output_files = [], []
-                input_files.append(self.get_pdf_input_filename())
-                input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
-                input_files.append(args[0])
-                output_files.append('%s.rwgt' % os.path.basename(args[0]))
-                output_files.append('reweight_xsec_events.output')
-                output_files.append('scale_pdf_dependence.dat')
-    
-                return self.cluster.submit2(exe, args, cwd=cwd, 
-                                 input_files=input_files, output_files=output_files) 
+            #Find the correct PDF input file
+            input_files, output_files = [], []
+            pdfinput = self.get_pdf_input_filename()
+            if os.path.exists(pdfinput):
+                input_files.append(pdfinput)
+            input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
+            input_files.append(args[0])
+            output_files.append('%s.rwgt' % os.path.basename(args[0]))
+            output_files.append('reweight_xsec_events.output')
+            output_files.append('scale_pdf_dependence.dat')
+
+            return self.cluster.submit2(exe, args, cwd=cwd, 
+                             input_files=input_files, output_files=output_files) 
 
         #this is for the cluster/multicore run
         elif 'ajob' in exe:
@@ -2941,6 +2953,12 @@ Integrated cross-section
         
         if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
+
+        # LHAPDF dynamic libraries (needed for lhapdf6)
+        lhalibs = ['libLHAPDF.dylib', 'libLHAPDF.so'] 
+        for lib in [pjoin(self.me_dir, 'lib', l) for l in lhalibs \
+           if os.path.exists(pjoin(self.me_dir, 'lib', l))]:
+            input_files.append(lib)
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
@@ -3015,7 +3033,9 @@ Integrated cross-section
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
 
         #Find the correct PDF input file
-        input_files.append(self.get_pdf_input_filename())
+        pdfinput = self.get_pdf_input_filename()
+        if os.path.exists(pdfinput):
+            input_files.append(pdfinput)
 
         if len(args) == 4 and not keep_fourth_arg:
             args = args[:3]
@@ -3106,10 +3126,7 @@ Integrated cross-section
         sourcedir = pjoin(self.me_dir, 'Source')
 
         #clean files
-        misc.call(['rm -f %s' % 
-                ' '.join([amcatnlo_log, madloop_log, reweight_log, test_log])], \
-                  cwd=self.me_dir, shell=True)
-
+        files.rm([amcatnlo_log, madloop_log, reweight_log, test_log])
         #define which executable/tests to compile
         if '+' in mode:
             mode = mode.split('+')[0]
@@ -3136,17 +3153,27 @@ Integrated cross-section
             return
 
         # rm links to lhapdflib/ PDFsets if exist
-        if os.path.islink(pjoin(libdir, 'libLHAPDF.a')):
-            os.remove(pjoin(libdir, 'libLHAPDF.a'))
-        if os.path.islink(pjoin(libdir, 'PDFsets')):
-            os.remove(pjoin(libdir, 'PDFsets'))
+        if os.path.exists(pjoin(libdir, 'PDFsets')):
+            files.rm(pjoin(libdir, 'PDFsets'))
 
         # read the run_card to find if lhapdf is used or not
-        if self.run_card['pdlabel'] == 'lhapdf':
-            self.link_lhapdf(libdir)
+        if self.run_card['pdlabel'] == 'lhapdf' and \
+                (self.banner.get_detail('run_card', 'lpp1') != '0' or \
+                 self.banner.get_detail('run_card', 'lpp1') != '0'):
+
+            self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
+            pdfsetsdir = self.get_lhapdf_pdfsetsdir()
+            lhaid_list = [int(self.run_card['lhaid'])]
+            if self.run_card['reweight_PDF'].lower() == '.true.':
+                lhaid_list.append(int(self.run_card['PDF_set_min']))
+                lhaid_list.append(int(self.run_card['PDF_set_max']))
+            self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+
         else:
-            if self.run_card['lpp1'] == '1' ==self.run_card['lpp2']:
+            if self.run_card['lpp1'] == '1' == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
+            if self.run_card['lpp1'] == '0' == self.run_card['lpp2']:
+                logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
             except KeyError:
@@ -3168,6 +3195,54 @@ Integrated cross-section
             logger.info('          ...done, continuing with P* directories')
         else:
             raise aMCatNLOError('Compilation failed')
+        
+        # make StdHep (only necessary with MG option output_dependencies='internal')
+        MCatNLO_libdir = pjoin(self.me_dir, 'MCatNLO', 'lib')
+        if not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libFmcfio.a'))):  
+            if  os.path.exists(pjoin(sourcedir,'StdHEP')):
+                logger.info('Compiling StdHEP (can take a couple of minutes) ...')
+                misc.compile(['StdHEP'], cwd = sourcedir)
+                logger.info('          ...done.')      
+            else:
+                raise aMCatNLOError('Could not compile StdHEP because its'+\
+                   ' source directory could not be found in the SOURCE folder.\n'+\
+                             " Check the MG5_aMC option 'output_dependencies.'")
+
+        # make CutTools (only necessary with MG option output_dependencies='internal')
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            if  os.path.exists(pjoin(sourcedir,'CutTools')):
+                logger.info('Compiling CutTools (can take a couple of minutes) ...')
+                misc.compile(['CutTools'], cwd = sourcedir)
+                logger.info('          ...done.')
+            else:
+                raise aMCatNLOError('Could not compile CutTools because its'+\
+                   ' source directory could not be found in the SOURCE folder.\n'+\
+                             " Check the MG5_aMC option 'output_dependencies.'")
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            raise aMCatNLOError('CutTools compilation failed.')            
+
+        # Verify compatibility between current compiler and the one which was
+        # used when last compiling CutTools (if specified).
+        compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
+                                  libdir, 'libcts.a')))),'compiler_version.log')
+        if os.path.exists(compiler_log_path):
+            compiler_version_used = open(compiler_log_path,'r').read()
+            if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
+                       pjoin(sourcedir,'make_opts')))) in compiler_version_used:
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('CutTools was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                    misc.compile(['cleanCT'], cwd = sourcedir)
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise aMCatNLOError("CutTools installation in %s"\
+                                 %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
+                 " seems to have been compiled with a different compiler than"+\
+                    " the one specified in MG5_aMC. Please recompile CutTools.")
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
@@ -3275,22 +3350,6 @@ Integrated cross-section
         else:
             logger.info('   Poles successfully cancel for %d points over %d (tolerance=%2.1e)' \
                     %(npass, nfail+npass, tolerance))
-
-
-
-    def link_lhapdf(self, libdir):
-        """links lhapdf into libdir"""
-        logger.info('Using LHAPDF interface for PDFs')
-        lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-        lhasetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-        if not os.path.exists(pjoin(libdir, 'libLHAPDF.a')):
-            os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
-        if not os.path.exists(pjoin(libdir, 'PDFsets')):
-            os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-        os.environ['lhapdf'] = 'True'
-        os.environ['lhapdf_config'] = self.options['lhapdf']
 
 
     def write_test_input(self, test):

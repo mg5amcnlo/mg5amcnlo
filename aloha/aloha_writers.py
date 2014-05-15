@@ -452,6 +452,10 @@ class ALOHAWriterForFortran(WriteALOHA):
                    'log': 'log(dble(%s))',
                    'asin': 'asin(dble(%s))',
                    'acos': 'acos(dble(%s))',
+                   'abs': 'abs(%s)',
+                   'fabs': 'abs(%s)',
+                   'math.abs': 'abs(%s)',
+                   'cmath.abs': 'abs(%s)',
                    '':'(%s)'
                    }
             
@@ -651,7 +655,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if isinstance(name, aloha_lib.ExtVariable):
             # external parameter nothing to do
             self.has_model_parameter = True
-            return name
+            return '%s%s' % (aloha.aloha_prefix, name)
         
         if '_' in name:
             vtype = name.type
@@ -1304,7 +1308,8 @@ class ALOHAWriterForCPP(WriteALOHA):
                    'cmath.sqrt':'sqrt(%s)', 
                    'sqrt': 'sqrt(%s)',
                    'complexconjugate': 'conj(dcmplx(%s))',
-                   '/' : '{0}/%s'.format(one) 
+                   '/' : '{0}/%s'.format(one),
+                   'abs': 'abs(%s)'
                    }
             
         if fct in self.fct_format:

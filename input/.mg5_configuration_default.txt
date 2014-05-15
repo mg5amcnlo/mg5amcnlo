@@ -151,6 +151,12 @@
 # e.g. pjfry=/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta2/pjfry_install/lib
 # pjfry = None
 
+#! Set how MadLoop dependencies (such as CutTools) should be handled
+#!  > external : ML5 places a link to the MG5_aMC-wide libraries
+#!  > internal : ML5 copies all dependencies in the output so that it is independent
+#!  > environment_paths : ML5 searches for the dependencies in your environment path
+# output_dependencies = external
+
 #! SysCalc PATH
 #! Path to the directory containing syscalc executables
 #! relative path start from main directory

@@ -1395,6 +1395,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Replace also for Template but not for cluster
         if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
             self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
+        
+        return compiler
 
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
@@ -2184,6 +2186,11 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                            len(matrix_element.get('processes')),
                            1)
 
+        filename = pjoin(dirpath, 'phasespace.inc')
+        self.write_phasespace_file(writers.FortranWriter(filename),
+                           len(matrix_element.get('diagrams')),
+                           )
+
         # Generate diagrams
         filename = pjoin(dirpath, "matrix.ps")
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
@@ -2200,7 +2207,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
         #ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
 
-        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'genps.inc']
+        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'genps.inc']
 
         for file in linkfiles:
             ln('../%s' % file, starting_dir=cwd)
@@ -2208,6 +2215,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         ln('nexternal.inc', '../../Source', log=False, cwd=dirpath)
         ln('leshouche.inc', '../../Source', log=False, cwd=dirpath)
         ln('maxamps.inc', '../../Source', log=False, cwd=dirpath)
+        ln('phasespace.inc', '../', log=True, cwd=dirpath)
         # Return to original PWD
         #os.chdir(cwd)
 
@@ -2310,6 +2318,24 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         writer.write(text)
 
         return True
+
+    def write_phasespace_file(self, writer, nb_diag):
+        """ """
+        
+        template = """      include 'maxparticles.inc' 
+      integer max_branches
+      parameter (max_branches=max_particles-1)
+      integer max_configs
+      parameter (max_configs=%(nb_diag)s)
+
+c     channel position
+      integer config_pos,perm_pos
+      common /to_config/config_pos,perm_pos
+        
+        """
+
+        writer.write(template % {'nb_diag': nb_diag})
+        
 
     #===========================================================================
     # write_auto_dsig_file
@@ -4379,7 +4405,7 @@ class UFO_model_to_mg4(object):
             logger.critical('aS not define as external parameter adding it!')
             #self.model['parameters']['aS'] = base_objects.ParamCardVariable('aS', 0.138,'DUMMY',(1,))
             self.params_indep.append( base_objects. ModelVariable('aS', '0.138','real'))
-            
+            self.params_indep.append( base_objects. ModelVariable('G', '4.1643','real'))
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
@@ -4652,8 +4678,9 @@ class UFO_model_to_mg4(object):
             already_def.add(particle.get('width').lower())
             if self.opt['complex_mass']:
                 already_def.add('cmass_%s' % particle.get('mass').lower())
-
-        is_valid = lambda name: name!='G' and name!='MU_R' and name.lower() not in already_def
+        
+        is_valid = lambda name: name.lower() not in ['g', 'mu_r', 'zero'] and \
+                                                 name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'
@@ -5238,7 +5265,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir,
               'iregi_dir':cmd._iregi_dir,
               'pjfry_dir':cmd.options["pjfry"],
-              'fortran_compiler':cmd.options['fortran_compiler']}
+              'fortran_compiler':cmd.options['fortran_compiler'],
+              'output_dependencies':cmd.options['output_dependencies']}
 
             if not cmd.options['loop_optimized_output']:
                 ExporterClass=loop_exporters.LoopProcessExporterFortranSA
@@ -5270,7 +5298,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir,
               'iregi_dir':cmd._iregi_dir,
               'pjfry_dir':cmd.options["pjfry"],
-              'fortran_compiler':cmd.options['fortran_compiler']}
+              'fortran_compiler':cmd.options['fortran_compiler'],
+              'output_dependencies':cmd.options['output_dependencies']}
         if not cmd.options['loop_optimized_output']:
             logger.info("Writing out the aMC@NLO code")
             ExporterClass = export_fks.ProcessExporterFortranFKS
@@ -5434,6 +5463,11 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         self.write_leshouche_file(writers.FortranWriter(filename),
                                    subproc_group)
 
+        filename = pjoin(Ppath, 'phasespace.inc')
+        self.write_phasespace_file(writers.FortranWriter(filename),
+                           nconfigs)
+                           
+
         filename = pjoin(Ppath, 'maxamps.inc')
         self.write_maxamps_file(writers.FortranWriter(filename),
                            maxamps,
@@ -5467,7 +5501,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
-        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
 
         for file in linkfiles:
             ln('../%s' % file, cwd=Ppath)
@@ -5477,7 +5511,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         ln('maxamps.inc', '../../Source', cwd=Ppath, log=False)
         ln('../../Source/maxparticles.inc', '.', log=True, cwd=Ppath)
         ln('../../Source/maxparticles.inc', '.', name='genps.inc', log=True, cwd=Ppath)
-
+        ln('phasespace.inc', '../', log=True, cwd=Ppath)
         if not tot_calls:
             tot_calls = 0
         return tot_calls

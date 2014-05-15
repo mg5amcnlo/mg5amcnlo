@@ -362,20 +362,20 @@ G__minus__ = G__plus__.anti()
 
 # Wavefunction renormalization
 
-b.loop_particles = [[[b,G]]]
+b.loop_particles = [[[5,21]]]
 b.counterterm = {(1,0,0):CTParam.bWcft_UV.value}
 
-t.loop_particles = [[[t,G]],[[t,A]]]
+t.loop_particles = [[[6,21]],[[6,22]]]
 t.counterterm = {(1,0,0):CTParam.tWcft_UV.value}
 
-G.loop_particles = [[[b]],[[t]]]
+G.loop_particles = [[[5]],[[6]]]
 G.counterterm = {(1,0,0):CTParam.GWcft_UV_b.value,(1,0,1):CTParam.GWcft_UV_t.value}
 
-Param.MB.loop_particles= [[[b,G]]]
+Param.MB.loop_particles= [[[5,21]]]
 Param.MB.counterterm = {(1,0,0):CTParam.bMass_UV.value}
 
-Param.MT.loop_particles= [[[t,G]],[[t,A]]]
+Param.MT.loop_particles= [[[6,21]],[[6,22]]]
 Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}
 
-Param.G.loop_particles = [[[u],[d],[c],[s]],[[b]],[[t]],[[G]]],
+Param.G.loop_particles = [[[1],[2],[3],[4]],[[5]],[[6]],[[21]]],
 Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVb.value,(1,0,2):CTParam.G_UVt.value,(1,0,3):CTParam.G_UVg.value}

@@ -89,7 +89,7 @@ class Switcher(object):
                        hasattr(method, '__call__') ]
         self.to_preserve += ['do_shell', 'help_shell', 'complete_shell']
 
-        ff = open(pjoin(MG5DIR, 'additional_command'), 'w')
+        ff = open(pjoin(os.getcwd(), 'additional_command'), 'w')
         
         for key in dir(self):
             # by pass all not over-writable command

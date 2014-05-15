@@ -1869,7 +1869,6 @@ class decay_all_events(object):
         # input
         self.options = options
         #max_weight_arg = options['max_weight']  
-        #BW_effects = options['BW_effect']
         self.path_me = os.path.realpath(options['curr_dir']) 
         if options['ms_dir']:
             self.path_me = os.path.realpath(options['ms_dir'])
@@ -1947,9 +1946,15 @@ class decay_all_events(object):
         # now we can write the param_card.dat:
         # Note that the width of each resonance in the    
         # decay chain should be >0 , we will check that later on
+        model_name = os.path.basename(self.model.get('name'))
         param=open(pjoin(self.path_me,'param_card.dat'),"w")
         param.write(param_card)
-        param.close()     
+        param.close()   
+        if model_name == 'mssm' or model_name.startswith('mssm-'):
+            #need to convert to SLHA2 format
+            import models.check_param_card as check_param_card
+            check_param_card.convert_to_mg5card(pjoin(self.path_me,'param_card.dat'))
+  
         
         self.list_branches = ms_interface.list_branches
         decay_ids = [self.pid2label[key] for key in self.list_branches \
@@ -1968,18 +1973,6 @@ class decay_all_events(object):
         resonances = self.width_estimator.resonances
         logger.debug('List of resonances: %s' % resonances)
         self.extract_resonances_mass_width(resonances) 
-
-        # now overwrite the param_card.dat in Cards:
-        param_card=self.banner['slha']
-        #param_card=decay_tools.check_param_card( param_card)
-
-        # now we can write the param_card.dat:
-        # Note that the width of each resonance in the    
-        # decay chain should be >0 , we will check that later on
-        param=open(pjoin(self.path_me,'param_card.dat'),"w")
-        param.write(param_card)
-        param.close()
-
 
         self.compile()
         
@@ -2012,7 +2005,6 @@ class decay_all_events(object):
         """Running the full code""" 
     
         max_weight_arg = self.options['max_weight']  
-        BW_effects = self.options['BW_effect']
         decay_tools=decay_misc()
         
         #Next step: we need to determine which matrix elements are really necessary
@@ -2334,14 +2326,14 @@ class decay_all_events(object):
             decay_mapping = self.get_process_identical_ratio(relation)
             return decay_mapping
         
-        BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 1e-6        
+        BW_cut = self.options['BW_cut']       
         
         #class the decay by class (nbody/pid)
         nbody_to_decay = collections.defaultdict(list)
         for decay in self.all_decay.values():
             id = decay['dc_branch']['tree'][-1]['label']
             id_final = decay['processes'][0].get_final_ids_after_decay()
-            cut = self.options['zeromass_for_max_weight']
+            cut = 0.0 
             mass_final = tuple([m if m> cut else 0 for m in map(self.pid2mass, id_final)])
             
             nbody_to_decay[(decay['nbody'], abs(id), mass_final)].append(decay)
@@ -2363,7 +2355,8 @@ class decay_all_events(object):
             for nb in range(125):
                 tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
                                         True, self.pid2width, self.pid2mass, BW_cut,self.Ecollider)
-
+                if not tree:
+                    continue
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
                     '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
                                                                   if i in tree))
@@ -2603,7 +2596,7 @@ class decay_all_events(object):
             if '@' in proc:
                 proc, proc_nb = proc.split('@')
                 try:
-                    int(proc_nb)
+                    proc_nb = int(proc_nb)
                 except ValueError:
                     raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
                 proc_nb = '@ %i' % proc_nb 
@@ -2767,7 +2760,7 @@ class decay_all_events(object):
         file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
         shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" )) 
         misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
-        misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')                   
+        misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')     
 
         file=pjoin(path_me, 'param_card.dat')
         shutil.copyfile(file,pjoin(path_me,mode,"Cards","param_card.dat")) 
@@ -2838,7 +2831,7 @@ class decay_all_events(object):
                     misc.call('./init', cwd=new_path)
                     shutil.copyfile(pjoin(new_path,'parameters.inc'), 
                                pjoin(new_path,os.path.pardir, 'parameters.inc'))
-                if mode == 'production_me':   
+                if mode == 'production_me':
                     misc.compile(cwd=new_path, mode='fortran')
                 else:
                     misc.compile(cwd=new_path, mode='fortran')

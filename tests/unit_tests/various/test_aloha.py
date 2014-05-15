@@ -2854,6 +2854,29 @@ class test_aloha_creation(unittest.TestCase):
         for ind in expr.listindices():
             self.assertEqual(eval(str(expr.get_rep(ind))), 178727040j)
 
+    def test_regular_expression_propa(self):
+
+        mod_numerator = create_aloha.AbstractRoutineBuilder.mod_propagator_expression
+            
+
+        text = '1*complex(1,1) * ( - Metric(1, 2) + P(1, id) * P(2, id) / (Mass(id) * Mass(id)) )'
+        self.assertEqual(mod_numerator({1:3}, text),
+               '1*complex(1,1) * ( - Metric(3, 2) + P(3, id) * P(2, id) / (Mass(id) * Mass(id)) )')
+
+        text = '1*complex(0,1) * ( - Metric(1, 2) + P(1, id) * P1(2, id) / (Mass(id) * Mass(id)) )'
+        self.assertEqual(mod_numerator({1:3}, text),
+               '1*complex(0,1) * ( - Metric(3, 2) + P(3, id) * P1(2, id) / (Mass(id) * Mass(id)) )')
+
+        text = "complex(0,1) * ( - Metric(1, 2) + P(1, id) * P(2, id) / (Mass(id) * Mass(id)) )"
+        tag = {'1': 3, '2': 'I2', 'id': 3}
+        self.assertEqual(mod_numerator(tag, text),
+               "complex(0,1) * ( - Metric(3, 'I2') + P(3, 3) * P('I2', 3) / (Mass(3) * Mass(3)) )")          
+
+
+        text = "P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id)"
+        tag = {'1': 3, '2': 'I2', 'id': 3}
+        self.assertEqual(mod_numerator(tag, text),
+               "P('mu', 3) * P('mu', 3) - Mass(3) * Mass(3) + complex(0,1) * Mass(3) * Width(3)")
 
     def test_use_of_library_spin2(self):
         """ check that use the library or the usual definition is the same """
