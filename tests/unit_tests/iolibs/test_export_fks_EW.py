@@ -262,8 +262,10 @@ Parameters              alpha_s
         goal = \
 """      DOUBLE PRECISION FUNCTION DLUM()
       IMPLICIT NONE
+      INCLUDE 'timing_variables.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+      CALL CPU_TIME(TBEFORE)
       IF (NFKSPROCESS.EQ.1) THEN
         CALL DLUM_1(DLUM)
       ELSEIF (NFKSPROCESS.EQ.2) THEN
@@ -296,7 +298,8 @@ Parameters              alpha_s
         WRITE(*,*) 'ERROR: invalid n in dlum :', NFKSPROCESS
         STOP
       ENDIF
-
+      CALL CPU_TIME(TAFTER)
+      TPDF = TPDF + (TAFTER-TBEFORE)
       RETURN
       END
 
@@ -620,8 +623,8 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         goal = \
 """      PMASS(1)=ZERO
       PMASS(2)=ZERO
-      PMASS(3)=ABS(MT)
-      PMASS(4)=ABS(MT)
+      PMASS(3)=ABS(MDL_MT)
+      PMASS(4)=ABS(MDL_MT)
       PMASS(5)=ZERO
 """
         process_exporter = export_fks.ProcessExporterFortranFKS()
@@ -1438,11 +1441,11 @@ C     Number of configs
         for the born matrix element.
         """
         goal = \
-"""      PMASS( -1,   1)  = ABS(MT)
-      PWIDTH( -1,   1) = ABS(WT)
+"""      PMASS( -1,   1)  = ABS(MDL_MT)
+      PWIDTH( -1,   1) = ABS(MDL_WT)
       POW( -1,   1) = 1
-      PMASS( -1,   2)  = ABS(MT)
-      PWIDTH( -1,   2) = ABS(WT)
+      PMASS( -1,   2)  = ABS(MDL_MT)
+      PWIDTH( -1,   2) = ABS(MDL_WT)
       POW( -1,   2) = 1
 """
         process_exporter = export_fks.ProcessExporterFortranFKS()

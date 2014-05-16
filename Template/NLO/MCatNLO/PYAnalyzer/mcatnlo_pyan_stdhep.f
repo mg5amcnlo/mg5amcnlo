@@ -9,7 +9,7 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE PYABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       implicit none
       integer lok,niter,maxevv
@@ -46,7 +46,7 @@ C   Write STDHEP begin run record
 
 C----------------------------------------------------------------------
       SUBROUTINE PYAEND(IEVT)
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       implicit none
       integer lok,IEVT
@@ -63,7 +63,7 @@ C...Finalize STDHEP file
 
 C----------------------------------------------------------------------
       SUBROUTINE PYANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       implicit none
       integer lok

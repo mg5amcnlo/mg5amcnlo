@@ -1069,7 +1069,7 @@ c Masses to be given to genps_fks.f
       common/to_mass/  emass
 
 c Monte Carlo masses: use PDG conventions
-      double precision mcmass(-5:21)
+      double precision mcmass(-16:21)
       common/cmcmass/mcmass
 
 c Masses used by write_events_lhe
@@ -1096,6 +1096,8 @@ c
       xmj=-1.d0
       xm1=-1.d0
       xm2=-1.d0
+c WARNING: what follows will need to be reconsidered the case of 
+c QED corrections, for what is relevant to i_fks and j_fks
       do i=1,nexternal
         if(i.eq.i_fks)then
           if(pmass(i).ne.0.d0)then
@@ -1186,12 +1188,13 @@ c one_tree assumes massless incoming QCD particles
         else
           idpart=jpart(1,i)
           if( idpart.eq.21 .or.
-     #        (abs(idpart).ge.1.and.abs(idpart).le.5) )then
+     #        (abs(idpart).ge.1.and.abs(idpart).le.5) .or.
+     #        (abs(idpart).ge.11.and.abs(idpart).le.16) )then
             if(pmass(i).eq.0.d0)then
               tmpmass=mcmass(idpart)
             else
-c If MadFKS has a non-zero mass for a "light" quark, one probably wants
-c to use that in the shower phase as well (ie bottom or charm production).
+c If MadFKS has a non-zero mass for a "light" quark or lepton, one probably 
+c wants to use that in the shower phase as well (ie bottom or charm production).
 c One may use equivalently a condition on maxjetflavor
               tmpmass=pmass(i)
             endif

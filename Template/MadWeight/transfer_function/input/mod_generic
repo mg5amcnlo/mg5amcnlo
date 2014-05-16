@@ -1,0 +1,261 @@
+##########################################################################
+##	                 						##
+##									##
+##				MadWeight				##
+##				*********				##
+##		    			                                ##
+##	Autor:	 Olivier Mattelaer 			                ##
+##		 Pierre Artoisenet			                ##
+##		 		                                        ##
+##	date:	January 08		                                ##
+##				                                        ##
+##########################################################################
+##########################################################################
+##   				                                        ##
+##  rule to define transfert_functions_fct.f                   		##
+##									##
+##									##
+## TAG:									##
+##    TF_HEADER                                                         ##
+##    GENERIC_TF    							##
+##    GENERIC_WIDTH							##
+##    START_CENTRAL_POINT                                               ##
+##									##
+##########################################################################
+##
+##
+##########################################################################
+$B$ TF_HEADER $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|                  TRANSFER FUNCTION FOR MADWEIGHT                      |
+C|                                                                       |
+C|     Author: Pierre Artoisenet (UCL-CP3)                               |
+C|             Olivier Mattelaer (UCL-CP3)                               |
+C+-----------------------------------------------------------------------+
+C|     This file is generated automaticly by MADWEIGHT-TF_BUILDER        |
+C+-----------------------------------------------------------------------+     
+##************************************************************************
+$E$ TF_HEADER $E$
+##************************************************************************
+##
+##
+##########################################################################
+$B$ GENERIC_TF $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|    Transfer function for $b$ tf_var $e$
+C+-----------------------------------------------------------------------+
+      subroutine $b$ tf_var $e$(pexp,p,n_lhco,weight)
+      implicit none
+
+      double precision tf
+      double precision pexp(0:3)
+      double precision p(0:3)
+      integer n_lhco
+      double precision weight
+      double precision pi
+      parameter (pi=3.141592654d0)
+      include 'nb_tf.inc'
+      include 'TF_param.inc'     
+$B$ tf_include $E$
+
+$B$ tf_definition $E$
+
+      weight=weight*tf
+      
+      return
+      end
+##************************************************************************
+$E$ GENERIC_TF $E$
+##************************************************************************
+##
+##
+##########################################################################
+$B$ GENERIC_WIDTH $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|    Definition of the WIDTH associated to $b$ tf_var $e$
+C+-----------------------------------------------------------------------+
+      DOUBLE PRECISION FUNCTION $b$ width_var $e$(pexp,n_lhco)
+      implicit none
+
+	  double precision width
+      double precision pexp(0:3)
+      integer n_lhco
+
+      double precision pi
+      parameter (pi=3.141592654d0)
+
+	  include 'nb_tf.inc'
+      include 'TF_param.inc'     
+
+$B$ tf_include $E$
+
+$B$ width_definition $E$
+      
+      $b$ width_var $e$= width
+      
+      return
+      end
+##************************************************************************
+$E$ GENERIC_WIDTH $E$
+##************************************************************************
+##
+##
+##########################################################################
+$B$ START_CENTRAL_POINT $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|     Subroutine: GET_CENTRAL_POINT                                     |
+C|                                                                       |
+C|     purpose: Define the central point of integration c_point(P,I,J,1) |
+C|              and the width associated c_point(P,I,J,2)                |
+C|                 P: Permutation                                        | 
+C|                 I: MadGraph Position                                  |
+C|                 J: 1,2,3 for THETA,PHI,RHO variable                   |
+C+-----------------------------------------------------------------------+
+      subroutine get_central_point
+      implicit none
+c                                                                        
+c     parameter                                                          
+c                                                                        
+      include 'run.inc'
+      include 'nexternal.inc'
+      include 'permutation.inc'
+      include 'TF_param.inc'
+
+c                                                                        
+c     global                                                             
+c                                                                        
+      double precision c_point(NPERM,1:max_particles,3,2)
+      common/ph_sp_init/c_point
+c                                                                        
+c      double precision p_exp(0:3,nexternal)
+c      common /to_pexp/p_exp
+      double precision pexp_init(0:3,nexternal)  !impulsion in original configuration
+      common/to_pexp_init/pexp_init
+      integer tag_lhco(3:nexternal)
+      common/lhco_order/tag_lhco
+c                                                                        
+c     local                                                              
+c                                                                       
+      integer perm_id(nexternal-2)
+      integer i,perm
+      integer n_lhco
+
+##************************************************************************
+$E$ START_CENTRAL_POINT $E$
+##************************************************************************
+##
+##
+##########################################################################
+$B$ START_TRANSFER_FCT $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|     Subroutine: transfer_fct(P,weight)                                |
+C|                                                                       |
+C|     purpose: returns the weight by the coeficient comming from the    |
+C|              transfer_fct                                             |
+C+-----------------------------------------------------------------------+
+     subroutine transfer_fct(P,weight)
+      implicit none
+c                                                 
+      integer    maxexternal
+      parameter (maxexternal=15)
+c                               
+c     ARGUMENTS                 
+c                               
+      DOUBLE PRECISION P(0:3,maxexternal)
+      DOUBLE PRECISION weight
+c                                        
+c     INCLUDE and COMMON                 
+c                                        
+      include 'phasespace.inc'
+      include 'nexternal.inc'
+      include 'run.inc'
+c                            
+c                            
+      double precision pexp(0:3,nexternal)
+      integer tag_lhco(3:nexternal)
+      common/to_pexp/pexp
+      common/lhco_order/tag_lhco
+C                               
+C     SPECIAL FCT              
+C                               
+      DOUBLE PRECISION R2,DOT,ET,ETA,DJ,SumDot,PT
+c                
+c     LOCAL                                      
+c                
+      integer i,k
+      integer n_lhco
+##************************************************************************
+$E$ START_TRANSFER_FCT $E$
+##************************************************************************
+##
+##
+##########################################################################
+$B$ START_TF_E_FOR_PART $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|     Subroutine: tf_E_for_part(MG_num)                                 |
+C|                                                                       |
+C|     purpose: returns the value of the transfert function (in energy)  |
+C|              for the particles associated to the MG_number            |
+C+-----------------------------------------------------------------------+
+      double precision function  tf_E_for_part(MG_num)
+      implicit none
+c
+c     ARGUMENTS
+c
+      INTEGER MG_num
+c
+c     INCLUDE and COMMON
+c
+      include 'phasespace.inc'
+      include 'nexternal.inc'
+      include 'run.inc'
+c
+      double precision pexp(0:3,nexternal)
+      common/to_pexp/pexp
+      double precision momenta(0:3,-max_branches:2*max_particles)
+      double precision mvir2(-max_branches:2*max_particles)
+      common/to_diagram_kin/momenta,mvir2
+      integer tag_lhco(3:nexternal)
+      common/lhco_order/tag_lhco
+c
+c     LOCAL
+c
+      integer n_lhco
+c
+##************************************************************************
+$E$ START_TF_E_FOR_PART $E$
+##************************************************************************
+##
+##
+##########################################################################
+$B$ DEF_TF_E_FOR_ONE_PART $B$
+##************************************************************************
+      implicit none
+c
+c     INCLUDE and COMMON
+c
+      include 'phasespace.inc'
+      include 'nexternal.inc'
+      include 'run.inc'
+c
+      double precision pexp(0:3,nexternal)
+      common/to_pexp/pexp
+      double precision momenta(0:3,-max_branches:2*max_particles)
+      double precision mvir2(-max_branches:2*max_particles)
+      common/to_diagram_kin/momenta,mvir2
+      integer tag_lhco(3:nexternal)
+      common/lhco_order/tag_lhco
+c
+c     LOCAL
+c
+      integer i,k,n_lhco
+##************************************************************************
+$E$ DEF_TF_E_FOR_ONE_PART $E$
+##************************************************************************
+

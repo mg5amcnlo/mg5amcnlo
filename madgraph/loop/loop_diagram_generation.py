@@ -331,8 +331,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
             valid_diag = True
             i=i+1
             
+#            if any([abs(i)!=1000021 for i in diag.get_loop_lines_pdgs()]):
+#                valid_diag=False
+            
             # Ex. 0: Chose a specific diagram number, here the 8th one for ex.     
-#            if i!=8:
+#            if i not in [31]:
 #                valid_diag = False                
 
             # Ex. 0: Keeps only the top quark loops.
@@ -343,7 +346,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             #        Notice that here particles and antiparticles are not 
             #        differentiated and always the particle PDG is returned.
             #        In this example, only boxes are selected.
-#            if len(diag.get_loop_lines_pdgs())<5 and \
+#            if len(diag.get_loop_lines_pdgs())>2 and \
 #              any([i in diag.get_loop_lines_pdgs() for i in[24,-24,23]]):
 #                valid_diag=False
             
@@ -919,7 +922,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 (particle.is_perturbating(order, self['process']['model']) and \
                 particle.get_pdg_code() not in \
                                         self['process']['forbidden_particles'])]
-
+#            lcutPart = [lp for lp in lcutPart if abs(lp.get('pdg_code'))==1000021]
 #            print "lcutPart=",[part.get('name') for part in lcutPart]
             for part in lcutPart:
                 if part.get_pdg_code() not in self.lcutpartemployed:

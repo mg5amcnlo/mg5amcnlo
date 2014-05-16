@@ -3,13 +3,13 @@
       integer i
 c Monte Carlo masses: use PDG conventions.
 c May be given in input eventually
-      double precision mcmass(-5:21)
+      double precision mcmass(-16:21)
       common/cmcmass/mcmass
 c
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
 c
-      do i=-5,21
+      do i=-16,21
         mcmass(i)=-1.d10
       enddo
       if (MonteCarlo.eq.'HERWIG6') then
@@ -27,6 +27,9 @@ c
          stop
       endif
       do i=-5,-1
+         mcmass(i)=mcmass(-i)
+      enddo
+      do i=-16,-11
          mcmass(i)=mcmass(-i)
       enddo
       return      

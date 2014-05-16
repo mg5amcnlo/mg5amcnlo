@@ -1,18 +1,19 @@
       program check_events
 c Checks self-consistency of event files. Compile with
-c gfortran -I../SubProcesses/P0_<anydir> -o check_events 
-c   check_events.f handling_lhe_events.f fill_MC_mshell.f
+c gfortran -I../SubProcesses/P0_<anydir> -ffixed-line-length-132 
+c   -o check_events check_events.f handling_lhe_events.f 
+c                   fill_MC_mshell.f dbook.f
 c With some work on finalizeprocesses(), it should work also for 
 c LH files created by Herwig, assuming they are identified by a 
 c negative number of events
       implicit none
       integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
      # iuseres_1,iwhmass,ilepmass,idec,itempsc,itempPDF,isavesc,
-     # isavePDF,itemp
+     # isavePDF,itemp,ii
       double precision chtot,xint,xinterr,xinta,xintaerr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
-      double precision remcmass(-5:21)
+      double precision remcmass(-16:21)
       common/cremcmass/remcmass
       integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,mtoterr,
      # itoterr,numproc,numconn,idup_eff(22),icolup_eff(2,22)
@@ -56,7 +57,7 @@ c negative number of events
 
       include "nexternal.inc"
       integer j,k
-      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
+      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal),xnorm
 
       include 'reweight0.inc'
       integer kr,kf,kpdf
@@ -66,6 +67,9 @@ c negative number of events
      # xmax_wgt_resc_pdf(0:maxPDFs),
      # xmin_wgt_resc_scale(maxscales,maxscales),
      # xmin_wgt_resc_pdf(0:maxPDFs)
+      integer istep
+      double precision percentage
+      include 'dbook.inc'
 
       call setcharges(charges)
       call setmasses(zmasses)
@@ -79,8 +83,8 @@ c negative number of events
         idups_Sproc_HW6(i,-1)=0
         idups_Hproc_HW6(i,-1)=0
       enddo
-      do i=-5,21
-         remcmass(i)=0.d0
+      do i=-16,21
+         remcmass(i)=-2.d0
       enddo
 
       write (*,*) 'Enter event file name'
@@ -97,7 +101,7 @@ c read from events
       write (*,*) '      2 to enter them'
       read (*,*) iwhmass
 
-      if(iwhmass.eq.0.or.iwhmass.eq.2)then
+      if(iwhmass.eq.2)then
         write (*,*) 'Enter 0 to use physical lepton masses'
         write (*,*) '      2 to enter them'
         read (*,*) ilepmass
@@ -174,14 +178,16 @@ c events, but its upper bound
         shower=.true.
       endif
       maxevt=abs(maxevt)
-c Fill quark/antiquark masses if not already in header
-      do i=-5,5
-        if(remcmass(i).eq.0.d0)remcmass(i)=remcmass(-i)
+c Fill quark/antiquark and lepton/antilepton masses if not already in header
+      do i=-16,16
+        if(abs(i).le.5.or.abs(i).ge.11)then
+          if(remcmass(i).eq.-2.d0)remcmass(i)=remcmass(-i)
+        endif
       enddo
 c
       if(iwhmass.eq.0)then
         do i=1,21
-          if(remcmass(i).ne.0.d0)zmasses(i)=remcmass(i)
+          if(remcmass(i).ne.-2.d0)zmasses(i)=remcmass(i)
         enddo
       elseif(iwhmass.eq.2)then
         do i=1,21
@@ -190,8 +196,6 @@ c
             read(*,*)zmasses(i)
           endif
         enddo
-      endif
-      if(iwhmass.eq.0.or.iwhmass.eq.2)then
         if(ilepmass.eq.0)then
           zmasses(11)=0.510998928d-3
           zmasses(12)=0.d0
@@ -315,11 +319,17 @@ c
       endif
 
       i=0
+      call inihist
+      call bookup(1,'scalup',2d0,0d0,200d0)
+      call bookup(2,'scalup',8d0,0d0,800d0)
+      call bookup(3,'log scalup',0.1d0,0d0,4d0)
       dowhile(i.lt.maxevt.and.keepevent)
          call read_lhef_event_catch(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-
+         call mfill(1,SCALUP,XWGTUP)
+         call mfill(2,SCALUP,XWGTUP)
+         if(SCALUP.gt.0d0)call mfill(3,log10(SCALUP),XWGTUP)
          if(index(buff,'endoffile').ne.0)then
            keepevent=.false.
            goto 111
@@ -487,9 +497,25 @@ c Showered LH files only contain final-state particles.
 c Don't check momentum conservation in that case
          if(.not.shower)call phspncheck_nocms2(i,npart,xmass,xmom)
 
- 111     continue
+         percentage=i*100d0/maxevt
+         istep=maxevt/10
+         if(mod(i,istep).eq.0.or.i.eq.maxevt)
+     &        write(*,*)'Processed',int(percentage),'% of the file'
 
+ 111     continue
       enddo
+
+      open(unit=99,file='SCALUP.top',status='unknown')
+      call mclear
+      xnorm=1d0
+      do ii=1,nplots
+         call mopera(ii,'+',ii,ii,xnorm,0.d0)
+         call mfinal(ii)
+      enddo
+      call multitop(1,3,2,'scalup    ',' ','LOG')
+      call multitop(2,3,2,'scalup    ',' ','LOG')
+      call multitop(3,3,2,'log scalup',' ','LOG')
+      close(99)
 
       if(event_norm.eq.'ave')sum_wgt=sum_wgt/maxevt
       if(event_norm.eq.'ave')sum_abs_wgt=sum_abs_wgt/maxevt
@@ -1770,3 +1796,7 @@ C     ICMPCH=+1 IF HEX VALUES OF IC1 IS GREATER THAN IC2
  80   ICMPCH=1
       RETURN
       END
+
+c Dummy subroutine (normally used with vegas when resuming plots)
+      subroutine resume()
+      end

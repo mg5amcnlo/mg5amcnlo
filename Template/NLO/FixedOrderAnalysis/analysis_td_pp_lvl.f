@@ -15,7 +15,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer i,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
       character*5 cc(2)
-      data cc/'     ',' Born'/
+      data cc/'     ','Born '/
       include 'dbook.inc'
       call inihist
       nwgt_analysis=nwgt
@@ -28,21 +28,21 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do i=1,2
       do kk=1,nwgt_analysis
         l=(kk-1)*16+(i-1)*8
-        call bookup(l+1,'total rate '//weights_info(kk)//cc(i),
+        call bookup(l+1,'total rate '//cc(i)//weights_info(kk),
      &       1.0d0,0.5d0,5.5d0)
-        call bookup(l+2,'lep rapidity '//weights_info(kk)//cc(i),
+        call bookup(l+2,'lep rapidity '//cc(i)//weights_info(kk),
      &       0.5d0,-5d0,5d0)
-        call bookup(l+3,'lep pt '//weights_info(kk)//cc(i),
+        call bookup(l+3,'lep pt '//cc(i)//weights_info(kk),
      &       10d0,0d0,200d0)
-        call bookup(l+4,'et miss '//weights_info(kk)//cc(i),
+        call bookup(l+4,'et miss '//cc(i)//weights_info(kk),
      &       10d0,0d0,200d0)
-        call bookup(l+5,'trans. mass '//weights_info(kk)//cc(i),
+        call bookup(l+5,'trans. mass '//cc(i)//weights_info(kk),
      &       5d0,0d0,200d0)
-        call bookup(l+6,'w rapidity '//weights_info(kk)//cc(i),
+        call bookup(l+6,'w rapidity '//cc(i)//weights_info(kk),
      &       0.5d0,-5d0,5d0)
-        call bookup(l+7,'w pt '//weights_info(kk)//cc(i),
+        call bookup(l+7,'w pt '//cc(i)//weights_info(kk),
      &       10d00,0d0,200d0)
-        call bookup(l+8,'cphi[l,vl] '//weights_info(kk)//cc(i),
+        call bookup(l+8,'cphi[l,vl] '//cc(i)//weights_info(kk),
      &       0.05d0,-1d0,1d0)
       enddo
       enddo

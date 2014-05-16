@@ -89,7 +89,16 @@ class TestCmdShell1(unittest.TestCase):
         
         self.do('generate e+ ve > V2 > e+ ve mu+ mu-')
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 8)
+       
+    def test_import_model(self):
+        """check that old UFO model are loaded correctly"""
         
+        self.do('''import model DY_SM''')
+        self.do('''import model TopEffTh''')
+        self.do('''import model uutt_tch_scalar''')
+        self.do('''import model uutt_sch_4fermion''')
+        self.do('''import model 2HDM''')
+                
     def test_draw(self):
         """ command 'draw' works """
 
@@ -120,6 +129,7 @@ class TestCmdShell1(unittest.TestCase):
                     'text_editor': None, 
                     'cluster_queue': None,
                     'nb_core': None,
+                    'pjfry': None,
                     'run_mode': 2,
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 
@@ -136,6 +146,7 @@ class TestCmdShell1(unittest.TestCase):
                     'group_subprocesses': 'Auto',
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
+                    'output_dependencies': 'external',
                     'lhapdf': 'lhapdf-config',  
                     'loop_optimized_output': True,
                     'fastjet': 'fastjet-config',
@@ -862,11 +873,26 @@ C
         
     def test_complex_mass_SA(self):
         """ Test that the complex_mass compile in fortran """
+
+        self.do('import model sm --noprefix')
+        self.do('set complex_mass_scheme')
+        self.do('generate e+ e- > e+ e-')
+        self.do('output standalone %s ' % self.out_dir)
+        misc.compile(cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'))
+        p = subprocess.Popen(['./check'], cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'),
+                            stdout=subprocess.PIPE)
+        #output = p.stdout.read()
+        for line in p.stdout:
+            if 'Matrix element' in line:
+                value = line.split('=')[1]
+                value = value. split('GeV')[0]
+                value = eval(value)
+                self.assertAlmostEqual(value, 0.019538610404713896)
         
         self.do('import model sm')
         self.do('set complex_mass_scheme')
         self.do('generate e+ e- > e+ e-')
-        self.do('output standalone %s ' % self.out_dir)
+        self.do('output standalone %s -f' % self.out_dir)
         misc.compile(cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'))
         p = subprocess.Popen(['./check'], cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'),
                             stdout=subprocess.PIPE)

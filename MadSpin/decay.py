@@ -53,6 +53,7 @@ import models.import_ufo as import_ufo
 import madgraph.interface.master_interface as Cmd
 import madgraph.interface.madevent_interface as me_interface
 import madgraph.iolibs.files as files
+import madgraph.fks.fks_common as fks_common
 import aloha
 logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
@@ -62,6 +63,7 @@ import math
 from madgraph import MG5DIR, MadGraph5Error
 import madgraph.various.misc as misc
 #import time
+import tests.unit_tests.various.test_aloha as test_aloha
 
 class MadSpinError(MadGraph5Error):
     pass
@@ -1293,13 +1295,12 @@ class width_estimate(object):
         if to_decay:
             logger.info('We need to recalculate the branching fractions')
             if hasattr(self.model.get('particles')[0], 'partial_widths'):
-                logger.debug('using the compute_width module of madevent')
-                # use FR to get all partial widths                                      
-                # set the br to partial_width/total_width
-                self.launch_width_evaluation(to_decay, mgcmd) 
+                logger.info('using the FeynRules formula present in the model (arXiv:1402.1178)')
             else:
-                logger.info('compute_width module not available, use numerical estimates instead ')
-                self.extract_br_from_width_evaluation(to_decay)
+                logger.info('Using MadWidth (arXiv:1402.1178)')
+                #self.extract_br_from_width_evaluation(to_decay)
+            self.launch_width_evaluation(to_decay, mgcmd) 
+
        
         return self.br
 
@@ -1444,9 +1445,11 @@ class width_estimate(object):
     def extract_br_from_width_evaluation(self, to_decay):
         """ use MadGraph5_aMC@NLO to generate me's for res > all all  
         """
+        raise DeprecationWarning
+
         if os.path.isdir(pjoin(self.path_me,"width_calculator")):
             shutil.rmtree(pjoin(self.path_me,"width_calculator"))
-            
+        
         assert not os.path.exists(pjoin(self.path_me, "width_calculator"))
         
         path_me = self.path_me 
@@ -1562,11 +1565,16 @@ class width_estimate(object):
         
         self.compute_widths(model, argument)
         self.extract_br_from_card(pjoin(self.path_me, 'param_card.dat'))
+        self.banner['slha'] = open(pjoin(self.path_me, 'param_card.dat')).read()
+        if hasattr(self.banner,'param_card'):
+            del self.banner.param_card
+        self.banner.charge_card('param_card')
         return      
           
     def compute_widths(self, model, opts):
-                
+        
         from madgraph.interface.master_interface import MasterCmd
+        import madgraph.iolibs.helas_call_writers as helas_call_writers
         cmd = MasterCmd()
         #self.define_child_cmd_interface(cmd, interface=False)
         cmd.exec_cmd('set automatic_html_opening False --no_save')
@@ -1580,8 +1588,10 @@ class width_estimate(object):
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        
-        cmd.exec_cmd(line, model=model)
+        cmd.exec_cmd('import model %s' % model.get('name'))
+#        cmd._curr_model = model
+#        cmd._curr_fortran_model = helas_call_writers.FortranUFOHelasCallWriter(model)
+        cmd.exec_cmd(line)
         #self.child = None
         del cmd                                
 
@@ -1859,7 +1869,6 @@ class decay_all_events(object):
         # input
         self.options = options
         #max_weight_arg = options['max_weight']  
-        #BW_effects = options['BW_effect']
         self.path_me = os.path.realpath(options['curr_dir']) 
         if options['ms_dir']:
             self.path_me = os.path.realpath(options['ms_dir'])
@@ -1937,9 +1946,15 @@ class decay_all_events(object):
         # now we can write the param_card.dat:
         # Note that the width of each resonance in the    
         # decay chain should be >0 , we will check that later on
+        model_name = os.path.basename(self.model.get('name'))
         param=open(pjoin(self.path_me,'param_card.dat'),"w")
         param.write(param_card)
-        param.close()     
+        param.close()   
+        if model_name == 'mssm' or model_name.startswith('mssm-'):
+            #need to convert to SLHA2 format
+            import models.check_param_card as check_param_card
+            check_param_card.convert_to_mg5card(pjoin(self.path_me,'param_card.dat'))
+  
         
         self.list_branches = ms_interface.list_branches
         decay_ids = [self.pid2label[key] for key in self.list_branches \
@@ -1958,18 +1973,6 @@ class decay_all_events(object):
         resonances = self.width_estimator.resonances
         logger.debug('List of resonances: %s' % resonances)
         self.extract_resonances_mass_width(resonances) 
-
-        # now overwrite the param_card.dat in Cards:
-        param_card=self.banner['slha']
-        #param_card=decay_tools.check_param_card( param_card)
-
-        # now we can write the param_card.dat:
-        # Note that the width of each resonance in the    
-        # decay chain should be >0 , we will check that later on
-        param=open(pjoin(self.path_me,'param_card.dat'),"w")
-        param.write(param_card)
-        param.close()
-
 
         self.compile()
         
@@ -2002,7 +2005,6 @@ class decay_all_events(object):
         """Running the full code""" 
     
         max_weight_arg = self.options['max_weight']  
-        BW_effects = self.options['BW_effect']
         decay_tools=decay_misc()
         
         #Next step: we need to determine which matrix elements are really necessary
@@ -2150,7 +2152,7 @@ class decay_all_events(object):
                 stdin_text+='%s  \n' % str(values_for_mc_masses).strip('[]').replace(',', ' ')
             
 #            here apply the reweighting procedure in fortran
-            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
+            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
             # next: need to fill all intermediate momenta
             if nb_mc_masses>0 and use_mc_masses==0:nb_fail_mc_mass+=1
             
@@ -2159,13 +2161,13 @@ class decay_all_events(object):
             momenta_in_decay=self.get_int_mom_in_decay(decay['decay_struct'],ext_mom)
             # reset extrenal momenta in the production event
             self.reset_mom_in_prod_event(decay['decay_struct'],decay['prod2full'],\
-                                         event_map,momenta_in_decay,ext_mom, use_mc_masses)
+                                         event_map,momenta_in_decay,ext_mom, use_mc_masses, helicities)
             # reset intermediate momenta in prod event
             self.curr_event.reset_resonances()
             
             #
             decayed_event = self.decay_one_event_new(self.curr_event,decay['decay_struct'],\
-                                                      event_map, momenta_in_decay,use_mc_masses)
+                                                      event_map, momenta_in_decay,use_mc_masses, helicities)
             
             
             # Treat the case that we ge too many overweight.
@@ -2268,7 +2270,7 @@ class decay_all_events(object):
                 
         return momenta_in_decay
     
-    def reset_mom_in_prod_event(self, decay_struct,prod2full, event_map, momenta_in_decay,ext_mom,use_mc_masses):
+    def reset_mom_in_prod_event(self, decay_struct,prod2full, event_map, momenta_in_decay,ext_mom,use_mc_masses,helicities):
 
         """ Reset the external momenta in the production event, since
             the virtuality of decaying particles has slightly changed the kinematics
@@ -2285,6 +2287,7 @@ class decay_all_events(object):
                     self.curr_event.particle[part_for_curr_evt]['mass']=self.curr_event.particle[part_for_curr_evt]['momentum'].m
                 else:
                     self.curr_event.particle[part_for_curr_evt]['momentum']=ext_mom[prod2full[part-1]-1]
+                    self.curr_event.particle[part_for_curr_evt]['helicity']=helicities[prod2full[part-1]-1]
                     if not use_mc_masses or abs(pid) not in self.MC_masses:
                         self.curr_event.particle[part_for_curr_evt]['mass']=self.banner.get('param_card','mass', abs(pid)).value
                     else:
@@ -2323,14 +2326,14 @@ class decay_all_events(object):
             decay_mapping = self.get_process_identical_ratio(relation)
             return decay_mapping
         
-        BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 1e-6        
+        BW_cut = self.options['BW_cut']       
         
         #class the decay by class (nbody/pid)
         nbody_to_decay = collections.defaultdict(list)
         for decay in self.all_decay.values():
             id = decay['dc_branch']['tree'][-1]['label']
             id_final = decay['processes'][0].get_final_ids_after_decay()
-            cut = self.options['zeromass_for_max_weight']
+            cut = 0.0 
             mass_final = tuple([m if m> cut else 0 for m in map(self.pid2mass, id_final)])
             
             nbody_to_decay[(decay['nbody'], abs(id), mass_final)].append(decay)
@@ -2352,7 +2355,8 @@ class decay_all_events(object):
             for nb in range(125):
                 tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
                                         True, self.pid2width, self.pid2mass, BW_cut,self.Ecollider)
-
+                if not tree:
+                    continue
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
                     '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
                                                                   if i in tree))
@@ -2461,6 +2465,7 @@ class decay_all_events(object):
     
 
     @misc.mute_logger()
+    @test_aloha.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
         i.e. the undecayed and the decay one. And associate those to the 
@@ -2516,26 +2521,32 @@ class decay_all_events(object):
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
                 commandline+="add process %s;" % (process)
-                if not order.startswith('virt='):
-                    if 'QCD' in order:
-                        if 'QCD=' in process:
-                            result=re.split(' ',process)
-                            process=''
-                            for r in result:
-                                if 'QCD=' in r:
-                                    ior=re.split('=',r)
-                                    r='QCD=%i' % (int(ior[1])+1)
-                                process=process+r+' '
-                        result = re.split('([/$@]|\w+=\w+)', process, 1)
-                        if len(result) ==3:
-                            process, split, rest = result
-                            commandline+="add process %s j %s%s ;" % (process, split, rest)
-                        else:
-                            commandline +='add process %s j;' % process
+                if not order:
+                    continue
+                elif not order.startswith('virt='):
+                    if '=' in order:
+                        order = order.split('=',1)[1]
+                    # define the list of particles that are needed for the radiateion
+                    pert = fks_common.find_pert_particles_interactions(
+                         mgcmd._curr_model,pert_order = order)['soft_particles']
+                    commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
+                    
+                    # check if we have to increase by one the born order
+                    if '%s=' % order in process:
+                        result=re.split(' ',process)
+                        process=''
+                        for r in result:
+                            if '%s=' % order in r:
+                                ior=re.split('=',r)
+                                r='QCD=%i' % (int(ior[1])+1)
+                            process=process+r+' '
+                    #handle special tag $ | / @
+                    result = re.split('([/$@]|\w+=\w+)', process, 1)                    
+                    if len(result) ==3:
+                        process, split, rest = result
+                        commandline+="add process %s pert_%s %s%s ;" % (process, order ,split, rest)
                     else:
-                        raise Exception('Madspin: only QCD NLO corrections implemented.')
-                
-                        
+                        commandline +='add process %s pert_%s;' % (process,order)                                       
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -2585,7 +2596,7 @@ class decay_all_events(object):
             if '@' in proc:
                 proc, proc_nb = proc.split('@')
                 try:
-                    int(proc_nb)
+                    proc_nb = int(proc_nb)
                 except ValueError:
                     raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
                 proc_nb = '@ %i' % proc_nb 
@@ -2604,26 +2615,36 @@ class decay_all_events(object):
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
                 commandline+="add process %s, %s %s;" % (process, decay_text, proc_nb)
-                if not order.startswith('virt='):
-                    if 'QCD' in order:
-                        if 'QCD=' in process:
-                            result=re.split(' ',process)
-                            process=''
-                            for r in result:
-                                if 'QCD=' in r:
-                                    ior=re.split('=',r)
-                                    r='QCD=%i' % (int(ior[1])+1)
-                                process=process+r+' '
-                        result = re.split('([/$]|\w+=\w+)', process, 1)
-                        if len(result) ==3:
-                            process, split, rest = result
-                            commandline+="add process %s j %s%s , %s %s ;" % (process, split, rest, decay_text, proc_nb)
-                        else:
-                            commandline +='add process %s j, %s; %s' % (process, decay_text, proc_nb)
+                if not order:
+                    continue
+                elif not order.startswith('virt='):
+                    if '=' in order:
+                        order = order.split('=',1)[1]
+                    # define the list of particles that are needed for the radiateion
+                    pert = fks_common.find_pert_particles_interactions(
+                         mgcmd._curr_model,pert_order = order)['soft_particles']
+                    commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
+                    
+                    # check if we have to increase by one the born order
+                    if '%s=' % order in process:
+                        result=re.split(' ',process)
+                        process=''
+                        for r in result:
+                            if '%s=' % order in r:
+                                ior=re.split('=',r)
+                                r='QCD=%i' % (int(ior[1])+1)
+                            process=process+r+' '
+                    #handle special tag $ | / @
+                    result = re.split('([/$@]|\w+=\w+)', process, 1)                    
+                    if len(result) ==3:
+                        process, split, rest = result
+                        commandline+="add process %s pert_%s %s%s , %s %s ;" % \
+                              (process, order, split, rest, decay_text, proc_nb)
                     else:
-                        raise Exception('Madspin not implemented NLO corrections.')
-                
-        
+                        commandline +='add process %s pert_%s, %s; %s' % \
+                                           (process, order, decay_text, proc_nb)
+                    
+                        
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -2714,7 +2735,7 @@ class decay_all_events(object):
         #self.channel_br = width.get_BR_for_each_decay(self.decay_processes, 
         #                                    self.mgcmd._multiparticles)
         self.width_estimator = width
-        
+        self.banner.param_card = width.banner.param_card
         return width    
 
 
@@ -2739,7 +2760,7 @@ class decay_all_events(object):
         file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
         shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" )) 
         misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
-        misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')                   
+        misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')     
 
         file=pjoin(path_me, 'param_card.dat')
         shutil.copyfile(file,pjoin(path_me,mode,"Cards","param_card.dat")) 
@@ -2810,7 +2831,7 @@ class decay_all_events(object):
                     misc.call('./init', cwd=new_path)
                     shutil.copyfile(pjoin(new_path,'parameters.inc'), 
                                pjoin(new_path,os.path.pardir, 'parameters.inc'))
-                if mode == 'production_me':   
+                if mode == 'production_me':
                     misc.compile(cwd=new_path, mode='fortran')
                 else:
                     misc.compile(cwd=new_path, mode='fortran')
@@ -3107,7 +3128,9 @@ class decay_all_events(object):
             failed= float(firstline[4])
             use_mc_masses=int(firstline[5])
             momenta=[external.stdout.readline() for i in range(nexternal)]
-            output = trials, BWvalue, weight, momenta, failed, use_mc_masses
+            lastline=external.stdout.readline().split()
+            helicities=[lastline[i] for i in range(len(lastline))]
+            output = trials, BWvalue, weight, momenta, failed, use_mc_masses, helicities
 
         if len(self.calculator) > 100:
             logger.debug('more than 100 calculator. Perform cleaning')
@@ -3164,7 +3187,7 @@ class decay_all_events(object):
             os.system('lsof -p %s' % external.pid)
             return ' '.join(prod_values.split()[-1*(nb_output-1):])
         
-        if len(self.calculator) > 100:
+        if len(self.calculator) > self.options['max_running_process']:
             logger.debug('more than 100 calculator. Perform cleaning')
             nb_calls = self.calculator_nbcall.values()
             nb_calls.sort()
@@ -3304,7 +3327,7 @@ class decay_all_events(object):
 
         return indices_for_mc_masses,values_for_mc_masses
 
-    def decay_one_event_new(self,curr_event,decay_struct, event_map, momenta_in_decay, use_mc_masses):
+    def decay_one_event_new(self,curr_event,decay_struct, event_map, momenta_in_decay, use_mc_masses, helicities):
         """Write down the event 
            momenta is the list of momenta ordered according to the productin ME
         """
@@ -3463,6 +3486,7 @@ class decay_all_events(object):
 
                         indexd1=decay_struct[part]["tree"][res]["d1"]["index"]
                         if ( indexd1>0):
+                            hel=helicities[index_d1_for_mom-1]
                             istup=1
                             external+=1
                             if not use_mc_masses or abs(pid) not in self.MC_masses:
@@ -3470,16 +3494,16 @@ class decay_all_events(object):
                             else:
                                 mass=self.MC_masses[abs(pid)]
                         else:
+                            hel=0.
                             decay_struct[part]["tree"][indexd1]["colup1"]=d1colup1
                             decay_struct[part]["tree"][indexd1]["colup2"]=d1colup2
                             istup=2                    
                             mass=mom.m
                         
-                        helicity=0.
                         decayed_event.particle[part_number]={"pid":pid,\
                                 "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
                                 "colup1":d1colup1,"colup2":d1colup2,"momentum":mom,\
-                                "mass":mass,"helicity":helicity}
+                                "mass":mass,"helicity":hel}
                         decayed_event.event2mg[part_number]=part_number
 
                         part_number+=1
@@ -3493,6 +3517,7 @@ class decay_all_events(object):
 
                         indexd2=decay_struct[part]["tree"][res]["d2"]["index"]
                         if ( indexd2>0):
+                            hel=helicities[index_d2_for_mom-1]
                             istup=1
                             external+=1
                             if not use_mc_masses or abs(pid) not in self.MC_masses:
@@ -3500,6 +3525,7 @@ class decay_all_events(object):
                             else:
                                 mass=self.MC_masses[abs(pid)]
                         else:
+                            hel=0.
                             istup=2
                             decay_struct[part]["tree"][indexd2]["colup1"]=d2colup1
                             decay_struct[part]["tree"][indexd2]["colup2"]=d2colup2
@@ -3508,11 +3534,10 @@ class decay_all_events(object):
 
                         mothup1=part_number-2
                         mothup2=part_number-2
-                        helicity=0.
                         decayed_event.particle[part_number]={"pid":pid,"istup":istup,\
                            "mothup1":mothup1,"mothup2":mothup2,"colup1":d2colup1,\
                            "colup2":d2colup2,\
-                           "momentum":mom,"mass":mass,"helicity":helicity}
+                           "momentum":mom,"mass":mass,"helicity":hel}
 
                         decayed_event.event2mg[part_number]=part_number
 

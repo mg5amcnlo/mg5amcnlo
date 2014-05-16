@@ -1183,7 +1183,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 for mothers, orig_color_list in zip(mothers_list, color_lists):
                     for struct_wf, struct_color_list in struct_infos:
                         new_color_list = copy.copy(orig_color_list)+\
-                                         copy.copy(struct_color_list)
+                                                    copy.copy(struct_color_list)
                         new_mothers = copy.copy(mothers)
                         new_mothers.append(struct_wf)
                         new_color_lists.append(new_color_list)
@@ -1335,7 +1335,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                             # Store wavefunction
                             try:
                                 wf = diagram_wavefunctions[\
-                                       diagram_wavefunctions.index(wf)]
+                                                diagram_wavefunctions.index(wf)]
                             except ValueError:
                                 # Update wf number
                                 wfNumber = wfNumber + 1
@@ -1349,7 +1349,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                     # Use wf_mother_arrays to locate existing
                                     # wavefunction
                                     wf = wavefunctions[wf_mother_arrays.index(\
-                                    wf.to_array())]
+                                                                 wf.to_array())]
                                     # Since we reuse the old wavefunction, reset
                                     # wfNumber
                                     wfNumber = wfNumber - 1
@@ -1606,12 +1606,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             # loop diagram, UNLESS we are in the loop_optimized_output mode.
             if optimization:
                 wavefunctions.extend(struct_wfs)
-                wf_mother_arrays.extend([wf.to_array() for wf \
-                                         in struct_wfs])
+                wf_mother_arrays.extend([wf.to_array() for wf in struct_wfs])
                 if self.optimized_output:
                     wavefunctions.extend(loop_wfs)
-                    wf_mother_arrays.extend([wf.to_array() for wf \
-                                         in loop_wfs])
+                    wf_mother_arrays.extend([wf.to_array() for wf in loop_wfs])
             else:
                 wavefunctionNumber = len(process.get('legs'))
                 if self.optimized_output:
@@ -2105,8 +2103,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """Gives the total number of wavefunctions for this ME, excluding the
         loop ones."""
         
-        return sum([ len(d.get('wavefunctions')) for d in \
-                       self.get('diagrams')])
+        return sum([ len(d.get('wavefunctions')) for d in self.get('diagrams')])
 
     def get_all_wavefunctions(self):
         """Gives a list of all wavefunctions for this ME"""

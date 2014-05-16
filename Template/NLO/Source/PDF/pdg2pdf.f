@@ -9,9 +9,7 @@ c        argument
          DOUBLE  PRECISION x,xmu
 
 c timing statistics
-         real*4 tbefore, tAfter
-         real*4 tTot, tOLP, tFastJet, tPDF
-         common/timings/tTot, tOLP, tFastJet, tPDF
+         include "timing_variables.inc"
 
          call cpu_time(tbefore)
          pdg2pdf_timed = pdg2pdf(ih,ipdg,x,xmu)

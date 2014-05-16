@@ -257,7 +257,8 @@ class AllResults(dict):
             for i,subrun in enumerate(run):
                 self.def_current(subrun)
                 self.clean()
-                self.current.event_path = pjoin(main_path,'Events') 
+                self.current.event_path = pjoin(main_path,'Events')
+                self.current.me_dir = main_path 
                 if i==0:
                     self.current.update_status()
                 else:
@@ -831,7 +832,7 @@ class OneTagResults(dict):
             if 'lheroot' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
             if 'rwt' in self.pythia:
-                link = './Events/%(run_name)s/%(tag)s_systematics.dat'
+                link = './Events/%(run_name)s/%(tag)s_syscalc.dat'
                 level = 'pythia'
                 name = 'systematics'
                 out += self.special_link(link, level, name)                 

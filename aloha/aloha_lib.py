@@ -120,7 +120,7 @@ class Computation(dict):
         new_2 = new_2.factorize()
         self.reduced_expr2[tag] = new_2
         self.add_tag((tag,))
-        self.unknow_fct = []
+        #self.unknow_fct = []
         #return expression
         return new
     
@@ -1049,18 +1049,16 @@ class LorentzObjectRepresentation(dict):
             else:
                 raise self.LorentzObjectRepresentationError("There is no key of (0,) in representation.")                    
         else:
-	    # HSS,23/10/2012
-	    if isinstance(representation,dict):
-		try:
-            	   self[(0,)] = representation[(0,)]
-		except Exception:
-		   if representation:
-		   	raise LorentzObjectRepresentation.LorentzObjectRepresentationError("There is no key of (0,) in representation.")
-		   else:
-			self[(0,)] = 0
-	    else:
-	    # HSS
-            	self[(0,)] = representation
+            if isinstance(representation,dict):
+                try:
+                    self[(0,)] = representation[(0,)]
+                except Exception:
+                    if representation:
+		   	            raise LorentzObjectRepresentation.LorentzObjectRepresentationError("There is no key of (0,) in representation.")
+                    else:
+			            self[(0,)] = 0
+            else:
+                self[(0,)] = representation
 
     def __str__(self):
         """ string representation """

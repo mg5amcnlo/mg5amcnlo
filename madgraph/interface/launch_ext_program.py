@@ -386,6 +386,81 @@ class SALauncher(ExtLauncher):
                 # check
                 subprocess.call(['./check'], cwd=cur_path)
 
+class MWLauncher(ExtLauncher):
+    """ A class to launch a simple Standalone test """
+    
+    
+    def __init__(self, cmd_int, running_dir, **options):
+        """ initialize the StandAlone Version"""
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
+        self.options = cmd_int.options
+
+    def launch_program(self):
+        """launch the main program"""
+        
+        import madgraph.interface.madweight_interface as MW
+        # Check for number of cores if multicore mode
+        mode = str(self.cluster)
+        nb_node = 1
+        if mode == "2":
+            import multiprocessing
+            max_node = multiprocessing.cpu_count()
+            if max_node == 1:
+                logger.warning('Only one core is detected on your computer! Pass in single machine')
+                self.cluster = 0
+                self.launch_program()
+                return
+            elif max_node == 2:
+                nb_node = 2
+            elif not self.force:
+                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+            else:
+                nb_node=max_node
+                
+        import madgraph.interface.madevent_interface as ME
+        
+        stdout_level = self.cmd_int.options['stdout_level']
+        if self.shell:
+            usecmd = MW.MadWeightCmdShell(me_dir=self.running_dir, options=self.options)
+        else:
+            usecmd = MW.MadWeightCmd(me_dir=self.running_dir, options=self.options)
+            usecmd.pass_in_web_mode()
+        #Check if some configuration were overwritten by a command. If so use it    
+        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        for line in set_cmd:
+            try:
+                usecmd.do_set(line[3:], log=False)
+            except Exception:
+                pass
+            
+        usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
+        #ensure that the logger level 
+        launch = self.cmd_int.define_child_cmd_interface(
+                     usecmd, interface=False)
+
+        command = 'launch'
+        if mode == "1":
+            command += " --cluster"
+        elif mode == "2":
+            command += " --nb_core=%s" % nb_node
+        
+        if self.force:
+            command+= " -f"
+        if self.laststep:
+            command += ' --laststep=%s' % self.laststep
+        
+        try:
+            os.remove('ME5_debug')
+        except:
+           pass
+        launch.run_cmd(command)
+        launch.run_cmd('quit')
+        
+        if os.path.exists('ME5_debug'):
+            return True
+        
+
+
 class aMCatNLOLauncher(ExtLauncher):
     """A class to launch MadEvent run"""
     
@@ -444,7 +519,12 @@ class aMCatNLOLauncher(ExtLauncher):
         
         #Check if some configuration were overwritten by a command. If so use it    
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        all_options = usecmd.options_configuration.keys() +  usecmd.options_madgraph.keys() + usecmd.options_madevent.keys()
         for line in set_cmd:
+            arg = line.split()
+            if arg[1] not in all_options:
+                continue
+            misc.sprint(line)
             try:
                 usecmd.exec_cmd(line)
             except Exception, error:
@@ -455,7 +535,9 @@ class aMCatNLOLauncher(ExtLauncher):
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
-                if self.options[opt] and not opt in ['cluster', 'multicore']])
+                if self.options[opt] and not opt in ['cluster', 'multicore', 'name']])
+        if self.options['name']:
+            option_line += '--name %s' %  self.options['name']  
         command = 'launch ' + self.run_mode + ' ' + option_line
 
         if mode == "1":

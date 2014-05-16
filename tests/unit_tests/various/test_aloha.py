@@ -19,6 +19,7 @@ from __future__ import division
 import math
 import os
 import time
+import tempfile as tempfile
 from functools import wraps
 
 import aloha
@@ -29,7 +30,7 @@ import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
 import models.sm.object_library as object_library
 import tests.unit_tests as unittest
-
+import madgraph.various.misc as misc
 
 def set_global(loop=False, unitary=True, mp=False, cms=False):
 
@@ -2853,6 +2854,29 @@ class test_aloha_creation(unittest.TestCase):
         for ind in expr.listindices():
             self.assertEqual(eval(str(expr.get_rep(ind))), 178727040j)
 
+    def test_regular_expression_propa(self):
+
+        mod_numerator = create_aloha.AbstractRoutineBuilder.mod_propagator_expression
+            
+
+        text = '1*complex(1,1) * ( - Metric(1, 2) + P(1, id) * P(2, id) / (Mass(id) * Mass(id)) )'
+        self.assertEqual(mod_numerator({1:3}, text),
+               '1*complex(1,1) * ( - Metric(3, 2) + P(3, id) * P(2, id) / (Mass(id) * Mass(id)) )')
+
+        text = '1*complex(0,1) * ( - Metric(1, 2) + P(1, id) * P1(2, id) / (Mass(id) * Mass(id)) )'
+        self.assertEqual(mod_numerator({1:3}, text),
+               '1*complex(0,1) * ( - Metric(3, 2) + P(3, id) * P1(2, id) / (Mass(id) * Mass(id)) )')
+
+        text = "complex(0,1) * ( - Metric(1, 2) + P(1, id) * P(2, id) / (Mass(id) * Mass(id)) )"
+        tag = {'1': 3, '2': 'I2', 'id': 3}
+        self.assertEqual(mod_numerator(tag, text),
+               "complex(0,1) * ( - Metric(3, 'I2') + P(3, 3) * P('I2', 3) / (Mass(3) * Mass(3)) )")          
+
+
+        text = "P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id)"
+        tag = {'1': 3, '2': 'I2', 'id': 3}
+        self.assertEqual(mod_numerator(tag, text),
+               "P('mu', 3) * P('mu', 3) - Mass(3) * Mass(3) + complex(0,1) * Mass(3) * Width(3)")
 
     def test_use_of_library_spin2(self):
         """ check that use the library or the usual definition is the same """
@@ -3382,33 +3406,33 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         self.assertEqual(linked, [])
         
         # Check that the file are correctly written
-        os.system('rm -r /tmp/mg5 &> /dev/null; mkdir /tmp/mg5 &> /dev/null')
-        helas_suite.write('/tmp/mg5', 'Fortran')
-        
-        content = set(os.listdir('/tmp/mg5'))
-        self.assertEqual(content, set(['FFV1_0.f',
-                                       'FFV1C1_0.f','FFV2C1_0.f']))
-        
-        # Check the content of FFV1__FFV2C1_0.f
-        fsock = open('/tmp/mg5/FFV1C1_0.f')
-        goal = """
-      SUBROUTINE FFV1_2C1_0(F2, F1, V3, COUP1, COUP2,VERTEX)
-      IMPLICIT NONE
-      COMPLEX*16 F1(*)
-      COMPLEX*16 F2(*)
-      COMPLEX*16 V3(*)
-      COMPLEX*16 COUP1
-      COMPLEX*16 COUP2
-      COMPLEX*16 VERTEX
-      COMPLEX*16 TMP
-      CALL FFV1C1_0(F2,F1,V3,COUP1,VERTEX)
-      CALL FFV2C1_0(F2,F1,V3,COUP2,TMP)
-      VERTEX = VERTEX + TMP
-      END"""
-
-        data = fsock.read().split('\n')
-        for line in goal.split('\n'):
-                self.assertTrue(line in data)
+        with misc.TMP_directory(prefix='mg5') as path:
+            helas_suite.write(path, 'Fortran')
+            
+            content = set(os.listdir(path))
+            self.assertEqual(content, set(['FFV1_0.f',
+                                           'FFV1C1_0.f','FFV2C1_0.f']))
+            
+            # Check the content of FFV1__FFV2C1_0.f
+            fsock = open('%s/FFV1C1_0.f' % path)
+            goal = """
+          SUBROUTINE FFV1_2C1_0(F2, F1, V3, COUP1, COUP2,VERTEX)
+          IMPLICIT NONE
+          COMPLEX*16 F1(*)
+          COMPLEX*16 F2(*)
+          COMPLEX*16 V3(*)
+          COMPLEX*16 COUP1
+          COMPLEX*16 COUP2
+          COMPLEX*16 VERTEX
+          COMPLEX*16 TMP
+          CALL FFV1C1_0(F2,F1,V3,COUP1,VERTEX)
+          CALL FFV2C1_0(F2,F1,V3,COUP2,TMP)
+          VERTEX = VERTEX + TMP
+          END"""
+    
+            data = [ l.strip() for l in fsock.read().split('\n')]
+            for line in goal.split('\n'):
+                    self.assertTrue(line.strip() in data)
         
         
         
@@ -3899,10 +3923,10 @@ def RFSC1_1(R1,S3,COUP,M2,W2):
     F2[1] = +R1[1]+S3[1]
     P2 = [-complex(F2[0]).real, -complex(F2[1]).real, -complex(F2[1]).imag, -complex(F2[0]).imag]
     denom = COUP/(P2[0]**2-P2[1]**2-P2[2]**2-P2[3]**2 - M2 * (M2 -1j* W2))
-    F2[2]= denom*(1j * ((S3[2])*(((P2[0])*(-1*((R1[7])+(R1[14])+1j*((R1[11]))-(R1[2])))+((P2[1])*(((R1[3])+(R1[15])+1j*((R1[10]))-(R1[6])))+((P2[2])*((-1j*((R1[6]))+1j*((R1[3])+(R1[15]))-(R1[10])))-(P2[3])*(((R1[7])+(R1[14])+1j*((R1[11]))-(R1[2])))))))))
-    F2[3]= denom*(1j * ((S3[2])*(((P2[0])*(((R1[3])+(R1[15])+1j*((R1[10]))-(R1[6])))+((P2[1])*(-1*((R1[7])+(R1[14])+1j*((R1[11]))-(R1[2])))+((P2[2])*((-1j*((R1[2]))+1j*((R1[7])+(R1[14]))-(R1[11])))-(P2[3])*(((R1[3])+(R1[15])+1j*((R1[10]))-(R1[6])))))))))
-    F2[4]= denom*(1j * ((M2)*((S3[2])*(((R1[7])+(R1[14])+1j*((R1[11]))-(R1[2]))))))
-    F2[5]= denom*(-1j * ((M2)*((S3[2])*(((R1[3])+(R1[15])+1j*((R1[10]))-(R1[6]))))))
+    F2[2]= denom*1j * S3[2]*(P2[0]*-1*(R1[7]+R1[14]+1j*(R1[11])-R1[2])+(P2[1]*(R1[3]+R1[15]+1j*(R1[10])-R1[6])+(P2[2]*(-1j*(R1[6])+1j*(R1[3]+R1[15])-R1[10])-P2[3]*(R1[7]+R1[14]+1j*(R1[11])-R1[2]))))
+    F2[3]= denom*1j * S3[2]*(P2[0]*(R1[3]+R1[15]+1j*(R1[10])-R1[6])+(P2[1]*-1*(R1[7]+R1[14]+1j*(R1[11])-R1[2])+(P2[2]*(-1j*(R1[2])+1j*(R1[7]+R1[14])-R1[11])-P2[3]*(R1[3]+R1[15]+1j*(R1[10])-R1[6]))))
+    F2[4]= denom*1j * M2*S3[2]*(R1[7]+R1[14]+1j*(R1[11])-R1[2])
+    F2[5]= denom*-1j * M2*S3[2]*(R1[3]+R1[15]+1j*(R1[10])-R1[6])
     return F2
 
 
@@ -3924,8 +3948,8 @@ def RFSC1_1(R1,S3,COUP,M2,W2):
 
         solution = """import wavefunctions
 def RFSC1_0(F2,R1,S3,COUP):
-    TMP0 = ((F2[4])*(((R1[7])+(R1[14])+1j*((R1[11]))-(R1[2])))-(F2[5])*(((R1[3])+(R1[15])+1j*((R1[10]))-(R1[6]))))
-    vertex = COUP*(-1j * ((TMP0)*(S3[2])))
+    TMP0 = (F2[4]*(R1[7]+R1[14]+1j*(R1[11])-R1[2])-F2[5]*(R1[3]+R1[15]+1j*(R1[10])-R1[6]))
+    vertex = COUP*-1j * TMP0*S3[2]
     return vertex   
     
     

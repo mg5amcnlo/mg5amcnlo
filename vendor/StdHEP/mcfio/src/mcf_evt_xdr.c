@@ -256,8 +256,9 @@ bool_t xdr_mcfast_eventtable(XDR *xdrs, int *blockid,
 /*  Translate a mcf EventTable block.  This subroutine will allocate
 	the memory needed if the stream is DECODE */
         
-    int i, *idat;
-    unsigned int nn, nnold, *uidat;
+    int i, itmp, *idat;
+    unsigned int nn, nnold, uitmp, *uidat;
+    off_t otmp, *odat;
     char **ctmp;
     mcfxdrEventTable *mcftmp;
     
@@ -267,7 +268,7 @@ bool_t xdr_mcfast_eventtable(XDR *xdrs, int *blockid,
       *ntot = sizeof(mcfxdrEventTable) + 4 * sizeof(int)* mcftmp->dim
               + sizeof(unsigned int)* mcftmp->dim - 2 * sizeof(int)
               - 4 * sizeof(int *) - sizeof(u_int *);
-       strcpy(*version, "1.00");
+       strcpy(*version, "2.00");
      }  else if (xdrs->x_op == XDR_FREE) {
           mcfioC_Free_EventTable(mcf);
           return 1;
@@ -291,10 +292,11 @@ bool_t xdr_mcfast_eventtable(XDR *xdrs, int *blockid,
         if((xdrs->x_op == XDR_DECODE) && (mcftmp->evtnums != NULL))
              nnold = mcftmp->previousnumevts;
           else nnold = 0;
-        idat = &mcftmp->nextLocator;
-        uidat = (u_int *) &mcftmp->numevts;  
-        if ((xdr_int(xdrs,idat) && xdr_u_int(xdrs,uidat )) == FALSE)
-                  return FALSE; 
+        itmp = mcftmp->nextLocator;
+        uitmp = mcftmp->numevts;
+        if ((xdr_int(xdrs,&itmp) && xdr_u_int(xdrs,&uitmp)) == FALSE) return FALSE;
+        mcftmp->nextLocator = itmp;
+        mcftmp->numevts = uitmp; 
         if(xdrs->x_op == XDR_DECODE) {
            if ((mcftmp->evtnums == NULL) || (mcftmp->numevts > nnold)) {
            if (mcftmp->evtnums != NULL) {
@@ -310,7 +312,7 @@ bool_t xdr_mcfast_eventtable(XDR *xdrs, int *blockid,
            mcftmp->runnums = (int *) malloc(sizeof(int) * mcftmp->dim);
            mcftmp->trigMasks = (int *) malloc(sizeof(int) * mcftmp->dim);
            mcftmp->ptrEvents = 
-            (unsigned int *) malloc(sizeof(unsigned int) * mcftmp->dim);
+            (off_t *) calloc(mcftmp->dim, sizeof(off_t));
             mcftmp->previousnumevts = mcftmp->dim;
            }
         }
@@ -331,9 +333,59 @@ bool_t xdr_mcfast_eventtable(XDR *xdrs, int *blockid,
 	if (xdr_array(xdrs, (char **) &idat, &nn, 
 	              mcftmp->dim, sizeof(int), xdr_int) == FALSE) 
 	              return FALSE;
-        uidat = mcftmp->ptrEvents;
-	if (xdr_array(xdrs, (char **) &uidat, &nn, 
-	              mcftmp->dim, sizeof(int), xdr_u_int) == FALSE) 
+        odat = mcftmp->ptrEvents;
+	if (xdr_array(xdrs, (char **) &odat, &nn, 
+	              mcftmp->dim, sizeof(off_t), xdr_u_int) == FALSE) 
+	              return FALSE;
+      } else if (strcmp(*version, "2.00") == 0) {
+     	      
+        if((xdrs->x_op == XDR_DECODE) && (mcftmp->evtnums != NULL))
+             nnold = mcftmp->previousnumevts;
+          else nnold = 0;
+        otmp = mcftmp->nextLocator;
+        uitmp = mcftmp->numevts;
+         if ((xdr_hyper(xdrs,&otmp) && xdr_u_int(xdrs,&uitmp)) == FALSE) return FALSE;
+        mcftmp->nextLocator = otmp;
+        mcftmp->numevts = uitmp; 
+        if(xdrs->x_op == XDR_DECODE) {
+           if ((mcftmp->evtnums == NULL) || (mcftmp->numevts > nnold)) {
+           if (mcftmp->evtnums != NULL) {
+            /*
+            ** I don't trust realloc.. just alloc again.. 
+            */
+            free(mcftmp->evtnums); free(mcftmp->storenums); 
+            free(mcftmp->runnums); free(mcftmp->trigMasks);
+            free(mcftmp->ptrEvents);
+            }  
+           mcftmp->evtnums = (int *) malloc(sizeof(int) * mcftmp->dim);
+           mcftmp->storenums = (int *) malloc(sizeof(int) * mcftmp->dim);
+           mcftmp->runnums = (int *) malloc(sizeof(int) * mcftmp->dim);
+           mcftmp->trigMasks = (int *) malloc(sizeof(int) * mcftmp->dim);
+           mcftmp->ptrEvents = 
+            (off_t *) calloc(mcftmp->dim, sizeof(off_t));
+            mcftmp->previousnumevts = mcftmp->dim;
+           }
+        }
+        if (xdrs->x_op == XDR_ENCODE) nn = mcftmp->dim;
+        idat = mcftmp->evtnums;
+	if (xdr_array(xdrs, (char **) &idat, &nn, 
+	              mcftmp->dim, sizeof(int), xdr_int) == FALSE) 
+	              return FALSE;
+        idat = mcftmp->storenums;
+	if (xdr_array(xdrs, (char **) &idat, &nn, 
+	              mcftmp->dim, sizeof(int), xdr_int) == FALSE) 
+	              return FALSE;
+        idat = mcftmp->runnums;
+	if (xdr_array(xdrs, (char **) &idat, &nn, 
+	              mcftmp->dim, sizeof(int), xdr_int) == FALSE) 
+	              return FALSE;
+        idat = mcftmp->trigMasks;
+	if (xdr_array(xdrs, (char **) &idat, &nn, 
+	              mcftmp->dim, sizeof(int), xdr_int) == FALSE) 
+	              return FALSE;
+        odat = mcftmp->ptrEvents;
+	if (xdr_array(xdrs, (char **) &odat, &nn, 
+	              mcftmp->dim, sizeof(off_t), xdr_hyper) == FALSE) 
 	              return FALSE;
      } else return FALSE; /* Future version encoded here. */
      return TRUE;
@@ -397,7 +449,8 @@ bool_t xdr_mcfast_eventheader(XDR *xdrs, int *blockid,
 	the memory needed if the stream is DECODE */
         
     int i, *itmp;
-    unsigned int nn, nnold, nNTuOld, *uitmp;
+    unsigned int nn, nnold, nNTuOld;
+    off_t *otmp;
     char **ctmp;
     mcfxdrEventHeader *mcftmp;
     
@@ -408,7 +461,7 @@ bool_t xdr_mcfast_eventheader(XDR *xdrs, int *blockid,
               + sizeof(unsigned int)* mcftmp->nBlocks
               + sizeof(int ) * mcftmp->nBlocks 
               - sizeof(int *)  - sizeof(u_int *) ;
-       strcpy(*version, "2.00");
+       strcpy(*version, "3.00");
      }  else if (xdrs->x_op == XDR_FREE) {
           mcfioC_Free_EventHeader(mcf);
           return 1;
@@ -451,7 +504,7 @@ bool_t xdr_mcfast_eventheader(XDR *xdrs, int *blockid,
            mcftmp->blockIds =
              (int *) malloc(sizeof(unsigned int) * mcftmp->dimBlocks);
            mcftmp->ptrBlocks =
-             (unsigned int *) malloc(sizeof(unsigned int) * mcftmp->dimBlocks);
+             (off_t *) calloc(mcftmp->dimBlocks, sizeof(off_t));
            }
         }
         if (xdrs->x_op == XDR_ENCODE)  nn = mcftmp->dimBlocks;
@@ -459,9 +512,9 @@ bool_t xdr_mcfast_eventheader(XDR *xdrs, int *blockid,
 	if (xdr_array(xdrs, (char **) &itmp, &nn, 
 	              mcftmp->dimBlocks, sizeof(int), xdr_int) == FALSE) 
 	              return FALSE;
-	uitmp = mcftmp->ptrBlocks;              
-	if (xdr_array(xdrs, (char **) &uitmp, &nn, 
-	              mcftmp->dimBlocks, sizeof(u_int), xdr_u_int) == FALSE) 
+	otmp = mcftmp->ptrBlocks;              
+	if (xdr_array(xdrs, (char **) &otmp, &nn, 
+	              mcftmp->dimBlocks, sizeof(off_t), xdr_u_int) == FALSE) 
 	              return FALSE;
      } else if (strcmp(*version, "2.00") == 0) {
         if (xdrs->x_op == XDR_DECODE) {
@@ -487,7 +540,7 @@ bool_t xdr_mcfast_eventheader(XDR *xdrs, int *blockid,
            mcftmp->blockIds =
              (int *) malloc(sizeof(unsigned int) * mcftmp->dimBlocks);
            mcftmp->ptrBlocks =
-             (unsigned int *) malloc(sizeof(unsigned int) * mcftmp->dimBlocks);
+             (off_t *) calloc(mcftmp->dimBlocks, sizeof(off_t));
            }
            if ((mcftmp->nTupleIds == NULL) || (mcftmp->dimNTuples > nNTuOld)) {
            if (mcftmp->nTupleIds != NULL) { 
@@ -497,7 +550,7 @@ bool_t xdr_mcfast_eventheader(XDR *xdrs, int *blockid,
            mcftmp->nTupleIds =
              (int *) malloc(sizeof(unsigned int) * mcftmp->dimNTuples);
            mcftmp->ptrNTuples =
-             (unsigned int *) malloc(sizeof(unsigned int) * mcftmp->dimNTuples);
+             (off_t *) calloc(mcftmp->dimNTuples, sizeof(off_t));
            }
         }
         if (mcftmp->dimBlocks > 0) {
@@ -506,9 +559,9 @@ bool_t xdr_mcfast_eventheader(XDR *xdrs, int *blockid,
 	    if (xdr_array(xdrs, (char **) &itmp, &nn, 
 	              mcftmp->dimBlocks, sizeof(int), xdr_int) == FALSE) 
 	              return FALSE;
-	    uitmp = mcftmp->ptrBlocks;              
-	    if (xdr_array(xdrs, (char **) &uitmp, &nn, 
-	              mcftmp->dimBlocks, sizeof(u_int), xdr_u_int) == FALSE) 
+	    otmp = mcftmp->ptrBlocks;              
+	    if (xdr_array(xdrs, (char **) &otmp, &nn, 
+	              mcftmp->dimBlocks, sizeof(off_t), xdr_u_int) == FALSE) 
 	              return FALSE;
         }
         if (mcftmp->dimNTuples > 0) {
@@ -517,9 +570,68 @@ bool_t xdr_mcfast_eventheader(XDR *xdrs, int *blockid,
 	    if (xdr_array(xdrs, (char **) &itmp, &nn, 
 	              mcftmp->dimNTuples, sizeof(int), xdr_int) == FALSE) 
 	              return FALSE;
-	    uitmp = mcftmp->ptrNTuples;              
-	    if (xdr_array(xdrs, (char **) &uitmp, &nn, 
-	              mcftmp->dimNTuples, sizeof(u_int), xdr_u_int) == FALSE) 
+	    otmp = mcftmp->ptrNTuples;              
+	    if (xdr_array(xdrs, (char **) &otmp, &nn, 
+	              mcftmp->dimNTuples, sizeof(off_t), xdr_u_int) == FALSE) 
+	              return FALSE;
+	}              
+     } else if (strcmp(*version, "3.00") == 0) {
+        if (xdrs->x_op == XDR_DECODE) {
+           nnold = 0;
+           if (mcftmp->blockIds != NULL)  nnold = mcftmp->dimBlocks;
+           nNTuOld = 0;
+           if (mcftmp->nTupleIds != NULL)  nNTuOld = mcftmp->dimNTuples;
+        }  
+        if ((xdr_int(xdrs,&(mcftmp->evtnum)) &&
+             xdr_int(xdrs,&(mcftmp->storenum)) &&
+             xdr_int(xdrs,&(mcftmp->runnum)) &&
+             xdr_int(xdrs,&(mcftmp->trigMask)) &&
+             xdr_u_int(xdrs,&(mcftmp->nBlocks)) &&
+             xdr_u_int(xdrs,&(mcftmp->dimBlocks)) &&
+             xdr_u_int(xdrs,&(mcftmp->nNTuples)) &&
+             xdr_u_int(xdrs,&(mcftmp->dimNTuples))) == FALSE) return FALSE;
+        if(xdrs->x_op == XDR_DECODE) {
+           if ((mcftmp->blockIds == NULL) || (mcftmp->dimBlocks > nnold)) {
+           if (mcftmp->blockIds != NULL) { 
+               free(mcftmp->blockIds);
+               free(mcftmp->ptrBlocks);
+           }     
+           mcftmp->blockIds =
+             (int *) malloc(sizeof(unsigned int) * mcftmp->dimBlocks);
+           mcftmp->ptrBlocks =
+             (off_t *) calloc(mcftmp->dimBlocks, sizeof(off_t));
+           }
+           if ((mcftmp->nTupleIds == NULL) || (mcftmp->dimNTuples > nNTuOld)) {
+           if (mcftmp->nTupleIds != NULL) { 
+               free(mcftmp->nTupleIds);
+               free(mcftmp->ptrNTuples);
+           }     
+           mcftmp->nTupleIds =
+             (int *) malloc(sizeof(unsigned int) * mcftmp->dimNTuples);
+           mcftmp->ptrNTuples =
+             (off_t *) calloc(mcftmp->dimNTuples, sizeof(off_t));
+           }
+        }
+        if (mcftmp->dimBlocks > 0) {
+            if (xdrs->x_op == XDR_ENCODE)  nn = mcftmp->dimBlocks;
+            itmp = mcftmp->blockIds;
+	    if (xdr_array(xdrs, (char **) &itmp, &nn, 
+	              mcftmp->dimBlocks, sizeof(int), xdr_int) == FALSE) 
+	              return FALSE;
+	    otmp = mcftmp->ptrBlocks;              
+	    if (xdr_array(xdrs, (char **) &otmp, &nn, 
+	              mcftmp->dimBlocks, sizeof(off_t), xdr_hyper) == FALSE) 
+	              return FALSE;
+        }
+        if (mcftmp->dimNTuples > 0) {
+            if (xdrs->x_op == XDR_ENCODE)  nn = mcftmp->dimNTuples;
+            itmp = mcftmp->nTupleIds;
+	    if (xdr_array(xdrs, (char **) &itmp, &nn, 
+	              mcftmp->dimNTuples, sizeof(int), xdr_int) == FALSE) 
+	              return FALSE;
+	    otmp = mcftmp->ptrNTuples;              
+	    if (xdr_array(xdrs, (char **) &otmp, &nn, 
+	              mcftmp->dimNTuples, sizeof(off_t), xdr_hyper) == FALSE) 
 	              return FALSE;
 	}              
      } else 

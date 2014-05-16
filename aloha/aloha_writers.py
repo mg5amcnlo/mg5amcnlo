@@ -28,7 +28,7 @@ class WriteALOHA:
     power_symbol = '**'
     change_number_format = str
     extension = ''
-    type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R'}
+    type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R', -1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
 
             
@@ -282,22 +282,13 @@ class WriteALOHA:
         """Turn a multvariable into a string"""
         
         mult_list = [self.write_variable_id(id) for id in obj]
-	# HSS, 23/11/2012
-	# data = {'factors': '*'.join(mult_list)}
-        data = {'factors': '('+')*('.join(mult_list)+')'}
-	# HSS
+        data = {'factors': '*'.join(mult_list)}
         if prefactor and obj.prefactor != 1:
             if obj.prefactor != -1:
-		# HSS,23/11/2012
-		# * %(factors)s->* (%(factors)s)
-                text = '%(prefactor)s * (%(factors)s)'
-		# HSS
+                text = '%(prefactor)s * %(factors)s'
                 data['prefactor'] = self.change_number_format(obj.prefactor)
             else:
-		# HSS, 23/11/2012
-		# text = '-%(factors)s'
-                text = '(-%(factors)s)'
-		# HSS
+                text = '-%(factors)s'
         else:
             text = '%(factors)s'
         return text % data
@@ -306,22 +297,13 @@ class WriteALOHA:
         """Turn a multvariable into a string"""
 
         mult_list = [self.write_obj(id) for id in obj]
-	# HSS, 23/11/2012
-	# data = {'factors': '*'.join(mult_list)}
-        data = {'factors': '('+')*('.join(mult_list)+')'}
-	# HSS
+        data = {'factors': '*'.join(mult_list)}
         if prefactor and obj.prefactor != 1:
             if obj.prefactor != -1:
-		# HSS, 23/11/2012
-		# * %(factors)s->* (%(factors)s)
-                text = '%(prefactor)s * (%(factors)s)'
-		# HSS
+                text = '%(prefactor)s * %(factors)s'
                 data['prefactor'] = self.change_number_format(obj.prefactor)
             else:
-		# HSS, 23/11/2012
-		# text = '-%(factors)s'
-                text = '(-%(factors)s)'
-		# HSS
+                text = '-%(factors)s'
         else:
             text = '%(factors)s'
         return text % data
@@ -464,14 +446,16 @@ class ALOHAWriterForFortran(WriteALOHA):
                    'im': 'imag(%s)',
                    'cmath.sqrt':'sqrt(dble(%s))', 
                    'sqrt': 'sqrt(dble(%s))',
-		   # HSS,5/11/2012
                    'complexconjugate': 'conjg(dcmplx(%s))',
-		   # HSS
                    '/' : '{0}/(%s)'.format(one),
                    'pow': '(%s)**(%s)',
                    'log': 'log(dble(%s))',
                    'asin': 'asin(dble(%s))',
                    'acos': 'acos(dble(%s))',
+                   'abs': 'abs(%s)',
+                   'fabs': 'abs(%s)',
+                   'math.abs': 'abs(%s)',
+                   'cmath.abs': 'abs(%s)',
                    '':'(%s)'
                    }
             
@@ -671,7 +655,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if isinstance(name, aloha_lib.ExtVariable):
             # external parameter nothing to do
             self.has_model_parameter = True
-            return name
+            return '%s%s' % (aloha.aloha_prefix, name)
         
         if '_' in name:
             vtype = name.type
@@ -702,10 +686,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     if number.imag == 1:
                         out = 'CI'
                     elif number.imag == -1:
-			# HSS, 23/11/2012
-			# out = '-CI'
-                        out = '(-CI)'
-			# HSS
+			            out = '-CI'
                     else: 
                         out = '%s * CI' % self.change_number_format(number.imag)
             else:
@@ -744,20 +725,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         keys.sort(sort_fct)
         for name in keys:
             fct, objs = self.routine.fct[name]
-	    # HSS , 5/11/2012
-	    #if fct=='complexconjugate':
-	    #	try:
-	    #	    obj = eval(objs[0])
-	    #	except:
-	    #	    format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
-	    #	else:
-	    #	    if isinstance(obj,complex):
-	    #		format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
-	    #	    else:
-	    #		format = ' %s = %s;\n' % (name, '%s')
-	    #else:
-	    #	format = ' %s = %s\n' % (name, self.get_fct_format(fct))
-            # HSS
+
 	    format = ' %s = %s\n' % (name, self.get_fct_format(fct))
 	    try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])
@@ -776,10 +744,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         if not self.offshell:
             if coup_name == 'COUP':
-		# HSS, 23/11/2012
-		# *%s->*(%s)
-                out.write(' vertex = COUP*(%s)\n' % self.write_obj(numerator.get_rep([0])))
-		# HSS
+                out.write(' vertex = COUP*%s\n' % self.write_obj(numerator.get_rep([0])))
             else:
                 out.write(' vertex = %s\n' % self.write_obj(numerator.get_rep([0])))
         else:
@@ -813,12 +778,9 @@ class ALOHAWriterForFortran(WriteALOHA):
                     coeff = ''
             to_order = {}  
             for ind in numerator.listindices():
-		# HSS,23/11/2012
-		# %s%s-> %s(%s)
                 to_order[self.pass_to_HELAS(ind)] = \
-                        '    %s(%d)= %s(%s)\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
+                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
                         coeff, self.write_obj(numerator.get_rep(ind)))
-		# HSS
             key = to_order.keys()
             key.sort()
             for i in key:
@@ -984,12 +946,9 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                     else:
                         data = 0
                     if data and coup:
-			# HSS, 23/11/2012
-			# coup*%s -> coup*(%s)
-                        out.write('    COEFF(%s,%s,%s)= coup*(%s)\n' % ( 
+                        out.write('    COEFF(%s,%s,%s)= coup*%s\n' % ( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
                                     J, K+1, self.write_obj(data)))
-			# HSS
                     else:
                         out.write('    COEFF(%s,%s,%s)= %s\n' % ( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
@@ -1300,10 +1259,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                     if number.imag == 1:
                         out = 'cI'
                     elif number.imag == -1:
-			# HSS,23/11/2012
-                        # out = '-cI'
-			out = '(-cI)'
-			# HSS
+                        out = '-cI'
                     else: 
                         out = '%s * cI' % self.change_number_format(number.imag)
             else:
@@ -1351,10 +1307,9 @@ class ALOHAWriterForCPP(WriteALOHA):
                    'im': 'imag(%s)',
                    'cmath.sqrt':'sqrt(%s)', 
                    'sqrt': 'sqrt(%s)',
-		   # HSS, 5/11/2012
                    'complexconjugate': 'conj(dcmplx(%s))',
-		   # HSS
-                   '/' : '{0}/%s'.format(one) 
+                   '/' : '{0}/%s'.format(one),
+                   'abs': 'abs(%s)'
                    }
             
         if fct in self.fct_format:
@@ -1545,21 +1500,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                 self.declaration.add(('complex', name))
                 
         for name, (fct, objs) in self.routine.fct.items():
-	    # HSS, 5/11/2012
-	    #if fct=='complexconjugate':
-	    #	try:
-	    #	    obj = eval(objs[0])
-	    #	except:
-	    #	    format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
-	    #	else:
-	    #	    if isinstance(obj,complex):
-	    #		format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
-	    #	    else:
-	    #		format = ' %s = %s;\n' % (name, '%s')
-	    #else:
-            #	format = ' %s = %s;\n' % (name, self.get_fct_format(fct))	
-            # HSS
-	    format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
+            format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
             
         
@@ -1571,10 +1512,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             coup_name = '%s' % self.change_number_format(1)
         if not self.offshell:
             if coup_name == 'COUP':
-		# HSS, 23/11/2012
-		# COUP*%s -> COUP*(%s)
-                out.write(' vertex = COUP*(%s);\n' % self.write_obj(numerator.get_rep([0])))
-		# HSS
+                out.write(' vertex = COUP*%s;\n' % self.write_obj(numerator.get_rep([0])))
             else:
                 out.write(' vertex = %s;\n' % self.write_obj(numerator.get_rep([0])))
         else:
@@ -1605,12 +1543,9 @@ class ALOHAWriterForCPP(WriteALOHA):
                 coeff = 'COUP'
                 
             for ind in numerator.listindices():
-		# HSS , 23/11/2012
-		# *%s -> *(%s)
-                out.write('    %s[%d]= %s*(%s);\n' % (self.outname, 
+                out.write('    %s[%d]= %s*%s;\n' % (self.outname, 
                                         self.pass_to_HELAS(ind), coeff,
                                         self.write_obj(numerator.get_rep(ind))))
-		# HSS
         return out.getvalue()
         
     remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
@@ -1908,10 +1843,7 @@ class ALOHAWriterForPython(WriteALOHA):
 
         if not self.offshell:
             if coup_name == 'COUP':
-		# HSS,23/11/2012
-		# *%s->*(%s)
-                out.write('    vertex = COUP*(%s)\n' % self.write_obj(numerator.get_rep([0])))
-		# HSS
+                out.write('    vertex = COUP*%s\n' % self.write_obj(numerator.get_rep([0])))
             else:
                 out.write('    vertex = %s\n' % self.write_obj(numerator.get_rep([0])))
         else:
@@ -1937,12 +1869,9 @@ class ALOHAWriterForPython(WriteALOHA):
                 coeff = 'COUP'
                 
             for ind in numerator.listindices():
-		# HSS,23/11/2012
-		# %s*%s -> %s*(%s)
-                out.write('    %s[%d]= %s*(%s)\n' % (self.outname, 
+                out.write('    %s[%d]= %s*%s\n' % (self.outname, 
                                         self.pass_to_HELAS(ind), coeff, 
                                         self.write_obj(numerator.get_rep(ind))))
-		# HSS
         return out.getvalue()
     
     def get_foot_txt(self):
@@ -2184,34 +2113,34 @@ class WriterFactory(object):
 
 
     
-unknow_fct_template = """
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-       double complex %(fct_name)s(%(args)s)
-       implicit none
-c      Include Model parameter / coupling
-       include \"../MODEL/input.inc\"
-       include \"../MODEL/coupl.inc\"
-c      Defintion of the arguments       
-%(definitions)s
-       
-c      enter HERE the code corresponding to your function.
-c      The output value should be put to the %(fct_name)s variable.
-
-
-       return
-       end
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-
-"""
-        
-def write_template_fct(fct_name, nb_args, output_dir):
-        """create a template for function not recognized by ALOHA"""
-
-        dico = {'fct_name' : fct_name,
-                'args': ','.join(['S%i' %(i+1) for i in range(nb_args)]),
-                'definitions': '\n'.join(['       double complex S%i' %(i+1) for i in range(nb_args)])}
-
-        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
-        ff.write(unknow_fct_template % dico)
-        ff.close()
+#unknow_fct_template = """
+#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+#       double complex %(fct_name)s(%(args)s)
+#       implicit none
+#c      Include Model parameter / coupling
+#       include \"../MODEL/input.inc\"
+#       include \"../MODEL/coupl.inc\"
+#c      Defintion of the arguments       
+#%(definitions)s
+#       
+#c      enter HERE the code corresponding to your function.
+#c      The output value should be put to the %(fct_name)s variable.
+#
+#
+#       return
+#       end
+#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+#
+#"""
+#        
+#def write_template_fct(fct_name, nb_args, output_dir):
+#        """create a template for function not recognized by ALOHA"""
+#
+#        dico = {'fct_name' : fct_name,
+#                'args': ','.join(['S%i' %(i+1) for i in range(nb_args)]),
+#                'definitions': '\n'.join(['       double complex S%i' %(i+1) for i in range(nb_args)])}
+#
+#        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
+#        ff.write(unknow_fct_template % dico)
+#        ff.close()
 
