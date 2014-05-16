@@ -9,10 +9,10 @@
       common /c_i_orig/i_orig
       integer ioutput
       parameter(ioutput=99)
-      integer nevents_file(80)
+      integer nevents_file(80),proc_id(80)
       double precision xsecfrac_all(80)
       common /to_xsecfrac/xsecfrac_all
-      common /to_nevents_file/nevents_file
+      common /to_nevents_file/nevents_file,proc_id
 
       write (*,*) "Overwrite the event weights?"
       write (*,*) "give '0' to keep original weights;"
@@ -59,6 +59,23 @@
          nevents=nevents+ievents
          numoffiles=numoffiles+1
          xsecfrac_all(numoffiles) = xsecfrac
+c store here the proc_id as computed from directory name ("@XX" in
+c process generation)
+         if (eventfile(1:1).eq.'P') then
+            if (eventfile(3:3).eq.'_') then
+               read(eventfile(2:2),'(i1)') proc_id(numoffiles)
+            elseif(eventfile(4:4).eq.'_') then
+               read(eventfile(2:3),'(i2)') proc_id(numoffiles)
+            elseif(eventfile(5:5).eq.'_') then 
+               read(eventfile(2:4),'(i3)') proc_id(numoffiles)
+            else
+               write (*,*) 'ERROR in collect_events: '/
+     $              /'cannot find process ID'
+               stop
+            endif
+         else
+            proc_id(numoffiles)=-1
+         endif
 c store here the number of events per file         
          nevents_file(numoffiles) = ievents
          xtotal=xtotal+absxsec
@@ -188,10 +205,16 @@ c
       external fk88random
       logical debug
       parameter (debug=.false.)
-      integer nevents_file(80)
-      common /to_nevents_file/nevents_file
+      integer nevents_file(80),proc_id(80)
+      common /to_nevents_file/nevents_file,proc_id
       double precision xsecfrac_all(80)
       common /to_xsecfrac/xsecfrac_all
+      double precision XSECUP2(100),XERRUP2(100),XMAXUP2(100)
+      integer LPRUP2(100)
+      common /lhef_init/XSECUP2,XERRUP2,XMAXUP2,LPRUP2
+      double precision xsecup_l(100),xerrup_l(100)
+      integer lprup_l(100),nproc_l
+      logical found_proc
       include 'reweight_all.inc'
 c
       if(debug) then
@@ -200,8 +223,10 @@ c
          return
       endif
       maxevt=0
-      xsecup=0.d0
-      xerrup=0.d0
+      do i=1,100
+         xsecup_l(i)=0.d0
+         xerrup_l(i)=0.d0
+      enddo
       call read_lhef_header(junit(ione),maxevt,MonteCarlo)
       if (MonteCarlo .ne. '') MonteCarlo0 = MonteCarlo
       call read_lhef_init(junit(ione),
@@ -223,8 +248,23 @@ c      header. Check consistency in this case
       endif
       maxevt=mx_of_evt(1)
 
-      xerrup=xerrup**2 * xsecfrac_all(ione)
-      xsecup = xsecup * xsecfrac_all(ione)
+      nproc_l=NPRUP
+      do i=1,nproc_l
+         xerrup_l(i)=xerrup2(i)**2 * xsecfrac_all(ione)
+         xsecup_l(i)=xsecup2(i) * xsecfrac_all(ione)
+         if (proc_id(ione).ne.-1) then
+            lprup_l(i)=proc_id(ione)
+            if (nproc_l.gt.1) then
+               write (*,*) 'ERROR: inconsistent nproc in collect_event'
+               write (*,*) nproc_l,NPRUP
+               write (*,*) proc_id
+               stop
+            endif
+         else
+            lprup_l(i)=lprup2(i)
+         endif
+      enddo
+
       do ii=2,numoffiles
         call read_lhef_header(junit(ii),nevents,MonteCarlo1)
         if (nevents .gt. 0) then
@@ -249,8 +289,26 @@ c      header. Check consistency in this case
         call read_lhef_init(junit(ii),
      #    IDBMUP1,EBMUP1,PDFGUP1,PDFSUP1,IDWTUP1,NPRUP1,
      #    XSECUP1,XERRUP1,XMAXUP1,LPRUP1)
-        xsecup=xsecup+xsecup1 * xsecfrac_all(ii)
-        xerrup=xerrup+xerrup1**2 * xsecfrac_all(ii)
+        if(proc_id(ii).ne.-1) then
+           lprup2(1)=proc_id(ii)
+        endif
+        do i=1,NPRUP1
+           found_proc=.false.
+           do j=1,nproc_l
+              if (lprup_l(j).eq.lprup2(i)) then
+                 xerrup_l(j)=xerrup_l(j)+xerrup2(i)**2 *xsecfrac_all(ii)
+                 xsecup_l(j)=xsecup_l(j)+xsecup2(i) *xsecfrac_all(ii)
+                 found_proc=.true.
+                 exit
+              endif
+           enddo
+           if (.not.found_proc) then
+              nproc_l=nproc_l+1
+              xerrup_l(nproc_l)=xerrup2(i)**2 *xsecfrac_all(ii)
+              xsecup_l(nproc_l)=xsecup2(i) *xsecfrac_all(ii)
+              lprup_l(nproc_l)=lprup2(i)
+           endif
+        enddo
         if(
      #     IDBMUP(1).ne.IDBMUP1(1) .or.
      #     IDBMUP(2).ne.IDBMUP1(2) .or.
@@ -259,8 +317,7 @@ c      header. Check consistency in this case
      #     PDFGUP(1).ne.PDFGUP1(1) .or.
      #     PDFGUP(2).ne.PDFGUP1(2) .or.
      #     PDFSUP(1).ne.PDFSUP1(1) .or.
-     #     PDFSUP(2).ne.PDFSUP1(2) .or.
-     #     LPRUP .ne.LPRUP1 )then
+     #     PDFSUP(2).ne.PDFSUP1(2))then
           write(*,*)'Error in collect_all_evfiles'
           write(*,*)'Files ',ione,' and ',ii,' are inconsistent'
           write(*,*)'Run parameters are not the same'
@@ -273,7 +330,19 @@ c      header. Check consistency in this case
         write(*,*)maxevt,imaxevt
         stop
       endif
-      xerrup=sqrt(xerrup)
+      do i=1,nproc_l
+         xerrup_l(i)=sqrt(xerrup_l(i))
+      enddo
+      XSECUP=xsecup_l(ione)
+      XERRUP=xerrup_l(ione)
+      LPRUP=lprup_l(ione)
+      do i=1,nproc_l
+         XSECUP2(i)=xsecup_l(i)
+         xerrup2(i)=xerrup_l(i)
+         lprup2(i)=lprup_l(i)
+         xmaxup2(i)=abs(evwgt)
+      enddo
+      NPRUP=nproc_l
       path="../Cards/"
       call write_lhef_header_banner(ioutput,maxevt,MonteCarlo0,path)
       call write_lhef_init(ioutput,
@@ -286,6 +355,7 @@ c      header. Check consistency in this case
         call read_lhef_event(iunit,
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+        if (proc_id(i0).ne.-1) IDPRUP=proc_id(i0)
 c Sanity check on weights read and computed a posteriori (check only for
 c event samples that are relatively large, otherwise it could be a
 c statistical fluctuation because the number of events per channel is

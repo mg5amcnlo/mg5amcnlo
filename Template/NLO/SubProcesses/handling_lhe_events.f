@@ -362,8 +362,11 @@ c if the file is a partial file the header is non-standard
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
       implicit none
-      integer ifile,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
+      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      double precision XSECUP2(100),XERRUP2(100),XMAXUP2(100)
+      integer LPRUP2(100)
+      common /lhef_init/XSECUP2,XERRUP2,XMAXUP2,LPRUP2
 c
       write(ifile,'(a)')
      # '  <init>'
@@ -371,6 +374,11 @@ c
      #                PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #                IDWTUP,NPRUP
       write(ifile,502)XSECUP,XERRUP,XMAXUP,LPRUP
+      if (NPRUP.gt.1) then
+         do i=2,NPRUP
+            write(ifile,502)XSECUP2(i),XERRUP2(i),XMAXUP2(i),LPRUP2(i)
+         enddo
+      endif
       write(ifile,'(a)')
      # '  </init>'
  501  format(2(1x,i6),2(1x,e14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
@@ -384,8 +392,11 @@ c
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
       implicit none
-      integer ifile,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
+      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      double precision XSECUP2(100),XERRUP2(100),XMAXUP2(100)
+      integer LPRUP2(100)
+      common /lhef_init/XSECUP2,XERRUP2,XMAXUP2,LPRUP2
       character*80 string
 c
       read(ifile,'(a)')string
@@ -393,6 +404,15 @@ c
      #                PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #                IDWTUP,NPRUP
       read(ifile,*)XSECUP,XERRUP,XMAXUP,LPRUP
+      XSECUP2(1)=XSECUP
+      XERRUP2(1)=XERRUP
+      XMAXUP2(1)=XMAXUP
+      LPRUP2(1)=LPRUP
+      if (NPRUP.gt.1) then
+         do i=2,NPRUP
+            read(ifile,*)XSECUP2(i),XERRUP2(i),XMAXUP2(i),LPRUP2(i)
+         enddo
+      endif
       read(ifile,'(a)')string
 c
       return
