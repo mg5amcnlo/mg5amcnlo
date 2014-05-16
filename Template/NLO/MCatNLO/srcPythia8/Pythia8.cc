@@ -22,7 +22,7 @@ extern "C" {
 
 extern "C" { 
   void pyabeg_(int&,char(*)[15]);
-  void pyaend_(int&);
+  void pyaend_(double&);
   void pyanal_(int&,double(*));
 }
 
@@ -80,12 +80,19 @@ int main() {
   HepMC::IO_BaseClass *_hepevtio;
   HepMC::Pythia8ToHepMC ToHepMC;
   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
+  double nSelected;
+  double norm;
 
   for (int iEvent = 0; ; ++iEvent) {
     if (!pythia.next()) {
       if (++iAbort < nAbort) continue;
       break;
     }
+    // the number of events read by Pythia so far
+    nSelected=double(pythia.info.nSelected());
+    // normalisation factor for the default analyses defined in pyanal_
+    norm=iEventtot_norm*iEvent/nSelected;
+
     if (iEvent >= iEventshower) break;
     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
       pythia.LHAeventList();
@@ -110,11 +117,11 @@ int main() {
     pyanal_(cwgtinfo_nn,cwgt_ww);
 
     if (iEvent % nstep == 0 && iEvent >= 100){
-      pyaend_(iEventtot_norm);
+      pyaend_(norm);
     }
     delete hepmcevt;
   }
-  pyaend_(iEventtot_norm);
+  pyaend_(norm);
 
   pythia.stat();
 
