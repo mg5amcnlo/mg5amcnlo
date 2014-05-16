@@ -1327,8 +1327,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
  
                 if self.get('is_loop'):
                     # fix a bug for the g g > go go g [virt=QCD]
-                    # when there is a wf dropped
-                    # but it is the mothers of the remaining wfs in diagram_wavefunctions
+                    # when there is a wf which is replaced, we need to propagate
+                    # the change in all wavefunction of that diagrams which could
+                    # have this replaced wavefunction in their mothers. This
+                    # plays the role of the 'number_to_wavefunction' dictionary
+                    # used for tree level.
                     for wf in diagram_wavefunctions:
                         for i,mother_wf in enumerate(wf.get('mothers')):
                             if mother_wf.get('number')==new_wf_number:
@@ -2656,6 +2659,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # no ghost at tree level
             ghost_factor = 1
 
+        fermion_loop_factor = 1
+
         # Now put together the fermion line merging in this amplitude
         if self.get('type')=='loop' and len(fermion_numbers)>0:
             # Remember that the amplitude closing the loop is always a 2-point
@@ -2686,12 +2691,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
             iferm_to_replace = (fermion_numbers.index([lcut_wf2_number,[]])+1)%2
         
             if fermion_numbers[iferm_to_replace][0]==lcut_wf1_number:
-                # We have a closed loop fermion flow here, so we just append
-                # [lwf2_number,lwf1_number] or [lwf2_number,lwf1_number]
-                # depending on which one is incoming or outgoing
-                fermion_number_list.extend([fermion_numbers[0][0],
-                                                         fermion_numbers[1][0]])
+                # We have a closed loop fermion flow here, so we must simply 
+                # add a minus sign (irrespectively of whether the closed loop 
+                # fermion flow goes clockwise or counter-clockwise) and not
+                # consider the fermion loop line in the fermion connection list.
                 fermion_number_list.extend(fermion_numbers[iferm_to_replace][1])
+                fermion_loop_factor = -1
             else:
                 # The fermion flow escape the loop in this case.
                 fermion_number_list = \
@@ -2708,7 +2713,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 fermion_number_list.append(fermion_numbers[iferm+1][0])
                 fermion_number_list.extend(fermion_numbers[iferm][1])
                 fermion_number_list.extend(fermion_numbers[iferm+1][1])
-
+                
+                
         # Bosons are treated in the same way for a bosonic loop than for tree
         # level kind of amplitudes.
         for boson in bosons:
@@ -2733,8 +2739,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         #fermion_number_list = fermion_number_list2
 
         fermion_factor = HelasAmplitude.sign_flips_to_order(fermion_number_list)
-        
-        self['fermionfactor'] = fermion_factor*ghost_factor
+
+        self['fermionfactor'] = fermion_factor*ghost_factor*fermion_loop_factor
 #        print "foooor %i ="%HelasAmplitude.counter, fermion_factor, self.get('type')
 
     @staticmethod
@@ -4330,7 +4336,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def calculate_fermionfactors(self):
         """Generate the fermion factors for all diagrams in the matrix element
         """
-
         for diagram in self.get('diagrams'):
             for amplitude in diagram.get('amplitudes'):
                 amplitude.get('fermionfactor')
