@@ -2520,10 +2520,10 @@ class decay_all_events(object):
         commandline=''
         for proc in processes:
             if '[' not in proc:
-                commandline+="add process %s ;" % proc
+                commandline+="add process %s  --no_warning=duplicate;" % proc
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s;" % (process)
+                commandline+="add process %s  --no_warning=duplicate;" % (process)
                 if not order:
                     continue
                 elif not order.startswith('virt='):
@@ -2547,9 +2547,9 @@ class decay_all_events(object):
                     result = re.split('([/$@]|\w+=\w+)', process, 1)                    
                     if len(result) ==3:
                         process, split, rest = result
-                        commandline+="add process %s pert_%s %s%s ;" % (process, order ,split, rest)
+                        commandline+="add process %s pert_%s %s%s  --no_warning=duplicate;" % (process, order ,split, rest)
                     else:
-                        commandline +='add process %s pert_%s;' % (process,order)                                       
+                        commandline +='add process %s pert_%s --no_warning=duplicate;' % (process,order)                                       
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -2609,15 +2609,15 @@ class decay_all_events(object):
             if '[' not in proc:
                 nb_comma = proc.count(',')
                 if nb_comma == 0:
-                    commandline+="add process %s, %s %s;" % (proc, decay_text, proc_nb)
+                    commandline+="add process %s, %s %s  --no_warning=duplicate;" % (proc, decay_text, proc_nb)
                 elif nb_comma == 1:
                     before, after = proc.split(',')
-                    commandline+="add process %s, %s, (%s, %s) %s;" % (before, decay_text, after, decay_text, proc_nb)
+                    commandline+="add process %s, %s, (%s, %s) %s  --no_warning=duplicate;" % (before, decay_text, after, decay_text, proc_nb)
                 else:
                     raise Exception, 'too much decay at MG level. this can not be done for the moment)'
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s, %s %s;" % (process, decay_text, proc_nb)
+                commandline+="add process %s, %s %s  --no_warning=duplicate;" % (process, decay_text, proc_nb)
                 if not order:
                     continue
                 elif not order.startswith('virt='):
@@ -2641,10 +2641,10 @@ class decay_all_events(object):
                     result = re.split('([/$@]|\w+=\w+)', process, 1)                    
                     if len(result) ==3:
                         process, split, rest = result
-                        commandline+="add process %s pert_%s %s%s , %s %s ;" % \
+                        commandline+="add process %s pert_%s %s%s , %s %s --no_warning=duplicate;" % \
                               (process, order, split, rest, decay_text, proc_nb)
                     else:
-                        commandline +='add process %s pert_%s, %s; %s' % \
+                        commandline +='add process %s pert_%s, %s %s  --no_warning=duplicate;' % \
                                            (process, order, decay_text, proc_nb)
                     
                         
