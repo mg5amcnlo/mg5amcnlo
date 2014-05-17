@@ -255,6 +255,7 @@ c
         if(index(string,'parton_shower').ne.0)then
            ii=iistr(string)
            MonteCarlo=string(ii:ii+10)
+           call case_trap4(10,MonteCarlo)
         endif
         if(index(string,'event_norm').ne.0)then
            ii=iistr(string)
@@ -263,6 +264,7 @@ c
       enddo
 c Works only if the name of the MC is the last line of the comments
       MonteCarlo=string0(1:10)
+      call case_trap4(10,MonteCarlo)
 c Here we are at the end of (user-defined) comments. Now go to end
 c of headers
       dowhile(index(string,'</header>').eq.0)
@@ -304,6 +306,7 @@ c
         if(index(string,'parton_shower').ne.0)then
            ii=iistr(string)
            MonteCarlo=string(ii:ii+10)
+           call case_trap4(10,MonteCarlo)
         endif
         if(index(string,'event_norm').ne.0)then
            ii=iistr(string)
@@ -345,6 +348,7 @@ c
       enddo
 c Works only if the name of the MC is the last line of the comments
       MonteCarlo=string0(1:10)
+      call case_trap4(10,MonteCarlo)
 c Here we are at the end of (user-defined) comments. Now go to end
 c of headers
       dowhile(index(string,'</header>').eq.0)
@@ -1180,6 +1184,7 @@ c
       character*10 MonteCarlo,MC
       common/cMonteCarloType/MonteCarlo
       MonteCarlo=MC
+      call case_trap4(10,MonteCarlo)
       call fill_MC_mshell()
       do i=-16,21
          masses(i)=mcmass(i)
@@ -1227,6 +1232,32 @@ c
          k=ichar(name(i:i))
          if(k.ge.65.and.k.le.90) then  !upper case A-Z
             k=ichar(name(i:i))+32   
+            name(i:i)=char(k)        
+         endif
+      enddo
+
+      return
+      end
+
+
+      subroutine case_trap4(ilength,name)
+c**********************************************************    
+c change the string to uppercase if the input is not
+c**********************************************************
+      implicit none
+c
+c     ARGUMENT
+c      
+      character*(*) name
+c
+c     LOCAL
+c
+      integer i,k,ilength
+
+      do i=1,ilength
+         k=ichar(name(i:i))
+         if(k.ge.97.and.k.le.122) then  !lower case A-Z
+            k=ichar(name(i:i))-32   
             name(i:i)=char(k)        
          endif
       enddo
