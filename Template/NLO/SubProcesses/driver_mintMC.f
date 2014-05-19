@@ -837,6 +837,8 @@ c PDG codes of particles
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow)
       common /c_leshouche_inc/idup,mothup,icolup
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          if (ickkw.eq.4) then
@@ -1134,6 +1136,10 @@ c THIS CAN BE OPTIMIZED
 c Fill the importance sampling array
             call fill_MC_integer(2,ihel,(abs(f1(1))+abs(f1(2)))*volh)
          endif
+c Set calculated Born to zero to prevent numerical inaccuracies: not
+c always exactly the same momenta in computation of Born when computed
+c for different nFKSprocess.
+         if(sum.eq.0) calculatedBorn=.false.
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum or a combination
