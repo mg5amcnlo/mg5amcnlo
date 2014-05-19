@@ -234,7 +234,7 @@ c Write here the reweight information if need be
 
       subroutine read_lhef_header(ifile,nevents,MonteCarlo)
       implicit none 
-      integer ifile,nevents,i,ii,iistr
+      integer ifile,nevents,i,ii,ii2,iistr
       character*10 MonteCarlo
       character*80 string,string0
       character*3 event_norm
@@ -251,7 +251,8 @@ c
      #    read(string,*)nevents,string0
         if(index(string,'parton_shower').ne.0)then
            ii=iistr(string)
-           MonteCarlo=string(ii:ii+10)
+           ii2=min(index(string,'=')-1,ii+9)
+           MonteCarlo=string(ii:ii2)
         endif
         if(index(string,'event_norm').ne.0)then
            ii=iistr(string)
@@ -278,7 +279,7 @@ c Avoid overloading read_lhef_header, meant to be used in utilities
       subroutine read_lhef_header_full(ifile,nevents,itempsc,itempPDF,
      #                                 MonteCarlo)
       implicit none 
-      integer ifile,nevents,i,ii,iistr,ipart,itempsc,itempPDF
+      integer ifile,nevents,i,ii,ii2,iistr,ipart,itempsc,itempPDF
       character*10 MonteCarlo
       character*80 string,string0
       character*3 event_norm
@@ -300,7 +301,8 @@ c
      #    read(string,*)nevents,string0
         if(index(string,'parton_shower').ne.0)then
            ii=iistr(string)
-           MonteCarlo=string(ii:ii+10)
+           ii2=min(index(string,'=')-1,ii+9)
+           MonteCarlo=string(ii:ii2)
         endif
         if(index(string,'event_norm').ne.0)then
            ii=iistr(string)
