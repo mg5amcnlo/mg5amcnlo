@@ -83,6 +83,9 @@ int main() {
   double nSelected;
   double norm;
 
+  // Cross section
+  double sigmaTotal  = 0.;
+
   for (int iEvent = 0; ; ++iEvent) {
     if (!pythia.next()) {
       if (++iAbort < nAbort) continue;
@@ -93,13 +96,23 @@ int main() {
     // normalisation factor for the default analyses defined in pyanal_
     norm=iEventtot_norm*iEvent/nSelected;
 
-    if (iEvent >= iEventshower) break;
+    if (nSelected >= iEventshower) break;
     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
       pythia.LHAeventList();
       pythia.info.list();
       pythia.process.list();
       pythia.event.list();
       ++iPrintLHA;
+    }
+
+    double evtweight = pythia.info.weight();
+    double normhepmc;
+    // Add the weight of the current event to the cross section.
+    normhepmc = 1. / (1e9*iEventshower);
+    if (evt_norm == "average") {
+      sigmaTotal  += evtweight*normhepmc;
+    } else {
+      sigmaTotal  += evtweight*normhepmc*iEventtot;
     }
 
     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
@@ -124,7 +137,15 @@ int main() {
   pyaend_(norm);
 
   pythia.stat();
-
+  if (isFxFx){
+    std::cout << " \n";
+    std::cout << "*********************************************************************** \n";
+    std::cout << "*********************************************************************** \n";
+    std::cout << "Cross section, including FxFx merging is: "
+	      << sigmaTotal*1e9 << "\n";
+    std::cout << "*********************************************************************** \n";
+    std::cout << "*********************************************************************** \n";
+  }
   delete matching;
 
   return 0;
