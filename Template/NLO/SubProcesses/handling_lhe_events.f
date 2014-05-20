@@ -23,11 +23,21 @@ c
       implicit none 
       integer ifile,nevents
       character*10 MonteCarlo
+c Scales
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
 c
       write(ifile,'(a)')
      #     '<LesHouchesEvents version="1.0">'
       write(ifile,'(a)')
      #     '  <!--'
+      write(ifile,'(a)')'  <scalesfunctionalform>'
+      write(ifile,'(a)')muR_id_str(1:len_trim(muR_id_str))
+      write(ifile,'(a)')muF1_id_str(1:len_trim(muF1_id_str))
+      write(ifile,'(a)')muF2_id_str(1:len_trim(muF2_id_str))
+      write(ifile,'(a)')QES_id_str(1:len_trim(QES_id_str))
+      write(ifile,'(a)')'  </scalesfunctionalform>'
       write(ifile,'(a)')
      #     MonteCarlo
       write(ifile,'(a)')
@@ -47,6 +57,10 @@ c
       integer ifile,nevents,iseed,i,pdf_set_min,pdf_set_max,idwgt
       double precision mcmass(-16:21),rw_Rscale_down,rw_Rscale_up
      $     ,rw_Fscale_down,rw_Fscale_up
+c Scales
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
       character*10 MonteCarlo
       character*100 path
       character*72 buffer,buffer_lc,buffer2
@@ -154,6 +168,14 @@ c Update the number of events
       endif
       if (.not.rwgt_skip_pdf) numPDFpairs=(pdf_set_max-pdf_set_min+1)/2
       write(ifile,'(a)') '  </MGRunCard>'
+c Functional form of the scales
+      write(ifile,'(a)') '  <scalesfunctionalform>'
+      write(ifile,'(a)')muR_id_str(1:len_trim(muR_id_str))
+      write(ifile,'(a)')muF1_id_str(1:len_trim(muF1_id_str))
+      write(ifile,'(a)')muF2_id_str(1:len_trim(muF2_id_str))
+      write(ifile,'(a)')QES_id_str(1:len_trim(QES_id_str))
+      write(ifile,'(a)') '  </scalesfunctionalform>'
+c MonteCarlo Masses
       write(ifile,'(a)') '  <MonteCarloMasses>'
       call fill_MC_mshell_wrap(MonteCarlo,mcmass)
       do i=1,5
@@ -239,6 +261,9 @@ c Write here the reweight information if need be
       character*80 string,string0
       character*3 event_norm
       common/cevtnorm/event_norm
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
       nevents = -1
       MonteCarlo = ''
 c
@@ -247,8 +272,7 @@ c
         string0=string
         if (index(string,'</header>').ne.0) return
         read(ifile,'(a)')string
-        if(index(string,'= nevents').ne.0)
-     #    read(string,*)nevents,string0
+        if(index(string,'= nevents').ne.0) read(string,*)nevents,string0
         if(index(string,'parton_shower').ne.0)then
            ii=iistr(string)
            MonteCarlo=string(ii:ii+10)
@@ -256,6 +280,12 @@ c
         if(index(string,'event_norm').ne.0)then
            ii=iistr(string)
            event_norm=string(ii:ii+3)
+        endif
+        if(index(string,'<scalesfunctionalform>').ne.0) then
+           read(ifile,'(a)') muR_id_str
+           read(ifile,'(a)') muF1_id_str
+           read(ifile,'(a)') muF2_id_str
+           read(ifile,'(a)') QES_id_str
         endif
       enddo
 c Works only if the name of the MC is the last line of the comments
@@ -267,7 +297,7 @@ c of headers
         read(ifile,'(a)')string
       enddo
 c if the file is a partial file the header is non-standard   
-      if (MonteCarlo .ne. '') read(string0,250) nevents
+      if (MonteCarlo .ne. '')read(string0,250) nevents
  250  format(1x,i8)
       return
       end
@@ -285,6 +315,10 @@ c Avoid overloading read_lhef_header, meant to be used in utilities
       common/cevtnorm/event_norm
       double precision temp,remcmass(-16:21)
       common/cremcmass/remcmass
+c Scales
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
       ipart=-1000000
       nevents = -1
       MonteCarlo = ''
@@ -338,6 +372,12 @@ c
             itempPDF=itempPDF+1
           enddo
           itempPDF=itempPDF-1
+        endif
+        if(index(string,'<scalesfunctionalform>').ne.0) then
+           read(ifile,'(a)') muR_id_str
+           read(ifile,'(a)') muF1_id_str
+           read(ifile,'(a)') muF2_id_str
+           read(ifile,'(a)') QES_id_str
         endif
       enddo
 c Works only if the name of the MC is the last line of the comments
