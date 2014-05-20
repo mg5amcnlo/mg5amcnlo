@@ -725,34 +725,8 @@ class Amplitude(base_objects.PhysicsObject):
         # in this way. We shall do this only if the diagrams are not asked to
         # be returned, as it is the case for NLO because it this case the
         # interference are not necessarily among the diagrams generated here only.
-        if not returndiag:   
-            # Start by checking the positive squared order constraints
-            for order, value in process.get('squared_orders').items():
-                if value >= 0:
-                    # First make sure there are some diagrams left
-                    if len(res)==0: break
-                    # Assuming born amplitude squared (see comment above)
-                    min_amp_order=min(diag.get_order(order) for diag in res)
-                    res = base_objects.DiagramList(filter(lambda diag: \
-                                diag.get_order(order)<=value-min_amp_order,res))
-            # Now check any negative order constraint
-            try:
-                neg_order=[elem for elem in process.get('orders').items()+\
-                          process.get('squared_orders').items() if elem[1]<0][0]
-                # Make sure there still are some diagrams
-                if len(res)==0:
-                    raise IndexError
-                min_amp_order=min(diag.get_order(neg_order[0]) for diag in res)
-                # When not including loop corrections, restricting a coupling
-                # order with a negative value at the amplitude level or at the
-                # squared order level does not make a difference.
-                # The expansion is in terms of alpha_x, not g_x, hence the
-                # factor 2.
-                res = base_objects.DiagramList(filter(lambda diag: \
-                                  diag.get_order(neg_order[0])<= min_amp_order+\
-                                                       2*(-neg_order[1]-1),res))           
-            except IndexError:
-                pass
+        if not returndiag:
+            res = self.apply_squared_order_constraints(res)
 
         # Replace final id=0 vertex if necessary
         if not process.get('is_decay_chain'):
@@ -797,6 +771,78 @@ class Amplitude(base_objects.PhysicsObject):
            return not failed_crossing
         else:
            return not failed_crossing, res
+
+    def apply_squared_order_constraints(self, diag_list):
+        """Applies the user specified squared order constraints on the diagram
+        list in argument."""
+
+        res = copy.copy(diag_list)
+
+        # A helper function that returns if two diagrams pass the squared
+        # order constraints when multiplied together:
+        def pass_sq_order_constraints(diag1, diag2):
+            for order, value in self['process'].get('squared_orders').items():
+                if value<0:
+                    continue
+                combined_order = diag1.get_order(order) + \
+                                                      diag2.get_order(order)
+                if ( self['process']['sqorders_types'][order]=='==' \
+                   and combined_order != value ) or \
+                   ( self['process']['sqorders_types'][order] in ['=', '<='] \
+                   and combined_order > value):
+                    return False
+            return True                    
+
+        # Iterate the filtering since the applying the constraint on one
+        # type of coupling order can impact what the filtering on a previous
+        # one (relevant for the '==' type of constraint).
+        while True:
+            new_res=base_objects.DiagramList([])
+            for diag_tested in res:
+                for diag in res:
+                    if pass_sq_order_constraints(diag_tested, diag):
+                        break;
+                else:
+                    continue
+                new_res.append(diag_tested)
+            # Exit condition
+            if len(res)==len(new_res):
+                break
+
+            # Actualizing the list of diagram for the next iteration
+            res = new_res
+            
+        # Now check any negative order constraint
+        try:
+            neg_order=[elem for elem in self['process'].get('orders').items()+\
+                  self['process'].get('squared_orders').items() if elem[1]<0][0]
+            # Make sure there still are some diagrams
+            if len(res)==0:
+                raise IndexError
+            min_amp_order=min(diag.get_order(neg_order[0]) for diag in res)
+            target_order=min_amp_order+2*(-neg_order[1]-1)
+            # When not including loop corrections, restricting a coupling
+            # order with a negative value at the amplitude level or at the
+            # squared order level does not make a difference.
+            # The expansion is in terms of alpha_x, not g_x, hence the
+            # factor 2.
+            if self['process']['sqorders_types'][neg_order[0]]=='==':
+                res = base_objects.DiagramList(filter(lambda diag: \
+                  (target_order-diag.get_order(neg_order[0])) in \
+                                  res.get_order_values(neg_order[0]),res))
+            elif self['process']['sqorders_types'][neg_order[0]] in ['<=','=']:
+                res = base_objects.DiagramList(filter(lambda diag: \
+                         diag.get_order(neg_order[0])<= target_order,res))
+            # Substitute the negative value to this positive one so that
+            # the resulting computed constraints appears in the print out
+            # and at the output stage we no longer have to deal with 
+            # negative valued target orders
+            self['process']['squared_orders'][neg_order[0]]=target_order
+                                       
+        except IndexError:
+            pass
+        
+        return res
 
     def create_diagram(self, vertexlist):
         """ Return a Diagram created from the vertex list. This function can be

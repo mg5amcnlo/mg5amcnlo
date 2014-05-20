@@ -1417,6 +1417,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             diagRef=AllLoopDiagrams
 
         sqorders_types=copy.copy(self['process']['sqorders_types'])
+
         # The WEIGHTED order might have been automatically assigned to the 
         # squared order constraints, so we must assign it a type if not specified
         if 'WEIGHTED' not in sqorders_types:
@@ -1465,7 +1466,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     AllBornDiagrams if (target_order-diag.get_order(order)) in
                                                          allDiags_order_values])
             if value<0:
-                # Substitute this positive value to the negative one
+                # Substitute the negative value to this positive one
                 # (also in the backed up values in user_squared_orders so that
                 # this change is permanent and we will still have access to
                 # it at the output stage)
