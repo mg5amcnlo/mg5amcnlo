@@ -108,7 +108,7 @@ int main() {
     double evtweight = pythia.info.weight();
     double normhepmc;
     // Add the weight of the current event to the cross section.
-    normhepmc = 1. / (1e9*iEventshower);
+    normhepmc = 1. / double(iEventshower);
     if (evt_norm == "average") {
       sigmaTotal  += evtweight*normhepmc;
     } else {
@@ -142,7 +142,7 @@ int main() {
     std::cout << "*********************************************************************** \n";
     std::cout << "*********************************************************************** \n";
     std::cout << "Cross section, including FxFx merging is: "
-	      << sigmaTotal*1e9 << "\n";
+	      << sigmaTotal << "\n";
     std::cout << "*********************************************************************** \n";
     std::cout << "*********************************************************************** \n";
   }

@@ -76,20 +76,18 @@ int main() {
     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
     double evtweight = pythia.info.weight();
     double normhepmc;
-    normhepmc = 1. / (1e9*iEventshower);
+    // ALWAYS NORMALISE HEPMC WEIGHTS TO SUM TO THE CROSS SECTION
+    if (evt_norm == "average") {
+      normhepmc = 1. / double(iEventshower);
+    } else {
+      normhepmc = double(iEventtot) / double(iEventshower);
+    }
     hepmcevt->weights().push_back(evtweight*normhepmc);
     ToHepMC.fill_next_event( pythia, hepmcevt );
     // Add the weight of the current event to the cross section.
-    if (evt_norm == "average") {
-      sigmaTotal  += evtweight*normhepmc;
-      errorTotal  += pow2(evtweight*normhepmc);
-    } else {
-      sigmaTotal  += evtweight*normhepmc*iEventtot;
-      errorTotal  += pow2(evtweight*normhepmc*iEventtot);
-    }
     // Report cross section to hepmc
     HepMC::GenCrossSection xsec;
-    xsec.set_cross_section( sigmaTotal*1e9, pythia.info.sigmaErr()*1e9 );
+    xsec.set_cross_section( sigmaTotal, pythia.info.sigmaErr() );
     hepmcevt->set_cross_section( xsec );
     // Write the HepMC event to file. Done with it.
     ascii_io << hepmcevt;    
@@ -102,7 +100,7 @@ int main() {
     std::cout << "*********************************************************************** \n";
     std::cout << "*********************************************************************** \n";
     std::cout << "Cross section, including FxFx merging is: "
-	      << sigmaTotal*1e9 << "\n";
+	      << sigmaTotal << "\n";
     std::cout << "*********************************************************************** \n";
     std::cout << "*********************************************************************** \n";
   }
