@@ -3095,6 +3095,7 @@ Integrated cross-section
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
 
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
@@ -3229,8 +3230,7 @@ Integrated cross-section
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        if not '[real=QCD]' in proc_card and \
-                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
+        if self.proc_characteristics['has_loops'].lower() == '.true.':
             os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
