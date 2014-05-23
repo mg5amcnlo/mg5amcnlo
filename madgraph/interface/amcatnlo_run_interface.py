@@ -1261,7 +1261,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1437,7 +1437,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 # check that PYTHIA6PT is not used for processes with FSR
             if shower == 'PYTHIA6PT' and \
-                self.proc_characteristics['has_fsr'] == '.true.':
+                self.proc_characteristics['has_fsr'] == 'true':
                 raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
 
             if mode in ['aMC@NLO', 'aMC@LO']:
@@ -3095,7 +3095,7 @@ Integrated cross-section
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
 
-        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
@@ -3166,7 +3166,7 @@ Integrated cross-section
         try: 
             os.environ['fastjet_config'] = self.options['fastjet']
         except (TypeError, KeyError):
-            os.environ['fastjet_config'] = 'None'
+            os.unsetenv['fastjet_config']
         
         # make Source
         self.update_status('Compiling source...', level=None)
@@ -3230,14 +3230,9 @@ Integrated cross-section
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        if self.proc_characteristics['has_loops'].lower() == '.true.':
-            os.environ['madloop'] = 'true'
-            if mode in ['NLO', 'aMC@NLO', 'noshower']:
-                tests.append('check_poles')
-                hasvirt = True
-        else:
-            os.unsetenv('madloop')
-            hasvirt = False
+        if self.proc_characteristics['has_loops'].lower() == 'true' and \
+           mode in ['NLO', 'aMC@NLO', 'noshower']:
+            tests.append('check_poles')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
@@ -3281,8 +3276,6 @@ Integrated cross-section
                 this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
                 #check that none of the tests failed
                 self.check_tests(test, this_dir)
-
-        os.unsetenv('madloop')
 
 
     def donothing(*args):

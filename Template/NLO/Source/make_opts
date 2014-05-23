@@ -69,7 +69,7 @@ else
 endif
 
 # Madloop
-ifdef madloop
+ifeq ($(has_loops),true)
   libmadloop=libMadLoop.a
   libcuttools=-lcts
 else
