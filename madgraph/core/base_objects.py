@@ -2198,6 +2198,25 @@ class Diagram(PhysicsObject):
         coupling_orders['WEIGHTED'] = weight
         self.set('orders', coupling_orders)
 
+    def pass_squared_order_constraints(self, diag_multiplier, squared_orders,
+                                                               sq_orders_types):
+        """ Returns wether the contributiong consisting in the current diagram 
+        multiplied by diag_multiplier passes the *positive* squared_orders 
+        specified ( a dictionary ) of types sq_order_types (a dictionary whose 
+        values are the relational operator used to define the constraint of the
+        order in key)."""
+        
+        for order, value in squared_orders.items():
+            if value<0:
+                continue
+            combined_order = self.get_order(order) + \
+                                                diag_multiplier.get_order(order)
+            if ( sq_orders_types[order]=='==' and combined_order != value ) or \
+               ( sq_orders_types[order] in ['=', '<='] and combined_order > value) or \
+               ( sq_orders_types[order]=='>' and combined_order <= value) :
+                return False
+        return True
+
     def get_order(self, order):
         """Return the order of this diagram. It returns 0 if it is not present."""
 
@@ -2337,6 +2356,97 @@ class DiagramList(PhysicsObjectList):
                     max_order = diag['orders'][order]
 
         return max_order
+
+    def apply_negative_sq_order(self, ref_diag_list, order, value, order_type):
+        """ This function returns a fitlered version of the diagram list self
+        which satisfy the negative squared_order constraint 'order' with negative
+        value 'value' and of type 'order_type', assuming that the diagram_list
+        it must be squared against is 'reg_diag_list'. It also returns the
+        new postive target squared order which correspond to this negative order
+        constraint. Example: u u~ > d d~ QED^2<=-2 means that one wants to
+        pick terms only up to the the next-to-leading order contributiong in QED,
+        which is QED=2 in this case, so that target_order=4 is returned."""
+        
+        # First we must compute all contributions to that order
+        target_order = min(ref_diag_list.get_order_values(order))+\
+                                  min(self.get_order_values(order))+2*(-value-1)
+        
+        new_list = self.apply_positive_sq_orders(ref_diag_list, 
+                                       {order:target_order}, {order:order_type})
+        
+        return new_list, target_order
+        
+#             neg_order=[elem for elem in self['process'].get('orders').items()+\
+#                   self['process'].get('squared_orders').items() if elem[1]<0][0]
+#             # Make sure there still are some diagrams
+#             if len(res)==0:
+#                 raise IndexError
+#             min_amp_order=min(diag.get_order(neg_order[0]) for diag in res)
+#             target_order=min_amp_order+2*(-neg_order[1]-1)
+#             # When not including loop corrections, restricting a coupling
+#             # order with a negative value at the amplitude level or at the
+#             # squared order level does not make a difference.
+#             # The expansion is in terms of alpha_x, not g_x, hence the
+#             # factor 2.
+#             if self['process']['sqorders_types'][neg_order[0]]=='==':
+#                 res = base_objects.DiagramList(filter(lambda diag: \
+#                   (target_order-diag.get_order(neg_order[0])) in \
+#                                   res.get_order_values(neg_order[0]),res))
+#             elif self['process']['sqorders_types'][neg_order[0]] in ['<=','=']:
+#                 res = base_objects.DiagramList(filter(lambda diag: \
+#                          diag.get_order(neg_order[0])<= target_order,res))
+#         
+# 
+#             filtered_diag_list = DiagramList()
+#             
+#             # We must treat indepdently each type of constraint
+#             if order_type in ['<=','=']:
+#                 # We ask for up to N^(-value) Leading Order in the coupling
+#                 upper_bound=ref_diag_list.get_min_order(order)+2*(-value-1)
+#                 # The target order is equal to  
+#                 # upper_bound+diagRef.get_min_order(order)
+#                 # which is more efficiently rewritten as
+#                 target_order=2*(upper_bound+value+1)
+#                 filtered_diag_list=DiagramList([diag for diag in \
+#                     self if diag.get_order(order)<=upper_bound])
+#                 if self['process']['has_born']:
+#                     AllBornDiagrams=base_objects.DiagramList([diag for diag in \
+#                            AllBornDiagrams if diag.get_order(order)<=max_order])
+# 
+#             elif sqorders_types[order]=='==':
+#                 ref_order_values = set(diagRef.get_order_values(order))
+#                 if value<0:
+#                     # ask for exactly the N^(-value) Leading Order in the coupling
+#                     target_order=2*(diagRef.get_min_order(order)-value-1)
+#                 else:
+#                     target_order=value
+#                                        
+#                 AllLoopDiagrams=base_objects.DiagramList([diag for diag in \
+#                     AllLoopDiagrams if (target_order-diag.get_order(order)) in
+#                                                               ref_order_values])
+#                 if self['process']['has_born']:
+#                     allDiags_order_values = ref_order_values.union(
+#                                         AllLoopDiagrams.get_order_values(order))
+#                     AllBornDiagrams=base_objects.DiagramList([diag for diag in \
+#                     AllBornDiagrams if (target_order-diag.get_order(order)) in
+#                                                          allDiags_order_values])  
+
+        
+        
+    def apply_positive_sq_orders(self, ref_diag_list, sq_orders, sq_order_types):
+        """ This function returns a filtered version of self which contain
+        only the diagram which satisfy the positive squared order constraints
+        sq_orders of type sq_order_types and assuming that the diagrams are
+        multiplied with those of the reference diagram list ref_diag_list."""
+                
+        new_diag_list = DiagramList()
+        for tested_diag in self:
+            for ref_diag in ref_diag_list:
+                if tested_diag.pass_squared_order_constraints(ref_diag,
+                                                      sq_orders,sq_order_types):
+                    new_diag_list.append(tested_diag)
+                    break
+        return new_diag_list
 
     def get_min_order(self,order):
         """ Return the order of the diagram in the list with the mimimum coupling
@@ -2571,6 +2681,13 @@ class Process(PhysicsObject):
         
         if name == 'legs_with_decays':
             self.get_legs_with_decays()
+
+        if name == 'sqorders_types':
+            # We must make sure that there is a type for each sqorder defined
+            for order in self['squared_orders'].keys():
+                if order not in self['sqorders_types']:
+                    # Then assign its type to the default '='
+                    self['sqorders_types'][order]='='
 
         return super(Process, self).get(name) # call the mother routine
 

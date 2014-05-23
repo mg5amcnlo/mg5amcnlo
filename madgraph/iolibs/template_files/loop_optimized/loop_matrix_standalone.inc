@@ -1375,8 +1375,8 @@ C
 
       INTEGER FUNCTION %(proc_prefix)sML5SOINDEX_FOR_SQUARED_ORDERS(ORDERS)
 C
-C This functions returns the integer index identifying the split orders list 
-C passed in argument.
+C This functions returns the integer index identifying the split orders list passed in argument which correspond to the values of the following list of couplings (and in this order):
+C %(split_order_str_list)s
 C
 C CONSTANTS
 C

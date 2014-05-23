@@ -38,8 +38,8 @@ C
 
       INTEGER FUNCTION %(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS%(proc_id)s(ORDERS)
 C
-C This functions returns the integer index identifying the squared split orders list 
-C passed in argument.
+C This functions returns the integer index identifying the squared split orders list passed in argument which corresponds to the values of the following list of couplings (and in this order).
+c %(split_order_str_list)s
 C
 C CONSTANTS
 C

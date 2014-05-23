@@ -1758,10 +1758,12 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) > 0 and args[-1] != '>' and n_part_entered > 0:
             syntax.append('>')
         if '>' in args and args.index('>') < len(args) - 1:
-            couplings.extend([c + "=" for c in self._couplings] + ['WEIGHTED='])
+            couplings.extend(sum([[c+"=",c+'^2'] for c in \
+                                              self._couplings+['WEIGHTED']],[]))
             syntax.extend(['@','$','/','>',','])
             if '[' not in line and ',' not in line and len(pert_couplings_allowed)>0:
                 syntax.append('[')
+            
         # If information for the virtuals has been specified already, do not
         # propose syntax or particles input anymore
         if '[' in line:
@@ -1797,6 +1799,20 @@ class CompleteForCmd(cmd.CompleteCmd):
         # Return list of particle names and multiparticle names, as well as
         # coupling orders and allowed symbols
         args = self.split_arg(line[0:begidx])
+
+        valid_sqso_operators=['==','<=','>']
+        if any(line.endswith('^2 %s '%op) for op in valid_sqso_operators):
+            return
+        if args[-1].endswith('^2'):
+            return self.list_completion(text,valid_sqso_operators)
+        match_op = [o for o in valid_sqso_operators if o.startswith(args[-1])]            
+        if args[-2].endswith('^2') and len(match_op)>0:
+            if args[-1] in valid_sqso_operators:
+                return self.list_completion(text,' ')
+            if len(match_op)==1:
+                return self.list_completion(text,[match_op[0][len(args[-1]):]])
+            else:
+                return self.list_completion(text,match_op)
 
         if len(args) > 2 and args[-1] == '@' or ( args[-1].endswith('=') and \
                             (not '[' in line or ('[' in line and ']' in line))):
@@ -2404,7 +2420,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme',
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
-    _valid_sqso_types = ['==','<=','=']
+    _valid_sqso_types = ['==','<=','=','>']
     _OLP_supported = ['MadLoop', 'GoSam']
     _output_dependencies_supported = ['external', 'internal','environment_paths']
 
@@ -3600,14 +3616,14 @@ This implies that with decay chains:
                 line = order_re.group('before')
                 order_re = order_pattern.match(line)
 
-        # if the squared orders are defined but not the orders, assume 
-        # orders=sq_orders. In case the squared order has a negative value,
-        # the the order is correspondingly set to be maximal (99) since there is
-        # no way to know, during generation, if the amplitude being contstructed
-        # will be leading or not.
+        # If the squared orders are defined but not the orders, assume 
+        # orders=sq_orders. In case the squared order has a negative value or is
+        # defined with the '>' operato, then this order correspondingly set to 
+        # be maximal (99) since there is no way to know, during generation, if 
+        # the amplitude being contstructed will be leading or not.
         if orders=={} and squared_orders!={}:
             for order in squared_orders.keys():
-                if squared_orders[order][0]>=0:
+                if squared_orders[order][0]>=0 and squared_orders[order][1]!='>':
                     orders[order]=squared_orders[order][0]
                 else:
                     orders[order]=99
@@ -3709,11 +3725,11 @@ This implies that with decay chains:
                             raise self.InvalidCmd(\
                                 "Perturbation order %s is not among" % pert_order + \
                                 " the perturbation orders allowed for by the loop model.")
-            
+
             if not self.options['loop_optimized_output'] and \
                          LoopOption not in ['tree','real'] and split_orders!=[]:
                 logger.info('The default output mode (loop_optimized_output'+\
-                  ' = False) does not support evaluations for given power of'+\
+                  ' = False) does not support evaluations for given powers of'+\
                   ' coupling orders. MadLoop output will therefore not be'+\
                   ' able to provide such quantities.')
                 split_orders = []

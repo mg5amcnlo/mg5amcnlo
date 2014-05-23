@@ -706,7 +706,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 if (process.get_squared_order_type(user_sqso) =='==' and \
                         value!=sqsos[split_orders.index(user_sqso)]) or \
                    (process.get_squared_order_type(user_sqso) in ['<=','='] and \
-                                    value<sqsos[split_orders.index(user_sqso)]):
+                                value<sqsos[split_orders.index(user_sqso)]) or \
+                   (process.get_squared_order_type(user_sqso) == '>' and \
+                                value <= sqsos[split_orders.index(user_sqso)]):
                     is_a_match = False
                     break
             res.append('.true.' if is_a_match else '.false.')
@@ -1808,11 +1810,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             amp_orders = [((1,),tuple(range(1,ngraphs+1)))]
             replace_dict['chosen_so_configs'] = '.TRUE.'
             replace_dict['nSqAmpSplitOrders']=1
+            replace_dict['split_order_str_list']=''
         else:
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
             replace_dict['nAmpSplitOrders']=len(amp_orders)
             replace_dict['nSqAmpSplitOrders']=len(squared_orders)
             replace_dict['nSplitOrders']=len(split_orders)
+            replace_dict['split_order_str_list']=str(split_orders)
             amp_so = self.get_split_orders_lines(
                     [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
             sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')

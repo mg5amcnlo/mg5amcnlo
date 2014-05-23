@@ -2000,6 +2000,7 @@ ENDIF"""%self.general_replace_dict
 
         # Those are additional entries used throughout the different files of
         # MadLoop5
+        self.general_replace_dict['split_order_str_list'] = str(split_orders)
         self.general_replace_dict['nSO'] = len(split_orders)
         self.general_replace_dict['nSquaredSO'] = len(sqso_contribs)
         self.general_replace_dict['nAmpSO'] = len(overall_so_basis)

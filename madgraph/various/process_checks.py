@@ -675,6 +675,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # Evaluate the matrix element for the momenta p
         finite_m2 = self.get_me_value(process.shell_string_v4(), 0,\
                           export_dir, p, PS_name = PS_name, verbose=False)[0][0]
+
         # Restore the original loop_matrix.f code so that it could be reused
         if gauge_check:
             file = open(file_path,'w')
@@ -3195,6 +3196,7 @@ def check_gauge_process(process, evaluator, options=None):
     #                                             output='jamp',MLOptions=MLOptions)
     brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
                                                  output='jamp', options=options)
+
     if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
@@ -3716,39 +3718,6 @@ def get_value(process, evaluator, p=None, options=None):
     
     if mvalue and mvalue['m2']:
         return {'process':process.base_string(),'value':mvalue,'p':p}
-
-
-
-def boost_momenta(p, boost_direction=1, beta=0.5):
-    """boost the set momenta in the 'boost direction' by the 'beta' 
-       factor"""
-    boost_p = []    
-    gamma = 1/ math.sqrt(1 - beta**2)
-    for imp in p:
-        bosst_p = imp[boost_direction]
-        E, px, py, pz = imp
-        boost_imp = []
-        # Energy:
-        boost_imp.append(gamma * E - gamma * beta * bosst_p)
-        # PX
-        if boost_direction == 1:
-            boost_imp.append(-gamma * beta * E + gamma * px)
-        else: 
-            boost_imp.append(px)
-        # PY
-        if boost_direction == 2:
-            boost_imp.append(-gamma * beta * E + gamma * py)
-        else: 
-            boost_imp.append(py)    
-        # PZ
-        if boost_direction == 3:
-            boost_imp.append(-gamma * beta * E + gamma * pz)
-        else: 
-            boost_imp.append(pz) 
-        #Add the momenta to the list
-        boost_p.append(boost_imp)                   
-        #print math.sqrt(boost_imp[0]**2-boost_imp[1]**2-boost_imp[2]**2-boost_imp[3]**2)    
-    return boost_p
 
 def output_lorentz_inv_loop(comparison_results, output='text'):
     """Present the results of a comparison in a nice list format for loop 

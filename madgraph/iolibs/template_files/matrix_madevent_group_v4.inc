@@ -257,9 +257,9 @@ C ----------
     Do I = 1, NCOLOR
 	  DO M = 1, NAMPSO	
 		DO N = 1, NAMPSO
-C          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
+          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
             Jamp2(i)=Jamp2(i)+Jamp(i,m)*dconjg(Jamp(i,n))
-C		  ENDIF
+		  ENDIF
 		enddo
 	  enddo
     Enddo

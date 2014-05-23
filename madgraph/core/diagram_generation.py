@@ -776,72 +776,38 @@ class Amplitude(base_objects.PhysicsObject):
         """Applies the user specified squared order constraints on the diagram
         list in argument."""
 
-        res = copy.copy(diag_list)
-
-        # A helper function that returns if two diagrams pass the squared
-        # order constraints when multiplied together:
-        def pass_sq_order_constraints(diag1, diag2):
-            for order, value in self['process'].get('squared_orders').items():
-                if value<0:
-                    continue
-                combined_order = diag1.get_order(order) + \
-                                                      diag2.get_order(order)
-                if ( self['process']['sqorders_types'][order]=='==' \
-                   and combined_order != value ) or \
-                   ( self['process']['sqorders_types'][order] in ['=', '<='] \
-                   and combined_order > value):
-                    return False
-            return True                    
+        res = copy.copy(diag_list)                  
 
         # Iterate the filtering since the applying the constraint on one
         # type of coupling order can impact what the filtering on a previous
         # one (relevant for the '==' type of constraint).
-        while True:
-            new_res=base_objects.DiagramList([])
-            for diag_tested in res:
-                for diag in res:
-                    if pass_sq_order_constraints(diag_tested, diag):
-                        break;
-                else:
-                    continue
-                new_res.append(diag_tested)
+        while True:   
+            new_res = res.apply_positive_sq_orders(res, 
+                                          self['process'].get('squared_orders'), 
+                                              self['process']['sqorders_types'])
             # Exit condition
             if len(res)==len(new_res):
                 break
-
             # Actualizing the list of diagram for the next iteration
             res = new_res
-            
-        # Now check any negative order constraint
-        try:
-            neg_order=[elem for elem in self['process'].get('orders').items()+\
-                  self['process'].get('squared_orders').items() if elem[1]<0][0]
-            # Make sure there still are some diagrams
-            if len(res)==0:
-                raise IndexError
-            min_amp_order=min(diag.get_order(neg_order[0]) for diag in res)
-            target_order=min_amp_order+2*(-neg_order[1]-1)
-            # When not including loop corrections, restricting a coupling
-            # order with a negative value at the amplitude level or at the
-            # squared order level does not make a difference.
-            # The expansion is in terms of alpha_x, not g_x, hence the
-            # factor 2.
-            if self['process']['sqorders_types'][neg_order[0]]=='==':
-                res = base_objects.DiagramList(filter(lambda diag: \
-                  (target_order-diag.get_order(neg_order[0])) in \
-                                  res.get_order_values(neg_order[0]),res))
-            elif self['process']['sqorders_types'][neg_order[0]] in ['<=','=']:
-                res = base_objects.DiagramList(filter(lambda diag: \
-                         diag.get_order(neg_order[0])<= target_order,res))
+
+        # Now treat the negative squared order constraint (at most one)
+        neg_orders = [(order, value) for order, value in \
+                       self['process'].get('squared_orders').items() if value<0]
+        if len(neg_orders)==1:
+            neg_order, neg_value = neg_orders[0]
+            # Now check any negative order constraint
+            res, target_order = res.apply_negative_sq_order(res, neg_order,\
+                  neg_value, self['process']['sqorders_types'][neg_order])
             # Substitute the negative value to this positive one so that
             # the resulting computed constraints appears in the print out
             # and at the output stage we no longer have to deal with 
             # negative valued target orders
-            self['process']['squared_orders'][neg_order[0]]=target_order
-                                       
-        except IndexError:
-            pass
-        
+            self['process']['squared_orders'][neg_order]=target_order
+        elif len(neg_orders)>1:
+            raise MadGraph5Error('At most one negative squared order constraint'+\
+                                   ' can be specified, not %s.'%str(neg_orders))
+
         return res
 
     def create_diagram(self, vertexlist):
