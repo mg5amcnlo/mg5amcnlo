@@ -708,7 +708,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                    (process.get_squared_order_type(user_sqso) in ['<=','='] and \
                                 value<sqsos[split_orders.index(user_sqso)]) or \
                    (process.get_squared_order_type(user_sqso) == '>' and \
-                                value <= sqsos[split_orders.index(user_sqso)]):
+                                value>=sqsos[split_orders.index(user_sqso)]):
                     is_a_match = False
                     break
             res.append('.true.' if is_a_match else '.false.')
