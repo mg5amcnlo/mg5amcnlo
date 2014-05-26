@@ -4987,7 +4987,7 @@ class UFO_model_to_mg4(object):
 
         #1. Check if a default param_card is present:
         done = False
-        if hasattr(self.model, 'restrict_card'):
+        if hasattr(self.model, 'restrict_card') and isinstance(self.model.restrict_card, str):
             restrict_name = os.path.basename(self.model.restrict_card)[9:-4]
             model_path = self.model.get('modelpath')
             if os.path.exists(pjoin(model_path,'paramcard_%s.dat' % restrict_name)):

@@ -4,7 +4,7 @@
 // File based on main25.cc in Pythia 8.149
 //==========================================================================
 
-#include "Pythia.h"
+#include "Pythia8/Pythia.h"
 %(include_lines)s
 
 using namespace Pythia8; 

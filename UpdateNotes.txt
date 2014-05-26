@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.1.2(xx/yy/zz) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
+2.1.2(xx/xx/xx) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)
                 OM: Fixing a bug preventing MadWidth to run due to the model prefixing (depending
                     on the way it was called)
@@ -9,6 +9,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                     pairs to the run_card for NLO-type generations.
 		RF: Prevent an infinite loop in MadSpin by forcing the correct sign to the invariants
 		RF: Catch a possible error related to grouping subprocesses and setcuts
+		OM: Fix an error when using the "customize_model" command
+                S. Mrenna (by OM): Fix the include file in pythia8 output to be compliant with the latest
+                    PY8 version
 
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be

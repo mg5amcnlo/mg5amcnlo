@@ -73,7 +73,7 @@ V_9 = Vertex(name = 'V_9',
              particles = [ P.vt__tilde__, P.ta__minus__, P.pi__plus__, P.pi__plus__, P.pi__minus__ ],
              color = [ '1' ],
              lorentz = [ L.FFSSS5, L.FFSSS6, L.FFSSS7 ],
-             couplings = {(0,2):C.GC_8,(0,1):C.GC_5,(0,0):C.GC_7})
+              couplings = {(0,0):C.GC_6,(0,2):C.GC_8,(0,1):C.GC_4})
 
 V_10 = Vertex(name = 'V_10',
               particles = [ P.ta__plus__, P.vt, P.pi__minus__, P.pi__minus__, P.pi__plus__ ],
