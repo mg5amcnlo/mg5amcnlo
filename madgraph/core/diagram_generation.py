@@ -725,7 +725,7 @@ class Amplitude(base_objects.PhysicsObject):
         # in this way. We shall do this only if the diagrams are not asked to
         # be returned, as it is the case for NLO because it this case the
         # interference are not necessarily among the diagrams generated here only.
-        if not returndiag:
+        if not returndiag and len(res)>0:
             res = self.apply_squared_order_constraints(res)
 
         # Replace final id=0 vertex if necessary

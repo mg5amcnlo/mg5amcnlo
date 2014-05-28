@@ -3182,12 +3182,23 @@ class Process(PhysicsObject):
         # Ensure that expansion orders are taken into account
         expansion_orders = self.get('model').get('expansion_order')
         orders = self.get('orders')
+        sq_orders = self.get('squared_orders')
         
         tmp = [(k,v) for (k,v) in expansion_orders.items() if 0 < v < 99]
         for (k,v) in tmp:  
             if k in orders:
                 if v < orders[k]:
-                    logger.warning('''The coupling order (%s=%s) specified is larger than the one allowed 
+                    if k in sq_orders.keys() and \
+                                             (sq_orders[k]>v or sq_orders[k]<0):
+                        logger.warning(
+'''The process with the squared coupling order (%s^2%s%s) specified can potentially 
+recieve contributions with powers of the coupling %s larger than the maximal 
+value allowed by the model builder (%s). Hence, MG5_aMC sets the amplitude order
+for that coupling to be this maximal one. '''%(k,self.get('sqorders_types')[k],
+                                             self.get('squared_orders')[k],k,v))
+                    else:
+                        logger.warning(
+'''The coupling order (%s=%s) specified is larger than the one allowed 
              by the model builder. The maximal value allowed is %s. 
              We set the %s order to this value''' % (k,orders[k],v,k))
                     orders[k] = v

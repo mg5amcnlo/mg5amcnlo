@@ -3720,7 +3720,7 @@ This implies that with decay chains:
                 split_orders.sort(key=lambda elem: 0 if elem=='WEIGHTED' else
                                        self._curr_model['order_hierarchy'][elem])
             except KeyError:
-                raise InvalidCMD, "The loaded model does not defined a "+\
+                raise self.InvalidCmd, "The loaded model does not defined a "+\
                     " coupling order hierarchy for these couplings: %s"%\
                       str([so for so in split_orders if so!='WEIGHTED' and so not 
                                  in self._curr_model['order_hierarchy'].keys()])
@@ -3783,6 +3783,7 @@ This implies that with decay chains:
                   "At most one negative squared order constraint can be specified.")
             
             sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
+            
             
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
