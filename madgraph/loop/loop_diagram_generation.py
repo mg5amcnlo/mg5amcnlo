@@ -772,10 +772,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # will find examples of common filters.
         self.user_filter(model,self['structure_repository'])
 
-        # The computation below is just to report what split order are computed
-        # and which one are considered (i.e. kept using the order specifications)
-        self.print_split_order_infos()
-
         # Now revert the squared order. This function typically adds to the 
         # squared order list the target WEIGHTED order which has been detected.
         # This is typically not desired because if the user types in directly
@@ -788,6 +784,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # get it.
         self['process']['squared_orders'].clear()
         self['process']['squared_orders'].update(user_squared_orders)
+
+        # The computation below is just to report what split order are computed
+        # and which one are considered (i.e. kept using the order specifications)
+        self.print_split_order_infos()
 
         # Give some info about the run
         nLoopDiag = 0
@@ -822,7 +822,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         """
         
         hierarchy = self['process']['model']['order_hierarchy']
-        
+                
         sqorders_types=copy.copy(self['process'].get('sqorders_types'))
         # The WEIGHTED order might have been automatically assigned to the 
         # squared order constraints, so we must assign it a type if not specified
@@ -843,8 +843,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
         
         born_sqSOs = set(tuple([x + y for x, y in zip(b1_SO, b2_SO)]) for b1_SO 
                                               in born_SOs for b2_SO in born_SOs)
+        if self['process']['has_born']:
+            ref_amps = born_SOs
+        else:
+            ref_amps = loop_SOs
         loop_sqSOs = set(tuple([x + y for x, y in zip(b_SO, l_SO)]) for b_SO in 
-                                                  born_SOs for l_SO in loop_SOs)
+                                                  ref_amps for l_SO in loop_SOs)
         
         # Append the corresponding WEIGHT of each contribution
         sorted_hierarchy.append('WEIGHTED')
@@ -860,6 +864,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                             " (%s)"%','.join(sorted_hierarchy))
         
         # Now check what is left
+        born_considered = []
+        loop_considered = []
         for i, sqSOList in enumerate([born_sqSOs,loop_sqSOs]):
             considered = []
             extra = []
@@ -881,12 +887,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # Set the ones considered to be the complement of the omitted ones
             considered = [sqSO for sqSO in sqSOList if sqSO not in extra]
    
-            if i==0: 
+            if i==0:
+                born_considered = considered
                 name = "Born"
                 if not self['process']['has_born']:
                     logger.debug(" > No Born contributions for this process.")
                     continue
-            elif i==1:            
+            elif i==1:     
+                loop_considered = considered       
                 name = "loop"
             
             if len(considered)==0:
@@ -900,6 +908,13 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 logger.debug(" > %s (not selected but available): %s"%(name,' '.
                     join(['(%s,W%d)'%(','.join(list('%d'%s for s in e[:-1])),
                                                        e[-1]) for e in extra])))
+                
+        # In case it is needed, the considered orders are returned 
+        # (it is used by some of the unit tests)
+        return (born_considered,
+               [sqSO for sqSO in born_sqSOs if sqSO not in born_considered],
+               loop_considered,
+               [sqSO for sqSO in loop_sqSOs if sqSO not in loop_considered])
                   
 
     def generate_born_diagrams(self):
@@ -916,7 +931,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Reinitialize the loop diagram container
         self['loop_diagrams']=base_objects.DiagramList()
         totloopsuccessful=False
-                    
+                            
         # Make sure to start with an empty l-cut particle list.
         self.lcutpartemployed=[]
 

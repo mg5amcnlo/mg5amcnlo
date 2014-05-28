@@ -514,12 +514,18 @@ class HelpToCmd(cmd.HelpCmd):
 
         logger.info("-- generate diagrams for a given process",'$MG:color:BLUE')
         logger.info("General leading-order syntax:",'$MG:color:BLACK')
-        logger.info(" o generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
+        logger.info(" o generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2^2=ORDER2 @N")
         logger.info(" o Example: generate l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1",'$MG:color:GREEN')
         logger.info(" > Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
         logger.info(" > If no coupling orders are given, MG5 will try to determine")
         logger.info("   orders to ensure maximum number of QCD vertices.")
+        logger.info(" > Desired coupling orders combination can be specified directly for")
+        logger.info("   the squared matrix element by appending '^2' to the coupling name.")
+        logger.info("   For example, 'p p > j j QED^2==2 QCD^==2' selects the QED-QCD")
+        logger.info("   interference terms only. The other two operators '<=' and '>' are")
+        logger.info("   supported. Finally, a negative value COUP^2==-I refers to the")
+        logger.info("   N^(-I+1)LO term in the expansion of the COUP order.")
         logger.info(" > To generate a second process use the \"add process\" command")
         logger.info("Decay chain syntax:",'$MG:color:BLACK')
         logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
@@ -3710,6 +3716,15 @@ This implies that with decay chains:
             # Correspondingly set 'split_order' from the squared orders and the
             # perturbation couplings list
             split_orders=list(set(perturbation_couplings_list+squared_orders.keys()))
+            try:
+                split_orders.sort(key=lambda elem: 0 if elem=='WEIGHTED' else
+                                       self._curr_model['order_hierarchy'][elem])
+            except KeyError:
+                raise InvalidCMD, "The loaded model does not defined a "+\
+                    " coupling order hierarchy for these couplings: %s"%\
+                      str([so for so in split_orders if so!='WEIGHTED' and so not 
+                                 in self._curr_model['order_hierarchy'].keys()])
+
             # If the loopOption is 'tree' then the user used the syntax 
             # [tree= Orders] for the sole purpose of setting split_orders. We
             # then empty the perturbation_couplings_list at this stage.

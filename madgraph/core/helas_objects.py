@@ -4634,6 +4634,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         amp_orders={}
         for diag in diag_list:
             diag_orders=diag.calculate_orders()
+            # Add the WEIGHTED order information
+            diag_orders['WEIGHTED']=sum(order_hierarchy[order]*value for \
+                                           order, value in  diag_orders.items())
             # Complement the missing split_orders with 0
             for order in split_orders:
                 if not order in diag_orders.keys():

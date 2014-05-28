@@ -44,6 +44,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as import_ufo
 import madgraph.various.misc as misc
+import madgraph.iolibs.file_writers as writers
 import tests.IOTests as IOTests
 import aloha
 
@@ -186,3 +187,98 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
       if not load_only:
           # Set it to True if you want info during the regular test_manager.py runs
           self.runIOTests(verbose=False)
+
+#===============================================================================
+# IOExportMadLoopUTest
+#===============================================================================
+class IOTestMadLoopSquaredOrdersExport(IOExportMadLoopUnitTest):
+    """Test class for the writing of loop_matrix.f in the presence of squared 
+    order constraints and differentiation of different "split orders" 
+    combinations."""
+    
+    def setUp(self):
+       """Loading the different writers, exporters and model used for these
+       IOTests"""
+       
+       if not hasattr(self, 'model'):
+           self.model=import_ufo.import_model('loop_qcd_qed_sm')
+           
+       if not hasattr(self, 'exporter'):
+           self.exporter = loop_exporters.\
+                                  LoopProcessOptimizedExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran',
+                                   'output_dependencies':'external'})
+        
+    @IOTests.createIOTest(groupName='LoopSquaredOrder_IOTest')
+    def testIO_Loop_sqso_uux_ddx(self):
+        """ target: [loop_matrix(.*)\.f]
+        """
+    
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':2,'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1,'state':True}))
+
+        fortran_model=\
+          helas_call_writers.FortranUFOHelasCallWriterOptimized(self.model,False)
+        
+        SO_tests = [({},['QCD','QED'],{},{},['QCD','QED'],'QCDQEDpert_default')
+                    ,({},['QCD'],{},{},['QCD'],'QCDpert_default')
+                    ,({},['QED'],{},{},['QED'],'QEDpert_default')            
+                    ,({},['QCD','QED'],{'QCD':4},{'QCD':'=='},['QCD','QED'],
+                                                        'QCDQEDpert_QCDsq_eq_4')
+                    ,({},['QCD','QED'],{'QED':4},{'QCD':'<='},['QCD','QED'],
+                                                        'QCDQEDpert_QEDsq_le_4')
+                    ,({},['QCD','QED'],{'QCD':4},{'QCD':'>'},['QCD','QED'],
+                                                        'QCDQEDpert_QCDsq_gt_4')
+                    ,({'QED':2},['QCD','QED'],{'QCD':0,'QED':2},
+                      {'QCD':'>','QED':'>'},['QCD','QED'],
+                                   'QCDQEDpert_QCDsq_gt_0_QEDAmpAndQEDsq_gt_2')
+                    ,({'QED':2},['QCD','QED'],{'WEIGHTED':10,'QED':2},
+                      {'WEIGHTED':'<=','QED':'>'},['WEIGHTED','QCD','QED'],
+                                  'QCDQEDpert_WGTsq_le_10_QEDAmpAndQEDsq_gt_2')]
+
+        for orders, pert_orders, sq_orders , sq_orders_type, split_orders, name \
+                                                                    in SO_tests:
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.model,
+                                           'orders': orders,
+                                           'squared_orders': sq_orders,
+                                           'perturbation_couplings':pert_orders,
+                                           'sqorders_types':sq_orders_type,
+                                           'split_orders':split_orders})
+
+            myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
+            matrix_element=loop_helas_objects.LoopHelasMatrixElement(\
+                                                myloopamp,optimized_output=True)
+            writer = writers.FortranWriter(\
+                                     pjoin(self.IOpath,'loop_matrix_%s.f'%name))
+            
+            # It is enough here to generate and check the filer loop_matrix.f 
+            # only here. For that we must initialize the general replacement 
+            # dictionary first (The four functions below are normally directly
+            # called from the write_matrix_element function in the exporter
+            # [but we don't call it here because we only want the file 
+            # loop_matrix.f]).
+            self.exporter.general_replace_dict= \
+                self.exporter.generate_general_replace_dict(matrix_element)
+            # and for the same reason also force the computation of the analytical
+            # information in the Helas loop diagrams.
+            matrix_element.compute_all_analytic_information(
+                                      self.exporter.get_aloha_model(self.model))
+            # and TIR specific entries
+            self.exporter.set_TIR_replace_dict_entries()
+            
+            # Finally the entries specific to the optimized output
+            self.exporter.set_optimized_output_specific_replace_dict_entries(\
+                                                                 matrix_element)
+        
+            # We can then finally write out 'loop_matrix.f'
+            self.exporter.write_loopmatrix(writer,matrix_element, fortran_model,
+                                      noSplit=True, write_auxiliary_files=False)

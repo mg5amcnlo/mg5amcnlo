@@ -1487,7 +1487,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f and loop_num.f only but with
         the optimized FortranModel"""
-        # Create the necessary files for the loop matrix element subroutine
+                
+        # Warn the user that the 'matrix' output where all relevant code is
+        # put together in a single file is not supported in this loop output.
+        if writer:
+            raise MadGraph5Error, 'Matrix output mode no longer supported.'
         
         if not isinstance(fortran_model,\
           helas_call_writers.FortranUFOHelasCallWriter):
@@ -1509,7 +1513,56 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict=LoopProcessExporterFortranSA.\
                               generate_general_replace_dict(self,matrix_element)
 
-        # TIR stuff
+        # Now fill in the replace dict entries specific to the TIR implementation
+        self.set_TIR_replace_dict_entries()
+        # and those specific to the optimized output
+        self.set_optimized_output_specific_replace_dict_entries(matrix_element)
+
+        # Create the necessary files for the loop matrix element subroutine      
+        proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
+        proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
+        proc_prefix_writer.close()
+                    
+        filename = 'loop_matrix.f'
+        calls = self.write_loopmatrix(writers.FortranWriter(filename),
+                                      matrix_element,
+                                      OptimizedFortranModel)
+        
+        filename = 'check_sa.f'
+        self.write_check_sa(writers.FortranWriter(filename),matrix_element)
+        
+        filename = 'polynomial.f'
+        calls = self.write_polynomial_subroutines(
+                                      writers.FortranWriter(filename),
+                                      matrix_element)
+        
+        filename = 'improve_ps.f'
+        calls = self.write_improve_ps(writers.FortranWriter(filename),
+                                                             matrix_element)
+        
+        filename = 'CT_interface.f'
+        self.write_CT_interface(writers.FortranWriter(filename),\
+                                matrix_element)
+        
+        filename = 'TIR_interface.f'
+        self.write_TIR_interface(writers.FortranWriter(filename),
+                                matrix_element)
+
+        filename = 'loop_num.f'
+        self.write_loop_num(writers.FortranWriter(filename),\
+                                matrix_element,OptimizedFortranModel)
+        
+        filename = 'mp_compute_loop_coefs.f'
+        self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
+                                     matrix_element,OptimizedFortranModel)
+
+        return calls
+
+    def set_TIR_replace_dict_entries(self):
+        """ Specify the entries of the replacement dictionary which depend on
+        the choice of Tensor Integral Reduction (TIR) libraries specified by the
+        user and their availability on the system."""
+        
         for tir in self.all_tir:
             if self.tir_available_dict[tir]:
                 if tir=="pjfry":
@@ -1559,7 +1612,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             looplibs_av.extend(['.FALSE.'])
         self.general_replace_dict['data_looplibs_av']="DATA LOOPLIBS_AVAILABLE /"\
         +','.join(looplibs_av)+"/"
-        # Now some features specific to the optimized output        
+
+
+    def set_optimized_output_specific_replace_dict_entries(self, matrix_element):
+        """ Specify the entries of the replacement dictionary which are specific
+        to the optimized output and only relevant to it (the more general entries
+        are set in the the mother class LoopProcessExporterFortranSA."""
+        
         max_loop_rank=matrix_element.get_max_loop_rank()
         self.general_replace_dict['maxrank']=max_loop_rank
         self.general_replace_dict['loop_max_coefs']=\
@@ -1594,51 +1653,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             self.general_replace_dict['mp_born_amps_decl'] = \
                   self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
                   "\n common/%sMP_AMPS/AMP"%self.general_replace_dict['proc_prefix']
-
-        if writer:
-            raise MadGraph5Error, 'Matrix output mode no longer supported.'
-
-        else:
-                        
-            proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
-            proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
-            proc_prefix_writer.close()
-                        
-            filename = 'loop_matrix.f'
-            calls = self.write_loopmatrix(writers.FortranWriter(filename),
-                                          matrix_element,
-                                          OptimizedFortranModel)
-            
-            filename = 'check_sa.f'
-            self.write_check_sa(writers.FortranWriter(filename),matrix_element)
-            
-            filename = 'polynomial.f'
-            calls = self.write_polynomial_subroutines(
-                                          writers.FortranWriter(filename),
-                                          matrix_element)
-            
-            filename = 'improve_ps.f'
-            calls = self.write_improve_ps(writers.FortranWriter(filename),
-                                                                 matrix_element)
-            
-            filename = 'CT_interface.f'
-            self.write_CT_interface(writers.FortranWriter(filename),\
-                                    matrix_element)
-            
-            filename = 'TIR_interface.f'
-            self.write_TIR_interface(writers.FortranWriter(filename),
-                                    matrix_element)
-
-            filename = 'loop_num.f'
-            self.write_loop_num(writers.FortranWriter(filename),\
-                                    matrix_element,OptimizedFortranModel)
-            
-            filename = 'mp_compute_loop_coefs.f'
-            self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
-                                         matrix_element,OptimizedFortranModel)
-
-            return calls
-
+    
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools
         which contains the Helas calls building the loop"""
@@ -1955,7 +1970,7 @@ ENDIF"""%self.general_replace_dict
                              '\nwrite (*,*) "---------------------------------"'
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
-                         noSplit=False):
+                         noSplit=False, write_auxiliary_files=True,):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \
@@ -2140,26 +2155,27 @@ ENDDO""")
             actualize_ans.extend(["ENDIF","ENDDO"])            
         replace_dict['actualize_ans']='\n'.join(actualize_ans)
         
-        # Write out the color matrix
-        (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open(pjoin('..','MadLoop5_resources',
+        if write_auxiliary_files:
+            # Write out the color matrix
+            (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
+            CMWriter=open(pjoin('..','MadLoop5_resources',
             '%(proc_prefix)sColorNumFactors.dat'%self.general_replace_dict),'w')
-        for ColorLine in CMNum:
-            CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
-        CMWriter.close()
-        CMWriter=open(pjoin('..','MadLoop5_resources',
-          '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
-        for ColorLine in CMDenom:
-            CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
-        CMWriter.close()
-        
-        # Write out the helicity configurations
-        HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open(pjoin('..','MadLoop5_resources',
+            for ColorLine in CMNum:
+                CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
+            CMWriter.close()
+            CMWriter=open(pjoin('..','MadLoop5_resources',
+            '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
+            for ColorLine in CMDenom:
+                CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
+            CMWriter.close()
+            
+            # Write out the helicity configurations
+            HelConfigs=matrix_element.get_helicity_matrix()
+            HelConfigWriter=open(pjoin('..','MadLoop5_resources',
                  '%(proc_prefix)sHelConfigs.dat'%self.general_replace_dict),'w')
-        for HelConfig in HelConfigs:
-            HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
-        HelConfigWriter.close()
+            for HelConfig in HelConfigs:
+                HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
+            HelConfigWriter.close()
         
         # Extract helas calls
         born_ct_helas_calls, uvct_helas_calls = \

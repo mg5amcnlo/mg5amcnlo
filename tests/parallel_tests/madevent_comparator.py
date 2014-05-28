@@ -61,7 +61,7 @@ class MadEventComparator(me_comparator.MEComparator):
         logging.info(\
             "Running on %i processes with order: %s, in model %s" % \
             (len(proc_list),
-             ' '.join(["%s=%i" % (k, v) for k, v in orders.items()]),
+             MadEventRunner.get_coupling_definitions(orders),
              '/'.join([onemodel for onemodel in model])))
 
         pass_proc = False
@@ -411,7 +411,8 @@ class MadEventRunner(object):
         """Perform some clean up procedure to leave the ME code directory in
         the same state as it was initially (e.g., remove temp dirs, ...)
         """
-        pass
+        pass 
+            
 
 class MG5Runner(MadEventRunner):
     """Runner object for the MG5 Matrix Element generator."""
@@ -480,7 +481,7 @@ class MG5Runner(MadEventRunner):
         else:
             v5_string = "import model %s\n" % model
         v5_string += "set automatic_html_opening False\n"
-        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+        couplings = me_comparator.MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
@@ -537,7 +538,7 @@ class MG5OldRunner(MG5Runner):
 
         v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
         v5_string += "set automatic_html_opening False\n"
-        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+        couplings =  me_comparator.MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
@@ -603,7 +604,7 @@ class MG5gaugeRunner(MG5Runner):
         v5_string += 'set gauge %s \n' % self.gauge
         v5_string += "import model %s \n" % os.path.join(self.model_dir, model)
 
-        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+        couplings = me_comparator.MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \

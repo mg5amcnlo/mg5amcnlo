@@ -26,6 +26,7 @@ sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 import tests.unit_tests as unittest
 
+import tests.IOTests as IOTests
 
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.file_writers as writers
@@ -49,6 +50,9 @@ import tests.unit_tests.iolibs.test_helas_call_writers as \
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
+
+pjoin = os.path.join
+
 #===============================================================================
 # IOImportV4Test
 #===============================================================================
@@ -3986,6 +3990,128 @@ C     Number of configs
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_symswap_dat)
 
+#===============================================================================
+# FullHelasOutputIOTest
+#===============================================================================
+class FullHelasOutputIOTest(IOTests.IOTestManager,
+                            test_helas_call_writers.HelasModelTestSetup):
+
+    def setUp(self):
+        """Generate a simple model for the IOTests to use"""
+        
+        if hasattr(self,'IOTestModel'):
+            return
+
+        self.IOTestModel = base_objects.Model()
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        # Gluon self-couplings
+        my_color_string = color.ColorString([color.f(0, 1, 2)])
+        my_color_string.is_imaginary = True
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [g, \
+                                             g, \
+                                             g]),
+                      'color': [my_color_string],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GG'},
+                      'orders':{'QCD':1}}))
+
+        self.IOTestModel.set('particles', mypartlist)
+        self.IOTestModel.set('interactions', myinterlist)
+        self.IOTestModel.set('couplings', ['QCD','QED'])        
+        self.IOTestModel.set('order_hierarchy', {'QCD':1,'QED':2})
+
+    @IOTests.createIOTest(groupName='SquaredOrder_IOTest')
+    def testIO_sqso_uux_uuxuuxx(self):
+        """ target: [matrix(.*)\.f]
+        """
+    
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':2,'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,'state':True}))
+        myleglist.append(base_objects.Leg({'id':-2,'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,'state':True}))
+        myleglist.append(base_objects.Leg({'id':-2,'state':True}))
+
+        fortran_model = helas_call_writers.FortranHelasCallWriter(self.IOTestModel)
+        process_exporter = export_v4.ProcessExporterFortranSA()
+        
+        SO_tests = [({},{},{},[],'NoSQSO'),
+                    ({},{'QCD':6},{'QCD':'=='},['QCD'],'QCDsq_eq_6'),
+                    ({},{'QED':4},{'QED':'>'},['QCD'],'QEDsq_gt_4'),
+                    ({},{'QED':6},{'QED':'<='},['QCD','QED'],'QCDsq_le_6'),
+                    ({'QED':2},{'WEIGHTED':14,'QCD':2}, 
+                     {'WEIGHTED':'<=','QCD':'>'},['WEIGHTED','QCD'],
+                                    'ampOrderQED2_eq_2_WGTsq_le_14_QCDsq_gt_4')]
+        
+        for orders, sq_orders, sq_orders_type, split_orders, name in SO_tests:
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.IOTestModel,
+                                           'orders': orders,
+                                           'squared_orders': sq_orders,
+                                           'sqorders_types':sq_orders_type,
+                                           'split_orders':split_orders})
+
+            myamplitude = diagram_generation.Amplitude({'process': myproc})
+            matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+            writer = writers.FortranWriter(pjoin(self.IOpath,'matrix_%s.f'%name))
+            process_exporter.write_matrix_element_v4(
+                                           writer,matrix_element,fortran_model)
+        
 #===============================================================================
 # FullHelasOutputTest
 #===============================================================================

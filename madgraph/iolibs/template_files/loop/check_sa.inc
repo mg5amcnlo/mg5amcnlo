@@ -273,9 +273,15 @@ C
       write (*,*) "Matrix element 1eps   = ", MATELEM(2,0), " GeV^",-(2*nexternal-8)
       write (*,*) "Matrix element 2eps   = ", MATELEM(3,0), " GeV^",-(2*nexternal-8)
       write (*,*) "---------------------------------"
-      write (*,*) "finite / (born*ao2pi) = ", MATELEM(1,0)/MATELEM(0,0)/AO2PI
-      write (*,*) "1eps   / (born*ao2pi) = ", MATELEM(2,0)/MATELEM(0,0)/AO2PI
-      write (*,*) "2eps   / (born*ao2pi) = ", MATELEM(3,0)/MATELEM(0,0)/AO2PI
+	  IF (MATELEM(0,0).NE.0.0d0) THEN
+        write (*,*) "finite / (born*ao2pi) = ", MATELEM(1,0)/MATELEM(0,0)/AO2PI
+        write (*,*) "1eps   / (born*ao2pi) = ", MATELEM(2,0)/MATELEM(0,0)/AO2PI
+        write (*,*) "2eps   / (born*ao2pi) = ", MATELEM(3,0)/MATELEM(0,0)/AO2PI
+	  ELSE
+        write (*,*) "finite / ao2pi      = ", MATELEM(1,0)/MATELEM(0,0)/AO2PI
+        write (*,*) "1eps   / ao2pi      = ", MATELEM(2,0)/MATELEM(0,0)/AO2PI
+        write (*,*) "2eps   / ao2pi      = ", MATELEM(3,0)/MATELEM(0,0)/AO2PI	    
+	  ENDIF
       write (*,*) "---------------------------------"
 
       open(69, file="result.dat", err=976, action='WRITE')
@@ -284,9 +290,15 @@ C
       enddo
       write (69,'(a3,1x,i2)') 'EXP',-(2*nexternal-8)
       write (69,'(a4,1x,1e25.15)') 'BORN',MATELEM(0,0)
-      write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1,0)/MATELEM(0,0)/AO2PI
-      write (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2,0)/MATELEM(0,0)/AO2PI
-      write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3,0)/MATELEM(0,0)/AO2PI
+	  IF (MATELEM(0,0).NE.0.0d0) THEN
+        write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1,0)/MATELEM(0,0)/AO2PI
+        write (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2,0)/MATELEM(0,0)/AO2PI
+        write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3,0)/MATELEM(0,0)/AO2PI
+	  ELSE
+        write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1,0)/AO2PI
+        write (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2,0)/AO2PI
+        write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3,0)/AO2PI
+	  ENDIF
       write (69,*) 'Export_Format Default'
 	  write (69,'(a7,1x,i3)') 'RETCODE',RETURNCODE
 	  write (69,'(a3,1x,1e10.4)') 'ACC',PREC_FOUND(0)

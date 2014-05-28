@@ -65,9 +65,9 @@ class OLDMG5Comparator(unittest.TestCase):
         
         #2. reverse the directory to its old status
         os.chdir(filepath)
-        status = subprocess.call(['bzr', 'revert', '-r', str(cls.reference_number)], stdout=devnull, stderr=devnull)
-        if status:
-            raise Exception, 'Impossible to configure old run'
+#        status = subprocess.call(['bzr', 'revert', '-r', str(cls.reference_number)], stdout=devnull, stderr=devnull)
+#        if status:
+#            raise Exception, 'Impossible to configure old run'
         
         cls.old_mg5 = pjoin(MG5DIR,filepath)
         os.chdir(init_dir)
@@ -77,6 +77,7 @@ class OLDMG5Comparator(unittest.TestCase):
                         energy = 500, filename = "", pickle_file = "",
                         tolerance = 1e-06):
         """ """
+        
         mg5_path = self.build_old_mg5()
         
         if 'v4' in model:
@@ -218,7 +219,8 @@ class OLDMG5Comparator(unittest.TestCase):
            Note that if you need to redo this, this is potentially due to a change
            in the model. In consequence, you need to change the old MG5 comparison
            point. (Since the default use another model)."""
-        
+
+        self.create_short_parallel_sqso()        
         return # By default no need this
         self.create_short_paralel_sm()
         self.create_short_paralel_mssm()
@@ -283,6 +285,23 @@ class OLDMG5Comparator(unittest.TestCase):
                              pickle_file = pickle_file)
 
 
+    def create_short_parallel_sqso(self):
+        """Test a short list of processes with squared order constraints"""
+        # Create a list of processes to check automatically
+        my_proc_list = ['u u~ > d d~', 
+                        'u u~ > d d~ g', 
+                        'u u~ > d d~ a',
+                        'u u~ > d d~ c c~']
+        
+        # Store list of non-zero processes and results in file
+        pickle_file = os.path.join(_pickle_path, 
+                                              "mg5_short_paralleltest_sqso.pkl")
+        self.compare_processes(my_proc_list,
+                             model='sm',
+                             orders = {'WEIGHTED^2<=':-2},
+                             filename = "short_sqso.log",
+                             pickle_file = pickle_file)
+
 
     ############################################################################    
     #  ROUTINE FOR THE SHORT TEST (USE by the release script)
@@ -302,8 +321,7 @@ class OLDMG5Comparator(unittest.TestCase):
             my_comp.set_me_runners(stored_runner, my_mg5)
 
             # Run the actual comparison
-            my_comp.run_comparison(stored_runner.proc_list,
-                                   'sm',
+            my_comp.run_comparison(stored_runner.proc_list,'sm',
                                    stored_runner.orders,
                                    stored_runner.energy)
 
