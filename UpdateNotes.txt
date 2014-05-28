@@ -12,6 +12,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		OM: Fix an error when using the "customize_model" command
                 S. Mrenna (by OM): Fix the include file in pythia8 output to be compliant with the latest
                     PY8 version
+		RF: Added a string with functional form for the scales to the event file banner (NLO only)
 
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be

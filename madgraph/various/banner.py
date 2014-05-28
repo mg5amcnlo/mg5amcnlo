@@ -80,6 +80,7 @@ class Banner(dict):
       'mgproccard': 'proc_card.dat',
       'init': '',
       'mggenerationinfo':'',
+      'scalesfunctionalform':'',
       'montecarlomasses':'',
       'initrwgt':'',
       'madspin':'madspin_card.dat',
