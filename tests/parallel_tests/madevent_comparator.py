@@ -61,7 +61,7 @@ class MadEventComparator(me_comparator.MEComparator):
         logging.info(\
             "Running on %i processes with order: %s, in model %s" % \
             (len(proc_list),
-             MadEventRunner.get_coupling_definitions(orders),
+             me_comparator.MERunner.get_coupling_definitions(orders),
              '/'.join([onemodel for onemodel in model])))
 
         pass_proc = False
@@ -494,7 +494,6 @@ class MG5Runner(MadEventRunner):
         return v5_string
     
     def get_values(self):
-    
     
         dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
         SubProc=[name for name in os.listdir(dir_name + '/SubProcesses') 

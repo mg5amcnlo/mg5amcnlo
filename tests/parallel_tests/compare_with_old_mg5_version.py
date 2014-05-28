@@ -65,9 +65,9 @@ class OLDMG5Comparator(unittest.TestCase):
         
         #2. reverse the directory to its old status
         os.chdir(filepath)
-#        status = subprocess.call(['bzr', 'revert', '-r', str(cls.reference_number)], stdout=devnull, stderr=devnull)
-#        if status:
-#            raise Exception, 'Impossible to configure old run'
+        status = subprocess.call(['bzr', 'revert', '-r', str(cls.reference_number)], stdout=devnull, stderr=devnull)
+        if status:
+            raise Exception, 'Impossible to configure old run'
         
         cls.old_mg5 = pjoin(MG5DIR,filepath)
         os.chdir(init_dir)
@@ -220,8 +220,8 @@ class OLDMG5Comparator(unittest.TestCase):
            in the model. In consequence, you need to change the old MG5 comparison
            point. (Since the default use another model)."""
 
-        self.create_short_parallel_sqso()        
         return # By default no need this
+        self.create_short_parallel_sqso()
         self.create_short_paralel_sm()
         self.create_short_paralel_mssm()
         self.create_short_paralel_heft()
@@ -329,6 +329,31 @@ class OLDMG5Comparator(unittest.TestCase):
 
             # Do some cleanup
             my_comp.cleanup()
+
+    def test_short_sqso(self): 
+        """Test a short list of processes with squared order constraints"""
+
+        comparisons = me_comparator.PickleRunner.find_comparisons(\
+            os.path.join(_pickle_path, "mg5_short_paralleltest_sqso.pkl"))
+
+        for stored_runner in comparisons:
+            # Create a MERunner object for MG5
+            my_mg5 = me_comparator.MG5_UFO_Runner()
+            my_mg5.setup(MG5DIR, MG5DIR)
+
+            # Create and setup a comparator
+            my_comp = me_comparator.MEComparator()
+            my_comp.set_me_runners(stored_runner, my_mg5)
+
+            # Run the actual comparison
+            my_comp.run_comparison(stored_runner.proc_list,'sm',
+                                   stored_runner.orders,
+                                   stored_runner.energy)
+
+            my_comp.assert_processes(self)
+
+            # Do some cleanup
+            my_comp.cleanup()
             
     def test_short_mssm(self):
         """Test a minimal list of sm 2->2 processes, mainly to test the test"""
@@ -395,6 +420,19 @@ class OLDMG5Comparator(unittest.TestCase):
         self.compare_cross_section_to_values(values, my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm1.log")
+
+    def test_short_cross_sqso1(self):
+        """Test a process with definite squared order constraints. In this case
+        only the QCD-QED interference."""
+        # Create a list of processes to check automatically                                                                                                                             
+        my_proc_list = ['p p > j j']
+        values = {'number_of_P0': '1',
+                  'cross_P0_qq_qq': '1.987E+05'}
+
+        # Store list of non-zero processes and results in file                                                                                                                          
+        self.compare_cross_section_to_values(values, my_proc_list,
+                             orders = {'QED^2==':2, 'QCD^2==':2},
+                             filename = "short_cs_sqso1.log")
  
     def test_short_cross_sm2(self):
         """Test a short list of sm processes""" 
