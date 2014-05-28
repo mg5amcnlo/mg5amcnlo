@@ -212,9 +212,17 @@ c get info on beam and PDFs
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
+      double precision muR2_current,muF12_current,
+     #                 muF22_current,QES2_current
+      common/cscales_current_values/muR2_current,muF12_current,
+     #                              muF22_current,QES2_current
 c
       ievent=66
-      scale = shower_scale
+      if (ickkw.ne.4) then
+         scale = shower_scale
+      else
+         scale = sqrt(muF12_current)
+      endif
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
 
