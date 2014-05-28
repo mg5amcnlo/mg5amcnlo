@@ -2591,9 +2591,23 @@ Integrated cross-section
         content += 'SMASS=%s\n' % mcmass_dict[3]
         content += 'CMASS=%s\n' % mcmass_dict[4]
         content += 'BMASS=%s\n' % mcmass_dict[5]
-        content += 'EMASS=%s\n' % mcmass_dict[11]
-        content += 'MUMASS=%s\n' % mcmass_dict[13]
-        content += 'TAUMASS=%s\n' % mcmass_dict[15]
+        try:
+            content += 'EMASS=%s\n' % mcmass_dict[11]
+            content += 'MUMASS=%s\n' % mcmass_dict[13]
+            content += 'TAUMASS=%s\n' % mcmass_dict[15]
+        except KeyError:
+            # this is for backward compatibility
+            mcmass_lines = [l for l in \
+                    open(pjoin(self.me_dir, 'SubProcesses', 'MCmasses_%s.inc' % shower.upper())
+                            ).read().split('\n') if l]
+            new_mcmass_dict = []
+            for l in mcmass_lines:
+                key, val = l.split('=')
+                new_mcmass_dict[key.strip()] = val.replace('d', 'e').strip()
+            content += 'EMASS=%s\n' % new_mcmass_dict['mcmass(11)']
+            content += 'MUMASS=%s\n' % new_mcmass_dict['mcmass(13)']
+            content += 'TAUMASS=%s\n' % new_mcmass_dict['mcmass(15)']
+
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
