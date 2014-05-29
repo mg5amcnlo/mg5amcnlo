@@ -1,7 +1,7 @@
 #FC = f95
 #FC = lf95
-#FC = gfortran
-FC = gfortran
+#FC = /usr/local/bin/gfortran
+FC = /usr/local/bin/gfortran
 
 CDFUN = yes
 #CDFUN = no

@@ -1,5 +1,5 @@
 
-FC= gfortran
+FC= /usr/local/bin/gfortran
 qcdlooppath=$(PWD)/qcdloop
 QLDIR=$(qcdlooppath)/ql
 FFDIR=$(qcdlooppath)/ff

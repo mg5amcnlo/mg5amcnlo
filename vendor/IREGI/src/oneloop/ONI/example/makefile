@@ -1,4 +1,4 @@
-FC = gfortran
+FC = /usr/local/bin/gfortran
 FFLAGS = 
 
 WITHLT = yes

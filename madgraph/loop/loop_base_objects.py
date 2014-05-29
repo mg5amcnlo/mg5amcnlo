@@ -1290,18 +1290,6 @@ class FDStructure(base_objects.PhysicsObject):
         else:
             return False
 
-    # HSS 19/09/2012
-    def is_external_massless(self,model):
-	"""Returns whether the structure is simply made of an external massless particle only"""
-	if not self.is_external():return False
-	exleg = [ leg for leg in self['external_legs'] if leg['number']==self['canonical'][0][0][0] ]
-	if not exleg: return False
-	exleg = exleg[0]
-	return any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() \
-	if pdg == abs(exleg['id'])])
-    # HSS
-
-
     def filter(self, name, value):
         """Filter for valid FDStructure property values."""
 
