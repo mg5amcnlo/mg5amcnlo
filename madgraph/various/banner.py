@@ -873,9 +873,8 @@ class ProcCard(list):
         
         store_line = ''
         for line in init:
-            if line.endswith('\\\n'):
-                store_line += line[:-2]
-            elif line.endswith('\\'):
+            line = line.strip()
+            if line.endswith('\\'):
                 store_line += line[:-1]
             else:
                 self.append(store_line + line)
