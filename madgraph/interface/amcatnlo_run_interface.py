@@ -2600,7 +2600,7 @@ Integrated cross-section
             mcmass_lines = [l for l in \
                     open(pjoin(self.me_dir, 'SubProcesses', 'MCmasses_%s.inc' % shower.upper())
                             ).read().split('\n') if l]
-            new_mcmass_dict = []
+            new_mcmass_dict = {}
             for l in mcmass_lines:
                 key, val = l.split('=')
                 new_mcmass_dict[key.strip()] = val.replace('d', 'e').strip()
