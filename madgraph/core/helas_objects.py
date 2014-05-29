@@ -89,6 +89,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         else:
             sorted_tags = sorted([cls(d, model, ninitial) for d in \
                                       amplitude.get('diagrams')])
+
         # Do not use this for loop diagrams as for now the HelasMultiProcess
         # always contain only exactly one loop amplitude.
         if sorted_tags and not isinstance(amplitude, \
@@ -2316,6 +2317,76 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         return conjugates
 
+    
+    def check_wavefunction_numbers_order(self, applyChanges=False, raiseError=True):
+        """ This function only serves as an internal consistency check to 
+        make sure that when setting the 'wavefunctions' attribute of the
+        diagram, their order is consistent, in the sense that all mothers 
+        of any given wavefunction appear before that wavefunction.
+        This function returns True if there was no change and the original 
+        wavefunction list was consistent and False otherwise.
+        The option 'applyChanges' controls whether the function should substitute
+        the original list (self) with the new corrected one. For now, this function
+        is only used for self-consistency checks and the changes are not applied."""
+    
+        if len(self)<2:
+            return True
+    
+        def RaiseError():
+            raise self.PhysicsObjectError, \
+      "This wavefunction list does not have a consistent wavefunction ordering."+\
+      "\n  Wf numbers: %s"%str([wf['number'] for wf in diag_wavefunctions])+\
+      "\n  Wf mothers: %s"%str([[mother['number'] for mother in wf['mothers']] \
+                                                  for wf in diag_wavefunctions])
+    
+        # We want to work on a local copy of the wavefunction list attribute
+        diag_wfs = copy.copy(self)
+        
+        # We want to keep the original wf numbering (but beware that this
+        # implies changing the 'number' attribute of some wf if this function
+        # was used for actual reordering and not just self-consistency check)
+        wfNumbers = [wf['number'] for wf in self]
+        
+        exitLoop=False
+        while not exitLoop:
+            for i, wf in enumerate(diag_wfs):
+                if i==len(diag_wfs)-1:
+                    exitLoop=True
+                    break
+                found=False
+                # Look at all subsequent wfs in the list placed after wf at 
+                # index i. None of them should have wf as its mother
+                for w in diag_wfs[i+1:]:
+                    if w in wf.get('mothers'):
+                        # There is an inconsisent order so we must move this
+                        # mother w *before* wf which is placed at i.
+                        diag_wfs.remove(w)
+                        diag_wfs.insert(i,w)
+                        found=True
+                        if raiseError: RaiseError()
+                        if not applyChanges:
+                            return False
+                        break
+                if found:
+                    break
+    
+        if diag_wfs!=self:
+            # After this, diag_wfs is the properly re-ordered and
+            # consistent list that should be used, where each mother appear
+            # before its daughter
+            for i,wf in enumerate(diag_wfs):
+                wf.set('number', wfNumbers[i])
+            
+            # Replace this wavefunction list by corrected one
+            del self[:]
+            self.extend(diag_wfs)
+            
+            # The original list was inconsistent, so it returns False.
+            return False
+        
+        # The original list was consistent, so it returns True
+        return True
+    
     @staticmethod
     def extract_wavefunctions(mothers):
         """Recursively extract the wavefunctions from mothers of mothers"""
@@ -3017,13 +3088,6 @@ class HelasDiagram(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasWavefunctionList object" % \
                         str(value)
-            else:
-                if __debug__ and not self.check_diagram_wavefunction_order(value):
-                    raise self.PhysicsObjectError, \
-      "This wavefunction list does not have a consistent wavefunction ordering."+\
-      "\n  Wf numbers: %s"%str([wf['number'] for wf in value])+\
-      "\n  Wf mothers: %s"%str([[mother['number'] for mother in wf['mothers']] \
-                                                               for wf in value])
       
         if name == 'amplitudes':
             if not isinstance(value, HelasAmplitudeList):
@@ -3031,66 +3095,6 @@ class HelasDiagram(base_objects.PhysicsObject):
                         "%s is not a valid HelasAmplitudeList object" % \
                         str(value)
 
-        return True
-
-    def check_diagram_wavefunction_order(self, diag_list, applyChanges=False):
-        """ This function only serves as an internal consistency check to 
-        make sure that when setting the 'wavefunctions' attribute of the
-        diagram, their order is consistent, in the sense that all mothers 
-        of any given wavefunction appear before that wavefunction.
-        This function returns True if there was no change and the original 
-        wavefunction list was consistent and False otherwise.
-        The option 'applyChanges' control whether the function should substitute
-        the original list with the new corrected one. For now, this function
-        is only used for self-consistency checks and the changes are not applied."""
-        
-        if len(diag_list)<2:
-            return True
-
-        # We want to work on a local copy of the wavefunction list attribute
-        diagram_wavefunctions = copy.copy(diag_list)
-        
-        # We want to keep the original wf numbering (but beward that this
-        # implies changing the 'number' attriute of some wf if this function
-        # was used for actual reordering and not just self-consistency check)
-        wfNumbers = [wf['number'] for wf in diag_list]
-        
-        exitLoop=False
-        while not exitLoop:
-            for i, wf in enumerate(diagram_wavefunctions):
-                if i==len(diagram_wavefunctions)-1:
-                    exitLoop=True
-                    break
-                found=False
-                # Look at all subsequent wfs in the list placed after wf at 
-                # index i. None of them should wf as its mother
-                for w in diagram_wavefunctions[i+1:]:
-                    if w in wf.get('mothers'):
-                        # There is an inconsisent order so we must move this
-                        # mother w *before* wf which is placed at i.
-                        diagram_wavefunctions.remove(w)
-                        diagram_wavefunctions.insert(i,w)
-                        found=True
-                        if not applyChanges:
-                            return False
-                        break
-                if found:
-                    break
-
-        if diagram_wavefunctions!=diag_list:
-            # After this diagram_wavefunctions is the properly re-ordered and
-            # consistent list that should be used, where each mother appear
-            # before its daughter       
-            for i,wf in enumerate(diagram_wavefunctions):
-                wf.set('number', wfNumbers[i])
-            
-            if applyChanges:
-                diag_list=diagram_wavefunctions
-            
-            # The original list was inconsistent, so it returns False.
-            return False
-        
-        # The original list was consistent, so it returns True
         return True
                 
     def get_sorted_keys(self):

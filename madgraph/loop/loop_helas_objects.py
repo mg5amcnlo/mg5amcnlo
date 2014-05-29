@@ -1648,6 +1648,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             diagram_number = diagram_number + 1
             loopHelDiag.set('number', diagram_number)
             helas_diagrams.append(loopHelDiag)
+            check_diagram_wavefunction_order
 
         # We finally turn to the UVCT diagrams
         for diagram in amplitude.get('loop_UVCT_diagrams'):
@@ -1669,6 +1670,15 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             helas_diagrams.append(loopHelDiag)
  
         self.set('diagrams', helas_diagrams)
+         # Check wf order consistency
+        if __debug__:
+            for diag in self.get('diagrams'):
+                # This is just a monitoring function, it will *NOT* affect the
+                # wavefunctions list of the diagram, but just raise an Error
+                # if the order is inconsistent, namely if a wavefunction in this
+                # list has a mother which appears after its position in the list.
+                diag.get('wavefunctions').check_wavefunction_numbers_order()
+
         # Inform how many loop wavefunctions have been reused.
         if self.optimized_output:
             logger.debug('%d loop wavefunctions have been reused'%self.lwf_reused+
@@ -1706,9 +1716,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
     def get_split_orders_mapping(self):
         """This function returns a list and a dictionary:
                         squared_orders, amps_orders
-        
         ===
-              
         The squared_orders lists all contributing squared_orders as tuple whose
         elements are the power at which are elevated the couplings orderered as
         in the 'split_orders'.
@@ -1739,9 +1747,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         
         'max_contrib_group_id': The same as above, except this time
         it is for the loop group id used for the loop reduction.
- 
         ===
-        
         The amps_orders is a *dictionary* with keys 
           'born_amp_orders',
           'loop_amp_orders'
