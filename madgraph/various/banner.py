@@ -1004,9 +1004,9 @@ class ProcCard(list):
         for line in self:
             while len(line) > 70:
                 sub, line = line[:70]+"\\" , line[70:] 
-                fsock.write(sub)
+                fsock.write(sub+"\n")
             else:
-                fsock.write(line)
+                fsock.write(line+"\n")
                 
             
                 
