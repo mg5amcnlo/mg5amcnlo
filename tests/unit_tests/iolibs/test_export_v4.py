@@ -1135,7 +1135,6 @@ C
 
       END""" % misc.get_pkg_info()
 
-        print "test_export_matrix_element_v4_madevent_group"
         open('sol.txt','w').writelines(open(self.give_pos('test')).read())
         self.assertFileContains('test', goal_matrix1)
 
@@ -2131,7 +2130,6 @@ C
 
       END""" % misc.get_pkg_info()
 
-        print "test_export_matrix_element_v4_madevent_group"
         open('solution.txt','w').writelines(open(self.give_pos('test')).read())
         self.assertFileContains('test', goal_matrix1)
 
