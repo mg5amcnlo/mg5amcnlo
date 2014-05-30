@@ -94,7 +94,7 @@ class IOTest(object):
     what kind of IO test will be necessary later """
 
     # Handy definitions
-    proc_files = ['[^.+\.(f|dat|inc)$]']
+    proc_files = ['[^.+\.(f|dat|inc)$]','MadLoop5_resources/[^ML5_.*\.dat]']
     # Some model files are veto because they are sourced by dictionaries whose 
     # order is random.
     model_files = ['../../Source/MODEL/[^.+\.(f|inc)$]',
@@ -706,7 +706,7 @@ class IOTestManager(unittest.TestCase):
                         else:
                             # Copying the existing reference as a backup
                             tmp_path = pjoin(_hc_comparison_files,folder_name,\
-                                        test_name,self.toFileName(fname)+'.tmp')
+                                        test_name,self.toFileName(fname)+'.BackUp')
                             if os.path.isfile(tmp_path):
                                 os.remove(tmp_path)
                             file = open(tmp_path,'w')

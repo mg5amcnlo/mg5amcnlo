@@ -191,7 +191,7 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
 #===============================================================================
 # IOExportMadLoopUTest
 #===============================================================================
-class IOTestMadLoopSquaredOrdersExport(IOExportMadLoopUnitTest):
+class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
     """Test class for the writing of loop_matrix.f in the presence of squared 
     order constraints and differentiation of different "split orders" 
     combinations."""

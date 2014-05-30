@@ -1648,7 +1648,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             diagram_number = diagram_number + 1
             loopHelDiag.set('number', diagram_number)
             helas_diagrams.append(loopHelDiag)
-            check_diagram_wavefunction_order
 
         # We finally turn to the UVCT diagrams
         for diagram in amplitude.get('loop_UVCT_diagrams'):

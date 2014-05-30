@@ -1349,9 +1349,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # The option below controls wether one wants to group together in one single
     # CutTools/TIR call the loops with same denominator structure
     group_loops=True
-    # TIR things
+    
+    # List of potential TIR library one wants to link to
     all_tir=['pjfry','iregi']
-    tir_available_dict={'pjfry':True,'iregi':True}
     
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
@@ -1360,6 +1360,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         super(LoopProcessOptimizedExporterFortranSA,self).__init__(mgme_dir, 
                                                                    dir_path, opt)
+
+        # TIR available ones
+        self.tir_available_dict={'pjfry':True,'iregi':True}
 
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
@@ -1450,8 +1453,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             return False
         if not os.path.exists(os.path.join(libpath,libname)):
             if libname=="libpjfry.a":
-                logger.warning('Loop library for TIR %s is compiled well.'%tir_name+\
-                           'It will be negelected below.')
+                logger.warning('Loop library %s for TIR %s does not exist at '\
+                      %(libname,tir_name,libpath)+'. It will not be available.')
                 self.tir_available_dict[tir_name]=False
                 # return to original pwd, which is important
                 os.chdir(cwd)
