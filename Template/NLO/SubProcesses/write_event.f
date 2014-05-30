@@ -67,6 +67,8 @@ c
          call set_cms_stuff(0)
       endif
 
+      if (ickkw.eq.4) putonshell=.false.
+
       if (ickkw.eq.4) then
          if (Hevents) then
             write (*,*) 'For ickkw=4, Hevents should be false',Hevents
@@ -94,7 +96,7 @@ c Put the Hevent info in a common block
          enddo
          Hevents=.false.
       endif
-
+      
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
      &     putonshell,ndim,ipole,x,jpart,npart,pb,shower_scale)
 
