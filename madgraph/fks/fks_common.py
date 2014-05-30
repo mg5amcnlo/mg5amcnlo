@@ -237,6 +237,35 @@ def find_splittings(leg, model, dict, pert='QCD'): #test written
     return splittings
 
 
+def find_mothers(leg1, leg2, model, dict={}, pert='', mom_mass=''):
+    """Find the possible mothers of leg1, leg2.
+    If mom_mass is passed, only the mothers with mom_mass are returned
+    """
+    if pert:
+        if dict == {}:
+            dict = find_pert_particles_interactions(model, pert)
+    interactions = dict['interactions']
+    mothers = []
+
+    for inte in interactions:
+        # loop over interactions which contain leg1 and leg2
+        # and add the third particle to mothers
+        pdgs = [p.get_pdg_code() for p in inte['particles']]
+        try:
+            for l in [leg1, leg2]:
+                if not l['state']:
+                    pdgs.remove(l['id'])
+                else:
+                    pdgs.remove(model.get('particle_dict')[l['id']].get_anti_pdg_code())
+        except ValueError:
+            continue
+        if mom_mass and \
+           mom_mass.lower() == model.get('particle_dict')[pdgs[0]]['mass'].lower():
+            mothers.append(pdgs[0])
+
+    return mothers
+
+
 def split_leg(leg, parts, model): #test written
     """Splits the leg into parts, and returns the two new legs.
     """
