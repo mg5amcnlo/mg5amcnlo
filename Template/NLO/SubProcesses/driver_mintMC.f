@@ -119,6 +119,11 @@ c For MINT:
       double precision ran2
       external ran2
 
+c When running with UNLOPS, there is an extra check if an event pass
+c cuts just before writing the event.
+      logical fail_to_write
+      common /c_fail_to_write/ fail_to_write
+
       logical SHsep
       logical Hevents
       common/SHevents/Hevents
@@ -430,7 +435,9 @@ c determine how many events for the virtual and how many for the no-virt
          write (*,*) 'imode is ',imode
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,0,x,vn)
-         do j=1,ncall
+         j=0
+         do while (j.lt.ncall)
+            j=j+1
             if (abrv(1:4).eq.'born') then
                vn=3
                call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
@@ -451,6 +458,9 @@ c determine how many events for the virtual and how many for the no-virt
                endif
             endif
             call finalize_event(x,weight,lunlhe,plotEv,putonshell)
+            if (fail_to_write) then
+               j = j-1
+            endif
          enddo
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
@@ -1018,7 +1028,8 @@ c for the <event> tag in the LHEF file. "npNLO" are the number of Born
 c partons in this multiplicity when running the code at NLO accuracy
 c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
 c "npNLO".
-         if (shower_mc.eq.'PYTHIA8' .and. (ickkw.eq.3.or.ickkw.eq.4))
+         if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIGPP')
+     &        .and. (ickkw.eq.3.or.ickkw.eq.4))
      $        then
             nattr=2
             nFKSprocess=1 ! just pick the first nFKSprocess

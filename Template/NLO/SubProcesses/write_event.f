@@ -212,6 +212,9 @@ c get info on beam and PDFs
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
+      logical passUNLOPScuts
+      logical fail_to_write
+      common /c_fail_to_write/ fail_to_write
       double precision muR2_current,muF12_current,
      #                 muF22_current,QES2_current
       common/cscales_current_values/muR2_current,muF12_current,
@@ -246,6 +249,14 @@ c
                 stop
              else
                 kwgtinfo=15
+             endif
+             call pythia_unlops_mass(p,ic,npart,passUNLOPScuts)
+             if (.not. passUNLOPScuts) then
+c Do not write the event
+                fail_to_write=.true.
+                return
+             else
+                fail_to_write=.false.
              endif
           else
              kwgtinfo=iwgtinfo

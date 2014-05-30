@@ -347,7 +347,6 @@ c masses
 c Use the MadGraph masses in the event file
          call write_masses_lhe_MG()
       endif
-
 c
 c Derive the n-body from the (n+1)-body if we are doing S-events
 c
