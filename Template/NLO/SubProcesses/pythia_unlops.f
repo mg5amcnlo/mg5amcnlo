@@ -60,7 +60,6 @@ c convert momenta to pythia8 c++ format
       enddo
       if (npart.ne.nexternal-1 .and. npart.ne.nexternal) then
          write (*,*) 'ERROR #1 in pythia_unlops.f',npart,nexternal
-         stop
       endif
 
  100  continue
@@ -78,10 +77,7 @@ c convert momenta to pythia8 c++ format
       if (npart.eq.nexternal) then
          d1=ptmin1
       elseif(npart.eq.nexternal-1) then
-c When cutting the n-body kinematics, increase the scale by 10% to try
-c to take any MC masses into account (which will be assigned when
-c writing out the events)
-         d2=ptmin1*1.1d0
+         d2=ptmin1
       endif
 
 c In the case we just did the real emission, now, also compute the
@@ -104,7 +100,6 @@ c or counter-event, we only need one scale.
          enddo
          if (npart.ne.nexternal-1) then
             write (*,*) 'ERROR #2 in pythia_unlops.f',npart,nexternal
-            stop
          endif
          goto 100
       endif
@@ -117,59 +112,3 @@ c Here is the actual cut applied
       return
       end
      
-
-      subroutine pythia_UNLOPS_mass(p,ic,nparts,passUNLOPScuts)
-      implicit none
-      include "nexternal.inc"
-      include "genps.inc"
-      include "run.inc"
-      double precision zero
-      parameter (zero=0d0)
-c arguments
-      double precision p(0:4,2*nexternal-3),eCM
-      integer ic(7,2*nexternal-3),nparts
-      logical passUNLOPScuts
-      INTEGER I,J
-      double precision pin(5,nexternal-1)
-      integer id(nexternal-1),ist(nexternal-1)
-c cut
-      integer npart
-      double precision pt_pythia,ptmin1,ptmin2,d1,d2
-      include 'cuts.inc'
-      pt_pythia=ptj
-      d1=-1d0
-c Set passcut to true, if not it will be updated below.
-      passUNLOPScuts=.true.
-
-c convert momenta to pythia8 c++ format
-      npart=0
-      do i=1,nparts
-         if (abs(ic(6,i)).ne.1) cycle
-         npart=npart+1
-         do j=1,5
-            if (j.ne.4) then
-               pin(j,npart)=p(j,i)
-            else
-               pin(j,npart)=p(0,i)
-            endif
-         enddo
-         ist(npart)=ic(6,i)
-         id(npart)=ic(1,i)
-      enddo
-      if (npart.ne.nexternal-1) then
-         write (*,*) 'ERROR #1 in pythia_unlops_mass',npart,nexternal
-         stop
-      endif
-
-      eCM=sqrt(4d0*ebeam(1)*ebeam(2))
-
-      call pythia_unlops_cluster(eCM,pin,npart,id,ist,ptmin1,ptmin2)
-      d2=ptmin1
-
-c Here is the actual cut applied
-      if (d2.lt.pt_pythia) then
-         passUNLOPScuts = .false.
-         return
-      endif
-      return
-      end
