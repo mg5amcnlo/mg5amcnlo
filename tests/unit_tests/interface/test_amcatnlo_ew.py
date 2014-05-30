@@ -129,9 +129,12 @@ class TestAMCatNLOEW(unittest.TestCase):
             self.assertEqual(len(fksprocess.born_amp['diagrams']), nborndiag)
             self.assertEqual(len(fksprocess.real_amps), nrealproc)
             for amp, n in zip(fksprocess.real_amps, nrealdiags):
-                # check that the fks_j_from i have also been set
+                # check that the fks_j_from i have also been set 
                 self.assertNotEqual(amp.fks_j_from_i, {})
                 self.assertEqual(n, len(amp.amplitude['diagrams']))
+                # and that no extra counterterm is needed
+                for info in amp.fks_infos:
+                    self.assertEqual(info['extra_cnt_index'], -1)
 
 
     def test_generate_fks_ew_extra_moms(self):
@@ -139,12 +142,21 @@ class TestAMCatNLOEW(unittest.TestCase):
         for processes which feature g/a > qqbar splitting.
         Check if the extra countertersm are found when needed"""
         cmd_list = [
-            'u u~ > g g [real=QED QCD]']
+            'u u~ > g g [real=QED QCD]',
+            'u u~ > g g QED=2 QCD=2 [real=QED QCD]',
+            'u u~ > g a QED=2 QCD=2 [real=QED QCD]']
 
-        len_extra_cnt_amp_list = [0]
-        for cmd, len_extra_cnt in zip(cmd_list, len_extra_cnt_amp_list):
+        len_extra_cnt_amp_list = [0, 2, 1]
+        nrealproc_list = [10, 10, 12]
+        print 'fix test leptons!'
+        for cmd, len_extra_cnt, nrealprocs in zip(cmd_list, len_extra_cnt_amp_list, nrealproc_list):
             self.interface.do_generate(cmd)
 
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
 
             self.assertEqual(len_extra_cnt, len(fksprocess.extra_cnt_amp_list))
+            for amp in fksprocess.real_amps:
+                print amp.process.nice_string()
+            self.assertEqual(nrealprocs, len(fksprocess.real_amps))
+
+

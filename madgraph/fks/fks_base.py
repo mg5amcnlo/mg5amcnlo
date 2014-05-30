@@ -635,14 +635,17 @@ class FKSProcess(object):
                         perturbed_orders = born_proc['perturbation_couplings']))
 
                 if mom_cnt:
+                    # for the moment we jsut theck the pdgs, regardless of any
+                    # permutation in the final state
                     try:
                         indx = extra_cnt_pdgs.index([l['id'] for l in cnt_process['legs']])
                     except ValueError:
                         extra_cnt_pdgs.append([l['id'] for l in cnt_process['legs']])
-                        extra_cnt_amp_list.append(cnt_amp)
-                        indx = len(extra_cnt_amp_list) - 1
+                        self.extra_cnt_amp_list.append(cnt_amp)
+                        indx = len(self.extra_cnt_amp_list) - 1
+                      
 
-                    self.real_amps[-1].fks_infos['extra_cnt_index'] = indx
+                    self.real_amps[-1].fks_infos[-1]['extra_cnt_index'] = indx
 
         self.find_reals_to_integrate()
         if combine:
