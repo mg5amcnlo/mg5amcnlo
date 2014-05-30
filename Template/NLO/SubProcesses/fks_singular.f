@@ -4249,6 +4249,8 @@ c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      double precision particle_charge(nexternal)
+      common /c_charges/particle_charge
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
@@ -4414,7 +4416,7 @@ C skype what we don't need
          if (iord.eq.1) ipos_ord = qcd_pos
          if (iord.eq.2) ipos_ord = qed_pos
          do i=nincoming+1,nexternal
-            if (i.ne.i_fks .and. particle_type(i).ne.1 .and. 
+            if (i.ne.i_fks .and. 
      #          pmass(i).eq.ZERO)then
             !FIXIFIXIFXIX
             write(*,*) 'FIXIFIXFIXFIX'
@@ -4422,19 +4424,22 @@ C skype what we don't need
                   aj=0
                elseif(abs(particle_type(i)).eq.3) then
                   aj=1
+               else
+                  aj=-1
                endif
                Ej=p(0,i)
                if (ipos_ord.eq.qcd_pos) then
 C                 set colour factors
+                  if (aj.eq.-1) cycle
                   c_used = c(aj)
                   gamma_used = gamma(aj)
                   gammap_used = gammap(aj)
                else if (ipos_ord.eq.qed_pos) then
                   write(*,*) 'SETSETSET'
 C                 set charge factors
-                  c_used = 0d0!!!c(aj)
-                  gamma_used = 0d0!!!gamma(aj)
-                  gammap_used = 0d0!!!gammap(aj)
+                  c_used = particle_charge(i)**2
+                  gamma_used = 3d0/2d0 * particle_charge(i)**2
+                  gammap_used = (13d0/2d0 - 2d0 * pi**2 / 3d0) * particle_charge(i)**2
                endif
                if(abrv.eq.'novA')then
 c 2+3+4
@@ -4544,8 +4549,6 @@ c   bsv_wgt=bsv_wgt+ao2pi*contr  <-- DO NOT USE THIS LINE
 c
       bsv_wgt=bsv_wgt-2*oneo8pi2*contr
 
-CCCCCC FROM HERE BELOW STILL TO BE FIXED (and uncommented)
-      write(*,*) 'FIXFIXFIX'
  548  continue
 c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
@@ -4631,8 +4634,6 @@ C             wgtnstmp=0d0
 C             wgtwnstmpmur=0.d0
 C           endif
          endif
-
-CCCC FROM HERE ON  SHOULD BE OK
 
       if (abrv(1:2).eq.'vi') then
          bsv_wgt=bsv_wgt-born_wgt
