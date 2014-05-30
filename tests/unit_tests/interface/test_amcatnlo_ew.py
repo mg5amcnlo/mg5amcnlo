@@ -113,13 +113,14 @@ class TestAMCatNLOEW(unittest.TestCase):
                            [17, 17, 17, 17, 17, 17],
                            [17, 17, 17, 17, 17, 17]]
 
-
         for cmd, born_orders, squared_orders, pert_couplings, nborndiag, nrealproc, nrealdiags in \
                 zip(cmd_list, born_orders_list, squared_orders_list, pert_couplings_list, nborndiag_list, 
                         nrealproc_list, nrealdiags_list):
             self.interface.do_generate(cmd)
 
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
+            # check that the extra_cnt_amp_list is empty
+            self.assertEqual(0, len(fksprocess.extra_cnt_amp_list))
 
             self.assertEqual(born_orders, fksprocess.born_amp['process']['born_orders'])
             self.assertEqual(squared_orders, fksprocess.born_amp['process']['squared_orders'])
@@ -132,3 +133,18 @@ class TestAMCatNLOEW(unittest.TestCase):
                 self.assertNotEqual(amp.fks_j_from_i, {})
                 self.assertEqual(n, len(amp.amplitude['diagrams']))
 
+
+    def test_generate_fks_ew_extra_moms(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed"""
+        cmd_list = [
+            'u u~ > g g [real=QED QCD]']
+
+        len_extra_cnt_amp_list = [0]
+        for cmd, len_extra_cnt in zip(cmd_list, len_extra_cnt_amp_list):
+            self.interface.do_generate(cmd)
+
+            fksprocess = self.interface._fks_multi_proc['born_processes'][0]
+
+            self.assertEqual(len_extra_cnt, len(fksprocess.extra_cnt_amp_list))

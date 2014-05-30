@@ -327,7 +327,8 @@ class FKSRealProcess(object):
                                'underlying_born': born_pdgs,
                                'splitting_type': splitting_type,
                                'need_color_links': need_color_links,
-                               'need_charge_links': need_charge_links})
+                               'need_charge_links': need_charge_links,
+                               'extra_cnt_index': -1})
 
         self.process = copy.copy(born_proc)
         self.process['perturbation_couplings'] = \
@@ -475,6 +476,7 @@ class FKSProcess(object):
         self.virt_amp = None
         self.perturbation = 'QCD'
         self.born_amp = diagram_generation.Amplitude()
+        self.extra_cnt_amp_list = diagram_generation.AmplitudeList()
 
         if not remove_reals in [True, False]:
             raise fks_common.FKSProcessError(\
@@ -568,18 +570,80 @@ class FKSProcess(object):
         born_proc = copy.copy(self.born_amp['process'])
         born_pdgs = self.get_pdg_codes()
         leglist = self.get_leglist()
+        extra_cnt_pdgs = []
         for i, real_list in enumerate(self.reals):
             # keep track of the id of the mother (will be used to constrct the
             # spin-correlated borns
             ij_id = leglist[i].get('id')
             ij = leglist[i].get('number')
             for real_dict in real_list:
+                nmom = 0
+                # check first if other counterterms need to be generated
+                # (e.g. g/a > q qbar)
+                cnt_amp = diagram_generation.Amplitude()
+                born_cnt_amp = diagram_generation.Amplitude()
+                mom_cnt = 0
+                for order, mothers in real_dict['extra_mothers'].items():
+                    nmom += len(mothers)
+                    for mom in mothers:
+                        print 'MOM!',mom
+                        # generate a new process with the mother particle 
+                        # replaced by the new mother and with the
+                        # squared orders changed accordingly
+                        cnt_process = copy.copy(born_proc)
+                        cnt_process['legs'] = copy.copy(born_proc['legs'])
+                        cnt_process['legs'][i]['id'] = mom
+                        cnt_process['squared_orders'] = \
+                                copy.copy(born_proc['squared_orders'])
+                        # check if we need to include the counterterm
+                        try:
+                            cnt_process['squared_orders'][order] += -2
+                        except KeyError:
+                            cnt_process['squared_orders']['WEIGHTED'] += \
+                                    -2 * cnt_process['model'].get('order_hierarchy')[order]
+
+                        cnt_amp = diagram_generation.Amplitude(cnt_process)
+                        if cnt_amp['diagrams']:
+                            #check if cnt_amp also fits the born_orders 
+                            # i.e. if we need to integrate it
+                            mom_cnt = mom
+                            born_cnt_process = copy.copy(cnt_process)
+                            born_cnt_process['squared_orders'] = \
+                                    copy.copy(cnt_process['squared_orders']) 
+                            born_cnt_process['orders'] = \
+                                    copy.copy(cnt_process['orders']) 
+                            born_cnt_process['orders'] = born_proc['born_orders']
+                            born_cnt_amp = diagram_generation.Amplitude(born_cnt_process)
+
+                if nmom > 1:
+                    raise fks_common.FKSProcessError(\
+                            'Error, more than one extra mother has been found: %d', nmom)
+
+                # if mom_cnt has been found AND the born_cnt_amp is non-trivial
+                # in order to avoid double counting, integrate only the configuration
+                # which has ij_id mimimum, i.e. only if mom > ij_id
+                # in practice this means not to integrate splittings when the mother 
+                # is a photon but only when it is a gluon
+                if born_cnt_amp['diagrams'] and mom_cnt < ij_id:
+                    continue
+
                 ij = leglist[i].get('number')
                 self.real_amps.append(FKSRealProcess( \
                         born_proc, real_dict['leglist'], ij, ij_id, \
                         born_pdgs[0], 
                         real_dict['perturbation'], \
                         perturbed_orders = born_proc['perturbation_couplings']))
+
+                if mom_cnt:
+                    try:
+                        indx = extra_cnt_pdgs.index([l['id'] for l in cnt_process['legs']])
+                    except ValueError:
+                        extra_cnt_pdgs.append([l['id'] for l in cnt_process['legs']])
+                        extra_cnt_amp_list.append(cnt_amp)
+                        indx = len(extra_cnt_amp_list) - 1
+
+                    self.real_amps[-1].fks_infos['extra_cnt_index'] = indx
+
         self.find_reals_to_integrate()
         if combine:
             self.combine_real_amplitudes()
@@ -624,14 +688,15 @@ class FKSProcess(object):
                         i, model, {}, pert_order)
                 for split in splittings:
                     # find other 'mother' particles which can end up in the same splitting
-                    extra_mothers = []
+                    extra_mothers = {}
                     for pert in pert_orders:
-                        extra_mothers += fks_common.find_mothers(split[0], split[1], model, pert=pert,
+                        extra_mothers[pert] = fks_common.find_mothers(split[0], split[1], model, pert=pert,
                                         mom_mass=model.get('particle_dict')[i['id']]['mass'].lower())
+                        
                     if i['state']:
-                        extra_mothers.remove(i['id'])
+                        extra_mothers[pert_order].remove(i['id'])
                     else:
-                        extra_mothers.remove(model.get('particle_dict')[i['id']].get_anti_pdg_code())
+                        extra_mothers[pert_order].remove(model.get('particle_dict')[i['id']].get_anti_pdg_code())
 
                     self.reals[i_i].append({
                         'leglist': fks_common.insert_legs(leglist, i, split ,pert=pert_order),
