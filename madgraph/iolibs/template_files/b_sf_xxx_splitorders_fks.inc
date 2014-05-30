@@ -1,4 +1,4 @@
-      SUBROUTINE SB%(iborn)d_SF_%(ilink)3.3d(P,ANS_SUMMED)
+      SUBROUTINE SB_SF_%(ilink)3.3d(P,ANS_SUMMED)
 C
 C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
 C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
@@ -25,7 +25,7 @@ C
 C
 C BEGIN CODE
 C
-	  CALL SB%(iborn)d_SF_%(ilink)3.3d_SPLITORDERS(P,ANS)
+	  CALL SB_SF_%(ilink)3.3d_SPLITORDERS(P,ANS)
 C color-linked borns are called for QCD-type emissions
       ans_summed = 0d0
       do i = 1, nsqampso
@@ -36,7 +36,7 @@ return
 END
 
 
-    SUBROUTINE SB%(iborn)d_SF_%(ilink)3.3d_SPLITORDERS(P1,ANS)
+    SUBROUTINE SB_SF_%(ilink)3.3d_SPLITORDERS(P1,ANS)
 C  
 %(info_lines)s
 C
@@ -101,7 +101,7 @@ C ----------
       ENDDO
       DO IHEL=1,NCOMB
          IF (GOODHEL(IHEL,nFKSprocess)) THEN
-           CALL B%(iborn)d_SF_%(ilink)3.3d(P1,IHEL,T)
+           CALL B_SF_%(ilink)3.3d(P1,IHEL,T)
            DO I=1,NSQAMPSO
              ANS(I)=ANS(I)+T(I)
            ENDDO
@@ -114,7 +114,7 @@ C ----------
       END
        
        
-      SUBROUTINE B%(iborn)d_SF_%(ilink)3.3d(P,HELL,ANS)
+      SUBROUTINE B_SF_%(ilink)3.3d(P,HELL,ANS)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -160,7 +160,7 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEXB%(iborn)s
+      INTEGER SQSOINDEXB
 C  
 C COLOR DATA
 C  
@@ -188,7 +188,7 @@ C ----------
               ZTEMP = ZTEMP + CF(j,i)*JAMP2(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXB%(iborn)d(M,N))=ANS(SQSOINDEXB%(iborn)d(M,N))+ZTEMP*DCONJG(JAMP1(I,N))/DENOM(I)
+              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP1(I,N))/DENOM(I)
           ENDDO
       ENDDO
     ENDDO

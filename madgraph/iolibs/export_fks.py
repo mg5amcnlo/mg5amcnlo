@@ -418,7 +418,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                     me_ntot, path=os.getcwd(),OLP='MadLoop'):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
-        proc = matrix_element.born_me_list[0]['processes'][0]
+        proc = matrix_element.born_me['processes'][0]
 
         if not self.model:
             self.model = matrix_element.get('processes')[0].get('model')
@@ -438,7 +438,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.fksdirs = []
         #first make and cd the direcrory corresponding to the born process:
         borndir = "P%s" % \
-        (matrix_element.born_me_list[0].get('processes')[0].shell_string())
+        (matrix_element.born_me.get('processes')[0].shell_string())
         os.mkdir(borndir)
         os.chdir(borndir)
         logger.info('Writing files in %s (%d / %d)' % (borndir, me_number + 1, me_ntot))
@@ -769,47 +769,45 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for all the orders which are split"""
 
         born_orders = {}
-        for ordd, val in matrix_element.born_me_list[0]['processes'][0]['born_orders'].items():
+        for ordd, val in matrix_element.born_me['processes'][0]['born_orders'].items():
             # factor 2 to pass to squared orders
             born_orders[ordd] = 2 * val 
         
         split_orders = \
-                matrix_element.born_me_list[0]['processes'][0]['split_orders']
+                matrix_element.born_me['processes'][0]['split_orders']
 
         pert_orders = \
-                matrix_element.born_me_list[0]['processes'][0]['perturbation_couplings']
+                matrix_element.born_me['processes'][0]['perturbation_couplings']
 
         max_born_orders = {}
         max_nlo_orders = {}
 
-        me_list = matrix_element.born_me_list
-        model = me_list[0]['processes'][0]['model']
+        model = matrix_element.born_me['processes'][0]['model']
 
         # first get the max_born_orders
         if born_orders.keys() == ['WEIGHTED']:
             # if user has not specified born_orders, check the 'weighted' for each
             # of the split_orders contributions
             wgt_ord_max = born_orders['WEIGHTED']
-            for me in me_list:
-                squared_orders, amp_orders = me.get_split_orders_mapping()
-                for sq_order in squared_orders:
-                    # put the numbers in sq_order in a dictionary, with as keys
-                    # the corresponding order name
-                    ord_dict = {}
-                    assert len(sq_order) == len(split_orders) 
-                    for o, v in zip(split_orders, list(sq_order)):
-                        ord_dict[o] = v
+            squared_orders, amp_orders = matrix_element.born_me.get_split_orders_mapping()
+            for sq_order in squared_orders:
+                # put the numbers in sq_order in a dictionary, with as keys
+                # the corresponding order name
+                ord_dict = {}
+                assert len(sq_order) == len(split_orders) 
+                for o, v in zip(split_orders, list(sq_order)):
+                    ord_dict[o] = v
 
-                    wgt = sum([v * model.get('order_hierarchy')[o] for \
-                            o, v in ord_dict.items()])
-                    if wgt > wgt_ord_max:
-                        continue
+                wgt = sum([v * model.get('order_hierarchy')[o] for \
+                        o, v in ord_dict.items()])
+                if wgt > wgt_ord_max:
+                    continue
 
-                    for o, v in ord_dict.items():
-                        try:
-                            max_born_orders[o] = max(max_born_orders[o], v)
-                        except KeyError:
-                            max_born_orders[o] = v
+                for o, v in ord_dict.items():
+                    try:
+                        max_born_orders[o] = max(max_born_orders[o], v)
+                    except KeyError:
+                        max_born_orders[o] = v
 
         else:
             #if there are born_orders keep the split_orders which 
@@ -1129,136 +1127,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         return 0
 
 
-    def write_born_wrappers(self, writer, me_list, sqsolist, fortran_model):
-        """writes the wrappers which allows to chose among the different 
-        born matrix elements, among different color/charge links and 
-        among the various helper functions for the split-orders"""
-
-        maxsqso = max(sqsolist)
-        nborns = len(me_list)
-
-        # the born me wrapper
-        text = \
-            """subroutine sborn(p, wgt)
-            implicit none
-            include 'nexternal.inc'
-            double precision p(0:3, nexternal)
-            double precision wgt
-            integer nborn
-            common/c_nborn/nborn
-            real*4 tbefore, tAfter
-            real*4 tTot, tOLP, tFastJet, tPDF
-            common/timings/tTot, tOLP, tFastJet, tPDF
-            call cpu_time(tbefore)
-            """
-        
-        # the sborn (color/charge links) wrapper
-        text1 = """\n\n subroutine sborn_sf(p,m,n,wgt)
-          implicit none
-          include 'nexternal.inc'
-          double precision p(0:3,nexternal-1), wgt
-          integer m,n
-          integer nborn
-          common/c_nborn/nborn
-             """
-
-        # the wrapper to the function which returns the number of squared 
-        # split orders
-        text2 = \
-            """\n\n integer function get_nsqso_born()
-            implicit none
-            integer nsqso
-            integer nborn
-            common/c_nborn/nborn
-            """
-        # the wrapper to the function which returns the power of a given coupling 
-        #appearing at a given index in the ans array
-        function_list = set(['getordpowfromindex_b%d' % (iborn + 1) \
-                for iborn in range(nborns)])
-        text3 = \
-            """\n\n integer function getordpowfromindex_born(iorder, index)
-            implicit none
-            integer iorder, index
-            integer nborn
-            common/c_nborn/nborn
-            integer %s
-            """ % ', '.join(function_list)
-        # the wrapper to the function which returns the index in the res array
-        # of the contribution of given orders
-        function_list = set(['sqsoindexb%d_from_orders' % (iborn + 1) \
-                for iborn in range(nborns)])
-        text4 = \
-            """\n\n integer function sqsoindex_from_orders_born(orders)
-            implicit none
-            integer orders(%d)
-            integer nborn
-            common/c_nborn/nborn
-            integer %s
-            """ % (maxsqso, ', '.join(function_list))
-
-        for n in range(nborns):
-            text += \
-                """if (nborn.eq.%(n)d) then
-                call sborn%(n)d(p, wgt)
-                else""" % {'n': n + 1}
-            text1 += \
-                """if (nborn.eq.%(n)d) then
-                call sborn%(n)d_sf(p, m, n, wgt)
-                else""" % {'n': n + 1}
-            text2 += \
-                """if (nborn.eq.%(n)d) then
-                call get_nsqso_born%(n)d(nsqso)
-                else""" % {'n': n + 1}
-            text3 += \
-                """if (nborn.eq.%(n)d) then
-                 getordpowfromindex_born = getordpowfromindex_b%(n)d(iorder, index)
-                else""" % {'n': n + 1}
-            text4 += \
-                """if (nborn.eq.%(n)d) then
-                 sqsoindex_from_orders_born = sqsoindexb%(n)d_from_orders(orders)
-                else""" % {'n': n + 1}
-        text += \
-            """
-            write(*,*) 'ERROR: invalid n in born_matrix :', nborn
-            stop\n endif\n call cpu_time(tAfter) \n tPDF = tPDF + (tAfter-tBefore)
-            return \n end
-            """
-        text1 += \
-            """
-            write(*,*) 'ERROR: invalid n in sborn_sf :', nborn\n stop\n endif
-            return \nend
-            """
-        text2 += \
-            """
-            write(*,*) 'ERROR: invalid n in nsqso :', nborn\n stop\n endif
-            return \nend
-            """
-        text3 += \
-            """
-            write(*,*) 'ERROR: invalid n in getordpowfromindex_born :', nborn\n stop\n endif
-            return \nend
-            """
-        text4 += \
-            """
-            write(*,*) 'ERROR: invalid n in sqsoindex_from_orders_born :', nborn\n stop\n endif
-            return \nend
-            """
-        # Write the file
-        writer.writelines(text + text1 + text2 + text3 + text4)
-        return 0
-
-
     def draw_feynman_diagrams(self, matrix_element):
         """Create the ps files containing the feynman diagrams for the born process,
         as well as for all the real emission processes"""
 
-        for i, me in enumerate(matrix_element.born_me_list):
-            filename = 'born_%d.ps' % (i + 1)
-            plot = draw.MultiEpsDiagramDrawer(me.get('base_amplitude').get('diagrams'),
-                                        filename,
-                                        model=me.get('processes')[0].get('model'),
-                                        amplitude=True, diagram_type='born')
-            plot.draw()
+        filename = 'born.ps'
+        plot = draw.MultiEpsDiagramDrawer(
+                matrix_element.born_me.get('base_amplitude').get('diagrams'),
+                filename,
+                model=matrix_element.born_me.get('processes')[0].get('model'),
+                amplitude=True, diagram_type='born')
+        plot.draw()
 
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'matrix_%d.ps' % (n + 1)
@@ -1309,8 +1188,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
-        replace_dict = {'global_variable':'', 'amp2_lines':'',
-                                                      'proc_prefix':proc_prefix}
+        replace_dict = {'global_variable':'', 'amp2_lines':''}
+        if proc_prefix:
+            replace_dict['proc_prefix'] = proc_prefix
 
         # update replace_dict according to start_dict
         for k,v in start_dict.items():
@@ -1433,89 +1313,81 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         be needed by the P* directories"""
         pathdir = os.getcwd()
 
-        born_list = matrix_element.born_me_list
+        born_me = matrix_element.born_me
 
         # the .inc files
-        filename = 'nborns.inc'
-        self.write_nborns_file(writers.FortranWriter(filename),
-                            len(born_list), fortran_model)
-
-        filename = 'born_configs_and_props_info.inc'
-        nconfigs_list, mapconfigs_list, s_and_t_channels_list = \
-                    self.write_born_configs_and_props_info_file(
+        filename = 'born_conf.inc'
+        nconfigs, mapconfigs, s_and_t_channels = \
+                    self.write_born_conf_file(
                     writers.FortranWriter(filename),
-                    born_list, fortran_model)
+                    born_me, fortran_model)
 
-        filename = 'born_leshouche_info.inc'
-        nflows_list = self.write_born_leshouche_info_file(writers.FortranWriter(filename),
-                             born_list, fortran_model)
+        filename = 'born_props.inc'
+        self.write_born_props_file(
+                    writers.FortranWriter(filename),
+                    born_me, s_and_t_channels, fortran_model)
+
+        filename = 'born_leshouche.inc'
+        nflows = self.write_born_leshouche_file(writers.FortranWriter(filename),
+                             born_me, fortran_model)
 
         filename = 'born_nhel.inc'
-        self.write_born_nhel_file_list(writers.FortranWriter(filename),
-                           born_list, nflows_list, fortran_model)
+        self.write_born_nhel_file(writers.FortranWriter(filename),
+                           born_me, nflows, fortran_model)
 
         filename = 'born_ngraphs.inc'
-        self.write_ngraphs_file(writers.FortranWriter(filename),
-                                max(nconfigs_list))
+        self.write_ngraphs_file(writers.FortranWriter(filename), nconfigs)
 
         filename = 'ncombs.inc'
         self.write_ncombs_file(writers.FortranWriter(filename),
-                               born_list[0], fortran_model)
+                               born_me, fortran_model)
 
         filename = 'born_coloramps.inc'
-        self.write_coloramps_file_list(writers.FortranWriter(filename),
-                                  mapconfigs_list, born_list, fortran_model)
+        self.write_coloramps_file(writers.FortranWriter(filename),
+                                  mapconfigs, born_me, fortran_model)
         
         # the born ME's and color/charge links
         sqsorders_list = []
-        for i, me in enumerate(matrix_element.born_me_list):
-            filename = 'born_%d.f' % (i + 1)
+        filename = 'born.f'
 
-            born_dict = {}
-            born_dict['nconfs'] = len(matrix_element.get_fks_info_list())
+        born_dict = {}
+        born_dict['nconfs'] = len(matrix_element.get_fks_info_list())
 
-            den_factor_lines = self.get_den_factor_lines(matrix_element,i)
-            born_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+        den_factor_lines = self.get_den_factor_lines(matrix_element)
+        born_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
 
-            ij_lines = self.get_ij_lines(matrix_element)
-            born_dict['ij_lines'] = '\n'.join(ij_lines)
+        ij_lines = self.get_ij_lines(matrix_element)
+        born_dict['ij_lines'] = '\n'.join(ij_lines)
 
-            calls_born, ncolor_born, norders, nsqorders = \
-                self.write_split_me_fks(writers.FortranWriter(filename),
-                                        me, fortran_model, 'born', "%d" % (i+1),
-                                        start_dict = born_dict)
+        calls_born, ncolor_born, norders, nsqorders = \
+            self.write_split_me_fks(writers.FortranWriter(filename),
+                                    born_me, fortran_model, 'born', '',
+                                    start_dict = born_dict)
 
-            # the second call is for the born_hel file. use the same writer
-            # function
-            filename = 'born_%d_hel.f' % (i + 1)
-            calls_born, ncolor_born, norders, nsqorders = \
-                self.write_split_me_fks(writers.FortranWriter(filename),
-                                        me, fortran_model, 'bhel', "%d" % (i+1),
-                                        start_dict = born_dict)
+        # the second call is for the born_hel file. use the same writer
+        # function
+        filename = 'born_hel.f'
+        calls_born, ncolor_born, norders, nsqorders = \
+            self.write_split_me_fks(writers.FortranWriter(filename),
+                                    born_me, fortran_model, 'bhel', '',
+                                    start_dict = born_dict)
 
-            sqsorders_list.append(nsqorders)
-        
+        sqsorders_list.append(nsqorders)
+    
+        self.color_link_files = [] 
+        for j in range(len(matrix_element.color_links)):
+            filename = 'b_sf_%3.3d.f' % (j + 1)
+            self.color_link_files.append(filename)
+            self.write_b_sf_fks(writers.FortranWriter(filename),
+                         matrix_element, j,
+                         fortran_model)
 
-            self.color_link_files = [] 
-            for j in range(len(matrix_element.color_links[i])):
-                filename = 'b_%d_sf_%3.3d.f' % (i + 1, j + 1)              
-                self.color_link_files.append(filename)
-                self.write_b_sf_fks(writers.FortranWriter(filename),
-                             matrix_element, j, i,
-                             fortran_model)
-
-            #write the sborn_sf.f and the b_sf_files
-            filename = 'sborn_%d_sf.f' % (i + 1)
-            self.write_sborn_sf(writers.FortranWriter(filename),
-                                matrix_element,
-                                i, nsqorders,
-                                fortran_model)
-
-        # finally write the wrappers
-        filename = 'born_chooser.f'
-        self.write_born_wrappers(writers.FortranWriter(filename),
-                            born_list, sqsorders_list, fortran_model)
-
+        #write the sborn_sf.f and the b_sf_files
+        filename = 'sborn_sf.f'
+        self.write_sborn_sf(writers.FortranWriter(filename),
+                            matrix_element,
+                            nsqorders,
+                            fortran_model)
 
 
     def generate_virtuals_from_OLP(self,FKSHMultiproc,export_path, OLP):
@@ -1932,15 +1804,14 @@ Parameters              %(params)s\n\
     # write_born_sf_fks
     #===============================================================================
     #test written
-    def write_sborn_sf(self, writer, me, iborn, nsqorders, fortran_model):
+    def write_sborn_sf(self, writer, me, nsqorders, fortran_model):
         """Creates the sborn_sf.f file, containing the calls to the different 
         color linked borns"""
         
         replace_dict = {}
-        color_links = me.color_links[iborn]
+        color_links = me.color_links
         nlinks = len(color_links)
 
-        replace_dict['iborn'] = iborn + 1
         replace_dict['nsqorders'] = nsqorders
         replace_dict['iflines_col'] = ''
          
@@ -1952,21 +1823,21 @@ Parameters              %(params)s\n\
                 replace_dict['iflines_col'] += \
                 "c link partons %(m)d and %(n)d \n\
                     %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
-                    call sb%(iborn)d_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
-                    % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1}
+                    call sb_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
+                    % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
             else:
                 replace_dict['iflines_col'] += \
                 "c link partons %(m)d and %(n)d \n\
                     %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
-                    call sb%(iborn)d_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
-                    % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1}
+                    call sb_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
+                    % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
 
         
         if replace_dict['iflines_col']:
             replace_dict['iflines_col'] += 'endif\n'
         else:
             # this is when no color links are there
-            replace_dict['iflines_col'] += 'write(*,*) \'Error in sborn%d_sf, no color links\'\nstop\n' % (iborn + 1)
+            replace_dict['iflines_col'] += 'write(*,*) \'Error in sborn_sf, no color links\'\nstop\n'
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/sborn_sf_fks.inc')).read()
@@ -1985,11 +1856,11 @@ Parameters              %(params)s\n\
     # write_b_sf_fks
     #===============================================================================
     #test written
-    def write_b_sf_fks(self, writer, fksborn, ilink, iborn, fortran_model):
+    def write_b_sf_fks(self, writer, fksborn, ilink, fortran_model):
         """Create the b_sf_xxx.f file for the ilink-th soft linked born 
-        for the iborn-th born in MadFKS format"""
+        """
 
-        matrix_element = copy.copy(fksborn.born_me_list[iborn])
+        matrix_element = copy.copy(fksborn.born_me)
 
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -2001,11 +1872,10 @@ Parameters              %(params)s\n\
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
-        link = fksborn.color_links[iborn][ilink]
+        link = fksborn.color_links[ilink]
     
         replace_dict = {}
         
-        replace_dict['iborn'] = iborn + 1
         replace_dict['ilink'] = ilink + 1
     
         # Extract version number and date from VERSION file
@@ -2030,7 +1900,7 @@ Parameters              %(params)s\n\
         replace_dict['ic_line'] = ic_line
 
         # Extract den_factor_lines
-        den_factor_lines = self.get_den_factor_lines(fksborn,iborn)
+        den_factor_lines = self.get_den_factor_lines(fksborn)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
     
         # Extract ngraphs
@@ -2105,32 +1975,16 @@ Parameters              %(params)s\n\
     
 
     #===============================================================================
-    # write_nborns_file
-    #===============================================================================
-    def write_nborns_file(self, writer, nborns, fortran_model):
-        """Write the nborns.inc file with the number of borns for a given process."""
-    
-        file = "       integer nborns \n"
-        file = file + "parameter (nborns=%d)" % \
-               (nborns)
-    
-        # Write the file
-        writer.writelines(file)
-    
-        return True
-
-    
-    #===============================================================================
     # write_born_nhel_file_list
     #===============================================================================
-    def write_born_nhel_file_list(self, writer, me_list, nflows_list, fortran_model):
+    def write_born_nhel_file(self, writer, me, nflows, fortran_model):
         """Write the born_nhel.inc file for MG4. Write the maximum as they are
         typically used for setting array limits."""
     
-        ncomb_list = [me.get_helicity_combinations() for me in me_list]
+        ncomb = me.get_helicity_combinations()
         file = "integer    max_bhel, max_bcol \n"
         file += "parameter (max_bhel=%d)\nparameter(max_bcol=%d)" % \
-               (max(ncomb_list), max(nflows_list))
+               (ncomb, nflows)
     
         # Write the file
         writer.writelines(file)
@@ -2163,7 +2017,7 @@ Parameters              %(params)s\n\
 
         replace_dict = {}
         fks_info_list = fksborn.get_fks_info_list()
-        split_orders = fksborn.born_me_list[0]['processes'][0]['split_orders']
+        split_orders = fksborn.born_me['processes'][0]['split_orders']
         replace_dict['nconfs'] = len(fks_info_list)
         replace_dict['fks_i_values'] = ', '.join(['%d' % info['fks_info']['i'] \
                                                  for info in fks_info_list]) 
@@ -2273,22 +2127,17 @@ Parameters              %(params)s\n\
 
 
     #===============================================================================
-    # write_coloramps_file_list
+    # write_coloramps_file
     #===============================================================================
-    def write_coloramps_file_list(self, writer, mapconfigs_list, me_list, fortran_model):
+    def write_coloramps_file(self, writer, mapconfigs, me, fortran_model):
         """Write the coloramps.inc file for MadEvent"""
 
         lines = []
-        lines.append( "logical icolamp_B(%d,%d,%d,1)" % \
-                        (len(me_list),
-                         max([len(matrix_element.get('color_basis').keys()) for matrix_element in me_list] + [1]),
-                         max([len(mapconfigs) for mapconfigs in mapconfigs_list])))
+        lines.append( "logical icolamp(%d,%d,1)" % \
+                        (max([len(me.get('color_basis').keys()), 1]),
+                         len(mapconfigs)))
 
-        for (mapconfigs, matrix_element) in zip(mapconfigs_list, me_list):
-            iborn = mapconfigs_list.index(mapconfigs) + 1
-        # add the extra index to the lines 
-            lines += [l.lower().replace('icolamp(', 'icolamp_B(%d,' % iborn) for \
-                    l in self.get_icolamp_lines(mapconfigs, matrix_element, 1)]
+        lines += self.get_icolamp_lines(mapconfigs, me, 1)
     
         # Write the file
         writer.writelines(lines)
@@ -2299,85 +2148,80 @@ Parameters              %(params)s\n\
     #===============================================================================
     # write_leshouche_file_list
     #===============================================================================
-    def write_born_leshouche_info_file(self, writer, me_list, fortran_model):
+    def write_born_leshouche_file(self, writer, me, fortran_model):
         """Write the leshouche.inc file for MG4"""
     
         # Extract number of external particles
-        (nexternal, ninitial) = me_list[0].get_nexternal_ninitial()
+        (nexternal, ninitial) = me.get_nexternal_ninitial()
     
         lines = []
-        nflows_list = []
-        nborns = len(me_list)
-        lines.append('integer idup_B(%d,%d,maxprocb_used)' % (nborns, nexternal))
-        lines.append('integer mothup_B(%d,%d,%d,maxprocb_used)' % (nborns, 2, nexternal))
-        lines.append('integer icolup_B(%d,%d,%d,maxflowb_used)' % (nborns, 2, nexternal))
+        lines.append('integer idup(%d,maxprocb_used)' % nexternal)
+        lines.append('integer mothup(%d,%d,maxprocb_used)' % (2, nexternal))
+        lines.append('integer icolup(%d,%d,maxflowb_used)' % (2, nexternal))
         lines.append('integer ilh')
         lines.append('')
-        for j, matrix_element in enumerate(me_list):
-            iborn = j + 1
-            for iproc, proc in enumerate(matrix_element.get('processes')):
-                legs = proc.get_legs_with_decays()
-                lines.append("DATA (IDUP_B(%d,ilh,%d),ilh=1,%d)/%s/" % \
-                             (iborn, iproc + 1, nexternal,
-                              ",".join([str(l.get('id')) for l in legs])))
-                for i in [1, 2]:
-                    lines.append("DATA (MOTHUP_B(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
-                             (iborn, i, iproc + 1, nexternal,
-                              ",".join([ "%3r" % 0 ] * ninitial + \
-                                       [ "%3r" % i ] * (nexternal - ninitial))))
-        
-                # Here goes the color connections corresponding to the JAMPs
-                # Only one output, for the first subproc!
-                if iproc == 0:
-                    # If no color basis, just output trivial color flow
-                    if not matrix_element.get('color_basis'):
-                        for i in [1, 2]:
-                            lines.append("DATA (ICOLUP_B(%d,%d,ilh,  1),ilh=1,%2r)/%s/" % \
-                                     (iborn, i, nexternal,
-                                      ",".join([ "%3r" % 0 ] * nexternal)))
-                        color_flow_list = []
-        
-                    else:
-                        # First build a color representation dictionnary
-                        repr_dict = {}
-                        for l in legs:
-                            repr_dict[l.get('number')] = \
-                                proc.get('model').get_particle(l.get('id')).get_color()\
-                                * (-1)**(1+l.get('state'))
-                        # Get the list of color flows
-                        color_flow_list = \
-                            matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
-                                                                                       ninitial)
-                        # And output them properly
-                        for cf_i, color_flow_dict in enumerate(color_flow_list):
-                            for i in [0, 1]:
-                                lines.append("DATA (ICOLUP_B(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
-                                     (iborn, i + 1, cf_i + 1, nexternal,
-                                      ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
-                                                for l in legs])))
 
-            nflows_list.append(len(color_flow_list))
+        for iproc, proc in enumerate(me.get('processes')):
+            legs = proc.get_legs_with_decays()
+            lines.append("DATA (IDUP(ilh,%d),ilh=1,%d)/%s/" % \
+                         (iproc + 1, nexternal,
+                          ",".join([str(l.get('id')) for l in legs])))
+            for i in [1, 2]:
+                lines.append("DATA (MOTHUP(%d,ilh,%3r),ilh=1,%2r)/%s/" % \
+                         (i, iproc + 1, nexternal,
+                          ",".join([ "%3r" % 0 ] * ninitial + \
+                                   [ "%3r" % i ] * (nexternal - ninitial))))
     
+            # Here goes the color connections corresponding to the JAMPs
+            # Only one output, for the first subproc!
+            if iproc == 0:
+                # If no color basis, just output trivial color flow
+                if not me.get('color_basis'):
+                    for i in [1, 2]:
+                        lines.append("DATA (ICOLUP(%d,ilh,  1),ilh=1,%2r)/%s/" % \
+                                 (i, nexternal,
+                                  ",".join([ "%3r" % 0 ] * nexternal)))
+                    color_flow_list = []
+    
+                else:
+                    # First build a color representation dictionnary
+                    repr_dict = {}
+                    for l in legs:
+                        repr_dict[l.get('number')] = \
+                            proc.get('model').get_particle(l.get('id')).get_color()\
+                            * (-1)**(1+l.get('state'))
+                    # Get the list of color flows
+                    color_flow_list = \
+                        me.get('color_basis').color_flow_decomposition(repr_dict, ninitial)
+                    # And output them properly
+                    for cf_i, color_flow_dict in enumerate(color_flow_list):
+                        for i in [0, 1]:
+                            lines.append("DATA (ICOLUP(%d,ilh,%3r),ilh=1,%2r)/%s/" % \
+                                 (i + 1, cf_i + 1, nexternal,
+                                  ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
+                                            for l in legs])))
 
-        nproc = len(matrix_element.get('processes'))
+        nflows = len(color_flow_list)
+
+        nproc = len(me.get('processes'))
         firstlines = ['integer maxprocb_used, maxflowb_used',
-                      'parameter (maxprocb_used = %d)' % max([len(me.get('processes')) for me in me_list]),
-                      'parameter (maxflowb_used = %d)' % max(nflows_list)]
+                      'parameter (maxprocb_used = %d)' % len(me.get('processes')),
+                      'parameter (maxflowb_used = %d)' % nflows]
         # Write the file
         writer.writelines(firstlines + lines)
     
-        return nflows_list
+        return nflows
 
 
     #===============================================================================
-    # write_born_configs_and_props_info_file
+    # write_born_conf_file
     #===============================================================================
-    def write_born_configs_and_props_info_file(self, writer, me_list, fortran_model):
+    def write_born_conf_file(self, writer, me, fortran_model):
         """Write the configs.inc file for the list of born matrix-elements"""
     
         # Extract number of external particles
-        (nexternal, ninitial) = me_list[0].get_nexternal_ninitial()
-        model = me_list[0].get('processes')[0].get('model')
+        (nexternal, ninitial) = me.get_nexternal_ninitial()
+        model = me.get('processes')[0].get('model')
         lines = ['', 'C Here are the congifurations']
         lines_P = ['', 'C Here are the propagators']
         lines_BW = ['', 'C Here are the BWs']
@@ -2389,141 +2233,144 @@ Parameters              %(params)s\n\
         s_and_t_channels_list = []
         nschannels = []
     
-        particle_dict = me_list[0].get('processes')[0].get('model').\
+        particle_dict = me.get('processes')[0].get('model').\
                         get('particle_dict')
 
         booldict = {True: '.false.', False: '.false'} 
 
         max_leg_number = 0
 
+        ######first get the configurations
+        s_and_t_channels = []
+        mapconfigs = []
+        lines.extend(['C     %s' % proc.nice_string() for proc in me.get('processes')])
+        base_diagrams = me.get('base_amplitude').get('diagrams')
+        minvert = min([max([len(vert.get('legs')) for vert in \
+                            diag.get('vertices')]) for diag in base_diagrams])
 
-        for i, matrix_element in enumerate(me_list):
-            ######first get the configurations
-            iborn = i + 1
-            s_and_t_channels = []
-            mapconfigs = []
-            iborn = i + 1
-            lines.append('C Born %d:' % iborn)
-            lines.extend(['C     %s' % proc.nice_string() for proc in matrix_element.get('processes')])
-            base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
-            minvert = min([max([len(vert.get('legs')) for vert in \
-                                diag.get('vertices')]) for diag in base_diagrams])
+        for idiag, diag in enumerate(base_diagrams):
+            if any([len(vert.get('legs')) > minvert for vert in
+                    diag.get('vertices')]):
+                # Only 3-vertices allowed in configs.inc
+                continue
+            iconfig = iconfig + 1
+            helas_diag = me.get('diagrams')[idiag]
+            mapconfigs.append(helas_diag.get('number'))
+            lines.append("# Diagram %d, Amplitude %d" % \
+                         (helas_diag.get('number'),helas_diag.get('amplitudes')[0]['number']))
+            # Correspondance between the config and the amplitudes
+            lines.append("data mapconfig(%4d)/%4d/" % (iconfig,
+                                                     helas_diag.get('amplitudes')[0]['number']))
     
-            for idiag, diag in enumerate(base_diagrams):
-                if any([len(vert.get('legs')) > minvert for vert in
-                        diag.get('vertices')]):
-                    # Only 3-vertices allowed in configs.inc
-                    continue
-                iconfig = iconfig + 1
-                helas_diag = matrix_element.get('diagrams')[idiag]
-                mapconfigs.append(helas_diag.get('number'))
-                lines.append("# Diagram %d, Amplitude %d" % \
-                             (helas_diag.get('number'),helas_diag.get('amplitudes')[0]['number']))
-                # Correspondance between the config and the amplitudes
-                lines.append("data mapconfig_B(%4d,%4d)/%4d/" % (iborn, iconfig,
-                                                         helas_diag.get('amplitudes')[0]['number']))
-        
-                # Need to reorganize the topology so that we start with all
-                # final state external particles and work our way inwards
-                schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                             get_s_and_t_channels(ninitial, model, 990)
-        
-                s_and_t_channels.append([schannels, tchannels])
-        
-                # Write out propagators for s-channel and t-channel vertices
-                allchannels = schannels
-                if len(tchannels) > 1:
-                    # Write out tchannels only if there are any non-trivial ones
-                    allchannels = schannels + tchannels
-        
-                for vert in allchannels:
-                    daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
-                    last_leg = vert.get('legs')[-1]
-                    lines.append("data (iforest_B(%3d,ifr,%3d,%4d),ifr=1,%d)/%s/" % \
-                                 (iborn, last_leg.get('number'), iconfig, len(daughters),
-                                  ",".join(["%3d" % d for d in daughters])))
-                    if vert in schannels:
-                        lines.append("data sprop_B(%4d,%4d,%4d)/%8d/" % \
-                                     (iborn, last_leg.get('number'), iconfig,
-                                      last_leg.get('id')))
-                    elif vert in tchannels[:-1]:
-                        lines.append("data tprid_B(%4d,%4d,%4d)/%8d/" % \
-                                     (iborn, last_leg.get('number'), iconfig,
-                                      abs(last_leg.get('id'))))
+            # Need to reorganize the topology so that we start with all
+            # final state external particles and work our way inwards
+            schannels, tchannels = helas_diag.get('amplitudes')[0].\
+                                         get_s_and_t_channels(ninitial, model, 990)
+    
+            s_and_t_channels.append([schannels, tchannels])
+    
+            # Write out propagators for s-channel and t-channel vertices
+            allchannels = schannels
+            if len(tchannels) > 1:
+                # Write out tchannels only if there are any non-trivial ones
+                allchannels = schannels + tchannels
+    
+            for vert in allchannels:
+                daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
+                last_leg = vert.get('legs')[-1]
+                lines.append("data (iforest(ifr,%3d,%4d),ifr=1,%d)/%s/" % \
+                             (last_leg.get('number'), iconfig, len(daughters),
+                              ",".join(["%3d" % d for d in daughters])))
+                if vert in schannels:
+                    lines.append("data sprop(%4d,%4d)/%8d/" % \
+                                 (last_leg.get('number'), iconfig,
+                                  last_leg.get('id')))
+                elif vert in tchannels[:-1]:
+                    lines.append("data tprid(%4d,%4d)/%8d/" % \
+                                 (last_leg.get('number'), iconfig,
+                                  abs(last_leg.get('id'))))
 
-                    max_leg_number = min(max_leg_number,last_leg.get('number'))
+                max_leg_number = min(max_leg_number,last_leg.get('number'))
 
-            s_and_t_channels_list.append(s_and_t_channels)
-            mapconfigs_list.append(mapconfigs)
-            iconfig_list.append(iconfig)
+        ##### Write out number of configs
+        lines.append("# Number of configs")
+        lines.append("data mapconfig(0)/%4d/" % (iconfig))
 
-            ##### Write out number of configs
-            lines.append("# Number of configs")
-            lines.append("data mapconfig_B(%4d, 0)/%4d/" % (iborn, iconfig))
-
-            ######now the propagators
-            for iconf, configs in enumerate(s_and_t_channels):
-                for vertex in configs[0] + configs[1][:-1]:
-                    leg = vertex.get('legs')[-1]
-                    if leg.get('id') == 21 and 21 not in particle_dict:
-                        # Fake propagator used in multiparticle vertices
-                        mass = 'zero'
-                        width = 'zero'
-                        pow_part = 0
-                    else:
-                        particle = particle_dict[leg.get('id')]
-                        # Get mass
-                        if particle.get('mass').lower() == 'zero':
-                            mass = particle.get('mass')
-                        else:
-                            mass = "abs(%s)" % particle.get('mass')
-                        # Get width
-                        if particle.get('width').lower() == 'zero':
-                            width = particle.get('width')
-                        else:
-                            width = "abs(%s)" % particle.get('width')
-        
-                        pow_part = 1 + int(particle.is_boson())
-        
-                    lines_P.append("pmass_B(%3d,%3d,%4d)  = %s" % \
-                                 (iborn, leg.get('number'), iconf + 1, mass))
-                    lines_P.append("pwidth_B(%3d,%3d,%4d) = %s" % \
-                                 (iborn, leg.get('number'), iconf + 1, width))
-                    lines_P.append("pow_B(%3d,%3d,%4d) = %d" % \
-                                 (iborn, leg.get('number'), iconf + 1, pow_part))
-
-            ######finally the BWs
-            for iconf, config in enumerate(s_and_t_channels):
-                schannels = config[0]
-                nschannels.append(len(schannels))
-                for vertex in schannels:
-                    # For the resulting leg, pick out whether it comes from
-                    # decay or not, as given by the from_group flag
-                    leg = vertex.get('legs')[-1]
-                    lines_BW.append("data gForceBW_B(%d,%d,%d)/%s/" % \
-                                 (iborn, leg.get('number'), iconf + 1,
-                                  booldict[leg.get('from_group')]))
+        ######finally the BWs
+        for iconf, config in enumerate(s_and_t_channels):
+            schannels = config[0]
+            nschannels.append(len(schannels))
+            for vertex in schannels:
+                # For the resulting leg, pick out whether it comes from
+                # decay or not, as given by the from_group flag
+                leg = vertex.get('legs')[-1]
+                lines_BW.append("data gForceBW(%d,%d)/%s/" % \
+                             (leg.get('number'), iconf + 1,
+                              booldict[leg.get('from_group')]))
 
         #lines for the declarations
         firstlines = []
         firstlines.append('integer ifr')
-        firstlines.append('integer nborns\nparameter (nborns=%d)' % len(me_list))
-        firstlines.append('integer lmaxconfigsb_used\nparameter (lmaxconfigsb_used=%d)' % max(iconfig_list))
+        firstlines.append('integer lmaxconfigsb_used\nparameter (lmaxconfigsb_used=%d)' % iconfig)
         firstlines.append('integer max_branchb_used\nparameter (max_branchb_used=%d)' % -max_leg_number)
-        firstlines.append('integer mapconfig_b(nborns, 0 : lmaxconfigsb_used)')
-        firstlines.append('integer iforest_b(nborns, 2, -max_branchb_used:-1, lmaxconfigsb_used)')
-        firstlines.append('integer sprop_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
-        firstlines.append('integer tprid_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
-        firstlines.append('double precision pmass_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
-        firstlines.append('double precision pwidth_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
-        firstlines.append('integer pow_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
-        firstlines.append('logical gforceBW_B(nborns, -max_branchb_used : -1, lmaxconfigsb_used)')
-
+        firstlines.append('integer mapconfig(0 : lmaxconfigsb_used)')
+        firstlines.append('integer iforest(2, -max_branchb_used:-1, lmaxconfigsb_used)')
+        firstlines.append('integer sprop(-max_branchb_used:-1, lmaxconfigsb_used)')
+        firstlines.append('integer tprid(-max_branchb_used:-1, lmaxconfigsb_used)')
+        firstlines.append('logical gforceBW(-max_branchb_used : -1, lmaxconfigsb_used)')
     
         # Write the file
-        writer.writelines(firstlines + lines + lines_P + lines_BW)
+        writer.writelines(firstlines + lines + lines_BW)
     
-        return iconfig_list, mapconfigs_list, s_and_t_channels_list
+        return iconfig, mapconfigs, s_and_t_channels
+
+
+    #===============================================================================
+    # write_born_props_file
+    #===============================================================================
+    def write_born_props_file(self, writer, me, s_and_t_channels, fortran_model):
+        """Write the configs.inc file for the list of born matrix-elements"""
+    
+        # Extract number of external particles
+        lines_P = ['', 'C Here are the propagators']
+    
+        particle_dict = me.get('processes')[0].get('model').\
+                        get('particle_dict')
+
+        for iconf, configs in enumerate(s_and_t_channels):
+            for vertex in configs[0] + configs[1][:-1]:
+                leg = vertex.get('legs')[-1]
+                if leg.get('id') == 21 and 21 not in particle_dict:
+                    # Fake propagator used in multiparticle vertices
+                    mass = 'zero'
+                    width = 'zero'
+                    pow_part = 0
+                else:
+                    particle = particle_dict[leg.get('id')]
+                    # Get mass
+                    if particle.get('mass').lower() == 'zero':
+                        mass = particle.get('mass')
+                    else:
+                        mass = "abs(%s)" % particle.get('mass')
+                    # Get width
+                    if particle.get('width').lower() == 'zero':
+                        width = particle.get('width')
+                    else:
+                        width = "abs(%s)" % particle.get('width')
+    
+                    pow_part = 1 + int(particle.is_boson())
+    
+                lines_P.append("pmass(%3d,%4d)  = %s" % \
+                             (leg.get('number'), iconf + 1, mass))
+                lines_P.append("pwidth(%3d,%4d) = %s" % \
+                             (leg.get('number'), iconf + 1, width))
+                lines_P.append("pow(%3d,%4d) = %d" % \
+                             (leg.get('number'), iconf + 1, pow_part))
+
+        # Write the file
+        writer.writelines(lines_P)
+
+    
 
     
     #===============================================================================
@@ -2645,7 +2492,7 @@ Parameters              %(params)s\n\
     #===============================================================================
     # get_den_factor_lines
     #===============================================================================
-    def get_den_factor_lines(self, fks_born, iborn):
+    def get_den_factor_lines(self, fks_born):
         """returns the lines with the information on the denominator keeping care
         of the identical particle factors in the various real emissions"""
     
@@ -2654,8 +2501,8 @@ Parameters              %(params)s\n\
         lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
         lines.append('DATA IDEN_VALUES /' + \
                      ', '.join(['%d' % ( 
-                     fks_born.born_me_list[iborn].get_denominator_factor() / \
-                     fks_born.born_me_list[iborn]['identical_particle_factor'] * \
+                     fks_born.born_me.get_denominator_factor() / \
+                     fks_born.born_me['identical_particle_factor'] * \
                      fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
                      for info in info_list]) + '/')
 

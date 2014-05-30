@@ -250,9 +250,9 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
     def get_born_amplitudes(self):
         """return an amplitudelist with the born amplitudes"""
-        return diagram_generation.AmplitudeList([amp for \
-                born in self['born_processes'] for \
-                amp in born.born_amp_list])
+        return diagram_generation.AmplitudeList([
+                born.born_amp for \
+                born in self['born_processes']])
 
 
     def get_virt_amplitudes(self):
@@ -421,65 +421,42 @@ class FKSProcess(object):
 
     def get_colors(self):
         """return the list of color representations 
-        for each amp in born_amp list"""
-        return [[leg.get('color') for \
-                    leg in amp['process']['legs']] for \
-                    amp in self.born_amp_list]
-                    
+        for each leg in born_amp"""
+        return [leg.get('color') for \
+                    leg in self.born_amp['process']['legs']]                    
+
 
     def get_charges(self):
         """return the list of charges
-        for each amp in born_amp list"""
-        return [[leg.get('charge') for \
-                    leg in amp['process']['legs']] for \
-                    amp in self.born_amp_list]
+        for each leg in born_amp"""
+        return [leg.get('charge') for \
+                    leg in self.born_amp['process']['legs']]                    
 
 
     def get_nlegs(self):
-        """return the number of born legs
-        for each amp in born_amp list"""
-        return [[len(amp['process']['legs'])] for \
-                    amp in self.born_amp_list]
+        """return the number of born legs"""
+        return len(self.born_amp['process']['legs'])
 
 
     def get_born_nice_string(self):
         """Return the nice string for the born process.
-        If there is only one amplitude, return its nice string
-        else (if there are many with g <-> a identified) replace
-        g / a by V
         """
-        string = self.born_amp_list[0]['process'].nice_string()
-        if len(self.born_amp_list) > 1:
-            string.replace('a', 'V').replace('g', 'V')
-        return string
+        return self.born_amp['process'].nice_string()
 
 
     def get_pdg_codes(self):
-        """return the list of pdg codes
-        for each amp in born_amp list"""
-        return [[leg.get('id') for \
-                    leg in amp['process']['legs']] for \
-                    amp in self.born_amp_list]
+        """return the list of the pdg codes
+        of each leg in born_amp"""
+        return [leg.get('id') for \
+                    leg in self.born_amp['process']['legs']]                    
 
 
-    def get_pdg_codes_ag(self):
-        """return the list of pdg codes replacing the photon pdg (22) with the 
-        gluon one (21)
-        for each amp in born_amp list"""
-        a_id = 22
-        g_id = 21
-        return [[leg.get('id') if leg.get('id') != a_id else g_id for \
-                    leg in amp['process']['legs']] for \
-                    amp in self.born_amp_list]
-
-     
     def get_leglist(self):
         """return the leg list
-        for each amp in born_amp list"""
-        return [fks_common.to_fks_legs( \
-                amp['process']['legs'], \
-                amp['process']['model']) for \
-                amp in self.born_amp_list]
+        for the born amp"""
+        return fks_common.to_fks_legs( \
+                self.born_amp['process']['legs'], \
+                self.born_amp['process']['model'])
 
 
 ###############################################################################
@@ -497,7 +474,7 @@ class FKSProcess(object):
         self.nincoming = 0
         self.virt_amp = None
         self.perturbation = 'QCD'
-        self.born_amp_list = diagram_generation.AmplitudeList()
+        self.born_amp = diagram_generation.Amplitude()
 
         if not remove_reals in [True, False]:
             raise fks_common.FKSProcessError(\
@@ -509,23 +486,23 @@ class FKSProcess(object):
                 pertur = start_proc['perturbation_couplings']
                 if pertur:
                     self.perturbation = sorted(pertur)[0]
-                self.born_amp_list.append(diagram_generation.Amplitude(\
+                self.born_amp = diagram_generation.Amplitude(\
                                 copy.copy(fks_common.sort_proc(\
-                                        start_proc, pert = self.perturbation))))
+                                        start_proc, pert = self.perturbation)))
             #initialize with an amplitude
             elif isinstance(start_proc, diagram_generation.Amplitude):
                 pertur = start_proc.get('process')['perturbation_couplings']
-                self.born_amp_list.append(diagram_generation.Amplitude(\
+                self.born_amp = diagram_generation.Amplitude(\
                                 copy.copy(fks_common.sort_proc(\
                                     start_proc['process'], 
-                                    pert = self.perturbation))))
+                                    pert = self.perturbation)))
             else:
                 raise fks_common.FKSProcessError(\
                     'Not valid start_proc in FKSProcess')
-            self.born_amp_list[0]['process'].set('legs_with_decays', MG.LegList())
+            self.born_amp['process'].set('legs_with_decays', MG.LegList())
 
             logger.info("Generating FKS-subtracted matrix elements for born process%s" \
-                % self.born_amp_list[0]['process'].nice_string(print_weighted=False).replace(\
+                % self.born_amp['process'].nice_string(print_weighted=False).replace(\
                                                                  'Process', '')) 
 
             # special treatment of photon is needed !
@@ -536,9 +513,8 @@ class FKSProcess(object):
             self.fsr = False
             print 'MZ fix isr/fsr' 
             #######
-            for leg in self.born_amp_list[0]['process']['legs']:
-                if not leg['state']:
-                    self.nincoming += 1
+            self.nincoming = len([l for l in self.born_amp['process']['legs'] \
+                                  if not l['state']])
                 
             self.find_reals()
 
@@ -589,13 +565,9 @@ class FKSProcess(object):
         are combined together
         """
 
-        born_proc = copy.copy(self.born_amp_list[0]['process'])
+        born_proc = copy.copy(self.born_amp['process'])
         born_pdgs = self.get_pdg_codes()
-        # safety check
-        if len(born_pdgs) > 1:
-            raise FKSProcessError('generate_reals should be called before ' + \
-                    ' combining born amplitudes')
-        leglist = self.get_leglist()[0]
+        leglist = self.get_leglist()
         for i, real_list in enumerate(self.reals):
             # keep track of the id of the mother (will be used to constrct the
             # spin-correlated borns
@@ -637,11 +609,11 @@ class FKSProcess(object):
         If pert orders is empty, all the orders of the model will be used
         """
         
-        model = self.born_amp_list[0]['process']['model']
+        model = self.born_amp['process']['model']
         if not pert_orders:
             pert_orders = model['coupling_orders']
 
-        leglist = self.get_leglist()[0]
+        leglist = self.get_leglist()
         if range(len(leglist)) != [l['number']-1 for l in leglist]:
             raise fks_common.FKSProcessError('Disordered numbers of leglist')
         for i in leglist:
@@ -649,7 +621,7 @@ class FKSProcess(object):
             self.reals.append([])
             for pert_order in pert_orders:
                 splittings = fks_common.find_splittings( \
-                        i, self.born_amp_list[0]['process']['model'], {}, pert_order)
+                        i, model, {}, pert_order)
                 for split in splittings:
                     # find other 'mother' particles which can end up in the same splitting
                     extra_mothers = []

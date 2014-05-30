@@ -3364,6 +3364,8 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
       common /c_born_cnt/ ans_cnt
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
       
       double precision one,pi
       parameter (one=1.d0)
@@ -4353,6 +4355,7 @@ c For the MINT folding
       include 'nFKSconfigs.inc'
       INTEGER nFKSprocess, nFKSprocess_save
       COMMON/c_nFKSprocess/nFKSprocess
+      logical need_color_link_used, need_charge_link_used
       include "pmass.inc"
 
       if (firsttime) then
@@ -4366,7 +4369,7 @@ C check if any real emission need cahrge/color links
          firsttime = .false.
          nFKSprocess = nFKSprocess_save
          call fks_inc_chooser()
-      enddo
+      endif
          
 
       aso2pi=g**2/(8*pi**2)
@@ -4560,8 +4563,8 @@ c convert to Binoth Les Houches Accord standards
             Call BinothLHA(p_born,born_wgt,virt_wgt)
             call cpu_time(tAfter)
             tOLP=tOLP+(tAfter-tBefore)
-            virtual_over_born=virt_wgt/(born_wgt*ao2pi)
-            virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
+            virtual_over_born=virt_wgt/(born_wgt*aso2pi)
+            virt_wgt=(virt_wgt-average_virtual*born_wgt*aso2pi)
             if (abrv.ne.'virt') then
                virt_wgt=virt_wgt/virtual_fraction
             endif
@@ -4573,7 +4576,7 @@ c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
 c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
       endif
       if (abrv(1:4).ne.'virt')
-     &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*ao2pi
+     &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*aso2pi
 
 c eq.(MadFKS.C.13)
       if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
@@ -4594,8 +4597,8 @@ c eq.(MadFKS.C.14)
         if (dabs(log(q2fact(1)/scale**2)).gt.1d-6) then
             ! fix the next line and remove the if statement (all points)
             write(*,*) 'FIX muR!=muF'
-            bsv_wgt=bsv_wgt - 2*pi*beta0*wgtbpower*
-     #                       log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
+C            bsv_wgt=bsv_wgt - 2*pi*beta0*wgtbpower*
+C     #                       log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
         endif
       endif
 
@@ -5325,11 +5328,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
-c$$$      integer mapconfig(0:lmaxconfigs), this_config
-c$$$      integer iforest(2,-max_branch:-1,lmaxconfigs)
-c$$$      integer sprop(-max_branch:-1,lmaxconfigs)
-c$$$      integer tprid(-max_branch:-1,lmaxconfigs)
-c$$$      include "born_conf.inc"
+      include "born_conf.inc"
 
       logical firsttime,firsttime_nFKSprocess(fks_configs)
       data firsttime,firsttime_nFKSprocess/.true.,fks_configs*.true./
@@ -5378,11 +5377,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born
-      INTEGER NBORN
-      COMMON/C_NBORN/NBORN
       double precision zero
       parameter (zero=0d0)
-      include "born_configs_and_props_info.inc"
 
 c The value of rotategranny may be superseded later if phase space
 c parametrization allows it
@@ -5551,12 +5547,12 @@ c Check to see if this channel needs to be included in the multi-channeling
          diagramsymmetryfactor=0d0
          if (multi_channel) then
             open (unit=19,file="symfact.dat",status="old",err=14)
-            do i=1,mapconfig_b(nborn,0)
+            do i=1,mapconfig(0)
                read (19,*,err=23) fac1,fac2
                if (i.eq.iconfig) then
-                  if (mapconfig_b(nborn,iconfig).ne.fac1) then
+                  if (mapconfig(iconfig).ne.fac1) then
                      write (*,*) 'inconsistency in symfact.dat',i
-     $                    ,iconfig,mapconfig_b(nborn,iconfig),fac1
+     $                    ,iconfig,mapconfig(iconfig),fac1
                      stop
                   endif
                   diagramsymmetryfactor=dble(fac2)

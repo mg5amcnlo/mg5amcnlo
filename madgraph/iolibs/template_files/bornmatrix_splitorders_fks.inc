@@ -1,4 +1,4 @@
-      SUBROUTINE SBORN%(proc_prefix)s(P,ANS_SUMMED)
+      SUBROUTINE SBORN(P,ANS_SUMMED)
 C
 C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
 C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
@@ -31,7 +31,7 @@ C
 C
 C     FUNCTIONS
 C
-      integer GETORDPOWFROMINDEX_B%(proc_prefix)s
+      integer GETORDPOWFROMINDEX_B
 C
 C BEGIN CODE
 C
@@ -41,7 +41,7 @@ if (firsttime) then
  do i = 1, nsqampso
 C this is for the orders of the born to integrate
   do j = 1, nsplitorders
-   if(GETORDPOWFROMINDEX_B%(proc_prefix)s(j, i) .gt. born_orders(j)) then
+   if(GETORDPOWFROMINDEX_B(j, i) .gt. born_orders(j)) then
     keep_order(i) = .false.
     EXIT 
    endif
@@ -56,16 +56,16 @@ C this is for the orders of the counterterms
     else
      ord_subtract=0
     endif
-    if(GETORDPOWFROMINDEX_B%(proc_prefix)s(k, i) .gt. nlo_orders(k)-ord_subtract) then
+    if(GETORDPOWFROMINDEX_B(k, i) .gt. nlo_orders(k)-ord_subtract) then
      keep_order_cnt(j,i) = .false.
      EXIT 
     endif
    enddo
   enddo
   if (keep_order(i)) then
-   write(*,*) 'BORN %(proc_prefix)s: keeping split order ', i
+   write(*,*) 'BORN: keeping split order ', i
   else
-   write(*,*) 'BORN %(proc_prefix)s: not keeping split order ', i
+   write(*,*) 'BORN: not keeping split order ', i
   endif
  enddo
 
@@ -73,16 +73,16 @@ C this is for the orders of the counterterms
   write(*,*) 'counterterm S.O', j, ordernames(j)
   do i = 1, nsqampso
    if (keep_order_cnt(j,i)) then
-    write(*,*) 'BORN %(proc_prefix)s: keeping split order', i
+    write(*,*) 'BORN: keeping split order', i
    else
-    write(*,*) 'BORN %(proc_prefix)s: not keeping split order', i
+    write(*,*) 'BORN: not keeping split order', i
    endif
   enddo
  enddo
  firsttime = .false.
 endif
 
-CALL SBORN%(proc_prefix)s_SPLITORDERS(P,ANS)
+CALL SBORN_SPLITORDERS(P,ANS)
 
 C the born to be integrated
 ans_summed = 0d0
@@ -107,7 +107,7 @@ END
 
 
 
-SUBROUTINE SBORN%(proc_prefix)s_SPLITORDERS(P1,ANS)
+SUBROUTINE SBORN_SPLITORDERS(P1,ANS)
 C  
 %(info_lines)s
 C
@@ -219,7 +219,7 @@ C ----------
         if (nhel(glu_ij,ihel).le.0) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             
-            CALL BORN%(proc_prefix)s(P1,NHEL(1,IHEL),IHEL,T,borns)
+            CALL BORN(P1,NHEL(1,IHEL),IHEL,T,borns)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
@@ -243,7 +243,7 @@ C ----------
       END
        
        
-      SUBROUTINE BORN%(proc_prefix)s(P,NHEL,HELL,ANS,borns)
+      SUBROUTINE BORN(P,NHEL,HELL,ANS,borns)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -302,7 +302,7 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEXB%(proc_prefix)s
+      INTEGER SQSOINDEXB
 
 %(ij_lines)s
 C  
@@ -355,7 +355,7 @@ C ----------
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              BORNS(2-(1-ihel)/2,SQSOINDEXB%(proc_prefix)s(M,N))=BORNS(2-(1-ihel)/2,SQSOINDEXB%(proc_prefix)s(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)   
+              BORNS(2-(1-ihel)/2,SQSOINDEXB(M,N))=BORNS(2-(1-ihel)/2,SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)   
           ENDDO
         ENDDO
         ENDDO
@@ -380,7 +380,7 @@ C ----------
           ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J,M)
         ENDDO
 	DO N = 1, NAMPSO
-        ANS(2,SQSOINDEXB%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))/DENOM(I)
+        ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))/DENOM(I)
         ENDDO
       ENDDO
       ENDDO
@@ -404,7 +404,7 @@ C
 C Helper functions to deal with the split orders.
 C
 
-      INTEGER FUNCTION SQSOINDEXB%(proc_prefix)s(AMPORDERA,AMPORDERB)
+      INTEGER FUNCTION SQSOINDEXB(AMPORDERA,AMPORDERB)
 C
 C This functions plays the role of the interference matrix. It can be hardcoded or 
 C made more elegant using hashtables if its execution speed ever becomes a relevant
@@ -431,19 +431,19 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEXB%(proc_prefix)s_FROM_ORDERS
+      INTEGER SQSOINDEXB_FROM_ORDERS
 C
 C BEGIN CODE
 C
       DO I=1,NSPLITORDERS
 	    SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDERB,I)
 	  ENDDO
-	  SQSOINDEXB%(proc_prefix)s=SQSOINDEXB%(proc_prefix)s_FROM_ORDERS(SQORDERS)
+	  SQSOINDEXB=SQSOINDEXB_FROM_ORDERS(SQORDERS)
 	  END
 
 
 
-      INTEGER FUNCTION SQSOINDEXB%(proc_prefix)s_FROM_ORDERS(ORDERS)
+      INTEGER FUNCTION SQSOINDEXB_FROM_ORDERS(ORDERS)
 C
 C From a list of values for the split orders, this function returns the
 c corresponding index in the squared orders canonical ordering.
@@ -470,7 +470,7 @@ C
 	    DO J=1,NSPLITORDERS
 		  IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
 		ENDDO
-		SQSOINDEXB%(proc_prefix)s_FROM_ORDERS = I
+		SQSOINDEXB_FROM_ORDERS = I
 		RETURN
 1009    CONTINUE
 	  ENDDO
@@ -483,7 +483,7 @@ C
 
 
 
-      INTEGER FUNCTION GETORDPOWFROMINDEX_B%(proc_prefix)s(IORDER, INDX)
+      INTEGER FUNCTION GETORDPOWFROMINDEX_B(IORDER, INDX)
 C
 C Return the power of the IORDER-th order appearing at position INDX
 C in the split-orders output
@@ -507,22 +507,22 @@ C
 C BEGIN CODE
 C
       IF (IORDER.GT.NSPLITORDERS.OR.IORDER.LT.1) THEN
-      WRITE(*,*) "INVALID IORDER B%(proc_prefix)s", IORDER
+      WRITE(*,*) "INVALID IORDER B", IORDER
       WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSPLITORDERS
       STOP
       ENDIF
 
       IF (INDX.GT.NSQAMPSO.OR.INDX.LT.1) THEN
-      WRITE(*,*) "INVALID INDX B%(proc_prefix)s", INDX
+      WRITE(*,*) "INVALID INDX B", INDX
       WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSQAMPSO
       STOP
       ENDIF
 
-      GETORDPOWFROMINDEX_B%(proc_prefix)s=SQSPLITORDERS(INDX, IORDER)
+      GETORDPOWFROMINDEX_B=SQSPLITORDERS(INDX, IORDER)
       END
 
 
-      SUBROUTINE GET_NSQSO_BORN%(proc_prefix)s(NSQSO)
+      SUBROUTINE GET_NSQSO_BORN(NSQSO)
 C
 C     Simple subroutine returning the number of squared split order
 C     contributions returned in ANS when calling SMATRIX_SPLITORDERS

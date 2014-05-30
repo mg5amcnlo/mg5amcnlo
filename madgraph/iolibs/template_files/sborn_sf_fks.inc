@@ -1,4 +1,4 @@
-subroutine sborn%(iborn)d_sf(p_born,m,n,wgt)
+subroutine sborn_sf(p_born,m,n,wgt)
           implicit none
           include "nexternal.inc"
           include 'coupl.inc'        

@@ -28,9 +28,9 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
 	 real_me_lum_chooser.o chooser_functions.o			\
 	 genps_fks.o setcuts.o setscales.o 		 		\
-	 $(patsubst %.f,%.o,$(wildcard b_*_sf_???.f)) 			\
-	 $(patsubst %.f,%.o,$(wildcard born_*.f)) 			\
-	 $(patsubst %.f,%.o,$(wildcard sborn_*_sf.f)) 			\
+	 $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) 			\
+	 born.o born_hel.o 			\
+	 $(patsubst %.f,%.o,$(wildcard sborn_sf.f)) 			\
 	 fks_Sij.o trapfpe.o $(fastjetfortran_madfks) fks_singular.o	\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
 	 get_color.o FKSParamReader.o\

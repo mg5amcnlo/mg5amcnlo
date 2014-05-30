@@ -121,7 +121,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         # Keep track of already generated color objects, to reuse as
         # much as possible
         list_colorize = []
-        list_color_links =[]
+        list_color_links = []
         list_color_basis = []
         list_color_matrices = []
         real_me_list = []
@@ -154,51 +154,48 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                 except ValueError:
                     # Otherwise, if the matrix element has any diagrams,
                     # add this matrix element.
-                    if any([born.get('processes') and born.get('diagrams') for \
-                            born in matrix_element.born_me_list]):
+                    if matrix_element.born_me.get('processes') and \
+                       matrix_element.born_me.get('diagrams'):
                         matrix_elements.append(matrix_element)
 
                         if not gen_color:
                             continue
 
-                        # loop over the born matrix elements
-                        for born in matrix_element.born_me_list:
+                        # Always create an empty color basis, and the
+                        # list of raw colorize objects (before
+                        # simplification) associated with amplitude
+                        col_basis = color_amp.ColorBasis()
+                        new_amp = matrix_element.born_me.get_base_amplitude()
+                        matrix_element.born_me.set('base_amplitude', new_amp)
+                        colorize_obj = col_basis.create_color_dict_list(new_amp)
 
-                            # Always create an empty color basis, and the
-                            # list of raw colorize objects (before
-                            # simplification) associated with amplitude
-                            col_basis = color_amp.ColorBasis()
-                            new_amp = born.get_base_amplitude()
-                            born.set('base_amplitude', new_amp)
-                            colorize_obj = col_basis.create_color_dict_list(new_amp)
-
-                            try:
-                                # If the color configuration of the ME has
-                                # already been considered before, recycle
-                                # the information
-                                col_index = list_colorize.index(colorize_obj)
-                                logger.info(\
-                                  "Reusing existing color information for %s" % \
-                                  born.get('processes')\
-                                  [0].nice_string(print_weighted=False).\
-                                                     replace('Process', 'process'))
-                            except ValueError:
-                                # If not, create color basis and color
-                                # matrix accordingly
-                                list_colorize.append(colorize_obj)
-                                col_basis.build()
-                                list_color_basis.append(col_basis)
-                                col_matrix = color_amp.ColorMatrix(col_basis)
-                                list_color_matrices.append(col_matrix)
-                                col_index = -1
-
-                                logger.info(\
-                                  "Processing color information for %s" % \
-                                  born.get('processes')[0].\
-                                  nice_string(print_weighted=False).\
+                        try:
+                            # If the color configuration of the ME has
+                            # already been considered before, recycle
+                            # the information
+                            col_index = list_colorize.index(colorize_obj)
+                            logger.info(\
+                              "Reusing existing color information for %s" % \
+                              matrix_element.born_me.get('processes')\
+                              [0].nice_string(print_weighted=False).\
                                                  replace('Process', 'process'))
-                            born.set('color_basis', list_color_basis[col_index])
-                            born.set('color_matrix', list_color_matrices[col_index])                    
+                        except ValueError:
+                            # If not, create color basis and color
+                            # matrix accordingly
+                            list_colorize.append(colorize_obj)
+                            col_basis.build()
+                            list_color_basis.append(col_basis)
+                            col_matrix = color_amp.ColorMatrix(col_basis)
+                            list_color_matrices.append(col_matrix)
+                            col_index = -1
+
+                            logger.info(\
+                              "Processing color information for %s" % \
+                              matrix_element.born_me.get('processes')[0].\
+                              nice_string(print_weighted=False).\
+                                             replace('Process', 'process'))
+                        matrix_element.born_me.set('color_basis', list_color_basis[col_index])
+                        matrix_element.born_me.set('color_matrix', list_color_matrices[col_index])                    
                 else:
                     # this is in order not to handle valueErrors coming from other plaeces,
                     # e.g. from the add_process function
@@ -231,9 +228,7 @@ class FKSHelasProcess(object):
         matrix elements in 1-1 correspondence with the amplitudes"""
         
         if fksproc != None:
-            self.born_me_list = [ \
-                    helas_objects.HelasMatrixElement(born_amp, **opts)
-                    for born_amp in fksproc.born_amp_list]
+            self.born_me = helas_objects.HelasMatrixElement(fksproc.born_amp, **opts)
 
             self.real_processes = []
             self.perturbation = fksproc.perturbation
@@ -265,16 +260,15 @@ class FKSHelasProcess(object):
         """this function computes and returns the color links, it should be called
         after the initialization and the setting of the color basis"""
         if not self.color_links:
-            for born_me in self.born_me_list:
-                legs = born_me.get('base_amplitude').get('process').get('legs')
-                model = born_me.get('base_amplitude').get('process').get('model')
-                color_links_info = fks_common.find_color_links(fks_common.to_fks_legs(legs, model),
-                            symm = True,pert = self.perturbation)
-                col_basis = born_me.get('color_basis')
-                self.color_links.append(fks_common.insert_color_links(col_basis,
-                                    col_basis.create_color_dict_list(
-                                        born_me.get('base_amplitude')),
-                                    color_links_info))    
+            legs = self.born_me.get('base_amplitude').get('process').get('legs')
+            model = self.born_me.get('base_amplitude').get('process').get('model')
+            color_links_info = fks_common.find_color_links(fks_common.to_fks_legs(legs, model),
+                        symm = True, pert = self.perturbation)
+            col_basis = self.born_me.get('color_basis')
+            self.color_links = fks_common.insert_color_links(col_basis,
+                                col_basis.create_color_dict_list(
+                                    self.born_me.get('base_amplitude')),
+                                color_links_info)    
 
     def get_fks_info_list(self):
         """Returns the list of the fks infos for all processes in the format
@@ -302,25 +296,17 @@ class FKSHelasProcess(object):
         return initial + '-> ' + final
 
 
-    def get(self, key, ime=None):
-        """the get function references to the borns
-        if ime is passed, refer to the i-th ME, otherwise
-        loop over them"""
+    def get(self, key):
+        """the get function references to the born
+        matrix element
+        """
+        return self.born_me.get(key)
 
-        if ime != None:
-            return self.born_me_list[ime].get(key)
-        else:
-            llist = []
-            for me in self.born_me_list:
-                llist.extend(me.get(key))
-            return llist
     
     def get_used_lorentz(self):
         """the get_used_lorentz function references to born, reals
         and virtual matrix elements"""
-        lorentz_list = []
-        for me in self.born_me_list:
-            lorentz_list.extend(me.get_used_lorentz())
+        lorentz_list = self.born_me.get_used_lorentz()
         for real in self.real_processes:
             lorentz_list.extend(real.matrix_element.get_used_lorentz())
         if self.virt_matrix_element:
@@ -328,38 +314,29 @@ class FKSHelasProcess(object):
 
         return list(set(lorentz_list))
     
+    
     def get_used_couplings(self):
         """the get_used_couplings function references to born, reals
         and virtual matrix elements"""
-        coupl_list = []
-        for me in self.born_me_list:
-            coupl_list.extend(me.get_used_couplings())
+        coupl_list = self.born_me.get_used_couplings()
         for real in self.real_processes:
             coupl_list.extend([c for c in\
                         real.matrix_element.get_used_couplings()])
         if self.virt_matrix_element:
             coupl_list.extend(self.virt_matrix_element.get_used_couplings())
         return coupl_list    
+
     
     def __eq__(self, other):
         """the equality between two FKSHelasProcesses is defined up to the 
         color links"""
-        #first compare the borns
-        selftag_list = [helas_objects.IdentifyMETag.\
-                        create_tag(born.get('base_amplitude')) for 
-                        born in self.born_me_list]
-        othertag_list = [helas_objects.IdentifyMETag.\
-                        create_tag(born.get('base_amplitude')) for 
-                        born in other.born_me_list]                    
-        borns2 = copy.copy(other.born_me_list)
+        #first compare the born
+        selftag = helas_objects.IdentifyMETag.\
+                        create_tag(self.born_me.get('base_amplitude'))
+        othertag = helas_objects.IdentifyMETag.\
+                        create_tag(other.born_me.get('base_amplitude'))
 
-        for born, tag in zip(self.born_me_list, selftag_list):
-            try:
-                borns2.remove(born)
-                othertag_list.remove(tag)
-            except ValueError:
-                return False  
-        if borns2 or othertag_list:
+        if selftag != othertag:
             return False
 
         # now the reals
@@ -380,19 +357,15 @@ class FKSHelasProcess(object):
         corresponding real processes may not be in the same order. This is 
         taken care of by constructing the list of self_reals.
         """
-
-        # first add the born processes
-        self_borns = [born for born in self.born_me_list]
-        for oth_born in other.born_me_list:
-            this_born = self.born_me_list[self.born_me_list.index(oth_born)]
-            #need to store pdg lists rather than processes in order to keep mirror processes different
-            this_pdgs = [[leg['id'] for leg in proc['legs']] \
-                    for proc in this_born['processes']]
-            for oth_proc in oth_born['processes']:
-                oth_pdgs = [leg['id'] for leg in oth_proc['legs']]
-                if oth_pdgs not in this_pdgs:
-                    this_born['processes'].append(oth_proc)
-                    this_pdgs.append(oth_pdgs)
+        # first add the born process
+        #need to store pdg lists rather than processes in order to keep mirror processes different
+        this_pdgs = [[leg['id'] for leg in proc['legs']] \
+                for proc in born_me['processes']]
+        for oth_proc in other.born_me['processes']:
+            oth_pdgs = [leg['id'] for leg in oth_proc['legs']]
+            if oth_pdgs not in this_pdgs:
+                this_born['processes'].append(oth_proc)
+                this_pdgs.append(oth_pdgs)
 
         # then the virtuals (if generated)
         if self.virt_matrix_element and other.virt_matrix_element:

@@ -153,6 +153,8 @@ c variable ptj
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
 c
       integer pow(-nexternal:0,lmaxconfigs)
+      double precision pmass(-nexternal:0,lmaxconfigs)
+      double precision pwidth(-nexternal:0,lmaxconfigs)
       integer itree(2,-max_branch:-1),iconfig
       common /to_itree/itree,iconfig
       INTEGER NFKSPROCESS
@@ -191,9 +193,8 @@ c
       common/to_mass/emass
       logical firsttime
       data firsttime /.true./
-      INTEGER NBORN
-      COMMON/C_NBORN/NBORN
-      include "born_configs_and_props_info.inc"
+
+      include "born_props.inc"
 
       if(.not.IS_A_J(NEXTERNAL))then
         write(*,*)'Fatal error in set_tau_min'
@@ -337,9 +338,9 @@ c skipped. [This is already done above; also for the leptons]
                   xw1=xw(d1)
                   xw2=xw(d2)
 c On-shell mass of the intermediate resonance
-                  xmi=pmass_b(nborn,i,iconfig)
+                  xmi=pmass(i,iconfig)
 c Width of the intermediate resonance
-                  xwi=pwidth_b(nborn,i,iconfig)
+                  xwi=pwidth(i,iconfig)
 c Set the intermediate mass equal to the max of its actual mass and
 c the sum of the masses of the two daugters.
                   if (xmi.gt.xm1+xm2) then
@@ -389,13 +390,13 @@ c mass of the BW
      $                 ,xm(i),mass_min(i)
                   stop
                endif
-               if (pmass_b(nborn,i,iconfig).lt.xm(i)) then
+               if (pmass(i,iconfig).lt.xm(i)) then
 c     Possible conflict in BW
-                  if (pmass_b(nborn,i,iconfig).lt.mass_min(i)) then
+                  if (pmass(i,iconfig).lt.mass_min(i)) then
 c     Resonance can never go on-shell due to the kinematics of the event
                      cBW_FKS(iFKS,i)=2
                      cBW_FKS_level(iFKS,i)=0
-                  elseif(pmass_b(nborn,i,iconfig).lt.xm(i)) then
+                  elseif(pmass(i,iconfig).lt.xm(i)) then
 c     Conflicting Breit-Wigner
                      cBW_FKS(iFKS,i)=1
                      cBW_FKS_level(iFKS,i)=1
@@ -424,9 +425,9 @@ c     difference between the mother and the sister masses. (3rd argument
 c     is '-1', because this alternative mass is SMALLER than the
 c     resonance mass).
                                  cBW_FKS_mass(iFKS,itree(k,j),-1)=
-     &                                pmass_b(nborn,j,iconfig)-xm(itree(3-k,j)) ! mass difference
+     &                                pmass(j,iconfig)-xm(itree(3-k,j)) ! mass difference
                                  cBW_FKS_width(iFKS,itree(k,j),-1)=
-     &                                pwidth_b(nborn,j,iconfig)+xw(itree(3-k,j)) ! sum of widths
+     &                                pwidth(j,iconfig)+xw(itree(3-k,j)) ! sum of widths
                               endif
                            endif
                         enddo

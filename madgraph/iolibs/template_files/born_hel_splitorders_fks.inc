@@ -1,4 +1,4 @@
-      SUBROUTINE SBORN%(proc_prefix)s_HEL(P,ANS_SUMMED)
+      SUBROUTINE SBORN_HEL(P,ANS_SUMMED)
 C
 C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
 C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
@@ -26,7 +26,7 @@ C
 C
 C     FUNCTIONS
 C
-      integer GETORDPOWFROMINDEX_B%(proc_prefix)s
+      integer GETORDPOWFROMINDEX_B
 C
 C BEGIN CODE
 C
@@ -36,7 +36,7 @@ if (firsttime) then
  do i = 1, nsqampso
 C this is for the orders of the born to integrate
   do j = 1, nsplitorders
-   if(GETORDPOWFROMINDEX_B%(proc_prefix)s(j, i) .gt. born_orders(j)) then
+   if(GETORDPOWFROMINDEX_B(j, i) .gt. born_orders(j)) then
     keep_order(i) = .false.
     EXIT 
    endif
@@ -46,7 +46,7 @@ C this is for the orders of the born to integrate
 endif
 
 C look for orders which match the born order constraint 
-	  CALL SBORN%(proc_prefix)s_HEL_SPLITORDERS(P,ANS)
+	  CALL SBORN_HEL_SPLITORDERS(P,ANS)
 ans_summed = 0d0
 do i = 1, nsqampso
  if (keep_order(i)) ANS_SUMMED = ANS_SUMMED + ANS(I)
@@ -56,7 +56,7 @@ return
 END
 
 
-    SUBROUTINE SBORN%(proc_prefix)s_HEL_SPLITORDERS(P1,ANS)
+    SUBROUTINE SBORN_HEL_SPLITORDERS(P1,ANS)
 C  
 %(info_lines)s
 C
@@ -124,7 +124,7 @@ C ----------
       ENDDO
       DO IHEL=1,NCOMB
          IF (GOODHEL(IHEL,nFKSprocess)) THEN
-           CALL BORN%(proc_prefix)s_HEL_SPLITORDERS(P1,IHEL,T)
+           CALL BORN_HEL_SPLITORDERS(P1,IHEL,T)
            DO I=1,NSQAMPSO
              wgt_hel(i, ihel) = T(I) / DBLE(IDEN)
              ANS(I)=ANS(I)+T(I)
@@ -138,7 +138,7 @@ C ----------
       END
        
        
-      SUBROUTINE BORN%(proc_prefix)s_HEL_SPLITORDERS(P,HELL,ANS)
+      SUBROUTINE BORN_HEL_SPLITORDERS(P,HELL,ANS)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -184,7 +184,7 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEXB%(proc_prefix)s
+      INTEGER SQSOINDEXB
 C  
 C COLOR DATA
 C  
@@ -211,7 +211,7 @@ C ----------
               ZTEMP = ZTEMP + CF(j,i)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXB%(proc_prefix)s(M,N))=ANS(SQSOINDEXB%(proc_prefix)s(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
           ENDDO
       ENDDO
     ENDDO

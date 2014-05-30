@@ -8,9 +8,7 @@ c is the number of color flows at Born level
       integer i,j,k,l,k0,mothercol(2),i1(2)
       integer maxflow
       parameter (maxflow=999)
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-      common /c_born_leshouche_inc/idup,mothup,icolup
+      include 'born_leshouche.inc'
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
       integer i_fks,j_fks
@@ -22,11 +20,6 @@ c is the number of color flows at Born level
       integer nglu,nsngl
       logical isspecial,isspecial0
       common/cisspecial/isspecial
-      INTEGER NBORN
-      COMMON/C_NBORN/NBORN
-
-      call born_leshouche_inc_chooser()
-
 
       ipartners(0)=0
       do i=1,nexternal-1

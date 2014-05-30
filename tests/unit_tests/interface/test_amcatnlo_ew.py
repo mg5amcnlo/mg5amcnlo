@@ -120,14 +120,12 @@ class TestAMCatNLOEW(unittest.TestCase):
             self.interface.do_generate(cmd)
 
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
-            # all these processes should only have 1 born
-            self.assertEqual(len(fksprocess.born_amp_list), 1)
 
-            self.assertEqual(born_orders, fksprocess.born_amp_list[0]['process']['born_orders'])
-            self.assertEqual(squared_orders, fksprocess.born_amp_list[0]['process']['squared_orders'])
-            self.assertEqual(pert_couplings, fksprocess.born_amp_list[0]['process']['perturbation_couplings'])
+            self.assertEqual(born_orders, fksprocess.born_amp['process']['born_orders'])
+            self.assertEqual(squared_orders, fksprocess.born_amp['process']['squared_orders'])
+            self.assertEqual(pert_couplings, fksprocess.born_amp['process']['perturbation_couplings'])
 
-            self.assertEqual(len(fksprocess.born_amp_list[0]['diagrams']), nborndiag)
+            self.assertEqual(len(fksprocess.born_amp['diagrams']), nborndiag)
             self.assertEqual(len(fksprocess.real_amps), nrealproc)
             for amp, n in zip(fksprocess.real_amps, nrealdiags):
                 # check that the fks_j_from i have also been set

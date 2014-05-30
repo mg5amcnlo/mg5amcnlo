@@ -24,10 +24,7 @@ c
       integer imatch
       integer i,j, k, n, nsym,l,ii,jj
       double precision diff,xi_i_fks
-c$$$      double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagotor mass
       double precision pmass(nexternal)
-      double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
-      integer pow(-max_branch:-1,lmaxconfigs)
 
       integer biforest(2,-max_branch:-1,lmaxconfigs)
       integer fksmother,fksgrandmother,fksaunt,compare
@@ -135,24 +132,11 @@ c helicity stuff
 
 c born configuration stuff
       include 'born_ngraphs.inc'
-      integer iforest(2,-max_branch:-1,n_max_cg)
-      integer sprop(-max_branch:-1,n_max_cg)
-      integer tprid(-max_branch:-1,n_max_cg)
-      integer mapconfig(0:n_max_cg)
-      common/c_born_configs_inc/iforest,sprop,tprid,mapconfig
-
-      INTEGER NBORN
-      COMMON/C_NBORN/NBORN
-      
+      include 'born_conf.inc'
 c      integer icomp
 c-----
 c  Begin Code
 c-----
-
-      write (*,*) "SETTING NBORN=1"
-      NBORN=1
-      call born_configs_and_props_inc_chooser
-
 
       write(*,*)'Enter xi_i, y_ij to be used in coll/soft tests'
       write(*,*)' Enter -2 to generate them randomly'
