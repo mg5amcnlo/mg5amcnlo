@@ -1262,7 +1262,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1438,7 +1438,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 # check that PYTHIA6PT is not used for processes with FSR
             if shower == 'PYTHIA6PT' and \
-                self.proc_characteristics['has_fsr'] == '.true.':
+                self.proc_characteristics['has_fsr'] == 'true':
                 raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
 
             if mode in ['aMC@NLO', 'aMC@LO']:
@@ -2612,9 +2612,23 @@ Integrated cross-section
         content += 'SMASS=%s\n' % mcmass_dict[3]
         content += 'CMASS=%s\n' % mcmass_dict[4]
         content += 'BMASS=%s\n' % mcmass_dict[5]
-        content += 'EMASS=%s\n' % mcmass_dict[11]
-        content += 'MUMASS=%s\n' % mcmass_dict[13]
-        content += 'TAUMASS=%s\n' % mcmass_dict[15]
+        try:
+            content += 'EMASS=%s\n' % mcmass_dict[11]
+            content += 'MUMASS=%s\n' % mcmass_dict[13]
+            content += 'TAUMASS=%s\n' % mcmass_dict[15]
+        except KeyError:
+            # this is for backward compatibility
+            mcmass_lines = [l for l in \
+                    open(pjoin(self.me_dir, 'SubProcesses', 'MCmasses_%s.inc' % shower.upper())
+                            ).read().split('\n') if l]
+            new_mcmass_dict = {}
+            for l in mcmass_lines:
+                key, val = l.split('=')
+                new_mcmass_dict[key.strip()] = val.replace('d', 'e').strip()
+            content += 'EMASS=%s\n' % new_mcmass_dict['mcmass(11)']
+            content += 'MUMASS=%s\n' % new_mcmass_dict['mcmass(13)']
+            content += 'TAUMASS=%s\n' % new_mcmass_dict['mcmass(15)']
+
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
@@ -3112,6 +3126,7 @@ Integrated cross-section
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
 
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
@@ -3182,7 +3197,7 @@ Integrated cross-section
         try: 
             os.environ['fastjet_config'] = self.options['fastjet']
         except (TypeError, KeyError):
-            os.environ['fastjet_config'] = 'None'
+            os.unsetenv['fastjet_config']
         
         # make Source
         self.update_status('Compiling source...', level=None)
@@ -3246,15 +3261,9 @@ Integrated cross-section
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        if not '[real=QCD]' in proc_card and \
-                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
-            os.environ['madloop'] = 'true'
-            if mode in ['NLO', 'aMC@NLO', 'noshower']:
-                tests.append('check_poles')
-                hasvirt = True
-        else:
-            os.unsetenv('madloop')
-            hasvirt = False
+        if self.proc_characteristics['has_loops'].lower() == 'true' and \
+           mode in ['NLO', 'aMC@NLO', 'noshower']:
+            tests.append('check_poles')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
@@ -3298,8 +3307,6 @@ Integrated cross-section
                 this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
                 #check that none of the tests failed
                 self.check_tests(test, this_dir)
-
-        os.unsetenv('madloop')
 
 
     def donothing(*args):

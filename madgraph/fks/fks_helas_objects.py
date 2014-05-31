@@ -72,6 +72,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         self['has_isr'] = fksmulti['has_isr']
         self['has_fsr'] = fksmulti['has_fsr']
+        self['has_loops'] = len(self.get_virt_matrix_elements()) > 0 
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])

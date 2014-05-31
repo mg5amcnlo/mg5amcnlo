@@ -310,11 +310,7 @@ class LoopDiagram(base_objects.Diagram):
         if len(tag)==1:
             return tag
         elif len(tag)==2:
-            # HSS, 14/02/2013
-            # Remove the redundant bubble diagrams, like [a W- a] and [W+ a W-]
-            #if tag[0][0]['id']>tag[1][0]['id']:
             if abs(tag[0][0]['id'])>abs(tag[1][0]['id']):
-            # HSS
                 return rev_tag
             else:
                 return tag

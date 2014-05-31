@@ -8,7 +8,7 @@
 
 #include <complex>
 
-#include "SigmaProcess.h"
+#include "Pythia8/SigmaProcess.h"
 #include "Parameters_%(model_name)s.h"
 
 using namespace std;

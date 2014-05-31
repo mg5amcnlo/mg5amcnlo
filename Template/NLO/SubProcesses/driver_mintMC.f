@@ -118,6 +118,10 @@ c For MINT:
      $     ,nvirt_acc
       double precision ran2
       external ran2
+      
+      integer ifile,ievents
+      double precision inter,absint,uncer
+      common /to_write_header_init/inter,absint,uncer,ifile,ievents
 
       logical SHsep
       logical Hevents
@@ -418,7 +422,13 @@ c determine how many events for the virtual and how many for the no-virt
          if(plotEv)open(unit=99,file='hard-events.top',status='unknown')
          open(unit=lunlhe,file='events.lhe',status='unknown')
 
-         call write_header_init(lunlhe,ncall,ans(2),ans(1)+ans(5),unc(2))
+c fill the information for the write_header_init common block
+         ifile=lunlhe
+         ievents=ncall
+         inter=ans(2)
+         absint=ans(1)+ans(5)
+         uncer=unc(2)
+
          if(plotEv)call initplot
 
          weight=(ans(1)+ans(5))/ncall
