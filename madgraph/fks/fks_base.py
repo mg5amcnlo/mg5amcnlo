@@ -583,10 +583,10 @@ class FKSProcess(object):
                 cnt_amp = diagram_generation.Amplitude()
                 born_cnt_amp = diagram_generation.Amplitude()
                 mom_cnt = 0
+                cnt_ord = None
                 for order, mothers in real_dict['extra_mothers'].items():
                     nmom += len(mothers)
                     for mom in mothers:
-                        print 'MOM!',mom
                         # generate a new process with the mother particle 
                         # replaced by the new mother and with the
                         # squared orders changed accordingly
@@ -607,6 +607,7 @@ class FKSProcess(object):
                             #check if cnt_amp also fits the born_orders 
                             # i.e. if we need to integrate it
                             mom_cnt = mom
+                            cnt_ord = order
                             born_cnt_process = copy.copy(cnt_process)
                             born_cnt_process['squared_orders'] = \
                                     copy.copy(cnt_process['squared_orders']) 
@@ -630,7 +631,7 @@ class FKSProcess(object):
                 ij = leglist[i].get('number')
                 self.real_amps.append(FKSRealProcess( \
                         born_proc, real_dict['leglist'], ij, ij_id, \
-                        born_pdgs[0], 
+                        [born_pdgs], 
                         real_dict['perturbation'], \
                         perturbed_orders = born_proc['perturbation_couplings']))
 
@@ -644,8 +645,11 @@ class FKSProcess(object):
                         self.extra_cnt_amp_list.append(cnt_amp)
                         indx = len(self.extra_cnt_amp_list) - 1
                       
-
+                    # update the fks infos
                     self.real_amps[-1].fks_infos[-1]['extra_cnt_index'] = indx
+                    self.real_amps[-1].fks_infos[-1]['underlying_born'].append(\
+                                            [l['id'] for l in cnt_process['legs']])
+                    self.real_amps[-1].fks_infos[-1]['splitting_type'].append(cnt_ord)
 
         self.find_reals_to_integrate()
         if combine:

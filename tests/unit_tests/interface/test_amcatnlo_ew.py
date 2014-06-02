@@ -135,6 +135,8 @@ class TestAMCatNLOEW(unittest.TestCase):
                 # and that no extra counterterm is needed
                 for info in amp.fks_infos:
                     self.assertEqual(info['extra_cnt_index'], -1)
+                    self.assertEqual(len(info['underlying_born']), 1)
+                    self.assertEqual(len(info['splitting_type']), 1)
 
 
     def test_generate_fks_ew_extra_moms(self):
@@ -156,7 +158,18 @@ class TestAMCatNLOEW(unittest.TestCase):
 
             self.assertEqual(len_extra_cnt, len(fksprocess.extra_cnt_amp_list))
             for amp in fksprocess.real_amps:
-                print amp.process.nice_string()
+                for info in amp.fks_infos:
+                    # check that if the splitting is g > qq then
+                    # 2 underlying borns are there
+                    if len_extra_cnt > 0: 
+                        if info['ij_id'] == 21 and \
+                                amp.process['legs'][info['i'] - 1]['id'] != 21:
+                            self.assertEqual(len(info['underlying_born']), 2)
+                            self.assertEqual(info['splitting_type'], ['QCD', 'QED'])
+                        else:
+                            self.assertEqual(len(info['underlying_born']), 1)
+                            self.assertEqual(len(info['splitting_type']), 1)
+
             self.assertEqual(nrealprocs, len(fksprocess.real_amps))
 
 
