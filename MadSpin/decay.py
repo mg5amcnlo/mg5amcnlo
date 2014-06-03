@@ -3377,8 +3377,8 @@ class decay_all_events(object):
                             mom=momenta_in_decay[index_res_for_mom].copy()
                             pid=decay_struct[part]["tree"][res]['label'] 
                             istup=2
-                            mothup1=1
-                            mothup2=2
+                            mothup1=curr_event.particle[part_for_curr_evt]["mothup1"]
+                            mothup2=curr_event.particle[part_for_curr_evt]["mothup2"]
                             colup1=curr_event.particle[part_for_curr_evt]["colup1"]
                             colup2=curr_event.particle[part_for_curr_evt]["colup2"]
                             decay_struct[part]["tree"][res]["colup1"]=colup1
@@ -3390,9 +3390,7 @@ class decay_all_events(object):
                                 "colup1":colup1,"colup2":colup2,"momentum":mom,\
                                 "mass":mass,"helicity":helicity}
                             decayed_event.event2mg[part_number]=part_number
-                    #print part_number
-                    #print pid
-                    #print " "
+
                         mothup1=part_number
                         mothup2=part_number
 #

@@ -572,10 +572,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Import model
         base_model = import_ufo.import_model(name, decay=True)
-        if not hasattr(base_model.get('particles')[0], 'partial_widths'):
-            msg = 'The UFO model does not include partial widths information.\n'
-            msg += 'Impossible to use analytical formula, will use MG5/MadEvent (slower).'
-            logger.warning(msg)
 
         if use_mg_default:
             base_model.pass_particles_name_in_mg_default()
