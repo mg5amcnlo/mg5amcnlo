@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.1.2(xx/xx/xx) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
+2.1.2.beta2(03/06/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)
                 OM: Fixing a bug preventing MadWidth to run due to the model prefixing (depending
                     on the way it was called)
@@ -13,6 +13,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 S. Mrenna (by OM): Fix the include file in pythia8 output to be compliant with the latest
                     PY8 version
 		RF: Added a string with functional form for the scales to the event file banner (NLO only)
+                S. Brochet (by OM): Fix a bug in MadSpin with the writting of the mother ID in the LHE file.
+      PT: Integrated Jimmy's underlying event for Herwig6
 
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be
