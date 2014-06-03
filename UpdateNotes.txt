@@ -14,6 +14,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                     PY8 version
 		RF: Added a string with functional form for the scales to the event file banner (NLO only)
                 S. Brochet (by OM): Fix a bug in MadSpin with the writting of the mother ID in the LHE file.
+      PT: Integrated Jimmy's underlying event for Herwig6
 
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be
