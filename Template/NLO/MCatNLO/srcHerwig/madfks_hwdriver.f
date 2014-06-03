@@ -24,6 +24,7 @@ C QQIN IS THE EVENT FILE
       COMMON/CENDOFRUN/ENDOFRUN
       INTEGER MAXEVV
       COMMON/CMAXEVV/MAXEVV
+      DOUBLE PRECISION EXPONT,PTJIM0,PRRAD
 C
       ENDOFRUN=.FALSE.
       OLDFORM=.FALSE.
@@ -329,15 +330,23 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
 C---EVENTS ARE NORMALIZED TO SUM OR AVERAGE TO THE TOTAL CROSS SECTION
       WRITE(*,*)'How are the events normalized ("average" or "sum")?'
       READ(*,*)NORM_EVENT
-      if (NORM_EVENT.eq.'average') then
-c     not need to multiply by the number of events
-         MQQ=1
-      endif
+      if (NORM_EVENT.eq.'average')MQQ=1
       MSFLAG=0
       IF (LHSOFT) THEN
-c     Minimum PT of secondary scatters
-         PTJIM=2.5
-C---  Turn MI on(1) or off(0)
+C---ATLAS JIMMY tune AUET2 (ATL-PHYS-PUB-2011-008, table 13)
+         PRRAD=2.339D0
+         PTJIM0=3.696D0
+         EXPONT=0.219D0
+C---AUET2 fixed parameters
+         ISPAC=2
+         PTRMS=1.2d0
+         QSPAC=2.5d0
+C---Beam 1/radii (assumed proton or antiproton)
+         JMU2=PRRAD
+         JMV2=PRRAD
+C---Minimum PT of secondary scatters
+         PTJIM=PTJIM0*(PBEAM1*PBEAM2/8.1D5)**(EXPONT/2)
+C---Turn MI on(1) or off(0)
          MSFLAG=1
          CALL JMINIT
       ENDIF
