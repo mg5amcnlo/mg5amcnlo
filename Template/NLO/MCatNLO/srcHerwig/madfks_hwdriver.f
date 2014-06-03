@@ -300,10 +300,7 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
 C---EVENTS ARE NORMALIZED TO SUM OR AVERAGE TO THE TOTAL CROSS SECTION
       WRITE(*,*)'How are the events normalized ("average" or "sum")?'
       READ(*,*)NORM_EVENT
-      if (NORM_EVENT.eq.'average') then
-c     not need to multiply by the number of events
-         MQQ=1
-      endif
+      if (NORM_EVENT.eq.'average')MQQ=1
 
 C---USER'S INITIAL CALCULATIONS
       CALL HWABEG
