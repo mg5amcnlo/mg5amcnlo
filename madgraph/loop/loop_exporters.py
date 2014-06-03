@@ -106,8 +106,11 @@ class LoopExporterFortran(object):
             # Create the links to the lib folder
             linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
-                ln(os.path.join(os.path.pardir,'Source','CutTools','includects',file),
-                                                 os.path.join(targetPath,'lib'))
+                # We don't use the the ln() macro here because we want to
+                # explicitely link to ../Source/<lib>path
+                os.symlink(
+                    pjoin(os.path.pardir,'Source','CutTools','includects',file), 
+                                                   pjoin(targetPath,'lib',file))
             # Make sure it is recompiled at least once. Because for centralized
             # MG5_aMC installations, it might be that compiler differs.
             # Not necessary anymore because I check the compiler version from
@@ -134,7 +137,7 @@ class LoopExporterFortran(object):
             linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
                 ln(os.path.join(self.cuttools_dir,'includects',file),
-                                                 os.path.join(targetPath,'lib'))
+                                    os.path.join(targetPath,'lib'),abspath=True)
 
         elif self.dependencies=='environment_paths':
             # Here the user chose to define the dependencies path in one of 
@@ -202,7 +205,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # dummy variables
         link_tir_libs=[]
         tir_libs=[]
-        pjdir=""
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
         try:
@@ -212,7 +214,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             return 0
         filename = 'makefile'
         calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                          link_tir_libs,tir_libs,pjdir)
+                                                         link_tir_libs,tir_libs)
         # Return to original PWD
         os.chdir(cwd)
         
@@ -220,7 +222,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
 
-        # Copy the hole MadLoop5_resources directory (empty at this stage)
+        # Copy the whole MadLoop5_resources directory (empty at this stage)
         if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
                                                         'MadLoop5_resources')):
             cp(pjoin(self.loop_dir,'StandAlone','SubProcesses',
@@ -259,7 +261,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
     # This function is placed here and not in optimized exporterd,
     # because the same makefile.inc should be used in all cases.
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs):
         """ Create the file makefile which links to the TIR libraries."""
             
         file = open(os.path.join(self.loop_dir,'StandAlone',
@@ -269,9 +271,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
-        replace_dict['pjdir']='PJDIR='+PJDIR
-        if not PJDIR.endswith('/') and PJDIR!="":
-            replace_dict['pjdir']=replace_dict['pjdir']+"/"
         file=file%replace_dict
         if writer:
             writer.writelines(file)
@@ -1387,38 +1386,32 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             libpath=getattr(self,tir_dir)
             libname="lib%s.a"%tir
             tir_name=tir
-            goodlink=self.link_TIR(os.path.join(self.dir_path, 'lib'),
-                              libpath,libname,tir_name=tir_name)
-            if goodlink==True:
-                if tir!="pjfry":
-                    link_tir_libs.extend(['-l%s'%tir])
-                    tir_libs.extend(['$(LIBDIR)lib%s.$(libext)'%tir])
-                else:
-                    link_pjfry_lib='-L$(PJDIR) -lpjfry'
-                    pjfry_lib='$(PJDIR)libpjfry.$(libext)'
-                    pjdir=libpath
-        if link_pjfry_lib!="":
-            link_tir_libs.extend([link_pjfry_lib])
-            tir_libs.extend([pjfry_lib])
-            #if tir=="iregi":
-            #    link_tir_libs.extend(['-lff','-lqcdloop','-lavh_olo'])
-            #    tir_libs.extend(['$(LIBDIR)libff.$(libext)',
-            #                     '$(LIBDIR)libqcdloop.$(libext)',
-            #                     '$(LIBDIR)libavh_olo.$(libext)'])
-        if self.all_tir and link_tir_libs:
-            os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
-            cwd = os.getcwd()
-            dirpath = os.path.join(self.dir_path, 'SubProcesses')
-            try:
-                os.chdir(dirpath)
-            except os.error:
-                logger.error('Could not cd to directory %s' % dirpath)
-                return 0
-            filename = 'makefile'
-            calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                          link_tir_libs,tir_libs,pjdir)
-            # Return to original PWD
-            os.chdir(cwd)
+            libpath = self.link_TIR(os.path.join(self.dir_path, 'lib'),
+                                              libpath,libname,tir_name=tir_name)
+            setattr(self,tir_dir,libpath)
+            if libpath != "":
+                if tir=='pjfry':
+                    # Apparently it is necessary to link against the original 
+                    # location of the pjfry library, so it needs a special treatment.
+                    link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
+                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))                
+                else :
+                    link_tir_libs.append('-l%s'%tir)
+                    tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
+
+        os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'makefile'
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                                     link_tir_libs,tir_libs)
+        # Return to original PWD
+        os.chdir(cwd)
                      
 
     def link_files_from_Subprocesses(self,proc_name=""):
@@ -1437,54 +1430,80 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """Link the TIR source directory inside the target path given
         in argument"""
 
-        cwd = os.getcwd()
-        try:
-            os.chdir(targetPath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % targetPath)
-            return 0
         if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
             logger.warning("The %s tensor integration library could not be found"%tir_name\
              +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
              +" It will not be available.")
             self.tir_available_dict[tir_name]=False
-            # return to original pwd, which is important
-            os.chdir(cwd)
-            return False
-        if not os.path.exists(os.path.join(libpath,libname)):
-            if libname=="libpjfry.a":
-                logger.warning('Loop library %s for TIR %s does not exist at '\
-                      %(libname,tir_name,libpath)+'. It will not be available.')
+            return ""
+       
+        if self.dependencies=='internal':
+            if tir_name in ["pjfry"]:
                 self.tir_available_dict[tir_name]=False
-                # return to original pwd, which is important
-                os.chdir(cwd)
-                return False    
-            logger.info(('Compiling %s. This has to be done only once and'%tir_name)+\
-                        ' can take a couple of minutes.','$MG:color:BLACK')
-            current = misc.detect_current_compiler(os.path.join(\
-                                                                libpath,'makefile'))
-            new = 'gfortran' if self.fortran_compiler is None else \
-                                                        self.fortran_compiler
-            if current != new:
-                misc.mod_compilator(libpath, new,current)
-            misc.compile(cwd=libpath, job_specs = False)
-            
-        if os.path.exists(os.path.join(libpath,libname)):            
-            linkfiles = [libname]
-            #if libname=="libiregi.a":
-            #    linkfiles.extend(["qcdloop/libff.a","qcdloop/libqcdloop.a",\
-            #                      "oneloop/libavh_olo.a"])
-            for file in linkfiles:
-                # don't link the pjfry lib
-                if file!="libpjfry.a":
-                    ln(libpath+'/%s' % file)
-        else:
-            raise MadGraph5Error,"%s could not be correctly compiled."%tir_name
+                logger.warning("When using the 'output_dependencies=internal' "+\
+" MG5_aMC option, the tensor integral library %s cannot be employed because"%tir_name+\
+" it is not distributed with the MG5_aMC code so that it cannot be copied locally.")
+                return ""
+            elif tir_name == "iregi":
+                # This is the right paths for IREGI
+                shutil.copytree(pjoin(libpath,os.path.pardir), 
+                    pjoin(targetPath,os.path.pardir,'Source','IREGI'), symlinks=True)
 
-        # Return to original PWD
-        os.chdir(cwd)
+                # Create the links to the lib folder
+                os.symlink(
+                    pjoin(os.path.pardir,'Source','IREGI','src',libname), 
+                                                      pjoin(targetPath,libname))
+            else:
+                logger.info("Tensor integral reduction library "+\
+                                            "%s not implemented yet."%tir_name)
+            return libpath
+ 
+        elif self.dependencies=='external':
+            if not os.path.exists(pjoin(libpath,libname)) and tir_name=='iregi':
+                logger.info('Compiling IREGI. This has to be done only once and'+\
+                             ' can take a couple of minutes.','$MG:color:BLACK')
+                
+                current = misc.detect_current_compiler(os.path.join(\
+                                                    libpath,'makefile_ML5_lib'))
+                new = 'gfortran' if self.fortran_compiler is None else \
+                                                        self.fortran_compiler
+                if current != new:
+                    misc.mod_compilator(libpath, new,current)
+                misc.compile(cwd=libpath, job_specs = False)
+
+                if not os.path.exists(pjoin(libpath,libname)):            
+                    logger.warning("IREGI could not be compiled. Check"+\
+                      "the compilation errors at %s. The related "%libpath+\
+                                              "functionalities are turned off.")
+                    self.tir_available_dict[tir_name]=False
+                    return ""
+            # Apparently it is necessary to link against the original location 
+            # of the pjfry library
+            if tir_name!='pjfry':
+                ln(os.path.join(libpath,libname),targetPath,abspath=True)
+
+        elif self.dependencies=='environment_paths':
+            # Here the user chose to define the dependencies path in one of 
+            # his environmental paths
+            newlibpath = misc.which_lib(libname)
+            if not newlibpath is None:
+                logger.info('MG5_aMC is using %s installation found at %s.'%\
+                                                          (tir_name,newlibpath)) 
+                # Apparently it is necessary to link against the original location 
+                # of the pjfry library
+                if tir_name!='pjfry':
+                    ln(newlibpath,targetPath,abspath=True)
+                self.tir_available_dict[tir_name]=True
+                return os.path.dirname(newlibpath)
+            else:
+                logger.warning("Could not find the location of the file"+\
+                  " %s in you environment paths. The related "%libname+\
+                                             "functionalities are turned off.")
+                self.tir_available_dict[tir_name]=False
+                return ""
+            
         self.tir_available_dict[tir_name]=True
-        return True
+        return libpath
         
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
@@ -1598,7 +1617,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     self.general_replace_dict['iregi_free_ps']=''
         # the first entry is the CutTools, we make sure it is available
         looplibs_av=['.TRUE.']
-        # one should be care about the order in the following
+        # one should be careful about the order in the following
         if "pjfry" in self.all_tir:
             if self.tir_available_dict["pjfry"]:             
                 looplibs_av.extend(['.TRUE.'])

@@ -14,7 +14,6 @@ LIBDIR = $(ROOT)/lib/
 
 PROG   = check
 OLP    = OLP
-%(pjdir)s
 STABCHECKDRIVER = StabilityCheckDriver
 CHECK_SA_BORN_SPLITORDERS = check_sa_born_splitOrders
 LINKLIBS =  -L$(LIBDIR) -lcts -ldhelas -lmodel %(link_tir_libs)s

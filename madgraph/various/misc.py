@@ -347,7 +347,7 @@ def mod_compilator(directory, new='gfortran', current=None):
             current = 'gfortran'
         elif new == 'gfortran' and current is None:
             current = 'g77'
-        else:
+        elif current is None:
             current = 'g77|gfortran'
         pattern = re.compile(current)
         text= pattern.sub(new, text)

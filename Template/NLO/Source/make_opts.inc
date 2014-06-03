@@ -71,7 +71,6 @@ endif
 
 # Madloop
 ifdef madloop
-  %(pjdir)s
   libmadloop=libMadLoop.a
   libcuttools=-lcts %(link_tir_libs)s
 else

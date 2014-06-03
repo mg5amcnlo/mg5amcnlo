@@ -201,7 +201,7 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
        IOTests"""
        
        if not hasattr(self, 'model'):
-           self.model=import_ufo.import_model('loop_qcd_qed_sm')
+           self.model=import_ufo.import_model('loop_qcd_qed_sm-full')
            
        if not hasattr(self, 'exporter'):
            self.exporter = loop_exporters.\

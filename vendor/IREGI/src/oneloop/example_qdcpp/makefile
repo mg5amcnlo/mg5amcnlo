@@ -1,9 +1,9 @@
 OLODIR = ../src
 QDHOME = $(HOME)/fortran/qd-2.3.13
-FC = /usr/local/bin/gfortran
+FC = gfortran
 CXX = g++
 FCFLAGS = -O2 -ffree-form
-FCLIBS = -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6 -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6/../../.. -lrt -l/usr/local/bin/gfortranbegin -l/usr/local/bin/gfortran -lm
+FCLIBS = -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6 -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6/../../.. -lrt -lgfortranbegin -lgfortran -lm
 
 QDLIB = \
 	$(QDHOME)/fortran/.libs/libqdmod.a \

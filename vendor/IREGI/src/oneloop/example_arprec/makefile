@@ -1,9 +1,9 @@
 OLODIR = ../src
 MPHOME = $(HOME)/fortran/arprec/arprec-2.2.9/fortran
-FC = /usr/local/bin/gfortran
+FC = gfortran
 CXX = g++
 FCFLAGS = -O2 -ffree-form
-FCLIBS = -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6 -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6/../../.. -l/usr/local/bin/gfortranbegin -l/usr/local/bin/gfortran -lm
+FCLIBS = -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6 -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/lib/gcc/x86_64-redhat-linux6E/4.4.6/../../.. -lgfortranbegin -lgfortran -lm
 
 ARPLIB = \
 	$(MPHOME)/libarprec_f_main.a \

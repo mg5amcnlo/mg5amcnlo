@@ -10,7 +10,7 @@ ifeq ($(wildcard ../make_opts), ../make_opts)
   include ../make_opts
 else
   FFLAGS = 
-  FC=/usr/local/bin/gfortran
+  FC=gfortran
 endif
 
 # These flags are vital for CT, so we enforce them here

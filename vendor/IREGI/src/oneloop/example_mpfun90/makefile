@@ -1,4 +1,4 @@
-FC = /usr/local/bin/gfortran
+FC = gfortran
 FFLAGS = -O
 
 MPFUN90MOD = $(HOME)/fortran/mpfun90/

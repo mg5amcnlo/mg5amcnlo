@@ -1246,7 +1246,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 
     def get_characteristics(self, file):
-        """reads the proc_characteristics file and initialises the correspondent
+        """reads the proc_characteristics file and initialises the correspondant
         dictionary"""
         lines = [l for l in open(file).read().split('\n') if l and not l.startswith('#')]
         self.proc_characteristics = {}
@@ -1262,7 +1262,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
+        self.get_characteristics(pjoin(self.me_dir, 
+                                        'SubProcesses', 'proc_characteristics'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -3126,7 +3127,8 @@ Integrated cross-section
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
 
-        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
+        self.get_characteristics(pjoin(self.me_dir, 
+                                        'SubProcesses', 'proc_characteristics'))
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
@@ -3259,11 +3261,44 @@ Integrated cross-section
                  " seems to have been compiled with a different compiler than"+\
                     " the one specified in MG5_aMC. Please recompile CutTools.")
 
+        # make IREGI (only necessary with MG option output_dependencies='internal')
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libiregi.a'))) \
+           and os.path.exists(pjoin(sourcedir,'IREGI')):
+                logger.info('Compiling IREGI (can take a couple of minutes) ...')
+                misc.compile(['IREGI'], cwd = sourcedir)
+                logger.info('          ...done.')
+
+        if os.path.exists(pjoin(libdir, 'libiregi.a')):
+            # Verify compatibility between current compiler and the one which was
+            # used when last compiling IREGI (if specified).
+            compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
+                                libdir, 'libiregi.a')))),'compiler_version.log')
+            if os.path.exists(compiler_log_path):
+                compiler_version_used = open(compiler_log_path,'r').read()
+                if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
+                       pjoin(sourcedir,'make_opts')))) in compiler_version_used:
+                    if os.path.exists(pjoin(sourcedir,'IREGI')):
+                        logger.info('IREGI was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                        misc.compile(['cleanIR'], cwd = sourcedir)
+                        misc.compile(['IREGI'], cwd = sourcedir)
+                        logger.info('          ...done.')
+                    else:
+                        raise aMCatNLOError("IREGI installation in %s"\
+                                %os.path.realpath(pjoin(libdir, 'libiregi.a'))+\
+                 " seems to have been compiled with a different compiler than"+\
+                    " the one specified in MG5_aMC. Please recompile IREGI.")
+
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        if self.proc_characteristics['has_loops'].lower() == 'true' and \
-           mode in ['NLO', 'aMC@NLO', 'noshower']:
-            tests.append('check_poles')
+        real_only_re = re.compile(r"\[\s*real\s*=.*\]")
+        if real_only_re.search(proc_card)==None and \
+                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
+            os.environ['madloop'] = 'true'
+            if mode in ['NLO', 'aMC@NLO', 'noshower']:
+                tests.append('check_poles')
+        else:
+            os.unsetenv('madloop')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)

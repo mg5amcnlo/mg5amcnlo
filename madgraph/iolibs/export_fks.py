@@ -120,7 +120,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         link_tir_libs=[]
         tir_libs=[]
-        pjdir=""
         os.remove(os.path.join(self.dir_path,'SubProcesses','makefile_loop.inc'))
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
@@ -131,7 +130,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             return 0
         filename = 'makefile_loop'
         calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                         link_tir_libs,tir_libs,pjdir)
+                                                        link_tir_libs,tir_libs)
         os.remove(os.path.join(self.dir_path,'Source','make_opts.inc'))
         dirpath = os.path.join(self.dir_path, 'Source')
         try:
@@ -141,7 +140,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             return 0
         filename = 'make_opts'
         calls = self.write_make_opts(writers.MakefileWriter(filename),
-                                         link_tir_libs,tir_libs,pjdir)
+                                                        link_tir_libs,tir_libs)
         # Return to original PWD
         os.chdir(cwd)
         
@@ -195,7 +194,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.copy_python_files()
 
     # I put it here not in optimized one, because I want to use the same makefile_loop.inc
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs):
         """ Create the file makefile_loop which links to the TIR libraries."""
             
         file = open(os.path.join(self.mgme_dir,'Template','NLO',
@@ -205,9 +204,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
-        replace_dict['pjdir']='PJDIR='+PJDIR
-        if not PJDIR.endswith('/') and PJDIR!="":
-            replace_dict['pjdir']=replace_dict['pjdir']+"/"
         file=file%replace_dict
         if writer:
             writer.writelines(file)
@@ -215,9 +211,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             return file
         
     # I put it here not in optimized one, because I want to use the same make_opts.inc
-    def write_make_opts(self, writer, link_tir_libs,tir_libs,PJDIR=""):
+    def write_make_opts(self, writer, link_tir_libs,tir_libs):
         """ Create the file make_opts which links to the TIR libraries."""
-            
         file = open(os.path.join(self.mgme_dir,'Template','NLO',
                                  'Source','make_opts.inc')).read()  
         replace_dict={}
@@ -225,9 +220,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
-        replace_dict['pjdir']='PJDIR='+PJDIR
-        if not PJDIR.endswith('/') and PJDIR!="":
-            replace_dict['pjdir']=replace_dict['pjdir']+"/"
         file=file%replace_dict
         if writer:
             writer.writelines(file)
@@ -2837,27 +2829,24 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         # special for PJFry++
         link_pjfry_lib=""
         pjfry_lib=""
-        pjdir=""
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
             libpath=getattr(self,tir_dir)
             libname="lib%s.a"%tir
             tir_name=tir
-            goodlink=self.link_TIR(os.path.join(self.dir_path, 'lib'),
-                              libpath,libname,tir_name=tir_name)
-            if goodlink==True:
-                if tir!="pjfry":
-                    link_tir_libs.extend(['-l%s'%tir])
-                    tir_libs.extend(['$(LIBDIR)lib%s.$(libext)'%tir])
+            libpath = self.link_TIR(os.path.join(self.dir_path, 'lib'),
+                                              libpath,libname,tir_name=tir_name)
+            setattr(self,tir_dir,libpath)
+            if libpath != "":
+                if tir=='pjfry':
+                    # Apparently it is necessary to link against the original 
+                    # location of the pjfry library, so it needs a special treatment.
+                    link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
+                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
                 else:
-                    link_pjfry_lib='-L$(PJDIR) -lpjfry'
-                    pjfry_lib='$(PJDIR)libpjfry.$(libext)'
-                    pjdir=libpath
-        if link_pjfry_lib!="":
-            link_tir_libs.extend([link_pjfry_lib])
-            tir_libs.extend([pjfry_lib])
+                    link_tir_libs.append('-l%s'%tir)
+                    tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
             
-        #if self.all_tir and link_tir_libs:
         os.remove(os.path.join(self.dir_path,'SubProcesses','makefile_loop.inc'))
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
@@ -2868,7 +2857,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             return 0
         filename = 'makefile_loop'
         calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                         link_tir_libs,tir_libs,pjdir)
+                                                         link_tir_libs,tir_libs)
         os.remove(os.path.join(self.dir_path,'Source','make_opts.inc'))
         dirpath = os.path.join(self.dir_path, 'Source')
         try:
@@ -2878,7 +2867,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             return 0
         filename = 'make_opts'
         calls = self.write_make_opts(writers.MakefileWriter(filename),
-                                         link_tir_libs,tir_libs,pjdir)
+                                                        link_tir_libs,tir_libs)
         # Return to original PWD
         os.chdir(cwd)
 
