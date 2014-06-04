@@ -1,4 +1,4 @@
-      SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
+      SUBROUTINE %(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
 C  
       IMPLICIT NONE
 C  

@@ -1092,10 +1092,10 @@ C                ENDIF
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>1000)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'born_ct_helas_calls','helas_calls_ampb')
+                            'born_ct_helas_calls',self.proc_prefix+'helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,loop_amp_helas_calls,\
-                    toBeRepaced,'helas_calls_ampl')
+                    toBeRepaced,self.proc_prefix+'helas_calls_ampl')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict[toBeRepaced]='\n'.join(loop_amp_helas_calls)
@@ -1418,10 +1418,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'mp_born_ct_helas_calls','mp_helas_calls_ampb')
+                            'mp_born_ct_helas_calls','MP_'+self.proc_prefix+'helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'mp_helas_calls_split.inc',file,coef_construction,\
-                    'mp_coef_construction','mp_coef_construction')
+                    'mp_coef_construction','MP_'+self.proc_prefix+'coef_construction')
         else:
             replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['mp_coef_construction']='\n'.join(coef_construction)
@@ -1556,13 +1556,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'born_ct_helas_calls','helas_calls_ampb')
+                            'born_ct_helas_calls',self.proc_prefix+'helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,coef_construction,\
-                    'coef_construction','coef_construction')
+                    'coef_construction',self.proc_prefix+'coef_construction')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,loop_CT_calls,\
-                    'loop_CT_calls','loop_CT_calls')
+                    'loop_CT_calls',self.proc_prefix+'loop_CT_calls')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['coef_construction']='\n'.join(coef_construction)
