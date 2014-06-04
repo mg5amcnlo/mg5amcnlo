@@ -101,8 +101,16 @@ class LoopExporterFortran(object):
         in argument"""
                 
         if self.dependencies=='internal':
-            shutil.copytree(self.cuttools_dir, 
-                           pjoin(targetPath,'Source','CutTools'), symlinks=True)
+            new_CT_path = pjoin(targetPath,'Source','CutTools')
+            shutil.copytree(self.cuttools_dir, new_CT_path, symlinks=True)
+            
+            current = misc.detect_current_compiler(os.path.join(new_CT_path,
+                                                                    'makefile'))
+            new = 'gfortran' if self.fortran_compiler is None else \
+                                                          self.fortran_compiler
+            if current != new:
+                misc.mod_compilator(new_CT_path, new, current)
+            
             # Create the links to the lib folder
             linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
@@ -1446,8 +1454,18 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 return ""
             elif tir_name == "iregi":
                 # This is the right paths for IREGI
-                shutil.copytree(pjoin(libpath,os.path.pardir), 
-                    pjoin(targetPath,os.path.pardir,'Source','IREGI'), symlinks=True)
+                new_iregi_path = pjoin(targetPath,os.path.pardir,'Source','IREGI')
+                shutil.copytree(pjoin(libpath,os.path.pardir), new_iregi_path, 
+                                                                  symlinks=True)
+                
+                current = misc.detect_current_compiler(
+                                 pjoin(new_iregi_path,'src','makefile_ML5_lib'))
+                new = 'gfortran' if self.fortran_compiler is None else \
+                                                        self.fortran_compiler
+                if current != new:
+                    misc.mod_compilator(pjoin(new_iregi_path,'src'), new,current)
+                    misc.mod_compilator(pjoin(new_iregi_path,'src','oneloop'), 
+                                                                   new, current)
 
                 # Create the links to the lib folder
                 os.symlink(
@@ -1469,6 +1487,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                         self.fortran_compiler
                 if current != new:
                     misc.mod_compilator(libpath, new,current)
+                    misc.mod_compilator(pjoin(libpath,'oneloop'), new, current)
+
                 misc.compile(cwd=libpath, job_specs = False)
 
                 if not os.path.exists(pjoin(libpath,libname)):            
