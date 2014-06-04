@@ -344,6 +344,16 @@ class Particle(PhysicsObject):
            in argument given the model specified. It is very fast for usual models"""
            
         for int in model['interactions'].get_type('base'):
+            # We discard the interactions with more than one type of orders
+            # contributing because it then doesn't necessarly mean that this
+            # particle (self) is charged under the group corresponding to the
+            # coupling order 'order'. The typical example is in SUSY which 
+            # features a ' photon-gluon-squark-antisquark ' interaction which
+            # has coupling orders QED=1, QCD=1 and would induce the photon
+            # to be considered as a valid particle to circulate in a loop of
+            # type "QCD".
+            if len(int.get('orders'))>1:
+                continue
             if order in int.get('orders').keys() and self.get('pdg_code') in \
               [part.get('pdg_code') for part in int.get('particles')]:
                 return True
