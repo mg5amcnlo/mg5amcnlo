@@ -23,8 +23,7 @@ FFLAGS+= -ffixed-line-length-132
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)
 #  FC=g77
-#  FC=gfortran
-   FC=/afs/cern.ch/sw/lcg/external/gcc/4.7.0/x86_64-slc5-gcc47-opt/bin/gfortran
+  FC=gfortran
 endif
 
 # Options: dynamic, lhapdf
