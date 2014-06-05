@@ -331,6 +331,7 @@ C---EVENTS ARE NORMALIZED TO SUM OR AVERAGE TO THE TOTAL CROSS SECTION
       WRITE(*,*)'How are the events normalized ("average" or "sum")?'
       READ(*,*)NORM_EVENT
       if (NORM_EVENT.eq.'average')MQQ=1
+
       MSFLAG=0
       IF (LHSOFT) THEN
 C---ATLAS JIMMY tune AUET2 (ATL-PHYS-PUB-2011-008, table 13)
