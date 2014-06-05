@@ -760,6 +760,7 @@ c From dsample_fks
       include 'reweight_all.inc'
       include 'run.inc'
       include 'cuts.inc'
+      include 'fks_info.inc'
       double precision zero
       parameter       (ZERO = 0d0)
       integer ndim,ipole
@@ -1092,30 +1093,26 @@ c
 c Compute the Born-like contributions with nbody=.true.
 c     
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-         if (j_fks.le.nincoming .and. sum.eq.0) then
-c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
-            if (.not.foundB(1)) then
-               write(*,*) 'Trying to generate Born momenta with '/
-     &              /'initial state j_fks, but there is no '/
-     &              /'configuration with i_fks a gluon and j_fks '/
-     &              /'initial state'
-               stop
-            endif
-            nFKSprocess=nFKSprocessBorn(1)
-         elseif( sum.eq.0) then
-            if (.not.foundB(2)) then
-               write(*,*) 'Trying to generate Born momenta with '/
-     &              /'final state j_fks, but there is no configuration'/
-     &              /' with i_fks a gluon and j_fks final state'
-               stop
-            endif
-            nFKSprocess=nFKSprocessBorn(2)
-         elseif (sum.eq.3) then
-c For sum=3, pick the first one because that's the one with the soft singularity.
-            nFKSprocess=proc_map(proc_map(0,1),1)
-         endif
+c Pick the first one because that's the one with the soft singularity.
+         nFKSprocess=proc_map(proc_map(0,1),1)
          nFKSprocess_all=nFKSprocess
          call fks_inc_chooser()
+         if (sum.eq.0) then
+c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
+            if (abs(particle_type(i_fks)).eq.3) then
+               do nFKSprocess=1,fks_configs
+                  if ( j_fks.eq.fks_j_D(nFKSprocess) .and.
+     $                 particle_type_D(nFKSprocess
+     $                 ,fks_i_D(nFKSprocess)).eq.8) exit
+               enddo
+            endif
+            if (nFKSprocess.gt.fks_configs) then
+               write (*,*) 'Trying the generate Born momenta, '/
+     $              /'but no FKS dir with soft singularity found'
+     $              ,nFKSprocess ,i_fks,j_fks
+               stop
+            endif
+         endif
          nbody=.true.
          fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
          nFKSprocess_used=nFKSprocess
