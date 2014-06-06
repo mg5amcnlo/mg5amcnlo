@@ -5,27 +5,32 @@ some parameters used in the files are included.
 
 To use:
 
-[These are now defaults in this branch:
+[These are now defaults in this branch (need to replace them by
+switches before merging this with the main package):
 
-1. in SubProcesses/driver_mintMC.f
+* in SubProcesses/driver_mintMC.f
    putonshell=.true.  -> putonshell=.true.
 
-2. in SubProcesses/write_event.f
+* in SubProcesses/write_event.f
    scale = shower_scale   -> scale = mu_r
 
-3. in the run_card.dat, set the ES scale equal to the Ren. scale.
+* in the run_card.dat, set the ES scale equal to the Ren. scale.
+
+* in madgraph/various/lhe_parser.py add
+   self.parse_reweight()
+below the "self.parse(text)" call
 
 ]
 
-4. Generate a LO event file (but using the NLO process generation),
+* Generate a LO event file (but using the NLO process generation),
 and unzip it once it is done
 
-5. Put this folder (as a subfolder of) the Events/run_XXX/ directory.
+* Put this folder (as a subfolder of) the Events/run_XXX/ directory.
 
-6. Move the virt_reweighter.py and resum_reweighter.py files to the
+* Move the virt_reweighter.py and resum_reweighter.py files to the
 bin/internal/ directory.
 
-7. From the bin/internal/ directory, execute
+* From the bin/internal/ directory, execute
 
 ./virt_reweighter.py ../../Events/run_XXX/events.lhe
 ./resum_reweighter.py ../../Events/run_XXX/events_rwgt.lhe
