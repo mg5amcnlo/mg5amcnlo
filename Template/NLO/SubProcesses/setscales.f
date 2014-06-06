@@ -90,7 +90,8 @@ c Factorization
           stop
         endif
 c Ellis-Sexton
-        call set_QES_scale(xp,dummyQES)
+c$$$        call set_QES_scale(xp,dummyQES)
+        call set_ren_scale(xp,dummyQES)
         if(scale.lt.0.2d0)then
           write(*,*)'Error in set_alphaS: QES too soft',dummyQES
           stop

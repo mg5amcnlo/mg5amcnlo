@@ -203,7 +203,8 @@ c
          firsttime=.false.
       endif
       ievent=66
-      scale = shower_scale
+c$$$      scale = shower_scale
+      scale = mu_r
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
 
