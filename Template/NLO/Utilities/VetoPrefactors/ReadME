@@ -1,0 +1,36 @@
+The Files AnomalyAndH.f BeamCorr.f and mstwpdf.f contain the
+subroutines to each reweighting factor. Further the Grid files of the
+PDFs and beam Functions are in the folder Grids. In "parameters.inc"
+some parameters used in the files are included.
+
+To use:
+
+[These are now defaults in this branch:
+
+1. in SubProcesses/driver_mintMC.f
+   putonshell=.true.  -> putonshell=.true.
+
+2. in SubProcesses/write_event.f
+   scale = shower_scale   -> scale = mu_r
+
+3. in the run_card.dat, set the ES scale equal to the Ren. scale.
+
+]
+
+4. Generate a LO event file (but using the NLO process generation),
+and unzip it once it is done
+
+5. Put this folder (as a subfolder of) the Events/run_XXX/ directory.
+
+6. Move the virt_reweighter.py and resum_reweighter.py files to the
+bin/internal/ directory.
+
+7. From the bin/internal/ directory, execute
+
+./virt_reweighter.py ../../Events/run_XXX/events.lhe
+./resum_reweighter.py ../../Events/run_XXX/events_rwgt.lhe
+
+and you should get the event file with weights that are
+LO+NNLL(jet-veto) correct. The veto and scales can be changed in the
+resum_driver.f file, and it is only needed to re-run the
+resum_reweighter (not the virt_reweighter)

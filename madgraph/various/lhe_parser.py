@@ -44,6 +44,7 @@ class Particle(object):
         self.mass = 0
         self.vtim = 0
         self.helicity = 9
+        self.rwgt = 0
         self.comment = ''
 
         if line:
@@ -176,10 +177,11 @@ class Event(list):
         
         if text:
             self.parse(text)
+            self.parse_reweight()
+
             
     def parse(self, text):
         """Take the input file and create the structured information"""
-        
         text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
         for line in text.split('\n'):
@@ -205,7 +207,6 @@ class Event(list):
     def parse_reweight(self):
         """Parse the re-weight information in order to return a dictionary
            {key: value}. If no group is define group should be '' """
-           
         self.reweight_data = {}
         self.reweight_order = []
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
