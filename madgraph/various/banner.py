@@ -42,8 +42,20 @@ class Banner(dict):
     """ """
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
-                     'slha', 'MGGenerationInfo', 'mgpythiacard', 'mgpgscard',
+                     'slha', 'mggenerationinfo', 'mgpythiacard', 'mgpgscard',
                      'mgdelphescard', 'mgdelphestrigger','mgshowercard','run_settings']
+
+    capitalized_items = {
+            'mgversion': 'MGVersion',
+            'mg5proccard': 'MG5ProcCard',
+            'mgproccard': 'MGProcCard',
+            'mgruncard': 'MGRunCard',
+            'mggenerationinfo': 'MGGenerationInfo',
+            'mgpythiacard': 'MGPythiaCard',
+            'mgpgscard': 'MGPGSCard',
+            'mgdelphescard': 'MGDelphesCard',
+            'mgdelphestrigger': 'MGDelphesTrigger',
+            'mgshowercard': 'MGShowerCard' }
     
     def __init__(self, banner_path=None):
         """ """
@@ -80,6 +92,7 @@ class Banner(dict):
       'mgproccard': 'proc_card.dat',
       'init': '',
       'mggenerationinfo':'',
+      'scalesfunctionalform':'',
       'montecarlomasses':'',
       'initrwgt':'',
       'madspin':'madspin_card.dat',
@@ -204,13 +217,15 @@ class Banner(dict):
 
 
         for tag in [t for t in self.ordered_items if t in self.keys()]:
+            capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':tag, 'text':self[tag].strip()})
+                     {'tag':capitalized_tag, 'text':self[tag].strip()})
         for tag in [t for t in self.keys() if t not in self.ordered_items]:
             if tag in ['init']:
                 continue
+            capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':tag, 'text':self[tag].strip()})
+                     {'tag':capitalized_tag, 'text':self[tag].strip()})
 
         ff.write('</header>\n')    
 

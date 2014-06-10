@@ -16,6 +16,7 @@ B) how to run in cluster/multi-core mode
 C) how to launch sequential run (called multi-run)
 D) How to launch Pythia/PGS/Delphes
 E) How to prevent automatic opening of html pages
+F) How to link to lhapdf 
 
 A) To generate events:
 -------------------
@@ -132,3 +133,13 @@ in order to have this value on False by default for all subsequently
 generated processes.
 
 
+F) How to run with a LHAPDF set
+-------------------------------
+
+1) Install lhapdf on your computer
+2) If not install globally, modify the file input/mg5_configuration.txt
+and specify the path to the script lhpadfconfig.
+3) in the run_card use the following parameter
+ 'lhapdf'    = pdlabel     ! PDF set
+ 10042       = lhaid       ! PDF number used ONLY for LHAPDF
+4) RUN as usual

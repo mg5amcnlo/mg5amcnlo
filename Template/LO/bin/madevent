@@ -141,7 +141,7 @@ import internal.madevent_interface as cmd_interface
 
 # Call the cmd interface main loop
 try:
-    if (args and os.path.exists(args[0])):
+    if (args and os.path.isfile(args[0])):
         # They are an input file 
         input_file = args[0]
         if options.web:

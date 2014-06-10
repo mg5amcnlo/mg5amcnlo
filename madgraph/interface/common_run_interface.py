@@ -1619,7 +1619,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     logger.debug('%d not found in pdfsets.index' % lhaid)
 
 
-        # check if the file exists, otherwise install it
+        # check if the file exists, otherwise install it:
+        # also check that the PDFsets dir exists, otherwise create it.
+        # if fails, install the lhapdfset into lib/PDFsets
+        if not os.path.isdir(pdfsets_dir):
+            try:
+                os.mkdir(pdfsets_dir)
+            except OSError:
+                pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
+
         if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
             self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
             

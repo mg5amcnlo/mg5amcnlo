@@ -2672,7 +2672,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         #Need to do the work!!!        
         import models.usermod as usermod
         base_model = usermod.UFOModel(self._curr_model.get('modelpath'))
-        base_model.add_model(path=model_path)
+        
+        identify = dict(tuple(a.split('=')) for a in args if '=' in a)
+        base_model.add_model(path=model_path, identify_particles=identify)
         base_model.write(output_dir)
         
         new_model_name = output_dir
@@ -4387,8 +4389,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
             out.write(data)
         if args[0] == 'Delphes3':
-            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS_PileUp.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_CMS.dat'))
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_ATLAS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_ATLAS.dat'))
+            
 
         #reset the position of the executable
         options_name = {'Delphes': 'delphes_path',
@@ -5303,8 +5310,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 1
 
             if res != 0 or error:
-                logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
+                        'executable (v3+). We will use fjcore instead. Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
                 self.options[args[0]] = None
                 self.history.pop()
             elif int(output.split('.')[0]) < 3:
