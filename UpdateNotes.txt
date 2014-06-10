@@ -14,6 +14,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                     PY8 version
 		RF: Added a string with functional form for the scales to the event file banner (NLO only)
                 S. Brochet (by OM): Fix a bug in MadSpin with the writting of the mother ID in the LHE file.
+                    Force the tag in the banner to always have the same case
+                    increase momenta precision for the LHE file written by MadSpin 
+                    (thanks a lot to S. Brochet for all those patch)
                 PT: Integrated Jimmy's underlying event for Herwig6
                 OM: improve "add model" functionality allow to force particle identification.
                 PT: Bug fix in the normalisation of topdrawer plots for option 'sum' (as opposed to 'average')
