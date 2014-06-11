@@ -236,9 +236,9 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
         self.assertEqual(len(checked_mass), 1)       
         
         if checked_mass[0] == 23:
-            self.assertEqual(self.writter.param_dict['MH'].expr, '1*MZ')
+            self.assertEqual(self.writter.param_dict['mdl_MH'].expr, '1*mdl_MZ')
         if checked_mass[0] == 25:
-            self.assertEqual(self.writter.param_dict['MZ'].expr, '1*MH')
+            self.assertEqual(self.writter.param_dict['mdl_MZ'].expr, '1*mdl_MH')
         
         
     def test_full_write(self):

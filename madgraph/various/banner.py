@@ -42,8 +42,20 @@ class Banner(dict):
     """ """
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
-                     'slha', 'MGGenerationInfo', 'mgpythiacard', 'mgpgscard',
+                     'slha', 'mggenerationinfo', 'mgpythiacard', 'mgpgscard',
                      'mgdelphescard', 'mgdelphestrigger','mgshowercard','run_settings']
+
+    capitalized_items = {
+            'mgversion': 'MGVersion',
+            'mg5proccard': 'MG5ProcCard',
+            'mgproccard': 'MGProcCard',
+            'mgruncard': 'MGRunCard',
+            'mggenerationinfo': 'MGGenerationInfo',
+            'mgpythiacard': 'MGPythiaCard',
+            'mgpgscard': 'MGPGSCard',
+            'mgdelphescard': 'MGDelphesCard',
+            'mgdelphestrigger': 'MGDelphesTrigger',
+            'mgshowercard': 'MGShowerCard' }
     
     def __init__(self, banner_path=None):
         """ """
@@ -80,6 +92,7 @@ class Banner(dict):
       'mgproccard': 'proc_card.dat',
       'init': '',
       'mggenerationinfo':'',
+      'scalesfunctionalform':'',
       'montecarlomasses':'',
       'initrwgt':'',
       'madspin':'madspin_card.dat',
@@ -204,13 +217,15 @@ class Banner(dict):
 
 
         for tag in [t for t in self.ordered_items if t in self.keys()]:
+            capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':tag, 'text':self[tag].strip()})
+                     {'tag':capitalized_tag, 'text':self[tag].strip()})
         for tag in [t for t in self.keys() if t not in self.ordered_items]:
             if tag in ['init']:
                 continue
+            capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':tag, 'text':self[tag].strip()})
+                     {'tag':capitalized_tag, 'text':self[tag].strip()})
 
         ff.write('</header>\n')    
 
@@ -514,6 +529,8 @@ class RunCard(dict):
                 self['draj'] = '0' 
     
         self.add_line('maxjetflavor', 'int', 4)
+        if int(self['maxjetflavor']) > 6:
+            raise Exception, 'maxjetflavor should be lower than 5! (6 is partly supported)'
         self.add_line('auto_ptj_mjj', 'bool', True)
         self.add_line('cut_decays', 'bool', True)
         # minimum pt
@@ -650,7 +667,7 @@ class RunCard(dict):
             self.add_line('iseed', 'int', 0, fortran_name='iseed')
         #number of events
         self.add_line('nevents', 'int', 10000)
-        self.add_line('gevents', 'int', 2000, log=10)
+        #self.add_line('gevents', 'int', 2000, log=10)
             
         # Renormalizrion and factorization scales
         self.add_line('fixed_ren_scale', 'bool', True)
@@ -682,6 +699,8 @@ class RunCard(dict):
                 if value != self.format('float', 1.0):
                     logger.warning('Since use_syst=T, We change the value of \'alpsfact\' to 1')
                     self['alpsfact'] = 1.0
+            if int(self['maxjetflavor']) == 6:
+                raise Exception, 'maxjetflavor at 6 is NOT supported for matching!'
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
             self.add_line('clusinfo', 'bool', False)
@@ -750,7 +769,7 @@ class RunCardNLO(RunCard):
 #      Writing the lines corresponding to the cuts
 ################################################################################
     
-        self.add_line('maxjetflavor', 'int', 5)
+        self.add_line('maxjetflavor', 'int', 4)
         # minimum pt
         self.add_line('ptj', 'float', 20)
         self.add_line('etaj', 'float', -1.0)
@@ -758,8 +777,10 @@ class RunCardNLO(RunCard):
         self.add_line('etal', 'float', -1.0)
         # minimum delta_r
         self.add_line('drll', 'float', 0.4)     
+        self.add_line('drll_sf', 'float', 0.4)     
         # minimum invariant mass for pairs
         self.add_line('mll', 'float', 0.0)
+        self.add_line('mll_sf', 'float', 0.0)
         #inclusive cuts
         # Jet measure cuts 
         self.add_line("jetradius", 'float', 0.7, log=10)
@@ -876,7 +897,7 @@ class ProcCard(list):
             if cmds[1].startswith('model'):
                 self.info['full_model_line'] = line
                 self.clean(remove_bef_last='import', keep_switch=True,
-                        allow_for_removal=['generate', 'add process', 'output'])
+                        allow_for_removal=['generate', 'add process', 'add model', 'output'])
                 if cmds[1] == 'model':
                     self.info['model'] = cmds[2]
                 else:
@@ -904,7 +925,7 @@ class ProcCard(list):
         keep_switch force to keep the statement remove_bef_??? which changes starts
         the removal mode.
         """
-        
+
         #check consistency
         if __debug__ and allow_for_removal:
             for arg in to_keep:

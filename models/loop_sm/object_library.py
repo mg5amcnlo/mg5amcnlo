@@ -149,7 +149,7 @@ class Parameter(UFOBaseClass):
 
     require_args=['name', 'nature', 'type', 'value', 'texname']
 
-    def __init__(self, name, nature, type, value, texname, lhablock=None, lhacode=None):
+    def __init__(self, name, nature, type, value, texname, lhablock=None, lhacode=None, loop_particles=None, counterterm=None):
 
         args = (name,nature,type,value,texname)
 

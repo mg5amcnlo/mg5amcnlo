@@ -31,7 +31,6 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.export_v4 as export_v4
-import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.interface.launch_ext_program as launch_ext

@@ -28,7 +28,7 @@ class WriteALOHA:
     power_symbol = '**'
     change_number_format = str
     extension = ''
-    type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R'}
+    type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R', -1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
 
             
@@ -455,6 +455,10 @@ class ALOHAWriterForFortran(WriteALOHA):
                    'log': 'log(dble(%s))',
                    'asin': 'asin(dble(%s))',
                    'acos': 'acos(dble(%s))',
+                   'abs': 'abs(%s)',
+                   'fabs': 'abs(%s)',
+                   'math.abs': 'abs(%s)',
+                   'cmath.abs': 'abs(%s)',
                    '':'(%s)'
                    }
             
@@ -654,7 +658,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if isinstance(name, aloha_lib.ExtVariable):
             # external parameter nothing to do
             self.has_model_parameter = True
-            return name
+            return '%s%s' % (aloha.aloha_prefix, name)
         
         if '_' in name:
             vtype = name.type
@@ -1312,7 +1316,8 @@ class ALOHAWriterForCPP(WriteALOHA):
                    'cmath.sqrt':'sqrt(%s)', 
                    'sqrt': 'sqrt(%s)',
                    'complexconjugate': 'conj(%s)',
-                   '/' : '{0}/%s'.format(one) 
+                   '/' : '{0}/%s'.format(one),
+                   'abs': 'abs(%s)' 
                    }
             
         if fct in self.fct_format:

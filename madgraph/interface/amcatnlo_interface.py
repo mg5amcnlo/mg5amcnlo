@@ -388,8 +388,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Check the validity of the arguments
         self.check_add(args)
 
-        if args[0] != 'process': 
-            raise self.InvalidCmd("The add command can only be used with a process")
+        if args[0] == 'model':
+            return self.add_model(args[1:])
+        elif args[0] != 'process': 
+            raise self.InvalidCmd("The add command can only be used with process or model")
         else:
             line = ' '.join(args[1:])
             
@@ -457,8 +459,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                                 timeout=self.options['timeout'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
-            else:
-                shutil.rmtree(self._export_dir)
+
+        # if one gets here either used -f or answered yes to the question about
+        # removing the dir
+        if os.path.exists(self._export_dir):
+            shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
         if self._export_format in ['NLO']:
@@ -556,13 +561,13 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
             self._fks_directories = []
             proc_characteristics = ''
-            for charac in ['has_isr', 'has_fsr']:
+            for charac in ['has_isr', 'has_fsr', 'has_loops']:
                 if self._curr_matrix_elements[charac]:
-                    proc_characteristics += '%s = .true.\n' % charac
+                    proc_characteristics += '%s=true\n' % charac
                 else:
-                    proc_characteristics += '%s = .false.\n' % charac
+                    proc_characteristics += '%s=false\n' % charac
 
-            open(pjoin(path, 'proc_characteristics.dat'),'w').write(proc_characteristics)
+            open(pjoin(path, 'proc_characteristics'),'w').write(proc_characteristics)
 
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):

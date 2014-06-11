@@ -20,7 +20,7 @@ C----------------------------------------------------------------------
       PARAMETER (PI=3.14159265358979312D0)
       integer j,kk,l,i,nnn
       character*5 cc(2)
-      data cc/'     ','     '/
+      data cc/'     ','Born '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
@@ -35,7 +35,7 @@ c To be changed !!
       weights_info(nwgt)="central value  "
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       nwgt_analysis=nwgt
-      do j=1,2
+      do j=1,1
       do kk=1,nwgt_analysis
       l=(kk-1)*48+(j-1)*24
       call mbook(l+ 1,'t pt        '//cc(j)//weights_info(kk)
@@ -313,7 +313,7 @@ C b-jet
       enddo
       nbjet=count_bj
 c fill the histograms
-      do i=1,2
+      do i=1,1
          do kk=1,nwgt_analysis
             l=(kk-1)*48+(i-1)*24
             call mfill(l+1,pttop,www(kk))

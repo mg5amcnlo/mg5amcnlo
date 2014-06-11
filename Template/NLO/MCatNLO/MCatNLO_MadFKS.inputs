@@ -10,7 +10,7 @@ PYPATH="../srcPythia"
 
 # SHOWER VERSIONS 
 HERWIGVER="herwig6521.o"
-PYTHIAVER="pythia6426.o"
+PYTHIAVER="pythia6428.o"
 
 ##### LOAD THE SCRIPTS
 . Scripts/MCatNLO_MadFKS_$MCMODE.Script

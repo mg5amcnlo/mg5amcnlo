@@ -5,7 +5,7 @@
 
 #include <iostream>
 #include "Parameters_%(model_name)s.h"
-#include "PythiaStdlib.h"
+#include "Pythia8/PythiaStdlib.h"
 
 namespace Pythia8 {
 

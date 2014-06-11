@@ -409,7 +409,7 @@ int mcfioC_OpenWriteDirect(char *filename, char *title, char *comment,
    str->table->runnums = (int *) malloc(sizeof(int) * str->fhead->dimTable);
    str->table->trigMasks = (int *) malloc(sizeof(int) * str->fhead->dimTable);
    str->table->ptrEvents = 
-         (u_int *) malloc(sizeof(int) * str->fhead->dimTable);
+         (off_t *) calloc(str->fhead->dimTable, sizeof(off_t));
    /*
    ** Write the first dummy table 
    */
@@ -430,7 +430,7 @@ int mcfioC_OpenWriteDirect(char *filename, char *title, char *comment,
       str->ehead->blockIds = 
           (int *) malloc(sizeof(int) * str->fhead->nBlocks);
       str->ehead->ptrBlocks =
-         (u_int *) malloc(sizeof(int) * str->fhead->nBlocks);
+         (off_t *) calloc(str->fhead->nBlocks, sizeof(off_t));
    } else {
        str->ehead->blockIds = NULL;
        str->ehead->ptrBlocks = NULL; 
@@ -454,8 +454,7 @@ int mcfioC_NextEvent(int stream)
 */
 {
    int i, jstr, idtmp, ntot, nn1;
-   u_int p_evt, *p_ptr;
-   off_t p1, p2;
+   off_t p_evt, p2;
    mcfStream *str;
    
   if (McfStreamPtrList == NULL) { 
@@ -526,7 +525,7 @@ int mcfioC_NextEvent(int stream)
  " mcfio_NextEvent: Corrupted Event Table \n"); 
  		            return -1;
                 }
-                if (fseeko(str->filePtr, str->table->nextLocator,SEEK_SET) != 0) {
+                if (fseeko(str->filePtr,str->table->nextLocator,SEEK_SET) != 0) {
                            fprintf(stderr,
  " mcfio_NextEvent: Error Repositioning stream \n"); 
  		            return -1;
@@ -548,7 +547,7 @@ int mcfioC_NextEvent(int stream)
        /* 
        ** we should be pointing to a good event header here. 
        */
-       if (fseeko(str->filePtr, p_evt,SEEK_SET) != 0) return -1;
+       if (fseeko(str->filePtr,p_evt,SEEK_SET) != 0) return -1;
        if( xdr_mcfast_eventheader(str->xdr, &idtmp,
 	&ntot, McfGenericVersion, &(str->ehead)) == FALSE) return -1;
         str->currentPos = ftello(str->filePtr);
@@ -592,7 +591,6 @@ int mcfioC_SpecificEvent(int stream, int ievt,
                              int istore, int irun, int itrig)
 {
    int i, jstr, idtmp, ntot, ok, nn1;
-   u_int p_evt, *p_ptr;
    off_t p1, p2;
    mcfStream *str;
    
@@ -614,7 +612,7 @@ int mcfioC_SpecificEvent(int stream, int ievt,
  or Memory Mapped \n"); 
      return -1;
      }
-  if (fseeko(str->filePtr, str->fhead->firstTable,SEEK_SET) != 0) {
+  if (fseeko(str->filePtr,str->fhead->firstTable,SEEK_SET) != 0) {
        fprintf(stderr,
  " mcfio_SpecificEvent:  Could not reposition Direct Access Stream %d \n",
          (jstr+1)) ;
@@ -625,7 +623,7 @@ int mcfioC_SpecificEvent(int stream, int ievt,
    ok = mcfioC_nextspecevt(str, ievt, istore, irun, itrig);
    if (ok == FALSE) {
       mcfioC_RewindDirect(jstr);
-      if (fseeko(str->filePtr, str->fhead->firstTable,SEEK_SET) != 0) {
+      if (fseeko(str->filePtr,str->fhead->firstTable,SEEK_SET) != 0) {
            fprintf(stderr,
      " mcfio_SpecificEvent:  Could not reposition Direct Access Stream %d \n",
          (jstr+1)) ;
@@ -642,7 +640,6 @@ int mcfioC_NextSpecificEvent(int stream, int ievt,
                              int istore, int irun, int itrig)
 {
    int i, jstr, idtmp, ntot, ok, nn1;
-   u_int p_evt, *p_ptr;
    off_t p1, p2;
    mcfStream *str;
    
@@ -920,7 +917,7 @@ static int mcfioC_gofornextevent(mcfStream *str)
             == FALSE)  return NOTHING;
      if ((id == EVENTTABLE) || (id == EVENTHEADER)) {
          str->currentPos = p1;
-         if(fseeko(str->filePtr, p1,SEEK_SET) != 0) return NOTHING;
+         if(fseeko(str->filePtr,p1,SEEK_SET) != 0) return NOTHING;
          return id;
      }
    }
@@ -935,8 +932,7 @@ static int  mcfioC_nextspecevt(mcfStream *str, int inum, int istore,
 */  
 {
    int i, jstr, j, idtmp, ntot, found;
-   u_int p_evt, *p_ptr;
-   off_t p1, p2;
+   off_t p_evt, p2;
 
    if ((str->table == NULL) || 
          ((str->table != NULL)&& (str->table->evtnums == NULL))) { 
@@ -997,7 +993,7 @@ static int  mcfioC_nextspecevt(mcfStream *str, int inum, int istore,
  " mcfio_NextEvent: Next EventTable corrupted, abandoning search \n"); 
  		            return FALSE;
               }
-              if (fseeko(str->filePtr, str->table->nextLocator, SEEK_SET)
+              if (fseeko(str->filePtr,str->table->nextLocator,SEEK_SET)
                       != 0) { fprintf(stderr,
  " mcfio_NextEvent: XDR Error repositioning to the next EventTable \n"); 
  		            return FALSE;
@@ -1021,7 +1017,7 @@ static int  mcfioC_nextspecevt(mcfStream *str, int inum, int istore,
        /* 
        ** we should be pointing to a good event header here. 
        */
-       if (fseeko(str->filePtr, p_evt, SEEK_SET) != 0) return FALSE;
+       if (fseeko(str->filePtr,p_evt,SEEK_SET) != 0) return FALSE;
        if( xdr_mcfast_eventheader(str->xdr, &idtmp,
 	&ntot, McfGenericVersion, &(str->ehead)) == FALSE) return FALSE;
         str->currentPos = ftello(str->filePtr);

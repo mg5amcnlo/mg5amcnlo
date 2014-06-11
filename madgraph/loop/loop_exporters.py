@@ -49,9 +49,11 @@ import madgraph.core.color_amp as color_amp
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
 
+pjoin = os.path.join
+
 import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.loop_exporter')
@@ -79,47 +81,71 @@ class LoopExporterFortran(object):
             self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madloop', 'mp':True,
                         'loop_dir':'', 'cuttools_dir':'', 
-                        'fortran_compiler':'gfortran'}
+                        'fortran_compiler':'gfortran',
+                        'output_dependencies':'external'}
 
         self.loop_dir = self.opt['loop_dir']
         self.cuttools_dir = self.opt['cuttools_dir']
         self.fortran_compiler = self.opt['fortran_compiler']
+        self.dependencies = self.opt['output_dependencies']
 
         super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)
         
     def link_CutTools(self, targetPath):
         """Link the CutTools source directory inside the target path given
         in argument"""
-
-        cwd = os.getcwd()
-
-        try:
-            os.chdir(targetPath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % targetPath)
-            return 0
-
-        if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
-            logger.info('Compiling CutTools. This has to be done only once and'+\
-                              ' can take a couple of minutes.','$MG:color:BLACK')
-            current = misc.detect_current_compiler(os.path.join(\
-                                                  self.cuttools_dir,'makefile'))
-            new = 'gfortran' if self.fortran_compiler is None else \
-                                                           self.fortran_compiler
-            if current != new:
-                misc.mod_compilator(self.cuttools_dir, new,current)
-            misc.compile(cwd=self.cuttools_dir, job_specs = False)
-
-        if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
+                
+        if self.dependencies=='internal':
+            shutil.copytree(self.cuttools_dir, 
+                           pjoin(targetPath,'Source','CutTools'), symlinks=True)
+            # Create the links to the lib folder
             linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
-                ln(os.path.join(self.cuttools_dir,'includects')+'/%s' % file)
-        else:
-            raise MadGraph5Error,"CutTools could not be correctly compiled."
-
-        # Return to original PWD
-        os.chdir(cwd)
+                ln(os.path.join(os.path.pardir,'Source','CutTools','includects',file),
+                                                 os.path.join(targetPath,'lib'))
+            # Make sure it is recompiled at least once. Because for centralized
+            # MG5_aMC installations, it might be that compiler differs.
+            # Not necessary anymore because I check the compiler version from
+            # the log compiler_version.log generated during CT compilation
+            # misc.compile(['cleanCT'], cwd = pjoin(targetPath,'Source'))
+ 
+        if self.dependencies=='external':
+            if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
+                logger.info('Compiling CutTools. This has to be done only once and'+\
+                                  ' can take a couple of minutes.','$MG:color:BLACK')
+                current = misc.detect_current_compiler(os.path.join(\
+                                                  self.cuttools_dir,'makefile'))
+                new = 'gfortran' if self.fortran_compiler is None else \
+                                                          self.fortran_compiler
+                if current != new:
+                    misc.mod_compilator(self.cuttools_dir, new, current)
+                misc.compile(cwd=self.cuttools_dir, job_specs = False)
+                
+                if not os.path.exists(os.path.join(self.cuttools_dir,
+                                                      'includects','libcts.a')):            
+                    raise MadGraph5Error,"CutTools could not be correctly compiled."
     
+            # Create the links to the lib folder
+            linkfiles = ['libcts.a', 'mpmodule.mod']
+            for file in linkfiles:
+                ln(os.path.join(self.cuttools_dir,'includects',file),
+                                                 os.path.join(targetPath,'lib'))
+
+        elif self.dependencies=='environment_paths':
+            # Here the user chose to define the dependencies path in one of 
+            # his environmental paths
+            CTlib = misc.which_lib('libcts.a')
+            CTmod = misc.which_lib('mpmodule.mod')
+            if not CTlib is None and not CTmod is None:
+                logger.info('MG5_aMC is using CutTools installation found at %s.'%\
+                                                         os.path.dirname(CTlib)) 
+                ln(os.path.join(CTlib),os.path.join(targetPath,'lib'),abspath=True)
+                ln(os.path.join(CTmod),os.path.join(targetPath,'lib'),abspath=True)
+            else:
+                raise InvalidCmd("Could not find the location of the files"+\
+                    " libcts.a and mp_module.mod in you environment paths.")
+            
+
     def get_aloha_model(self, model):
         """ Caches the aloha model created here as an attribute of the loop 
         exporter so that it can later be used in the LoopHelasMatrixElement
@@ -162,10 +188,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         """
         super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
         
-        # We must link the CutTools to the Library folder of the active Template
-        super(LoopProcessExporterFortranSA, self).link_CutTools(
-                                    os.path.join(self.dir_path, 'lib'))
-        
         # We must change some files to their version for NLO computations
         cpfiles= ["Source/makefile","SubProcesses/makefile",\
                   "SubProcesses/check_sa.f","SubProcesses/MadLoopParamReader.f",
@@ -190,7 +212,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         # Return to original PWD
         os.chdir(cwd)
-
+        
+        # We must link the CutTools to the Library folder of the active Template
+        super(LoopProcessExporterFortranSA, self).link_CutTools(self.dir_path)
+        
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
         """ Caches the aloha model created here when writing out the aloha 
@@ -247,6 +272,47 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         model_path = self.dir_path + '/Source/MODEL/'
         ln(model_path + '/mp_coupl.inc', self.dir_path + '/SubProcesses')
         ln(model_path + '/mp_coupl_same_name.inc', self.dir_path + '/SubProcesses')
+    
+    def make(self):
+        """ Compiles the additional dependences for loop (such as CutTools)."""
+        super(LoopProcessExporterFortranSA, self).make()
+        
+        # make CutTools (only necessary with MG option output_dependencies='internal')
+        libdir = os.path.join(self.dir_path,'lib')
+        sourcedir = os.path.join(self.dir_path,'Source')
+        if self.dependencies=='internal':
+            if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('Compiling CutTools (can take a couple of minutes) ...')
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise MadGraph5Error('Could not compile CutTools because its'+\
+                   ' source directory could not be found in the SOURCE folder.')
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            raise MadGraph5Error('CutTools compilation failed.')
+        
+        # Verify compatibility between current compiler and the one which was
+        # used when last compiling CutTools (if specified).
+        compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
+                                  libdir, 'libcts.a')))),'compiler_version.log')
+        if os.path.exists(compiler_log_path):
+            compiler_version_used = open(compiler_log_path,'r').read()
+            if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
+                       pjoin(sourcedir,'make_opts')))) in compiler_version_used:
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('CutTools was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                    misc.compile(['cleanCT'], cwd = sourcedir)
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise MadGraph5Error("CutTools installation in %s"\
+                                 %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
+                 " seems to have been compiled with a different compiler than"+\
+                    " the one specified in MG5_aMC. Please recompile CutTools.")
     
     def cat_coeff(self, ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         """Concatenate the coefficient information to reduce it to 

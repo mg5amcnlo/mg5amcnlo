@@ -413,7 +413,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif arg.startswith('--multicore'):
                 self.configure_run_mode(2)
             elif arg.startswith('--nb_core'):
-                self.nb_core = int(arg.split('=',1)[1])
+                self.options['nb_core'] = int(arg.split('=',1)[1])
                 self.configure_run_mode(2)
             elif arg.startswith('--web'):
                 self.pass_in_web_mode()
@@ -1068,9 +1068,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     return self.pdffile
             else:
                 # possible when using lhapdf
-                self.pdffile = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
-                        shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-                #self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
                 return self.pdffile
                 
     def do_quit(self, line):
@@ -1224,10 +1222,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.cluster_mode = run_mode
 
         if run_mode == 2:
-            if not self.nb_core:
+            if not self.options['nb_core']:
                 import multiprocessing
-                self.nb_core = multiprocessing.cpu_count()
-            nb_core =self.nb_core
+                self.options['nb_core'] = multiprocessing.cpu_count()
+            nb_core = self.options['nb_core']
         elif run_mode == 0:
             nb_core = 1
 
@@ -1236,6 +1234,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if run_mode in [0, 2]:
             self.cluster = cluster.MultiCore(
                              **self.options)
+            self.cluster.nb_core = nb_core
                              #cluster_temp_path=self.options['cluster_temp_path'],
 
         if self.cluster_mode == 1:
@@ -1562,6 +1561,194 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             return
 
+
+# lhapdf-related functions
+    def link_lhapdf(self, libdir, extra_dirs = []):
+        """links lhapdf into libdir"""
+
+        lhapdf_version = self.get_lhapdf_version()
+        logger.info('Using LHAPDF v%s interface for PDFs' % lhapdf_version)
+        lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
+                 stdout = subprocess.PIPE).stdout.read().strip()
+
+        if lhapdf_version.startswith('5.'):
+            pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
+                     stdout = subprocess.PIPE).stdout.read().strip()
+            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
+            # link the static library in lib
+            lhalib = 'libLHAPDF.a'
+
+        elif lhapdf_version.startswith('6.'):
+            pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
+                     stdout = subprocess.PIPE).stdout.read().strip()
+            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
+            # link the dynamic library in lib
+            if os.path.exists(pjoin(lhalibdir, 'libLHAPDF.so')):
+                lhalib = 'libLHAPDF.so'
+            elif os.path.exists(pjoin(lhalibdir, 'libLHAPDF.dylib')):
+                lhalib = 'libLHAPDF.dylib'
+            else:
+                raise MadGraph5Error('Dynamic library not found for LHAPDF6')
+
+        else:
+            raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
+
+        if os.path.exists(pjoin(libdir, lhalib)):
+            files.rm(pjoin(libdir, lhalib))
+        files.ln(pjoin(lhalibdir, lhalib), libdir)
+        # link the dynamic library for v6 in extra_dirs
+        if lhapdf_version.startswith('6.'):
+            for d in extra_dirs:
+                files.ln(pjoin(libdir, lhalib), pjoin(self.me_dir, d))
+        # just create the PDFsets dir, the needed PDF set will be copied at run time
+        if not os.path.isdir(pjoin(libdir, 'PDFsets')):
+            os.mkdir(pjoin(libdir, 'PDFsets'))
+        os.environ['lhapdf'] = 'True'
+        os.environ['lhapdf_config'] = self.options['lhapdf']
+
+
+    def copy_lhapdf_set(self, lhaid_list, pdfsets_dir):
+        """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
+        into lib/PDFsets"""
+
+        pdfsetname = ''
+        for lhaid in lhaid_list:
+            try:
+                if not pdfsetname:
+                    if lhaid in self.lhapdf_pdfsets:
+                        pdfsetname = self.lhapdf_pdfsets[lhaid]['filename']
+                    else:
+                        raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
+                # just check the other ids refer to the same pdfsetname
+                elif not \
+                  self.lhapdf_pdfsets[lhaid]['filename'] == pdfsetname:
+                    raise MadGraph5Error(\
+                        'lhaid and PDF_set_min/max in the run_card do not correspond to the' + \
+                        'same PDF set. Please check the run_card.')
+            except KeyError:
+                raise MadGraph5Error(\
+                        ('invalid lhaid set in th run_card: %d .\nPlease note that some sets' % lhaid) + \
+                    '(eg MSTW 90%CL error sets) \nare not available in aMC@NLO + LHAPDF 5.x.x')
+
+
+        # check if the file exists, otherwise install it:
+        # also check that the PDFsets dir exists, otherwise create it.
+        # if fails, install the lhapdfset into lib/PDFsets
+        if not os.path.isdir(pdfsets_dir):
+            try:
+                os.mkdir(pdfsets_dir)
+            except OSError:
+                pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
+
+        if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+            self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
+            
+        if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+            files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+        elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
+            files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+            
+
+    def install_lhapdf_pdfset(self, pdfsets_dir, filename):
+        """idownloads and install the pdfset filename in the pdfsets_dir"""
+        lhapdf_version = self.get_lhapdf_version()
+        logger.info('Trying to download %s' % filename)
+
+        if lhapdf_version.startswith('5.'):
+            # use the lhapdf-getdata command, which is in the same path as
+            # lhapdf-config
+            getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf-getdata'))
+            misc.call([getdata, filename], cwd = pdfsets_dir)
+
+        elif lhapdf_version.startswith('6.'):
+            # use the "lhapdf install xxx" command, which is in the same path as
+            # lhapdf-config
+            getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf'))
+
+            misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
+
+        else:
+            raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
+        
+        # check taht the file has been installed in the global dir
+        if os.path.exists(pjoin(pdfsets_dir, filename)) or \
+           os.path.isdir(pjoin(pdfsets_dir, filename)):
+            logger.info('%s successfully downloaded and stored in %s' \
+                    % (filename, pdfsets_dir))
+        #otherwise save it locally
+        else:
+            logger.warning('Could not download %s into %s. Trying to save it locally' \
+                    % (filename, pdfsets_dir))
+            self.install_lhapdf_pdfset(pjoin(self.me_dir, 'lib', 'PDFsets'), filename)
+
+
+    def get_lhapdf_pdfsets_list(self, pdfsets_dir):
+        """read the PDFsets.index file, which should be located in the same
+        place as pdfsets_dir, and return a list of dictionaries with the information
+        about each pdf set"""
+        lhapdf_version = self.get_lhapdf_version()
+
+        if lhapdf_version.startswith('5.'):
+            if os.path.exists('%s.index' % pdfsets_dir):
+                indexfile = '%s.index' % pdfsets_dir
+            else:
+                raise MadGraph5Error, 'index of lhapdf file not found'
+            pdfsets_lines = \
+                    [l for l in open(indexfile).read().split('\n') if l.strip() and \
+                        not '90cl' in l]
+            lhapdf_pdfsets = dict( (int(l.split()[0]), {'lhaid': int(l.split()[0]),
+                          'pdflib_ntype': int(l.split()[1]),
+                          'pdflib_ngroup': int(l.split()[2]),
+                          'pdflib_nset': int(l.split()[3]),
+                          'filename': l.split()[4],
+                          'lhapdf_nmem': int(l.split()[5]),
+                          'q2min': float(l.split()[6]),
+                          'q2max': float(l.split()[7]),
+                          'xmin': float(l.split()[8]),
+                          'xmax': float(l.split()[9]),
+                          'description': l.split()[10]}) \
+                         for l in pdfsets_lines)
+
+        elif lhapdf_version.startswith('6.'):
+            pdfsets_lines = \
+                    [l for l in open(pjoin(pdfsets_dir, 'pdfsets.index')).read().split('\n') if l.strip()]
+            lhapdf_pdfsets = dict( (int(l.split()[0]), 
+                        {'lhaid': int(l.split()[0]),
+                          'filename': l.split()[1]}) \
+                         for l in pdfsets_lines)
+
+        else:
+            raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
+
+        return lhapdf_pdfsets
+
+
+    def get_lhapdf_version(self):
+        """returns the lhapdf version number"""
+        if not hasattr(self, 'lhapdfversion'):
+            self.lhapdf_version = \
+                    subprocess.Popen([self.options['lhapdf'], '--version'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()
+
+        # this will be removed once some issues in lhapdf6 will be fixed
+        if self.lhapdf_version.startswith('6.'):
+            raise MadGraph5Error('LHAPDF 6 not yet supported. Please use v5.x.x')
+
+        return self.lhapdf_version
+
+
+    def get_lhapdf_pdfsetsdir(self):
+        lhapdf_version = self.get_lhapdf_version()
+
+        if lhapdf_version.startswith('5.'):
+            datadir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
+                         stdout = subprocess.PIPE).stdout.read().strip()
+
+        elif lhapdf_version.startswith('6.'):
+            datadir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
+                         stdout = subprocess.PIPE).stdout.read().strip()
+
+        return datadir
 
 class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the
@@ -2288,6 +2475,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if not os.path.exists(path):
                 logger.info('Path in MW_card not existing')
                 path = pjoin(me_dir, 'Events', answer)
+        #security
+        path = path.replace('_card_card','_card')
         try:
             self.mother_interface.exec_cmd('open %s' % path)
         except InvalidCmd, error:

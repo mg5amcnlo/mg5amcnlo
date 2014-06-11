@@ -631,7 +631,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                        'mp':True,
               'loop_dir': os.path.join(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
-                       'fortran_compiler': self.cmd.options['fortran_compiler']}
+                       'fortran_compiler': self.cmd.options['fortran_compiler'],
+                       'output_dependencies': self.cmd.options['output_dependencies']}
                         
             FortranExporter = exporter_class(\
                 self.mg_root, export_dir, MLoptions)
@@ -1211,7 +1212,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                        'mp':True,
           'loop_dir': os.path.join(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
-                       'fortran_compiler':self.cmd.options['fortran_compiler']}
+                       'fortran_compiler':self.cmd.options['fortran_compiler'],
+                       'output_dependencies':self.cmd.options['output_dependencies']}
     
             start=time.time()
             FortranExporter = exporter_class(self.mg_root, export_dir, MLoptions)

@@ -65,12 +65,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.decay = madspin.decay_misc()
         self.model = None
         
-        self.options = {'max_weight': -1, 'BW_effect': 1, 
+        self.options = {'max_weight': -1, 
                         'curr_dir': os.path.realpath(os.getcwd()),
                         'Nevents_for_max_weigth': 0,
                         'max_weight_ps_point': 400,
                         'BW_cut':-1,
-                        'zeromass_for_max_weight':5,
                         'nb_sigma':0,
                         'ms_dir':None,
                         'max_running_process':100}
@@ -509,6 +508,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         generate_all.mscmd = self 
         generate_all.pid2width = lambda pid: generate_all.banner.get('param_card', 'decay', abs(pid)).value
         generate_all.pid2mass = lambda pid: generate_all.banner.get('param_card', 'mass', abs(pid)).value
+        if generate_all.path_me != self.options['ms_dir']:
+            for decay in generate_all.all_ME.values():
+                decay['path'] = decay['path'].replace(generate_all.path_me, self.options['ms_dir'])
+                for decay2 in decay['decays']:
+                    decay2['path'] = decay2['path'].replace(generate_all.path_me, self.options['ms_dir'])
+            generate_all.path_me = self.options['ms_dir'] # directory can have been move
+            generate_all.ms_dir = generate_all.path_me
         
         if not hasattr(self.banner, 'param_card'):
             self.banner.charge_card('slha')
@@ -566,10 +572,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Import model
         base_model = import_ufo.import_model(name, decay=True)
-        if not hasattr(base_model.get('particles')[0], 'partial_widths'):
-            msg = 'The UFO model does not include partial widths information.\n'
-            msg += 'Impossible to use analytical formula, will use MG5/MadEvent (slower).'
-            logger.warning(msg)
 
         if use_mg_default:
             base_model.pass_particles_name_in_mg_default()

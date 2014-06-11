@@ -50,6 +50,7 @@ end module
 module avh_olo_units
   implicit none
   integer :: eunit=6
+  integer :: dunit=-1
   integer :: wunit=6
   integer :: munit=6
   integer :: punit=0 ! print all
@@ -1658,10 +1659,10 @@ contains
   ntwo = jj-odd
 ! 
   if (yy.eq.RONE.and.odd.eq.0) then
-!!$    if (ntwo.ne.0) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog_r: ' &
-!!$        ,'|x|,iph = ',trim(myprint(yy)),',',jj,', returning 0'
-!!$    endif
+    if (ntwo.ne.0) then
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog_r: ' &
+        ,'|x|,iph = ',trim(myprint(yy)),',',jj,', returning 0'
+    endif
     rslt = 0
     return
   endif
@@ -1767,8 +1768,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c j1=/=j2,r1=r2' !DEBUG
       return
@@ -1781,8 +1782,8 @@ contains
 !
   if (a1.lt.eps) then
     if (a2.lt.eps) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c r1<eps,r2<eps' !DEBUG
       return
@@ -1803,8 +1804,8 @@ contains
 !      write(*,*) 'dilog2_c ||1-y1|/|1-y2|-1|>0.1' !DEBUG
       return
     elseif (oo.eq.0.and.ao1.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
       if (ao2.lt.eps) then
         rslt = -1
 !        write(*,*) 'dilog2_c |1-y1|' !DEBUG
@@ -1813,8 +1814,8 @@ contains
         y1=1-eps ;nn=0 ;logr1=0 ;r1=1-eps
       endif
     elseif (oo.eq.0.and.ao2.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
       y2=1-eps ;nn=0 ;logr2=0 ;r2=1-eps
     endif
   else
@@ -1828,9 +1829,9 @@ contains
       if (a1.gt.RONE) ii = ii + (nn+pp(oo,sgnIm(y2)))
       if (a2.gt.RONE) ii = ii - (nn+pp(oo,sgnIm(y2)))
       ii = nn*ii
-!!$      if (ii.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
-!!$        ,', putting nn=0'
+      if (ii.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
+        ,', putting nn=0'
       rslt = -olog2(y2,0)
 !      write(*,*) 'dilog2_c |logr1/lorg2|<eps' !DEBUG
       return
@@ -1901,8 +1902,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r j1=/=j2,r1=r2' !DEBUG
       return
@@ -1915,8 +1916,8 @@ contains
 !
   if (r1.lt.eps) then
     if (r2.lt.eps) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r r1<eps,r2<eps' !DEBUG
       return
@@ -1937,8 +1938,8 @@ contains
 !      write(*,*) 'dilog2_r ||1-y1|/|1-y2|-1|>0.1' !DEBUG
       return
     elseif (oo.eq.0.and.ro1.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
       if (ro2.lt.eps) then
         rslt = -1
 !        write(*,*) 'dilog2_r |1-y1|' !DEBUG
@@ -1947,8 +1948,8 @@ contains
         y1=1-eps ;nn=0 ;logr1=0 ;r1=1-eps
       endif
     elseif (oo.eq.0.and.ro2.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
       y2=1-eps ;nn=0 ;logr2=0 ;r2=1-eps
     endif
   else
@@ -1962,9 +1963,9 @@ contains
       if (r1.gt.RONE) ii = ii + (nn+2*oo)
       if (r2.gt.RONE) ii = ii - (nn+2*oo)
       ii = nn*ii
-!!$      if (ii.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
-!!$        ,', putting nn=0'
+      if (ii.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
+        ,', putting nn=0'
       rslt = -olog2(y2,0)
 !      write(*,*) 'dilog2_r |logr1/lorg2|<eps' !DEBUG
       return
@@ -6167,6 +6168,13 @@ module avh_olo_dp
   public :: olo_an ,olo_bn
   public :: olo
   public :: olo_get_scale ,olo_get_onshell ,olo_get_precision
+  public :: a0_r,a0rr,a0_c,a0cr
+  public :: an_r,anrr,an_c,ancr
+  public :: b0rr,b0rrr,b0rc,b0rcr,b0cc,b0ccr
+  public :: b11rr,b11rrr,b11rc,b11rcr,b11cc,b11ccr
+  public :: bnrr,bnrrr,bnrc,bnrcr,bncc,bnccr
+  public :: c0rr,c0rrr,c0rc,c0rcr,c0cc,c0ccr
+  public :: d0rr,d0rrr,d0rc,d0rcr,d0cc,d0ccr
 !
   integer ,public ,parameter :: olo_kind=kindr2    
 !
@@ -9565,7 +9573,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -9838,7 +9848,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -10103,7 +10115,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -10370,7 +10384,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -10628,7 +10644,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -10888,7 +10906,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -11462,7 +11482,7 @@ contains
   write(aa,'(i10)') min(len(cc),ndec+novh+1) ;aa=adjustl(aa)
   write(bb,'(i10)') min(len(cc),ndec       ) ;bb=adjustl(bb)
   aa = '(e'//trim(aa)//'.'//trim(bb)//')'
-  write(cc,aa) xx  ;cc=adjustl(cc)
+  write(cc,aa) dble(xx)  ;cc=adjustl(cc)
   if (cc(1:2).eq.'-0') then ;rslt = '-'//cc(3:len(cc))
   else                      ;rslt = ' '//cc(2:len(cc))
   endif
@@ -12567,10 +12587,10 @@ contains
   ntwo = jj-odd
 ! 
   if (yy.eq.RONE.and.odd.eq.0) then
-!!$    if (ntwo.ne.0) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog_r: ' &
-!!$        ,'|x|,iph = ',trim(myprint(yy)),',',jj,', returning 0'
-!!$    endif
+    if (ntwo.ne.0) then
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog_r: ' &
+        ,'|x|,iph = ',trim(myprint(yy)),',',jj,', returning 0'
+    endif
     rslt = 0
     return
   endif
@@ -12676,8 +12696,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c j1=/=j2,r1=r2' !DEBUG
       return
@@ -12690,8 +12710,8 @@ contains
 !
   if (a1.lt.eps) then
     if (a2.lt.eps) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c r1<eps,r2<eps' !DEBUG
       return
@@ -12712,8 +12732,8 @@ contains
 !      write(*,*) 'dilog2_c ||1-y1|/|1-y2|-1|>0.1' !DEBUG
       return
     elseif (oo.eq.0.and.ao1.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
       if (ao2.lt.eps) then
         rslt = -1
 !        write(*,*) 'dilog2_c |1-y1|' !DEBUG
@@ -12722,8 +12742,8 @@ contains
         y1=1-eps ;nn=0 ;logr1=0 ;r1=1-eps
       endif
     elseif (oo.eq.0.and.ao2.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
       y2=1-eps ;nn=0 ;logr2=0 ;r2=1-eps
     endif
   else
@@ -12737,9 +12757,9 @@ contains
       if (a1.gt.RONE) ii = ii + (nn+pp(oo,sgnIm(y2)))
       if (a2.gt.RONE) ii = ii - (nn+pp(oo,sgnIm(y2)))
       ii = nn*ii
-!!$      if (ii.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
-!!$        ,', putting nn=0'
+      if (ii.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
+        ,', putting nn=0'
       rslt = -olog2(y2,0)
 !      write(*,*) 'dilog2_c |logr1/lorg2|<eps' !DEBUG
       return
@@ -12810,8 +12830,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r j1=/=j2,r1=r2' !DEBUG
       return
@@ -12824,8 +12844,8 @@ contains
 !
   if (r1.lt.eps) then
     if (r2.lt.eps) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r r1<eps,r2<eps' !DEBUG
       return
@@ -12846,8 +12866,8 @@ contains
 !      write(*,*) 'dilog2_r ||1-y1|/|1-y2|-1|>0.1' !DEBUG
       return
     elseif (oo.eq.0.and.ro1.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
       if (ro2.lt.eps) then
         rslt = -1
 !        write(*,*) 'dilog2_r |1-y1|' !DEBUG
@@ -12856,8 +12876,8 @@ contains
         y1=1-eps ;nn=0 ;logr1=0 ;r1=1-eps
       endif
     elseif (oo.eq.0.and.ro2.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
       y2=1-eps ;nn=0 ;logr2=0 ;r2=1-eps
     endif
   else
@@ -12871,9 +12891,9 @@ contains
       if (r1.gt.RONE) ii = ii + (nn+2*oo)
       if (r2.gt.RONE) ii = ii - (nn+2*oo)
       ii = nn*ii
-!!$      if (ii.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
-!!$        ,', putting nn=0'
+      if (ii.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
+        ,', putting nn=0'
       rslt = -olog2(y2,0)
 !      write(*,*) 'dilog2_r |logr1/lorg2|<eps' !DEBUG
       return
@@ -17076,6 +17096,13 @@ module avh_olo_qp
   public :: olo_an ,olo_bn
   public :: olo
   public :: olo_get_scale ,olo_get_onshell ,olo_get_precision
+  public :: a0_r,a0rr,a0_c,a0cr
+  public :: an_r,anrr,an_c,ancr
+  public :: b0rr,b0rrr,b0rc,b0rcr,b0cc,b0ccr
+  public :: b11rr,b11rrr,b11rc,b11rcr,b11cc,b11ccr
+  public :: bnrr,bnrrr,bnrc,bnrcr,bncc,bnccr
+  public :: c0rr,c0rrr,c0rc,c0rcr,c0cc,c0ccr
+  public :: d0rr,d0rrr,d0rc,d0rcr,d0cc,d0ccr
 !
   integer ,public ,parameter :: olo_kind=kindr2    
 !
@@ -20474,7 +20501,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -20747,7 +20776,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -21012,7 +21043,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -21279,7 +21312,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -21537,7 +21572,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -21797,7 +21834,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -23499,10 +23538,10 @@ contains
   ntwo = jj-odd
 ! 
   if (yy.eq.RONE.and.odd.eq.0) then
-!!$    if (ntwo.ne.0) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog_r: ' &
-!!$        ,'|x|,iph = ',trim(myprint(yy)),',',jj,', returning 0'
-!!$    endif
+    if (ntwo.ne.0) then
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog_r: ' &
+        ,'|x|,iph = ',trim(myprint(yy)),',',jj,', returning 0'
+    endif
     rslt = 0
     return
   endif
@@ -23608,8 +23647,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c j1=/=j2,r1=r2' !DEBUG
       return
@@ -23622,8 +23661,8 @@ contains
 !
   if (a1.lt.eps) then
     if (a2.lt.eps) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_c r1<eps,r2<eps' !DEBUG
       return
@@ -23644,8 +23683,8 @@ contains
 !      write(*,*) 'dilog2_c ||1-y1|/|1-y2|-1|>0.1' !DEBUG
       return
     elseif (oo.eq.0.and.ao1.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
       if (ao2.lt.eps) then
         rslt = -1
 !        write(*,*) 'dilog2_c |1-y1|' !DEBUG
@@ -23654,8 +23693,8 @@ contains
         y1=1-eps ;nn=0 ;logr1=0 ;r1=1-eps
       endif
     elseif (oo.eq.0.and.ao2.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
       y2=1-eps ;nn=0 ;logr2=0 ;r2=1-eps
     endif
   else
@@ -23669,9 +23708,9 @@ contains
       if (a1.gt.RONE) ii = ii + (nn+pp(oo,sgnIm(y2)))
       if (a2.gt.RONE) ii = ii - (nn+pp(oo,sgnIm(y2)))
       ii = nn*ii
-!!$      if (ii.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
-!!$        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
-!!$        ,', putting nn=0'
+      if (ii.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_c: ' &
+        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
+        ,', putting nn=0'
       rslt = -olog2(y2,0)
 !      write(*,*) 'dilog2_c |logr1/lorg2|<eps' !DEBUG
       return
@@ -23742,8 +23781,8 @@ contains
 !
   if (j1.ne.j2) then
     if (r1.eq.r2) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'j1,j2,r1-r2',j1,j2,',',trim(myprint(r1-r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r j1=/=j2,r1=r2' !DEBUG
       return
@@ -23756,8 +23795,8 @@ contains
 !
   if (r1.lt.eps) then
     if (r2.lt.eps) then
-!!$      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
+      if (dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,r2 =',trim(myprint(r1)),',',trim(myprint(r2)),', returning 0'
       rslt = 0
 !      write(*,*) 'dilog2_r r1<eps,r2<eps' !DEBUG
       return
@@ -23778,8 +23817,8 @@ contains
 !      write(*,*) 'dilog2_r ||1-y1|/|1-y2|-1|>0.1' !DEBUG
       return
     elseif (oo.eq.0.and.ro1.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,oo,nn =',trim(myprint(r1)),',',oo,nn,', putting nn=0'
       if (ro2.lt.eps) then
         rslt = -1
 !        write(*,*) 'dilog2_r |1-y1|' !DEBUG
@@ -23788,8 +23827,8 @@ contains
         y1=1-eps ;nn=0 ;logr1=0 ;r1=1-eps
       endif
     elseif (oo.eq.0.and.ro2.lt.eps) then
-!!$      if (nn.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
+      if (nn.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r2,oo,nn =',trim(myprint(r2)),',',oo,nn,', putting nn=0'
       y2=1-eps ;nn=0 ;logr2=0 ;r2=1-eps
     endif
   else
@@ -23803,9 +23842,9 @@ contains
       if (r1.gt.RONE) ii = ii + (nn+2*oo)
       if (r2.gt.RONE) ii = ii - (nn+2*oo)
       ii = nn*ii
-!!$      if (ii.ne.0.and.eunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
-!!$        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
-!!$        ,', putting nn=0'
+      if (ii.ne.0.and.dunit.gt.0) write(eunit,*) 'ERROR in OneLOop dilog2_r: ' &
+        ,'r1,r2,nn =',trim(myprint(r1)),',',trim(myprint(r2)),',',nn &
+        ,', putting nn=0'
       rslt = -olog2(y2,0)
 !      write(*,*) 'dilog2_r |logr1/lorg2|<eps' !DEBUG
       return
@@ -28008,6 +28047,13 @@ module avh_olo_mp
   public :: olo_an ,olo_bn
   public :: olo
   public :: olo_get_scale ,olo_get_onshell ,olo_get_precision
+  public :: a0_r,a0rr,a0_c,a0cr
+  public :: an_r,anrr,an_c,ancr
+  public :: b0rr,b0rrr,b0rc,b0rcr,b0cc,b0ccr
+  public :: b11rr,b11rrr,b11rc,b11rcr,b11cc,b11ccr
+  public :: bnrr,bnrrr,bnrc,bnrcr,bncc,bnccr
+  public :: c0rr,c0rrr,c0rc,c0rcr,c0cc,c0ccr
+  public :: d0rr,d0rrr,d0rc,d0rcr,d0cc,d0ccr
 !
  integer ,public ,parameter :: olo_kind=kind(1d0) 
 !
@@ -31406,7 +31452,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -31679,7 +31727,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -31944,7 +31994,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -32211,7 +32263,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -32469,7 +32523,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else
@@ -32729,7 +32785,9 @@ contains
                  .or.(     areal(ss(1)).ge.-small  &
                       .and.areal(ss(2)).ge.-small  &
                       .and.areal(ss(3)).ge.-small  &
-                      .and.areal(ss(4)).ge.-small) )
+!OLD                      .and.areal(ss(4)).ge.-small) )
+                      .and.areal(ss(4)).ge.-small) & !NEW
+                 .or.(areal(ss(5)).ge.-small.and.areal(ss(6)).ge.-small)) !NEW
       if (useboxc) then
         call boxc( rslt ,ss,rr ,as ,smax )
       else

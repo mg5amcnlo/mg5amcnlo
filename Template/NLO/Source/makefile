@@ -1,8 +1,11 @@
 include make_opts
 
 LIBDIR= ../lib/
+MCATNLOLIBDIR= ../MCatNLO/lib/
 BINDIR= ../bin/
 PDFDIR= ./PDF/
+CUTTOOLSDIR= ./CutTools/
+STDHEPDIR= ./StdHEP/
 
 PROCESS= hfill.o matrix.o myamp.o 
 
@@ -75,15 +78,37 @@ $(BINDIR)combine_events: $(COMBINE)
 	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 	mv combine_events $(BINDIR)
 
+CutTools: $(LIBDIR)libcts.a
+
+$(LIBDIR)libcts.a: $(CUTTOOLSDIR)
+	cd $(CUTTOOLSDIR); make
+	ln -sf ../Source/CutTools/includects/libcts.a $(LIBDIR)libcts.a
+	ln -sf ../Source/CutTools/includects/mpmodule.mod $(LIBDIR)mpmodule.mod
+
+StdHEP: $(MCATNLOLIBDIR)libstdhep.a  
+
+$(MCATNLOLIBDIR)libstdhep.a: $(STDHEPDIR)
+	cd $(STDHEPDIR); make all
+	ln -sf ../../Source/StdHEP/lib/libstdhep.a $(MCATNLOLIBDIR)libstdhep.a
+	ln -sf ../../Source/StdHEP/lib/libFmcfio.a $(MCATNLOLIBDIR)libFmcfio.a
+
 clean4pdf:
 	rm -f ../lib/libpdf.a
 	rm -f ../lib/libgeneric.a
 
+cleanCT:
+	cd $(CUTTOOLSDIR); make clean; cd ..
+
+cleanStdHEP:
+	cd $(STDHEPDIR); make clean; cd ..
+
 clean:
 	rm -f *.o
 	rm -f param_card.inc run_card.inc
-	cd MODEL; make clean
+	cd MODEL; make clean; cd ..
 	cd CERNLIB; make clean; cd ..
-	cd PDF; make clean
-	cd DHELAS; make clean
+	cd PDF; make clean; cd ..
+	cd DHELAS; make clean; cd ..
+	cd $(CUTTOOLSDIR); make clean; cd ..
+	cd $(STDHEPDIR); make clean; cd ..
 	rm -f $(BINDIR)/combine_events $(BINDIR)/gen_ximprove

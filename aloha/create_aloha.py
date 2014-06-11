@@ -36,8 +36,10 @@ import aloha.aloha_parsers as aloha_parsers
 import aloha.aloha_fct as aloha_fct
 try:
     import madgraph.iolibs.files as files
+    import madgraph.various.misc as misc
 except Exception:
     import aloha.files as files
+    import aloha.misc as misc
     
 aloha_path = os.path.dirname(os.path.realpath(__file__))
 logger = logging.getLogger('ALOHA')
@@ -130,7 +132,7 @@ class AbstractRoutineBuilder(object):
               >0 defines the outgoing part (start to count at 1)
         """
 
-        self.spins = [abs(s) for s  in lorentz.spins]
+        self.spins = [s for s  in lorentz.spins]
         self.name = lorentz.name
         self.conjg = []
         self.tag = []
@@ -304,7 +306,7 @@ in presence of majorana particle/flow violation"""
                 
                 
                 
-                if spin == 1: 
+                if spin in [1,-1]: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift and flip the tag if we multiply by C matrices
@@ -347,10 +349,10 @@ in presence of majorana particle/flow violation"""
                                              2 * _spin2_mult + id,'I2','I3', id)
                 else:
                     raise self.AbstractALOHAError(
-                                'The spin value %s is not supported yet' % spin)
+                                'The spin value %s (2s+1) is not supported yet' % spin)
             else:
                 # This is an incoming particle
-                if spin == 1:
+                if spin in [1,-1]:
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
@@ -373,7 +375,7 @@ in presence of majorana particle/flow violation"""
                     lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
                     raise self.AbstractALOHAError(
-                                'The spin value %s is not supported yet' % spin)                    
+                                'The spin value %s (2s+1) is not supported yet' % spin)                    
 
         # If no particle OffShell
         if not outgoing:
@@ -395,16 +397,36 @@ in presence of majorana particle/flow violation"""
         lorentz.tag = set(aloha_lib.KERNEL.use_tag)
         return lorentz     
 
+    @staticmethod
+    def mod_propagator_expression(tag, text):
+        """Change the index of the propagator to match the current need"""
+        data = re.split(r'(\b[a-zA-Z]\w*?)\(([\'\w,\s]*?)\)',text)
+
+        pos=-2
+        while pos +3 < len(data):
+            pos = pos+3
+            ltype = data[pos]
+            if ltype != 'complex':
+                for old, new in tag.items():
+                    if isinstance(new, str):
+                        new='\'%s\'' % new
+                    else:
+                        new = str(new)
+                    data[pos+1] = re.sub(r'\b%s\b' % old, new, data[pos+1])
+            data[pos+1] = '(%s)' % data[pos+1]
+        text=''.join(data)
+        return text
+
     def get_custom_propa(self, propa, spin, id):
-        
+        """Return the ALOHA object associated to the user define propagator"""
+
         propagator = getattr(self.model.propagators, propa)
         numerator = propagator.numerator
-        denominator = propagator.denominator
-        
+        denominator = propagator.denominator      
 
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
-        if spin == 1:
+        if spin in [1,-1]:
             tag = {'id': id}         
         elif spin == 2:
             # shift and flip the tag if we multiply by C matrices
@@ -439,16 +461,10 @@ in presence of majorana particle/flow violation"""
             tag = {'1': _spin2_mult + id, '2': 2 * _spin2_mult + id, 
                    '51': 'I2', '52': 'I3', 'id':id}
         
-        for old, new in tag.items():
-            if isinstance(new, str):
-                new='\'%s\'' % new
-            else:
-                new = str(new)
-            numerator = re.sub(r'\b%s\b' % old, new,numerator)
-            if denominator:
-                denominator = re.sub(r'\b%s\b' % old, new, denominator)
-        
-        
+        numerator = self.mod_propagator_expression(tag, numerator)
+        if denominator:
+            denominator = self.mod_propagator_expression(tag, denominator)      
+                
         numerator = self.parse_expression(numerator, needPflipping)
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)
@@ -485,7 +501,7 @@ in presence of majorana particle/flow violation"""
 
         # Compute the variable from which we need to split the expression
         var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
-        spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
+        spin = aloha_writers.WriteALOHA.type_to_variable[abs(self.spins[l_in-1])]
         size = aloha_writers.WriteALOHA.type_to_size[spin]-1
         var_veto += ['%s%s_%s' % (spin,l_in,i) for i in range(1,size)]
         # compute their unique identifiant
@@ -1066,8 +1082,8 @@ class AbstractALOHAModel(dict):
             if len(vertex.lorentz) == 1:
                 continue
             #remove ghost
-            if -1 in vertex.lorentz[0].spins:
-                continue
+            #if -1 in vertex.lorentz[0].spins:
+            #    continue
             
             # assign each order/color to a set of lorentz routine
             combine = {}

@@ -177,7 +177,7 @@ C NOW MAKE SURE THE SHIFTED POINT IS NOT TOO FAR FROM THE ORIGINAL ONE
 	  IF ((REF/REF2).GT.THRS_CLOSE) THEN
 	    %(mp_prefix)sIS_CLOSE = .FALSE.
 	    IF (WARNED.LT.20) THEN
-	      WRITE(*,*) 'WARNING:: The improved PS point is too far from the original one',(REF/REF2)
+	      WRITE(*,*) 'WARNING:: The improved PS point is too far from the original one',dble(REF/REF2)
 		  WARNED=WARNED+1
 		ENDIF
 	  ENDIF
@@ -246,7 +246,7 @@ C FOR THAT WE NEED A REFERENCE SCALE
 		ENDDO
 		IF ((BUFF/REF).GT.THRES_FOURMOM) THEN
 		  IF (WARNED.LT.20) THEN
-		    WRITE(*,*) 'ERROR:: Four-momentum conservation is not accurate enough, ',(BUFF/REF)
+		    WRITE(*,*) 'ERROR:: Four-momentum conservation is not accurate enough, ',dble(BUFF/REF)
 		    CALL %(mp_prefix)sWRITE_MOM(P)
 			WARNED=WARNED+1
 		  ENDIF
@@ -258,7 +258,7 @@ C FOR THAT WE NEED A REFERENCE SCALE
 	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
 		IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF).GT.THRES_ONSHELL) THEN
 		  IF (WARNED.LT.20) THEN		  
-		    WRITE(*,*) 'ERROR:: Onshellness of the momentum of particle ',I,' of mass ',MASSES(I),' is not accurate enough, ', (SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
+		    WRITE(*,*) 'ERROR:: Onshellness of the momentum of particle ',I,' of mass ',dble(MASSES(I)),' is not accurate enough, ', dble(SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
 		    CALL %(mp_prefix)sWRITE_MOM(P)
 			WARNED=WARNED+1
 		  ENDIF		  

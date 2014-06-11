@@ -40,6 +40,6 @@ setscale.o : genps.inc nexternal.inc coupl.inc maxamps.inc leshouche.inc run.inc
 cuts.o: maxparticles.inc nexternal.inc coupl.inc cuts.inc
 permutation.o: phasespace.inc nexternal.inc data.inc coupl.inc madweight_card.inc  maxparticles.inc
 maxparticles.inc:
-	ln ../../Source/maxparticles.inc
+	ln -s ../../Source/maxparticles.inc
 cuts.inc:
-	ln ../../Source/cuts.inc
+	ln -s ../../Source/cuts.inc
