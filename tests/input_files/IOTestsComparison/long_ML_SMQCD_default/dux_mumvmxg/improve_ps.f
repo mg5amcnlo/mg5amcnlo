@@ -185,7 +185,7 @@ C      ONE
         MP_IS_CLOSE = .FALSE.
         IF (WARNED.LT.20) THEN
           WRITE(*,*) 'WARNING:: The improved PS point is too far from
-     $      the original one',(REF/REF2)
+     $      the original one',DBLE(REF/REF2)
           WARNED=WARNED+1
         ENDIF
       ENDIF
@@ -259,7 +259,7 @@ C     FOR THAT WE NEED A REFERENCE SCALE
         IF ((BUFF/REF).GT.THRES_FOURMOM) THEN
           IF (WARNED.LT.20) THEN
             WRITE(*,*) 'ERROR:: Four-momentum conservation is not
-     $        accurate enough, ',(BUFF/REF)
+     $        accurate enough, ',DBLE(BUFF/REF)
             CALL MP_WRITE_MOM(P)
             WARNED=WARNED+1
           ENDIF
@@ -273,9 +273,9 @@ C     FOR THAT WE NEED A REFERENCE SCALE
      $   -MASSES(I)**2))/REF).GT.THRES_ONSHELL) THEN
           IF (WARNED.LT.20) THEN
             WRITE(*,*) 'ERROR:: Onshellness of the momentum of
-     $        particle ',I,' of mass ',MASSES(I),' is not accurate
-     $        enough, ', (SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2
-     $       -P(3,I)**2-MASSES(I)**2))/REF)
+     $        particle ',I,' of mass ',DBLE(MASSES(I)),' is not
+     $        accurate enough, ', DBLE(SQRT(ABS(P(0,I)**2-P(1,I)**2
+     $       -P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
             CALL MP_WRITE_MOM(P)
             WARNED=WARNED+1
           ENDIF
