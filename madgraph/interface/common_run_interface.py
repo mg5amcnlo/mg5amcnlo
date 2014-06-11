@@ -1628,13 +1628,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             except OSError:
                 pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
 
-        if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-            self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
-            
-        if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-            files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
-        elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
-            files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+        #check that the pdfset is not already there
+        if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
+           not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)):
+
+            if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+                self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
+
+            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+                files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+            elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
+                files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
             
 
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
