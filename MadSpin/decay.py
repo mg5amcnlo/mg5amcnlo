@@ -184,7 +184,7 @@ class Event:
 
     def get_particle_line(self,leg):
 
-        line=" %8d %2d %4d %4d %4d %4d %+13.7e %+13.7e %+13.7e %14.8e %14.8e %10.4e %10.4e" \
+        line=" %8d %2d %4d %4d %4d %4d %+18.11e %+18.11e %+18.11e %18.11e %18.11e %10.4e %10.4e" \
             % (leg["pid"], leg["istup"],leg["mothup1"],leg["mothup2"],\
                leg["colup1"],leg["colup2"],leg["momentum"].px,leg["momentum"].py,\
                 leg["momentum"].pz,leg["momentum"].E, leg["mass"],\
