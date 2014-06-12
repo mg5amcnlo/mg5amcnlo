@@ -4621,7 +4621,7 @@ C ----------------------------------------------------------------------------
 
       IMPLICIT NONE
 
-      include "jimmy.inc"
+      include 'JIMMY.INC'
 
 
       INTEGER N,i
@@ -4660,7 +4660,7 @@ C --------------------------------------------------------------------------
 C      CERNLIB INTEGRATION OPTIONS
 C --------------------------------------------------------------------------
 
-      include "jimmy.inc"
+      include 'JIMMY.INC'
 
 
       COMMON/QUADRE/IDEG
@@ -4686,8 +4686,8 @@ C ----------------------------------------------------------------------------
 C  Purpose: Used when eikonalising the total gamma-p xsec.
 C ----------------------------------------------------------------------------
 
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
 
       INTEGER NDIM
@@ -4712,7 +4712,7 @@ C     the eikonalised version (EIKON)
 C     --------------------------------------------------------------------
       IMPLICIT NONE
 
-      include "jimmy.inc"
+      include 'JIMMY.INC'
 
       DOUBLE PRECISION EPS, XSECN, DUMMY
       INTEGER NDIM, MAXPTS, MINPTS, LENWRK, I
@@ -4745,8 +4745,8 @@ C     Purpose: To construct the inclusive & eikonalised hadronic cross
 C     section at the given Z. The bremstralung factor for photons in not
 C     included.
 C     -----------------------------------------------------------------
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
       INTEGER I, J
       DOUBLE PRECISION Y, Z, JMSHAT, BREMFAC, JMSN
@@ -4813,8 +4813,8 @@ C
 C If the returned argument (ABORT) is TRUE then the event has been
 C vetoed by the eikonalisation, and should be abandoned.
 C -----------------------------------------------------------------
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
       LOGICAL ABORT
       INTEGER N, I, J, REPORT, CHECKSUM, CHECKEV, COUNTER
@@ -4961,8 +4961,8 @@ C          bin in s in which we lie.
 C          If the chosen particles are at a fixed cms, J is always 1
 C --------------------------------------------------------------------------
 
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
       DOUBLE PRECISION Z, EIK, UNEIK, JMGAMZ, TEST
       DOUBLE PRECISION JMRNDM, DICE, SOFAR, PROBS(MAXMS)
@@ -5049,8 +5049,8 @@ C --------------------------------------------------------------
 C Initialise default values for JIMMY. Call just after HWIGIN.
 C Author :    Jonathan Butterworth   08/01/95
 C --------------------------------------------------------------
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
       INTEGER I
 
@@ -5104,8 +5104,8 @@ c      Mods: 20-Aug-1993 JMB. Allow use of CERNLIB.
 c      Mods: 27-Jan-1995  RW. Allow e+e- (not NAGLIB!)
 c ----------------------------------------------------------------------
 
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
       INTEGER NPHOTONS
       DOUBLE PRECISION B2,AREA
@@ -5162,8 +5162,8 @@ C -----------------------------------------------------------------
 C     Adjust HERWIG cross section in light of Multiple Scattering.
 C     Must be called after (from?) HWEFIN.
 C -----------------------------------------------------------------
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
       WRITE (JMOUT,1)
     1 FORMAT(/10X,'MODIFIED OUTPUT ON ELEMENTARY PROCESS'/)
@@ -5222,8 +5222,8 @@ C           (e.g. pp) then input should be Z=-1.0, and J is set to 1
 C           WHICH = 1 returns uneikonalised xsec
 C           WHICH = 2 returns eikonalised xsec
 C -------------------------------------------------------------------
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
 
       DOUBLE PRECISION Z
@@ -5305,8 +5305,8 @@ C     calculate the uneikonalised gp cross section) and EIKON (to
 C     eikonalise it).
 C     ------------------------------------------------------------------------
 
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
       INTEGER I
       DOUBLE PRECISION XSECN, EPFUN, H, Y, SUM, TMP, DELTA
@@ -5362,8 +5362,8 @@ C Purpose:  Run initialisation specific to Jimmy. Call from HERWIG
 C           run initialisation (HWEINI).
 C --------------------------------------------------------------------------
 
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
 
       INTEGER I
@@ -5558,8 +5558,8 @@ C            Otherwise they are the pt2 of the current
 C            hard scatter and of the last, respectively.
 C -------------------------------------------------------------
 
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
 
       INTEGER NDIM
@@ -5659,8 +5659,8 @@ C --------------------------------------------------------------------------
 C Enforce virtual mass cutoffs of the structure function values
 C generated.
 C --------------------------------------------------------------------------
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
 
       INTEGER I
@@ -5709,8 +5709,8 @@ C  Purpose: Returns the probabilities of N scatters at a given z, by
 C           interpolating between the points stored during initialisation.
 C           Returned arg. J is the lower edge of the s bin we are in.
 C --------------------------------------------------------------------------
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
 
       DOUBLE PRECISION ZDUB
@@ -5780,7 +5780,7 @@ C ------------------------------------------------------------------------
 
       IMPLICIT NONE
 
-      include "jimmy.inc"
+      include 'JIMMY.INC'
 
 
       INTEGER WOT, SEED(2)
@@ -5817,7 +5817,7 @@ C --------------------------------------------------------------------
 
       IMPLICIT NONE
 
-      include "jimmy.inc"
+      include 'JIMMY.INC'
 
 
       INTEGER N, DUMMY2
@@ -5853,8 +5853,8 @@ C ----------------------------------------------------------------------------
 C  Purpose: Used when eikonalising the total hadronic xsec.
 C ----------------------------------------------------------------------------
 
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
 
       INTEGER NDIM, N
@@ -5902,8 +5902,8 @@ c
 c Author: JRF/JMB
 c   Mods: JRF Oct '93 - Include different parton processes.
 c ------------------------------------------------------------------
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
 
       INTEGER I, J, NF, FLAG1, FLAG2, PID(4)
@@ -6241,8 +6241,8 @@ C     ---------------------------------------------------------------------
 C     Purpose: To calculate the inclusive hadron(or photon)+hadron(or
 C     photon) => JETS 
 C     ---------------------------------------------------------------------
-      include "herwig65.inc"
-      include "jimmy.inc"
+      include 'HERWIG65.INC'
+      include 'JIMMY.INC'
 
       INTEGER I, MINPTS, NDIM, MAXPTS, LENWRK
 
