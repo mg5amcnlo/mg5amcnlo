@@ -5311,7 +5311,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             if res != 0 or error:
                 logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). We will use fjcore instead. Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                 'executable (v3+). We will use fjcore instead.\n Please set the \'fastjet\'' + \
+                 'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).' +
+                        '\n MG5_aMC> set fastjet /PATH/TO/fastjet-config\n')
                 self.options[args[0]] = None
                 self.history.pop()
             elif int(output.split('.')[0]) < 3:
@@ -5333,8 +5335,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 1
             if res != 0:
                 logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
-                        'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+                        'executable. \nPlease set the \'lhapdf\' variable to the (absolute) ' + \
+                        '/PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
+                        ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
                          'cluster_retry_wait']:
