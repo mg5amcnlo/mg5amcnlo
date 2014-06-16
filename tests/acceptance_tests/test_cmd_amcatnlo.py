@@ -192,10 +192,10 @@ class TestMECmdShell(unittest.TestCase):
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue('    1   = lpp' in card)
         self.assertTrue('6500   = ebeam' in card)
-        self.assertTrue('cteq6_m   = pdlabel' in card)
+        self.assertTrue('nn23nlo   = pdlabel' in card)
         card = card.replace('    1   = lpp', '    0   = lpp')
         card = card.replace('6500   = ebeam', ' 500   = ebeam')
-        card = card.replace('cteq6_m   = pdlabel', '\'lhapdf\' = pdlabel')
+        card = card.replace('nn23nlo   = pdlabel', '\'lhapdf\' = pdlabel')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
 
         self.do('calculate_xsect -f LO')
