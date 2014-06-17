@@ -9,6 +9,8 @@ c
       DOUBLE  PRECISION x,q,pdf(-7:7)
       DOUBLE  PRECISION f(-6:6)
       INTEGER IH,I
+      double precision  photon
+      LOGICAL has_photon
 C
 C     Include
 C
