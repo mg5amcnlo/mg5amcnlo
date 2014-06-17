@@ -154,6 +154,8 @@ c Scales
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
+      character*7 event_norm
+      common /event_normalisation/event_norm
 
 
 c      open(unit=58,file='res_1',status='old')
@@ -167,7 +169,11 @@ c get info on beam and PDFs
       XERRUP(1)=uncer
       XMAXUP(1)=absint/ievents
       LPRUP(1)=66
-      IDWTUP=-4
+      if (event_norm(1:5).eq.'unity') then
+         IDWTUP=-3
+      else
+         IDWTUP=-4
+      endif
       NPRUP=1
 
       write(lunlhe,'(a)')'<LesHouchesEvents version="1.0">'
