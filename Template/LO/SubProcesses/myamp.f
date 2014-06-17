@@ -454,7 +454,7 @@ c     Or: required offshell and forced, with bwcutoff.le.5
             if(prwidth(i,iconfig) .gt. 0.and.
      $         (lbw(nbw).eq.1.and.
      $          (prmass(i,iconfig)+5d0*prwidth(i,iconfig).lt.xm(i)
-     $           .or.prmass(i,iconfig)-5d0*prwidth(i,iconfig).gt.stot)
+     $           .or.prmass(i,iconfig)-5d0*prwidth(i,iconfig).gt.dsqrt(stot))
      $          .or.gforcebw(i,iconfig).eq.1.and.
      $              prmass(i,iconfig)+bwcutoff*prwidth(i,iconfig).lt.xm(i)
      $          .or.lbw(nbw).eq.2.and.gforcebw(i,iconfig).eq.1 .and.

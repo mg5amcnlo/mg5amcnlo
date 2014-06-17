@@ -64,13 +64,14 @@ c general MadFKS parameters
       external ran2
       double precision wgt_hel(max_bhel)
       common/c_born_hel/wgt_hel
-      integer nsqso
+      integer nsqso, MLResArrayDim
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
-      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       parameter (nbadmax = 5)
       double precision pmass(nexternal)
+      character*1 include_hel(max_bhel)
       integer goodhel(max_bhel),hel(0:max_bhel)
       save hel,goodhel
       logical fillh
@@ -93,9 +94,10 @@ c Ellis-Sexton scale)
       prec_found = 1.0d0
       if (firsttime_run) then
          call get_nsqso_loop(nsqso)
+         call get_answer_dimension(MLResArrayDim)
          allocate(accuracies(0:nsqso))
-         allocate(virt_wgts(0:3,0:nsqso))
-         allocate(virt_wgts_hel(0:3,0:nsqso))
+         allocate(virt_wgts(0:3,0:MLResArrayDim))
+         allocate(virt_wgts_hel(0:3,0:MLResArrayDim))
 c Make sure that whenever in the initialisation phase, MadLoop calls
 c itself again to perform stability check to make sure no unstable EPS
 c splips unnoticed.
@@ -218,12 +220,13 @@ c exists, which should be the case when firsttime is false.
                    mc_hel=0
                    goto 203
                endif
-               open (unit=67,file='MadLoop5_resources/HelFilter.dat',
+               open (unit=67,file='../MadLoop5_resources/HelFilter.dat',
      $   status='old',err=201)
                hel(0)=0
                j=0
+c optimized loop output
                do i=1,max_bhel
-                  read(67,*,err=201) goodhel(i)
+                  read(67,*,err=202) goodhel(i)
                   if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
                      j=j+1
                      goodhel(j)=goodhel(i)
@@ -231,7 +234,7 @@ c exists, which should be the case when firsttime is false.
                      hel(j)=i
                  endif
                enddo
-               goto 202
+               goto 203
 201            continue
                write (*,*) 'Cannot do MC over hel:'/
      &     /' "HelFilter.dat" does not exist'/
@@ -242,6 +245,18 @@ c exists, which should be the case when firsttime is false.
 c               mc_hel=0
 c               goto 203
 202            continue
+c non optimized loop output
+               rewind(67)
+               read(67,*,err=201) (include_hel(i),i=1,max_bhel)
+               do i=1,max_bhel
+                  if (include_hel(i).eq.'T') then
+                     j=j+1
+                     goodhel(j)=1
+                     hel(0)=hel(0)+1
+                     hel(j)=i
+                  endif
+               enddo
+203            continue
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities
                if (NHelForMCoverHels.eq.-1) then
@@ -254,7 +269,6 @@ c or more non-zero (independent) helicities
      $                 /' switching to explicitly summing over them'
                   mc_hel=0
                endif
-203            continue
                close(67)
             endif
          elseif(cpol .and. firsttime) then
@@ -307,9 +321,7 @@ c Update the statistics using the MadLoop return code (ret_code)
       else
          n10=n10+1              ! no known ret_code (10)
       endif
-      if (mod(ret_code,10).ne.0) then
-         n1=n1+1                ! no known ret_code (1)
-      endif
+         n1(mod(ret_code,10))=n1(mod(ret_code,10))+1                ! unit ret code distribution
 
 c Write out the unstable, non-rescued phase-space points (MadLoop return
 c code is in the four hundreds) or the ones that are found by the pole

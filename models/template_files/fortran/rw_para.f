@@ -28,6 +28,17 @@ c************************************************************************
 
       end
 
+      subroutine setParamLog(OnOff)
+
+      logical OnOff
+      logical WriteParamLog
+      data WriteParamLog/.TRUE./
+      common/IOcontrol/WriteParamLog
+
+      WriteParamLog = OnOff
+
+      end
+
       subroutine setpara2(param_name)
       implicit none
 
@@ -57,12 +68,13 @@ c************************************************************************
         endif
         call setpara(param_name)
       endif
-      if (param_name(1:1).ne.'*') then
+      if (param_name(1:1).eq.'*') then
          ! Dummy call to printout so that it is available in the
          ! dynamic library for MadLoop BLHA2
          ! In principle the --whole-archive option of ld could be 
          ! used but it is not always supported
          call printout()
+         call setParamLog(.True.)
       endif
       return
 

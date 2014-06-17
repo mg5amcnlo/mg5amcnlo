@@ -410,9 +410,9 @@ class TestFKSCommon(unittest.TestCase):
         """tests the correct sorting of a fks_leglist"""
         # QCD test
         input_pdgs = [ [1,1,21,1,1], [21,1,-1,1,1], [1,21,-1,1,1], [1,2,21,2,1],
-                       [1,-2,-2,21,1], [2,21,21,2,21] ]
+                       [1,-2,-2,21,1], [2,21,21,2,21], [1,2,2,6,1] ]
         sorted_pdgs = [ [1,1,1,1,21], [21,1,1,1,-1], [1,21,1,1,-1], [1,2,1,2,21],
-                       [1,-2,1,-2,21], [2,21,2,21,21]]
+                       [1,-2,1,-2,21], [2,21,2,21,21], [1,2,6,1,2]]
         for input,goal in zip(input_pdgs, sorted_pdgs):
             leglist = fks_common.to_fks_legs(
                     MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
@@ -422,15 +422,15 @@ class TestFKSCommon(unittest.TestCase):
             self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
             
         # QED test
-        input_pdgs = [ [1,1,22,1,1],[1,2,-2,1,-11],[1,2,2,6,1]]
-        sorted_pdgs = [ [1,1,22,1,1],[1,2,1,-2,-11],[1,2,1,6,2]]
-        for input,goal in zip(input_pdgs, sorted_pdgs):
-            leglist = fks_common.to_fks_legs(
-                    MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
-                            for i, id in enumerate(input)]), self.model)
-            leglist.sort(pert = 'QED')
-            self.assertEqual([l['id'] for l in leglist], goal)
-            self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
+###        input_pdgs = [ [1,1,22,1,1],[1,2,-2,1,-11],[1,2,2,6,1]]
+###        sorted_pdgs = [ [1,1,22,1,1],[1,2,1,-2,-11],[1,2,1,6,2]]
+###        for input,goal in zip(input_pdgs, sorted_pdgs):
+###            leglist = fks_common.to_fks_legs(
+###                    MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
+###                            for i, id in enumerate(input)]), self.model)
+###            leglist.sort(pert = 'QED')
+###            self.assertEqual([l['id'] for l in leglist], goal)
+###            self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
 
     
     def test_split_leg(self):

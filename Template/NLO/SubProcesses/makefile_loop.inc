@@ -2,7 +2,7 @@ include ../../../Source/make_opts
 
 LIBDIR = ../../../lib/
 LOOPLIB= libMadLoop.a
-%(pjdir)s
+
 LINKLIBS =  -L$(LIBDIR) -lcts -ldhelas -lmodel %(link_tir_libs)s
 LIBS = $(LIBDIR)libcts.$(libext) $(LIBDIR)libdhelas.$(libext)	\
 	$(LIBDIR)libmodel.$(libext) %(tir_libs)s

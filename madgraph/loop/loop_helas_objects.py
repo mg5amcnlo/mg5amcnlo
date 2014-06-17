@@ -1183,7 +1183,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 for mothers, orig_color_list in zip(mothers_list, color_lists):
                     for struct_wf, struct_color_list in struct_infos:
                         new_color_list = copy.copy(orig_color_list)+\
-                                         copy.copy(struct_color_list)
+                                                    copy.copy(struct_color_list)
                         new_mothers = copy.copy(mothers)
                         new_mothers.append(struct_wf)
                         new_color_lists.append(new_color_list)
@@ -1335,7 +1335,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                             # Store wavefunction
                             try:
                                 wf = diagram_wavefunctions[\
-                                       diagram_wavefunctions.index(wf)]
+                                                diagram_wavefunctions.index(wf)]
                             except ValueError:
                                 # Update wf number
                                 wfNumber = wfNumber + 1
@@ -1349,7 +1349,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                     # Use wf_mother_arrays to locate existing
                                     # wavefunction
                                     wf = wavefunctions[wf_mother_arrays.index(\
-                                    wf.to_array())]
+                                                                 wf.to_array())]
                                     # Since we reuse the old wavefunction, reset
                                     # wfNumber
                                     wfNumber = wfNumber - 1
@@ -1606,12 +1606,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             # loop diagram, UNLESS we are in the loop_optimized_output mode.
             if optimization:
                 wavefunctions.extend(struct_wfs)
-                wf_mother_arrays.extend([wf.to_array() for wf \
-                                         in struct_wfs])
+                wf_mother_arrays.extend([wf.to_array() for wf in struct_wfs])
                 if self.optimized_output:
                     wavefunctions.extend(loop_wfs)
-                    wf_mother_arrays.extend([wf.to_array() for wf \
-                                         in loop_wfs])
+                    wf_mother_arrays.extend([wf.to_array() for wf in loop_wfs])
             else:
                 wavefunctionNumber = len(process.get('legs'))
                 if self.optimized_output:
@@ -1671,6 +1669,15 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             helas_diagrams.append(loopHelDiag)
  
         self.set('diagrams', helas_diagrams)
+         # Check wf order consistency
+        if __debug__:
+            for diag in self.get('diagrams'):
+                # This is just a monitoring function, it will *NOT* affect the
+                # wavefunctions list of the diagram, but just raise an Error
+                # if the order is inconsistent, namely if a wavefunction in this
+                # list has a mother which appears after its position in the list.
+                diag.get('wavefunctions').check_wavefunction_numbers_order()
+
         # Inform how many loop wavefunctions have been reused.
         if self.optimized_output:
             logger.debug('%d loop wavefunctions have been reused'%self.lwf_reused+
@@ -1708,9 +1715,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
     def get_split_orders_mapping(self):
         """This function returns a list and a dictionary:
                         squared_orders, amps_orders
-        
         ===
-              
         The squared_orders lists all contributing squared_orders as tuple whose
         elements are the power at which are elevated the couplings orderered as
         in the 'split_orders'.
@@ -1741,9 +1746,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         
         'max_contrib_group_id': The same as above, except this time
         it is for the loop group id used for the loop reduction.
- 
         ===
-        
         The amps_orders is a *dictionary* with keys 
           'born_amp_orders',
           'loop_amp_orders'
@@ -2105,8 +2108,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """Gives the total number of wavefunctions for this ME, excluding the
         loop ones."""
         
-        return sum([ len(d.get('wavefunctions')) for d in \
-                       self.get('diagrams')])
+        return sum([ len(d.get('wavefunctions')) for d in self.get('diagrams')])
 
     def get_all_wavefunctions(self):
         """Gives a list of all wavefunctions for this ME"""

@@ -24,6 +24,14 @@ HCR_processes_short = []
 
 ML5EW_processes_short = []
 
+ML5EW_processes_short_sqso =  [
+   ('u u~ > d d~',{},['QCD QED'],{'QCD^2==':6,'QED^2==':0})
+   ,('u u~ > d d~',{},['QCD QED'],{'QCD^2==':4,'QED^2==':2})
+   ,('u u~ > d d~',{},['QCD QED'],{'QCD^2==':2,'QED^2==':4})
+   ,('u u~ > d d~',{},['QCD QED'],{'QCD^2==':0,'QED^2==':6})
+   ,('u u~ > d d~',{},['QCD QED'],{'QCD^2=':99,'QED^2=':99})
+   ]
+
 # The longer processes below are treated one by one so that they can be better
 # independently checked/updated (especially the corresponding reference pickle.)
 
@@ -183,6 +191,10 @@ class ML5EWTest(unittest.TestCase):
 
         file = open(os.path.join(_mg5_path,'Template','loop_material','StandAlone',
                                  'Cards','MadLoopParams.dat'), 'r')
+        
+        # Check if the process has squared order constraints
+        has_sqso = any('^2' in key for proc in my_proc_list for key in \
+                                                                 proc[3].keys())
 
         MLParams = file.read()
         MLred = re.search(r'#MLReductionLib\n',MLParams)
@@ -195,7 +207,7 @@ class ML5EWTest(unittest.TestCase):
             ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename,\
                           mu_r=mu_r)
 
-        if MLredstr=="1":
+        if MLredstr=="1" and not has_sqso:
             # Create a MERunner object for MadLoop 5 default
             ML5_default = loop_me_comparator.LoopMG5Runner()
             ML5_default.setup(_mg5_path, optimized_output=False, temp_dir=filename,\
@@ -204,7 +216,7 @@ class ML5EWTest(unittest.TestCase):
         # Create and setup a comparator
         my_comp = loop_me_comparator.LoopMEComparator()
         
-        if MLredstr=="1":
+        if MLredstr=="1" and not has_sqso:
         # Always put the saved run first if you use it, so that the corresponding PS
         # points will be used.
             if pickle_file != "" and not loop_induce:
@@ -268,7 +280,19 @@ class ML5EWTest(unittest.TestCase):
             self.compare_processes(ML5EW_processes_short,model = self.test_model_name,
                                    pickle_file = 'ml5ew_short_parallel_tests.pkl',
                                         filename = 'ptest_short_ml5ew_vs_old_ml5ew',
-                                                            chosen_runner='ML5')
+                                                        chosen_runner='ML5_opt')
+
+    #===========================================================================
+    # First tests consisting in a list of quick 2>2 processes to be run together
+    #===========================================================================
+
+    def test_short_ML5EW_sm_vs_stored_ML5EW_sqso(self):
+        if ML5EW_processes_short_sqso:
+            self.compare_processes(ML5EW_processes_short_sqso,
+                    model = self.test_model_name,
+                    pickle_file = 'ml5ew_short_parallel_tests_sqso.pkl',
+                    filename = 'ptest_short_ml5ew_vs_old_ml5ew_sqso', 
+                    chosen_runner='ML5_opt')
 
     # The tests below probe one quite long process at a time individually, so
     # one can better manage them.

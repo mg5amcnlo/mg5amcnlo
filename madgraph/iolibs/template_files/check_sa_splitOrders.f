@@ -33,16 +33,32 @@ C
       REAL*8 MATELEM, MATELEMS(0:NSPLITORDERS)        
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
+
+      integer NChosen
+      character*20 chosen_so_indices(NSPLITORDERS)
+
 C     
 C     EXTERNAL
 C     
       REAL*8 DOT
       EXTERNAL DOT
+
+      LOGICAL CHOSEN_SO_CONFIGS(NSPLITORDERS)
+      COMMON/CHOSEN_BORN_SQSO/CHOSEN_SO_CONFIGS
       
 C -----
 C     BEGIN CODE
 C -----
 C     
+c     Start by initializing what is the squared split orders indices chosen
+      NCHOSEN=0
+      DO I=1,NSPLITORDERS
+        IF (CHOSEN_SO_CONFIGS(I)) THEN
+          NCHOSEN=NCHOSEN+1
+          WRITE(CHOSEN_SO_INDICES(NCHOSEN),'(I3,A1)') I,')'
+        ENDIF
+      ENDDO
+
 C ---  INITIALIZATION CALLS
 C     
 c ---  Call to initialize the values of the couplings, masses and widths 
@@ -88,7 +104,10 @@ c
       MATELEM=MATELEMS(0)
       %(printout_sqorders)s
 c
-
+      IF (NCHOSEN.ne.NSPLITORDERS) THEN
+        write (*,*) "Selected squared coupling orders combination for the sum below:"
+        write (*,*) (chosen_so_indices(I),I=1,NCHOSEN)
+      endif
       write (*,*) "Total Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
       write (*,*) "-----------------------------"
 

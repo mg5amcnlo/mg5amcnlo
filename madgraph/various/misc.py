@@ -179,6 +179,30 @@ def which_lib(program):
 
 
 #===============================================================================
+# find a library
+#===============================================================================
+def which_lib(lib):
+    def is_lib(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.R_OK)
+
+    if not lib:
+        return None
+
+    fpath, fname = os.path.split(lib)
+    if fpath:
+        if is_lib(lib):
+            return lib
+    else:
+        locations = sum([os.environ[env_path].split(os.pathsep) for env_path in
+           ["DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
+                                                  if env_path in os.environ],[])
+        for path in locations:
+            lib_file = os.path.join(path, lib)
+            if is_lib(lib_file):
+                return lib_file
+    return None
+
+#===============================================================================
 # Return Nice display for a random variable
 #===============================================================================
 def nice_representation(var, nb_space=0):
@@ -323,7 +347,7 @@ def mod_compilator(directory, new='gfortran', current=None):
             current = 'gfortran'
         elif new == 'gfortran' and current is None:
             current = 'g77'
-        else:
+        elif current is None:
             current = 'g77|gfortran'
         pattern = re.compile(current)
         text= pattern.sub(new, text)
@@ -469,6 +493,15 @@ def rm_file_extension( ext, dirname, names):
     [os.remove(os.path.join(dirname, name)) for name in names if name.endswith(ext)]
 
 
+
+def multiple_replacer(*key_values):
+    replace_dict = dict(key_values)
+    replacement_function = lambda match: replace_dict[match.group(0)]
+    pattern = re.compile("|".join([re.escape(k) for k, v in key_values]), re.M)
+    return lambda string: pattern.sub(replacement_function, string)
+
+def multiple_replace(string, *key_values):
+    return multiple_replacer(*key_values)(string)
 
 # Control
 def check_system_error(value=1):
@@ -642,12 +675,21 @@ class TMP_directory(object):
     """
 
     def __init__(self, suffix='', prefix='tmp', dir=None):
+        self.nb_try_remove = 0
         import tempfile   
         self.path = tempfile.mkdtemp(suffix, prefix, dir)
 
-
+    
     def __exit__(self, ctype, value, traceback ):
-        shutil.rmtree(self.path)
+        try:
+            shutil.rmtree(self.path)
+        except OSError:
+            self.nb_try_remove += 1
+            if self.nb_try_remove < 3:
+                time.sleep(10)
+                self.__exit__(ctype, value, traceback)
+            else:
+                logger.warning("Directory %s not completely cleaned. This directory can be removed manually" % self.path)
         
     def __enter__(self):
         return self.path

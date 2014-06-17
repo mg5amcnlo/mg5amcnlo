@@ -28,7 +28,7 @@ C----------------------------------------------------------------------
       integer maxcuts
       parameter (maxcuts=2)
       character*5 cc(maxcuts)
-      data cc/'     ',' cuts'/
+      data cc/'     ','cuts '/
       real*8 pi
       PARAMETER (PI=3.14159265358979312D0)
       real*8 sbin(100),smin(100),smax(100)
@@ -107,7 +107,7 @@ c
           write(tmpstr3,'(i3)')io
           call mbook(l,'sing '//tmpstr1(1:3)//
      &    ' '//tmpstr3(1:3)//' '
-     &       //weights_info(kk)//cc(icuts),sbin(io),smin(io),smax(io))
+     &       //cc(icuts)//weights_info(kk),sbin(io),smin(io),smax(io))
         enddo
         enddo
         ipair=0
@@ -121,7 +121,7 @@ c
           write(tmpstr3,'(i3)')io
           call mbook(l,'corr '//tmpstr1(1:3)//' '//
      &       tmpstr2(1:3)//' '//tmpstr3(1:3)//
-     &     ' '//weights_info(kk)//cc(icuts),cbin(io),cmin(io),cmax(io))
+     &     ' '//cc(icuts)//weights_info(kk),cbin(io),cmin(io),cmax(io))
         enddo
         enddo
         enddo
@@ -143,12 +143,12 @@ C----------------------------------------------------------------------
       common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='PYTHIA.top',STATUS='UNKNOWN')
       XNORM=1.D0/IEVT
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+        CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do kk=1,nwgt_analysis
       do icuts=1,ncuts

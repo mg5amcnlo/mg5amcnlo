@@ -75,9 +75,7 @@ ccc
       external ALPHAS_not_timed
 
 c     timing statistics
-      real*4 tbefore, tAfter
-      real*4 tTot, tOLP, tFastJet, tPDF
-      common/timings/tTot, tOLP, tFastJet, tPDF
+      include "timing_variables.inc"
 
 c     This function takes roughly 0.6 micro-seconds and the function
 c     cpu_time takes 0.3 so it does not make much sense to always leave

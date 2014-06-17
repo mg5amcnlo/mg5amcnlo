@@ -556,9 +556,12 @@ class Amplitude(base_objects.PhysicsObject):
                 part = model.get('particle_dict')[leg.get('id')]
                 try:
                     value = part.get(charge)
-                except AttributeError, PhysicsObjectError:
-                    value = 0
-                    
+                except (AttributeError, base_objects.PhysicsObject.PhysicsObjectError):
+                    try:
+                        value = getattr(part, charge)
+                    except AttributeError:
+                        value = 0
+                        
                 if (leg.get('id') != part['pdg_code']) != leg['state']:
                     total -= value
                 else:
@@ -722,34 +725,8 @@ class Amplitude(base_objects.PhysicsObject):
         # in this way. We shall do this only if the diagrams are not asked to
         # be returned, as it is the case for NLO because it this case the
         # interference are not necessarily among the diagrams generated here only.
-        if not returndiag:   
-            # Start by checking the positive squared order constraints
-            for order, value in process.get('squared_orders').items():
-                if value >= 0:
-                    # First make sure there are some diagrams left
-                    if len(res)==0: break
-                    # Assuming born amplitude squared (see comment above)
-                    min_amp_order=min(diag.get_order(order) for diag in res)
-                    res = base_objects.DiagramList(filter(lambda diag: \
-                                diag.get_order(order)<=value-min_amp_order,res))
-            # Now check any negative order constraint
-            try:
-                neg_order=[elem for elem in process.get('orders').items()+\
-                          process.get('squared_orders').items() if elem[1]<0][0]
-                # Make sure there still are some diagrams
-                if len(res)==0:
-                    raise IndexError
-                min_amp_order=min(diag.get_order(neg_order[0]) for diag in res)
-                # When not including loop corrections, restricting a coupling
-                # order with a negative value at the amplitude level or at the
-                # squared order level does not make a difference.
-                # The expansion is in terms of alpha_x, not g_x, hence the
-                # factor 2.
-                res = base_objects.DiagramList(filter(lambda diag: \
-                                  diag.get_order(neg_order[0])<= min_amp_order+\
-                                                       2*(-neg_order[1]-1),res))           
-            except IndexError:
-                pass
+        if not returndiag and len(res)>0:
+            res = self.apply_squared_order_constraints(res)
 
         # Filter the diagrams according to the squared coupling order
         # constraints and possible the negative one. Remember that OrderName=-n
@@ -830,6 +807,44 @@ class Amplitude(base_objects.PhysicsObject):
            return not failed_crossing
         else:
            return not failed_crossing, res
+
+    def apply_squared_order_constraints(self, diag_list):
+        """Applies the user specified squared order constraints on the diagram
+        list in argument."""
+
+        res = copy.copy(diag_list)                  
+
+        # Iterate the filtering since the applying the constraint on one
+        # type of coupling order can impact what the filtering on a previous
+        # one (relevant for the '==' type of constraint).
+        while True:   
+            new_res = res.apply_positive_sq_orders(res, 
+                                          self['process'].get('squared_orders'), 
+                                              self['process']['sqorders_types'])
+            # Exit condition
+            if len(res)==len(new_res):
+                break
+            # Actualizing the list of diagram for the next iteration
+            res = new_res
+
+        # Now treat the negative squared order constraint (at most one)
+        neg_orders = [(order, value) for order, value in \
+                       self['process'].get('squared_orders').items() if value<0]
+        if len(neg_orders)==1:
+            neg_order, neg_value = neg_orders[0]
+            # Now check any negative order constraint
+            res, target_order = res.apply_negative_sq_order(res, neg_order,\
+                  neg_value, self['process']['sqorders_types'][neg_order])
+            # Substitute the negative value to this positive one so that
+            # the resulting computed constraints appears in the print out
+            # and at the output stage we no longer have to deal with 
+            # negative valued target orders
+            self['process']['squared_orders'][neg_order]=target_order
+        elif len(neg_orders)>1:
+            raise MadGraph5Error('At most one negative squared order constraint'+\
+                                   ' can be specified, not %s.'%str(neg_orders))
+
+        return res
 
     def create_diagram(self, vertexlist):
         """ Return a Diagram created from the vertex list. This function can be
@@ -1672,6 +1687,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('perturbation_couplings'),
                               'squared_orders': \
                                  process_definition.get('squared_orders'),
+                              'sqorders_types': \
+                                 process_definition.get('sqorders_types'),                              
                               'overall_orders': \
                                  process_definition.get('overall_orders'),
                               'has_born': \
@@ -1903,6 +1920,12 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('required_s_channels'),
                               'forbidden_onsh_s_channels': \
                                  process_definition.get('forbidden_onsh_s_channels'),
+                              'sqorders_types': \
+                                 process_definition.get('sqorders_types'),
+                              'squared_orders': \
+                                 process_definition.get('squared_orders'),
+                              'split_orders': \
+                                 process_definition.get('split_orders'), 
                               'forbidden_s_channels': \
                                  process_definition.get('forbidden_s_channels'),
                               'forbidden_particles': \

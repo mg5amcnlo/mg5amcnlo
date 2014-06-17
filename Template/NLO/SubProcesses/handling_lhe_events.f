@@ -23,11 +23,21 @@ c
       implicit none 
       integer ifile,nevents
       character*10 MonteCarlo
+c Scales
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
 c
       write(ifile,'(a)')
      #     '<LesHouchesEvents version="1.0">'
       write(ifile,'(a)')
      #     '  <!--'
+      write(ifile,'(a)')'  <scalesfunctionalform>'
+      write(ifile,'(a)')muR_id_str(1:len_trim(muR_id_str))
+      write(ifile,'(a)')muF1_id_str(1:len_trim(muF1_id_str))
+      write(ifile,'(a)')muF2_id_str(1:len_trim(muF2_id_str))
+      write(ifile,'(a)')QES_id_str(1:len_trim(QES_id_str))
+      write(ifile,'(a)')'  </scalesfunctionalform>'
       write(ifile,'(a)')
      #     MonteCarlo
       write(ifile,'(a)')
@@ -45,8 +55,12 @@ c
       subroutine write_lhef_header_banner(ifile,nevents,MonteCarlo,path)
       implicit none 
       integer ifile,nevents,iseed,i,pdf_set_min,pdf_set_max,idwgt
-      double precision mcmass(-5:21),rw_Rscale_down,rw_Rscale_up
+      double precision mcmass(-16:21),rw_Rscale_down,rw_Rscale_up
      $     ,rw_Fscale_down,rw_Fscale_up
+c Scales
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
       character*10 MonteCarlo
       character*100 path
       character*72 buffer,buffer_lc,buffer2
@@ -154,11 +168,22 @@ c Update the number of events
       endif
       if (.not.rwgt_skip_pdf) numPDFpairs=(pdf_set_max-pdf_set_min+1)/2
       write(ifile,'(a)') '  </MGRunCard>'
+c Functional form of the scales
+      write(ifile,'(a)') '  <scalesfunctionalform>'
+      write(ifile,'(a)')muR_id_str(1:len_trim(muR_id_str))
+      write(ifile,'(a)')muF1_id_str(1:len_trim(muF1_id_str))
+      write(ifile,'(a)')muF2_id_str(1:len_trim(muF2_id_str))
+      write(ifile,'(a)')QES_id_str(1:len_trim(QES_id_str))
+      write(ifile,'(a)') '  </scalesfunctionalform>'
+c MonteCarlo Masses
       write(ifile,'(a)') '  <MonteCarloMasses>'
       call fill_MC_mshell_wrap(MonteCarlo,mcmass)
       do i=1,5
          write (ifile,'(2x,i6,3x,e12.6)')i,mcmass(i)
       enddo
+      write (ifile,'(2x,i6,3x,e12.6)')11,mcmass(11)
+      write (ifile,'(2x,i6,3x,e12.6)')13,mcmass(13)
+      write (ifile,'(2x,i6,3x,e12.6)')15,mcmass(15)
       write (ifile,'(2x,i6,3x,e12.6)')21,mcmass(21)
       write(ifile,'(a)') '  </MonteCarloMasses>'
 c Write here the reweight information if need be
@@ -231,11 +256,14 @@ c Write here the reweight information if need be
 
       subroutine read_lhef_header(ifile,nevents,MonteCarlo)
       implicit none 
-      integer ifile,nevents,i,ii,iistr
+      integer ifile,nevents,i,ii,ii2,iistr
       character*10 MonteCarlo
       character*80 string,string0
       character*3 event_norm
       common/cevtnorm/event_norm
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
       nevents = -1
       MonteCarlo = ''
 c
@@ -244,15 +272,21 @@ c
         string0=string
         if (index(string,'</header>').ne.0) return
         read(ifile,'(a)')string
-        if(index(string,'= nevents').ne.0)
-     #    read(string,*)nevents,string0
+        if(index(string,'= nevents').ne.0) read(string,*)nevents,string0
         if(index(string,'parton_shower').ne.0)then
            ii=iistr(string)
-           MonteCarlo=string(ii:ii+10)
+           ii2=min(index(string,'=')-1,ii+9)
+           MonteCarlo=string(ii:ii2)
         endif
         if(index(string,'event_norm').ne.0)then
            ii=iistr(string)
            event_norm=string(ii:ii+3)
+        endif
+        if(index(string,'<scalesfunctionalform>').ne.0) then
+           read(ifile,'(a)') muR_id_str
+           read(ifile,'(a)') muF1_id_str
+           read(ifile,'(a)') muF2_id_str
+           read(ifile,'(a)') QES_id_str
         endif
       enddo
 c Works only if the name of the MC is the last line of the comments
@@ -264,7 +298,7 @@ c of headers
         read(ifile,'(a)')string
       enddo
 c if the file is a partial file the header is non-standard   
-      if (MonteCarlo .ne. '') read(string0,250) nevents
+      if (MonteCarlo .ne. '')read(string0,250) nevents
  250  format(1x,i8)
       return
       end
@@ -275,13 +309,17 @@ c Avoid overloading read_lhef_header, meant to be used in utilities
       subroutine read_lhef_header_full(ifile,nevents,itempsc,itempPDF,
      #                                 MonteCarlo)
       implicit none 
-      integer ifile,nevents,i,ii,iistr,ipart,itempsc,itempPDF
+      integer ifile,nevents,i,ii,ii2,iistr,ipart,itempsc,itempPDF
       character*10 MonteCarlo
       character*80 string,string0
       character*3 event_norm
       common/cevtnorm/event_norm
-      double precision temp,remcmass(-5:21)
+      double precision temp,remcmass(-16:21)
       common/cremcmass/remcmass
+c Scales
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
       ipart=-1000000
       nevents = -1
       MonteCarlo = ''
@@ -297,7 +335,8 @@ c
      #    read(string,*)nevents,string0
         if(index(string,'parton_shower').ne.0)then
            ii=iistr(string)
-           MonteCarlo=string(ii:ii+10)
+           ii2=min(index(string,'=')-1,ii+9)
+           MonteCarlo=string(ii:ii2)
         endif
         if(index(string,'event_norm').ne.0)then
            ii=iistr(string)
@@ -309,7 +348,7 @@ c
           dowhile( index(string,'</montecarlomasses>').eq.0 .and.
      #             index(string,'</MonteCarloMasses>').eq.0 )
             read(string,*)ipart,temp
-            if(ipart.lt.-5.or.ipart.gt.21)then
+            if(ipart.lt.-16.or.ipart.gt.21)then
               write(*,*)'Error in read_lhef_header:'
               write(*,*)' incomprehensible list of parton masses',ipart
               stop
@@ -335,6 +374,12 @@ c
             itempPDF=itempPDF+1
           enddo
           itempPDF=itempPDF-1
+        endif
+        if(index(string,'<scalesfunctionalform>').ne.0) then
+           read(ifile,'(a)') muR_id_str
+           read(ifile,'(a)') muF1_id_str
+           read(ifile,'(a)') muF2_id_str
+           read(ifile,'(a)') QES_id_str
         endif
       enddo
 c Works only if the name of the MC is the last line of the comments
@@ -495,14 +540,15 @@ c
             write(ifile,442)wgtwmcxsecE(i),
      #                      wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) write(ifile,'(1x,e14.8,1x,i4,1x,i4)')
-     &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
+          if(jwgtinfo.eq.4) write(ifile,
+     f         '(1x,e14.8,1x,e14.8,1x,i4,1x,i4)')
+     &       wgtbpower,wgtcpower,nFKSprocess_used,nFKSprocess_used_born
           write(ifile,'(a)') '  </rwgt>'
          elseif(jwgtinfo.eq.5) then
            write(ifile,'(a)')'  <rwgt>'
            if (iSorH_lhe.eq.1) then ! S-event
-              write(ifile,'(1x,e14.8,i4,i4)') wgtbpower,nScontributions
-     $             ,i_process
+              write(ifile,'(1x,e14.8,1x,e14.8,i4,i4)') 
+     f             wgtbpower,wgtcpower,nScontributions,i_process
               write(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
      &             ,wgtref_nbody_all(i_process)
               do i=1,mexternal
@@ -545,7 +591,8 @@ c$$$                 enddo
      $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              write(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
+              write(ifile,'(1x,e14.8,1x,e14.8,i4)')
+     f             wgtbpower,wgtcpower,i_process
               iFKS=nFKSprocess_used*2
               write(ifile,'(1x,i4)') nFKSprocess_used
               write(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS,i_process)
@@ -695,13 +742,15 @@ c
             read(ifile,442)wgtwmcxsecE(i),
      #                     wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) read(ifile,'(1x,e14.8,1x,i4,1x,i4)')
-     &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
+          if(jwgtinfo.eq.4) read(ifile,
+     f     '(1x,e14.8,1x,e14.8,1x,i4,1x,i4)')
+     &     wgtbpower,wgtcpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.5) then
            read(ifile,'(a)')string
            if (iSorH_lhe.eq.1) then ! S-event
-              read(ifile,'(1x,e14.8,i4,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,e14.8,1x,e14.8,i4,i4)')
+     f             wgtbpower,wgtcpower,nScontributions
      $             ,i_process
               read(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
      &             ,wgtref_nbody_all(i_process)
@@ -747,7 +796,8 @@ c
      $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
+              read(ifile,'(1x,e14.8,1x,e14.8,i4)')
+     f             wgtbpower,wgtcpower,i_process
               read(ifile,'(1x,i4)') nFKSprocess_used
               iFKS=nFKSprocess_used*2
               read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS,i_process)
@@ -908,13 +958,15 @@ c
             read(ifile,442)wgtwmcxsecE(i),
      #                     wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) read(ifile,'(1x,e14.8,1x,i4,1x,i4)')
-     &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
+          if(jwgtinfo.eq.4) read(ifile,
+     f      '(1x,e14.8,1x,e14.8,1x,i4,1x,i4)')
+     &      wgtbpower,wgtcpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.5) then
            read(ifile,'(a)')string
            if (iSorH_lhe.eq.1) then ! S-event
-              read(ifile,'(1x,e14.8,i4,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,e14.8,1x,e14.8,i4,i4)') 
+     f             wgtbpower,wgtcpower,nScontributions
      $             ,i_process
               read(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
      &             ,wgtref_nbody_all(i_process)
@@ -960,7 +1012,8 @@ c
      $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
+              read(ifile,'(1x,e14.8,1x,e14.8,i4)') 
+     f             wgtbpower,wgtcpower,i_process
               read(ifile,'(1x,i4)') nFKSprocess_used
               iFKS=nFKSprocess_used*2
               read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS,i_process)
@@ -1063,13 +1116,13 @@ c
 
 
       subroutine fill_MC_mshell_wrap(MC,masses)
-      double precision mcmass(-5:21),masses(-5:21)
+      double precision mcmass(-16:21),masses(-16:21)
       common/cmcmass/mcmass
       character*10 MonteCarlo,MC
       common/cMonteCarloType/MonteCarlo
       MonteCarlo=MC
       call fill_MC_mshell()
-      do i=-5,21
+      do i=-16,21
          masses(i)=mcmass(i)
       enddo
       return

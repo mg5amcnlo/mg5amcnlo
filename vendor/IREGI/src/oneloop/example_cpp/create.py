@@ -16,7 +16,7 @@ cppintf = 'no'
 ddf90mod = ''
 mpf90mod = ''
 
-lines = open('Config','r').readlines()
+lines = open('makefile_config','r').readlines()
 for line in lines:
     line = line.rstrip('\n')
     if   re.match(r'^ *FC'      ,line): fc       = re.sub(r'^ *FC *= *'      ,'',line)

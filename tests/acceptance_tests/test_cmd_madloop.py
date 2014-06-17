@@ -226,7 +226,7 @@ class TestCmdLoop(unittest.TestCase):
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
             self.assertTrue('Double precision results' in res)
-            self.assertTrue('Number of Exceptional PS points' in res)
+            self.assertTrue('Number of Unstable PS points' in res)
             self.assertTrue(res.count('NA')<=3)
         except:
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)

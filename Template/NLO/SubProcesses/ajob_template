@@ -7,8 +7,9 @@ if [[ ! -e $1 && -e ../$1 ]] ; then
 fi
 }
 
-
-
+if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then
+    tar -xf MadLoop5_resources.tar
+fi
 
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
@@ -62,12 +63,13 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
             fi
         fi
     fi
-    if  [[ ! -e randinit ]] ; then
-        if [[ -e ../randinit ]] ; then
-            cp ../randinit .
-        else
-            cp ../../randinit .
-        fi
+    if  [[ -e randinit ]] ; then
+	rm -f randinit
+    fi
+    if [[ -e ../randinit ]] ; then
+        ln -sf ../randinit .
+    else
+        ln -sf ../../randinit .
     fi
     if  [[ ! -e symfact.dat ]] ; then
     	if [[  -e ../symfact.dat ]] ; then
@@ -78,9 +80,11 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     fi
 
     link1up FKS_params.dat
-    link1up MadLoop5_resources
+#   Not necessary anymore
+#    link1up MadLoop5_resources
     link1up OLE_order.olc
     link1up param_card.dat
+    link1up libLHAPDF.so
     
 #   check where is the basic file for the creation of input_app.txt
 #       

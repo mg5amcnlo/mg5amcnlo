@@ -555,7 +555,13 @@ c
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
      $                npart,numproc,flip)
 
-
+      if (nincoming.eq.1)then
+        do i=-nexternal+3,2*nexternal-3
+            if (jpart(2,i).eq.1)then
+                 jpart(3,i) = 0
+            endif
+        enddo
+      endif
 c
 c     Write events to lun
 c

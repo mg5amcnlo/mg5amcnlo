@@ -59,7 +59,7 @@ typedef struct _mcfxdrFileHeader{
 	char closingDate[30];
 	unsigned int numevts_expect;    /* The number of event expected */
 	unsigned int numevts;    /* The number of evts really written on tape */
-	unsigned int firstTable; /* The XDR locator for the first table */
+	off_t firstTable; /* The XDR locator for the first table */
 	unsigned int dimTable; /* The number of events listed in the fixed-sized 
 	                           event table */
 	unsigned int nBlocks;		
@@ -80,7 +80,7 @@ typedef struct _mcfxdrEventTable{
 				the id and version, and this word */
 	char version[MCF_XDR_VERSION_LENGTH+1];
 	                 /* The version of this particular block */
-	int nextLocator; /*The Locator for the next Event Table. */
+	off_t nextLocator; /* The Locator for the next Event Table. */
 	int previousnumevts; /* The size of the previous Table */
         int numevts;	/* The number of events in this chunk */
         unsigned int dim; /* The dimension of the arrays listed below */
@@ -89,7 +89,7 @@ typedef struct _mcfxdrEventTable{
 	int *storenums; /* The list of Store number within a Run */
 	int *runnums;   /* The list of run numbers */
 	int *trigMasks; /* The list of user-defined Trigger masks */
-	unsigned int *ptrEvents;
+	off_t *ptrEvents;
 			/* The list of XDR pointers for these events */ 
 } mcfxdrEventTable;
 
@@ -117,7 +117,7 @@ typedef struct _mcfxdrEventHeader{
 	unsigned int nBlocks;  /* The number of Blocks  */
 	unsigned int dimBlocks; /* The dimension of the two following arrays */
 	int *blockIds;     /* The list of Block identifiers */
-	unsigned int *ptrBlocks;
+	off_t *ptrBlocks;
 			/* The list of XDR pointers for these blocks */ 
 	unsigned int nNTuples;
 	                /* The number of Ntuples defined for this event */
@@ -125,7 +125,7 @@ typedef struct _mcfxdrEventHeader{
 	unsigned int dimNTuples; /* The dimension of the two following arrays */
 	int *nTupleIds; /* The list of Ntuple identifiers, pointing to the 
 				global list array */                				
-	unsigned int *ptrNTuples;
+	off_t *ptrNTuples;
 			/* The list of XDR pointers for these NTuples */ 
 	
 } mcfxdrEventHeader;
@@ -141,10 +141,10 @@ typedef struct _mcfStream{
 	int numWordsT;  /* The number of words read or written, Total */
 	mcfxdrFileHeader *fhead; /* The File header */
 	mcfxdrEventHeader *ehead; /* The current Event Header */  
-	unsigned int currentPos; /* The XDR current position */
-	unsigned int evtPos;     /* The XDR position for the begingin of evt */
-	unsigned int tablePos;   /* The XDR position for the table */
-	unsigned int firstPos;   /* The XDR position just before file header */
+	off_t currentPos; /* The XDR current position */
+	off_t evtPos;     /* The XDR position for the begingin of evt */
+	off_t tablePos;   /* The XDR position for the table */
+	off_t firstPos;   /* The XDR position just before file header */
 	XDR *xdr;       /* The XDR stream */
 	char *filename; /* Filename */
 	FILE *filePtr;  /* The file pointer */

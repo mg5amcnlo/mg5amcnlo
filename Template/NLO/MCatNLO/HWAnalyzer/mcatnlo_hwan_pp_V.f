@@ -12,7 +12,7 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE HWABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       include 'reweight0.inc'
@@ -21,7 +21,7 @@ C----------------------------------------------------------------------
       PARAMETER (PI=3.14159265358979312D0)
       integer j,kk,l,jpr
       character*5 cc(2)
-      data cc/'     ','     '/
+      data cc/'     ','Born '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
@@ -37,22 +37,23 @@ c
       do j=1,1
       do kk=1,nwgt_analysis
       l=(kk-1)*10+(j-1)*5
-      call mbook(l+ 1,'V pt     '//weights_info(kk)//cc(j)
+      call mbook(l+ 1,'V pt     '//cc(j)//weights_info(kk)
      &     ,2.d0,0.d0,200.d0)
-      call mbook(l+ 2,'V log pt '//weights_info(kk)//cc(j)
+      call mbook(l+ 2,'V log pt '//cc(j)//weights_info(kk)
      &     ,0.05d0,0.d0,5.d0)
-      call mbook(l+ 3,'V y      '//weights_info(kk)//cc(j)
+      call mbook(l+ 3,'V y      '//cc(j)//weights_info(kk)
      &     ,0.25d0,-9.d0,9.d0)
-      call mbook(l+ 4,'V eta    '//weights_info(kk)//cc(j)
+      call mbook(l+ 4,'V eta    '//cc(j)//weights_info(kk)
      &     ,0.25d0,-9.d0,9.d0)
-      call mbook(l+ 5,'mV       '//weights_info(kk)//cc(j)
+      call mbook(l+ 5,'mV       '//cc(j)//weights_info(kk)
      &     ,bin,xmi,xms)
       enddo
       enddo
  999  END
+
 C----------------------------------------------------------------------
       SUBROUTINE HWAEND
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       REAL*8 XNORM
@@ -64,12 +65,12 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+        CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do i=1,1
       do kk=1,nwgt_analysis
@@ -86,7 +87,7 @@ C
 
 C----------------------------------------------------------------------
       SUBROUTINE HWANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       include 'reweight0.inc'
@@ -117,7 +118,7 @@ c
 c
 c CHOOSE IDENT=24 FOR W+, IDENT=-24 FOR W-, IDENT=23 FOR Z0
       IDENT=24
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,4)).EQ.SIGN(1.D0,PHEP(3,5)))THEN
         CALL HWWARN('HWANAL',111)
@@ -141,7 +142,7 @@ C EFFECT, SO THROW THE EVENT AWAY
         IST=ISTHEP(IHEP)      
         ID=IDHW(IHEP)
         ID1=IDHEP(IHEP)
-C Herwig relabels the vector boson V in Drell-Yan; this doesn't happen with
+C Herwig relabels the vector boson V in Drell-Yan; this doesn''t happen with
 C MC@NLO; in S events, V appears as HARD, in H as V, but with status 155
 C rather than 195. We add here 195 for future compatibility
         IF(IPROC.LT.0)THEN

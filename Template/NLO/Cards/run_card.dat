@@ -109,6 +109,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
  15  = bwcutoff
 #***********************************************************************
 # Cuts on the jets                                                     *
+# Jet clustering is performed by FastJet.
 # When matching to a parton shower, these generation cuts should be    *
 # considerably softer than the analysis cuts.                          *
 # (more specific cuts can be specified in SubProcesses/cuts.f)         *
@@ -121,10 +122,12 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 # Cuts on the charged leptons (e+, e-, mu+, mu-, tau+ and tau-)        *
 # (more specific gen cuts can be specified in SubProcesses/cuts.f)     *
 #***********************************************************************
-   0  = ptl   ! Min lepton transverse momentum
-  -1  = etal  ! Max lepton abs(pseudo-rap) (a value .lt.0 means no cut)
-   0  = drll  ! Min distance between opposite sign lepton pairs
-  30  = mll   ! Min inv. mass of all oppositely charged lepton pairs
+   0  = ptl     ! Min lepton transverse momentum
+  -1  = etal    ! Max lepton abs(pseudo-rap) (a value .lt.0 means no cut)
+   0  = drll    ! Min distance between opposite sign lepton pairs
+   0  = drll_sf ! Min distance between opp. sign same-flavor lepton pairs
+   0  = mll     ! Min inv. mass of all opposite sign lepton pairs
+  30  = mll_sf  ! Min inv. mass of all opp. sign same-flavor lepton pairs
 #***********************************************************************
 # Photon-isolation cuts, according to hep-ph/9801442                   *
 # When ptgmin=0, all the other parameters are ignored                  *
@@ -136,7 +139,8 @@ average = event_norm ! Normalize events to sum or average to the X sect.
  1.0  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
  .true.  = isoEM  ! isolate photons from EM energy (photons and leptons)
 #***********************************************************************
-# maximal pdg code for quark to be considered as a jet                 *
+# Maximal PDG code for quark to be considered a jet when applying cuts.*
+# At least all massless quarks of the model should be included here.   *
 #***********************************************************************
- 5 = maxjetflavor
+ 4 = maxjetflavor
 #***********************************************************************

@@ -13,14 +13,14 @@ make -f make_cuttools
 ########################################################################
 
 To create a static library "libavh_olo.a", 
-set your Fortran compiler in the file "Config", and execute
+set your Fortran compiler in the file "makefile_config", and execute
 
 ./create.py
 
 ########################################################################
 
 To create a dynamic library "libavh_olo.so" with gfortran,
-set the Fortran compiler in the file "Config" to gfortran, and execute
+set the Fortran compiler in the file "makefile_config" to gfortran, and execute
 
 ./create.py dynamic
 
@@ -55,7 +55,7 @@ can also execute
 You can use this if you want to include the creation of the source file
 into the build of your program. Have a look at the file "make_cuttools".
 
-There are some variables in the file "Config" you can set:
+There are some variables in the file "makefile_config" you can set:
 
    FFLAGS: flags for the Fortran compiler
 

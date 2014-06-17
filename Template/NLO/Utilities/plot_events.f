@@ -1,6 +1,6 @@
 c Compile with
 c   gfortran -g -ffixed-line-length-132 -fno-automatic -I./any-P-directory
-c      -o plot_events plot_events.f madfks_plot.f madfks_dbook.f setcuts.f
+c      -o plot_events plot_events.f madfks_plot.f dbook.f setcuts.f
 c         handling_lhe_events.f 
 c         any-dependencies-in-madfksplot
       program plot_events

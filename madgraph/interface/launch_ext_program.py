@@ -281,18 +281,25 @@ class MadLoopLauncher(ExtLauncher):
         
         str_lines=[]
         
-        if res['export_format']=='Default':
+        notZeroBorn=True
+        if len([1 for k in res['Born_kept'] if k])==0:
+            notZeroBorn = False
+            str_lines.append(
+("|  /!\\ There is no Born contribution for the squared orders specified in "+
+                                  "the process definition/!\\",'$MG:color:RED'))
+        
+        if res['export_format']=='Default' and notZeroBorn:
             str_lines.extend(['\n',ASCII_bar,
   ('|| Results for process %s'%shell_name,main_color),
   ASCII_bar]+PS_point_spec+StabilityOutput+[
   '|',
-  ('|| Total Born contribution (GeV^%d):'%res['gev_pow'],main_color),
+  ('|| Total(*) Born contribution (GeV^%d):'%res['gev_pow'],main_color),
   ('|    Born        = %s'%special_float_format(res['born']),main_color),
-  ('|| Total virtual contribution normalized with born*alpha_S/(2*pi):',main_color),
+  ('|| Total(*) virtual contribution normalized with born*alpha_S/(2*pi):',main_color),
   ('|    Finite      = %s'%special_float_format(res['finite']),main_color),
   ('|    Single pole = %s'%special_float_format(res['1eps']),main_color),
   ('|    Double pole = %s'%special_float_format(res['2eps']),main_color)])
-        elif res['export_format']=='LoopInduced':
+        elif res['export_format']=='LoopInduced' and notZeroBorn:
             str_lines.extend(['\n',ASCII_bar,
   ('|| Results for process %s (Loop-induced)'%shell_name,main_color),
   ASCII_bar]+PS_point_spec+StabilityOutput+[
@@ -302,28 +309,43 @@ class MadLoopLauncher(ExtLauncher):
   '|(| Pole residues, indicated only for checking purposes: )',
   '|(    Single pole = %s )'%special_float_format(res['1eps']),
   '|(    Double pole = %s )'%special_float_format(res['2eps'])])
-            
+
+        if (len(res['Born_SO_Results'])+len(res['Born_SO_Results']))>0:
+            if notZeroBorn:
+                str_lines.append(
+    ("|  (*) The results above sum all starred contributions below",main_color))
+
         str_lines.append('|')
-        
+        if not notZeroBorn:
+            str_lines.append(
+("|  The Born contributions below are computed but do not match these squared "+
+                                               "orders constraints",main_color))
+
         if len(res['Born_SO_Results'])==1:
-            str_lines.append('|| All Born contributions are of split orders (%s)'\
+            str_lines.append('|| All Born contributions are of split orders *(%s)'\
                                 %format_so_orders(res['Born_SO_Results'][0][0]))
         elif len(res['Born_SO_Results'])>1:
-            for bso_contrib in res['Born_SO_Results']:
-                str_lines.append('|| Born contribution of split orders (%s) = %s'\
-                                             %(format_so_orders(bso_contrib[0]),
+            for i, bso_contrib in enumerate(res['Born_SO_Results']):
+                str_lines.append('|| Born contribution of split orders %s(%s) = %s'\
+                                           %('*' if res['Born_kept'][i] else ' ',
+                                               format_so_orders(bso_contrib[0]),
                                   special_float_format(bso_contrib[1]['BORN'])))
         
         if len(so_order_names):
             str_lines.append('|')
 
         if len(res['Loop_SO_Results'])==1:
-            str_lines.append('|| All virtual contributions are of split orders (%s)'\
+            str_lines.append('|| All virtual contributions are of split orders *(%s)'\
                                 %format_so_orders(res['Loop_SO_Results'][0][0]))
         elif len(res['Loop_SO_Results'])>1:
-            for lso_contrib in res['Loop_SO_Results']:
-                str_lines.append('|| Virtual contribution of split orders (%s):'\
-                                              %format_so_orders(lso_contrib[0]))
+            if not notZeroBorn:
+                str_lines.append(
+    ("|  The coupling order combinations matching the squared order"+
+                              " constraints are marked with a star",main_color))
+            for i, lso_contrib in enumerate(res['Loop_SO_Results']):
+                str_lines.append('|| Virtual contribution of split orders %s(%s):'\
+                                        %('*' if res['Loop_kept'][i] else ' ',
+                                              format_so_orders(lso_contrib[0])))
                 str_lines.append('|    Accuracy    =  %.1e'%\
                                                          lso_contrib[1]['ACC']),
                 str_lines.append('|    Finite      = %s'%\
@@ -363,6 +385,81 @@ class SALauncher(ExtLauncher):
                 misc.compile(cwd=cur_path, mode='unknown')
                 # check
                 subprocess.call(['./check'], cwd=cur_path)
+
+class MWLauncher(ExtLauncher):
+    """ A class to launch a simple Standalone test """
+    
+    
+    def __init__(self, cmd_int, running_dir, **options):
+        """ initialize the StandAlone Version"""
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
+        self.options = cmd_int.options
+
+    def launch_program(self):
+        """launch the main program"""
+        
+        import madgraph.interface.madweight_interface as MW
+        # Check for number of cores if multicore mode
+        mode = str(self.cluster)
+        nb_node = 1
+        if mode == "2":
+            import multiprocessing
+            max_node = multiprocessing.cpu_count()
+            if max_node == 1:
+                logger.warning('Only one core is detected on your computer! Pass in single machine')
+                self.cluster = 0
+                self.launch_program()
+                return
+            elif max_node == 2:
+                nb_node = 2
+            elif not self.force:
+                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+            else:
+                nb_node=max_node
+                
+        import madgraph.interface.madevent_interface as ME
+        
+        stdout_level = self.cmd_int.options['stdout_level']
+        if self.shell:
+            usecmd = MW.MadWeightCmdShell(me_dir=self.running_dir, options=self.options)
+        else:
+            usecmd = MW.MadWeightCmd(me_dir=self.running_dir, options=self.options)
+            usecmd.pass_in_web_mode()
+        #Check if some configuration were overwritten by a command. If so use it    
+        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        for line in set_cmd:
+            try:
+                usecmd.do_set(line[3:], log=False)
+            except Exception:
+                pass
+            
+        usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
+        #ensure that the logger level 
+        launch = self.cmd_int.define_child_cmd_interface(
+                     usecmd, interface=False)
+
+        command = 'launch'
+        if mode == "1":
+            command += " --cluster"
+        elif mode == "2":
+            command += " --nb_core=%s" % nb_node
+        
+        if self.force:
+            command+= " -f"
+        if self.laststep:
+            command += ' --laststep=%s' % self.laststep
+        
+        try:
+            os.remove('ME5_debug')
+        except:
+           pass
+        launch.run_cmd(command)
+        launch.run_cmd('quit')
+        
+        if os.path.exists('ME5_debug'):
+            return True
+        
+
 
 class aMCatNLOLauncher(ExtLauncher):
     """A class to launch MadEvent run"""
@@ -422,7 +519,12 @@ class aMCatNLOLauncher(ExtLauncher):
         
         #Check if some configuration were overwritten by a command. If so use it    
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        all_options = usecmd.options_configuration.keys() +  usecmd.options_madgraph.keys() + usecmd.options_madevent.keys()
         for line in set_cmd:
+            arg = line.split()
+            if arg[1] not in all_options:
+                continue
+            misc.sprint(line)
             try:
                 usecmd.exec_cmd(line)
             except Exception, error:
@@ -433,7 +535,9 @@ class aMCatNLOLauncher(ExtLauncher):
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
-                if self.options[opt] and not opt in ['cluster', 'multicore']])
+                if self.options[opt] and not opt in ['cluster', 'multicore', 'name']])
+        if self.options['name']:
+            option_line += '--name %s' %  self.options['name']  
         command = 'launch ' + self.run_mode + ' ' + option_line
 
         if mode == "1":

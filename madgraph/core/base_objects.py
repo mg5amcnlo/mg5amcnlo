@@ -28,6 +28,7 @@ from madgraph import MadGraph5Error, MG5DIR
 import madgraph.various.misc as misc 
 
 logger = logging.getLogger('madgraph.base_objects')
+pjoin = os.path.join
 
 #===============================================================================
 # PhysicsObject
@@ -343,6 +344,16 @@ class Particle(PhysicsObject):
            in argument given the model specified. It is very fast for usual models"""
            
         for int in model['interactions'].get_type('base'):
+            # We discard the interactions with more than one type of orders
+            # contributing because it then doesn't necessarly mean that this
+            # particle (self) is charged under the group corresponding to the
+            # coupling order 'order'. The typical example is in SUSY which 
+            # features a ' photon-gluon-squark-antisquark ' interaction which
+            # has coupling orders QED=1, QCD=1 and would induce the photon
+            # to be considered as a valid particle to circulate in a loop of
+            # type "QCD".
+            if len(int.get('orders'))>1:
+                continue
             if order in int.get('orders').keys() and self.get('pdg_code') in \
               [part.get('pdg_code') for part in int.get('particles')]:
                 return True
@@ -1087,12 +1098,27 @@ class Model(PhysicsObject):
             modeldir = self.get('version_tag').rsplit('##',1)[0]
             if os.path.exists(modeldir):
                 return modeldir
-            modeldir = os.path.join(os.path.dirname(modeldir),
-                                    os.path.basename(modeldir).rsplit("-",1)[0])
-            if os.path.exists(modeldir):
-                return modeldir 
-
-            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
+            else:
+                raise Exception, "path %s not valid anymore." % modeldir
+            #modeldir = os.path.join(os.path.dirname(modeldir),
+            #                        os.path.basename(modeldir).rsplit("-",1)[0])
+            #if os.path.exists(modeldir):
+            #    return modeldir 
+            #raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
+        elif name == 'modelpath+restriction':
+            modeldir = self.get('version_tag').rsplit('##',1)[0]
+            modelname = self['name']            
+            if not  os.path.exists(modeldir):
+                raise Exception, "path %s not valid anymore" % modeldir
+            modeldir = os.path.dirname(modeldir)
+            modeldir = pjoin(modeldir, modelname)
+            return modeldir
+        elif name == 'restrict_name':
+            modeldir = self.get('version_tag').rsplit('##',1)[0]
+            modelname = self['name']            
+            basename = os.path.basename(modeldir)
+            restriction = modelname[len(basename)+1:]
+            return restriction
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
@@ -1400,7 +1426,98 @@ class Model(PhysicsObject):
             part = self.get_particle(25)
             part.set('name', 'h1')
             part.set('antiname', 'h1')
+
+
             
+    def change_parameter_name_with_prefix(self, prefix='mdl_'):
+        """ Change all model parameter by a given prefix.
+        Modify the parameter if some of them are identical up to the case"""
+        
+        lower_dict={}
+        duplicate = set()
+        keys = self.get('parameters').keys()
+        for key in keys:
+            for param in self['parameters'][key]:
+                lower_name = param.name.lower()
+                if not lower_name:
+                    continue
+                try:
+                    lower_dict[lower_name].append(param)
+                except KeyError:
+                    lower_dict[lower_name] = [param]
+                else:
+                    duplicate.add(lower_name)
+                    logger.debug('%s is define both as lower case and upper case.' 
+                                 % lower_name)
+        
+        if prefix == '' and  not duplicate:
+            return
+                
+        re_expr = r'''\b(%s)\b'''
+        to_change = []
+        change={}
+        # recast all parameter in prefix_XX
+        for key in keys:
+            for param in self['parameters'][key]:
+                value = param.name.lower()
+                if value in ['as','mu_r', 'zero','aewm1','g']:
+                    continue
+                elif value.startswith(prefix):
+                    continue
+                elif value in duplicate:
+                    continue # handle later
+                elif value:
+                    change[param.name] = '%s%s' % (prefix,param.name)
+                    to_change.append(param.name)
+                    param.name = change[param.name]
+            
+        for value in duplicate:
+            for i, var in enumerate(lower_dict[value][1:]):
+                to_change.append(var.name)
+                change[var.name] = '%s%s__%s' % (prefix, var.name.lower(), i+2)
+                var.name = '%s%s__%s' %(prefix, var.name.lower(), i+2)
+                to_change.append(var.name)
+        assert 'zero' not in to_change
+        replace = lambda match_pattern: change[match_pattern.groups()[0]]
+        
+        if not to_change:
+            return
+        
+        if 'parameter_dict' in self:
+            new_dict = dict( (change[name] if (name in change) else name, value) for
+                             name, value in self['parameter_dict'].items())
+            self['parameter_dict'] = new_dict
+        
+        i=0
+        while i*1000 <= len(to_change): 
+            one_change = to_change[i*1000: min((i+1)*1000,len(to_change))]
+            i+=1
+            rep_pattern = re.compile('\\b%s\\b'% (re_expr % ('\\b|\\b'.join(one_change))))
+            
+            # change parameters
+            for key in keys:
+                if key == ('external',):
+                    continue
+                for param in self['parameters'][key]:
+                    param.expr = rep_pattern.sub(replace, param.expr)
+            # change couplings
+            for key in self['couplings'].keys():
+                for coup in self['couplings'][key]:
+                    coup.expr = rep_pattern.sub(replace, coup.expr)
+                    
+            # change mass/width
+            for part in self['particles']:
+                if str(part.get('mass')) in one_change:
+                    part.set('mass', rep_pattern.sub(replace, str(part.get('mass'))))
+                if str(part.get('width')) in one_change:
+                    part.set('width', rep_pattern.sub(replace, str(part.get('width'))))  
+                if  hasattr(part, 'partial_widths'):
+                    for key, value in part.partial_widths.items():                        part.partial_widths[key] = rep_pattern.sub(replace, value)
+                
+        #ensure that the particle_dict is up-to-date
+        self['particle_dict'] =''
+        self.get('particle_dict') 
+
         
 
     def get_first_non_pdg(self):
@@ -1472,6 +1589,8 @@ class Model(PhysicsObject):
                     if hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2)))':
                         # Make MW an external parameter
                         MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
+                        if not MW.value:
+                            MW.value = 80.385
                         self.get('parameters')[('external',)].append(MW)
                         self.get('parameters')[mass.depend].remove(mass)
                         # Make Gf an internal parameter
@@ -1483,6 +1602,26 @@ class Model(PhysicsObject):
                         self.add_param(new_param, ['aEW'])
                         # Use the new mass for the future modification
                         mass = MW
+                    #option with prefixing
+                    elif hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(mdl_MZ__exp__2/2. + cmath.sqrt(mdl_MZ__exp__4/4. - (mdl_aEW*cmath.pi*mdl_MZ__exp__2)/(mdl_Gf*mdl_sqrt__2)))':
+                        # Make MW an external parameter
+                        MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
+                        if not MW.value:
+                            MW.value = 80.385
+                        self.get('parameters')[('external',)].append(MW)
+                        self.get('parameters')[mass.depend].remove(mass)
+                        # Make Gf an internal parameter
+                        new_param = ModelVariable('mdl_Gf',
+                        '-mdl_aEW*mdl_MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - mdl_MZ**2))' %\
+                        {'MW': mass.name}, 'complex', mass.depend)
+                        Gf = self.get_parameter('mdl_Gf')
+                        self.get('parameters')[('external',)].remove(Gf)
+                        self.add_param(new_param, ['mdl_aEW'])
+                        # Use the new mass for the future modification
+                        mass = MW
+                    elif isinstance(mass, ModelVariable):
+                        logger.warning('W mass is not an external parameter. This is not adviced for the complex mass scheme.')
+                
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
                 depend = list(set(mass.depend + width.depend))
@@ -2070,6 +2209,25 @@ class Diagram(PhysicsObject):
         coupling_orders['WEIGHTED'] = weight
         self.set('orders', coupling_orders)
 
+    def pass_squared_order_constraints(self, diag_multiplier, squared_orders,
+                                                               sq_orders_types):
+        """ Returns wether the contributiong consisting in the current diagram 
+        multiplied by diag_multiplier passes the *positive* squared_orders 
+        specified ( a dictionary ) of types sq_order_types (a dictionary whose 
+        values are the relational operator used to define the constraint of the
+        order in key)."""
+        
+        for order, value in squared_orders.items():
+            if value<0:
+                continue
+            combined_order = self.get_order(order) + \
+                                                diag_multiplier.get_order(order)
+            if ( sq_orders_types[order]=='==' and combined_order != value ) or \
+               ( sq_orders_types[order] in ['=', '<='] and combined_order > value) or \
+               ( sq_orders_types[order]=='>' and combined_order <= value) :
+                return False
+        return True
+
     def get_order(self, order):
         """Return the order of this diagram. It returns 0 if it is not present."""
 
@@ -2210,6 +2368,97 @@ class DiagramList(PhysicsObjectList):
 
         return max_order
 
+    def apply_negative_sq_order(self, ref_diag_list, order, value, order_type):
+        """ This function returns a fitlered version of the diagram list self
+        which satisfy the negative squared_order constraint 'order' with negative
+        value 'value' and of type 'order_type', assuming that the diagram_list
+        it must be squared against is 'reg_diag_list'. It also returns the
+        new postive target squared order which correspond to this negative order
+        constraint. Example: u u~ > d d~ QED^2<=-2 means that one wants to
+        pick terms only up to the the next-to-leading order contributiong in QED,
+        which is QED=2 in this case, so that target_order=4 is returned."""
+        
+        # First we must compute all contributions to that order
+        target_order = min(ref_diag_list.get_order_values(order))+\
+                                  min(self.get_order_values(order))+2*(-value-1)
+        
+        new_list = self.apply_positive_sq_orders(ref_diag_list, 
+                                       {order:target_order}, {order:order_type})
+        
+        return new_list, target_order
+        
+#             neg_order=[elem for elem in self['process'].get('orders').items()+\
+#                   self['process'].get('squared_orders').items() if elem[1]<0][0]
+#             # Make sure there still are some diagrams
+#             if len(res)==0:
+#                 raise IndexError
+#             min_amp_order=min(diag.get_order(neg_order[0]) for diag in res)
+#             target_order=min_amp_order+2*(-neg_order[1]-1)
+#             # When not including loop corrections, restricting a coupling
+#             # order with a negative value at the amplitude level or at the
+#             # squared order level does not make a difference.
+#             # The expansion is in terms of alpha_x, not g_x, hence the
+#             # factor 2.
+#             if self['process']['sqorders_types'][neg_order[0]]=='==':
+#                 res = base_objects.DiagramList(filter(lambda diag: \
+#                   (target_order-diag.get_order(neg_order[0])) in \
+#                                   res.get_order_values(neg_order[0]),res))
+#             elif self['process']['sqorders_types'][neg_order[0]] in ['<=','=']:
+#                 res = base_objects.DiagramList(filter(lambda diag: \
+#                          diag.get_order(neg_order[0])<= target_order,res))
+#         
+# 
+#             filtered_diag_list = DiagramList()
+#             
+#             # We must treat indepdently each type of constraint
+#             if order_type in ['<=','=']:
+#                 # We ask for up to N^(-value) Leading Order in the coupling
+#                 upper_bound=ref_diag_list.get_min_order(order)+2*(-value-1)
+#                 # The target order is equal to  
+#                 # upper_bound+diagRef.get_min_order(order)
+#                 # which is more efficiently rewritten as
+#                 target_order=2*(upper_bound+value+1)
+#                 filtered_diag_list=DiagramList([diag for diag in \
+#                     self if diag.get_order(order)<=upper_bound])
+#                 if self['process']['has_born']:
+#                     AllBornDiagrams=base_objects.DiagramList([diag for diag in \
+#                            AllBornDiagrams if diag.get_order(order)<=max_order])
+# 
+#             elif sqorders_types[order]=='==':
+#                 ref_order_values = set(diagRef.get_order_values(order))
+#                 if value<0:
+#                     # ask for exactly the N^(-value) Leading Order in the coupling
+#                     target_order=2*(diagRef.get_min_order(order)-value-1)
+#                 else:
+#                     target_order=value
+#                                        
+#                 AllLoopDiagrams=base_objects.DiagramList([diag for diag in \
+#                     AllLoopDiagrams if (target_order-diag.get_order(order)) in
+#                                                               ref_order_values])
+#                 if self['process']['has_born']:
+#                     allDiags_order_values = ref_order_values.union(
+#                                         AllLoopDiagrams.get_order_values(order))
+#                     AllBornDiagrams=base_objects.DiagramList([diag for diag in \
+#                     AllBornDiagrams if (target_order-diag.get_order(order)) in
+#                                                          allDiags_order_values])  
+
+        
+        
+    def apply_positive_sq_orders(self, ref_diag_list, sq_orders, sq_order_types):
+        """ This function returns a filtered version of self which contain
+        only the diagram which satisfy the positive squared order constraints
+        sq_orders of type sq_order_types and assuming that the diagrams are
+        multiplied with those of the reference diagram list ref_diag_list."""
+                
+        new_diag_list = DiagramList()
+        for tested_diag in self:
+            for ref_diag in ref_diag_list:
+                if tested_diag.pass_squared_order_constraints(ref_diag,
+                                                      sq_orders,sq_order_types):
+                    new_diag_list.append(tested_diag)
+                    break
+        return new_diag_list
+
     def get_min_order(self,order):
         """ Return the order of the diagram in the list with the mimimum coupling
         order for the coupling specified """
@@ -2222,6 +2471,19 @@ class DiagramList(PhysicsObjectList):
                 return 0
 
         return min_order
+
+    def get_order_values(self, order):
+        """ Return the list of possible values appearing in the diagrams of this
+        list for the order given in argument """
+
+        values=set([])
+        for diag in self:
+            if order in diag['orders'].keys():
+                values.add(diag['orders'][order])
+            else:
+                values.add(0)  
+
+        return list(values)
 
 #===============================================================================
 # Process
@@ -2264,6 +2526,11 @@ class Process(PhysicsObject):
         # gives the upper bound for the total weighted order of the
         # squared amplitude.
         self['squared_orders'] = {}
+        # The squared order (sqorders) constraints above can either be upper 
+        # bound (<=) or exact match (==) depending on how they were specified
+        # in the user input. This choice is stored in the dictionary below.
+        # Notice that the upper bound is the default
+        self['sqorders_types'] = {}
         self['has_born'] = True
         # The NLO_mode is always None for a tree-level process and can be
         # 'all', 'real', 'virt' for a loop process.
@@ -2294,6 +2561,15 @@ class Process(PhysicsObject):
 
         if name in ['orders', 'overall_orders','squared_orders', 'born_orders']:
             Interaction.filter(Interaction(), 'orders', value)
+
+        if name == 'sqorders_types':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dictionary" % str(value)
+            for order in value.keys()+value.values():
+                if not isinstance(order, str):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid string" % str(value)
 
         if name == 'split_orders':
             if not isinstance(value, list):
@@ -2406,11 +2682,28 @@ class Process(PhysicsObject):
 
         return super(Process, self).set(name, value) # call the mother routine
 
+    def get_squared_order_type(self, order):
+        """ Return what kind of squared order constraint was specified for the
+        order 'order'."""
+
+        if order in self['sqorders_types'].keys():
+            return self['sqorders_types'][order]
+        else:
+            # Default behavior '=' is interpreted as upper bound '<='
+            return '='
+
     def get(self, name):
         """Special get for legs_with_decays"""
         
         if name == 'legs_with_decays':
             self.get_legs_with_decays()
+
+        if name == 'sqorders_types':
+            # We must make sure that there is a type for each sqorder defined
+            for order in self['squared_orders'].keys():
+                if order not in self['sqorders_types']:
+                    # Then assign its type to the default '='
+                    self['sqorders_types'][order]='='
 
         return super(Process, self).get(name) # call the mother routine
 
@@ -2454,7 +2747,8 @@ class Process(PhysicsObject):
         # Add orders
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-              for key in self['orders'] if print_weighted or key!='WEIGHTED']) + ' '
+              for key in self['orders'] if (print_weighted or key!='WEIGHTED') \
+              and not key in self['squared_orders'].keys()]) + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:
@@ -2466,9 +2760,11 @@ class Process(PhysicsObject):
             mystr = mystr + '] '
 
         # Add squared orders
-        if self['perturbation_couplings'] and self['squared_orders']:
-            mystr = mystr + " ".join([key + '=' + repr(self['squared_orders'][key]) \
-              for key in self['squared_orders'] if print_weighted or key!='WEIGHTED']) + ' ' 
+        if self['squared_orders']:
+            mystr = mystr + " ".join([key + '^2%s%d'%\
+                (self.get_squared_order_type(key),self['squared_orders'][key]) \
+              for key in self['squared_orders'].keys() \
+                                    if print_weighted or key!='WEIGHTED']) + ' '
 
         # Add forbidden s-channels
         if self['forbidden_onsh_s_channels']:
@@ -2743,6 +3039,14 @@ class Process(PhysicsObject):
                 return True
         return False
     
+    def decays_have_squared_orders(self):
+        """ Check iteratively that the decayed processes are not perturbed """
+        
+        for procdef in self['decay_chains']:
+            if procdef['squared_orders']!={} or procdef.decays_have_squared_orders():
+                return True
+        return False
+    
     def get_ninitial(self):
         """Gives number of initial state particles"""
 
@@ -2894,12 +3198,23 @@ class Process(PhysicsObject):
         # Ensure that expansion orders are taken into account
         expansion_orders = self.get('model').get('expansion_order')
         orders = self.get('orders')
+        sq_orders = self.get('squared_orders')
         
         tmp = [(k,v) for (k,v) in expansion_orders.items() if 0 < v < 99]
         for (k,v) in tmp:  
             if k in orders:
                 if v < orders[k]:
-                    logger.warning('''The coupling order (%s=%s) specified is larger than the one allowed 
+                    if k in sq_orders.keys() and \
+                                             (sq_orders[k]>v or sq_orders[k]<0):
+                        logger.warning(
+'''The process with the squared coupling order (%s^2%s%s) specified can potentially 
+recieve contributions with powers of the coupling %s larger than the maximal 
+value allowed by the model builder (%s). Hence, MG5_aMC sets the amplitude order
+for that coupling to be this maximal one. '''%(k,self.get('sqorders_types')[k],
+                                             self.get('squared_orders')[k],k,v))
+                    else:
+                        logger.warning(
+'''The coupling order (%s=%s) specified is larger than the one allowed 
              by the model builder. The maximal value allowed is %s. 
              We set the %s order to this value''' % (k,orders[k],v,k))
                     orders[k] = v
@@ -3062,7 +3377,7 @@ class ProcessDefinition(Process):
 
         return max_order_now, particles, hierarchy
 
-    def nice_string(self, indent=0):
+    def nice_string(self, indent=0, print_weighted=False):
         """Returns a nicely formated string about current process
         content"""
 
@@ -3123,6 +3438,12 @@ class ProcessDefinition(Process):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
+        if self['squared_orders']:
+            mystr = mystr + " ".join([key + '^2%s%d'%\
+                (self.get_squared_order_type(key),self['squared_orders'][key]) \
+              for key in self['squared_orders'].keys() \
+                                    if print_weighted or key!='WEIGHTED']) + ' '
+
         # Remove last space
         mystr = mystr[:-1]
 
@@ -3151,6 +3472,7 @@ class ProcessDefinition(Process):
             'model':self.get('model'),
             'id': self.get('id'),
             'orders': self.get('orders'),
+            'sqorders_types': self.get('sqorders_types'),
             'squared_orders': self.get('squared_orders'),
             'has_born': self.get('has_born'),
             'required_s_channels': self.get('required_s_channels'),

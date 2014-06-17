@@ -62,7 +62,7 @@ int mcfioC_Block(int stream, int blkid,
 { 
   int i, j, jstr, idtmp, ntot, nbuff;
   bool_t ok;
-  u_int p1;
+  off_t p1;
   mcfStream *str;
    
   if (McfStreamPtrList == NULL) { 
@@ -95,7 +95,7 @@ int mcfioC_Block(int stream, int blkid,
  " mcfio_Block: Unable to find block i.d. %d in Stream %d \n", blkid, stream);
           return -1;  
       }
-      if (xdr_setpos(str->xdr,str->ehead->ptrBlocks[j]) == FALSE) {
+      if (fseeko(str->filePtr,str->ehead->ptrBlocks[j],SEEK_SET) != 0) {
         fprintf(stderr,
          " mcfio_Block: Unable to position stream at block %d \n", blkid);
           return -1;  
@@ -128,7 +128,7 @@ int mcfioC_Block(int stream, int blkid,
              str->buffer2 = NULL;
              str->bufferSize = str->maxlrec * nbuff;
              xdrmem_create(str->xdr, str->buffer, str->bufferSize, XDR_ENCODE);
-             if (xdr_setpos(str->xdr, str->currentPos) == FALSE) {
+             if (fseeko(str->filePtr,str->currentPos,SEEK_SET) != 0) {
                  fprintf(stderr,
              " mcfio_Block:\n\
  Unable to position stream %d at block %d after realocation.\n", stream, blkid);
@@ -143,7 +143,7 @@ int mcfioC_Block(int stream, int blkid,
         fprintf(stderr,
          " mcfio_Block: Unable to encode or decode block I.D. %d \n", blkid);
          j = str->ehead->nBlocks;
-         if (xdr_setpos(str->xdr,p1) == FALSE) 
+         if (fseeko(str->filePtr,p1,SEEK_SET) != 0) 
            fprintf(stderr,
          " mcfio_Block: Unable to position stream at block %d \n", blkid);
          return -1;
@@ -159,7 +159,7 @@ int mcfioC_Block(int stream, int blkid,
       str->ehead->ptrBlocks[str->ehead->nBlocks] = p1;
       str->ehead->nBlocks++; 
     }
-    str->currentPos = xdr_getpos(str->xdr);    
+    str->currentPos = ftello(str->filePtr);    
     str->numWordsC += (ntot/4);
     str->numWordsT += ((str->currentPos-p1)/4);
     return 1;
@@ -169,7 +169,7 @@ int mcfioC_NTuple(int stream, int nTupleId, char * version)
 { 
   int i, j, jstr, idtmp, ntot, nbuff;
   bool_t ok;
-  u_int p1;
+  off_t p1;
   mcfStream *str;
   nTuDDL *ddl;
   descrGenNtuple *dNTu;
@@ -215,7 +215,7 @@ int mcfioC_NTuple(int stream, int nTupleId, char * version)
           nTupleId, stream);
           return -1;  
       }
-      if (xdr_setpos(str->xdr,str->ehead->ptrNTuples[j]) == FALSE) {
+      if (fseeko(str->filePtr,str->ehead->ptrNTuples[j],SEEK_SET) != 0) {
         fprintf(stderr,
          " mcfio_NTuple: Unable to position stream at NTuple %d \n", nTupleId);
           return -1;  
@@ -254,7 +254,7 @@ int mcfioC_NTuple(int stream, int nTupleId, char * version)
              str->buffer2 = NULL;
              str->bufferSize = str->maxlrec * nbuff;
              xdrmem_create(str->xdr, str->buffer, str->bufferSize, XDR_ENCODE);
-             if (xdr_setpos(str->xdr, str->currentPos) == FALSE) {
+             if (fseeko(str->filePtr,str->currentPos,SEEK_SET) != 0) {
                  fprintf(stderr,
              " mcfio_NTuple:\n\
  Unable to position stream %d at Ntuple %d after realocation.\n",
@@ -271,7 +271,7 @@ int mcfioC_NTuple(int stream, int nTupleId, char * version)
          " mcfio_NTuple: Unable to encode or decode NTuple I.D. %d \n",
              nTupleId);
          j = str->ehead->nNTuples;
-         if (xdr_setpos(str->xdr,p1) == FALSE) 
+         if (fseeko(str->filePtr,p1,SEEK_SET) != 0) 
            fprintf(stderr,
          " mcfio_NTuple: Unable to position stream at NTuple %d \n", nTupleId);
          return -1;
@@ -281,7 +281,7 @@ int mcfioC_NTuple(int stream, int nTupleId, char * version)
       str->ehead->ptrNTuples[str->ehead->nNTuples] = p1;
       str->ehead->nNTuples++; 
     }
-    str->currentPos = xdr_getpos(str->xdr);    
+    str->currentPos = ftello(str->filePtr);
     str->numWordsC += (ntot/4);
     str->numWordsT += ((str->currentPos-p1)/4);
     return 1;
@@ -310,7 +310,7 @@ int mcfioC_NTupleMult(int stream, int nTupleId, char * version)
   for(i=0, j=-1; i<str->ehead->nNTuples; i++) {
            if (str->ehead->nTupleIds[i] == ddl->seqNTuId) j = i;
    }
-  if (xdr_setpos(str->xdr,str->ehead->ptrNTuples[j]) == FALSE) {
+  if (fseeko(str->filePtr,str->ehead->ptrNTuples[j],SEEK_SET) != 0) {
         fprintf(stderr,
     " mcfio_NTupleMult: Unable to position stream at NTuple %d \n", nTupleId);
           return -1;  
@@ -325,7 +325,7 @@ int mcfioC_NTupleMult(int stream, int nTupleId, char * version)
          " mcfio_NTuple: Unable to encode or decode NTuple I.D. %d \n",
              nTupleId);
          j = str->ehead->nNTuples;
-         if (xdr_setpos(str->xdr, str->currentPos) == FALSE) 
+         if (fseeko(str->filePtr,str->currentPos,SEEK_SET) != 0) 
            fprintf(stderr,
          " mcfio_NTuple: Unable to position stream at NTuple %d \n", nTupleId);
          return -1;
@@ -365,7 +365,7 @@ int mcfioC_NTupleVar(int stream, int nTupleId, int ivar, char * version)
   for(i=0, j=-1; i<str->ehead->nNTuples; i++) {
            if (str->ehead->nTupleIds[i] == ddl->seqNTuId) j = i;
    }
-  if (xdr_setpos(str->xdr,str->ehead->ptrNTuples[j]) == FALSE) {
+  if (fseeko(str->filePtr,str->ehead->ptrNTuples[j],SEEK_SET) != 0) {
         fprintf(stderr,
     " mcfio_NTupleVar: Unable to position stream at NTuple %d \n", nTupleId);
           return -1;  
@@ -380,7 +380,7 @@ int mcfioC_NTupleVar(int stream, int nTupleId, int ivar, char * version)
          " mcfio_NTuple: Unable to encode or decode NTuple I.D. %d \n",
              nTupleId);
          j = str->ehead->nNTuples;
-         if (xdr_setpos(str->xdr, str->currentPos) == FALSE) 
+         if (fseeko(str->filePtr,str->currentPos,SEEK_SET) != 0) 
            fprintf(stderr,
          " mcfio_NTuple: Unable to position stream at NTuple %d \n", nTupleId);
          return -1;
@@ -413,7 +413,7 @@ int mcfioC_NTupleSubVar(int stream, int nTupleId, int ivar, int multIndex,
   for(i=0, j=-1; i<str->ehead->nNTuples; i++) {
            if (str->ehead->nTupleIds[i] == ddl->seqNTuId) j = i;
    }
-  if (xdr_setpos(str->xdr,str->ehead->ptrNTuples[j]) == FALSE) {
+  if (fseeko(str->filePtr,str->ehead->ptrNTuples[j],SEEK_SET) != 0) {
         fprintf(stderr,
     " mcfio_NTupleVar: Unable to position stream at NTuple %d \n", nTupleId);
           return -1;  
@@ -428,7 +428,7 @@ int mcfioC_NTupleSubVar(int stream, int nTupleId, int ivar, int multIndex,
          " mcfio_NTuple: Unable to encode or decode NTuple I.D. %d \n",
              nTupleId);
          j = str->ehead->nNTuples;
-         if (xdr_setpos(str->xdr, str->currentPos) == FALSE) 
+         if (fseeko(str->filePtr,str->currentPos,SEEK_SET) != 0) 
            fprintf(stderr,
          " mcfio_NTuple: Unable to position stream at NTuple %d \n", nTupleId);
          return -1;
@@ -461,7 +461,7 @@ int mcfioC_NTupleSubStruct(int stream, int nTupleId, int multIndex,
   for(i=0, j=-1; i<str->ehead->nNTuples; i++) {
            if (str->ehead->nTupleIds[i] == ddl->seqNTuId) j = i;
    }
-  if (xdr_setpos(str->xdr,str->ehead->ptrNTuples[j]) == FALSE) {
+  if (fseeko(str->filePtr,str->ehead->ptrNTuples[j],SEEK_SET) != 0) {
         fprintf(stderr,
     " mcfio_NTupleVar: Unable to position stream at NTuple %d \n", nTupleId);
           return -1;  
@@ -476,7 +476,7 @@ int mcfioC_NTupleSubStruct(int stream, int nTupleId, int multIndex,
          " mcfio_NTuple: Unable to encode or decode NTuple I.D. %d \n",
              nTupleId);
          j = str->ehead->nNTuples;
-         if (xdr_setpos(str->xdr, str->currentPos) == FALSE) 
+         if (fseeko(str->filePtr,str->currentPos,SEEK_SET) != 0) 
            fprintf(stderr,
          " mcfio_NTuple: Unable to position stream at NTuple %d \n", nTupleId);
          return -1;

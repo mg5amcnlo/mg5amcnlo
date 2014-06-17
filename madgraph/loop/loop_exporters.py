@@ -52,9 +52,11 @@ import models.check_param_card as check_param_card
 import madgraph.loop.loop_base_objects as loop_objects
 # HSS
 
+pjoin = os.path.join
+
 import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 from madgraph.iolibs.files import cp, ln, mv
 pjoin = os.path.join
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -83,11 +85,13 @@ class LoopExporterFortran(object):
             self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madloop', 'mp':True,
                         'loop_dir':'', 'cuttools_dir':'', 
-                        'fortran_compiler':'gfortran'}
+                        'fortran_compiler':'gfortran',
+                        'output_dependencies':'external'}
 
         self.loop_dir = self.opt['loop_dir']
         self.cuttools_dir = self.opt['cuttools_dir']
         self.fortran_compiler = self.opt['fortran_compiler']
+        self.dependencies = self.opt['output_dependencies']
 
         super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)        
 
@@ -95,36 +99,68 @@ class LoopExporterFortran(object):
     def link_CutTools(self, targetPath):
         """Link the CutTools source directory inside the target path given
         in argument"""
-
-        cwd = os.getcwd()
-
-        try:
-            os.chdir(targetPath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % targetPath)
-            return 0
-        
-        if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
-            logger.info('Compiling CutTools. This has to be done only once and'+\
-                              ' can take a couple of minutes.','$MG:color:BLACK')
-            current = misc.detect_current_compiler(os.path.join(\
-                                                  self.cuttools_dir,'makefile'))
+                
+        if self.dependencies=='internal':
+            new_CT_path = pjoin(targetPath,'Source','CutTools')
+            shutil.copytree(self.cuttools_dir, new_CT_path, symlinks=True)
+            
+            current = misc.detect_current_compiler(os.path.join(new_CT_path,
+                                                                    'makefile'))
             new = 'gfortran' if self.fortran_compiler is None else \
-                                                           self.fortran_compiler
+                                                          self.fortran_compiler
             if current != new:
-                misc.mod_compilator(self.cuttools_dir, new,current)
-            misc.compile(cwd=self.cuttools_dir, job_specs = False)
-
-        if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
+                misc.mod_compilator(new_CT_path, new, current)
+            
+            # Create the links to the lib folder
             linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
-                ln(os.path.join(self.cuttools_dir,'includects')+'/%s' % file)
-        else:
-            raise MadGraph5Error,"CutTools could not be correctly compiled."
+                # We don't use the the ln() macro here because we want to
+                # explicitely link to ../Source/<lib>path
+                os.symlink(
+                    pjoin(os.path.pardir,'Source','CutTools','includects',file), 
+                                                   pjoin(targetPath,'lib',file))
+            # Make sure it is recompiled at least once. Because for centralized
+            # MG5_aMC installations, it might be that compiler differs.
+            # Not necessary anymore because I check the compiler version from
+            # the log compiler_version.log generated during CT compilation
+            # misc.compile(['cleanCT'], cwd = pjoin(targetPath,'Source'))
+ 
+        if self.dependencies=='external':
+            if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
+                logger.info('Compiling CutTools. This has to be done only once and'+\
+                                  ' can take a couple of minutes.','$MG:color:BLACK')
+                current = misc.detect_current_compiler(os.path.join(\
+                                                  self.cuttools_dir,'makefile'))
+                new = 'gfortran' if self.fortran_compiler is None else \
+                                                          self.fortran_compiler
+                if current != new:
+                    misc.mod_compilator(self.cuttools_dir, new, current)
+                misc.compile(cwd=self.cuttools_dir, job_specs = False)
+                
+                if not os.path.exists(os.path.join(self.cuttools_dir,
+                                                      'includects','libcts.a')):            
+                    raise MadGraph5Error,"CutTools could not be correctly compiled."
+    
+            # Create the links to the lib folder
+            linkfiles = ['libcts.a', 'mpmodule.mod']
+            for file in linkfiles:
+                ln(os.path.join(self.cuttools_dir,'includects',file),
+                                    os.path.join(targetPath,'lib'),abspath=True)
 
-        # Return to original PWD
-        os.chdir(cwd)
-            
+        elif self.dependencies=='environment_paths':
+            # Here the user chose to define the dependencies path in one of 
+            # his environmental paths
+            CTlib = misc.which_lib('libcts.a')
+            CTmod = misc.which_lib('mpmodule.mod')
+            if not CTlib is None and not CTmod is None:
+                logger.info('MG5_aMC is using CutTools installation found at %s.'%\
+                                                         os.path.dirname(CTlib)) 
+                ln(os.path.join(CTlib),os.path.join(targetPath,'lib'),abspath=True)
+                ln(os.path.join(CTmod),os.path.join(targetPath,'lib'),abspath=True)
+            else:
+                raise InvalidCmd("Could not find the location of the files"+\
+                    " libcts.a and mp_module.mod in you environment paths.")
+    
     def get_aloha_model(self, model):
         """ Caches the aloha model created here as an attribute of the loop 
         exporter so that it can later be used in the LoopHelasMatrixElement
@@ -167,10 +203,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         """
         super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
         
-        # We must link the CutTools to the Library folder of the active Template
-        super(LoopProcessExporterFortranSA, self).link_CutTools(
-                                    os.path.join(self.dir_path, 'lib'))
-        
         # We must change some files to their version for NLO computations
         cpfiles= ["Source/makefile",\
                   "SubProcesses/MadLoopCommons.f",
@@ -181,7 +213,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # dummy variables
         link_tir_libs=[]
         tir_libs=[]
-        pjdir=""
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
         try:
@@ -191,7 +222,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             return 0
         filename = 'makefile'
         calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                          link_tir_libs,tir_libs,pjdir)
+                                                         link_tir_libs,tir_libs)
         # Return to original PWD
         os.chdir(cwd)
         
@@ -199,7 +230,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
 
-        # Copy the hole MadLoop5_resources directory (empty at this stage)
+        # Copy the whole MadLoop5_resources directory (empty at this stage)
         if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
                                                         'MadLoop5_resources')):
             cp(pjoin(self.loop_dir,'StandAlone','SubProcesses',
@@ -228,12 +259,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                      
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
-                            writers.FortranWriter('cts_mpc.h'),)
+                                            writers.FortranWriter('cts_mpc.h'))
 
         # Return to original PWD
         os.chdir(cwd)
-    # I put it here not in optimized one, because I want to use the same makefile.inc
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
+
+        # We must link the CutTools to the Library folder of the active Template
+        super(LoopProcessExporterFortranSA, self).link_CutTools(self.dir_path)
+
+    # This function is placed here and not in optimized exporterd,
+    # because the same makefile.inc should be used in all cases.
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs):
         """ Create the file makefile which links to the TIR libraries."""
             
         file = open(os.path.join(self.loop_dir,'StandAlone',
@@ -243,9 +279,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
-        replace_dict['pjdir']='PJDIR='+PJDIR
-        if not PJDIR.endswith('/') and PJDIR!="":
-            replace_dict['pjdir']=replace_dict['pjdir']+"/"
         file=file%replace_dict
         if writer:
             writer.writelines(file)
@@ -310,7 +343,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                                  new_helas_call)
 
     def make_source_links(self):
-        """ In the loop output, we don't need the files fromt he Source folder """
+        """ In the loop output, we don't need the files from the Source folder """
         pass
 
     def make_model_symbolic_link(self):
@@ -320,6 +353,47 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         model_path = self.dir_path + '/Source/MODEL/'
         ln(model_path + '/mp_coupl.inc', self.dir_path + '/SubProcesses')
         ln(model_path + '/mp_coupl_same_name.inc', self.dir_path + '/SubProcesses')
+    
+    def make(self):
+        """ Compiles the additional dependences for loop (such as CutTools)."""
+        super(LoopProcessExporterFortranSA, self).make()
+        
+        # make CutTools (only necessary with MG option output_dependencies='internal')
+        libdir = os.path.join(self.dir_path,'lib')
+        sourcedir = os.path.join(self.dir_path,'Source')
+        if self.dependencies=='internal':
+            if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('Compiling CutTools (can take a couple of minutes) ...')
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise MadGraph5Error('Could not compile CutTools because its'+\
+                   ' source directory could not be found in the SOURCE folder.')
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            raise MadGraph5Error('CutTools compilation failed.')
+        
+        # Verify compatibility between current compiler and the one which was
+        # used when last compiling CutTools (if specified).
+        compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
+                                  libdir, 'libcts.a')))),'compiler_version.log')
+        if os.path.exists(compiler_log_path):
+            compiler_version_used = open(compiler_log_path,'r').read()
+            if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
+                       pjoin(sourcedir,'make_opts')))) in compiler_version_used:
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('CutTools was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                    misc.compile(['cleanCT'], cwd = sourcedir)
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise MadGraph5Error("CutTools installation in %s"\
+                                 %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
+                 " seems to have been compiled with a different compiler than"+\
+                    " the one specified in MG5_aMC. Please recompile CutTools.")
     
     def cat_coeff(self, ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         """Concatenate the coefficient information to reduce it to 
@@ -538,20 +612,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         # Do not draw the loop diagrams if they are too many.
         # The user can always decide to do it manually, if really needed
-	    # HSS,24/10/2012
         loop_diags = [loop_diag for loop_diag in\
 		  matrix_element.get('base_amplitude').get('loop_diagrams')\
 		  if isinstance(loop_diag,loop_objects.LoopDiagram) and \
                                                       loop_diag.get('type') > 0]
-        #if (len(matrix_element.get('base_amplitude').get('loop_diagrams'))>1000):
-        if len(loop_diags)>1000:
-            logger.info("There are more than 1000 loop diagrams."+\
-                                               "Only the first 1000 are drawn.")
+        if len(loop_diags)>5000:
+            logger.info("There are more than 5000 loop diagrams."+\
+                                              "Only the first 5000 are drawn.")
         filename = "loop_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
-            loop_diags[:1000]),filename,
+            loop_diags[:5000]),filename,
             model=matrix_element.get('processes')[0].get('model'),amplitude='')
-	    # HSS
         logger.info("Drawing loop Feynman diagrams for " + \
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
@@ -607,6 +678,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # subroutines and common block so that several processes can be compiled
         # together into one library, as necessary to follow BLHA guidelines.
         dict['proc_prefix'] = self.get_ME_identifier(matrix_element)
+
+        # The proc_id is used for MadEvent grouping, so none of our concern here
+        # and it is simply set to an empty string.        
+        dict['proc_id'] = ''
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
         dict['info_lines'] = info_lines
@@ -640,10 +715,18 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Color matrix size
         # For loop induced processes it is NLOOPAMPSxNLOOPAMPS and otherwise
         # it is NLOOPAMPSxNBORNAMPS
+        # Also, how to access the number of Born squared order contributions
+
         if matrix_element.get('processes')[0].get('has_born'):
             dict['color_matrix_size'] = 'nbornamps'
+            dict['get_nsqso_born']=\
+                           "include 'nsqso_born.inc'"
         else:
-            dict['color_matrix_size'] = 'nloopamps'
+            dict['get_nsqso_born']="""INTEGER NSQSO_BORN
+            PARAMETER (NSQSO_BORN=0)
+            """
+            dict['color_matrix_size'] = 'nloopamps'    
+        
         # These placeholders help to have as many common templates for the
         # output of the loop induced processes and those with a born 
         # contribution.
@@ -721,11 +804,12 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
                                           LoopFortranModel)
-            
+
+            # Write out the proc_prefix in a file, this is quite handy
             proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
             proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
             proc_prefix_writer.close()
-            
+                        
             filename = 'check_sa.f'
             self.write_check_sa(writers.FortranWriter(filename),matrix_element)
             
@@ -759,15 +843,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         All the necessary entries in the replace_dictionary have already been 
         set in write_loopmatrix because it is only there that one has access to
         the information about split orders."""        
-        replace_dict = copy.copy(self.general_replace_dict)
-        if 'nSquaredSO' not in replace_dict.keys():
-            writers.FortranWriter('nsquaredSO.inc').writelines(
-"""INTEGER NSQUAREDSO
-PARAMETER (NSQUAREDSO=0)""")    
-        else:
-            writers.FortranWriter('nsquaredSO.inc').writelines(
-"""INTEGER NSQUAREDSO
-PARAMETER (NSQUAREDSO=%d)"""%replace_dict['nSquaredSO'])     
+        replace_dict = copy.copy(self.general_replace_dict)     
         for key in ['print_so_born_results','print_so_loop_results',
             'write_so_born_results','write_so_loop_results','set_coupling_target']:
             if key not in replace_dict.keys():
@@ -1068,7 +1144,7 @@ C                ENDIF
                          ANS(2)=ANS(2)+DBLE(CFTOT*AMPL(2,I))+DIMAG(CFTOT*AMPL(2,I))
                          ANS(3)=ANS(3)+DBLE(CFTOT*AMPL(3,I))+DIMAG(CFTOT*AMPL(3,I))                         
                        ENDIF"""      
-        else:
+        else: 
             replace_dict['compute_born']=\
 """C Compute the born, for a specific helicity if asked so.
 call %(proc_prefix)ssmatrixhel(P_USER,USERHEL,ANS(0))
@@ -1085,6 +1161,13 @@ call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
                    'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J,H)))',
                                                                        'ENDDO'])
 
+        # Write a dummy nsquaredSO.inc which is used in the default
+        # loop_matrix.f code (even though it does not support split orders evals)
+        # just to comply with the syntax expected from the external code using MadLoop.
+        writers.FortranWriter('nsquaredSO.inc').writelines(
+"""INTEGER NSQUAREDSO
+PARAMETER (NSQUAREDSO=0)""")
+
         # Actualize results from the loops computed. Only necessary for
         # processes with a born.
         actualize_ans=[]
@@ -1100,12 +1183,13 @@ call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
             replace_dict['actualize_ans']='\n'.join(actualize_ans)
         else:
             replace_dict['actualize_ans']=\
-            ("""IF(.NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),REF*(10.0d0**-2),-1,H)) THEN
-                 WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
-                 WRITE(*,*) 'Finite contribution         = ',ANS(1)
-                 WRITE(*,*) 'single pole contribution    = ',ANS(2)
-                 WRITE(*,*) 'double pole contribution    = ',ANS(3)
-               ENDIF""")%replace_dict
+            ("""C We add five powers to the reference value to loosen a bit the vanishing pole check.
+C               IF(.NOT.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)).AND..NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),ABS(ANS(1))*(10.0d0**5),-1,H)) THEN
+C                 WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
+C                 WRITE(*,*) 'Finite contribution         = ',ANS(1)
+C                 WRITE(*,*) 'single pole contribution    = ',ANS(2)
+C                 WRITE(*,*) 'double pole contribution    = ',ANS(3)
+C               ENDIF""")%replace_dict
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
@@ -1272,9 +1356,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # The option below controls wether one wants to group together in one single
     # CutTools/TIR call the loops with same denominator structure
     group_loops=True
-    # TIR things
+    
+    # List of potential TIR library one wants to link to
     all_tir=['pjfry','iregi']
-    tir_available_dict={'pjfry':True,'iregi':True}
     
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
@@ -1283,6 +1367,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         super(LoopProcessOptimizedExporterFortranSA,self).__init__(mgme_dir, 
                                                                    dir_path, opt)
+
+        # TIR available ones
+        self.tir_available_dict={'pjfry':True,'iregi':True}
 
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
@@ -1307,38 +1394,32 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             libpath=getattr(self,tir_dir)
             libname="lib%s.a"%tir
             tir_name=tir
-            goodlink=self.link_TIR(os.path.join(self.dir_path, 'lib'),
-                              libpath,libname,tir_name=tir_name)
-            if goodlink==True:
-                if tir!="pjfry":
-                    link_tir_libs.extend(['-l%s'%tir])
-                    tir_libs.extend(['$(LIBDIR)lib%s.$(libext)'%tir])
-                else:
-                    link_pjfry_lib='-L$(PJDIR) -lpjfry'
-                    pjfry_lib='$(PJDIR)libpjfry.$(libext)'
-                    pjdir=libpath
-        if link_pjfry_lib!="":
-            link_tir_libs.extend([link_pjfry_lib])
-            tir_libs.extend([pjfry_lib])
-            #if tir=="iregi":
-            #    link_tir_libs.extend(['-lff','-lqcdloop','-lavh_olo'])
-            #    tir_libs.extend(['$(LIBDIR)libff.$(libext)',
-            #                     '$(LIBDIR)libqcdloop.$(libext)',
-            #                     '$(LIBDIR)libavh_olo.$(libext)'])
-        if self.all_tir and link_tir_libs:
-            os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
-            cwd = os.getcwd()
-            dirpath = os.path.join(self.dir_path, 'SubProcesses')
-            try:
-                os.chdir(dirpath)
-            except os.error:
-                logger.error('Could not cd to directory %s' % dirpath)
-                return 0
-            filename = 'makefile'
-            calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                          link_tir_libs,tir_libs,pjdir)
-            # Return to original PWD
-            os.chdir(cwd)
+            libpath = self.link_TIR(os.path.join(self.dir_path, 'lib'),
+                                              libpath,libname,tir_name=tir_name)
+            setattr(self,tir_dir,libpath)
+            if libpath != "":
+                if tir=='pjfry':
+                    # Apparently it is necessary to link against the original 
+                    # location of the pjfry library, so it needs a special treatment.
+                    link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
+                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))                
+                else :
+                    link_tir_libs.append('-l%s'%tir)
+                    tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
+
+        os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'makefile'
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                                     link_tir_libs,tir_libs)
+        # Return to original PWD
+        os.chdir(cwd)
                      
 
     def link_files_from_Subprocesses(self,proc_name=""):
@@ -1357,60 +1438,102 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """Link the TIR source directory inside the target path given
         in argument"""
 
-        cwd = os.getcwd()
-        try:
-            os.chdir(targetPath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % targetPath)
-            return 0
         if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
             logger.warning("The %s tensor integration library could not be found"%tir_name\
              +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
              +" It will not be available.")
             self.tir_available_dict[tir_name]=False
-            # return to original pwd, which is important
-            os.chdir(cwd)
-            return False
-        if not os.path.exists(os.path.join(libpath,libname)):
-            if libname=="libpjfry.a":
-                logger.warning('Loop library for TIR %s is compiled well.'%tir_name+\
-                           'It will be negelected below.')
+            return ""
+       
+        if self.dependencies=='internal':
+            if tir_name in ["pjfry"]:
                 self.tir_available_dict[tir_name]=False
-                # return to original pwd, which is important
-                os.chdir(cwd)
-                return False    
-            logger.info(('Compiling %s. This has to be done only once and'%tir_name)+\
-                        ' can take a couple of minutes.','$MG:color:BLACK')
-            current = misc.detect_current_compiler(os.path.join(\
-                                                                libpath,'makefile'))
-            new = 'gfortran' if self.fortran_compiler is None else \
+                logger.warning("When using the 'output_dependencies=internal' "+\
+" MG5_aMC option, the tensor integral library %s cannot be employed because"%tir_name+\
+" it is not distributed with the MG5_aMC code so that it cannot be copied locally.")
+                return ""
+            elif tir_name == "iregi":
+                # This is the right paths for IREGI
+                new_iregi_path = pjoin(targetPath,os.path.pardir,'Source','IREGI')
+                shutil.copytree(pjoin(libpath,os.path.pardir), new_iregi_path, 
+                                                                  symlinks=True)
+                
+                current = misc.detect_current_compiler(
+                                 pjoin(new_iregi_path,'src','makefile_ML5_lib'))
+                new = 'gfortran' if self.fortran_compiler is None else \
                                                         self.fortran_compiler
-            if current != new:
-                misc.mod_compilator(libpath, new,current)
-            misc.compile(cwd=libpath, job_specs = False)
-            
-        if os.path.exists(os.path.join(libpath,libname)):            
-            linkfiles = [libname]
-            #if libname=="libiregi.a":
-            #    linkfiles.extend(["qcdloop/libff.a","qcdloop/libqcdloop.a",\
-            #                      "oneloop/libavh_olo.a"])
-            for file in linkfiles:
-                # don't link the pjfry lib
-                if file!="libpjfry.a":
-                    ln(libpath+'/%s' % file)
-        else:
-            raise MadGraph5Error,"%s could not be correctly compiled."%tir_name
+                if current != new:
+                    misc.mod_compilator(pjoin(new_iregi_path,'src'), new,current)
+                    misc.mod_compilator(pjoin(new_iregi_path,'src','oneloop'), 
+                                                                   new, current)
 
-        # Return to original PWD
-        os.chdir(cwd)
+                # Create the links to the lib folder
+                os.symlink(
+                    pjoin(os.path.pardir,'Source','IREGI','src',libname), 
+                                                      pjoin(targetPath,libname))
+            else:
+                logger.info("Tensor integral reduction library "+\
+                                            "%s not implemented yet."%tir_name)
+            return libpath
+ 
+        elif self.dependencies=='external':
+            if not os.path.exists(pjoin(libpath,libname)) and tir_name=='iregi':
+                logger.info('Compiling IREGI. This has to be done only once and'+\
+                             ' can take a couple of minutes.','$MG:color:BLACK')
+                
+                current = misc.detect_current_compiler(os.path.join(\
+                                                    libpath,'makefile_ML5_lib'))
+                new = 'gfortran' if self.fortran_compiler is None else \
+                                                        self.fortran_compiler
+                if current != new:
+                    misc.mod_compilator(libpath, new,current)
+                    misc.mod_compilator(pjoin(libpath,'oneloop'), new, current)
+
+                misc.compile(cwd=libpath, job_specs = False)
+
+                if not os.path.exists(pjoin(libpath,libname)):            
+                    logger.warning("IREGI could not be compiled. Check"+\
+                      "the compilation errors at %s. The related "%libpath+\
+                                              "functionalities are turned off.")
+                    self.tir_available_dict[tir_name]=False
+                    return ""
+            # Apparently it is necessary to link against the original location 
+            # of the pjfry library
+            if tir_name!='pjfry':
+                ln(os.path.join(libpath,libname),targetPath,abspath=True)
+
+        elif self.dependencies=='environment_paths':
+            # Here the user chose to define the dependencies path in one of 
+            # his environmental paths
+            newlibpath = misc.which_lib(libname)
+            if not newlibpath is None:
+                logger.info('MG5_aMC is using %s installation found at %s.'%\
+                                                          (tir_name,newlibpath)) 
+                # Apparently it is necessary to link against the original location 
+                # of the pjfry library
+                if tir_name!='pjfry':
+                    ln(newlibpath,targetPath,abspath=True)
+                self.tir_available_dict[tir_name]=True
+                return os.path.dirname(newlibpath)
+            else:
+                logger.warning("Could not find the location of the file"+\
+                  " %s in you environment paths. The related "%libname+\
+                                             "functionalities are turned off.")
+                self.tir_available_dict[tir_name]=False
+                return ""
+            
         self.tir_available_dict[tir_name]=True
-        return True
+        return libpath
         
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f and loop_num.f only but with
         the optimized FortranModel"""
-        # Create the necessary files for the loop matrix element subroutine
+                
+        # Warn the user that the 'matrix' output where all relevant code is
+        # put together in a single file is not supported in this loop output.
+        if writer:
+            raise MadGraph5Error, 'Matrix output mode no longer supported.'
         
         if not isinstance(fortran_model,\
           helas_call_writers.FortranUFOHelasCallWriter):
@@ -1432,7 +1555,56 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict=LoopProcessExporterFortranSA.\
                               generate_general_replace_dict(self,matrix_element)
 
-        # TIR stuff
+        # Now fill in the replace dict entries specific to the TIR implementation
+        self.set_TIR_replace_dict_entries()
+        # and those specific to the optimized output
+        self.set_optimized_output_specific_replace_dict_entries(matrix_element)
+
+        # Create the necessary files for the loop matrix element subroutine      
+        proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
+        proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
+        proc_prefix_writer.close()
+                    
+        filename = 'loop_matrix.f'
+        calls = self.write_loopmatrix(writers.FortranWriter(filename),
+                                      matrix_element,
+                                      OptimizedFortranModel)
+        
+        filename = 'check_sa.f'
+        self.write_check_sa(writers.FortranWriter(filename),matrix_element)
+        
+        filename = 'polynomial.f'
+        calls = self.write_polynomial_subroutines(
+                                      writers.FortranWriter(filename),
+                                      matrix_element)
+        
+        filename = 'improve_ps.f'
+        calls = self.write_improve_ps(writers.FortranWriter(filename),
+                                                             matrix_element)
+        
+        filename = 'CT_interface.f'
+        self.write_CT_interface(writers.FortranWriter(filename),\
+                                matrix_element)
+        
+        filename = 'TIR_interface.f'
+        self.write_TIR_interface(writers.FortranWriter(filename),
+                                matrix_element)
+
+        filename = 'loop_num.f'
+        self.write_loop_num(writers.FortranWriter(filename),\
+                                matrix_element,OptimizedFortranModel)
+        
+        filename = 'mp_compute_loop_coefs.f'
+        self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
+                                     matrix_element,OptimizedFortranModel)
+
+        return calls
+
+    def set_TIR_replace_dict_entries(self):
+        """ Specify the entries of the replacement dictionary which depend on
+        the choice of Tensor Integral Reduction (TIR) libraries specified by the
+        user and their availability on the system."""
+        
         for tir in self.all_tir:
             if self.tir_available_dict[tir]:
                 if tir=="pjfry":
@@ -1465,7 +1637,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     self.general_replace_dict['iregi_free_ps']=''
         # the first entry is the CutTools, we make sure it is available
         looplibs_av=['.TRUE.']
-        # one should be care about the order in the following
+        # one should be careful about the order in the following
         if "pjfry" in self.all_tir:
             if self.tir_available_dict["pjfry"]:             
                 looplibs_av.extend(['.TRUE.'])
@@ -1482,7 +1654,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             looplibs_av.extend(['.FALSE.'])
         self.general_replace_dict['data_looplibs_av']="DATA LOOPLIBS_AVAILABLE /"\
         +','.join(looplibs_av)+"/"
-        # Now some features specific to the optimized output        
+
+
+    def set_optimized_output_specific_replace_dict_entries(self, matrix_element):
+        """ Specify the entries of the replacement dictionary which are specific
+        to the optimized output and only relevant to it (the more general entries
+        are set in the the mother class LoopProcessExporterFortranSA."""
+        
         max_loop_rank=matrix_element.get_max_loop_rank()
         self.general_replace_dict['maxrank']=max_loop_rank
         self.general_replace_dict['loop_max_coefs']=\
@@ -1517,51 +1695,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             self.general_replace_dict['mp_born_amps_decl'] = \
                   self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
                   "\n common/%sMP_AMPS/AMP"%self.general_replace_dict['proc_prefix']
-
-        if writer:
-            raise MadGraph5Error, 'Matrix output mode no longer supported.'
-
-        else:
-                        
-            proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
-            proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
-            proc_prefix_writer.close()
-                        
-            filename = 'loop_matrix.f'
-            calls = self.write_loopmatrix(writers.FortranWriter(filename),
-                                          matrix_element,
-                                          OptimizedFortranModel)
-            
-            filename = 'check_sa.f'
-            self.write_check_sa(writers.FortranWriter(filename),matrix_element)
-            
-            filename = 'polynomial.f'
-            calls = self.write_polynomial_subroutines(
-                                          writers.FortranWriter(filename),
-                                          matrix_element)
-            
-            filename = 'improve_ps.f'
-            calls = self.write_improve_ps(writers.FortranWriter(filename),
-                                                                 matrix_element)
-            
-            filename = 'CT_interface.f'
-            self.write_CT_interface(writers.FortranWriter(filename),\
-                                    matrix_element)
-            
-            filename = 'TIR_interface.f'
-            self.write_TIR_interface(writers.FortranWriter(filename),
-                                    matrix_element)
-
-            filename = 'loop_num.f'
-            self.write_loop_num(writers.FortranWriter(filename),\
-                                    matrix_element,OptimizedFortranModel)
-            
-            filename = 'mp_compute_loop_coefs.f'
-            self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
-                                         matrix_element,OptimizedFortranModel)
-
-            return calls
-
+    
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools
         which contains the Helas calls building the loop"""
@@ -1822,8 +1956,8 @@ ENDIF"""%self.general_replace_dict
 ' aim at computing all individual contributions. You can choose otherwise.',
 'call %(proc_prefix)sSET_COUPLINGORDERS_TARGET(-1)'%self.general_replace_dict])
             self.general_replace_dict['print_so_loop_results'] = '\n'.join([
-              '\n'.join(["write(*,*) 'Loop ME for orders (%s) :'"%(' '.join(
-          ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))])),
+              '\n'.join(["write(*,*) '%dL) Loop ME for orders (%s) :'"%((j+1),(' '.join(
+          ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))]))),
               "IF (PREC_FOUND(%d).NE.-1.0d0) THEN"%(j+1),
               "write(*,*) ' > accuracy = ',PREC_FOUND(%d)"%(j+1),
               "ELSE",
@@ -1861,7 +1995,7 @@ ENDIF"""%self.general_replace_dict
                                             for i in range(len(split_orders))]))
         else:
             self.general_replace_dict['print_so_born_results'] = '\n'.join([
-          "write(*,*) 'Born ME for orders (%s) = ',MATELEM(0,%d)"%(' '.join(
+          "write(*,*) '%dB) Born ME for orders (%s) = ',MATELEM(0,%d)"%(j+1,' '.join(
        ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))]),j+1)
                                 for j, so in enumerate(squared_born_so_orders)])
         self.general_replace_dict['write_so_born_results'] = '\n'.join(
@@ -1878,7 +2012,7 @@ ENDIF"""%self.general_replace_dict
                              '\nwrite (*,*) "---------------------------------"'
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
-                         noSplit=False):
+                         noSplit=False, write_auxiliary_files=True,):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \
@@ -1898,7 +2032,7 @@ ENDIF"""%self.general_replace_dict
         squared_orders, amps_orders = matrix_element.get_split_orders_mapping()
         # Creating here a temporary list containing only the information of 
         # what are the different squared split orders contributing
-        # (no max_contrib_amp_number and max_contrib_ref_amp_number)
+        # (i.e. not using max_contrib_amp_number and max_contrib_ref_amp_number)
         sqso_contribs = [sqso[0] for sqso in squared_orders]
         split_orders = matrix_element.get('processes')[0].get('split_orders')
         # The entries set in the function below are only for check_sa written
@@ -1923,9 +2057,14 @@ ENDIF"""%self.general_replace_dict
 
         # Those are additional entries used throughout the different files of
         # MadLoop5
+        self.general_replace_dict['split_order_str_list'] = str(split_orders)
         self.general_replace_dict['nSO'] = len(split_orders)
         self.general_replace_dict['nSquaredSO'] = len(sqso_contribs)
         self.general_replace_dict['nAmpSO'] = len(overall_so_basis)
+
+        writers.FortranWriter('nsquaredSO.inc').writelines(
+"""INTEGER NSQUAREDSO
+PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
         
         replace_dict = copy.copy(self.general_replace_dict)
         # Build the general array mapping the split orders indices to their
@@ -1934,6 +2073,11 @@ ENDIF"""%self.general_replace_dict
                                              overall_so_basis,'AMPSPLITORDERS'))
         replace_dict['SquaredSO'] = '\n'.join(self.get_split_orders_lines(\
                                                   sqso_contribs,'SQPLITORDERS'))
+        
+        # Specify what are the squared split orders selected by the proc def.
+        replace_dict['chosen_so_configs'] = self.set_chosen_SO_index(
+                               matrix_element.get('processes')[0],sqso_contribs)
+        
         # Now we build the different arrays storing the split_orders ID of each
         # amp.
         ampSO_list=[-1]*sum(len(el[1]) for el in amps_orders['loop_amp_orders'])
@@ -2007,17 +2151,17 @@ C respectively. For this to work, we assume that there is
 C always more squared split orders in the loop ME than in the
 C born ME, which is practically always true. In any case, only
 C the split_order summed value I=0 is used in ML5 code.
-DO I=0,NSQUAREDSO
-  TEMP1(I)=0.0d0
+DO I=0,NSQSO_BORN
+  BORNBUFF(I)=0.0d0
 ENDDO
-CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,TEMP1(0))
-DO I=0,NSQUAREDSO
-  ANS(0,I)=TEMP1(I)
+CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,BORNBUFF(0))
+DO I=0,NSQSO_BORN
+  ANS(0,I)=BORNBUFF(I)
 ENDDO
 """%self.general_replace_dict
             replace_dict['set_reference']='\n'.join(
-              ['C We set here the reference to the born summed over all split orders and helicities',
-              'call %(proc_prefix)ssmatrix(P_USER,ref)'%self.general_replace_dict])
+              ['C We set here the reference to the born summed over all split orders',
+              'REF=0.0d0','DO I=1,NSQSO_BORN','REF=REF+ANS(0,I)','ENDDO'])
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join([
@@ -2053,26 +2197,27 @@ ENDDO""")
             actualize_ans.extend(["ENDIF","ENDDO"])            
         replace_dict['actualize_ans']='\n'.join(actualize_ans)
         
-        # Write out the color matrix
-        (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open(pjoin('..','MadLoop5_resources',
+        if write_auxiliary_files:
+            # Write out the color matrix
+            (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
+            CMWriter=open(pjoin('..','MadLoop5_resources',
             '%(proc_prefix)sColorNumFactors.dat'%self.general_replace_dict),'w')
-        for ColorLine in CMNum:
-            CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
-        CMWriter.close()
-        CMWriter=open(pjoin('..','MadLoop5_resources',
-          '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
-        for ColorLine in CMDenom:
-            CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
-        CMWriter.close()
-        
-        # Write out the helicity configurations
-        HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open(pjoin('..','MadLoop5_resources',
+            for ColorLine in CMNum:
+                CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
+            CMWriter.close()
+            CMWriter=open(pjoin('..','MadLoop5_resources',
+            '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
+            for ColorLine in CMDenom:
+                CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
+            CMWriter.close()
+            
+            # Write out the helicity configurations
+            HelConfigs=matrix_element.get_helicity_matrix()
+            HelConfigWriter=open(pjoin('..','MadLoop5_resources',
                  '%(proc_prefix)sHelConfigs.dat'%self.general_replace_dict),'w')
-        for HelConfig in HelConfigs:
-            HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
-        HelConfigWriter.close()
+            for HelConfig in HelConfigs:
+                HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
+            HelConfigWriter.close()
         
         # Extract helas calls
         born_ct_helas_calls, uvct_helas_calls = \

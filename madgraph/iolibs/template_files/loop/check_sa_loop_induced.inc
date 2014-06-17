@@ -18,7 +18,6 @@ C
 
 	  character(512) MadLoopResourcePath
 
-      INCLUDE "nsquaredSO.inc"
 C     
 C     INCLUDE FILES
 C     
@@ -30,6 +29,7 @@ C particle masses
       REAL*8 PMASS(NEXTERNAL)      
 C integer    n_max_cg
       INCLUDE "ngraphs.inc" 
+	  include "nsquaredSO.inc"
 
 C     
 C     LOCAL
@@ -37,12 +37,31 @@ C
       INTEGER I,J,K
 C four momenta. Energy is the zeroth component.
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 SQRTS,MATELEM(0:3,0:NSQUAREDSO),AO2PI
+	  INTEGER MATELEM_ARRAY_DIM
+	  REAL*8 , allocatable :: MATELEM(:,:)
+      REAL*8 SQRTS,AO2PI
 C sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
 	  INTEGER RETURNCODE, UNITS, TENS, HUNDREDS
-	  REAL*8 PREC_FOUND(0:NSQUAREDSO)
+	  INTEGER NSQUAREDSO_LOOP
+	  REAL*8 , allocatable :: PREC_FOUND(:)
+
+	  LOGICAL INIT
+      DATA INIT/.TRUE./
+	  COMMON/INITCHECKSA/INIT
+
+C
+C     GLOBAL VARIABLES
+C
+C     This is from ML code for the list of split orders selected by
+c     the process definition
+c
+      integer NLoopChosen
+      character*20 chosen_loop_so_indices(NSQUAREDSO)
+	  LOGICAL CHOSEN_LOOP_SO_CONFIGS(NSQUAREDSO)
+      COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_LOOP_SO_CONFIGS
+
 C     
 C     EXTERNAL
 C     
@@ -51,7 +70,13 @@ C
       
 C 
 C     BEGIN CODE
-C 
+C
+      IF (INIT) THEN
+	    INIT=.FALSE.
+	    CALL %(proc_prefix)sGET_ANSWER_DIMENSION(MATELEM_ARRAY_DIM)
+	  	ALLOCATE(MATELEM(0:3,0:MATELEM_ARRAY_DIM))
+		CALL %(proc_prefix)sGET_NSQSO_LOOP(NSQUAREDSO_LOOP)
+	  	ALLOCATE(PREC_FOUND(0:NSQUAREDSO_LOOP))
 C     
 C     INITIALIZATION CALLS
 C     
@@ -64,6 +89,17 @@ C first call to setup the paramaters
       call setpara('param_card.dat')
 C set up masses
       include "pmass.inc"             
+		
+	  ENDIF
+
+c     Start by initializing what is the squared split orders indices chosen
+      NLoopChosen=0
+      DO I=1,NSQUAREDSO
+        IF (CHOSEN_LOOP_SO_CONFIGS(I)) THEN
+          NLoopChosen=NLoopChosen+1
+          WRITE(chosen_loop_so_indices(NLoopChosen),'(I3,A2)') I,'L)'
+        ENDIF
+      ENDDO
 
       AO2PI=G**2/(8.D0*(3.14159265358979323846d0**2))
 
@@ -166,7 +202,9 @@ C
          write (*,'(i2,1x,5e15.7)') i, P(0,i),P(1,i),P(2,i),P(3,i),dsqrt(dabs(DOT(p(0,i),p(0,i))))
       enddo
       write (*,*) "---------------------------------"
-
+      write (*,*) "Detailed result for each coupling orders combination."
+	  %(print_so_born_results)s
+	  %(print_so_loop_results)s
       UNITS=MOD(RETURNCODE,10)
       TENS=(MOD(RETURNCODE,100)-UNITS)/10
       HUNDREDS=(RETURNCODE-TENS*10-UNITS)/100
@@ -197,7 +235,11 @@ C
           write(*,*) 'Estimated accuracy could not be computed for an unknown reason.'
         endif
       endif
-
+      write (*,*) "---------------------------------"
+      IF (NLOOPCHOSEN.ne.NSQUAREDSO) THEN
+        write (*,*) "Selected squared coupling orders combination for the loop summed result below:"
+        write (*,*) (chosen_loop_so_indices(I),I=1,NLOOPCHOSEN)
+      endif
       write (*,*) "---------------------------------"
       write (*,*) " This is a loop induced process, so only the "
 	  write (*,*) " unnormalized finite part is output here. Be aware "
@@ -206,8 +248,7 @@ C
       write (*,*) "---------------------------------"
       write (*,*) "Matrix element finite = ", MATELEM(1,0), " GeV^",-(2*nexternal-8)
       write (*,*) "---------------------------------"
-	  %(print_so_born_results)s
-	  %(print_so_loop_results)s
+
 
       open(69, file="result.dat", err=976, action='WRITE')
       do i=1,nexternal      
@@ -221,6 +262,8 @@ C
       write (69,*) 'Export_Format LoopInduced'
 	  write (69,'(a7,1x,i3)') 'RETCODE',RETURNCODE
 	  write (69,'(a3,1x,1e10.4)') 'ACC',PREC_FOUND(0)
+	  write (69,*) 'Born_kept F'
+	  write (69,*) 'Loop_kept',(CHOSEN_LOOP_SO_CONFIGS(I),I=1,NSQUAREDSO)
 	  %(write_so_born_results)s
 	  %(write_so_loop_results)s	  
       close(69)

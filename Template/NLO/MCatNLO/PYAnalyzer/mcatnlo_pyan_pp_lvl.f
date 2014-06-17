@@ -15,13 +15,13 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE PYABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       implicit none
       include 'reweight0.inc'
       integer j,kk,l,i
       character*5 cc(2)
-      data cc/'     ','     '/
+      data cc/'     ','Born '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
@@ -34,30 +34,29 @@ c
       do i=1,1
       do kk=1,nwgt_analysis
         l=(kk-1)*16+(i-1)*8
-        call mbook(l+1,'total rate '//weights_info(kk)//cc(i),
+        call mbook(l+1,'total rate '//cc(i)//weights_info(kk),
      &       1.0d0,0.5d0,5.5d0)
-        call mbook(l+2,'lep rapidity '//weights_info(kk)//cc(i),
+        call mbook(l+2,'lep rapidity '//cc(i)//weights_info(kk),
      &       0.5d0,-5d0,5d0)
-        call mbook(l+3,'lep pt '//weights_info(kk)//cc(i),
+        call mbook(l+3,'lep pt '//cc(i)//weights_info(kk),
      &       10d0,0d0,200d0)
-        call mbook(l+4,'et miss '//weights_info(kk)//cc(i),
+        call mbook(l+4,'et miss '//cc(i)//weights_info(kk),
      &       10d0,0d0,200d0)
-        call mbook(l+5,'trans. mass '//weights_info(kk)//cc(i),
+        call mbook(l+5,'trans. mass '//cc(i)//weights_info(kk),
      &       5d0,0d0,200d0)
-        call mbook(l+6,'w rapidity '//weights_info(kk)//cc(i),
+        call mbook(l+6,'w rapidity '//cc(i)//weights_info(kk),
      &       0.5d0,-5d0,5d0)
-        call mbook(l+7,'w pt '//weights_info(kk)//cc(i),
+        call mbook(l+7,'w pt '//cc(i)//weights_info(kk),
      &       10d00,0d0,200d0)
-        call mbook(l+8,'cphi[l,vl] '//weights_info(kk)//cc(i),
+        call mbook(l+8,'cphi[l,vl] '//cc(i)//weights_info(kk),
      &       0.05d0,-1d0,1d0)
       enddo
       enddo
  999  END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE PYAEND(IEVT)
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       REAL*8 XNORM
       INTEGER I,J,KK,l,nwgt_analysis
@@ -66,12 +65,12 @@ C----------------------------------------------------------------------
       common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='PYTLL.TOP',STATUS='UNKNOWN')
       XNORM=1.D0/IEVT
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+        CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do i=1,1
       do kk=1,nwgt_analysis
@@ -91,7 +90,7 @@ C
 
 C----------------------------------------------------------------------
       SUBROUTINE PYANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       implicit double precision(a-h, o-z)
       implicit integer(i-n)
@@ -134,7 +133,7 @@ C CHOOSE IDENT = 11 FOR E - NU_E
 C        IDENT = 13 FOR MU - NU_MU
 C        IDENT = 15 FOR TAU - NU_TAU
       IDENT=11
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,P(3,3)).EQ.SIGN(1.D0,P(4,3)))THEN
          WRITE(*,*)'WARNING 111 IN PYANAL'

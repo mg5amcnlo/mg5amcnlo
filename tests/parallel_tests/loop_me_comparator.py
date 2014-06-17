@@ -27,10 +27,9 @@ import shutil
 import subprocess
 import sys
 import time
-# HSS, 2/4/2013
+import re
 import operator
 import math
-# HSS
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -204,6 +203,14 @@ class LoopMG5Runner(me_comparator.MG5Runner):
 
         v5_string += "import model %s\n" % os.path.join(self.model_dir, model)
         
+        # The squared order couplings can be specified via the dictionary
+        # squared_orders using either of the two syntax:
+        # {'QCD':2,'QED':4} or {'QCD^2<=':2,'QED^2<=':4}
+        # The latter syntax allowing for specifying the comparator. 
+        # The reg. exp. below makes sure one can separate the two syntaxes.       
+        sq_order_re = re.compile(
+          r"^\s*(?P<coup_name>\w*)\s*\^2\s*(?P<logical_operator>(==)|(<=)|=|>)")
+        
         for i, (proc, born_orders, perturbation_orders, squared_orders) in \
             enumerate(proc_list):      
             
@@ -211,9 +218,18 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                                    in born_orders.items()])
             perturbations = ' '.join([k for k \
                                    in perturbation_orders])
-
-            squared_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
-                                   in squared_orders.items()])      
+            
+            squared_couplings = []
+            for coup, value in squared_orders.items():
+                parsed = sq_order_re.match(coup)
+                if not parsed is None:
+                    operator = parsed.group('logical_operator')
+                    coup_name = parsed.group('coup_name')
+                else:
+                    operator = '='
+                    coup_name = coup
+                squared_couplings.append('%s^2%s%i'% (coup_name,operator,value))
+            squared_couplings = ' '.join(squared_couplings)    
             v5_string += 'add process ' + proc + ' ' + born_couplings + \
                          ' [virt=' + perturbations + '] ' + squared_couplings + \
                          (' @%i\n'%i)
@@ -1397,7 +1413,10 @@ class LoopMEComparator(me_comparator.MEComparator):
         """Output result as a nicely formated table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 
-        proc_col_size = 24
+        if any('^2' in sqso for proc in self.proc_list for sqso in proc[3].keys()):
+            proc_col_size = 42
+        else:
+            proc_col_size = 24
 
         for proc in self.proc_list:
             if len(proc) + 2 > proc_col_size:
@@ -1427,9 +1446,7 @@ class LoopMEComparator(me_comparator.MEComparator):
             for i, (proc, born_orders, perturbation_orders, squared_orders) \
               in enumerate(self.proc_list):
                 list_res = [res[i][0][index] for res in self.results]
-                # HSS, 02/04/2013
                 if index==0:maxfin=max(max(map(abs,list_res)),1e-99)
-                # HSS
                 if max(list_res) == 0.0 and min(list_res) == 0.0:
                     diff = 0.0
                     if skip_zero:
@@ -1438,14 +1455,21 @@ class LoopMEComparator(me_comparator.MEComparator):
                     diff = (max(list_res) - min(list_res)) / \
                            abs((max(list_res) + min(list_res)))
 
-                res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
+                proc_string = ""
+                if any('^2' in key for key in squared_orders.keys()):
+                    # In this case, it is necessary to also detail the squared
+                    # order constraints
+                    proc_string = self._fixed_string_length(proc+' %s'%' '.join(
+                        '%s%i'%(key, value) for key, value in 
+                                          squared_orders.items()),proc_col_size)
+                else:
+                    proc_string = self._fixed_string_length(proc, proc_col_size)
+                res_str += '\n' + proc_string+ \
                            ''.join([self._fixed_string_length("%1.10e" % res,
-                                                   col_size) for res in list_res])
+                                                 col_size) for res in list_res])
     
                 res_str += self._fixed_string_length("%1.10e" % diff, col_size)
-                # HSS, 02/04/2013
                 if diff < tolerance or max(map(abs,list_res))/maxfin<tolerance and index>1:
-                # HSS
                     if index==3 and proc not in failed_proc_list:
                         pass_proc += 1
                     res_str += "Pass"
@@ -1533,6 +1557,7 @@ class LoopHardCodedRefRunner(me_comparator.MERunner):
                  "Phase space point is not provided !"
         return self.res_list
 # HSS
+
 class LoopMEComparatorGauge(LoopMEComparator):
     """Base object to run comparison tests for loop processes. Take standard 
     MERunner objects and a list of loop proc as an input and return detailed 

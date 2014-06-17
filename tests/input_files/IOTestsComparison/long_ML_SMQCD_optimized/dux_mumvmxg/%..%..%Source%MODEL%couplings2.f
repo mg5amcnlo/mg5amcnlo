@@ -1,0 +1,46 @@
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c      written by the UFO converter
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+      SUBROUTINE COUP2()
+
+      IMPLICIT NONE
+
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+      INCLUDE 'input.inc'
+      INCLUDE 'coupl.inc'
+
+      INCLUDE 'model_functions.inc'
+      UV_GQQB = MDL_COMPLEXI*(COND(DCMPLX(MDL_MB),DCMPLX(0.000000D
+     $ +00),DCMPLX(-((MDL_G__EXP__2)/(2.000000D+00*4.800000D+01*PI*
+     $ *2))*4.000000D+00*MDL_TF*REGLOG(DCMPLX(MDL_MB__EXP__2/MDL_MU_R__
+     $ EXP__2)))))*G
+      UV_GQQT = MDL_COMPLEXI*(COND(DCMPLX(MDL_MT),DCMPLX(0.000000D
+     $ +00),DCMPLX(-((MDL_G__EXP__2)/(2.000000D+00*4.800000D+01*PI*
+     $ *2))*4.000000D+00*MDL_TF*REGLOG(DCMPLX(MDL_MT__EXP__2/MDL_MU_R__
+     $ EXP__2)))))*G
+      UVWFCT_G_2 = COND(DCMPLX(MDL_MT),DCMPLX(0.000000D+00),DCMPLX(((MD
+     $ L_G__EXP__2)/(2.000000D+00*4.800000D+01*PI**2))*4.000000D
+     $ +00*MDL_TF*REGLOG(DCMPLX(MDL_MT__EXP__2/MDL_MU_R__EXP__2))))
+      UVWFCT_G_1 = COND(DCMPLX(MDL_MB),DCMPLX(0.000000D+00),DCMPLX(((MD
+     $ L_G__EXP__2)/(2.000000D+00*4.800000D+01*PI**2))*4.000000D
+     $ +00*MDL_TF*REGLOG(DCMPLX(MDL_MB__EXP__2/MDL_MU_R__EXP__2))))
+      R2_SXCW = ((MDL_CKM22*MDL_EE*MDL_COMPLEXI)/(MDL_SW*MDL_SQRT__2))
+     $ *(-(MDL_G__EXP__2*(1.000000D+00+MDL_LHV)*(MDL_NCOL__EXP__2_M_1_0
+     $ ))/(2.000000D+00*MDL_NCOL*1.600000D+01*PI**2))
+      GC_4 = -G
+      GC_5 = MDL_COMPLEXI*G
+      R2_GQQ = -MDL_COMPLEXI*MDL_G__EXP__3/(1.600000D+01*PI**2)
+     $ *((MDL_NCOL__EXP__2_M_1)/(2.000000D+00*MDL_NCOL))*(1.000000D+00
+     $ +MDL_LHV)
+      R2_QQQ = MDL_LHV*MDL_COMPLEXI*MDL_G__EXP__2*(MDL_NCOL__EXP__2_M_1
+     $ )/(3.200000D+01*PI**2*MDL_NCOL)
+      UV_GQQG_1EPS = MDL_COMPLEXI*(-((MDL_G__EXP__2)/(2.000000D
+     $ +00*4.800000D+01*PI**2))*1.100000D+01*MDL_CA)*G
+      UV_GQQQ_1EPS = MDL_COMPLEXI*(((MDL_G__EXP__2)/(2.000000D
+     $ +00*4.800000D+01*PI**2))*4.000000D+00*MDL_TF)*G
+      UVWFCT_G_2_1EPS = COND(DCMPLX(MDL_MT),DCMPLX(0.000000D+00)
+     $ ,DCMPLX(-((MDL_G__EXP__2)/(2.000000D+00*4.800000D+01*PI**2))
+     $ *4.000000D+00*MDL_TF))
+      END

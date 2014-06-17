@@ -278,11 +278,20 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                      '%s at the output stage only.'%self['OLP'])
             return
 
+        # determine the orders to be used to generate the loop
+        loop_orders = {}
+        for  born in self['born_processes']:
+            for coup, val in fks_common.find_orders(born.born_amp).items():
+                try:
+                    loop_orders[coup] = max([loop_orders[coup], val])
+                except KeyError:
+                    loop_orders[coup] = val
+
         for i, born in enumerate(self['born_processes']):
             logger.info('Generating virtual matrix elements using MadLoop:')
             myproc = copy.copy(born.born_proc)
             # take the orders that are actually used bu the matrix element
-            myproc['orders'] = fks_common.find_orders(born.born_amp)
+            myproc['orders'] = loop_orders
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
             logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
                     % (myproc.nice_string(print_weighted = False).replace(\
@@ -367,22 +376,22 @@ class FKSRealProcess(object):
         for i in self.process.get('legs'):
             fks_j_from_i[i.get('number')] = []
             if i.get('state'):
-                for j in self.process.get('legs'):
-                    if j.get('number') != i.get('number') :
-                        for pert_order in self.process.get('perturbation_couplings'):
-                            ijlist = fks_common.combine_ij(i, j, self.process.get('model'), {},\
-                                                           pert=pert_order)
-                            for ij in ijlist:
-                                born_leglist = fks_common.to_fks_legs(
-                                              copy.deepcopy(self.process.get('legs')), 
-                                              self.process.get('model'))
-                                born_leglist.remove(i)
-                                born_leglist.remove(j)
-                                born_leglist.insert(ij.get('number') - 1, ij)
-                                born_leglist.sort(pert = self.perturbation)
-                                if [l['id'] for l in born_leglist] in born_pdg_list:
-                                    fks_j_from_i[i.get('number')].append(\
-                                                            j.get('number'))                                
+                for j in [l for l in self.process.get('legs') if \
+                        l.get('number') != i.get('number')]:
+                    for pert_order in self.process.get('perturbation_couplings'):
+                        ijlist = fks_common.combine_ij(i, j, self.process.get('model'), {},\
+                                                       pert=pert_order)
+                        for ij in ijlist:
+                            born_leglist = fks_common.to_fks_legs(
+                                          copy.deepcopy(self.process.get('legs')), 
+                                          self.process.get('model'))
+                            born_leglist.remove(i)
+                            born_leglist.remove(j)
+                            born_leglist.insert(ij.get('number') - 1, ij)
+                            born_leglist.sort(pert = self.perturbation)
+                            if [l['id'] for l in born_leglist] in born_pdg_list:
+                                fks_j_from_i[i.get('number')].append(\
+                                                        j.get('number'))                                
 
         self.fks_j_from_i = fks_j_from_i
         return fks_j_from_i

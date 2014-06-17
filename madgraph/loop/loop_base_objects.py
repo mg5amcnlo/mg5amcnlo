@@ -310,11 +310,7 @@ class LoopDiagram(base_objects.Diagram):
         if len(tag)==1:
             return tag
         elif len(tag)==2:
-            # HSS, 14/02/2013
-            # Remove the redundant bubble diagrams, like [a W- a] and [W+ a W-]
-            #if tag[0][0]['id']>tag[1][0]['id']:
             if abs(tag[0][0]['id'])>abs(tag[1][0]['id']):
-            # HSS
                 return rev_tag
             else:
                 return tag
@@ -1289,18 +1285,6 @@ class FDStructure(base_objects.PhysicsObject):
             return True
         else:
             return False
-
-    # HSS 19/09/2012
-    def is_external_massless(self,model):
-	"""Returns whether the structure is simply made of an external massless particle only"""
-	if not self.is_external():return False
-	exleg = [ leg for leg in self['external_legs'] if leg['number']==self['canonical'][0][0][0] ]
-	if not exleg: return False
-	exleg = exleg[0]
-	return any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() \
-	if pdg == abs(exleg['id'])])
-    # HSS
-
 
     def filter(self, name, value):
         """Filter for valid FDStructure property values."""

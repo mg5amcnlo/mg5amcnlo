@@ -77,6 +77,14 @@ C     Try to automatically find the path
           goto 10
 2         continue
           close(1)
+          prefix='../MadLoop5_resources/'
+          call joinPath(prefix,nameToCheck,fpath)
+          OPEN(1, FILE=fpath, ERR=66, STATUS='OLD',      
+     $    ACTION='READ')
+          MLPath=prefix
+          goto 10
+66        continue
+          close(1)
 c     We could not automatically find the auxiliary files
           write(*,*) '==='
           write(*,*) 'ERROR: MadLoop5 could not automatically find',
@@ -264,7 +272,9 @@ C BEGIN CODE
 C ----------
       LPASS=.TRUE.
       IF(NLOOPLINE.LT.RANK.OR.RANK.GT.5
-     $     .OR.NLOOPLINE.GT.6.OR.complex_mass)LPASS=.FALSE.
+     $.OR.NLOOPLINE.GT.6.OR.complex_mass.OR.NLOOPLINE.eq.1) THEN
+        LPASS=.FALSE.
+      ENDIF
       RETURN
       END
 

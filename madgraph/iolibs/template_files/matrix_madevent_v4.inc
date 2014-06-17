@@ -188,6 +188,11 @@ C
     PARAMETER (ZERO=0D0)
     COMPLEX*16 IMAG1
     PARAMETER (IMAG1=(0D0,1D0))
+    INTEGER NAMPSO, NSQAMPSO
+    PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
+	LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
+	DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
+	SAVE CHOSEN_SO_CONFIGS
 C  
 C ARGUMENTS 
 C  
@@ -196,14 +201,18 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-    INTEGER I,J
+    INTEGER I,J,M,N
     COMPLEX*16 ZTEMP
     REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-    COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
+    COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(18,NWAVEFUNCS)
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+C
+C FUNCTION
+C
+      INTEGER SQSOINDEX%(proc_id)s
 C  
 C GLOBAL VARIABLES
 C  
@@ -219,17 +228,31 @@ C BEGIN CODE
 C ----------
 %(helas_calls)s
 %(jamp_lines)s
+
     MATRIX%(proc_id)s = 0.D0 
-    DO I = 1, NCOLOR
+	DO M = 1, NAMPSO
+      DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+          ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
         ENDDO
-        MATRIX%(proc_id)s=MATRIX%(proc_id)s+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
-    ENDDO
+		DO N = 1, NAMPSO
+          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
+		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+		  ENDIF
+		ENDDO
+      ENDDO
+	ENDDO
+
 %(amp2_lines)s
     Do I = 1, NCOLOR
-        Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
+	  DO M = 1, NAMPSO	
+		DO N = 1, NAMPSO
+          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN		
+            Jamp2(i)=Jamp2(i)+Jamp(i,m)*dconjg(Jamp(i,n))
+		  ENDIF
+		enddo
+	  enddo
     Enddo
 
     END
