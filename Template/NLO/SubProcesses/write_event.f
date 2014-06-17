@@ -128,7 +128,7 @@ c  Write-out the events
       return
       end
 
-      subroutine write_header_init(lunlhe,nevents,res,res_abs,err)
+      subroutine write_header_init
       implicit none
       integer lunlhe,nevents
       double precision res,err,res_abs
@@ -136,7 +136,11 @@ c  Write-out the events
       logical Hevents
       common/SHevents/Hevents
       character*10 MonteCarlo
+c
       common/cMonteCarloType/MonteCarlo
+      integer ifile,ievents
+      double precision inter,absint,uncer
+      common /to_write_header_init/inter,absint,uncer,ifile,ievents
 
 c Les Houches init block (for the <init> info)
       integer maxpup
@@ -146,28 +150,38 @@ c Les Houches init block (for the <init> info)
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
      &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
      &     xmaxup(maxpup),lprup(maxpup)
+c Scales
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
 
 
 c      open(unit=58,file='res_1',status='old')
 c      read(58,'(a)')string
 c      read(string(index(string,':')+1:index(string,'+/-')-1),*) res_abs
 c      close(58)
-
+      lunlhe=ifile
 c get info on beam and PDFs
       call setrun
-      XSECUP(1)=res
-      XERRUP(1)=err
-      XMAXUP(1)=res_abs/nevents
+      XSECUP(1)=inter
+      XERRUP(1)=uncer
+      XMAXUP(1)=absint/ievents
       LPRUP(1)=66
       IDWTUP=-4
       NPRUP=1
 
       write(lunlhe,'(a)')'<LesHouchesEvents version="1.0">'
       write(lunlhe,'(a)')'  <!--'
+      write(lunlhe,'(a)')'  <scalesfunctionalform>'
+      write(lunlhe,'(2a)')'    muR  ',muR_id_str(1:len_trim(muR_id_str))
+      write(lunlhe,'(2a)')'    muF1 ',muF1_id_str(1:len_trim(muF1_id_str))
+      write(lunlhe,'(2a)')'    muF2 ',muF2_id_str(1:len_trim(muF2_id_str))
+      write(lunlhe,'(2a)')'    QES  ',QES_id_str(1:len_trim(QES_id_str))
+      write(lunlhe,'(a)')'  </scalesfunctionalform>'
       write(lunlhe,'(a)')MonteCarlo
       write(lunlhe,'(a)')'  -->'
       write(lunlhe,'(a)')'  <header>'
-      write(lunlhe,250)  nevents
+      write(lunlhe,250)ievents
       write(lunlhe,'(a)')'  </header>'
       write(lunlhe,'(a)')'  <init>'
       write(lunlhe,501)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
@@ -218,7 +232,13 @@ c get info on beam and PDFs
      #                 muF22_current,QES2_current
       common/cscales_current_values/muR2_current,muF12_current,
      #                              muF22_current,QES2_current
+      logical firsttime
+      data firsttime/.true./
 c
+      if (firsttime) then
+         call write_header_init
+         firsttime=.false.
+      endif
       ievent=66
       if (ickkw.ne.4) then
          scale = shower_scale

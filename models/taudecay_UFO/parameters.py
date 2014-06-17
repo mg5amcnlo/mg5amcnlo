@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules 2.0.6
+# This file was automatically created by FeynRules 2.0.25
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (February 23, 2011)
-# Date: Wed 18 Dec 2013 14:14:59
+# Date: Thu 8 May 2014 12:30:33
 
 
 
@@ -33,13 +33,21 @@ Gf = Parameter(name = 'Gf',
                lhablock = 'SMINPUTS',
                lhacode = [ 2 ])
 
+F0 = Parameter(name = 'F0',
+               nature = 'external',
+               type = 'real',
+               value = 1.,
+               texname = 'F_0',
+               lhablock = 'FRBlock',
+               lhacode = [ 1 ])
+
 F1 = Parameter(name = 'F1',
                nature = 'external',
                type = 'real',
                value = 0.13041,
                texname = 'F_1',
                lhablock = 'FRBlock',
-               lhacode = [ 1 ])
+               lhacode = [ 2 ])
 
 F2 = Parameter(name = 'F2',
                nature = 'external',
@@ -47,7 +55,7 @@ F2 = Parameter(name = 'F2',
                value = 1.,
                texname = 'F_2',
                lhablock = 'FRBlock',
-               lhacode = [ 2 ])
+               lhacode = [ 3 ])
 
 F3 = Parameter(name = 'F3',
                nature = 'external',
@@ -55,7 +63,7 @@ F3 = Parameter(name = 'F3',
                value = 1.,
                texname = 'F_3',
                lhablock = 'FRBlock',
-               lhacode = [ 3 ])
+               lhacode = [ 4 ])
 
 Fr1 = Parameter(name = 'Fr1',
                 nature = 'external',
@@ -63,7 +71,7 @@ Fr1 = Parameter(name = 'Fr1',
                 value = 1.,
                 texname = 'F_{23}',
                 lhablock = 'FRBlock',
-                lhacode = [ 4 ])
+                lhacode = [ 5 ])
 
 Fr2 = Parameter(name = 'Fr2',
                 nature = 'external',
@@ -71,23 +79,39 @@ Fr2 = Parameter(name = 'Fr2',
                 value = 1.,
                 texname = 'F_{13}',
                 lhablock = 'FRBlock',
-                lhacode = [ 5 ])
+                lhacode = [ 6 ])
 
-G1 = Parameter(name = 'G1',
+Gr1 = Parameter(name = 'Gr1',
+                nature = 'external',
+                type = 'real',
+                value = 1.,
+                texname = 'G_{23}',
+                lhablock = 'FRBlock',
+                lhacode = [ 7 ])
+
+Gr2 = Parameter(name = 'Gr2',
+                nature = 'external',
+                type = 'real',
+                value = 1.,
+                texname = 'G_{13}',
+                lhablock = 'FRBlock',
+                lhacode = [ 8 ])
+
+Me = Parameter(name = 'Me',
                nature = 'external',
                type = 'real',
-               value = 1.,
-               texname = 'G_{23}',
-               lhablock = 'FRBlock',
-               lhacode = [ 6 ])
+               value = 0.000511,
+               texname = '\\text{Me}',
+               lhablock = 'MASS',
+               lhacode = [ 11 ])
 
-G2 = Parameter(name = 'G2',
-               nature = 'external',
-               type = 'real',
-               value = 1.,
-               texname = 'G_{13}',
-               lhablock = 'FRBlock',
-               lhacode = [ 7 ])
+MMU = Parameter(name = 'MMU',
+                nature = 'external',
+                type = 'real',
+                value = 0.10566,
+                texname = '\\text{MMU}',
+                lhablock = 'MASS',
+                lhacode = [ 13 ])
 
 MTA = Parameter(name = 'MTA',
                 nature = 'external',

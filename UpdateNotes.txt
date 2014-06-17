@@ -1,13 +1,23 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.1.2(xx/yy/zz) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
+2.1.2.beta2(03/06/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)
                 OM: Fixing a bug preventing MadWidth to run due to the model prefixing (depending
                     on the way it was called)
                 OM: Fixing a bug in MadSpin in the mssm model
 		RF: Added the invariant mass and DeltaR cuts for *same flavour* opposite sign lepton
                     pairs to the run_card for NLO-type generations.
-		RF: Added FxFx UNLOPS merging with Pythia8
+		RF: Added FxFx and UNLOPS merging with Pythia8
+		RF: Prevent an infinite loop in MadSpin by forcing the correct sign to the invariants
+		RF: Catch a possible error related to grouping subprocesses and setcuts
+		OM: Fix an error when using the "customize_model" command
+                S. Mrenna (by OM): Fix the include file in pythia8 output to be compliant with the latest
+                    PY8 version
+		RF: Added a string with functional form for the scales to the event file banner (NLO only)
+                S. Brochet (by OM): Fix a bug in MadSpin with the writting of the mother ID in the LHE file.
+                PT: Integrated Jimmy's underlying event for Herwig6
+                OM: improve "add model" functionality allow to force particle identification.
+                PT: Bug fix in the normalisation of topdrawer plots for option 'sum' (as opposed to 'average')
 
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be

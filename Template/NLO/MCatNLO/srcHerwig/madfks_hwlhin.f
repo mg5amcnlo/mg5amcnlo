@@ -152,13 +152,13 @@ c 2 = (muR0,muF0),    3 = (muR0,muFup),     4 = (muR0,muFdown)
 c 5 = (muRup,muF0),   6 = (muRup,muFup),    7 = (muRup,muFdown)
 c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
                 iww=iww+1
-                ww(iww)=wgtxsecmu(i,j)/MQQ
+                ww(iww)=wgtxsecmu(i,j)
              enddo
           enddo
           do i=1,2*numPDFpairs
              call read_rwgt_line(iunit,idwgt,wgtxsecPDF(i))
              iww=iww+1
-             ww(iww)=wgtxsecPDF(i)/MQQ
+             ww(iww)=wgtxsecPDF(i)
           enddo
           if (numscales.eq.0) then
              wgtxsecmu(1,1)=wgtref
