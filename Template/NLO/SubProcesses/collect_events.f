@@ -49,6 +49,13 @@
       open(unit=10,file=basicfile,status='old')
       open(unit=98,file=nextbasicfile,status='unknown')
 
+c
+c First get the cross section from the res_1 files
+c
+      if (istep.eq.0) then
+         call get_xsec(10)
+      endif
+
       numoffiles=0
       nbunches=0
       nevents=0
@@ -223,6 +230,10 @@ c
       integer lprup_l(100),nproc_l
       logical found_proc
       include 'reweight_all.inc'
+      integer proc_id_tot(0:100)
+      double precision xsec(100),xerr(100)
+      logical get_xsec_from_res1
+      common/total_xsec/xsec,xerr,proc_id_tot,get_xsec_from_res1
 c
       if(debug) then
          write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
@@ -230,10 +241,24 @@ c
          return
       endif
       maxevt=0
-      do i=1,100
-         xsecup_l(i)=0.d0
-         xerrup_l(i)=0.d0
-      enddo
+      if (.not. get_xsec_from_res1) then
+         do i=1,100
+            xsecup_l(i)=0.d0
+            xerrup_l(i)=0.d0
+         enddo
+      else
+         do i=1,100
+            if (i.le.proc_id_tot(0)) then
+               xsecup_l(i)=xsec(i)
+               xerrup_l(i)=xerr(i)
+               lprup_l(i)  =proc_id_tot(i)
+            else
+               xsecup_l(i)=0.d0
+               xerrup_l(i)=0.d0
+            endif
+         enddo
+      endif
+         
       call read_lhef_header(junit(ione),maxevt,MonteCarlo)
       if (MonteCarlo .ne. '') MonteCarlo0 = MonteCarlo
       call read_lhef_init(junit(ione),
@@ -256,21 +281,24 @@ c      header. Check consistency in this case
       maxevt=mx_of_evt(1)
 
       nproc_l=NPRUP
-      do i=1,nproc_l
-         xerrup_l(i)=xerrup2(i)**2 * xsecfrac_all(ione)
-         xsecup_l(i)=xsecup2(i) * xsecfrac_all(ione)
-         if (proc_id(ione).ne.-1) then
-            lprup_l(i)=proc_id(ione)
-            if (nproc_l.gt.1) then
-               write (*,*) 'ERROR: inconsistent nproc in collect_event'
-               write (*,*) nproc_l,NPRUP
-               write (*,*) proc_id
-               stop
+      if (.not. get_xsec_from_res1) then
+         do i=1,nproc_l
+            xerrup_l(i)=xerrup2(i)**2 * xsecfrac_all(ione)
+            xsecup_l(i)=xsecup2(i) * xsecfrac_all(ione)
+            if (proc_id(ione).ne.-1) then
+               lprup_l(i)=proc_id(ione)
+               if (nproc_l.gt.1) then
+                  write (*,*)
+     $                 'ERROR: inconsistent nproc in collect_event'
+                  write (*,*) nproc_l,NPRUP
+                  write (*,*) proc_id
+                  stop
+               endif
+            else
+               lprup_l(i)=lprup2(i)
             endif
-         else
-            lprup_l(i)=lprup2(i)
-         endif
-      enddo
+         enddo
+      endif
 
       do ii=2,numoffiles
         call read_lhef_header(junit(ii),nevents,MonteCarlo1)
@@ -296,26 +324,28 @@ c      header. Check consistency in this case
         call read_lhef_init(junit(ii),
      #    IDBMUP1,EBMUP1,PDFGUP1,PDFSUP1,IDWTUP1,NPRUP1,
      #    XSECUP1,XERRUP1,XMAXUP1,LPRUP1)
-        if(proc_id(ii).ne.-1) then
-           lprup2(1)=proc_id(ii)
-        endif
-        do i=1,NPRUP1
-           found_proc=.false.
-           do j=1,nproc_l
-              if (lprup_l(j).eq.lprup2(i)) then
-                 xerrup_l(j)=xerrup_l(j)+xerrup2(i)**2 *xsecfrac_all(ii)
-                 xsecup_l(j)=xsecup_l(j)+xsecup2(i) *xsecfrac_all(ii)
-                 found_proc=.true.
-                 exit
+        if (.not.get_xsec_from_res1) then
+           if(proc_id(ii).ne.-1) then
+              lprup2(1)=proc_id(ii)
+           endif
+           do i=1,NPRUP1
+              found_proc=.false.
+              do j=1,nproc_l
+                 if (lprup_l(j).eq.lprup2(i)) then
+                    xerrup_l(j)=xerrup_l(j)+xerrup2(i)**2 *xsecfrac_all(ii)
+                    xsecup_l(j)=xsecup_l(j)+xsecup2(i) *xsecfrac_all(ii)
+                    found_proc=.true.
+                    exit
+                 endif
+              enddo
+              if (.not.found_proc) then
+                 nproc_l=nproc_l+1
+                 xerrup_l(nproc_l)=xerrup2(i)**2 *xsecfrac_all(ii)
+                 xsecup_l(nproc_l)=xsecup2(i) *xsecfrac_all(ii)
+                 lprup_l(nproc_l)=lprup2(i)
               endif
            enddo
-           if (.not.found_proc) then
-              nproc_l=nproc_l+1
-              xerrup_l(nproc_l)=xerrup2(i)**2 *xsecfrac_all(ii)
-              xsecup_l(nproc_l)=xsecup2(i) *xsecfrac_all(ii)
-              lprup_l(nproc_l)=lprup2(i)
-           endif
-        enddo
+        endif
         if(
      #     IDBMUP(1).ne.IDBMUP1(1) .or.
      #     IDBMUP(2).ne.IDBMUP1(2) .or.
@@ -337,19 +367,25 @@ c      header. Check consistency in this case
         write(*,*)maxevt,imaxevt
         stop
       endif
-      do i=1,nproc_l
-         xerrup_l(i)=sqrt(xerrup_l(i))
-      enddo
+      if (.not.get_xsec_from_res1) then
+         do i=1,nproc_l
+            xerrup_l(i)=sqrt(xerrup_l(i))
+         enddo
+      endif
       XSECUP=xsecup_l(ione)
       XERRUP=xerrup_l(ione)
       LPRUP=lprup_l(ione)
-      do i=1,nproc_l
+      if (.not.get_xsec_from_res1) then
+         NPRUP=nproc_l
+      else
+         NPRUP=proc_id_tot(0)
+      endif
+      do i=1,NPRUP
          XSECUP2(i)=xsecup_l(i)
          xerrup2(i)=xerrup_l(i)
          lprup2(i)=lprup_l(i)
          xmaxup2(i)=abs(evwgt)
       enddo
-      NPRUP=nproc_l
       path="../Cards/"
       call write_lhef_header_banner(ioutput,maxevt,MonteCarlo0,path)
       call write_lhef_init(ioutput,
@@ -460,3 +496,94 @@ c
       FK88RANDOM = SEED*MINV
       END
 
+
+
+
+
+
+
+
+
+      subroutine get_xsec(unit10)
+      implicit none
+      integer unit10
+      character*120 string120,eventfile,results_file,read_line
+      integer proc_id_l,add_xsec_to,i,ievents
+      double precision xsec_read,xerr_read,absxsec,xsecfrac
+      integer proc_id_tot(0:100)
+      double precision xsec(100),xerr(100)
+      logical get_xsec_from_res1
+      common/total_xsec/xsec,xerr,proc_id_tot,get_xsec_from_res1
+
+      proc_id_tot(0)=0
+      get_xsec_from_res1=.true.
+      do 
+         read(unit10,'(120a)',end=22,err=22) string120
+         eventfile=string120(2:index(string120,'   '))
+         read(string120(index(string120,'   '):120),*)
+     $    ievents,absxsec,xsecfrac
+         if (eventfile(1:1).eq.'P') then
+            if (eventfile(3:3).eq.'_') then
+               read(eventfile(2:2),'(i1)') proc_id_l
+            elseif(eventfile(4:4).eq.'_') then
+               read(eventfile(2:3),'(i2)') proc_id_l
+            elseif(eventfile(5:5).eq.'_') then 
+               read(eventfile(2:4),'(i3)') proc_id_l
+            else
+               write (*,*) 'ERROR in collect_events: '/
+     $              /'cannot find process ID'
+               stop
+            endif
+         else
+            proc_id_l=-1
+            get_xsec_from_res1=.false.
+            exit
+         endif
+         if (index(eventfile,'events.lhe').eq.0) then
+            get_xsec_from_res1=.false.
+            exit
+         endif
+         results_file=eventfile(1:index(eventfile,'events.lhe')-1)
+     $        //'res_1'
+         open (unit=11,file=results_file,status='old',err=998)
+         read (11,'(120a)',err=998) read_line
+         read (11,'(120a)',err=998) read_line
+         close (11)
+         read(read_line(index(read_line,'Final result:')+14:),*,err=998)
+     $        xsec_read
+         read(read_line(index(read_line,'+/-')+4:),*,err=998) xerr_read
+         add_xsec_to=-1
+         if (proc_id_tot(0).ge.1) then
+            do i=1,proc_id_tot(0)
+               if (proc_id_l.eq.proc_id_tot(i)) then
+                  add_xsec_to=i
+                  exit
+               endif
+            enddo
+         endif
+         if (add_xsec_to.eq.-1) then
+            proc_id_tot(0)=proc_id_tot(0)+1
+            if (proc_id_tot(0).gt.100) then
+               write (*,*) 'ERROR, too many separate processes'
+     $              ,proc_id_tot(0)
+               stop
+            endif
+            proc_id_tot(proc_id_tot(0))=proc_id_l
+            xsec(proc_id_tot(0))=xsec_read*xsecfrac
+            xerr(proc_id_tot(0))=xerr_read**2*xsecfrac
+         else
+            xsec(add_xsec_to)=xsec(add_xsec_to)+xsec_read*xsecfrac
+            xerr(add_xsec_to)=xerr(add_xsec_to)+xerr_read**2*xsecfrac
+         endif
+      enddo
+ 22   continue
+      do i=1,proc_id_tot(0)
+         xerr(i)=sqrt(xerr(i))
+      enddo
+      rewind(unit10)
+      return
+ 998  continue
+      write (*,*) 'Error, results file',results_file
+     $     ,' not found or not the correct format.'
+      stop
+      end

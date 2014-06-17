@@ -2869,6 +2869,8 @@ Integrated cross-section
         # then open the nevents_unweighted_splitted file and look for the 
         # number of splittings to be done
         nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
+        # This skips the channels with zero events, because they are
+        # not of the form GFXX_YY, but simply GFXX
         pattern = re.compile(r"%s_(\d+)/events.lhe" % \
                           pjoin(pdir, 'G%s%s' % (arg,channel)))
         matches = re.findall(pattern, nevents_file)
