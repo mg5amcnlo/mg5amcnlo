@@ -31,7 +31,10 @@ HCR_processes_long =  [
                        ('g g > t1 t1~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('g g > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
                        ('u u~ > t1 t1~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
-                       ('u u~ > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
+                       ('u u~ > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
+                       ('g g > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
+                       ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
+                       ('g g > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
                        ]
 
 HCR_processes_long_dic = dict((procToFolderName(elem[0])+'_mssm_'+'_'.join(elem[2][0].split()),elem)\
@@ -42,7 +45,10 @@ ML5MSSMQCD_processes_long =  [
                          ('g g > t1 t1~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                          ('g g > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
                          ('u u~ > t1 t1~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
-                         ('u u~ > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
+                         ('u u~ > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
+                         ('g g > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
+                         ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
+                         ('g g > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
                          ]
 
 ML5MSSMQCD_processes_long_dic = dict((procToFolderName(elem[0])+'_mssm_'+'_'.join(elem[2][0].split()),elem)\
@@ -60,6 +66,10 @@ class ML5MSSMQCDTest(unittest.TestCase):
                         '.restrict_parallel_test.dat'),
            os.path.join(_mg5_path,'models','loop_MSSM',
                         'restrict_parallel_test.dat'))
+        cp(os.path.join(_mg5_path,'models','loop_MSSM',
+                        '.restrict_parallel_test_gogo.dat'),
+           os.path.join(_mg5_path,'models','loop_MSSM',
+                        'restrict_parallel_test_gogo.dat'))
     @staticmethod
     def create_pickle(my_proc_list, pickle_file, runner, ref_runner=None,
                       model = 'loop_MSSM-parallel_test', energy = 1000):
@@ -218,6 +228,33 @@ class ML5MSSMQCDTest(unittest.TestCase):
         self.compare_processes([HCR_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_mssm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+
+#   ('g g > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})
+    def test_long_mssm_vs_stored_HCR_gg_gogo_QCD(self):
+        proc = 'gg_gogo_mssm_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+                               model = "loop_MSSM-parallel_test_gogo",
+                               pickle_file = 'hcr_%s.pkl'%proc,
+                               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False)
+
+#   ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})
+    def test_long_mssm_vs_stored_HCR_uux_gogo_QCD(self):
+        proc = 'uux_gogo_mssm_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+                               model = "loop_MSSM-parallel_test_gogo",
+                               pickle_file = 'hcr_%s.pkl'%proc,
+                               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False)
+
+#   ('g g > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
+    def test_long_mssm_vs_stored_HCR_gg_gogog_QCD(self):
+        proc = 'gg_gogog_mssm_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+                               model = "loop_MSSM-parallel_test_gogo",
+                               pickle_file = 'hcr_%s.pkl'%proc,
+                               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False)
         
 
 if '__main__' == __name__:
@@ -234,7 +271,7 @@ if '__main__' == __name__:
     # Replace here the path of your HCR output file
     HCRpath = '/Users/erdissshaw/Works/FLibatM/check-ML/OutputML'
     # Replace the correct model and resctrict card
-    model = 'loop_MSSM-parallel_test'
+    model = 'loop_MSSM-parallel_test_gogo'
     #model = 'loop_qcd_qed_sm_Gmu-parallel_test_WW'
     #model = 'loop_qcd_qed_sm_Gmu-parallel_test_ZZ'
     #model = 'loop_qcd_qed_sm_Gmu-parallel_test_WZ' 
