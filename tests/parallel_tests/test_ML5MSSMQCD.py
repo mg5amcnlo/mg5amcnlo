@@ -33,7 +33,10 @@ HCR_processes_long =  [
                        ('u u~ > t1 t1~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('u u~ > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
                        ('g g > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
-                       ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})
+                       ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
+                       ('u u~ > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
+                       # loop-induced process
+                       ('g g > n1 n1',{},['QCD'],{})
                        ]
 
 HCR_processes_long_dic = dict((procToFolderName(elem[0])+'_mssm_'+'_'.join(elem[2][0].split()),elem)\
@@ -46,7 +49,10 @@ ML5MSSMQCD_processes_long =  [
                          ('u u~ > t1 t1~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                          ('u u~ > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
                          ('g g > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
-                         ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})
+                         ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
+                         ('u u~ > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
+                         # loop induced process
+                         ('g g > n1 n1',{},['QCD'],{})
                          ]
 
 ML5MSSMQCD_processes_long_dic = dict((procToFolderName(elem[0])+'_mssm_'+'_'.join(elem[2][0].split()),elem)\
@@ -244,6 +250,24 @@ class ML5MSSMQCDTest(unittest.TestCase):
                                pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
                                loop_induce = False)
+
+#   ('u u~ > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
+    def test_long_mssm_vs_stored_HCR_uux_gogog_QCD(self):
+        proc = 'uux_gogog_mssm_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+                               model = "loop_MSSM-parallel_test_gogo",
+                                                      pickle_file = 'hcr_%s.pkl'%proc,
+                               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False)
+
+#   test loop induced processes
+#   ('g g > n1 n1',{},['QCD'],{})
+    def test_long_mssm_vs_stored_HCR_gg_n1n1_QCD(self):
+        proc = 'gg_n1n1_mssm_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+                               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+                               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = True)    
         
 
 if '__main__' == __name__:
