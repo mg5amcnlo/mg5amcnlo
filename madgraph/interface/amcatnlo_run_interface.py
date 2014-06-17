@@ -3174,7 +3174,11 @@ Integrated cross-section
         try: 
             os.environ['fastjet_config'] = self.options['fastjet']
         except (TypeError, KeyError):
-            os.unsetenv['fastjet_config']
+            try:
+                del os.environ['fastjet_config']
+            except Exception:
+                pass
+            os.unsetenv('fastjet_config')
         
         # make Source
         self.update_status('Compiling source...', level=None)

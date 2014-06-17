@@ -9,6 +9,8 @@ c
       DOUBLE  PRECISION x,q,pdf(-7:7)
       DOUBLE  PRECISION f(-6:6)
       INTEGER IH,I
+      double precision  photon
+      LOGICAL has_photon
 C
 C     Include
 C
@@ -16,9 +18,14 @@ C
 C      
       if(abs(ih).eq.1) then
          pdf(-7)=0d0
-         pdf(7)=0d0
-         call evolvePDF(x, q, f)
-         do i=-6,6
+         if(has_photon())then
+             call evolvePDFphoton(x, q, f, photon)
+             pdf(7)= photon
+         else
+             pdf(7) = 0d0
+             call evolvePDF(x, q, f)
+         endif
+         do i=-7,7
             pdf(i)=f(i)/x
          enddo
       else

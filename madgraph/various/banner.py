@@ -891,6 +891,8 @@ class ProcCard(list):
             self.clean(remove_bef_last='generate', keep_switch=True,
                      allow_for_removal= ['generate', 'add process', 'output'])
             self.info['generate'] = ' '.join(cmds[1:])
+        elif cmd == 'add' and cmds[1] == 'process' and not self.info['generate']:
+            self.info['generate'] = ' '.join(cmds[2:])
         elif cmd == 'import':
             if len(cmds) < 2:
                 return

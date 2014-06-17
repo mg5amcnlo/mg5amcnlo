@@ -62,12 +62,13 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
             fi
         fi
     fi
-    if  [[ ! -e randinit ]] ; then
-        if [[ -e ../randinit ]] ; then
-            cp ../randinit .
-        else
-            cp ../../randinit .
-        fi
+    if  [[ -e randinit ]] ; then
+	rm -f randinit
+    fi
+    if [[ -e ../randinit ]] ; then
+        ln -sf ../randinit .
+    else
+        ln -sf ../../randinit .
     fi
     if  [[ ! -e symfact.dat ]] ; then
     	if [[  -e ../symfact.dat ]] ; then
