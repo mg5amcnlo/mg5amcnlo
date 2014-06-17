@@ -253,7 +253,8 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
         for path in args['required_output']:
             if args['cwd']:
                 path = pjoin(args['cwd'], path)
-            if not os.path.exists(path):
+# check that file exists and is not empty.
+            if not (os.path.exists(path) and os.stat(path).st_size != 0) :
                 break
         else:
             # all requested output are present
