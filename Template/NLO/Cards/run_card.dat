@@ -29,7 +29,12 @@
     -1 = req_acc ! Required accuracy (-1=auto determined from nevents)
     -1 = nevt_job! Max number of events per job in event generation. 
                  !  (-1= no split).
-average = event_norm ! Normalize events to sum or average to the X sect.
+#***********************************************************************
+# Normalize the weights of the events such that they sum or average to
+# the total cross section, or set the weights to +/- 1 (the latter is
+# not recommended when using the build MC@NLO interface to the shower).
+#***********************************************************************
+ average = event_norm      ! average, sum or unity
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************

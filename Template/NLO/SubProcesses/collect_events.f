@@ -20,8 +20,11 @@
      $     /" to sum to the Xsec;"
       write (*,*) "give '2' to overwrite the weights"/
      $     /" to average to the Xsec (=default)"
+      write (*,*) "give '3' to overwrite the weights"/
+     $     /" to either +/- 1."
       read (*,*) i_orig
-      if (i_orig.ne.0 .and. i_orig.ne.1 .and. i_orig.ne.2) stop
+      if (i_orig.ne.0 .and. i_orig.ne.1 .and. i_orig.ne.2 .and.
+     $     i_orig.ne.3) stop
       write(*,*) i_orig
 
 
@@ -72,6 +75,8 @@ c Every time we find 80 files, collect the events
                evwgt=xtotal/dfloat(nevents)
             elseif(i_orig.eq.2) then
                evwgt=xtotal
+            elseif(i_orig.eq.3) then
+               evwgt=1d0
             endif
             write (*,*) 'found ',numoffiles,
      &           ' files, bunch number is',nbunches
@@ -112,6 +117,8 @@ c Also collect events from the rest files
             evwgt=xtotal/dfloat(nevents)
          elseif(i_orig.eq.2) then
             evwgt=xtotal
+         elseif(i_orig.eq.3) then
+            evwgt=1d0
          endif
          write (*,*) 'found ',numoffiles,
      &        ' files, bunch number is',nbunches

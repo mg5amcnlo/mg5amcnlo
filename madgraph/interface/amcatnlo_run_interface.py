@@ -2148,8 +2148,10 @@ Integrated cross-section
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
                 stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
-        if event_norm == 'sum':
+        if event_norm.lower() == 'sum':
             p.communicate(input = '1\n')
+        elif event_norm.lower() == 'unity':
+            p.communicate(input = '3\n')
         else:
             p.communicate(input = '2\n')
 
@@ -2609,7 +2611,7 @@ Integrated cross-section
             content += 'TAUMASS=%s\n' % new_mcmass_dict['mcmass(15)']
 
         content += 'GMASS=%s\n' % mcmass_dict[21]
-        content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
+        content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm').lower()
         # check if need to link lhapdf
         if pdlabel == 'lhapdf':
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))

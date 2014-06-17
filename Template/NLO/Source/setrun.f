@@ -66,6 +66,7 @@ c
       integer nevents
 
       character*7 event_norm
+      common /event_normalisation/event_norm
 c
 c----------
 c     start
@@ -101,15 +102,18 @@ c For backward compatibility
       ellissextonfact=QES_over_ref
 
 c check that the event normalization input is reasoble
-      if (event_norm(1:7).ne.'average' .and. event_norm(1:3).ne.'sum')
-     $     then
+      call case_trap2(event_norm)
+      if (event_norm(1:7).ne.'average' .and. event_norm(1:3).ne.'sum'
+     $     .and. event_norm(1:5).ne.'unity')then
          write (*,*) 'Do not understand the event_norm parameter'/
      &        /' in the run_card.dat. Possible options are'/
-     &        /' "average" or "sum". Current input is: ',event_norm
+     &        /' "average", "sum" or "unity". Current input is: ',
+     &        event_norm
          open(unit=26,file='../../error',status='unknown')
          write (26,*) 'Do not understand the event_norm parameter'/
      &        /' in the run_card.dat. Possible options are'/
-     &        /' "average" or "sum". Current input is: ',event_norm
+     &        /' "average", "sum" or "unity". Current input is: ',
+     &        event_norm
          
          stop 1
       endif
