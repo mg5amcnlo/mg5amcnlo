@@ -76,7 +76,7 @@ namespace fwrapper {
   /// and the extraction of the jets
   void amcatnlo_transfer_cluster_transfer(const double * p, const int & npart, 
                                  const JetDefinition & jet_def,
-                                 const double & ptmin,
+                                 const double & ptmin, const double & etamax,
 				 double * f77jets, int & njets, int * whichjet) {
 
     // transfer p[4*ipart+0..3] -> input_particles[i]
@@ -88,6 +88,12 @@ namespace fwrapper {
 
     // extract jets (pt-ordered)
     jets = sorted_by_pt(cs->inclusive_jets(ptmin));
+
+    //apply the eta selector if etamax >0
+    Selector select_eta = SelectorAbsEtaMax(etamax);
+    if (etamax > 0.) {
+        jets = select_eta(jets);
+    }
 
     // transfer jets -> f77jets[4*ijet+0..3]
     amcatnlo_transfer_jets(f77jets, njets);
@@ -150,8 +156,9 @@ extern "C" {
 // the transpose of the Pythia array and drop the fifth component
 // (particle mass).
 //
-void amcatnlo_fastjetppgenkt_(const double * p, const int & npart,                   
+void amcatnlo_fastjetppgenkt_etamax_(const double * p, const int & npart,                   
                      const double & R, const double & ptjetmin,
+                     const double & etamax,
                      const double & palg,
                      double * f77jets, int & njets, int * whichjet) {
 
@@ -167,7 +174,19 @@ void amcatnlo_fastjetppgenkt_(const double * p, const int & npart,
     }
 
     // do everything
-    amcatnlo_transfer_cluster_transfer(p,npart,jet_def,ptjetmin,f77jets,njets,whichjet);
+    amcatnlo_transfer_cluster_transfer(p,npart,jet_def,ptjetmin,etamax,f77jets,njets,whichjet);
+}
+
+
+void amcatnlo_fastjetppgenkt_(const double * p, const int & npart,                   
+                     const double & R, const double & ptjetmin,
+                     const double & palg,
+                     double * f77jets, int & njets, int * whichjet) {
+
+    // jsut call amacatnlo_fastjetppgenkt_etamax passing etamax=-1.
+    double etamax = -1.;
+    amcatnlo_fastjetppgenkt_etamax_(p,npart,R,ptjetmin,etamax,palg,
+                                    f77jets,njets,whichjet);
 }
 
 

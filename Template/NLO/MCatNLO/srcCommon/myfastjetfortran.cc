@@ -69,8 +69,17 @@ extern "C" {
 // PALG it calls the generalised kt implementation.
 //
 void fastjetppgenkt_(const double * p, const int & npart,                   
-                     const double & R, const double & jetptmin, const double & palg,
-                     double * f77jets, int & njets, int * whichjet) {
+                     const double & R, const double & jetptmin,
+                     const double & palg, double * f77jets, int & njets, int * whichjet) {
+    // jsut call fastjetppgenkt_etamax passing etamax=-1.
+    double etamax = -1.;
+    fastjetppgenkt_etamax(p,npart,R,jetptmin,etamax,palg,f77jets,njets,whichjet)
+}
+
+
+void fastjetppgenkt_etamax_(const double * p, const int & npart,                   
+                     const double & R, const double & jetptmin, const double & etamax,
+                     const double & palg, double * f77jets, int & njets, int * whichjet) {
   
   // transfer p[4*ipart+0..3] -> input_particles[i]
   vector<fj::PseudoJet> input_particles;   
@@ -101,6 +110,13 @@ void fastjetppgenkt_(const double * p, const int & npart,
   cs.reset(new fj::ClusterSequence(input_particles,jet_def));
   // extract jets (pt-ordered)
   vector<fj::PseudoJet> jets = sorted_by_pt(cs->inclusive_jets(jetptmin));
+
+  //apply the eta selector if etamax >0
+  Selector select_eta = SelectorAbsEtaMax(etamax);
+  if (etamax > 0.) {
+    jets = select_eta(jets);
+  }
+
   njets = jets.size();
   
   // tell the user what was done
@@ -121,7 +137,7 @@ void fastjetppgenkt_(const double * p, const int & npart,
   
   // clean up
   
-  // set all jet entrie to zero first
+  // set all jet entries to zero first
   for(unsigned int ii=0; ii<npart; ++ii) whichjet[ii]=0;       
   
   for (unsigned int kk=0; kk<jets.size(); ++kk) {   
