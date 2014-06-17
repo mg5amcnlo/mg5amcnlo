@@ -455,6 +455,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         sqsorders_list = \
             self.write_real_matrix_elements(matrix_element, fortran_model)
 
+        filename = 'extra_cnt_wrapper.f'
+        self.write_extra_cnt_wrapper(writers.FortranWriter(filename),
+                                     matrix_elenent.extra_cnt_me_list, 
+                                     fortran_model)
+        for i, extra_cnt_me in enumerate(matrix_element.extra_cnt_me_list):
+            self.write_split_me_fks(writers.FortranWriter(filename),
+                                        fksreal.matrix_element, 
+                                        fortran_model, 'cnt', '%d' % (i+1))
+
         self.write_pdf_calls(matrix_element, fortran_model)
 
         filename = 'nFKSconfigs.inc'
@@ -1220,6 +1229,37 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             sqsorders_list.append(nsqsplitorders)
         return sqsorders_list
 
+        
+    
+    def write_extra_cnt_wrapper(writers, cnt_me_list, fortran_model):
+        """write a wrapper for the extra born counterterms that may be 
+        present e.g. if the process has gluon at the born
+        """
+
+        iflines = ''
+        for i, cnt in cnt_me_list:
+            mydict = {'icnt': i}
+            if not iflines:
+                iflines += 
+                   'if (icnt.eq.%(icnt)d) then\n call sborn_cnt%(icnt)d(p,cnts)\n' % \
+                        mydict
+            else:
+                iflines += 
+                   'else if (icnt.eq.%(icnt)d) then\n call sborn_cnt%(icnt)d(p,cnts)\n' % \
+                        mydict
+
+        if iflines:
+            iflines += 'endif\n'
+
+        file = open(pjoin(_file_path, \
+            'iolibs/template_files/extra_cnt_wrapper_fks.inc')).read()
+
+        file = file % {'iflines': iflines}
+
+        # Write the file
+        writer.writelines(file)
+
+
 
     #===========================================================================
     # write_split_me_fks
@@ -1227,7 +1267,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def write_split_me_fks(self, writer, matrix_element, fortran_model,
                                     proc_type, proc_prefix='',start_dict={}):
         """Export a matrix element using the split_order format
-        proc_type is either born or real
+        proc_type is either born, bhel, real or cnt,
         start_dict contains additional infos to be put in replace_dict"""
 
         if not matrix_element.get('processes') or \
@@ -1345,6 +1385,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         elif proc_type=='real':
             file = open(pjoin(_file_path, \
             'iolibs/template_files/realmatrix_splitorders_fks.inc')).read()
+        elif proc_type=='cnt':
+            file = open(pjoin(_file_path, \
+            'iolibs/template_files/born_cnt_splitorders_fks.inc')).read()
 
         file = file % replace_dict
 
@@ -2078,6 +2121,8 @@ Parameters              %(params)s\n\
         replace_dict['fks_i_values'] = ', '.join(['%d' % info['fks_info']['i'] \
                                                  for info in fks_info_list]) 
         replace_dict['fks_j_values'] = ', '.join(['%d' % info['fks_info']['j'] \
+                                                 for info in fks_info_list]) 
+        replace_dict['extra_cnt_values'] = ', '.join(['%d' % (info['fks_info']['extra_cnt_index'] + 1) \
                                                  for info in fks_info_list]) 
         replace_dict['nsplitorders'] = len(split_orders)
         replace_dict['splitorders_name'] = ', '.join(split_orders)

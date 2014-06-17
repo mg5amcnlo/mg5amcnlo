@@ -89,12 +89,15 @@ c fks.inc information
       common /c_particle_type_born/particle_type_born
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
+      integer extra_cnt
+      common /c_extra_cnt/extra_cnt
       include 'orders.inc'
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
 c
       i_fks=fks_i_D(nFKSprocess)
       j_fks=fks_j_D(nFKSprocess)
+      extra_cnt = extra_cnt_D(nFKSprocess)
       need_color_links=need_color_links_d(nFKSprocess)
       need_charge_links=need_charge_links_d(nFKSprocess)
       do i=1,nexternal

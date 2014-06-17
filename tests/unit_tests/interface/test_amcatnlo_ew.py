@@ -150,13 +150,20 @@ class TestAMCatNLOEW(unittest.TestCase):
 
         len_extra_cnt_amp_list = [0, 2, 1]
         nrealproc_list = [10, 10, 12]
+        born_ids = [[2,-2,21,21], [2,-2,21,21], [2,-2,21,22]]
         print 'fix test leptons!'
-        for cmd, len_extra_cnt, nrealprocs in zip(cmd_list, len_extra_cnt_amp_list, nrealproc_list):
+        for cmd, born_id, len_extra_cnt, nrealprocs in zip(cmd_list, born_ids, len_extra_cnt_amp_list, nrealproc_list):
             self.interface.do_generate(cmd)
 
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
 
+            self.assertEqual(born_id, [l['id'] for l in fksprocess.born_amp['process']['legs']])
+            
+            print 'if test fails, check fks_base - MZMZ17062014 '
             self.assertEqual(len_extra_cnt, len(fksprocess.extra_cnt_amp_list))
+            for amp in fksprocess.extra_cnt_amp_list:
+                print [l['id'] for l in amp['process']['legs']]
+
             for amp in fksprocess.real_amps:
                 for info in amp.fks_infos:
                     # check that if the splitting is g > qq then
@@ -166,6 +173,7 @@ class TestAMCatNLOEW(unittest.TestCase):
                                 amp.process['legs'][info['i'] - 1]['id'] != 21:
                             self.assertEqual(len(info['underlying_born']), 2)
                             self.assertEqual(info['splitting_type'], ['QCD', 'QED'])
+                            print info
                         else:
                             self.assertEqual(len(info['underlying_born']), 1)
                             self.assertEqual(len(info['splitting_type']), 1)

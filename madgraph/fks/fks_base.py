@@ -600,7 +600,7 @@ class FKSProcess(object):
                         # replaced by the new mother and with the
                         # squared orders changed accordingly
                         cnt_process = copy.copy(born_proc)
-                        cnt_process['legs'] = copy.copy(born_proc['legs'])
+                        cnt_process['legs'] = copy.deepcopy(born_proc['legs'])
                         cnt_process['legs'][i]['id'] = mom
                         cnt_process['squared_orders'] = \
                                 copy.copy(born_proc['squared_orders'])
@@ -611,6 +611,7 @@ class FKSProcess(object):
                             cnt_process['squared_orders']['WEIGHTED'] += \
                                     -2 * cnt_process['model'].get('order_hierarchy')[order]
 
+                        # MZMZ17062014 beware that the Amplitude reorders the legs
                         cnt_amp = diagram_generation.Amplitude(cnt_process)
                         if cnt_amp['diagrams']:
                             #check if cnt_amp also fits the born_orders 
@@ -619,9 +620,9 @@ class FKSProcess(object):
                             cnt_ord = order
                             born_cnt_process = copy.copy(cnt_process)
                             born_cnt_process['squared_orders'] = \
-                                    copy.copy(cnt_process['squared_orders']) 
+                                    copy.deepcopy(cnt_process['squared_orders']) 
                             born_cnt_process['orders'] = \
-                                    copy.copy(cnt_process['orders']) 
+                                    copy.deepcopy(cnt_process['orders']) 
                             born_cnt_process['orders'] = born_proc['born_orders']
                             born_cnt_amp = diagram_generation.Amplitude(born_cnt_process)
 

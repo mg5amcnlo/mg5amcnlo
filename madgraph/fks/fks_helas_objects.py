@@ -220,7 +220,9 @@ class FKSHelasProcess(object):
     -- born ME
     -- list of FKSHelasRealProcesses
     -- color links
-    -- charges"""
+    -- charges
+    -- extra MEs used as counterterms
+    """
     
     def __init__(self, fksproc=None, real_me_list =[], real_amp_list=[], 
             loop_optimized = False, **opts):#test written
@@ -232,9 +234,14 @@ class FKSHelasProcess(object):
             self.born_me = helas_objects.HelasMatrixElement(fksproc.born_amp, **opts)
 
             self.real_processes = []
+            self.extra_cnt_me_list = []
             self.perturbation = fksproc.perturbation
             self.charges_born = fksproc.get_charges() 
             real_amps_new = []
+
+            for extra_cnt in fks_proc.extra_cnt_amp_list:
+                self.extra_cnt_me_list.append(helas_objects.HelasMatrixElement(extra_cnt, **opts)
+
             # combine for example u u~ > t t~ and d d~ > t t~
             for proc in fksproc.real_amps:
                 if proc.amplitude['diagrams']:
@@ -249,6 +256,7 @@ class FKSHelasProcess(object):
                             self.real_processes.append(fksreal_me)
                             real_amps_new.append(proc)
             fksproc.real_amps = real_amps_new
+
             if fksproc.virt_amp:
                 self.virt_matrix_element = \
                   loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp, 

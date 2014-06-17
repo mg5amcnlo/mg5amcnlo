@@ -1,5 +1,6 @@
       INTEGER IPOS, JPOS
       INTEGER FKS_I_D(%(nconfs)d), FKS_J_D(%(nconfs)d)
+      INTEGER EXTRA_CNT(%(nconfs)d)
       INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
       REAL*8 PARTICLE_CHARGE_D(%(nconfs)d, NEXTERNAL)
@@ -16,6 +17,10 @@ data need_charge_links_d / %(need_charge_links)s /
 
 C     Split type: the order of elements is %(splitorders_name)s
 %(split_type_lines)s
+
+C     Extra cnt: if the real emission needs an extra cnt (g/a > qqbar), then
+C     this is the id of the extra cnt. otherwise it should be set to 0
+data extra_cnt_D / %(extra_cnt_values)s /
 
 C     
 C     Particle type:
