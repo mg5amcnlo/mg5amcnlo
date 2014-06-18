@@ -460,6 +460,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                      matrix_element.extra_cnt_me_list, 
                                      fortran_model)
         for i, extra_cnt_me in enumerate(matrix_element.extra_cnt_me_list):
+            filename = 'born_cnt_%d.f' % (i+1)
             self.write_split_me_fks(writers.FortranWriter(filename),
                                         fksreal.matrix_element, 
                                         fortran_model, 'cnt', '%d' % (i+1))
