@@ -1618,11 +1618,11 @@ Integrated cross-section
         proc_card_lines = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read().split('\n')
         process = ''
         for line in proc_card_lines:
-            if line.startswith('generate'):
-                process = line.replace('generate ', '')
+            if line.startswith('generate') or line.startswith('add process'):
+                process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
         lpp = {'0':'l', '1':'p', '-1':'pbar'}
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
-        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
+        (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
         
         # Gather some basic statistics for the run and extracted from the log files.

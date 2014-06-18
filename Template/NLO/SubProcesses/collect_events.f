@@ -13,6 +13,10 @@
       double precision xsecfrac_all(80)
       common /to_xsecfrac/xsecfrac_all
       common /to_nevents_file/nevents_file,proc_id
+      integer proc_id_tot(0:100)
+      double precision xsec(100),xsecABS,xerr(100)
+      logical get_xsec_from_res1
+      common/total_xsec/xsec,xerr,xsecABS,proc_id_tot,get_xsec_from_res1
 
       write (*,*) "Overwrite the event weights?"
       write (*,*) "give '0' to keep original weights;"
@@ -96,9 +100,17 @@ c Every time we find 80 files, collect the events
          if (numoffiles.eq.80) then
             nbunches=nbunches+1
             if (i_orig.eq.1) then
-               evwgt=xtotal/dfloat(nevents)
+               if (.not.get_xsec_from_res1) then
+                  evwgt=xtotal/dfloat(nevents)
+               else
+                  evwgt=xsecABS/dfloat(nevents)
+               endif
             elseif(i_orig.eq.2) then
-               evwgt=xtotal
+               if (.not.get_xsec_from_res1) then
+                  evwgt=xtotal
+               else
+                  evwgt=xsecABS
+               endif
             elseif(i_orig.eq.3) then
                evwgt=1d0
             endif
@@ -138,9 +150,17 @@ c Also collect events from the rest files
       if(numoffiles.ne.0) then
          nbunches=nbunches+1
          if (i_orig.eq.1) then
-            evwgt=xtotal/dfloat(nevents)
+            if (.not.get_xsec_from_res1) then
+               evwgt=xtotal/dfloat(nevents)
+            else
+               evwgt=xsecABS/dfloat(nevents)
+            endif
          elseif(i_orig.eq.2) then
-            evwgt=xtotal
+            if (.not.get_xsec_from_res1) then
+               evwgt=xtotal
+            else
+               evwgt=xsecABS
+            endif
          elseif(i_orig.eq.3) then
             evwgt=1d0
          endif
@@ -231,9 +251,9 @@ c
       logical found_proc
       include 'reweight_all.inc'
       integer proc_id_tot(0:100)
-      double precision xsec(100),xerr(100)
+      double precision xsec(100),xsecABS,xerr(100)
       logical get_xsec_from_res1
-      common/total_xsec/xsec,xerr,proc_id_tot,get_xsec_from_res1
+      common/total_xsec/xsec,xerr,xsecABS,proc_id_tot,get_xsec_from_res1
 c
       if(debug) then
          write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
@@ -399,19 +419,6 @@ c      header. Check consistency in this case
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
         if (proc_id(i0).ne.-1) IDPRUP=proc_id(i0)
-c Sanity check on weights read and computed a posteriori (check only for
-c event samples that are relatively large, otherwise it could be a
-c statistical fluctuation because the number of events per channel is
-c assigned randomly with a weight according to the contribution of that
-c channel to the total cross section)
-        if( ( abs(XWGTUP/evwgt).gt.2.d0.or.
-     #        abs(XWGTUP/evwgt).lt.0.5d0 ) .and.
-     #       mx_of_evt(i0).gt.50 .and. i_orig.eq.1)then
-           write(*,*)'Error in collect_all_evfiles'
-           write(*,*)'Events weights appear to be wrong'
-           write(*,*)XWGTUP,evwgt
-           stop
-        endif
         if (i_orig.eq.0) then
            evwgt_sign=XWGTUP
         else
@@ -509,14 +516,15 @@ c
       integer unit10
       character*120 string120,eventfile,results_file,read_line
       integer proc_id_l,add_xsec_to,i,ievents
-      double precision xsec_read,xerr_read,absxsec,xsecfrac
+      double precision xsec_read,xerr_read,absxsec,xsecfrac,xsecABS_read
       integer proc_id_tot(0:100)
-      double precision xsec(100),xerr(100)
+      double precision xsec(100),xsecABS,xerr(100)
       logical get_xsec_from_res1
-      common/total_xsec/xsec,xerr,proc_id_tot,get_xsec_from_res1
+      common/total_xsec/xsec,xerr,xsecABS,proc_id_tot,get_xsec_from_res1
 
       proc_id_tot(0)=0
       get_xsec_from_res1=.true.
+      xsecABS=0d0
       do 
          read(unit10,'(120a)',end=22,err=22) string120
          eventfile=string120(2:index(string120,'   '))
@@ -547,6 +555,8 @@ c
      $        //'res_1'
          open (unit=11,file=results_file,status='old',err=998)
          read (11,'(120a)',err=998) read_line
+         read(read_line(index(read_line,'Final result [ABS]:')+20:),*
+     $        ,err=998)xsecABS_read
          read (11,'(120a)',err=998) read_line
          close (11)
          read(read_line(index(read_line,'Final result:')+14:),*,err=998)
@@ -575,6 +585,7 @@ c
             xsec(add_xsec_to)=xsec(add_xsec_to)+xsec_read*xsecfrac
             xerr(add_xsec_to)=xerr(add_xsec_to)+xerr_read**2*xsecfrac
          endif
+         xsecABS=xsecABS + xsecABS_read*xsecfrac
       enddo
  22   continue
       do i=1,proc_id_tot(0)
