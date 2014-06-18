@@ -119,6 +119,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             self.interface.do_generate(cmd)
 
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
+
             # check that the extra_cnt_amp_list is empty
             self.assertEqual(0, len(fksprocess.extra_cnt_amp_list))
 

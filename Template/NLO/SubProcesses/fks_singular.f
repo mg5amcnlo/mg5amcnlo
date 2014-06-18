@@ -4703,11 +4703,12 @@ c convert to Binoth Les Houches Accord standards
 c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                call cpu_time(tAfter)
                tOLP=tOLP+(tAfter-tBefore)
-               virtual_over_born=virt_wgt/(born_wgt*ao2pi)
-               virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
-               if (abrv.ne.'virt') then
-                  virt_wgt=virt_wgt/virtual_fraction
-               endif
+               write(*,*) 'MZ fix virt tricks'
+ccMZ               virtual_over_born=virt_wgt/(born_wgt*ao2pi)
+ccMZ               virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
+ccMZ               if (abrv.ne.'virt') then
+ccMZ                  virt_wgt=virt_wgt/virtual_fraction
+CCMZ               endif
                virt_wgt_save=virt_wgt
          endif
       elseif(fold.eq.1) then

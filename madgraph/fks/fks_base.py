@@ -199,7 +199,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         born_pdg_list = []
         for born in self['born_processes']:
-            born_pdg_list.extend(born.get_pdg_codes())
+            born_pdg_list.append(born.get_pdg_codes())
 
         for born in self['born_processes']:
             for real in born.real_amps:
@@ -389,7 +389,7 @@ class FKSRealProcess(object):
                             born_leglist.remove(j)
                             born_leglist.insert(ij.get('number') - 1, ij)
                             born_leglist.sort(pert = self.perturbation)
-                            if [l['id'] for l in born_leglist] in born_pdg_list:
+                            if [leg['id'] for leg in born_leglist] in born_pdg_list:
                                 fks_j_from_i[i.get('number')].append(\
                                                         j.get('number'))                                
 
