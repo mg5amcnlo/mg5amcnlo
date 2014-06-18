@@ -239,8 +239,8 @@ class FKSHelasProcess(object):
             self.charges_born = fksproc.get_charges() 
             real_amps_new = []
 
-            for extra_cnt in fks_proc.extra_cnt_amp_list:
-                self.extra_cnt_me_list.append(helas_objects.HelasMatrixElement(extra_cnt, **opts)
+            for extra_cnt in fksproc.extra_cnt_amp_list:
+                self.extra_cnt_me_list.append(helas_objects.HelasMatrixElement(extra_cnt, **opts))
 
             # combine for example u u~ > t t~ and d d~ > t t~
             for proc in fksproc.real_amps:

@@ -457,7 +457,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         filename = 'extra_cnt_wrapper.f'
         self.write_extra_cnt_wrapper(writers.FortranWriter(filename),
-                                     matrix_elenent.extra_cnt_me_list, 
+                                     matrix_element.extra_cnt_me_list, 
                                      fortran_model)
         for i, extra_cnt_me in enumerate(matrix_element.extra_cnt_me_list):
             self.write_split_me_fks(writers.FortranWriter(filename),
@@ -1231,7 +1231,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         
     
-    def write_extra_cnt_wrapper(writers, cnt_me_list, fortran_model):
+    def write_extra_cnt_wrapper(self, writer, cnt_me_list, fortran_model):
         """write a wrapper for the extra born counterterms that may be 
         present e.g. if the process has gluon at the born
         """
@@ -1240,11 +1240,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for i, cnt in cnt_me_list:
             mydict = {'icnt': i}
             if not iflines:
-                iflines += 
+                iflines += \
                    'if (icnt.eq.%(icnt)d) then\n call sborn_cnt%(icnt)d(p,cnts)\n' % \
                         mydict
             else:
-                iflines += 
+                iflines += \
                    'else if (icnt.eq.%(icnt)d) then\n call sborn_cnt%(icnt)d(p,cnts)\n' % \
                         mydict
 
