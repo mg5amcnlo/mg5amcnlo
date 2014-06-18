@@ -68,15 +68,6 @@ extern "C" {
 // implementation of those algorithms, whereas for other values of
 // PALG it calls the generalised kt implementation.
 //
-void fastjetppgenkt_(const double * p, const int & npart,                   
-                     const double & R, const double & jetptmin,
-                     const double & palg, double * f77jets, int & njets, int * whichjet) {
-    // jsut call fastjetppgenkt_etamax passing etamax=-1.
-    double etamax = -1.;
-    fastjetppgenkt_etamax(p,npart,R,jetptmin,etamax,palg,f77jets,njets,whichjet)
-}
-
-
 void fastjetppgenkt_etamax_(const double * p, const int & npart,                   
                      const double & R, const double & jetptmin, const double & etamax,
                      const double & palg, double * f77jets, int & njets, int * whichjet) {
@@ -112,7 +103,7 @@ void fastjetppgenkt_etamax_(const double * p, const int & npart,
   vector<fj::PseudoJet> jets = sorted_by_pt(cs->inclusive_jets(jetptmin));
 
   //apply the eta selector if etamax >0
-  Selector select_eta = SelectorAbsEtaMax(etamax);
+  fj::Selector select_eta = fj::SelectorAbsEtaMax(etamax);
   if (etamax > 0.) {
     jets = select_eta(jets);
   }
@@ -148,6 +139,16 @@ void fastjetppgenkt_etamax_(const double * p, const int & npart,
   
 }
 
+
+void fastjetppgenkt_(const double * p, const int & npart,                   
+                     const double & R, const double & jetptmin,
+                     const double & palg, double * f77jets, int & njets, int * whichjet) {
+    // jsut call fastjetppgenkt_etamax passing etamax=-1.
+    double etamax = -1.;
+    fastjetppgenkt_etamax_(p,npart,R,jetptmin,etamax,palg,f77jets,njets,whichjet);
+}
+
+
 /// return the dmin corresponding to the recombination that went from
 /// n+1 to n jets (sometimes known as d_{n n+1}).
 //
@@ -180,4 +181,10 @@ double fastjetdmergemax_(const int & n) {
 
 
 }
+
+
+
+
+
+
 
