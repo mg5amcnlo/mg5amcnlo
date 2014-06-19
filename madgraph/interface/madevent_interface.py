@@ -3528,8 +3528,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if self.run_card['pdlabel'] == "lhapdf":
             os.environ['lhapdf'] = 'True'
             self.link_lhapdf(pjoin(self.me_dir,'lib'))
-            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         elif 'lhapdf' in os.environ.keys():
