@@ -1240,6 +1240,8 @@ c FxFx merging
       external setclscales,rewgt
 
       double precision rwgt_muR_dep_fac
+      double precision ddum(6)
+      logical ldum
 
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -2128,6 +2130,11 @@ c Apply the FxFx Sudakov damping on the S events
       deg_swgt = deg_swgt * enhanceS
 
 c Update the shower starting scale with the shape from montecarlocounter
+      if( (.not.MCcntcalled) .and.
+     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+         call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat,pp,ileg,
+     &     xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5),ddum(6),ldum)
+      endif
       if (.not.nbody) then
          call set_cms_stuff(mohdr)
          call set_shower_scale(nFKSprocess*2,.true.)
@@ -2465,8 +2472,6 @@ c based on previous PS points (done in BinothLHA.f)
       integer ileg
       common/cscaleminmax/xm12,ileg
 
-c What happens when the MC is not called (so that ileg is not known)?
-
 c Initialise
       SCALUP(iFKS)=0d0
 c S events
@@ -2528,18 +2533,14 @@ c jet cluster algorithm
 
 c Initialise
       NN=0
+      ppp=0d0
+      pQCD=0d0
       pt_hardness=0d0
-      nmax=nexternal-1
       do j=1,nexternal
          if (j.gt.nincoming.and.is_a_j(j)) then
             NN=NN+1
             ptparton=pt(pp(0,j))
          endif
-         do i=0,3
-            pQCD(i,j)=0d0
-            if(j.lt.nexternal)ppp(i,j)=p_born(i,j)
-            if(j.eq.nexternal)ppp(i,j)=0d0
-         enddo
       enddo
 
 c Unphysical situation
@@ -2553,12 +2554,26 @@ c Processes without jets at the Born
          shower_H_scale(iFKS)=sqrtshat_ev-ptparton
 c$$$         shower_H_scale(iFKS)=sqrtshat_cnt(0)
          ref_H_scale(iFKS)=0d0
-c Processes with jets at the Born (iSH=1 (2) means S (H) events)
+c Processes with jets at the Born (iSH = 1 (2) means S (H) events)
       else
          do iSH=1,2
-            if(iSH.eq.2)then
-               ppp=pp
+            if(iSH.eq.1)then
+               nmax=nexternal-1
+               do j=1,nmax
+                  do i=0,3
+                     ppp(i,j)=p_born(i,j)
+                  enddo
+               enddo
+            elseif(iSH.eq.2)then
                nmax=nexternal
+               do j=1,nmax
+                  do i=0,3
+                     ppp(i,j)=pp(i,j)
+                  enddo
+               enddo
+            else
+               write(*,*)'Wrong iSH inset_shower_scale_noshape: ',iSH
+               stop
             endif
             if(ppp(0,1).gt.0d0)then
 c Put all (light) QCD partons in momentum array for jet clustering.
