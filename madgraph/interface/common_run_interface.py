@@ -1631,7 +1631,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     '(eg MSTW 90%CL error sets) \nare not available in aMC@NLO + LHAPDF 5.x.x')
 
 
-        # check if the file exists, otherwise install it
+        # check if the file exists, otherwise install it:
+        # also check that the PDFsets dir exists, otherwise create it.
+        # if fails, install the lhapdfset into lib/PDFsets
+        if not os.path.isdir(pdfsets_dir):
+            try:
+                os.mkdir(pdfsets_dir)
+            except OSError:
+                pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
+
         if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
             self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
             
@@ -1665,7 +1673,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # check taht the file has been installed in the global dir
         if os.path.exists(pjoin(pdfsets_dir, filename)) or \
            os.path.isdir(pjoin(pdfsets_dir, filename)):
-            logger.info('%s successfully donloaded and stored in %s' \
+            logger.info('%s successfully downloaded and stored in %s' \
                     % (filename, pdfsets_dir))
         #otherwise save it locally
         else:
