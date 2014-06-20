@@ -35,6 +35,7 @@ HCR_processes_long =  [
                        ('g g > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('u u~ > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
+                       ('g g > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
                        # loop-induced process
                        ('g g > n1 n1',{},['QCD'],{})
                        ]
@@ -51,6 +52,7 @@ ML5MSSMQCD_processes_long =  [
                          ('g g > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                          ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                          ('u u~ > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
+                         ('g g > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
                          # loop induced process
                          ('g g > n1 n1',{},['QCD'],{})
                          ]
@@ -254,6 +256,15 @@ class ML5MSSMQCDTest(unittest.TestCase):
 #   ('u u~ > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
     def test_long_mssm_vs_stored_HCR_uux_gogog_QCD(self):
         proc = 'uux_gogog_mssm_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+                               model = "loop_MSSM-parallel_test_gogo",
+                                                      pickle_file = 'hcr_%s.pkl'%proc,
+                               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False)
+
+#   ('g g > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
+    def test_long_mssm_vs_stored_HCR_gg_gogog_QCD(self):
+        proc = 'gg_gogog_mssm_QCD'
         self.compare_processes([HCR_processes_long_dic[proc]],
                                model = "loop_MSSM-parallel_test_gogo",
                                                       pickle_file = 'hcr_%s.pkl'%proc,
