@@ -134,7 +134,9 @@ c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
       average_virtual=0d0
-      virtual_fraction=virt_fraction
+      virtual_fraction=max(virt_fraction,min_virt_fraction)
+      
+      
 c
 c     Read process number
 c
@@ -244,6 +246,11 @@ c Update the number of PS points based on unc(1), ncall and accuracy
          endif
 c
          write (*,*) 'imode is ',imode
+
+         if (ickkw.eq.-1) then
+            min_virt_fraction=1d0
+            virtual_fraction=1d0
+         endif
 c
 c Setup for parton-level NLO reweighting
          if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
