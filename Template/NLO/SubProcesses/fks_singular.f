@@ -239,7 +239,7 @@ c      include "fks.inc"
       include 'run.inc'
       include 'reweight.inc'
       include 'reweightNLO.inc'
-
+      include 'cuts.inc'
 c     timing statistics
       include 'timing_variables.inc'
       real deltaTOLP,deltaTPDF,deltaTFJ
@@ -396,6 +396,15 @@ c For tests
      &                 total_wgt_sum_min
       double precision virt_wgt,born_wgt_ao2pi
       common/c_fks_singular/virt_wgt,born_wgt_ao2pi
+c veto-xsec
+      double precision Q2,ptjmax,mu,alpha,E1,veto_compensating_factor
+     $     ,H1_factor,muMad,alphah,alphaMad,H1_factor_virt,Q
+     $     ,H1_factor_Born,veto_multiplier,muh,Efull,H1_comp,alphas
+     $     ,virtual_wgt
+      save H1_factor_virt,H1_factor_Born
+      external alphas
+      double precision average_virtual,virtual_fraction
+      common/c_avg_virt/average_virtual,virtual_fraction
 
 c FxFx merging
       logical rewgt_mohdr_calculated,rewgt_izero_calculated
@@ -521,6 +530,14 @@ c points)
       deg_swgt=0.d0
       plot_wgt=0.d0
       iplot=-3
+
+c veto-xsec
+      if (ickkw.eq.-1) then
+         if (nbody) then
+            H1_factor_virt=0d0
+            H1_factor_Born=0d0
+         endif
+      endif
 
       if(doreweight)then
         call reweight_settozero()
@@ -697,6 +714,40 @@ c For FxFx merging, include the compensation term
               if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
                  bsv_wgt=bsv_wgt-g**2/(4d0*Pi)*rewgt_exp_izero*born_wgt
               endif
+              if (ickkw.eq.-1) then
+                 if (bpower.ne.0) then
+                    write (*,*) 'ERROR in VETO XSec: bpower should'/
+     $                   /' be zero (no QCD partons at the'/
+     $                   /' Born allowed)', bpower
+                 endif
+                 Q=sqrtshat
+                 Q2=shat
+                 ptjmax=ptj
+                 mu=2*ptjmax
+                 if (abs(QES2-mu_R**2).gt.1d-7) then
+                    write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+     $                   /'scale should be equal to the '/
+     $                   /'renormalisation scale',QES2,mu_R
+                    stop
+                 endif
+                 muMad=sqrt(QES2)
+                 alpha=alphas(mu)
+                 alphah=alphas(sqrt(Q2))
+                 alphaMad=alphas(muMad)
+                 call AnomalyExp(Q2, alpha, mu, ptjmax, E1)
+c compensating factor for difference between muMad and the soft scale mu
+                 H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/mu)**2 +
+     $                Log(muMad/mu)*(36d0 - 48d0*Log(Q/mu))))/9d0
+                 virtual_wgt=virt_wgt+
+     &                average_virtual*born_wgt*alphaMad/(2*pi)
+                 veto_compensating_factor=virtual_wgt*alpha/alphaMad
+     $                      +(H1_comp*alpha/(2d0*pi)+E1)*born_wgt
+c subtract alpha*(H1+E1) from the NLO cross section
+                 bsv_wgt=bsv_wgt-veto_compensating_factor
+c save the virtual_wgt to be used in the H1_factor
+                 H1_factor_virt=virtual_wgt/(born_wgt*alphaMad)
+                 H1_factor_born=born_wgt/(2d0*pi)
+              endif
               if(doreweight)then
                 if(wgtbpower.gt.0)then
                   wgtwborn(2)=born_wgt*xsec/g**(nint(2*wgtbpower))
@@ -704,10 +755,13 @@ c For FxFx merging, include the compensation term
                   wgtwborn(2)=born_wgt*xsec
                 endif
                 wgtwns(2)=wgtnstmp*xsec/g**(nint(2*wgtbpower+2.d0))
-                 if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
-                    wgtwns(2)=wgtwns(2)-rewgt_exp_izero*wgtwborn(2)
-     $                   /(4d0*pi)
-                 endif
+                if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
+                   wgtwns(2)=wgtwns(2)-rewgt_exp_izero*wgtwborn(2)
+     $                  /(4d0*pi)
+                endif
+                if (ickkw.eq.-1) then
+                   wgtwns(2)=wgtwns(2)-veto_compensating_factor/g**2
+                endif
                 wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(nint(2*wgtbpower
      &               +2.d0))
                 wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
@@ -839,7 +893,8 @@ c
       cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
 
-c Apply the FxFx Sudakov damping on the H events
+
+c Apply the FxFx Sudakov damping on the real-emission PS points
       if (ev_wgt.ne.0d0 .and. ickkw.eq.3..and.
      $     .not.rewgt_mohdr_calculated) then
          write (*,*) 'Error rewgt_mohdr_calculated'
@@ -847,13 +902,39 @@ c Apply the FxFx Sudakov damping on the H events
       elseif(rewgt_mohdr_calculated) then
          if (rewgt_mohdr.gt.1d0) rewgt_mohdr=1d0
          enhanceH=enhance*rewgt_mohdr
+      elseif (ickkw.eq.-1) then
+c This is for the NNLL veto cross section
+c     set sqrt(\hat(s)) correctly to be the one of the (n+1)-body
+c     kinematics
+         call set_cms_stuff(mohdr)
+         Q=sqrtshat
+         Q2=shat
+c     set muMad to be the ren scale used in the virtual
+         call set_alphaS(p1_cnt(0,1,0))
+         muMad=sqrt(QES2)
+         muh=sqrt(Q2)            ! hard scale
+         alphaMad=g**2/(4*pi)    ! alpha_s used by MG5_aMC in the virtual corrections
+         ptjmax=ptj              ! from cuts.inc
+         mu=2*ptjmax             ! soft scale
+         alpha=alphas(mu)
+         alphah=alphas(muh)
+c     compensating factor for difference between muMad and the hard
+c     scale muh
+         H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
+     $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
+c     (first order of) the Hard function
+         H1_factor=(H1_factor_virt + H1_comp*H1_factor_Born)*alphah
+         call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
+     $        JETRADIUS, Efull)
+         veto_multiplier=(1d0+H1_factor)*Efull
+         enhanceH=enhance*veto_multiplier
       else
          enhanceH=enhance
       endif
 
       ev_wgt = ev_wgt * enhanceH
 
-c Apply the FxFx Sudakov damping on the S events
+c Apply the FxFx Sudakov damping on the Born, virtual & counter PS points
       if(.not.(cnt_wgt.eq.0d0 .and. cnt_swgt.eq.0d0 .and. bsv_wgt.eq.0d0
      $     .and. born_wgt.eq.0d0 .and. deg_wgt.eq.0d0 .and.
      $     deg_swgt.eq.0d0 )
@@ -863,6 +944,31 @@ c Apply the FxFx Sudakov damping on the S events
       elseif(rewgt_izero_calculated) then
          if (rewgt_izero.gt.1d0) rewgt_izero=1d0
          enhanceS=enhance*rewgt_izero
+      elseif (ickkw.eq.-1) then
+c This is for the NNLL veto cross section
+c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
+         call set_cms_stuff(izero)
+         Q=sqrtshat
+         Q2=shat
+c     set muMad to be the ren scale used in the virtual
+         call set_alphaS(p1_cnt(0,1,0))
+         muMad=sqrt(QES2)        
+         muh=sqrt(Q2)            ! hard scale
+         alphaMad=g**2/(4*pi)    ! alpha_s used by MG5_aMC in the virtual corrections
+         ptjmax=ptj              ! from cuts.inc
+         mu=2*ptjmax             ! soft scale
+         alpha=alphas(mu)
+         alphah=alphas(muh)
+c     compensating factor for difference between muMad and the hard
+c     scale muh
+         H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
+     $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
+c     (first order of) the Hard function
+         H1_factor=(H1_factor_virt + H1_comp*H1_factor_Born)*alphah
+         call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
+     $        JETRADIUS, Efull)
+         veto_multiplier=(1d0+H1_factor)*Efull
+         enhanceS=enhance*veto_multiplier
       else
          enhanceS=enhance
       endif

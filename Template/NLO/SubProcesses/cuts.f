@@ -388,6 +388,7 @@ C***************************************************************
       include "nexternal.inc"
       include 'run.inc'
       include 'genps.inc'
+      include 'cuts.inc'
       REAL*8 P(0:3,nexternal),rwgt
       integer i,j,istatus(nexternal),iPDG(nexternal)
 c For boosts
@@ -410,6 +411,7 @@ c PDG codes of particles
       common /c_leshouche_inc/idup,mothup,icolup
       logical passcuts_user
       external passcuts_user
+      logical found
 c Make sure have reasonable 4-momenta
       if (p(0,1) .le. 0d0) then
          passcuts=.false.
@@ -425,6 +427,25 @@ c Also make sure there's no INF or NAN
          enddo
       enddo
       rwgt=1d0
+c Veto Xsec
+      if (ickkw.eq.-1) then
+         found=.false.
+         do i=nincoming+1,nexternal
+            if (abs(idup(i,1)).le.maxjetflavor .or.
+     &           idup(i,1).eq.21) then
+               if (found) then
+                  write (*,*) 'ERROR: already found a QCD parton in '/
+     $                 /'this event in cuts.f. There should only be one'
+                  stop
+               endif
+               found=.true.
+               if (p(1,i)**2+p(2,i)**2 .gt. ptj**2) then
+                  passcuts=.false.
+                  return
+               endif
+            endif
+         enddo
+      endif
 c Boost the momenta p(0:3,nexternal) to the lab frame plab(0:3,nexternal)
       chybst=cosh(ybst_til_tolab)
       shybst=sinh(ybst_til_tolab)
