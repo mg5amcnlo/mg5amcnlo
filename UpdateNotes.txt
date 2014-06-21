@@ -21,7 +21,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: improve "add model" functionality allow to force particle identification.
                 PT: Bug fix in the normalisation of topdrawer plots for option 'sum' (as opposed to 'average')
 		RF: Fixed a bug related to the random seed when the code was not recompiled for a new run.
-
+                OM: Fixed a bug in MadEvent(LO) run, the generated sample were bias in presence of 
+                    negative cross-section. A negative cross-section is possible only if you use a NLO PDF 
+                    and/or if you edit the matrix.f by hand to have a non-definite positive matrix-element.
+                    
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be
                     bypassed by using the option --noprefix when importing the model.

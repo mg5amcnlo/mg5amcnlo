@@ -275,24 +275,58 @@ class CheckValidForCmd(object):
         if args[0] != self.run_name:
             self.set_run_name(args[0])
 
+        args[0] = self.get_events_path(args[0])
+
+        args += opts
+
+    def check_check_events(self,args):
+        """Check the argument for decay_events command
+        syntax: decay_events [NAME]
+        Note that other option are already remove at this point
+        """
+
+        if len(args) == 0:
+            if self.run_name:
+                args.insert(0, self.run_name)
+            elif self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently defined. Please add this information.')
+                return
+        
+        if args[0] and os.path.isfile(args[0]):
+            pass
+        else:
+            if args[0] != self.run_name:
+                self.set_run_name(args[0], allow_new_tag=False)
+    
+            args[0] = self.get_events_path(args[0])
+
+
+    def get_events_path(self, run_name):
+        """Check the argument for decay_events command
+        syntax: decay_events [NAME]
+        Note that other option are already remove at this point
+        """
+
+
         if self.mode == 'madevent':
             possible_path = [
-                pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz'),
-                pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe')]
+                pjoin(self.me_dir,'Events', run_name, 'unweighted_events.lhe.gz'),
+                pjoin(self.me_dir,'Events', run_name, 'unweighted_events.lhe')]
         else:
             possible_path = [
-                           pjoin(self.me_dir,'Events',args[0], 'events.lhe.gz'),
-                           pjoin(self.me_dir,'Events',args[0], 'events.lhe')]
+                           pjoin(self.me_dir,'Events', run_name, 'events.lhe.gz'),
+                           pjoin(self.me_dir,'Events', run_name, 'events.lhe')]
 
         for path in possible_path:
             if os.path.exists(path):
                 correct_path = path
                 break
         else:
-            raise self.InvalidCmd('No events file corresponding to %s run. ' % args[0])
-        args[0] = correct_path
+            raise self.InvalidCmd('No events file corresponding to %s run. ' % run_name)
+        return correct_path
 
-        args += opts
 
 
 class MadEventAlreadyRunning(InvalidCmd):
@@ -1561,6 +1595,34 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             return
 
+    ############################################################################
+    def do_check_events(self, line):
+        """ Run some sanity check on the generated events."""
+                
+        # Check that MG5 directory is present .
+        if MADEVENT and not self.options['mg5_path']:
+            raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
+            You can install it and set its path in ./Cards/me5_configuration.txt'''
+        elif MADEVENT:
+            sys.path.append(self.options['mg5_path'])
+        try:
+            import madgraph.interface.reweight_interface as reweight_interface
+        except ImportError:
+            raise self.ConfigurationError, '''Can\'t load Reweight module.
+            The variable mg5_path might not be correctly configured.'''
+              
+
+        # load the name of the event file
+        args = self.split_arg(line) 
+        self.check_check_events(args) 
+        # args now alway content the path to the valid files
+        reweight_cmd = reweight_interface.ReweightInterface(args[0])
+        reweight_cmd. mother = self
+        self.update_status('Running check on events', level='check')
+        
+        reweight_cmd.check_events()
+        
+
 
 # lhapdf-related functions
     def link_lhapdf(self, libdir, extra_dirs = []):
@@ -2423,6 +2485,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info('AsPerGe creates the file succesfully')
         files.mv(card, '%s.beforeasperge' % card)
         files.mv('%s.new' % card, card)
+
 
 
     def copy_file(self, path):

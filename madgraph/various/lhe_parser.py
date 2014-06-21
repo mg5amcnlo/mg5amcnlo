@@ -129,9 +129,19 @@ class EventFile(file):
         if mode == 'r':
             line = ''
             while '</init>' not in line.lower():
-                line  = file.next(self)
+                try:
+                    line  = file.next(self)
+                except StopIteration:
+                    self.seek(0)
+                    self.banner = ''
+                    break 
+                if "<event>" in line.lower():
+                    self.seek(0)
+                    self.banner = ''
+                    break                     
+
                 self.banner += line
-                
+
     def get_banner(self):
         """return a banner object"""
         import madgraph.various.banner as banner
