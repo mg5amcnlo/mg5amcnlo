@@ -657,7 +657,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                     except KeyError:
                         continue
                     error = math.sqrt(error)
-                    fsock.write('%s %s %s %s %s \n' % (event, card, tf_set, value, error))
+                    fsock.write('%s %s %s %s %s \n' % (event.replace('@', ' '), card, tf_set, value, error))
     
         # write the likelihood file:
         fsock = open(pjoin(self.me_dir, 'Events', name, 'un-normalized_likelihood.out'), 'w')
