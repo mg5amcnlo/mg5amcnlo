@@ -9,6 +9,9 @@ NFILE=$4
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%(extralibs)s
 
+# this is for py8 runs
+export PYTHIA8DATA=`pwd`/xmldoc
+
 # if one is splitting file cd to a new dir and link all files here
 if [[ "$NFILE" != "" ]]; then
     mkdir run_$NFILE

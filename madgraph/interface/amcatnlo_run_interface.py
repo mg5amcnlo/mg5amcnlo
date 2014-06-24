@@ -2295,6 +2295,7 @@ Integrated cross-section
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
             files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
+            files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -3071,6 +3072,7 @@ Integrated cross-section
                 input_files.append(pjoin(cwd, 'Pythia8.exe'))
                 input_files.append(pjoin(cwd, 'Pythia8.cmd'))
                 input_files.append(pjoin(cwd, 'config.sh'))
+                input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
             else:
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
