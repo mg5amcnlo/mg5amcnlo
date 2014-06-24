@@ -25,7 +25,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                     negative cross-section. A negative cross-section is possible only if you use a NLO PDF 
                     and/or if you edit the matrix.f by hand to have a non-definite positive matrix-element.
 		OM: When importing a model, check that there is not more than 1 parameter with the same name.
-                    
+      PT: Substantial recoding of montecarlocounter.f and of a subroutine in fks_singular.f. Will help future
+          extensions like EW NLO+PS matching and numerical derivatives      
+              
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be
                     bypassed by using the option --noprefix when importing the model.
