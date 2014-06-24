@@ -361,6 +361,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'cpp_compiler': None,
                        'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_status_update': (600, 30),
