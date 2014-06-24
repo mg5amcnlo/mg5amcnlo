@@ -6146,7 +6146,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     if amp:
                         self._curr_amps.extend(amp)
                 clevel = 2
-                while part.get('apx_decaywidth_err') > precision:
+                while part.get('apx_decaywidth_err').real > precision:
                     clevel += 1
                     if clevel > max_level:
                         logger_mg.info('    stop to %s body-decay. approximate error: %s' %

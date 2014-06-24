@@ -6009,7 +6009,7 @@ def channelcmp_final(x, y):
 
 def amplitudecmp_width(x, y):
     """ Sort the amplitudes by their width."""
-    mycmp = cmp(x['apx_decaywidth'], y['apx_decaywidth'])
+    mycmp = cmp(x['apx_decaywidth'].real, y['apx_decaywidth'].real)
 
     return -mycmp
 
