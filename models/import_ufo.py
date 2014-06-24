@@ -286,11 +286,18 @@ class UFOMG5Converter(object):
 
         # Check the validity of the model
         # 1) check that all lhablock are single word.
+        def_name = []
         for param in self.ufomodel.all_parameters:
             if param.nature == "external":
                 if len(param.lhablock.split())>1:
                     raise InvalidModel, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\' ''' % (param.name, param.lhablock)
+            if param.name in def_name:
+                raise InvalidModel, "name %s define multiple time. Please correct the UFO model!" \
+                                                                  % (param.name)
+            else:
+                def_name.append(param.name)
+                                                                  
          
         if hasattr(self.ufomodel, 'gauge'):    
             self.model.set('gauge', self.ufomodel.gauge)

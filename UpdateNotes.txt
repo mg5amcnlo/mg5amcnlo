@@ -24,6 +24,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Fixed a bug in MadEvent(LO) run, the generated sample were bias in presence of 
                     negative cross-section. A negative cross-section is possible only if you use a NLO PDF 
                     and/or if you edit the matrix.f by hand to have a non-definite positive matrix-element.
+		OM: When importing a model, check that there is not more than 1 parameter with the same name.
                     
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be
