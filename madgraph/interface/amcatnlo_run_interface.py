@@ -3078,6 +3078,7 @@ Integrated cross-section
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
             if shower == 'HERWIGPP':
                 input_files.append(pjoin(cwd, 'Herwig++'))
+                input_files.append(pjoin(cwd, 'HepMCFortran.so'))
             if len(args) == 3:
                 if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')):
                     input_files.append(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz'))

@@ -20,6 +20,9 @@ if [[ "$NFILE" != "" ]]; then
     if [ $SHOWER == "PYTHIA8" ] ; then
         cp ../Pythia8.exe ../Pythia8.cmd ../config.sh .
     else
+        if [ $SHOWER == "HERWIGPP" ] ; then
+            cp ../Herwig++ ../HepMCFortran.so .
+        fi
         cp ../MCATNLO_$SHOWER\_EXE ../MCATNLO_$SHOWER\_input .
     fi
 fi
