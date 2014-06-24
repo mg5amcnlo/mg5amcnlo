@@ -105,7 +105,7 @@ c or counter-event, we only need one scale.
       endif
 
 c Here is the actual cut applied
-      if (max(d1,d2) .lt. pt_pythia .or. min(d1,d2) .gt. pt_pythia) then
+      if (max(d1,d2) .lt. pt_pythia .or. d1 .gt. pt_pythia) then
          passUNLOPScuts = .false.
          return
       endif
