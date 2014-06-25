@@ -1262,37 +1262,32 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                 diagram_wavefunctions.insert(i, new_wf)
                                 break
                         else:
-                            # For regular wavefunctions, we can simply add it
-                            # at the new wf at the ened of the diag_wfs list.
-                            if not new_wf['is_loop']:
-                                diagram_wavefunctions.append(new_wf)
-                            # For loop wavefunctions, more care is needed since
+                            # For loop processes, care is needed since
                             # some loop wavefunctions in the diag_wfs might have
                             # the new_wf in their mother, so we want to place 
-                            # this new_wf as early as possible in the list.
-                            else:
-                                # We first look if any mother of the wavefunction
-                                # we want to add appears in the diagram_wavefunctions
-                                # list. If it doesn't, max_mother_index is -1.
-                                # If it does, then max_mother_index is the maximum
-                                # index in diagram_wavefunctions of those of the 
-                                # mothers present in this list.
-                                max_mother_index = max([-1]+
-                                    [diagram_wavefunctions.index(wf) for wf in 
-                                            mothers if wf in diagram_wavefunctions])
-                                
-                                # We want to insert this new_wf as early as 
-                                # possible in the diagram_wavefunctions list so that
-                                # we are guaranteed that it will be placed *before*
-                                # wavefunctions that have new_wf as a mother.
-                                # We therefore place it at max_mother_index+1.
-                                if max_mother_index<len(diagram_wavefunctions)-1:
-                                    new_wf.set('number',diagram_wavefunctions[
-                                                  max_mother_index+1].get('number'))
-                                for wf in diagram_wavefunctions[max_mother_index+1:]:
-                                    wf.set('number',wf.get('number')+1)
-                                diagram_wavefunctions.insert(max_mother_index+1,
-                                                                             new_wf)
+                            # new_wf as early as possible in the list.
+                            # We first look if any mother of the wavefunction
+                            # we want to add appears in the diagram_wavefunctions
+                            # list. If it doesn't, max_mother_index is -1.
+                            # If it does, then max_mother_index is the maximum
+                            # index in diagram_wavefunctions of those of the 
+                            # mothers present in this list.
+                            max_mother_index = max([-1]+
+                                [diagram_wavefunctions.index(wf) for wf in 
+                                        mothers if wf in diagram_wavefunctions])
+                            
+                            # We want to insert this new_wf as early as 
+                            # possible in the diagram_wavefunctions list so that
+                            # we are guaranteed that it will be placed *before*
+                            # wavefunctions that have new_wf as a mother.
+                            # We therefore place it at max_mother_index+1.
+                            if max_mother_index<len(diagram_wavefunctions)-1:
+                                new_wf.set('number',diagram_wavefunctions[
+                                              max_mother_index+1].get('number'))
+                            for wf in diagram_wavefunctions[max_mother_index+1:]:
+                                wf.set('number',wf.get('number')+1)
+                            diagram_wavefunctions.insert(max_mother_index+1,
+                                                                         new_wf)
 
             # Set new mothers
             new_wf.set('mothers', mothers)
