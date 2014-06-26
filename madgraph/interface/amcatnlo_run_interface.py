@@ -1262,7 +1262,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             options['only_generation'] = False
 
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
-
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
             self.cluster = cluster.from_name[cluster_name](**self.options)
@@ -1411,7 +1410,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 
             cross, error = sum_html.make_all_html_results(self, folder_names[mode])
             self.results.add_detail('cross', cross)
-            self.results.add_detail('error', error) 
+            self.results.add_detail('error', error)
+            if self.run_card['iappl'] != '0':
+                self.applgrid_combine(cross,error)
             self.update_status('Run complete', level='parton', update_results=True)
 
             return
@@ -1529,6 +1530,32 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         self.collect_log_files(folder_names[mode], 2)
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
+
+    def applgrid_combine(self,cross,error):
+        """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
+        logger.debug('Combining APPLgrids \n')
+        with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
+            all_jobs=dirf.readlines()
+        ngrids=len(whole_file)
+        j=0 # observable label
+        while True:
+            try:
+                gstring=" ".join([pjoin(self.me_dir,job.rstrip(),"grid_obs_"+str(j)+"_out.root") for job in all_jobs])
+            # combine APPLgrids from different channels for observable 'j'
+                if self.run_card["iappl"] == "1":
+                    os.system("applgrid-combine -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(j)+"_starting_grid.root") + " --optimise -g "+str(ngrids)+" "+gstring)
+                elif self.run_card["iappl"] == "2":
+                    os.system("applgrid-combine -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(j)+".root") + " -g "+str(ngrids)+ " -u "+str(ngrids)+" "+gstring)
+                else:
+                    raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
+            # after combining, delete the original grids
+                os.remove(gstring)
+                j = j+1
+            else:
+                break
+        
+    def applgrid_distribute(self,cross,error):
+        """Distributes the APPLgrids ready to be filled by a second run of the code"""
 
     def collect_log_files(self, folders, istep):
         """collect the log files and put them in a single, html-friendly file inside the run_...
@@ -2938,6 +2965,7 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
+                     pjoin(cwd, 'initial_states_map.dat'),
                      pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
@@ -3174,6 +3202,15 @@ Integrated cross-section
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
+            except KeyError:
+                pass
+
+        # read the run_card to find if applgrid is used or not
+        if self.run_card['iappl'] != '0':
+            os.environ['applgrid'] = 'True'
+        else:
+            try:
+                del os.environ['applgrid']
             except KeyError:
                 pass
 
@@ -3737,6 +3774,9 @@ _calculate_xsect_parser.add_option("-x", "--nocompile", default=False, action='s
                             help="Skip compilation. Ignored if no executable is found")
 _calculate_xsect_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
+_calculate_xsect_parser.add_option("-o", "--only_generation", default=False, action='store_true',
+                            help="Skip grid set up, just start from " + \
+                            "the last available results")
 
 _shower_usage = 'shower run_name [options]\n' + \
         '-- do shower/hadronization on parton-level file generated for run run_name\n' + \

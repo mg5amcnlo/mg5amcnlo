@@ -397,6 +397,11 @@ c For tests
       double precision virt_wgt,born_wgt_ao2pi
       common/c_fks_singular/virt_wgt,born_wgt_ao2pi
 
+c APPLgrid stuff
+      integer iappl
+      common /for_applgrid/ iappl
+      include "appl_common.inc" 
+
 c FxFx merging
       logical rewgt_mohdr_calculated,rewgt_izero_calculated
       double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
@@ -438,7 +443,10 @@ c Note that all the wgts and jacs should be positive.
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
          wgtbpower=bpower
-
+c Store the power of alphas of the Born events in the appl common block.
+         if(iappl.ne.0) appl_bpower = wgtbpower
+c Initialize histograms
+         call initplot
 c Compute cpower done for bottom Yukawa, routine needs to be adopted
 c for other muR-dependendent factors
          call compute_cpower(p_born,cpower)
@@ -932,7 +940,7 @@ c     #                                   iwgtinfo)
          endif      
 
 c For tests
-         if(abs(dsig).gt.fksmaxwgt)then
+        if(abs(dsig).gt.fksmaxwgt)then
             fksmaxwgt=abs(dsig)
             xisave=xi_i_fks_ev
             ysave=y_ij_fks_ev

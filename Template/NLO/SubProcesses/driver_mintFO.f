@@ -122,6 +122,10 @@ c timing statistics
 c general MadFKS parameters
       include "FKSParams.inc"
 
+c applgrid
+      integer iappl
+      common /for_applgrid/ iappl
+
 C-----
 C  BEGIN CODE
 C-----  
@@ -192,6 +196,19 @@ c at the NLO)
         stop
       endif
       write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
+      write(*,*) "  "
+c APPLgrid
+      if (imode.eq.0) iappl=0 ! overwrite when starting completely fresh
+      if(iappl.ne.0) then
+         write(6,*) "Initializing aMCfast ..."
+         write(6,*) "  "
+c     Set flavor map, starting from all possible
+c     parton lumi configurations defined in initial_states_map.dat
+         call setup_flavourmap
+c     Fill the number of combined matrix elements for given initial state luminosity
+         call find_iproc_map
+      endif
+
       itotalpoints=0
       ivirtpoints=0
       ivirtpointsExcept=0
@@ -247,7 +264,6 @@ c
 c
 c Setup for parton-level NLO reweighting
          if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
-         call initplot
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2)
          call topout

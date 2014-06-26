@@ -144,3 +144,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
  4 = maxjetflavor
 #***********************************************************************
+# For aMCfast + APPLGRID use in PDF fitting                            *
+#***********************************************************************
+ 0 = iappl   ! aMCfast switch (0=OFF, 1=prepare APPLgrids, 2=fill grids)
+#***********************************************************************
