@@ -225,45 +225,17 @@ class Banner(dict):
         else:
             ff = output_path
             
-        header ="""<LesHouchesEvents version="%.1f">
-<header>
-<!--
-#*********************************************************************
-#                                                                    *
-#                        MadGraph5_aMC@NLO                           *
-#                                                                    *
-#                           Going Beyond                             *
-#                                                                    *
-#                   http://madgraph.hep.uiuc.edu                     *
-#                   http://madgraph.phys.ucl.ac.be                   *
-#                   http://amcatnlo.cern.ch                          *
-#                                                                    *
-#                     The MadGraph5_aMC@NLO team                     *
-#                                                                    *
-#....................................................................*
-#                                                                    *
-# This file contains all the information necessary to reproduce      *
-# the events generated:                                              *
-#                                                                    *
-# 1. software version                                                *
-# 2. proc_card          : code generation info including model       *
-# 3. param_card         : model primary parameters in the LH format  *
-# 4. run_card           : running parameters (collider and cuts)     *
-# 5. pythia_card        : present only if pythia has been run        *
-# 6. pgs_card           : present only if pgs has been run           *
-# 7. delphes_cards      : present only if delphes has been run       *
-#                                                                    *
-#                                                                    *
-#*********************************************************************
--->
-"""
+        if MADEVENT:
+            header = open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read()
+        else:
+            header = open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read()
+    
         if not self.lhe_version:
             self.lhe_version = self.get('run_card', 'lhe_version', default=1.0)
             if float(self.lhe_version) < 3:
                 self.lhe_version = 1.0
         
-        
-        ff.write(header % float(self.lhe_version))
+        ff.write(header % { 'version':float(self.lhe_version)})
 
 
         for tag in [t for t in self.ordered_items if t in self.keys()]:
