@@ -1,5 +1,5 @@
-1. Go through all the Template/NLO/FixedOrderAnalysis/amcatnlo_amcfast_* and check that they are well-documented and understandable. Also prepare a proper template for this!
+o. The changes in dbook.f are not very safe. Need to be addressed.
 
-2. The changes in dbook.f are not very safe. Need to be addressed.
-
-3. Makefile_fks_dir assumes that root, applgrid, etc are available
+o. Makefile_fks_dir assumes that root, applgrid, etc are
+available. This is set in the Source/make_opts file. Should think
+about a better way of doing this
