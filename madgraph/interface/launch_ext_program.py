@@ -282,7 +282,8 @@ class MadLoopLauncher(ExtLauncher):
         str_lines=[]
         
         notZeroBorn=True
-        if len([1 for k in res['Born_kept'] if k])==0:
+        if res['export_format']!='LoopInduced' and len(so_order_names) and \
+                                     len([1 for k in res['Born_kept'] if k])==0:
             notZeroBorn = False
             str_lines.append(
 ("|  /!\\ There is no Born contribution for the squared orders specified in "+
