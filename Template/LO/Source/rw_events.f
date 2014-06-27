@@ -14,6 +14,7 @@ c********************************************************************
       implicit none
       include 'maxparticles.inc'
       include 'run_config.inc'
+      include 'run.inc'
       double precision pi
       parameter (pi = 3.1415926d0)
 c
@@ -68,9 +69,16 @@ c-----
       
 c     Clustering scales
       read(lun,'(a)',end=99,err=99) buff
-      if(buff(1:7).ne.'<scales') then
+      if (lhe_version.lt.3d0)then
+        if(buff(1:1).ne.'#') then
          backspace(lun)
          buff=''
+        endif
+      else
+        if(buff(1:7).ne.'<scales') then
+         backspace(lun)
+         buff=''
+        endif
       endif
 c     Systematics info
       read(lun,'(a)',end=99,err=99) s_buff(1)

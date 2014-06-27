@@ -2672,7 +2672,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         #Need to do the work!!!        
         import models.usermod as usermod
         base_model = usermod.UFOModel(self._curr_model.get('modelpath'))
-        base_model.add_model(path=model_path)
+        
+        identify = dict(tuple(a.split('=')) for a in args if '=' in a)
+        base_model.add_model(path=model_path, identify_particles=identify)
         base_model.write(output_dir)
         
         new_model_name = output_dir
@@ -3908,6 +3910,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                                self._curr_model)
             else:
                 prefix = not '--noprefix' in args
+                if prefix:
+                    aloha.aloha_prefix='mdl_'
+                else:
+                    aloha.aloha_prefix=''
+                
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix)
                 except import_ufo.UFOImportError, error:
@@ -4382,8 +4389,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
             out.write(data)
         if args[0] == 'Delphes3':
-            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS_PileUp.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_CMS.dat'))
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_ATLAS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_ATLAS.dat'))
+            
 
         #reset the position of the executable
         options_name = {'Delphes': 'delphes_path',
@@ -5298,8 +5310,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 1
 
             if res != 0 or error:
-                logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
+                 'executable (v3+). We will use fjcore instead.\n Please set the \'fastjet\'' + \
+                 'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).' +
+                        '\n MG5_aMC> set fastjet /PATH/TO/fastjet-config\n')
                 self.options[args[0]] = None
                 self.history.pop()
             elif int(output.split('.')[0]) < 3:
@@ -5321,8 +5335,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 1
             if res != 0:
                 logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
-                        'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+                        'executable. \nPlease set the \'lhapdf\' variable to the (absolute) ' + \
+                        '/PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
+                        ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
                          'cluster_retry_wait']:
@@ -5949,7 +5965,10 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             for mode, expr in particle.partial_widths.items():
                 tmp_mass = mass
                 for p in mode:
-                    tmp_mass -= abs(eval(str(p.mass), data))
+                    try:
+                        tmp_mass -= abs(eval(str(p.mass), data))
+                    except Exception:
+                        tmp_mass -= abs(eval("mdl_"+str(p.mass), data))
                 if tmp_mass <=0:
                     continue
 
@@ -6127,7 +6146,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     if amp:
                         self._curr_amps.extend(amp)
                 clevel = 2
-                while part.get('apx_decaywidth_err') > precision:
+                while part.get('apx_decaywidth_err').real > precision:
                     clevel += 1
                     if clevel > max_level:
                         logger_mg.info('    stop to %s body-decay. approximate error: %s' %

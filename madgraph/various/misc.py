@@ -647,12 +647,21 @@ class TMP_directory(object):
     """
 
     def __init__(self, suffix='', prefix='tmp', dir=None):
+        self.nb_try_remove = 0
         import tempfile   
         self.path = tempfile.mkdtemp(suffix, prefix, dir)
 
-
+    
     def __exit__(self, ctype, value, traceback ):
-        shutil.rmtree(self.path)
+        try:
+            shutil.rmtree(self.path)
+        except OSError:
+            self.nb_try_remove += 1
+            if self.nb_try_remove < 3:
+                time.sleep(10)
+                self.__exit__(ctype, value, traceback)
+            else:
+                logger.warning("Directory %s not completely cleaned. This directory can be removed manually" % self.path)
         
     def __enter__(self):
         return self.path

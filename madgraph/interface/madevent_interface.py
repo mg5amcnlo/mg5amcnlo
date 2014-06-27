@@ -2409,7 +2409,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         if mode in ['param', 'all']:
             model = self.find_model_name()
-            if model == 'mssm' or model.startswith('mssm-'):
+            tmp_model = os.path.basename(model)
+            if tmp_model == 'mssm' or tmp_model.startswith('mssm-'):
                 if not '--param_card=' in line:
                     param_card = pjoin(self.me_dir, 'Cards','param_card.dat')
                     mg5_param = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')
@@ -3583,7 +3584,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             return default
         
     ############################################################################
-    def set_run_name(self, name, tag=None, level='parton', reload_card=False):
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False,
+                     allow_new_tag=True):
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
@@ -3656,7 +3658,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 tag = self.results[self.run_name][-1]['tag']
                 self.run_card['run_tag'] = tag # ensure that run_tag is correct                
                    
-        if name in self.results and not new_tag:
+        if allow_new_tag and (name in self.results and not new_tag):
             self.results.def_current(self.run_name)
         else:
             self.results.add_run(self.run_name, self.run_card)

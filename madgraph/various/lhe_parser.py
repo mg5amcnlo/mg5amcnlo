@@ -1,5 +1,7 @@
+import collections
 import re
 import misc
+
 
 
 class Particle(object):
@@ -127,9 +129,19 @@ class EventFile(file):
         if mode == 'r':
             line = ''
             while '</init>' not in line.lower():
-                line  = file.next(self)
+                try:
+                    line  = file.next(self)
+                except StopIteration:
+                    self.seek(0)
+                    self.banner = ''
+                    break 
+                if "<event>" in line.lower():
+                    self.seek(0)
+                    self.banner = ''
+                    break                     
+
                 self.banner += line
-                
+
     def get_banner(self):
         """return a banner object"""
         import madgraph.various.banner as banner
@@ -260,6 +272,25 @@ class Event(list):
         initial.sort(), final.sort()
         tag = (tuple(initial), tuple(final))
         return tag, order
+    
+    def check_color_structure(self):
+        """check that each color structure is raised only once.
+        This is a debug routine not used anywhere in the code"""
+        color_index = collections.defaultdict(int)
+        
+        for particle in self:
+            if particle.color1:
+                color_index[particle.color1] +=1
+            if particle.color2:
+                color_index[particle.color2] +=1     
+                
+        for key,value in color_index.items():
+            if value > 2:
+                print self
+                print key, value
+                raise Exception, 'Wrong color_flow'           
+        
+        
      
     
         

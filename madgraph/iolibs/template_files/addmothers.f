@@ -414,7 +414,10 @@ c       Need to flip initial state color, since might be overwritten
         endif
 
         if(ickkw.gt.0) then
-           if(nexternal.gt.2)then
+            if (lhe_version.lt.3d0) then
+              write(cform,'(a4,i2,a6)') '(a1,',max(nexternal,10),'e15.7)'
+              write(buff,cform) '#',(ptclus(i),i=3,nexternal)
+           else if(nexternal.gt.2)then
               temp0='<scales '
               temp=''	
               do i=3,nexternal

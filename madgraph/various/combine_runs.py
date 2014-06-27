@@ -110,7 +110,7 @@ class CombineRuns(object):
         #Now read in all of the events and write them
         #back out with the appropriate scaled weight
         fsock = open(pjoin(channel, 'events.lhe'), 'w')
-        wgt = results.xsec / results.nunwgt
+        wgt = results.axsec / results.nunwgt
         tot_nevents=0
         for result in results:  
             i = result.name
@@ -129,7 +129,7 @@ class CombineRuns(object):
         def get_fortran_str(nb):
             data = '%E' % nb
             nb, power = data.split('E')
-            nb = float(nb) /10
+            nb = abs(float(nb)) /10
             power = int(power) + 1
             return '%.7fE%+03i' %(nb,power)
         new_wgt = get_fortran_str(new_wgt)
@@ -143,6 +143,7 @@ class CombineRuns(object):
                     sign = ''
                 else:
                     sign = '-'
+                    
                 line= ' %s  %s%s  %s\n' % ('   '.join(data[:2]), sign,
                                            new_wgt, '  '.join(data[3:]))
             fsock.write(line)

@@ -325,7 +325,7 @@ int mcfioC_NTupleMult(int stream, int nTupleId, char * version)
          " mcfio_NTuple: Unable to encode or decode NTuple I.D. %d \n",
              nTupleId);
          j = str->ehead->nNTuples;
-         if (fseeko(str->filePtr, str->currentPos,SEEK_SET) != 0) 
+         if (fseeko(str->filePtr,str->currentPos,SEEK_SET) != 0) 
            fprintf(stderr,
          " mcfio_NTuple: Unable to position stream at NTuple %d \n", nTupleId);
          return -1;

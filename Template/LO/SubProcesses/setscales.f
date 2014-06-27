@@ -4,8 +4,6 @@ c     This is the USER-FUNCTION to calculate the renormalization
 c     scale on event-by-event basis.
 c----------------------------------------------------------------------      
       implicit none
-      integer    maxexternal
-      parameter (maxexternal=15)
       real*8   alphas
       external alphas
 c
@@ -33,7 +31,7 @@ c
 c
 c     ARGUMENTS
 c      
-      REAL*8 P(0:3,maxexternal)
+      REAL*8 P(0:3,nexternal)
       REAL*8 rscale
 c
 c     EXTERNAL
@@ -101,9 +99,7 @@ c     This is the USER-FUNCTION to calculate the factorization
 c     scales^2 on event-by-event basis.
 c----------------------------------------------------------------------      
       implicit none
-      integer    maxexternal
-      parameter (maxexternal=15)
-c
+
 c     INCLUDE and COMMON
 c
 c      include 'genps.inc'
@@ -113,7 +109,7 @@ c--masses and poles
 c
 c     ARGUMENTS
 c      
-      REAL*8 P(0:3,maxexternal)
+      REAL*8 P(0:3,nexternal)
       real*8 q2fact(2)
 c
 c     EXTERNAL
