@@ -257,7 +257,7 @@ class Banner(dict):
             self.lhe_version = self.get_detail('run_card', 'lhe_version', default=1.0)
         
         
-        ff.write(header % self.lhe_version)
+        ff.write(header % float(self.lhe_version))
 
 
         for tag in [t for t in self.ordered_items if t in self.keys()]:

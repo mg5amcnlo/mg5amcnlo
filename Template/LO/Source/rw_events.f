@@ -168,6 +168,7 @@ c      aqcd = g*g/4d0/pi
      $     (p(j,i),j=1,3),p(0,i),p(4,i),0.,real(ic(7,i))
       enddo
       if(buff(1:7).eq.'<scales') write(lun,'(a)') buff(1:len_trim(buff))
+      if(buff(1:1).eq.'#') write(lun,'(a)') buff(1:len_trim(buff))
       if(u_syst)then
          do i=1,7
             write(lun,'(a)') s_buff(i)(1:len_trim(s_buff(i)))
