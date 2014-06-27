@@ -106,12 +106,12 @@ c
          xnorm=1d0
       endif
       if(useitmax)xnorm=xnorm/float(itmax)
+c Normalization factor for the APPLgrid grids
+      if(iappl.ne.0) appl_norm_histo = 1d0 / dble(ncall*itmax)
       call analysis_end(xnorm)
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
       if (.not.useitmax) xnorm=xnorm/float(itmax)
-c Normalization factor for the APPLgrid grids
-      if(iappl.ne.0) appl_norm_histo = 1d0 / dble(ncall*itmax)
       write (34,*) numscales**2
       if (numscales.gt.0) then
          write (34,*) ((xsecScale_acc(ii,jj)*xnorm,ii=1

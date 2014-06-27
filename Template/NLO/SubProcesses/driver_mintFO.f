@@ -196,17 +196,16 @@ c at the NLO)
         stop
       endif
       write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
-      write(*,*) "  "
 c APPLgrid
       if (imode.eq.0) iappl=0 ! overwrite when starting completely fresh
       if(iappl.ne.0) then
          write(6,*) "Initializing aMCfast ..."
-         write(6,*) "  "
 c     Set flavor map, starting from all possible
 c     parton lumi configurations defined in initial_states_map.dat
          call setup_flavourmap
 c     Fill the number of combined matrix elements for given initial state luminosity
          call find_iproc_map
+         write(6,*) "   ... done."
       endif
 
       itotalpoints=0
