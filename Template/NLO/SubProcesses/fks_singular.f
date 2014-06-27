@@ -1204,9 +1204,6 @@ c For tests
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
 
-      character*10 MonteCarlo
-      common/cMonteCarloType/MonteCarlo
-
       double precision xm12
       integer ileg
       common/cscaleminmax/xm12,ileg
@@ -1246,7 +1243,6 @@ c FxFx merging
       double precision pmass(nexternal)
       include "pmass.inc"
 
-      MonteCarlo=shower_mc
       vegas_weight=vegaswgt
 
 c If there was an exceptional phase-space point found for the 
