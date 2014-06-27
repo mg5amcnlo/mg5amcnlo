@@ -23,13 +23,17 @@ pjoin = os.path.join
 try:
     import madgraph.various.misc as misc
     import madgraph.iolibs.file_writers as file_writers
+    import madgraph.iolibs.files as files 
     import models.check_param_card as param_card_reader
     from madgraph import MG5DIR
     MADEVENT = False
 except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
+    import internal.files as files
     import internal.check_param_card as param_card_reader
+    import internal.misc as misc
+    
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
 
@@ -254,7 +258,9 @@ class Banner(dict):
 -->
 """
         if not self.lhe_version:
-            self.lhe_version = self.get_detail('run_card', 'lhe_version', default=1.0)
+            self.lhe_version = self.get('run_card', 'lhe_version', default=1.0)
+            if float(self.lhe_version) < 3:
+                self.lhe_version = 1.0
         
         
         ff.write(header % float(self.lhe_version))
@@ -279,6 +285,7 @@ class Banner(dict):
                      {'tag':'init', 'text':text.strip()})  
         if close_tag:          
             ff.write('</LesHouchesEvents>\n')
+        return ff
         
         
     ############################################################################
@@ -437,6 +444,66 @@ class Banner(dict):
     
     #convenient alias
     get = get_detail
+    
+    def set(self, card, *args):
+        """modify one of the cards"""
+
+        if tag == 'param_card':
+            tag = 'slha'
+            attr_tag = 'param_card'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+            attr_tag = 'run_card'
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+        elif tag == 'model':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+            arg = ('model',)
+        elif tag == 'generate':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+            arg = ('generate',)
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
+            attr_tag = 'shower_card'
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'shower_card'], 'not recognized'
+        
+        if not hasattr(self, attr_tag):
+            self.charge_card(attr_tag) 
+            
+        card = getattr(self, attr_tag)
+        if len(args) ==2:
+            if tag == 'mg5proccard':
+                card.info[args[0]] = args[-1]
+            else:
+                card[args[0]] = args[1]
+        else:
+            card[args[:-1]] = args[-1]
+        
+    
+
+    def add_to_file(self, path, seed=None):
+        """Add the banner to a file and change the associate seed in the banner"""
+
+        if seed is not None:
+            self.set("run_card", "iseed", seed)
+            
+        ff = self.write("%s.tmp" % path, close_tag=False)
+
+        if self.lhe_version >= 3:
+        #add the original content
+            [ff.write(line) if not line.startswith("<generator name='MadGraph5_aMC@NLO'")
+                        else ff.write("<generator name='MadGraph5_aMC@NLO' version='%s'>" % self['mgversion'][:-1])
+                        for line in open(path)]
+        else:
+            [ff.write(line) for line in open(path)]
+        ff.write("</LesHouchesEvents>\n")
+        ff.close()
+        files.mv("%s.tmp" % path, path)
+
+
         
 def split_banner(banner_path, me_dir, proc_card=True):
     """a simple way to split a banner"""
@@ -478,6 +545,9 @@ def recover_banner(results_object, level, run=None, tag=None):
                 del banner[tag]
     return banner
     
+
+
+
 
 class RunCard(dict):
     """A class object for the run_card"""
