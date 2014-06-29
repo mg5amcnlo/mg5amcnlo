@@ -163,29 +163,8 @@ class CmdExtended(cmd.Cmd):
 
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
-        self.history_header = \
-        '#************************************************************\n' + \
-        '#*                     MadGraph5_aMC@NLO                    *\n' + \
-        '#*                                                          *\n' + \
-        "#*                *                       *                 *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                    * * * * 5 * * * *                     *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                *                       *                 *\n" + \
-        "#*                                                          *\n" + \
-        "#*                                                          *\n" + \
-        info_line + \
-        "#*                                                          *\n" + \
-        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
-        '#*                                                          *\n' + \
-        '#************************************************************\n' + \
-        '#*                                                          *\n' + \
-        '#*               Command File for MadGraph5_aMC@NLO         *\n' + \
-        '#*                                                          *\n' + \
-        '#*     run as ./bin/mg5_aMC  filename                       *\n' + \
-        '#*                                                          *\n' + \
-        '#************************************************************\n'
+        self.history_header = banner_module.ProcCard.history_header % {'info_line': info_line}
+        banner_module.ProcCard.history_header = self.history_header
 
         if info_line:
             info_line = info_line[1:]
@@ -5824,7 +5803,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,
@@ -5853,7 +5831,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,

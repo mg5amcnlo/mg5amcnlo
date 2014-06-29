@@ -619,10 +619,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Write command history as proc_card_mg5
         if os.path.isdir('Cards'):
             output_file = os.path.join('Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
         # Duplicate run_card and FO_analyse_card
         for card in ['run_card', 'FO_analyse_card', 'shower_card']:
