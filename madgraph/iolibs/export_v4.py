@@ -1433,7 +1433,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.make()
 
         # Write command history as proc_card_mg5
-        if os.path.isdir(pjoin(self.dir_path, 'Cards')):
+        if history and os.path.isdir(pjoin(self.dir_path, 'Cards')):
             output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
 
