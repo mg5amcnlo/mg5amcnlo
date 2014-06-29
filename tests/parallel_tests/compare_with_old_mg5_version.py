@@ -104,7 +104,7 @@ class OLDMG5Comparator(unittest.TestCase):
 
         # Run the actual comparison
         my_comp.run_comparison(my_proc_list,
-                               ['paralel_test_model_%s' % model, model], orders, energy)
+                               ['paralel_test_model_%s' % model,  model], orders, energy)
 
         # Print the output
         if filename:
@@ -154,7 +154,7 @@ class OLDMG5Comparator(unittest.TestCase):
         
         # Create and setup a comparator
         my_comp = madevent_comparator.MadEventComparator()
-        my_comp.set_me_runners(current_mg5, old_mg5)
+        my_comp.set_me_runners(old_mg5,current_mg5)
 
         # Run the actual comparison
         my_comp.run_comparison(my_proc_list,
@@ -621,7 +621,7 @@ class OLDMG5Comparator(unittest.TestCase):
                           initial=1, final_1=1, final_2=2, charge_conservation=False)
         my_proc_list += ['t2 > b1 d~ u', 't2 > b2 d~ u', 't1 > b1 d~ u', 't1 > b2 d~ u',
                         't2~ > b1~ d u~', 't2~ > b2~ d u~', 't1~ > b1~ d u~', 't1~ > b2~ d u~']
-        print len(my_proc_list)
+
         # Store list of non-zero processes and results in file
         self.compare_processes(my_proc_list,
                              orders = {'QED':4, 'QCD':4},
