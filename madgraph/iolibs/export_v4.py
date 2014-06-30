@@ -1433,12 +1433,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.make()
 
         # Write command history as proc_card_mg5
-        if os.path.isdir(pjoin(self.dir_path, 'Cards')):
+        if history and os.path.isdir(pjoin(self.dir_path, 'Cards')):
             output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
@@ -1892,10 +1889,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Write command history as proc_card_mg5
         if os.path.isdir(os.path.join(self.dir_path, 'Cards')):
             output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
     #===========================================================================
     # export model files
@@ -2825,10 +2819,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Write command history as proc_card_mg5
         if os.path.isdir(pjoin(self.dir_path,'Cards')):
             output_file = pjoin(self.dir_path,'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
         misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)

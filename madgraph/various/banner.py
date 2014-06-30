@@ -844,6 +844,33 @@ class RunCardNLO(RunCard):
 class ProcCard(list):
     """Basic Proccard object"""
     
+    history_header = \
+        '#************************************************************\n' + \
+        '#*                     MadGraph5_aMC@NLO                    *\n' + \
+        '#*                                                          *\n' + \
+        "#*                *                       *                 *\n" + \
+        "#*                  *        * *        *                   *\n" + \
+        "#*                    * * * * 5 * * * *                     *\n" + \
+        "#*                  *        * *        *                   *\n" + \
+        "#*                *                       *                 *\n" + \
+        "#*                                                          *\n" + \
+        "#*                                                          *\n" + \
+        "%(info_line)s" +\
+        "#*                                                          *\n" + \
+        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
+        "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        '#*                                                          *\n' + \
+        '#************************************************************\n' + \
+        '#*                                                          *\n' + \
+        '#*               Command File for MadGraph5_aMC@NLO         *\n' + \
+        '#*                                                          *\n' + \
+        '#*     run as ./bin/mg5_aMC  filename                       *\n' + \
+        '#*                                                          *\n' + \
+        '#************************************************************\n'
+    
+    
+    
+    
     def __init__(self, init=None):
         """ initialize a basic proc_card"""
         self.info = {'model': 'sm', 'generate':None,
@@ -859,9 +886,16 @@ class ProcCard(list):
         if isinstance(init, str): #path to file
             init = file(init, 'r')
         
+        store_line = ''
         for line in init:
-            self.append(line)
-            
+            line = line.strip()
+            if line.endswith('\\'):
+                store_line += line[:-1]
+            else:
+                self.append(store_line + line)
+                store_line = ""
+        if store_line:
+            raise Exception, "WRONG CARD FORMAT"
     def move_to_last(self, cmd):
         """move an element to the last history."""
         for line in self[:]:
@@ -891,6 +925,8 @@ class ProcCard(list):
             self.clean(remove_bef_last='generate', keep_switch=True,
                      allow_for_removal= ['generate', 'add process', 'output'])
             self.info['generate'] = ' '.join(cmds[1:])
+        elif cmd == 'add' and cmds[1] == 'process' and not self.info['generate']:
+            self.info['generate'] = ' '.join(cmds[2:])
         elif cmd == 'import':
             if len(cmds) < 2:
                 return
@@ -970,11 +1006,24 @@ class ProcCard(list):
             # update the counter to pass to the next element
             nline -= 1
         
-        def __getattr__(self, tag):
-            if isinstance(tag, int):
-                list.__getattr__(self, tag)
+    def __getattr__(self, tag):
+        if isinstance(tag, int):
+            list.__getattr__(self, tag)
+        else:
+            return self.info[tag]
+            
+    def write(self, path):
+        """write the proc_card to a given path"""
+        
+        fsock = open(path, 'w')
+        fsock.write(self.history_header)
+        for line in self:
+            while len(line) > 70:
+                sub, line = line[:70]+"\\" , line[70:] 
+                fsock.write(sub+"\n")
             else:
-                return self.info[tag]
+                fsock.write(line+"\n")
+                
             
                 
             

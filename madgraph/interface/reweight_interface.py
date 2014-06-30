@@ -115,6 +115,9 @@ class ReweightInterface(extended_cmd.Cmd):
 
         # Read the banner of the inputfile
         self.lhe_input = lhe_parser.EventFile(os.path.realpath(inputfile))
+        if not self.lhe_input.banner:
+            value = self.ask("What is the path to banner", 0, [0], "please enter a path", timeout=0)
+            self.lhe_input.banner = open(value).read()
         self.banner = self.lhe_input.get_banner()
         
         # Check the validity of the banner:
@@ -144,6 +147,38 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.info("options: %s" % option)
 
 
+    def check_events(self):
+        """Check some basic property of the events file"""
+        
+        sum_of_weight = 0
+        sum_of_abs_weight = 0
+        negative_event = 0
+        positive_event = 0
+        
+        start = time.time()
+        for event_nb,event in enumerate(self.lhe_input):
+            #control logger
+            if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
+                    running_time = misc.format_timer(time.time()-start)
+                    logger.info('Event nb %s %s' % (event_nb, running_time))
+            if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
+
+            #event.check() #check 4 momenta/...
+
+            sum_of_weight += event.wgt
+            sum_of_abs_weight += abs(event.wgt)
+            if event.wgt < 0 :
+                negative_event +=1
+            else:
+                positive_event +=1
+        
+        logger.info("total cross-section: %s" % sum_of_weight)
+        logger.info("total abs cross-section: %s" % sum_of_abs_weight) 
+        logger.info("fraction of negative event %s", negative_event/(negative_event+positive_event))      
+        logger.info("total number of events %s", (negative_event+positive_event))
+        logger.info("negative event %s", negative_event)
+        
+        
         
         
     @extended_cmd.debug()

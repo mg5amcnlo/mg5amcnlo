@@ -2213,7 +2213,7 @@ Integrated cross-section
             except Exception:
                 logger.warning('Linking FastJet: using fjcore')
                 # this is for FJcore, so no FJ library has to be linked
-                self.shower_card['extralibs'].replace('fasjtet', '')
+                self.shower_card['extralibs'] = self.shower_card['extralibs'].replace('fastjet', '')
                 if not 'fjcore.o' in self.shower_card['analyse']:
                     self.shower_card['analyse'] += ' fjcore.o'
                 # to be changed in the fortran wrapper
@@ -3180,7 +3180,9 @@ Integrated cross-section
         try: 
             os.environ['fastjet_config'] = self.options['fastjet']
         except (TypeError, KeyError):
-            os.unsetenv['fastjet_config']
+            if 'fastjet_config' in os.environ:
+                del os.environ['fastjet_config']
+            os.unsetenv('fastjet_config')
         
         # make Source
         self.update_status('Compiling source...', level=None)
