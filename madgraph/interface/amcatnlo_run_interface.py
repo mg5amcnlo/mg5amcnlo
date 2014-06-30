@@ -2213,7 +2213,7 @@ Integrated cross-section
             except Exception:
                 logger.warning('Linking FastJet: using fjcore')
                 # this is for FJcore, so no FJ library has to be linked
-                self.shower_card['extralibs'].replace('fasjtet', '')
+                self.shower_card['extralibs'].replace('fastjet', '')
                 if not 'fjcore.o' in self.shower_card['analyse']:
                     self.shower_card['analyse'] += ' fjcore.o'
                 # to be changed in the fortran wrapper
