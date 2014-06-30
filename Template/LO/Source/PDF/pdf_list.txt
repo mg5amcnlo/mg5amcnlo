@@ -69,6 +69,12 @@
  CTEQ3D            cteq3_d     ---------          0.112          2
 
 
+---------------------------------------------------------------------
+          
+ NNPDF23NLO        nn23nlo     NNPDF23nlo_as_0119_qed_mem0.grid  0.119  2
+ NNPDF23LO         nn23lo      NNPDF23_lo_as_0119_qed_mem0.grid  0.119  2
+ NNPDF23LO1        nn23lo1     NNPDF23_lo_as_0130_qed_mem0.grid  0.130  1
+  
 
 
  

@@ -24,7 +24,7 @@ c generic subroutine to open the table files in the right directories
 c********************************************************************
       implicit none
 c
-      Character Tablefile*40,up*3,lib*4,dir*8,tempname*100
+      Character Tablefile*(*),up*3,lib*4,dir*8,tempname*100
       data up,lib,dir/'../','lib/','Pdfdata/'/
       Integer IU,NextUnopen,i
       External NextUnopen
