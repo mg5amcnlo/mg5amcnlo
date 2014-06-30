@@ -1562,9 +1562,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         
     def applgrid_distribute(self,options,mode,p_dirs):
         """Distributes the APPLgrids ready to be filled by a second run of the code"""
-        if 'appl_run_name' in options.keys() and options['appl_run_name']:
-            self.appl_run_name = options['appl_run_name']
-            start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_run_name)
+        if 'appl_start_grid' in options.keys() and options['appl_start_grid']:
+            self.appl_start_grid = options['appl_start_grid']
+            start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_start_grid)
             # check that this dir exists and at least one grid file is there
             if not os.path.exists(pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root')):
                 raise self.InvalidCmd('APPLgrid file not found: %s' % \
@@ -1574,7 +1574,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                if name.endswith("_starting_grid.root")]
                 nobs =len(all_grids)
                 gstring=" ".join(all_grids)
-        if not hasattr(self, 'appl_run_name') or not self.appl_run_name:
+        if not hasattr(self, 'appl_start_grid') or not self.appl_start_grid:
             raise self.InvalidCmd('No APPLgrid name currently defined. Please provide this information.')             
         if mode == 'NLO':
             gdir='all_G'
@@ -3756,7 +3756,7 @@ _launch_parser.add_option("-o", "--only_generation", default=False, action='stor
                             "the last available results")
 _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
-_launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_run_name',
+_launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
                             help="For use with APPLgrid only: start from existing grids")
 
 
@@ -3811,7 +3811,7 @@ _calculate_xsect_parser.add_option("-n", "--name", default=False, dest='run_name
 _calculate_xsect_parser.add_option("-o", "--only_generation", default=False, action='store_true',
                             help="Skip grid set up, just start from " + \
                             "the last available results")
-_calculate_xsect_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_run_name',
+_calculate_xsect_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
                             help="For use with APPLgrid only: start from existing grids")
 
 _shower_usage = 'shower run_name [options]\n' + \
