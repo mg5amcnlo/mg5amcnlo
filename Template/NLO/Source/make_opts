@@ -69,7 +69,7 @@ endif
 
 # Option APPLGrid
 ifdef applgrid
-  APPLLIBS=$(shell applgrid-config --ldcflags) $(shell amcbridge-config --ldflags)
+  APPLLIBS=$(shell applgrid-config --ldcflags) $(shell amcfast-config --ldflags)
   applgrid_interface=appl_interface.o
 else
   APPLLIBS=

@@ -1,5 +1,0 @@
-o. The changes in dbook.f are not very safe. Need to be addressed.
-
-o. Makefile_fks_dir assumes that root, applgrid, etc are
-available. This is set in the Source/make_opts file. Should think
-about a better way of doing this

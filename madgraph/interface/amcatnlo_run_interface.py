@@ -1549,10 +1549,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") for job in all_jobs])
             # combine APPLgrids from different channels for observable 'obs'
             if self.run_card["iappl"] == "1":
-                os.system(applcomb + " -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root") + " --optimise -g "+str(ngrids)+" "+gstring)
+                os.system(applcomb + " -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root") + " --optimise "+gstring)
             elif self.run_card["iappl"] == "2":
-                os.system(applcomb + " -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root") + " -g "+str(ngrids)+ " -u "+str(ngrids)+" "+gstring)
-
+                unc2_inv=pow(cross/error,2)
+                unc2_inv_ngrids=pow(cross/error,2)*ngrids
+                os.system(applcomb + " -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root") \
+                                                          + " -g "+str(unc2_inv)+ " --weight "+str(unc2_inv)+ " -r "+str(unc2_inv)+ " "+gstring)
                 start_gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"aMCfast_obs_"+str(obs)+"_starting_grid.root") for job in all_jobs])
                 os.system("rm -f "+ start_gstring)
             else:
@@ -3242,16 +3244,16 @@ Integrated cross-section
         if self.run_card['iappl'] != '0':
             os.environ['applgrid'] = 'True'
             # check versions of applgrid and amcfast
-            for code in ['applgrid','amcbridge']:
+            for code in ['applgrid','amcfast']:
                 try:
                     p = subprocess.Popen([self.options[code], '--version'], \
                                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     output, error = p.communicate()
                     if code is 'applgrid' and output < '1.4.63':
-                        raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.63 or later.'\
+                        raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
                                                 +' You are using %s',output)
-                    if code is 'amcbridge' and output < '1.1.1':
-                        raise aMCatNLOError('Version of aMCbridge is too old. Use 1.1.1 or later.'\
+                    if code is 'amcfast' and output < '1.1.1':
+                        raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
                                                 +' You are using %s',output)
                 except Exception:
                     raise aMCatNLOError(('No valid %s installation found. \n' + \
@@ -3259,7 +3261,7 @@ Integrated cross-section
                           'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
             # set-up the Source/make_opts with the correct applgrid-config file
             appllibs="  APPLLIBS=$(shell %s --ldcflags) $(shell %s --ldflags) \n" \
-                             % (self.options['applgrid'],self.options['amcbridge'])
+                             % (self.options['applgrid'],self.options['amcfast'])
             text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
             text_out=[]
             for line in text:
