@@ -2181,6 +2181,26 @@ Integrated cross-section
 
         self.banner = banner_mod.Banner(evt_file)
         shower = self.banner.get_detail('run_card', 'parton_shower').upper()
+
+        #check that the number of split event files divides the number of
+        # events, otherwise set it to 1
+        if int(int(self.banner.get_detail('run_card', 'nevents')) / \
+                self.shower_card['nsplit_jobs']) * self.shower_card['nsplit_jobs'] \
+                != int(self.banner.get_detail('run_card', 'nevents')):
+            logger.warning(\
+                'nsplit_jobs in the shower card is not a divisor of the number of events.\n' + \
+                'Setting it to 1.')
+            self.shower_card['nsplit_jobs'] = 1
+
+        # don't split jobs if the user asks to shower only a part of the events
+        if self.shower_card['nevents'] > 0 and \
+           self.shower_card['nevents'] < int(self.banner.get_detail('run_card', 'nevents')) and \
+           self.shower_card['nsplit_jobs'] != 1:
+            logger.warning(\
+                'Only a part of the events will be showered.\n' + \
+                'Setting nsplit_jobs in the shower_card to 1.')
+            self.shower_card['nsplit_jobs'] = 1
+
         self.banner_to_mcatnlo(evt_file)
 
         # if fastjet has to be linked (in extralibs) then
@@ -2273,15 +2293,16 @@ Integrated cross-section
             logger.info('Cleaning old files and splitting the event file...')
             #clean the old files
             files.rm([f for f in event_files if 'events.lhe' not in f])
-            misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'))
-            p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'split_events')],
-                            stdin=subprocess.PIPE,
-                            stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
-                            cwd=pjoin(self.me_dir, 'Events', self.run_name))
-            p.communicate(input = 'events.lhe\n%d\n' % self.shower_card['nsplit_jobs'])
+            if self.shower_card['nsplit_jobs'] > 1:
+                misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'))
+                p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'split_events')],
+                                stdin=subprocess.PIPE,
+                                stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
+                                cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                p.communicate(input = 'events.lhe\n%d\n' % self.shower_card['nsplit_jobs'])
+                logger.info('Splitting done.')
             event_files = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
                                             'events_*.lhe'))
-            logger.info('Splitting done.')
 
         event_files.sort()
 
@@ -2679,10 +2700,11 @@ Integrated cross-section
         init_dict = self.get_init_dict(evt_file)
 
         if nevents < 0 or \
-           nevents > int(self.banner.get_detail('run_card', 'nevents')) /\
-                         self.shower_card['nsplit_jobs']:
-            nevents = int(self.banner.get_detail('run_card', 'nevents')) /\
-                      self.shower_card['nsplit_jobs']
+           nevents > int(self.banner.get_detail('run_card', 'nevents')):
+            nevents = int(self.banner.get_detail('run_card', 'nevents'))
+
+        nevents = nevents / self.shower_card['nsplit_jobs']
+
         mcmass_dict = {}
         for line in [l for l in self.banner['montecarlomasses'].split('\n') if l]:
             pdg = int(line.split()[0])
