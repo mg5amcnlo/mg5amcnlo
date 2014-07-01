@@ -106,14 +106,6 @@ function compile {
 architecture
 
 EVTDIR=`pwd`"/../Events"
-# stops if event file is not in the /Events folder
-EVT_NAMEF="$EVPREFIX"
-if [ ! -f $EVTDIR/$EVT_NAMEF ]
-then
-  echo "Event file" $EVTDIR/$EVT_NAMEF "not found: quitting"
-  exit 1
-fi
-
 
 if [ "$PDFCODE" -ne 0 ]
 then
@@ -304,7 +296,6 @@ then
   fi
 fi
 echo " "
-echo "*****   All parameters read from event file $EVT_NAMEF"
 echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
 echo " "
 runMCMadFKS

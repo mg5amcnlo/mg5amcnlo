@@ -29,6 +29,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                     future extensions like EW NLO+PS matching and numerical derivatives      
                 OM: Fixing a wrong assignement in the color flow in presence of epsilon_ijk color structure.
                     Those events were rejected by Pythia8 due to this wrong color-flow.
+                MZ: Added the possibility to run the shower on a cluster, possibly splitting the lhe file 
 
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be
