@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 249 #2.0.0
+    reference_number = 323 #2.0.0
     nb_test = 0
     
     
@@ -371,8 +371,8 @@ class OLDMG5Comparator(unittest.TestCase):
         # Create a list of processes to check automatically                                                                                                                             
         my_proc_list = ['p p > t t~']
         values = {'number_of_P0': '2', 
-                  'cross_P0_qq_ttx': '65.93', 
-                  'cross_P0_gg_ttx': '399.1'}
+                  'cross_P0_qq_ttx': '0.65258E+02', 
+                  'cross_P0_gg_ttx': '0.43817E+03'}
 
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section_to_values(values, my_proc_list,
@@ -406,7 +406,7 @@ class OLDMG5Comparator(unittest.TestCase):
         """Test a short list of sm processes""" 
         my_proc_list = ['g g > go go']
 
-        values = {'number_of_P0': '1', 'cross_P0_gg_gogo': '0.31630E+01'}
+        values = {'number_of_P0': '1', 'cross_P0_gg_gogo': '0.46066E+01'}
         
         self.compare_cross_section_to_values(values, my_proc_list,
                              model='mssm',
