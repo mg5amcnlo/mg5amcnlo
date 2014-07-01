@@ -899,7 +899,7 @@ class CheckValidForCmd(object):
             #    restrict_file = pjoin(ufo_path, 'restrict_default.dat')
             model = import_ufo.import_model(modelname, decay=True, 
                         restrict=True)
-            if self.mother.options['complex_mass_scheme']:
+            if self.mother and self.mother.options['complex_mass_scheme']:
                 model.change_mass_to_complex_scheme()
         else:
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
@@ -964,6 +964,8 @@ class CheckValidForCmd(object):
             else:
                 self.help_compute_widths()
                 raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
+        if self.force:
+            output['force'] = True
 
         if not output['particles']:
             raise self.InvalidCmd, '''This routines requires at least one particle in order to compute
@@ -3584,7 +3586,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             return default
         
     ############################################################################
-    def set_run_name(self, name, tag=None, level='parton', reload_card=False):
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False,
+                     allow_new_tag=True):
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
@@ -3657,7 +3660,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 tag = self.results[self.run_name][-1]['tag']
                 self.run_card['run_tag'] = tag # ensure that run_tag is correct                
                    
-        if name in self.results and not new_tag:
+        if allow_new_tag and (name in self.results and not new_tag):
             self.results.def_current(self.run_name)
         else:
             self.results.add_run(self.run_name, self.run_card)

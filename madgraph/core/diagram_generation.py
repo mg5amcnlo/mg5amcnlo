@@ -690,13 +690,42 @@ class Amplitude(base_objects.PhysicsObject):
         if process.get('forbidden_s_channels'):
             ninitial = len(filter(lambda leg: leg.get('state') == False,
                                   process.get('legs')))
-            res = base_objects.DiagramList(\
+            if ninitial == 2:
+                res = base_objects.DiagramList(\
                 filter(lambda diagram: \
                        not any([vertex.get_s_channel_id(\
                            process.get('model'), ninitial) \
                                 in process.get('forbidden_s_channels')
                                 for vertex in diagram.get('vertices')[:-1]]),
                        res))
+            else:
+                # split since we need to avoid that the initial particle is forbidden 
+                # as well. 
+                newres= []
+                for diagram in res:
+                    leg1 = 1
+                    #check the latest vertex to see if the leg 1 is inside if it 
+                    #is we need to inverse the look-up and allow the first s-channel
+                    # of the associate particles.
+                    vertex =  diagram.get('vertices')[-1]
+                    if any([l['number'] ==1 for l in vertex.get('legs')]):
+                        leg1 = [l['number'] for l in vertex.get('legs') if l['number'] !=1][0]
+                    to_loop = range(len(diagram.get('vertices'))-1)
+                    if leg1 >1:   
+                        to_loop.reverse()
+                    for i in to_loop:
+                        vertex = diagram.get('vertices')[i]
+                        if leg1:
+                            if any([l['number'] ==leg1 for l in vertex.get('legs')]):
+                                leg1 = 0 
+                                continue
+                        if vertex.get_s_channel_id(process.get('model'), ninitial)\
+                                         in process.get('forbidden_s_channels'):
+                            break
+                    else:
+                        newres.append(diagram)
+                newres = base_objects.DiagramList(newres)
+                
 
         # Mark forbidden (onshell) s-channel propagators, to forbid onshell
         # generation.

@@ -102,7 +102,7 @@ c $E$ input_file $E$
       read(15,*,err=20) xsec,xerr,xdum,xdum,xdum,xdum,xdum,xdum,xdum,rxsec
       write(*,*) "Results.dat xsec = ",rxsec," abs xsec = ",xsec
  20   close(15)
- 21   if (nreq .gt. 0 .and. xsec .gt. 0) then
+ 21   if (nreq .gt. 0 .and. xsec .ne. 0) then
          goal_wgt = xsec/nreq/4d0   !Extra factor of 4 for weighted events
       else
          goal_wgt = 0d0    !Write out everything
@@ -372,11 +372,12 @@ c     Now write out specific information on the event set
 c
 c
       write(lunw,'(a)') '<MGGenerationInfo>'
-      write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
-      write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
-      write(lunw,'(a30,e10.5)') '#  Max wgt                 :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Average wgt             :  ',wgt
+      write(lunw,'(a30,i11)')   '#  Number of Events        :  ',nevent
+      write(lunw,'(a30,e11.5)') '#  Integrated weight (pb)  :  ',sum
+      write(lunw,'(a30,e11.5)') '#  Max wgt                 :  ',maxwgt
+      write(lunw,'(a30,e11.5)') '#  Average wgt             :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
+
    
     
 
@@ -476,10 +477,10 @@ c     Now write out specific information on the event set
 c
 
       write(lunw,'(a)') '<MGGenerationInfo>'
-      write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
-      write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
-      write(lunw,'(a30,e10.5)') '#  Truncated wgt (pb)      :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Unit wgt                :  ',wgt
+      write(lunw,'(a30,i11)')   '#  Number of Events        :  ',nevent
+      write(lunw,'(a30,e11.5)') '#  Integrated weight (pb)  :  ',sum
+      write(lunw,'(a30,e11.5)') '#  Truncated wgt (pb)      :  ',maxwgt
+      write(lunw,'(a30,e11.5)') '#  Unit wgt                :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
 
 C   Write out compulsory init info
