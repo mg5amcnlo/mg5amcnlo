@@ -2414,6 +2414,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
+                       'applgrid':'applgrid-config',
+                       'amcbridge':'amcbridge-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,

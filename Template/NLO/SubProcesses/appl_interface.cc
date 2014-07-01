@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 /*
-  NLO mode of aMCatNLO
+  fNLO mode of aMCatNLO
 */
 
 void (*appl_initptr)() = 0;
@@ -42,27 +42,4 @@ extern "C" void appl_term_() {
   if (appl_termptr) appl_termptr();  
 }
 
-
-/*
-  NLO+PS mode of aMCatNLO
-*/
-
-void (*applmc_initptr)() = 0;
-void (*applmc_fillrefptr)() = 0;
-void (*applmc_termptr)() = 0;
-
-extern "C" void applmc_init_() {
-  std::cerr<<"I am in applmc_init (C++ version)"<<std::endl;
-  if (applmc_initptr) applmc_initptr(); 
-}
-
-extern "C" void applmc_fill_ref_() {
-  std::cerr<<"I am in applmc_fill_ref_ (C++ version)"<<std::endl;
-  if (applmc_fillrefptr) applmc_fillrefptr(); 
-}
-
-extern "C" void applmc_term_() {
-  std::cerr<<"I am in applmc_term_ (C++ version)"<<std::endl;
-  if (applmc_termptr) applmc_termptr(); 
-}
 

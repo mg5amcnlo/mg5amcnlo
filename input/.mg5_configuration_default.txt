@@ -157,4 +157,7 @@
 #! relative path start from main directory
 # syscalc_path = ./SysCalc
 
+#! Absolute paths to config scripts in the bin directories for APPLgrid and aMCFast.
+# applgrid = applgrid-config
+# amcbridge = amcbridge-config
 

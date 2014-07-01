@@ -479,6 +479,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 run_card = self.run_card
 
+            if self.run_card['iappl'] != '0' and self.run_card['pdlabel'].lower() != 'lhapdf':
+                raise self.InvalidCmd('APPLgrid generation only possible with the use of LHAPDF')
+
             if amcatnlo and int(run_card['ickkw']) == 3:
                 # For FxFx merging, make sure that:
                 # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed

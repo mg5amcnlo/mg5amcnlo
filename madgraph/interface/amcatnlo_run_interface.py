@@ -1540,6 +1540,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
     def applgrid_combine(self,cross,error):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
         logger.debug('Combining APPLgrids \n')
+        applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),'applgrid-combine')
         with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
             all_jobs=dirf.readlines()
         ngrids=len(all_jobs)
@@ -1548,9 +1549,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") for job in all_jobs])
             # combine APPLgrids from different channels for observable 'obs'
             if self.run_card["iappl"] == "1":
-                os.system("applgrid-combine -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root") + " --optimise -g "+str(ngrids)+" "+gstring)
+                os.system(applcomb + " -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root") + " --optimise -g "+str(ngrids)+" "+gstring)
             elif self.run_card["iappl"] == "2":
-                os.system("applgrid-combine -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root") + " -g "+str(ngrids)+ " -u "+str(ngrids)+" "+gstring)
+                os.system(applcomb + " -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root") + " -g "+str(ngrids)+ " -u "+str(ngrids)+" "+gstring)
 
                 start_gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"aMCfast_obs_"+str(obs)+"_starting_grid.root") for job in all_jobs])
                 os.system("rm -f "+ start_gstring)
@@ -3240,6 +3241,26 @@ Integrated cross-section
         # read the run_card to find if applgrid is used or not
         if self.run_card['iappl'] != '0':
             os.environ['applgrid'] = 'True'
+            # check versions of applgrid and amcfast
+            for code in ['applgrid','amcbridge']:
+                try:
+                    p = subprocess.Popen([self.options[code], '--version'], \
+                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    output, error = p.communicate()
+                except Exception:
+                    raise aMCatNLOError(('No valid %s installation found. \n' + \
+                          'Please set the path to %s-config by using \n' + \
+                          'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+            # set-up the Source/make_opts with the correct applgrid-config file
+            appllibs="  APPLLIBS=$(shell %s --ldcflags) $(shell %s --ldflags) \n" \
+                             % (self.options['applgrid'],self.options['amcbridge'])
+            text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
+            text_out=[]
+            for line in text:
+                if line.strip().startswith('APPLLIBS=$'):
+                    line=appllibs
+                text_out.append(line)
+            open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
         else:
             try:
                 del os.environ['applgrid']
