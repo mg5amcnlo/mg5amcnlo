@@ -407,7 +407,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             fsock = open(pjoin(me_dir,'RunWeb'),'w')
             fsock.write(`pid`)
             fsock.close()
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+
+            misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
+                        cwd=me_dir)
 
         self.to_store = []
         self.run_name = None

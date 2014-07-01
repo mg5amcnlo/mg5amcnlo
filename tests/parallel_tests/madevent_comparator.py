@@ -70,6 +70,7 @@ class MadEventComparator(me_comparator.MEComparator):
             logging.info("Now running %s" % runner.name)
             if pass_proc:
                 runner.pass_proc = pass_proc 
+
             self.results.append(runner.run(proc_list, model[i], orders))
             cpu_time2 = time.time()
             logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
@@ -557,7 +558,6 @@ class MG5OldRunner(MG5Runner):
         self.model = model
         self.orders = orders
         self.non_zero = 0 
-
         dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
 
         # Create a proc_card.dat in the v5 format
@@ -573,6 +573,7 @@ class MG5OldRunner(MG5Runner):
         # Run mg5
         logging.info("Running MG5")
         devnull = open(os.devnull,'w') 
+
         if logging.root.level >=20:
             subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location],
                         stdout=devnull, stderr=devnull)

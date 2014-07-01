@@ -562,7 +562,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if self._export_format in ['standalone']:
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,

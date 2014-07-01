@@ -2027,7 +2027,7 @@ class Vertex(PhysicsObject):
 
         if ninitial == 1:
             # For one initial particle, all legs are s-channel
-            # Only need to flip particle id if state is False
+            # Only need to flip particle id if state is False            
             if leg.get('state') == True:
                 return leg.get('id')
             else:
