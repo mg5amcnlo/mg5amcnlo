@@ -68,7 +68,7 @@ c     Variables for combination of color indices (including multipart. vert)
       
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
-      CHARACTER temp*200,temp0*7,integ*1,float*18
+      CHARACTER temp*600,temp0*7,integ*1,float*18
       CHARACTER(LEN=45*nexternal) ptclusstring
 
 C     iproc has the present process number
@@ -425,7 +425,7 @@ c       Need to flip initial state color, since might be overwritten
                  float=''
                  write(integ,'(i1)') i
                  Write(float,'(f16.10)') ptclus(i)
-                 temp=trim(temp)//' pt_start_'//integ//'="'//trim(adjustl(float))//'"'
+                 temp=trim(temp)//' pt_clust_'//integ//'="'//trim(adjustl(float))//'"'
               enddo
               ptclusstring=trim(adjustl(temp0//trim(temp)//'></scales>'))
 c             write(*,*)'WRITING THE ptclusscale:',trim(adjustl(ptclusstring))
