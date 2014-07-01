@@ -112,9 +112,6 @@ C identical matrix elements
                 T_SAVE(IHEL,I)=T(I)
             ENDDO
             T_IDENT(IHEL)=-1
-	    DO I=1,NSQAMPSO			
-                ANS(I)=ANS(I)+T(I)
-	    ENDDO
             DO I=1,IHEL-1
                IF (T(1).EQ.0D0) EXIT
                IF (T_SAVE(I,1).EQ.0D0) CYCLE
