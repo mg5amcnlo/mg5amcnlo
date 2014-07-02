@@ -429,6 +429,14 @@ c
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
      &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
      &     xmaxup(maxpup),lprup(maxpup)
+
+c
+c     Flag on how to write the LHE events
+c     Include <clustering> tag for Pythia 8 CKKW-L matching
+c
+      logical clusinfo
+      double precision lhe_version
+      COMMON/TO_LHEFORMAT/lhe_version,clusinfo
 c
 c     Global
 c
@@ -486,6 +494,10 @@ c
 C   Write out compulsory init info
       write(lunw,'(a)') '</header>'
       write(lunw,'(a)') '<init>'
+      if (lhe_version.ge.3) then
+        write(lunw,'(a)') "<generator name='MadGraph5_aMC@NLO' version='X.X.X'>           "
+        write(lunw,'(a)') "please cite 1405.0301 </generator>"
+      endif
       write(lunw,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),(pdfgup(i),i=1,2),
      $   (pdfsup(i),i=1,2),3,nprup
       do i=1,nprup

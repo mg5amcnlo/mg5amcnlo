@@ -2728,12 +2728,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                                      '%s_%s_banner.txt' % (self.run_name, tag)))
         
-        misc.call(['%s/put_banner' % self.dirbin, 'events.lhe',
-                   str(self.random_orig)],
-                            cwd=pjoin(self.me_dir, 'Events'))
-        misc.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe',
-                   str(self.random_orig)],
-                            cwd=pjoin(self.me_dir, 'Events'))
+        
+        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'))
+        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'))        
+
         
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']

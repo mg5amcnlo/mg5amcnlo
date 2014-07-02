@@ -50,7 +50,9 @@ c     Common block for systematics variations
       COMMON/TO_SYST/use_syst,n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
      $               s_scale,s_qalps,s_xpdf,s_qpdf,s_rwfact
 c
+c     Flag on how to write the LHE events 
 c     Include <clustering> tag for Pythia 8 CKKW-L matching
 c
       logical clusinfo
-      COMMON/TO_CINFO/clusinfo
+      double precision lhe_version
+      COMMON/TO_LHEFORMAT/lhe_version,clusinfo
