@@ -46,6 +46,7 @@ except ImportError, error:
         raise error
     MADEVENT = True
 
+
 pjoin = os.path.join
 
 class TimeOutError(Exception):
@@ -1285,7 +1286,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 basedir = os.getcwd()
         elif MADEVENT:
             # launch via ./bin/madevent
-            base = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
+            for config_file in ['me5_configuration.txt', 'amcatnlo_configuration.txt']:
+                if os.path.exists(pjoin(self.me_dir, 'Cards', config_file)): 
+                    base = pjoin(self.me_dir, 'Cards', config_file)
             basedir = self.me_dir
         else:
             if hasattr(self, 'me_dir'):

@@ -361,6 +361,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'cpp_compiler': None,
                        'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_status_update': (600, 30),
@@ -1181,9 +1182,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if args[1] == 'None':
                 args[1] = None
             self.options['fortran_compiler'] = args[1]
-            current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'))
+            current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'), 'fortran')
             if current != args[1] and args[1] != None:
-                misc.mod_compilator(self.me_dir, args[1], current)
+                misc.mod_compilator(self.me_dir, args[1], current, 'gfortran')
+        elif args[0] == "cpp_compiler":
+            if args[1] == 'None':
+                args[1] = None
+            self.options['cpp_compiler'] = args[1]
+            current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'), 'cpp')
+            if current != args[1] and args[1] != None:
+                misc.mod_compilator(self.me_dir, args[1], current, 'cpp')
         elif args[0] == "run_mode":
             if not args[1] in [0,1,2,'0','1','2']:
                 raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'

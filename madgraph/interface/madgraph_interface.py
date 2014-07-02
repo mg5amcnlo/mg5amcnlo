@@ -2130,6 +2130,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                           'CRITICAL','default'])
             elif args[1] == 'fortran_compiler':
                 return self.list_completion(text, ['f77','g77','gfortran','default'])
+            elif args[1] == 'cpp_compiler':
+                return self.list_completion(text, ['g++', 'c++', 'clang', 'default'])
             elif args[1] == 'nb_core':
                 return self.list_completion(text, [str(i) for i in range(100)] + ['default'] )
             elif args[1] == 'run_mode':
@@ -2362,6 +2364,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
+                    'cpp_compiler',
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge']
@@ -2386,6 +2389,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'cpp_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
@@ -5801,12 +5805,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
+            compiler_dict = {'fortran': self.options['fortran_compiler'],
+                             'cpp': self.options['cpp_compiler']}
+
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'],
+                                           compiler_dict,
               output_dependencies = self.options['output_dependencies'],
                                            MG5DIR = MG5DIR)
             # Create configuration file [path to executable] for amcatnlo

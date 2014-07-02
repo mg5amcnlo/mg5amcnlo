@@ -890,7 +890,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
     _generate_options = ['-f', '--laststep=parton', '--laststep=pythia', '--laststep=pgs', '--laststep=delphes']
     _calculate_decay_options = ['-f', '--accuracy=0.']
-    _set_options = ['stdout_level','fortran_compiler','timeout']
+    _set_options = ['stdout_level','fortran_compiler','cpp_compiler','timeout']
     _plot_mode = ['all', 'parton','shower','pgs','delphes']
     _clean_mode = _plot_mode + ['channel', 'banner']
     _display_opts = ['run_name', 'options', 'variable']
