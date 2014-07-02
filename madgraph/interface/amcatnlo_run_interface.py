@@ -1554,7 +1554,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
                 os.system(applcomb + " -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root") \
-                                                          + " -g "+str(unc2_inv)+ " --weight "+str(unc2_inv)+ " -r "+str(unc2_inv)+ " "+gstring)
+                                                          + " -g "+str(unc2_inv)+ " --weight "+str(unc2_inv)+" "+gstring)
                 start_gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"aMCfast_obs_"+str(obs)+"_starting_grid.root") for job in all_jobs])
                 os.system("rm -f "+ start_gstring)
             else:
@@ -1596,8 +1596,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             g_dirs = [file for file in os.listdir(pjoin(self.me_dir,"SubProcesses",pdir)) \
                       if file.startswith(gdir) and os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
             for g_dir in g_dirs:
-                for obs in range(0,nobs):
-                    os.system("cp -f "+gstring+" "+pjoin(self.me_dir,"SubProcesses",pdir,g_dir))
+                for grid in all_grids:
+                    obs=grid.split('_')[-3]
+                    os.system("cp -f "+grid+" "+pjoin(self.me_dir,"SubProcesses",pdir,g_dir,'grid_obs_'+obs+'_in.root'))
 
 
     def collect_log_files(self, folders, istep):
