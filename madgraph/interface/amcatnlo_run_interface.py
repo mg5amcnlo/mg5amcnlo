@@ -1555,7 +1555,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
                 os.system(applcomb + " -o "+ pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root") \
                                                           + " -g "+str(unc2_inv)+ " --weight "+str(unc2_inv)+" "+gstring)
-                start_gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"aMCfast_obs_"+str(obs)+"_starting_grid.root") for job in all_jobs])
+                start_gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_in.root") for job in all_jobs])
                 os.system("rm -f "+ start_gstring)
             else:
                 raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
@@ -3066,6 +3066,9 @@ Integrated cross-section
                         to_move = ['mint_grids', 'grid.MC_integer']
                     else: 
                         to_move  = []
+                    if self.run_card['iappl'] =='2':
+                        for grid in glob.glob(pjoin(cwd,base,'grid_obs_*_in.root')):
+                            to_move.append(grid)
                     if not os.path.exists(pjoin(cwd,current)):
                         os.mkdir(pjoin(cwd,current))
                         input_files.append(pjoin(cwd, current))
