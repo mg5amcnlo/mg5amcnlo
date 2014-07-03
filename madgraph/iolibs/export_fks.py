@@ -556,8 +556,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
 
     def finalize_fks_directory(self, matrix_elements, history, makejpg = False,
-         online = False, compiler='gfortran', output_dependencies = 'external',
-                                                                MG5DIR = None):
+            online = False, 
+            compiler_dict={'fortran': 'gfortran', 'cpp': 'g++'}, 
+            output_dependencies = 'external', MG5DIR = None):
         """Finalize FKS directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
@@ -583,7 +584,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
 
         # Check for compiler
-        compiler_chosen = self.set_compiler(compiler)
+        fcompiler_chosen = self.set_fortran_compiler(compiler_dict['fortran'])
+        ccompiler_chosen = self.set_cpp_compiler(compiler_dict['cpp'])
 
         old_pos = os.getcwd()
         os.chdir(os.path.join(self.dir_path, 'SubProcesses'))
@@ -619,10 +621,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Write command history as proc_card_mg5
         if os.path.isdir('Cards'):
             output_file = os.path.join('Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
         # Duplicate run_card and FO_analyse_card
         for card in ['run_card', 'FO_analyse_card', 'shower_card']:
@@ -665,7 +664,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                     path = os.path.join(StdHep_path, 'src', 'make_opts')
                     text = open(path).read()
                     for base in base_compiler:
-                        text = text.replace(base,'FC=%s' % compiler_chosen)
+                        text = text.replace(base,'FC=%s' % fcompiler_chosen)
                     open(path, 'w').writelines(text)
 
                 logger.info('Compiling StdHEP. This has to be done only once.')
@@ -689,7 +688,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                     path = pjoin(StdHEP_internal_path, 'src', 'make_opts')
                     text = open(path).read()
                     for base in base_compiler:
-                        text = text.replace(base,'FC=%s' % compiler_chosen)
+                        text = text.replace(base,'FC=%s' % fcompiler_chosen)
                     open(path, 'w').writelines(text)
                 # To avoid compiler version conflicts, we force a clean here
                 misc.compile(['clean'],cwd = StdHEP_internal_path)

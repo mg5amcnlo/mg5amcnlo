@@ -118,6 +118,10 @@ c For MINT:
      $     ,nvirt_acc
       double precision ran2
       external ran2
+      
+      integer ifile,ievents
+      double precision inter,absint,uncer
+      common /to_write_header_init/inter,absint,uncer,ifile,ievents
 
       logical SHsep
       logical Hevents
@@ -276,7 +280,7 @@ c
          write(*,*)'Final result:',ans(2),' +/-',unc(2)
          write(*,*)'chi**2 per D.o.F.:',chi2(1)
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*) ans(1),unc(1),0d0,0,0,0,0,0d0,0d0,ans(2)
+         write(58,*) ans(1),unc(2),0d0,0,0,0,0,0d0,0d0,ans(2)
          close(58)
 c
 c to save grids:
@@ -328,6 +332,15 @@ c Prepare the MINT folding
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2)
+         
+c If integrating the virtuals alone, in update_unwgt_table we include
+c the virtuals in ans(1). Therefore, no need to have them in ans(5) and
+c we have to set them to zero.
+         if (only_virt) then
+            ans(3)=0d0 ! virtual Xsec
+            ans(5)=0d0 ! ABS virtual Xsec
+         endif
+
          open(unit=58,file='res_1',status='unknown')
          write(58,*)'Final result [ABS]:',ans(1)+ans(5),' +/-'
      $        ,sqrt(unc(1)**2+unc(5)**2)
@@ -407,7 +420,13 @@ c determine how many events for the virtual and how many for the no-virt
          if(plotEv)open(unit=99,file='hard-events.top',status='unknown')
          open(unit=lunlhe,file='events.lhe',status='unknown')
 
-         call write_header_init(lunlhe,ncall,ans(2),ans(1)+ans(5),unc(2))
+c fill the information for the write_header_init common block
+         ifile=lunlhe
+         ievents=ncall
+         inter=ans(2)
+         absint=ans(1)+ans(5)
+         uncer=unc(2)
+
          if(plotEv)call initplot
 
          weight=(ans(1)+ans(5))/ncall
@@ -428,8 +447,13 @@ c determine how many events for the virtual and how many for the no-virt
             else
                if (ran2().lt.ans(5)/(ans(1)+ans(5)) .or. only_virt) then
                   abrv='virt'
-                  vn=1
-                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  if (only_virt) then
+                     vn=2
+                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  else
+                     vn=1
+                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  endif
                else
                   abrv='novi'
                   vn=2
@@ -445,8 +469,8 @@ c Uncomment the next to lines to plot the integral from the PS points
 c trown during event generation. This corresponds only to the cross
 c section if these points are thrown flat, so not using the xmmm() stuff
 c in mint.
-c$$$         write (*,*) 'Integral from novi points computed',x(2),x(3)
-c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
+c         write (*,*) 'Integral from novi points computed',x(2),x(3)
+c         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif

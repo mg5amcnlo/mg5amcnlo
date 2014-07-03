@@ -23,13 +23,17 @@ pjoin = os.path.join
 try:
     import madgraph.various.misc as misc
     import madgraph.iolibs.file_writers as file_writers
+    import madgraph.iolibs.files as files 
     import models.check_param_card as param_card_reader
     from madgraph import MG5DIR
     MADEVENT = False
 except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
+    import internal.files as files
     import internal.check_param_card as param_card_reader
+    import internal.misc as misc
+    
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
 
@@ -42,8 +46,20 @@ class Banner(dict):
     """ """
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
-                     'slha', 'MGGenerationInfo', 'mgpythiacard', 'mgpgscard',
+                     'slha', 'mggenerationinfo', 'mgpythiacard', 'mgpgscard',
                      'mgdelphescard', 'mgdelphestrigger','mgshowercard','run_settings']
+
+    capitalized_items = {
+            'mgversion': 'MGVersion',
+            'mg5proccard': 'MG5ProcCard',
+            'mgproccard': 'MGProcCard',
+            'mgruncard': 'MGRunCard',
+            'mggenerationinfo': 'MGGenerationInfo',
+            'mgpythiacard': 'MGPythiaCard',
+            'mgpgscard': 'MGPGSCard',
+            'mgdelphescard': 'MGDelphesCard',
+            'mgdelphestrigger': 'MGDelphesTrigger',
+            'mgshowercard': 'MGShowerCard' }
     
     def __init__(self, banner_path=None):
         """ """
@@ -58,6 +74,8 @@ class Banner(dict):
         else:
             info = misc.get_pkg_info()
             self['mgversion'] = info['version']+'\n'
+        
+        self.lhe_version = None
         
 
             
@@ -80,6 +98,7 @@ class Banner(dict):
       'mgproccard': 'proc_card.dat',
       'init': '',
       'mggenerationinfo':'',
+      'scalesfunctionalform':'',
       'montecarlomasses':'',
       'initrwgt':'',
       'madspin':'madspin_card.dat',
@@ -117,7 +136,17 @@ class Banner(dict):
                 break
             elif "<event>" in line:
                 break
-                
+    
+    def change_lhe_version(self, version):
+        """change the lhe version associate to the banner"""
+    
+        version = float(version)
+        if version < 3:
+            version = 1
+        elif version > 3:
+            raise Exception, "Not Supported version"
+        self.lhe_version = version
+    
     def load_basic(self, medir):
         """ Load the proc_card /param_card and run_card """
         
@@ -184,10 +213,11 @@ class Banner(dict):
                 if pid not in pid2label.keys(): 
                     block.remove((pid,))
 
+
     ############################################################################
     #  WRITE BANNER
     ############################################################################
-    def write(self, output_path, close_tag=True):
+    def write(self, output_path, close_tag=True, exclude=[]):
         """write the banner"""
         
         if isinstance(output_path, str):
@@ -199,27 +229,38 @@ class Banner(dict):
             header = open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read()
         else:
             header = open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read()
+    
+        if not self.lhe_version:
+            self.lhe_version = self.get('run_card', 'lhe_version', default=1.0)
+            if float(self.lhe_version) < 3:
+                self.lhe_version = 1.0
         
-        ff.write(header)
+        ff.write(header % { 'version':float(self.lhe_version)})
 
 
         for tag in [t for t in self.ordered_items if t in self.keys()]:
-            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':tag, 'text':self[tag].strip()})
-        for tag in [t for t in self.keys() if t not in self.ordered_items]:
-            if tag in ['init']:
+            if tag in exclude: 
                 continue
+            capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':tag, 'text':self[tag].strip()})
+                     {'tag':capitalized_tag, 'text':self[tag].strip()})
+        for tag in [t for t in self.keys() if t not in self.ordered_items]:
+            if tag in ['init'] or tag in exclude:
+                continue
+            capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
+            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
+                     {'tag':capitalized_tag, 'text':self[tag].strip()})
+        
+        if not '/header' in exclude:
+            ff.write('</header>\n')    
 
-        ff.write('</header>\n')    
-
-        if 'init' in self:
+        if 'init' in self and not 'init' in exclude:
             text = self['init']
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':'init', 'text':text.strip()})  
         if close_tag:          
             ff.write('</LesHouchesEvents>\n')
+        return ff
         
         
     ############################################################################
@@ -320,7 +361,7 @@ class Banner(dict):
             return self.FOanalyse_card
         
 
-    def get_detail(self, tag, *arg):
+    def get_detail(self, tag, *arg, **opt):
         """return a specific """
                 
         if tag == 'param_card':
@@ -347,19 +388,98 @@ class Banner(dict):
         
         if not hasattr(self, attr_tag):
             self.charge_card(attr_tag) 
-            
+        
         card = getattr(self, attr_tag)
         if len(arg) == 1:
             if tag == 'mg5proccard':
-                return card.info[arg[0]]
-            return card[arg[0]]
+                try:
+                    return card.info[arg[0]]
+                except KeyError, error:
+                    if opt['default']:
+                        return opt['default']
+                    else:
+                        raise
+            try:
+                return card[arg[0]]
+            except KeyError:
+                if opt['default']:
+                    return opt['default']
+                else:
+                    raise                
         elif len(arg) == 2 and tag == 'slha':
-            return card[arg[0]].get(arg[1:])
+            try:
+                return card[arg[0]].get(arg[1:])
+            except KeyError:
+                if opt['default']:
+                    return opt['default']
+                else:
+                    raise  
         else:
             raise Exception, "Unknow command"
     
     #convenient alias
     get = get_detail
+    
+    def set(self, card, *args):
+        """modify one of the cards"""
+
+        if tag == 'param_card':
+            tag = 'slha'
+            attr_tag = 'param_card'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+            attr_tag = 'run_card'
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+        elif tag == 'model':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+            arg = ('model',)
+        elif tag == 'generate':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+            arg = ('generate',)
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
+            attr_tag = 'shower_card'
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'shower_card'], 'not recognized'
+        
+        if not hasattr(self, attr_tag):
+            self.charge_card(attr_tag) 
+            
+        card = getattr(self, attr_tag)
+        if len(args) ==2:
+            if tag == 'mg5proccard':
+                card.info[args[0]] = args[-1]
+            else:
+                card[args[0]] = args[1]
+        else:
+            card[args[:-1]] = args[-1]
+        
+    
+
+    def add_to_file(self, path, seed=None):
+        """Add the banner to a file and change the associate seed in the banner"""
+
+        if seed is not None:
+            self.set("run_card", "iseed", seed)
+            
+        ff = self.write("%s.tmp" % path, close_tag=False,
+                        exclude=['MGGenerationInfo', '/header', 'init'])
+        ff.write("## END BANNER##\n")
+        if self.lhe_version >= 3:
+        #add the original content
+            [ff.write(line) if not line.startswith("<generator name='MadGraph5_aMC@NLO'")
+                        else ff.write("<generator name='MadGraph5_aMC@NLO' version='%s'>" % self['mgversion'][:-1])
+                        for line in open(path)]
+        else:
+            [ff.write(line) for line in open(path)]
+        ff.write("</LesHouchesEvents>\n")
+        ff.close()
+        files.mv("%s.tmp" % path, path)
+
+
         
 def split_banner(banner_path, me_dir, proc_card=True):
     """a simple way to split a banner"""
@@ -401,6 +521,9 @@ def recover_banner(results_object, level, run=None, tag=None):
                 del banner[tag]
     return banner
     
+
+
+
 
 class RunCard(dict):
     """A class object for the run_card"""
@@ -642,6 +765,8 @@ class RunCard(dict):
 ################################################################################
 #      Writing the lines corresponding to anything but cuts
 ################################################################################
+        # lhe output format
+        self.add_line("lhe_version", "float", 2.0) #if not specify assume old standard
         # seed
         self.add_line("gridpack","bool", False)
         self.add_line("gridrun",'bool', False, log=10)
@@ -762,8 +887,10 @@ class RunCardNLO(RunCard):
         self.add_line('etal', 'float', -1.0)
         # minimum delta_r
         self.add_line('drll', 'float', 0.4)     
+        self.add_line('drll_sf', 'float', 0.4)     
         # minimum invariant mass for pairs
         self.add_line('mll', 'float', 0.0)
+        self.add_line('mll_sf', 'float', 0.0)
         #inclusive cuts
         # Jet measure cuts 
         self.add_line("jetradius", 'float', 0.7, log=10)
@@ -827,6 +954,33 @@ class RunCardNLO(RunCard):
 class ProcCard(list):
     """Basic Proccard object"""
     
+    history_header = \
+        '#************************************************************\n' + \
+        '#*                     MadGraph5_aMC@NLO                    *\n' + \
+        '#*                                                          *\n' + \
+        "#*                *                       *                 *\n" + \
+        "#*                  *        * *        *                   *\n" + \
+        "#*                    * * * * 5 * * * *                     *\n" + \
+        "#*                  *        * *        *                   *\n" + \
+        "#*                *                       *                 *\n" + \
+        "#*                                                          *\n" + \
+        "#*                                                          *\n" + \
+        "%(info_line)s" +\
+        "#*                                                          *\n" + \
+        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
+        "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        '#*                                                          *\n' + \
+        '#************************************************************\n' + \
+        '#*                                                          *\n' + \
+        '#*               Command File for MadGraph5_aMC@NLO         *\n' + \
+        '#*                                                          *\n' + \
+        '#*     run as ./bin/mg5_aMC  filename                       *\n' + \
+        '#*                                                          *\n' + \
+        '#************************************************************\n'
+    
+    
+    
+    
     def __init__(self, init=None):
         """ initialize a basic proc_card"""
         self.info = {'model': 'sm', 'generate':None,
@@ -842,9 +996,16 @@ class ProcCard(list):
         if isinstance(init, str): #path to file
             init = file(init, 'r')
         
+        store_line = ''
         for line in init:
-            self.append(line)
-            
+            line = line.strip()
+            if line.endswith('\\'):
+                store_line += line[:-1]
+            else:
+                self.append(store_line + line)
+                store_line = ""
+        if store_line:
+            raise Exception, "WRONG CARD FORMAT"
     def move_to_last(self, cmd):
         """move an element to the last history."""
         for line in self[:]:
@@ -874,6 +1035,8 @@ class ProcCard(list):
             self.clean(remove_bef_last='generate', keep_switch=True,
                      allow_for_removal= ['generate', 'add process', 'output'])
             self.info['generate'] = ' '.join(cmds[1:])
+        elif cmd == 'add' and cmds[1] == 'process' and not self.info['generate']:
+            self.info['generate'] = ' '.join(cmds[2:])
         elif cmd == 'import':
             if len(cmds) < 2:
                 return
@@ -953,11 +1116,24 @@ class ProcCard(list):
             # update the counter to pass to the next element
             nline -= 1
         
-        def __getattr__(self, tag):
-            if isinstance(tag, int):
-                list.__getattr__(self, tag)
+    def __getattr__(self, tag):
+        if isinstance(tag, int):
+            list.__getattr__(self, tag)
+        else:
+            return self.info[tag]
+            
+    def write(self, path):
+        """write the proc_card to a given path"""
+        
+        fsock = open(path, 'w')
+        fsock.write(self.history_header)
+        for line in self:
+            while len(line) > 70:
+                sub, line = line[:70]+"\\" , line[70:] 
+                fsock.write(sub+"\n")
             else:
-                return self.info[tag]
+                fsock.write(line+"\n")
+                
             
                 
             

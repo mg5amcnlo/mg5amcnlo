@@ -890,7 +890,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
     _generate_options = ['-f', '--laststep=parton', '--laststep=pythia', '--laststep=pgs', '--laststep=delphes']
     _calculate_decay_options = ['-f', '--accuracy=0.']
-    _set_options = ['stdout_level','fortran_compiler','timeout']
+    _set_options = ['stdout_level','fortran_compiler','cpp_compiler','timeout']
     _plot_mode = ['all', 'parton','shower','pgs','delphes']
     _clean_mode = _plot_mode + ['channel', 'banner']
     _display_opts = ['run_name', 'options', 'variable']
@@ -1261,7 +1261,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1289,9 +1289,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         folder_names['noshower'] = folder_names['aMC@NLO']
         folder_names['noshowerLO'] = folder_names['aMC@LO']
         job_dict = {}
-        p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 
-                    if file.startswith('P') and \
-                    os.path.isdir(pjoin(self.me_dir, 'SubProcesses', file))]
+        p_dirs = [d for d in \
+                open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
         #find jobs and clean previous results
         if not options['only_generation'] and not options['reweightonly']:
             self.update_status('Cleaning previous results', level=None)
@@ -1437,7 +1436,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 # check that PYTHIA6PT is not used for processes with FSR
             if shower == 'PYTHIA6PT' and \
-                self.proc_characteristics['has_fsr'] == '.true.':
+                self.proc_characteristics['has_fsr'] == 'true':
                 raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
 
             if mode in ['aMC@NLO', 'aMC@LO']:
@@ -2182,6 +2181,26 @@ Integrated cross-section
 
         self.banner = banner_mod.Banner(evt_file)
         shower = self.banner.get_detail('run_card', 'parton_shower').upper()
+
+        #check that the number of split event files divides the number of
+        # events, otherwise set it to 1
+        if int(int(self.banner.get_detail('run_card', 'nevents')) / \
+                self.shower_card['nsplit_jobs']) * self.shower_card['nsplit_jobs'] \
+                != int(self.banner.get_detail('run_card', 'nevents')):
+            logger.warning(\
+                'nsplit_jobs in the shower card is not a divisor of the number of events.\n' + \
+                'Setting it to 1.')
+            self.shower_card['nsplit_jobs'] = 1
+
+        # don't split jobs if the user asks to shower only a part of the events
+        if self.shower_card['nevents'] > 0 and \
+           self.shower_card['nevents'] < int(self.banner.get_detail('run_card', 'nevents')) and \
+           self.shower_card['nsplit_jobs'] != 1:
+            logger.warning(\
+                'Only a part of the events will be showered.\n' + \
+                'Setting nsplit_jobs in the shower_card to 1.')
+            self.shower_card['nsplit_jobs'] = 1
+
         self.banner_to_mcatnlo(evt_file)
 
         # if fastjet has to be linked (in extralibs) then
@@ -2213,7 +2232,7 @@ Integrated cross-section
             except Exception:
                 logger.warning('Linking FastJet: using fjcore')
                 # this is for FJcore, so no FJ library has to be linked
-                self.shower_card['extralibs'].replace('fasjtet', '')
+                self.shower_card['extralibs'] = self.shower_card['extralibs'].replace('fastjet', '')
                 if not 'fjcore.o' in self.shower_card['analyse']:
                     self.shower_card['analyse'] += ' fjcore.o'
                 # to be changed in the fortran wrapper
@@ -2229,14 +2248,15 @@ Integrated cross-section
             open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc'), 'w').write(\
                     '\n'.join(fjwrapper_lines) + '\n')
 
+        extrapaths = self.shower_card['extrapaths'].split()
+        if shower == 'HERWIGPP':
+            extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
+
         if 'LD_LIBRARY_PATH' in os.environ.keys():
             ldlibrarypath = os.environ['LD_LIBRARY_PATH']
         else:
             ldlibrarypath = ''
-        for path in self.shower_card['extrapaths'].split():
-            ldlibrarypath += ':%s' % path
-        if shower == 'HERWIGPP':
-            ldlibrarypath += ':%s' % pjoin(self.options['hepmc_path'], 'lib')
+        ldlibrarypath += ':' + ':'.join(extrapaths)
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
 
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
@@ -2247,12 +2267,14 @@ Integrated cross-section
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
+
         exe = 'MCATNLO_%s_EXE' % shower
         if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
             not os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe')):
             print open(mcatnlo_log).read()
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
+
         # create an empty dir where to run
         count = 1
         while os.path.isdir(pjoin(self.me_dir, 'MCatNLO', 'RUN_%s_%d' % \
@@ -2263,15 +2285,38 @@ Integrated cross-section
         os.mkdir(rundir)
         files.cp(shower_card_path, rundir)
 
+        #look for the event files (don't resplit if one asks for the 
+        # same number of event files as in the previous run)
+        event_files = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
+                                            'events_*.lhe'))
+        if max(len(event_files), 1) != self.shower_card['nsplit_jobs']:
+            logger.info('Cleaning old files and splitting the event file...')
+            #clean the old files
+            files.rm([f for f in event_files if 'events.lhe' not in f])
+            if self.shower_card['nsplit_jobs'] > 1:
+                misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'))
+                p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'split_events')],
+                                stdin=subprocess.PIPE,
+                                stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
+                                cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                p.communicate(input = 'events.lhe\n%d\n' % self.shower_card['nsplit_jobs'])
+                logger.info('Splitting done.')
+            event_files = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
+                                            'events_*.lhe'))
+
+        event_files.sort()
+
         self.update_status('Showering events...', level='shower')
         logger.info('(Running in %s)' % rundir)
         if shower != 'PYTHIA8':
             files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
-        # special treatment for pythia8
         else:
+        # special treatment for pythia8
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
+            files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
+            files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -2282,35 +2327,39 @@ Integrated cross-section
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
 
-        evt_name = os.path.basename(evt_file)
-        files.ln(os.path.split(evt_file)[0], rundir, self.run_name)
-        # special treatment for pythia8
-        if shower=='PYTHIA8':
-            open(pjoin(rundir, exe), 'w').write(\
-                 '#!/bin/bash\nsource %s\n./Pythia8.exe Pythia8.cmd\n'\
-                % pjoin(self.options['pythia8_path'], 'examples', 'config.sh'))
-            os.system('chmod  +x %s' % pjoin(rundir,exe))
-            misc.call(['./%s' % exe], cwd = rundir, 
-                stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
+        files.ln(evt_file, rundir, 'events.lhe')
+        for i, f in enumerate(event_files):
+            files.ln(f, rundir,'events_%d.lhe' % (i + 1))
+
+        if not self.shower_card['analyse']:
+            # an hep/hepmc file as output
+            out_id = 'HEP'
         else:
-            misc.call(['./%s' % exe], cwd = rundir, 
-                stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
-                stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
-        
+            # one or more .top file(s) as output
+            out_id = 'TOP'
+
+        # write the executable
+        open(pjoin(rundir, 'shower.sh'), 'w').write(\
+                open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
+                % {'extralibs': ':'.join(extrapaths)})
+        subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
+
+        if event_files:
+            arg_list = [[shower, out_id, self.run_name, '%d' % (i + 1)] \
+                    for i in range(len(event_files))]
+        else:
+            arg_list = [[shower, out_id, self.run_name]]
+
+        self.run_all({rundir: 'shower.sh'}, arg_list, 'shower')
+        self.njobs = 1
+        self.wait_for_complete('shower')
+
         # now collect the results
         message = ''
         warning = ''
-        to_gzip = []
-        if not self.shower_card['analyse']:
+        to_gzip = [evt_file]
+        if out_id == 'HEP':
             #copy the showered stdhep/hepmc file back in events
-            showerfile_dict = \
-                {'HERWIG6': pjoin(rundir, self.run_name, evt_name + '.hep'),
-                 'PYTHIA6Q': pjoin(rundir, self.run_name, evt_name + '.hep'),
-                 'PYTHIA6PT': pjoin(rundir, self.run_name, evt_name + '.hep'),
-                 'PYTHIA8': pjoin(rundir, 'Pythia8.hep'),
-                 'HERWIGPP': pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')}
             if shower in ['PYTHIA8', 'HERWIGPP']:
                 hep_format = 'HEPMC'
                 ext = 'hepmc'
@@ -2318,41 +2367,70 @@ Integrated cross-section
                 hep_format = 'StdHEP'
                 ext = 'hep'
 
-            hep_file = '%s_%s_0.%s' % (evt_file[:-4], shower, ext)
+            hep_file = '%s_%s_0.%s.gz' % \
+                    (pjoin(os.path.dirname(evt_file), 'events'), shower, ext)
             count = 0
-            while os.path.exists(hep_file + '.gz'):
+
+            # find the first available name for the output:
+            # check existing results with or without event splitting
+            while os.path.exists(hep_file) or \
+                  os.path.exists(hep_file.replace('.%s.gz' % ext, '__1.%s.gz' % ext)) :
                 count +=1
-                hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
+                hep_file = '%s_%s_%d.%s.gz' % \
+                    (pjoin(os.path.dirname(evt_file), 'events'), shower, count, ext)
 
             try:
-                files.mv(showerfile_dict[shower], hep_file) 
+                if self.shower_card['nsplit_jobs'] == 1:
+                    files.mv(os.path.join(rundir, 'events.%s.gz' % ext), hep_file) 
+                    message = ('The file %s has been generated. \nIt contains showered' + \
+                     ' and hadronized events in the %s format obtained' + \
+                     ' showering the parton-level event file %s.gz with %s') % \
+                     (hep_file, hep_format, evt_file, shower)
+                else:
+                    hep_list = []
+                    for i in range(self.shower_card['nsplit_jobs']):
+                        hep_list.append(hep_file.replace('.%s.gz' % ext, '__%d.%s.gz' % (i + 1, ext)))
+                        files.mv(os.path.join(rundir, 'events_%d.%s.gz' % (i + 1, ext)), hep_list[-1]) 
+                    message = ('The following files have been generated:\n  %s\nThey contain showered' + \
+                     ' and hadronized events in the %s format obtained' + \
+                     ' showering the (split) parton-level event file %s.gz with %s') % \
+                     ('\n  '.join(hep_list), hep_format, evt_file, shower)
+
             except OSError, IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
 
-            to_gzip.extend([evt_file, hep_file])
-
-            message = ('The file %s.gz has been generated. \nIt contains showered' + \
-                    ' and hadronized events in the %s format obtained' + \
-                    ' showering the parton-level event file %s.gz with %s') % \
-                    (hep_file, hep_format, evt_file, shower)
-            
-        else:
+        elif out_id == 'TOP':
             #copy the topdrawer file(s) back in events
-            topfiles = [n for n in os.listdir(pjoin(rundir)) \
-                                            if n.lower().endswith('.top')]
-            to_gzip.append(evt_file)
+            topfiles = []
+            top_tars = [tarfile.TarFile(f) for f in glob.glob(pjoin(rundir, 'topfile*.tar'))]
+            for top_tar in top_tars:
+                topfiles.extend(top_tar.getnames())
+
+            # safety check
+            if len(top_tars) != self.shower_card['nsplit_jobs']:
+                raise aMCatNLOError('%d job(s) expected, %d file(s) found' % \
+                                     (self.shower_card['nsplit_jobs'], len(top_tars)))
+
+            # find the first available name for the output:
+            # check existing results with or without event splitting
+            filename = 'plot_%s_%d_' % (shower, 1)
+            count = 1
+            while os.path.exists(pjoin(self.me_dir, 'Events', 
+                      self.run_name, '%s0.top' % filename)) or \
+                  os.path.exists(pjoin(self.me_dir, 'Events', 
+                      self.run_name, '%s0__1.top' % filename)):
+                count += 1
+                filename = 'plot_%s_%d_' % (shower, count)
+
             if not topfiles:
+                # if no topfiles are found just warn the user
                 waarning = 'No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir
 
-	    else:    
-                filename = 'plot_%s_%d_' % (shower, 1)
-                count = 1
-                while os.path.exists(pjoin(self.me_dir, 'Events', 
-                    self.run_name, '%s0.top' % filename)):
-                    count += 1
-                    filename = 'plot_%s_%d_' % (shower, count)
+            elif self.shower_card['nsplit_jobs'] == 1:
+                # only one job for the shower
+                top_tars[0].extractall(path = rundir) 
                 plotfiles = [] 
                 for i, file in enumerate(topfiles):
                     plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
@@ -2368,11 +2446,78 @@ Integrated cross-section
 
                 message = ('The %s %s %s been generated, with histograms in the' + \
                         ' TopDrawer format, obtained by showering the parton-level' + \
-                        ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
+                        ' file %s.gz with %s.') % (ffiles, ', '.join(plotfiles), have, \
                         evt_file, shower)
+            else:
+                # many jobs for the shower have been run
+                topfiles_set = set(topfiles)
+                plotfiles = [] 
+                for j, top_tar in enumerate(top_tars):
+                    top_tar.extractall(path = rundir) 
+                    for i, file in enumerate(topfiles_set):
+                        plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
+                                  '%s%d__%d.top' % (filename, i, j + 1))
+                        files.mv(pjoin(rundir, file), plotfile) 
+                        plotfiles.append(plotfile)
+
+                # check if the user asked to combine the .top into a single file
+                if self.shower_card['combine_td']:
+                    misc.compile(['sum_plots'], cwd = pjoin(self.me_dir, 'Utilities'))
+
+                    if self.banner.get('run_card', 'event_norm').lower() == 'sum':
+                        norm = 1.
+                    elif self.banner.get('run_card', 'event_norm').lower() == 'average':
+                        norm = 1./float(self.shower_card['nsplit_jobs'])
+
+                    plotfiles = []
+                    for i, file in enumerate(topfiles_set):
+                        filelist = ['%s%d__%d.top' % (filename, i, j + 1) \
+                                    for j in range(self.shower_card['nsplit_jobs'])]
+                        infile="%d\n%s\n%s\n" % \
+                                (self.shower_card['nsplit_jobs'],
+                                 '\n'.join(filelist),
+                                 '\n'.join([str(norm)] * self.shower_card['nsplit_jobs']))
+
+                        p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'sum_plots')],
+                                        stdin=subprocess.PIPE,
+                                        stdout=os.open(os.devnull, os.O_RDWR), 
+                                        cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                        p.communicate(input = infile)
+                        files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
+                                 pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
+                        plotfiles.append(pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
+                        tar = tarfile.open(
+                                pjoin(self.me_dir, 'Events', self.run_name, '%s%d.tar.gz' % (filename, i)), 'w:gz')
+                        for f in filelist:
+                            tar.add(pjoin(self.me_dir, 'Events', self.run_name, f), arcname=f)
+                        files.rm([pjoin(self.me_dir, 'Events', self.run_name, f) for f in filelist])
+
+                    tar.close()
+
+                    ffiles = 'files'
+                    have = 'have'
+                    if len(plotfiles) == 1:
+                        ffiles = 'file'
+                        have = 'has'
+
+                    message = ('The %s %s %s been generated, with histograms in the' + \
+                            ' TopDrawer format, obtained by showering the parton-level' + \
+                            ' file %s.gz with %s.\n' + \
+                            'The files from the different shower ' + \
+                            'jobs (before combining them) can be found inside %s.') % \
+                            (ffiles, ', '.join(plotfiles), have, \
+                             evt_file, shower, 
+                             ', '.join([f.replace('top', 'tar.gz') for f in plotfiles]))
+
+                else:
+                    message = ('The following files have been generated:\n  %s\n' + \
+                            'They contain histograms in the' + \
+                            ' TopDrawer format, obtained by showering the parton-level' + \
+                            ' file %s.gz with %s.') % ('\n  '.join(plotfiles), \
+                            evt_file, shower)
                 
         # Now arxiv the shower card used if RunMaterial is present
-        run_dir_path = pjoin(rundir,self.run_name)
+        run_dir_path = pjoin(rundir, self.run_name)
         if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
             misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
             files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
@@ -2554,17 +2699,22 @@ Integrated cross-section
         nevents = self.shower_card['nevents']
         init_dict = self.get_init_dict(evt_file)
 
-        if nevents < 0 or nevents > self.banner.get_detail('run_card', 'nevents'):
-            nevents = self.banner.get_detail('run_card', 'nevents')
+        if nevents < 0 or \
+           nevents > int(self.banner.get_detail('run_card', 'nevents')):
+            nevents = int(self.banner.get_detail('run_card', 'nevents'))
+
+        nevents = nevents / self.shower_card['nsplit_jobs']
+
         mcmass_dict = {}
         for line in [l for l in self.banner['montecarlomasses'].split('\n') if l]:
             pdg = int(line.split()[0])
             mass = float(line.split()[1])
             mcmass_dict[pdg] = mass
 
-        content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
-        content += 'NEVENTS=%s\n' % nevents
-        content += 'NEVENTS_TOT=%s\n' % self.banner.get_detail('run_card', 'nevents')
+        content = 'EVPREFIX=%s\n' % pjoin(os.path.split(evt_file)[1])
+        content += 'NEVENTS=%d\n' % nevents
+        content += 'NEVENTS_TOT=%d\n' % (int(self.banner.get_detail('run_card', 'nevents')) /\
+                                             self.shower_card['nsplit_jobs'])
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
@@ -2591,9 +2741,23 @@ Integrated cross-section
         content += 'SMASS=%s\n' % mcmass_dict[3]
         content += 'CMASS=%s\n' % mcmass_dict[4]
         content += 'BMASS=%s\n' % mcmass_dict[5]
-        content += 'EMASS=%s\n' % mcmass_dict[11]
-        content += 'MUMASS=%s\n' % mcmass_dict[13]
-        content += 'TAUMASS=%s\n' % mcmass_dict[15]
+        try:
+            content += 'EMASS=%s\n' % mcmass_dict[11]
+            content += 'MUMASS=%s\n' % mcmass_dict[13]
+            content += 'TAUMASS=%s\n' % mcmass_dict[15]
+        except KeyError:
+            # this is for backward compatibility
+            mcmass_lines = [l for l in \
+                    open(pjoin(self.me_dir, 'SubProcesses', 'MCmasses_%s.inc' % shower.upper())
+                            ).read().split('\n') if l]
+            new_mcmass_dict = {}
+            for l in mcmass_lines:
+                key, val = l.split('=')
+                new_mcmass_dict[key.strip()] = val.replace('d', 'e').strip()
+            content += 'EMASS=%s\n' % new_mcmass_dict['mcmass(11)']
+            content += 'MUMASS=%s\n' % new_mcmass_dict['mcmass(13)']
+            content += 'TAUMASS=%s\n' % new_mcmass_dict['mcmass(15)']
+
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
@@ -2619,7 +2783,6 @@ Integrated cross-section
             content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
         if self.options['hepmc_path']:
             content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
-
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
         output.write(content)
@@ -2777,7 +2940,6 @@ Integrated cross-section
 
     def run_all(self, job_dict, arg_list, run_type='monitor', split_jobs = False):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
-        self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
         njob_split = 0
         self.ijob = 0
         if self.cluster_mode == 0:
@@ -2787,20 +2949,27 @@ Integrated cross-section
         # folders/args in order to resubmit the jobs if some of them fail
         self.split_folders = {}
 
-        for args in arg_list:
-            for Pdir, jobs in job_dict.items():
-                for job in jobs:
-                    if not split_jobs:
-                        self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
-                    else:
-                        for n in self.find_jobs_to_split(Pdir, job, args[1]):
-                            self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
-                            njob_split += 1
-                    # print some statistics if running serially
-        if self.cluster_mode == 2:
-            time.sleep(1) # security to allow all jobs to be launched
-        if njob_split > 0:
-            self.njobs = njob_split
+        if run_type != 'shower':
+            self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
+            for args in arg_list:
+                for Pdir, jobs in job_dict.items():
+                    for job in jobs:
+                        if not split_jobs:
+                            self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                        else:
+                            for n in self.find_jobs_to_split(Pdir, job, args[1]):
+                                self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                                njob_split += 1
+                        # print some statistics if running serially
+            if self.cluster_mode == 2:
+                time.sleep(1) # security to allow all jobs to be launched
+            if njob_split > 0:
+                self.njobs = njob_split
+        else:
+            self.njobs = len(arg_list)
+            for args in arg_list:
+                [(cwd, exe)] = job_dict.items()
+                self.run_exe(exe, args, run_type, cwd)
         
         self.wait_for_complete(run_type)
 
@@ -2883,8 +3052,11 @@ Integrated cross-section
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
                                 min([1, self.njobs - self.ijob]),
                                 self.ijob, run_type), level='parton')
+
+        #this is for the cluster/multicore run
         elif 'reweight' in exe:
-            #Find the correct PDF input file
+            # a reweight run
+            # Find the correct PDF input file
             input_files, output_files = [], []
             pdfinput = self.get_pdf_input_filename()
             if os.path.exists(pdfinput):
@@ -2898,8 +3070,8 @@ Integrated cross-section
             return self.cluster.submit2(exe, args, cwd=cwd, 
                              input_files=input_files, output_files=output_files) 
 
-        #this is for the cluster/multicore run
         elif 'ajob' in exe:
+            # the 'standard' amcatnlo job
             # check if args is a list of string 
             if type(args[0]) == str:
                 input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
@@ -2910,6 +3082,60 @@ Integrated cross-section
                 # keep track of folders and arguments for splitted evt gen
                 if len(args) == 4 and '_' in output_files[-1]:
                     self.split_folders[pjoin(cwd,output_files[-1])] = [exe] + args
+
+        elif 'shower' in exe:
+            # a shower job
+            # args are [shower, output(HEP or TOP), run_name]
+            # cwd is the shower rundir, where the executable are found
+            input_files, output_files = [], []
+            shower = args[0]
+            # the input files
+            if shower == 'PYTHIA8':
+                input_files.append(pjoin(cwd, 'Pythia8.exe'))
+                input_files.append(pjoin(cwd, 'Pythia8.cmd'))
+                input_files.append(pjoin(cwd, 'config.sh'))
+                input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
+            else:
+                input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
+                input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
+            if shower == 'HERWIGPP':
+                input_files.append(pjoin(cwd, 'Herwig++'))
+                input_files.append(pjoin(cwd, 'HepMCFortran.so'))
+            if len(args) == 3:
+                if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')):
+                    input_files.append(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz'))
+                elif os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')):
+                    input_files.append(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe'))
+                else:
+                    raise aMCatNLOError, 'Event file not present in %s' % \
+                            pjoin(self.me_dir, 'Events', self.run_name)
+            else: 
+                input_files.append(pjoin(cwd, 'events_%s.lhe' % args[3]))
+            # the output files
+            if len(args) == 3:
+                output_files.append('mcatnlo_run.log')
+            else:
+                output_files.append('mcatnlo_run_%s.log' % args[3]) 
+            if args[1] == 'HEP':
+                if len(args) == 3:
+                    fname = 'events'
+                else:
+                    fname = 'events_%s' % args[3]
+                if shower in ['PYTHIA8', 'HERWIGPP']:
+                    output_files.append(fname + '.hepmc.gz')
+                else:
+                    output_files.append(fname + '.hep.gz')
+            elif args[1] == 'TOP':
+                if len(args) == 3:
+                    fname = 'topfile'
+                else:
+                    fname = 'topfile_%s' % args[3]
+                output_files.append(fname + '.tar')
+            else:
+                raise aMCatNLOError, 'Not a valid output argument for shower job :  %d' % args[1]
+            #submitting
+            self.cluster.submit2(exe, args, cwd=cwd, 
+                    input_files=input_files, output_files=output_files)
 
         else:
             return self.cluster.submit(exe, args, cwd=cwd)
@@ -3095,6 +3321,7 @@ Integrated cross-section
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
 
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
@@ -3124,9 +3351,8 @@ Integrated cross-section
             open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o\n')
 
         #directory where to compile exe
-        p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 
-                    if file.startswith('P') and \
-                    os.path.isdir(pjoin(self.me_dir, 'SubProcesses', file))]
+        p_dirs = [d for d in \
+                open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
         # create param_card.inc and run_card.inc
         self.do_treatcards('', amcatnlo=True)
         # if --nocompile option is specified, check here that all exes exists. 
@@ -3165,7 +3391,9 @@ Integrated cross-section
         try: 
             os.environ['fastjet_config'] = self.options['fastjet']
         except (TypeError, KeyError):
-            os.environ['fastjet_config'] = 'None'
+            if 'fastjet_config' in os.environ:
+                del os.environ['fastjet_config']
+            os.unsetenv('fastjet_config')
         
         # make Source
         self.update_status('Compiling source...', level=None)
@@ -3229,15 +3457,9 @@ Integrated cross-section
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        if not '[real=QCD]' in proc_card and \
-                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
-            os.environ['madloop'] = 'true'
-            if mode in ['NLO', 'aMC@NLO', 'noshower']:
-                tests.append('check_poles')
-                hasvirt = True
-        else:
-            os.unsetenv('madloop')
-            hasvirt = False
+        if self.proc_characteristics['has_loops'].lower() == 'true' and \
+           mode in ['NLO', 'aMC@NLO', 'noshower']:
+            tests.append('check_poles')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
@@ -3281,8 +3503,6 @@ Integrated cross-section
                 this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
                 #check that none of the tests failed
                 self.check_tests(test, this_dir)
-
-        os.unsetenv('madloop')
 
 
     def donothing(*args):

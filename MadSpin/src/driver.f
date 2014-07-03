@@ -741,14 +741,38 @@ c            write(*,*) 'd2 full',itree(2,i)-ns_channel_decay
          keep_inv(i-ns_channel_decay)=.TRUE.
  
          if (i.ne.(-ns_channel-nt_channel-1)) then
-           fixedinv(i-ns_channel_decay)=dot(p(0,i-ns_channel_decay),p(0,i-ns_channel_decay))
+            fixedinv(i-ns_channel_decay)=
+     &           dot(p(0,i-ns_channel_decay),p(0,i-ns_channel_decay))
+c MODIF May, 6, 2014 (R.F.)
+c Due to numerical instabilities, sometimes the computation of the
+c invariant gets the wrong sign. This happens only when the invariant is
+c close to zero. If this is the case, the code might go into an infinite
+c loop (because no momenta can be generated later). Simply fix it by
+c forcing the correct sign for the invariants.
+           if (nt_channel.ne.0.and.i .lt.-ns_channel) then
+              if (fixedinv(i-ns_channel_decay).gt.stot/500d0) then
+                 write(*,*)  'Error: t-channel invariant has a'/
+     $                /' value larger than +stot/500 ' 
+                 stop
+              elseif (fixedinv(i-ns_channel_decay).gt.0d0) then
+                 fixedinv(i-ns_channel_decay)=
+     &                -fixedinv(i-ns_channel_decay)
+              endif
+           else
+              if (fixedinv(i-ns_channel_decay).lt.-stot/500d0) then
+                 write(*,*)  'Error: s-channel invariant has a'/
+     $                /' value smaller than -stot/500 ' 
+                 stop
+              elseif (fixedinv(i-ns_channel_decay).lt.0d0) then
+                 fixedinv(i-ns_channel_decay)=
+     &                -fixedinv(i-ns_channel_decay)
+              endif
+           endif
+c end MODIF R.F.
            qmass_full(i-ns_channel_decay)=qmass(i)
            qwidth_full(i-ns_channel_decay)=qwidth(i)
          endif
-
-
       enddo 
-
 c
 c        MODIF March 5, 2014 (P.A.) 
 c        overwrite last t-channel invariant to avoid numerical unstabilities
@@ -795,6 +819,8 @@ c              write(*,*) d1, d2, itree(1, last_branch), itree(2, last_branch)
            endif
            endif
          endif
+
+
 
 c     END MODIF MARCH 5, 2014
  

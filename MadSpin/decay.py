@@ -184,7 +184,7 @@ class Event:
 
     def get_particle_line(self,leg):
 
-        line=" %8d %2d %4d %4d %4d %4d %+13.7e %+13.7e %+13.7e %14.8e %14.8e %10.4e %10.4e" \
+        line=" %8d %2d %4d %4d %4d %4d %+18.11e %+18.11e %+18.11e %18.11e %18.11e %10.4e %10.4e" \
             % (leg["pid"], leg["istup"],leg["mothup1"],leg["mothup2"],\
                leg["colup1"],leg["colup2"],leg["momentum"].px,leg["momentum"].py,\
                 leg["momentum"].pz,leg["momentum"].E, leg["mass"],\
@@ -1293,7 +1293,7 @@ class width_estimate(object):
         to_decay = list(set(to_decay))
         
         if to_decay:
-            logger.info('We need to recalculate the branching fractions')
+            logger.info('We need to recalculate the branching fractions for %s' % ','.join(to_decay))
             if hasattr(self.model.get('particles')[0], 'partial_widths'):
                 logger.info('using the FeynRules formula present in the model (arXiv:1402.1178)')
             else:
@@ -1517,14 +1517,17 @@ class width_estimate(object):
         
         label2pid = self.label2pid
         pid2label = self.label2pid
-        
         for res in self.br.keys():
             particle=self.model.get_particle(label2pid[res])
             if particle['self_antipart']: 
                 continue
             anti_res=pid2label[-label2pid[res]]
             self.br[anti_res] = []
-            self.width_value[anti_res]=self.width_value[res]
+            if res in self.width_value: 
+                self.width_value[anti_res]=self.width_value[res]
+            elif anti_res in self.width_value:
+                self.width_value[res]=self.width_value[anti_res]
+                res, anti_res = anti_res, res
             for chan, decay in enumerate(self.br[res]):
                 self.br[anti_res].append({})
                 bran=decay['br']
@@ -1946,9 +1949,15 @@ class decay_all_events(object):
         # now we can write the param_card.dat:
         # Note that the width of each resonance in the    
         # decay chain should be >0 , we will check that later on
+        model_name = os.path.basename(self.model.get('name'))
         param=open(pjoin(self.path_me,'param_card.dat'),"w")
         param.write(param_card)
-        param.close()     
+        param.close()   
+        if model_name == 'mssm' or model_name.startswith('mssm-'):
+            #need to convert to SLHA2 format
+            import models.check_param_card as check_param_card
+            check_param_card.convert_to_mg5card(pjoin(self.path_me,'param_card.dat'))
+  
         
         self.list_branches = ms_interface.list_branches
         decay_ids = [self.pid2label[key] for key in self.list_branches \
@@ -1967,18 +1976,6 @@ class decay_all_events(object):
         resonances = self.width_estimator.resonances
         logger.debug('List of resonances: %s' % resonances)
         self.extract_resonances_mass_width(resonances) 
-
-        # now overwrite the param_card.dat in Cards:
-        param_card=self.banner['slha']
-        #param_card=decay_tools.check_param_card( param_card)
-
-        # now we can write the param_card.dat:
-        # Note that the width of each resonance in the    
-        # decay chain should be >0 , we will check that later on
-        param=open(pjoin(self.path_me,'param_card.dat'),"w")
-        param.write(param_card)
-        param.close()
-
 
         self.compile()
         
@@ -2361,7 +2358,8 @@ class decay_all_events(object):
             for nb in range(125):
                 tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
                                         True, self.pid2width, self.pid2mass, BW_cut,self.Ecollider)
-
+                if not tree:
+                    continue
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
                     '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
                                                                   if i in tree))
@@ -2765,7 +2763,7 @@ class decay_all_events(object):
         file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
         shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" )) 
         misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
-        misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')                   
+        misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')     
 
         file=pjoin(path_me, 'param_card.dat')
         shutil.copyfile(file,pjoin(path_me,mode,"Cards","param_card.dat")) 
@@ -2836,7 +2834,7 @@ class decay_all_events(object):
                     misc.call('./init', cwd=new_path)
                     shutil.copyfile(pjoin(new_path,'parameters.inc'), 
                                pjoin(new_path,os.path.pardir, 'parameters.inc'))
-                if mode == 'production_me':   
+                if mode == 'production_me':
                     misc.compile(cwd=new_path, mode='fortran')
                 else:
                     misc.compile(cwd=new_path, mode='fortran')
@@ -3382,8 +3380,8 @@ class decay_all_events(object):
                             mom=momenta_in_decay[index_res_for_mom].copy()
                             pid=decay_struct[part]["tree"][res]['label'] 
                             istup=2
-                            mothup1=1
-                            mothup2=2
+                            mothup1=curr_event.particle[part_for_curr_evt]["mothup1"]
+                            mothup2=curr_event.particle[part_for_curr_evt]["mothup2"]
                             colup1=curr_event.particle[part_for_curr_evt]["colup1"]
                             colup2=curr_event.particle[part_for_curr_evt]["colup2"]
                             decay_struct[part]["tree"][res]["colup1"]=colup1
@@ -3395,9 +3393,7 @@ class decay_all_events(object):
                                 "colup1":colup1,"colup2":colup2,"momentum":mom,\
                                 "mass":mass,"helicity":helicity}
                             decayed_event.event2mg[part_number]=part_number
-                    #print part_number
-                    #print pid
-                    #print " "
+
                         mothup1=part_number
                         mothup2=part_number
 #

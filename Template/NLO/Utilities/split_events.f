@@ -26,6 +26,7 @@ c
       ifile=34
       open(unit=ifile,file=event_file,status='old')
       call read_lhef_header_full(ifile,maxevt,isc,ipdf,MonteCarlo)
+      numPDFpairs=ipdf/2
       numscales=int(sqrt(dble(isc)))
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
@@ -56,7 +57,7 @@ c$$$      read (*,*) inputfile
       executable=' '
       inputfile=' '
 
-      loc=index(event_file,' ')
+      loc=index(event_file,'.')
       loc1=index(executable,' ')
       loc2=index(inputfile,' ')
          
@@ -78,7 +79,7 @@ c$$$      read (*,*) inputfile
          if (i.le.9) write (str(3:3),'(i1)') i
          if (i.gt.9.and.i.le.99) write (str(2:3),'(i2)') i
          if (i.gt.99.and.i.le.999) write (str(1:3),'(i3)') i
-         fname1=event_file(1:loc-1)//'.'//str
+         fname1=event_file(1:loc-1)//'_'//str//'.lhe'
          write (*,*) 'writing event file ',fname1(1:40)
          ofile=35
          ifile2=44

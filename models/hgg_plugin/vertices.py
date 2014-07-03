@@ -8,6 +8,12 @@ import particles as P
 import couplings as C
 import lorentz as L
 
+V_12 = Vertex(name = 'V_12',
+              particles = [ P.A, P.A, P.H ],
+              color = [ '1' ],
+              lorentz = [ L.VVS3 ],
+              couplings = {(0,0):C.GC_1})
+
 V_13 = Vertex(name = 'V_13',
               particles = [ P.G, P.G, P.H ],
               color = [ 'Identity(1,2)' ],

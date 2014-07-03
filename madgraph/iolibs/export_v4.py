@@ -1267,7 +1267,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         return res_str + '*'
 
-    def set_compiler(self, default_compiler, force=False):
+
+    def set_fortran_compiler(self, default_compiler, force=False):
         """Set compiler based on what's available on the system"""
                 
         # Check for compiler
@@ -1285,14 +1286,44 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             raise MadGraph5Error, 'No Fortran Compiler detected! Please install one'
         logger.info('Use Fortran compiler ' + compiler)
-        self.replace_make_opt_compiler(compiler)
+        self.replace_make_opt_f_compiler(compiler)
         # Replace also for Template but not for cluster
         if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
-            self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
+            self.replace_make_opt_f_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
         
         return compiler
 
-    def replace_make_opt_compiler(self, compiler, root_dir = ""):
+    # an alias for backward compatibility
+    set_compiler = set_fortran_compiler
+
+
+    def set_cpp_compiler(self, default_compiler, force=False):
+        """Set compiler based on what's available on the system"""
+                
+        # Check for compiler
+        if default_compiler and misc.which(default_compiler):
+            compiler = default_compiler
+        elif misc.which('g++'):
+            compiler = 'g++'
+        elif misc.which('c++'):
+            compiler = 'c++'
+        elif misc.which('clang'):
+            compiler = 'clang'
+        elif default_compiler:
+            logger.warning('No c++ Compiler detected! Please install one')
+            compiler = default_compiler # maybe misc fail so try with it
+        else:
+            raise MadGraph5Error, 'No c++ Compiler detected! Please install one'
+        logger.info('Use c++ compiler ' + compiler)
+        self.replace_make_opt_c_compiler(compiler)
+        # Replace also for Template but not for cluster
+        if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
+            self.replace_make_opt_c_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
+        
+        return compiler
+
+
+    def replace_make_opt_f_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
 
         mod = False #avoid to rewrite the file if not needed
@@ -1307,6 +1338,52 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 if compiler != FC_result.group(2):
                     mod = True
                 lines[iline] = FC_result.group(1) + "FC=" + compiler
+        if not mod:
+            return
+        try:
+            outfile = open(make_opts, 'w')
+        except IOError:
+            if root_dir == self.dir_path:
+                logger.info('Fail to set compiler. Trying to continue anyway.')
+            return
+        outfile.write('\n'.join(lines))
+
+
+    def replace_make_opt_c_compiler(self, compiler, root_dir = ""):
+        """Set CXX=compiler in Source/make_opts.
+        The version is also checked, in order to set some extra flags
+        if the compiler is clang (on MACOS)"""
+
+        
+        p = misc.Popen([compiler, '--version'], stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE)
+        output, error = p.communicate()
+        is_clang = 'LLVM' in output
+
+        mod = False #avoid to rewrite the file if not needed
+        if not root_dir:
+            root_dir = self.dir_path
+        make_opts = pjoin(root_dir, 'Source', 'make_opts')
+        lines = open(make_opts).read().split('\n')
+        CC_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
+        for iline, line in enumerate(lines):
+            CC_result = CC_re.match(line)
+            if CC_result:
+                if compiler != CC_result.group(2):
+                    mod = True
+                lines[iline] = CC_result.group(1) + "CXX=" + compiler
+
+        if is_clang:
+            CFLAGS_re=re.compile('^(\s*)CFLAGS\s*=\s*(.+)\s*$')
+            CXXFLAGS_re=re.compile('^(\s*)CXXFLAGS\s*=\s*(.+)\s*$')
+            flags= '-O -stdlib=libstdc++ -mmacosx-version-min=10.6'
+            for iline, line in enumerate(lines):
+                CF_result = CFLAGS_re.match(line)
+                CXXF_result = CXXFLAGS_re.match(line)
+                if CF_result:
+                    lines[iline] = CF_result.group(1) + "CFLAGS= " + flags
+                if CXXF_result:
+                    lines[iline] = CXXF_result.group(1) + "CXXFLAGS= " + flags
         if not mod:
             return
         try:
@@ -1433,12 +1510,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.make()
 
         # Write command history as proc_card_mg5
-        if os.path.isdir(pjoin(self.dir_path, 'Cards')):
+        if history and os.path.isdir(pjoin(self.dir_path, 'Cards')):
             output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
@@ -1892,10 +1966,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Write command history as proc_card_mg5
         if os.path.isdir(os.path.join(self.dir_path, 'Cards')):
             output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
     #===========================================================================
     # export model files
@@ -2825,10 +2896,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Write command history as proc_card_mg5
         if os.path.isdir(pjoin(self.dir_path,'Cards')):
             output_file = pjoin(self.dir_path,'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
         misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
@@ -4987,7 +5055,7 @@ class UFO_model_to_mg4(object):
 
         #1. Check if a default param_card is present:
         done = False
-        if hasattr(self.model, 'restrict_card'):
+        if hasattr(self.model, 'restrict_card') and isinstance(self.model.restrict_card, str):
             restrict_name = os.path.basename(self.model.restrict_card)[9:-4]
             model_path = self.model.get('modelpath')
             if os.path.exists(pjoin(model_path,'paramcard_%s.dat' % restrict_name)):

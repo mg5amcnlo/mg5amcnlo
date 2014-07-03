@@ -414,7 +414,7 @@ from object_library import all_propagators, Propagator
                 
                 if not os.path.exists(pjoin(outputdir, 'Fortran')):
                     os.mkdir(pjoin(outputdir, 'Fortran'))
-                fsock = open(pjoin(outputdir, 'Fortran'),'a')
+                fsock = open(pjoin(outputdir, 'Fortran','functions.f'),'a')
                 fsock.write(text)
                 fsock.close()
                 
@@ -458,14 +458,25 @@ from object_library import all_propagators, Propagator
         else:
             self.add_external_parameter(parameter)
 
-    def add_particle(self, particle):
+    def add_particle(self, particle, identify=None):
         """Add a particle in a consistent way"""
         
         name = particle.name
+        if identify:
+            name = identify
         old_part = next((p for p in self.particles if p.name==name), None)
         if old_part:
             #Check if the two particles have the same pdgcode
             if old_part.pdg_code == particle.pdg_code:
+                particle.replace = old_part
+                return self.check_mass_width_of_particle(old_part, particle)
+            elif identify:
+                if particle.spin != old_part.spin:
+                    raise USRMODERROR, "identify particles should have the same spin"
+                elif particle.color != old_part.color:
+                    raise USRMODERROR, "identify particles should have the same color"
+                
+                particle.pdg_code = old_part.pdg_code
                 particle.replace = old_part
                 return self.check_mass_width_of_particle(old_part, particle)
             else:
@@ -474,6 +485,8 @@ from object_library import all_propagators, Propagator
                 particle.name = '%s%s' % (name, self.addon)
                 self.particles.append(particle)
                 return
+        elif identify:
+            raise USRMODERROR, "Particle %s is not in the model" % identify
         
         pdg = particle.pdg_code
         if pdg in self.particle_dict:
@@ -783,16 +796,17 @@ from object_library import all_propagators, Propagator
         self.CTvertices.append(interaction)
         
 
-    def add_model(self, model=None, path=None):
+    def add_model(self, model=None, path=None, identify_particles=None):
         """add another model in the current one"""
         
         self.new_external = []
         if path:
             model = ufomodels.load_model(path) 
-        
+                
         if not model:
             raise USRMODERROR, 'Need a valid Model'
-        
+        else:
+            path = model.__path__[0]
         # Check the validity of the model. Too old UFO (before UFO 1.0)
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR, 'Add-on Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
@@ -814,11 +828,15 @@ from object_library import all_propagators, Propagator
         for lorentz in model.all_lorentz:
             self.add_lorentz(lorentz)
         for particle in model.all_particles:
-            self.add_particle(particle)
+            if particle.name in identify_particles:
+                self.add_particle(particle, identify=identify_particles[particle.name])
+            else:
+                self.add_particle(particle)
         for vertex in model.all_vertices:
             self.add_interaction(vertex)
         
         self.all_path.append(path)
+        
         
         return
 

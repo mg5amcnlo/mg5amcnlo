@@ -20,7 +20,7 @@ import logging
 import os
 import re
 
-from madgraph import InvalidCmd, MG4DIR
+from madgraph import InvalidCmd, MG4DIR, ReadWrite
 
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
@@ -74,8 +74,12 @@ def import_model(model_path, mgme_dir = MG4DIR, absolute=True):
     model.set('name', os.path.split(model_path)[-1])  
 
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model)
-    
+    if ReadWrite:
+        try:
+            save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model)
+        except Exception:
+            logger.warning("fail to write %s. This is perfectly fine will just prevent speed boost in future load of this model" %\
+                           os.path.join(model_path, 'model.pkl'))
     return model, model_path  
 
     

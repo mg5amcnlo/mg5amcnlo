@@ -11482,7 +11482,7 @@ contains
   write(aa,'(i10)') min(len(cc),ndec+novh+1) ;aa=adjustl(aa)
   write(bb,'(i10)') min(len(cc),ndec       ) ;bb=adjustl(bb)
   aa = '(e'//trim(aa)//'.'//trim(bb)//')'
-  write(cc,aa) xx  ;cc=adjustl(cc)
+  write(cc,aa) dble(xx)  ;cc=adjustl(cc)
   if (cc(1:2).eq.'-0') then ;rslt = '-'//cc(3:len(cc))
   else                      ;rslt = ' '//cc(2:len(cc))
   endif

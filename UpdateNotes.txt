@@ -1,5 +1,40 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.1.2(03/07/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
+                OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)
+                OM: Fixing a bug preventing MadWidth to run due to the model prefixing (depending
+                    on the way it was called)
+                OM: Fixing a bug in MadSpin in the mssm model
+		RF: Added the invariant mass and DeltaR cuts for *same flavour* opposite sign lepton
+                    pairs to the run_card for NLO-type generations.
+		RF: Prevent an infinite loop in MadSpin by forcing the correct sign to the invariants
+		RF: Catch a possible error related to grouping subprocesses and setcuts
+		OM: Fix an error when using the "customize_model" command
+                S. Mrenna (by OM): Fix the include file in pythia8 output to be compliant with the latest
+                    PY8 version
+		RF: Added a string with functional form for the scales to the event file banner (NLO only)
+                S. Brochet (by OM): Fix a bug in MadSpin with the writting of the mother ID in the LHE file.
+                    Force the tag in the banner to always have the same case
+                    increase momenta precision for the LHE file written by MadSpin 
+                    (thanks a lot to S. Brochet for all those patch)
+                PT: Integrated Jimmy's underlying event for Herwig6
+                OM: improve "add model" functionality allow to force particle identification.
+                PT: Bug fix in the normalisation of topdrawer plots for option 'sum' (as opposed to 'average')
+		RF: Fixed a bug related to the random seed when the code was not recompiled for a new run.
+                OM: Fixed a bug in MadEvent(LO) run, the generated sample were bias in presence of 
+                    negative cross-section. A negative cross-section is possible only if you use a NLO PDF 
+                    and/or if you edit the matrix.f by hand to have a non-definite positive matrix-element.
+		OM: When importing a model, check that there is not more than 1 parameter with the same name.
+                PT: Subsantial recoding of montecarlocounter.f and of a subroutine in fks_singular.f. Will help 
+                    future extensions like EW NLO+PS matching and numerical derivatives      
+                OM: Fixing a wrong assignement in the color flow in presence of epsilon_ijk color structure.
+                    Those events were rejected by Pythia8 due to this wrong color-flow.
+                MZ: Added the possibility to run the shower on a cluster, possibly splitting the lhe file 
+                MZ: The c++ compiler can be specified as an option in the interface. On MACOSX, clang should
+                    work now
+                OM: MadEvent output is now LHEFv3 fully compliant. A parameter in the run_tag (lhe_version) 
+                    allows to return LHEF version 2 format for retro-compatibility.
+
 2.1.1(31/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be
                     bypassed by using the option --noprefix when importing the model.

@@ -68,9 +68,9 @@ extern "C" {
 // implementation of those algorithms, whereas for other values of
 // PALG it calls the generalised kt implementation.
 //
-void fastjetppgenkt_(const double * p, const int & npart,                   
-                     const double & R, const double & jetptmin, const double & palg,
-                     double * f77jets, int & njets, int * whichjet) {
+void fastjetppgenkt_etamax_(const double * p, const int & npart,                   
+                     const double & R, const double & jetptmin, const double & etamax,
+                     const double & palg, double * f77jets, int & njets, int * whichjet) {
   
   // transfer p[4*ipart+0..3] -> input_particles[i]
   vector<fj::PseudoJet> input_particles;   
@@ -101,6 +101,13 @@ void fastjetppgenkt_(const double * p, const int & npart,
   cs.reset(new fj::ClusterSequence(input_particles,jet_def));
   // extract jets (pt-ordered)
   vector<fj::PseudoJet> jets = sorted_by_pt(cs->inclusive_jets(jetptmin));
+
+  //apply the eta selector if etamax >0
+  fj::Selector select_eta = fj::SelectorAbsEtaMax(etamax);
+  if (etamax > 0.) {
+    jets = select_eta(jets);
+  }
+
   njets = jets.size();
   
   // tell the user what was done
@@ -121,7 +128,7 @@ void fastjetppgenkt_(const double * p, const int & npart,
   
   // clean up
   
-  // set all jet entrie to zero first
+  // set all jet entries to zero first
   for(unsigned int ii=0; ii<npart; ++ii) whichjet[ii]=0;       
   
   for (unsigned int kk=0; kk<jets.size(); ++kk) {   
@@ -131,6 +138,16 @@ void fastjetppgenkt_(const double * p, const int & npart,
   }
   
 }
+
+
+void fastjetppgenkt_(const double * p, const int & npart,                   
+                     const double & R, const double & jetptmin,
+                     const double & palg, double * f77jets, int & njets, int * whichjet) {
+    // jsut call fastjetppgenkt_etamax passing etamax=-1.
+    double etamax = -1.;
+    fastjetppgenkt_etamax_(p,npart,R,jetptmin,etamax,palg,f77jets,njets,whichjet);
+}
+
 
 /// return the dmin corresponding to the recombination that went from
 /// n+1 to n jets (sometimes known as d_{n n+1}).
@@ -164,4 +181,10 @@ double fastjetdmergemax_(const int & n) {
 
 
 }
+
+
+
+
+
+
 

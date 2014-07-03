@@ -1,13 +1,13 @@
-# This file was automatically created by FeynRules 2.0.6
+# This file was automatically created by FeynRules 2.0.25
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (February 23, 2011)
-# Date: Wed 18 Dec 2013 14:14:58
+# Date: Thu 8 May 2014 12:30:32
 
 
 # 
 # This is the logfile for the model taudecay
 
 # Authors: K. Mawatari, J. Nakamura
-# Model version: 1.0
+# Model version: 2.0
 # Checking the Quantum numbers
    * Electric charge defined.
 # Checking the Lagrangians
@@ -21,8 +21,8 @@
 
 
 # Compulsory PDG codes:
-   * Class SM leptons incomplete. 11, 13 missing.
-   * Class SM neutrinos incomplete. 12, 14 missing.
+   * Class SM leptons complete.
+   * Class SM neutrinos complete.
    * Class SM quarks incomplete. 1, 2, 3, 4, 5, 6 missing.
    * Class SM gauge bosons incomplete. 21, 22, 23, 24 missing.
 #
@@ -34,8 +34,9 @@
 
 # Vertices
    * Calling FeynmanRules for 1 Lagrangians.
-   * Number of classes vertices: 2
-   * Number of flavored vertices: 2
+   * Appending manually appended vertices.
+   * Number of classes vertices: 12
+   * Number of flavored vertices: 12
    * Saved vertices in InterfaceRun[ 1 ].
    * Checked QNumber conservation.
       - Quantum number LeptonNumber conserved in all vertices.
@@ -46,19 +47,19 @@
 # Vertex definitions
 #
 
-   * 2 vertices written.
+   * 12 vertices written.
    * vertices.py written.
 #
 # Lorentz structure definitions
 #
 
-   * 1 lorentz structure written.
+   * 7 lorentz structures written.
    * lorentz.py written.
 #
 # Coupling definitions
 #
 
-   * 1 coupling written.
+   * 8 couplings written.
    * couplings.py written.
 #
 # Coupling order definitions

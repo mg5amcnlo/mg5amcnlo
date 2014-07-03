@@ -109,6 +109,6 @@ clean:
 	cd CERNLIB; make clean; cd ..
 	cd PDF; make clean; cd ..
 	cd DHELAS; make clean; cd ..
-	cd $(CUTTOOLSDIR); make clean; cd ..
-	cd $(STDHEPDIR); make clean; cd ..
+	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
+	if [ -d $(STDHEPDIR) ]; then cd $(STDHEPDIR); make clean; cd ..; fi
 	rm -f $(BINDIR)/combine_events $(BINDIR)/gen_ximprove
