@@ -2871,6 +2871,10 @@ class decay_all_events(object):
                       # this is useful to handle cases like tau decays
                     label2width[particle_label]=0.001
                     need_param_card_modif = True
+                    logger.warning('ATTENTION')
+                    logger.warning('Found a very small width in the param_card for particle '\
+                                   +str(particle_label))
+                    logger.warning('Use instead an effective width of 1 MeV ' )
                 #label2mass[particle_label]=float(mass.value)
                 #pid2mass[part]=label2mass[particle_label]
                 pid2width[abs(part)]=label2width[particle_label]
@@ -2885,14 +2889,6 @@ class decay_all_events(object):
                                    +str(particle_label))
                     logger.warning('Use instead the default/effective value '\
                                    +str(label2width[particle_label]))
-                elif (width.value > 0.001):  # the width is less than 1 MeV, need to use an effective width !!
-                      # this is useful to handle cases like tau decays
-                    label2width[particle_label]=0.001
-                    pid2width[abs(part)]=0.001
-                    logger.warning('ATTENTION')
-                    logger.warning('Found a very small width in the param_card for particle '\
-                                   +str(particle_label))
-                    logger.warning('Use instead an effective width of 1 MeV ' )
                
         # now we need to modify the values of the width
         # in param_card.dat, since this is where the input 
