@@ -217,7 +217,7 @@ class Banner(dict):
     ############################################################################
     #  WRITE BANNER
     ############################################################################
-    def write(self, output_path, close_tag=True):
+    def write(self, output_path, close_tag=True, exclude=[]):
         """write the banner"""
         
         if isinstance(output_path, str):
@@ -239,19 +239,22 @@ class Banner(dict):
 
 
         for tag in [t for t in self.ordered_items if t in self.keys()]:
-            capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
-            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
-                     {'tag':capitalized_tag, 'text':self[tag].strip()})
-        for tag in [t for t in self.keys() if t not in self.ordered_items]:
-            if tag in ['init']:
+            if tag in exclude: 
                 continue
             capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':capitalized_tag, 'text':self[tag].strip()})
+        for tag in [t for t in self.keys() if t not in self.ordered_items]:
+            if tag in ['init'] or tag in exclude:
+                continue
+            capitalized_tag = self.capitalized_items[tag] if tag in self.capitalized_items else tag
+            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
+                     {'tag':capitalized_tag, 'text':self[tag].strip()})
+        
+        if not '/header' in exclude:
+            ff.write('</header>\n')    
 
-        ff.write('</header>\n')    
-
-        if 'init' in self:
+        if 'init' in self and not 'init' in exclude:
             text = self['init']
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':'init', 'text':text.strip()})  
@@ -462,8 +465,9 @@ class Banner(dict):
         if seed is not None:
             self.set("run_card", "iseed", seed)
             
-        ff = self.write("%s.tmp" % path, close_tag=False)
-
+        ff = self.write("%s.tmp" % path, close_tag=False,
+                        exclude=['MGGenerationInfo', '/header', 'init'])
+        ff.write("## END BANNER##\n")
         if self.lhe_version >= 3:
         #add the original content
             [ff.write(line) if not line.startswith("<generator name='MadGraph5_aMC@NLO'")
