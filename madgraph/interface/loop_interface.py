@@ -20,9 +20,7 @@ import os
 import shutil
 import time
 import logging
-# HSS, 13/11/2012
 import re
-# HSS
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -388,13 +386,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                             'Using default IREGI instead.')%\
                            self._iregi_dir)
             self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
-        # Set where to look for PJFry++ installation
-        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
-        #if not os.path.isdir(self._pjfry_dir):
-        #    logger.warning(('Warning: Directory %s is not a valid PJFry++ directory.'+\
-        #                    'Using default PJFry++ instead.')%\
-        #                   self._pjfry_dir)
-        #    self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
     
     def do_display(self,line, *argss, **opt):
         """ Display born or loop diagrams, otherwise refer to the default display
@@ -644,19 +635,18 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         argss = self.split_arg(line, *args,**opt)
         # Check args validity
-	# HSS,13/11/2012
         perturbation_couplings_pattern = \
           re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings=""
         if perturbation_couplings_re:
             perturbation_couplings = perturbation_couplings_re.group("pertOrders")
-        args2=re.search("QED",perturbation_couplings)
-        if args2:
+        QED_found=re.search("QED",perturbation_couplings)
+        if QED_found:
             self.validate_model(coupling_type='QED')
         else:
        	    self.validate_model()
-	# HSS
+        
         param_card = self.check_check(argss)
         reuse = argss[1]=="-reuse"   
         argss = argss[:1]+argss[2:]
@@ -672,13 +662,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Now make sure the process is acceptable
         proc = " ".join(argss[1:i+1])
         myprocdef = self.extract_process(proc)
-	# HSS, 13/11/2012
-	# Is it useless ?
-        if args2:
-            self.validate_model(loop_type='virtual',coupling_type='QED')
-        else:
-            self.validate_model(loop_type='virtual')
-	# HSS
         self.proc_validity(myprocdef,'ML5_check')
         
         return mg_interface.MadGraphCmd.do_check(self, line, *args,**opt)
@@ -690,19 +673,17 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_add(args)
-	# HSS, 13/11/2012
         perturbation_couplings_pattern = \
           re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings=""
         if perturbation_couplings_re:
             perturbation_couplings = perturbation_couplings_re.group("pertOrders")
-        args2=re.search('QED',perturbation_couplings)
-        if args2:
+        QED_found=re.search('QED',perturbation_couplings)
+        if QED_found:
             self.validate_model(coupling_type='QED')
         else:
             self.validate_model()
-	   # HSS
 
         if args[0] == 'process':            
             # Rejoin line
@@ -716,12 +697,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
             # Extract process from process definition
-	    # HSS, 13/11/2012
-	    # Is it useless ?
-        if args2:
-            self.validate_model(loop_type='virtual',coupling_type='QED')
-        else:
-            self.validate_model(loop_type='virtual')
 
         myprocdef = self.extract_process(line)
              

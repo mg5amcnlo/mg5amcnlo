@@ -594,7 +594,7 @@ if '__main__' == __name__:
     logging.basicConfig(level=logging.INFO)
     
     # save hard-coded reference results
-    # Replace here the path of your HCR output file
+    # Replace here the path of your HCR output file, below is just an example.
     HCRpath = '/Users/erdissshaw/Works/FLibatM/check-ML/OutputML'
     # Replace the correct model and resctrict card
     model = 'loop_qcd_qed_sm-parallel_test'

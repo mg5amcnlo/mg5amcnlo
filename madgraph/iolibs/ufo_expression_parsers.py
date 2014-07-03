@@ -67,9 +67,6 @@ class UFOExpressionParser(object):
     literals = "=+-*/(),"
 
     # Definition of tokens
-    # HSS, 5/11/2012
-    # add t_ARG
-    # HSS
 
     def t_CSC(self, t):
         r'(?<!\w)csc(?=\()'
@@ -148,7 +145,6 @@ class UFOExpressionParser(object):
         self.lexer = lex.lex(module=self, **kwargs)
 
     # Definitions for the PLY yacc parser
-	# HSS, 5/11/2012
     # Parsing rules
     precedence = (
         ('right', 'LOGICALCOMB'),
@@ -174,7 +170,6 @@ class UFOExpressionParser(object):
         ('right','COMPLEX'),
         ('right','COND'),
         )
-    # HSS
 
     # Dictionary of parser expressions
     def p_statement_expr(self, p):
@@ -296,9 +291,6 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         "expression : COMPLEX '(' expression ',' expression ')'"
         p[0] = '(' + p[3] + ',' + p[5] + ')'
 
-    # HSS , 5/11/2012
-    # add arg and complexconjugate
-    # HSS
     def p_expression_func(self, p):
         '''expression : CSC group
                       | SEC group
@@ -369,9 +361,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
         p[0] = 'MP_COND(CMPLX('+p[3]+',KIND=16),CMPLX('+p[5]+\
                                           ',KIND=16),CMPLX('+p[7]+',KIND=16))'
-    # HSS,5/11/2012
-    # add arg and complexconjugate
-    # HSS
+
     def p_expression_func(self, p):
         '''expression : CSC group
                       | SEC group
@@ -451,7 +441,6 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         "expression : COMPLEX '(' expression ',' expression ')'"
         p[0] = 'std::complex<double>(' + p[3] + ',' + p[5] + ')'
     
-    # HSS, 5/11/2012, add arg
     def p_expression_func(self, p):
         '''expression : CSC group
                       | SEC group
@@ -473,7 +462,6 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conj' + p[2]
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
-    # HSS
     
     def p_expression_pi(self, p):
         '''expression : PI'''

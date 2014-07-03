@@ -370,7 +370,6 @@ class MatrixElementEvaluator(object):
         previous_globals = list(globals().keys())
         for routine in aloha_routines:
             exec(routine, globals())
-	#open(os.path.join('/afs/cern.ch/work/h/hshao/aMCatNLO_EW','test01.txt'),'w').write("\n      ".join(aloha_routines))
         for key in globals().keys():
             if key not in previous_globals:
                 ADDED_GLOBAL.append(key)
@@ -388,7 +387,9 @@ class MatrixElementEvaluator(object):
         except helas_call_writers.HelasWriterError, error:
             logger.info(error)
             return None
-	#open(os.path.join('/afs/cern.ch/work/h/hshao/aMCatNLO_EW','test02.txt'),'w').write(matrix_methods[process.shell_string()])
+        # If one wants to output the python code generated for the computation
+        # of these matrix elements, it is possible to run the following cmd
+#       open('output_path','w').write(matrix_methods[process.shell_string()])
         if self.reuse:
             # Define the routines (globally)
             exec(matrix_methods[process.shell_string()], globals())	    
@@ -2977,9 +2978,7 @@ def output_comparisons(comparison_results):
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-	# HSS,13/11/2012
         proc_col_size = len(process_header) + 1
-	# HSS
 
     for proc in comparison_results:
         if len(proc['process'].base_string()) + 1 > proc_col_size:
@@ -3226,9 +3225,7 @@ def output_gauge(comparison_results, output='text'):
         process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-	# HSS, 13/11/2012
         proc_col_size = len(process_header) + 1
-	# HSS
 
     for one_comp in comparison_results:
         proc = one_comp['process'].base_string()
@@ -3437,15 +3434,6 @@ def check_lorentz_process(process, evaluator,options=None):
                          process.nice_string().replace('Process', 'process'))
         return None
 
-    
-    # Generate phase space point to use
-    #p, w_rambo = evaluator.get_momenta(process)
-    #ps=""
-    #for pi in p:
-    #   for pij in pi:
-    #      ps=ps+str(pij)+"  "
-    #   ps=ps+"\n"
-    #open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS0.input'),'w').write(ps)
      # Generate the HelasMatrixElement for the process
     p, w_rambo = evaluator.get_momenta(process, options)
 
@@ -3457,16 +3445,7 @@ def check_lorentz_process(process, evaluator,options=None):
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                                        optimized_output = evaluator.loop_optimized_output)
 
-    #data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
-    #                                 auth_skipping = True)
-
     MLOptions = {'ImprovePS':True,'ForceMP':True}
-#ps=""
-        #for pi in p:
-        #for pij in pi:
-        #ps=ps+str(pij)+"   "
-            #ps=ps+"\n"
-            #open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS0.input'),'w').write(ps)
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
                                                  auth_skipping = True, options=options)
@@ -3482,18 +3461,6 @@ def check_lorentz_process(process, evaluator,options=None):
             results = [('Original evaluation',data)]
     else:
         return  {'process':process, 'results':'pass'}
-    
-    #for boost in range(1,4):
-    #    boost_p = boost_momenta(p, boost)
-        #ps=""
-        #for pi in boost_p:
-	#   for pij in pi:
-	#       ps=ps+str(pij)
-	#   ps=ps+"\n"
-	#open(os.path.join('/afs/cern.ch/work/h/hshao/aMCatNLO_EW','PS%s.input')%boost,'w').write(ps)
-    #    results.append(evaluator.evaluate_matrix_element(matrix_element,
-    #                                                     p=boost_p,
-    #                                                     output='jamp'))
 
     # The boosts are not precise enough for the loop evaluations and one need the
     # fortran improve_ps function of MadLoop to work. So we only consider the
@@ -3504,29 +3471,6 @@ def check_lorentz_process(process, evaluator,options=None):
             results.append(evaluator.evaluate_matrix_element(matrix_element,
                                                     p=boost_p,output='jamp'))
     else:
-        #for boost in range(1,4):
-        #    boost_p = boost_momenta(p,boost)
-        #    ps=""
-        #    for pi in boost_p:
-        #        for pij in pi:
-        #            ps=ps+str(pij)+"      "
-        #        ps=ps+"\n"
-        #    open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS%s.input')%boost,'w').write(ps)
-
-        #    results.append(evaluator.evaluate_matrix_element(matrix_element,
-        #            p=boost_p,output='jamp',MLOptions = MLOptions))
-        # The boosts are not precise enough for the loop evaluations and one
-        # need the fortran improve_ps function of MadLoop to work. So we only
-        # consider the boosts along the z directions for loops or simple rotations.
-        #boost_p = boost_momenta(p, 3)
-        #ps=""
-#for pi in boost_p:
-                #for pij in pi:
-#ps=ps+str(pij)+"      "
-#ps=ps+"\n"
-#open(os.path.join('/Users/erdissshaw/Works/aMCatNLO_EW','PS%s.input')%3,'w').write(ps)
-                #results.append(evaluator.evaluate_matrix_element(matrix_element,
-#                p=boost_p,output='jamp',MLOptions = MLOptions))
         # We only consider the rotations around the z axis so to have the
         boost_p = boost_momenta(p, 3)
         results.append(('Z-axis boost',
@@ -3583,14 +3527,12 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
         # Initialize matrix element evaluation
         # For the unitary gauge, open loops should not be used
-        # HSS, 20/03/2013
         loop_optimized_bu = cmd.options['loop_optimized_output']
-        # HSS
-        loop_optimized_output = False
+        cmd.options['loop_optimized_output'] = False
         aloha.unitary_gauge = True
         if processes_unit.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
-                                       cmd= cmd,auth_skipping = False, reuse = True)
+                                       cmd=cmd,auth_skipping = False, reuse = True)
         else:
             evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
                                            cmd=cmd, model=model,
@@ -3625,7 +3567,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         aloha.unitary_gauge = False
         # We could use the default output as well for Feynman, but it provides
         # an additional check
-        loop_optimized_output = True
+        cmd.options['loop_optimized_output'] = True
         if processes_feynm.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmd= cmd, auth_skipping = False, reuse = False)
@@ -3660,7 +3602,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             clean_up(output_path)
 
         # Reset the original global variable loop_optimized_output.
-        loop_optimized_output = loop_optimized_bu
+        cmd.options['loop_optimized_output'] = loop_optimized_bu
 
         return output
 #    elif isinstance(processes, base_objects.Process):
@@ -3790,9 +3732,7 @@ def output_lorentz_inv(comparison_results, output='text'):
     process_header = "Process"
 
     if len(process_header) + 1 > proc_col_size:
-	# HSS,13/11/2012
         proc_col_size = len(process_header) + 1
-	# HSS
     
     for proc, values in comparison_results:
         if len(proc) + 1 > proc_col_size:

@@ -973,16 +973,15 @@ class OrganizeModelExpression:
     def analyze_parameters(self):
         """ separate the parameters needed to be recomputed events by events and
         the others"""
-        # HSS 27/10/2013
         # in order to match in Gmu scheme
-        # test whether aEWM1 is the exteranl or not
-        # if not, take Gf as the track_dependant varaible
-        present_aEWM1 = any([param.name == 'aEWM1' for param in self.model.all_parameters\
-                                if param.nature == 'external'])
-        #exter_pa = [param.name for param in self.model.all_parameters\
-        #                        if param.nature == 'external']
+        # test whether aEWM1 is the external or not
+        # if not, take Gf as the track_dependant variable
+        present_aEWM1 = any(param.name == 'aEWM1' for param in
+                        self.model.all_parameters if param.nature == 'external')
+
         if not present_aEWM1:
             self.track_dependant = ['aS','Gf','MU_R']
+            
         for param in self.model.all_parameters:
             if param.nature == 'external':
                 parameter = base_objects.ParamCardVariable(param.name, param.value, \

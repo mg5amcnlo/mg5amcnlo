@@ -1587,7 +1587,6 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         goal_vertices=base_objects.VertexList([vx17_tag,vx12_tag,vx13_tag,vx15_tag,vx168_tag,closing_vx])
         self.assertEqual(myPentaDiag1.get('vertices'), goal_vertices)
 
-# HSS, 03/04/2013
 class LoopEWDiagramGenerationTest(unittest.TestCase):
     """Test class for all functions related to the Loop diagram generation with model LoopSMEWTest."""
 
@@ -2257,7 +2256,6 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
             for loop_UVCT_diag in myloopamplitude.get('loop_UVCT_diagrams'):
                 sumUV+=len(loop_UVCT_diag.get('UVCT_couplings'))
             self.assertEqual(sumUV,nUVGoal)
-# HSS
 
 if __name__ == '__main__':
         # Save this model so that it can be loaded by other loop tests

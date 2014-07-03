@@ -1061,13 +1061,11 @@ class GoSamRunner(me_comparator.MERunner):
                     # here QCD if defined and otherwise the first available
                     if not order_specified:
                         if gosam_born_orders[order]!=-1:
-                            # HSS, remove =   
                             proc_card_out+="order="+', '.join([order,\
                                             str(gosam_born_orders[order]),\
                                             str(gosam_loop_orders[order])])+'\n'
                             order_specified=True
                         elif gosam_loop_orders[order]!=-1:
-                            # HSS, remove =
                             proc_card_out+="order="+', '.join([order,\
                                             str(gosam_loop_orders[order]),\
                                             str(gosam_loop_orders[order])])+'\n'
@@ -1104,18 +1102,18 @@ class GoSamRunner(me_comparator.MERunner):
                     proc_card_out+="true=chord[ghZ,ghZbar,ghWp,ghWpbar,ghWm, ghWmbar,0, 0];\\n\\\n"
                 else:
                     proc_card_out+="# No qgraf specific options\n"
-            # HSS, 20/03/2013
-            elif line.find("# qgraf.bin=")==0:
-                proc_card_out+="qgraf.bin=/Users/erdissshaw/Works/qgraf/run\n"
-            elif line.find("# golem95.fcflags=")==0:
-                proc_card_out+="golem95.fcflags=-I/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/include/gosam-contrib\n"
-            elif line.find("# golem95.ldflags=")==0:
-                proc_card_out+="golem95.ldflags=-L/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/lib -lgolem95\n"
-            elif line.find("# samurai.ldflags=")==0:
-                proc_card_out+="samurai.ldflags=-L/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/lib -lsamurai\n"
-            elif line.find("# samurai.fcflags=")==0:
-                proc_card_out+="samurai.fcflags=-I/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/include/gosam-contrib\n"
-            # HSS
+            # For custom path of the GoSam dependencies, one might want to
+            # uncomment and edit the lines below.
+#            elif line.find("# qgraf.bin=")==0:
+#                proc_card_out+="qgraf.bin=/Users/erdissshaw/Works/qgraf/run\n"
+#            elif line.find("# golem95.fcflags=")==0:
+#                proc_card_out+="golem95.fcflags=-I/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/include/gosam-contrib\n"
+#            elif line.find("# golem95.ldflags=")==0:
+#                proc_card_out+="golem95.ldflags=-L/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/lib -lgolem95\n"
+#            elif line.find("# samurai.ldflags=")==0:
+#                proc_card_out+="samurai.ldflags=-L/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/lib -lsamurai\n"
+#            elif line.find("# samurai.fcflags=")==0:
+#                proc_card_out+="samurai.fcflags=-I/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/include/gosam-contrib\n"
             else:
                 proc_card_out+=line
 
@@ -1515,10 +1513,9 @@ class LoopMEComparator(me_comparator.MEComparator):
                 else:
                     diff = (max(list_res) - min(list_res)) / \
                            abs((max(list_res) + min(list_res)))
-                # HSS, 02/04/2013
+
                 if diff >= tolerance and proc not in failed_proc_list and\
-                 (max(map(abs,list_res))/maxfin>=tolerance or index<=1):
-                # HSS
+                         (max(map(abs,list_res))/maxfin>=tolerance or index<=1):
                     failed_proc_list.append(proc)
                     fail_str += self._fixed_string_length(proc, col_size) + \
                                 ''.join([self._fixed_string_length("%1.10e" % res,
@@ -1530,7 +1527,6 @@ class LoopMEComparator(me_comparator.MEComparator):
 
 
 
-# HSS, 28/03/2013
 class LoopHardCodedRefRunnerError(Exception):
         """class for error in LoopHardCodedRefRunner"""
         pass
@@ -1556,7 +1552,6 @@ class LoopHardCodedRefRunner(me_comparator.MERunner):
             raise self.LoopHardCodedRefRunnerError,\
                  "Phase space point is not provided !"
         return self.res_list
-# HSS
 
 class LoopMEComparatorGauge(LoopMEComparator):
     """Base object to run comparison tests for loop processes. Take standard 

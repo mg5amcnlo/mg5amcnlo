@@ -900,12 +900,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self.set('particle', self.get('antiparticle'))
         self.set('antiparticle', part)
     
-    # HSS, 30/01/2013
     def is_anticommutating_ghost(self):
         """ Return True if the particle of this wavefunction is a ghost"""
         return self.get('particle').get('ghost')
-    #    return self.get('particle').get('ghost') and self.get('color')!=1
-    # HSS
     
     def is_fermion(self):
         return self.get('spin') % 2 == 0
@@ -1873,13 +1870,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 'legs': legs})
 
             # Add s- and t-channels going down towards leg 1
-	    # HSS, 24/09/2012
-	    # legs[1]-> legs[-2]. Why is legs[1] ?
-	    # Thanks to Johan for confirming !
             mother_s, tchannels = \
                       init_mothers1.get_s_and_t_channels(ninitial, legs[-2],
                                                          reverse_t_ch)
-	    # HSS	
             schannels.extend(mother_s)
 
             # Add vertex
@@ -4468,12 +4461,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Gives (number or external particles, number of
         incoming particles)"""
 
-        # HSS 25/09/2012
-        external_wfs = filter(lambda wf: not wf.get('mothers'),self.get_all_wavefunctions())
-        #external_wfs = filter(lambda wf: wf.get('leg_state') != \
-        #                      'intermediate',
-        #                      self.get_all_wavefunctions())
-        # HSS
+        external_wfs = filter(lambda wf: not wf.get('mothers'),
+                                                   self.get_all_wavefunctions())
 
         return (len(set([wf.get('number_external') for wf in \
                          external_wfs])),
@@ -4794,9 +4783,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Compare bulk process properties (number of external legs,
         # identity factors, number of diagrams, number of wavefunctions
         # initial leg, final state legs
-	# HSS 25/09/2012
-	# len(decay1.get('processes')[0].get("legs"))!=len(decay1.get('processes')[0].get("legs"))
-	# correct the second decay1 as decay2
         if len(decay1.get('processes')[0].get("legs")) != \
            len(decay2.get('processes')[0].get("legs")) or \
            len(decay1.get('diagrams')) != len(decay2.get('diagrams')) or \

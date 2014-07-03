@@ -263,22 +263,17 @@ class Coupling(UFOBaseClass):
         for param in all_CTparameters:
            pattern=re.compile(r"(?P<first>\A|\*|\+|\-|\(|\s)(?P<name>"+param.name+r")(?P<second>\Z|\*|\+|\-|\)|/|\\|\s)")
            numberOfMatches=len(pattern.findall(self.value))
-	   # HSS, 5/11/2012
            if numberOfMatches > 0:
               if not CTparam:
 	           # CTparam = param
                    CTparam=[param,]
 		   numbermatch = [numberOfMatches,]
-		   # HSS
               else:
-		   # HSS, 5/11/2012
 		   CTparam = CTparam + [param,]
 		   numbermatch = numbermatch + [numberOfMatches,]
                    # raise UFOError, "UFO does not support yet more than one occurence of CTParameters in the 			   # couplings values."+param.name+" "+self.name+" "+CTparam.name
-		   # HSS
            #elif numberOfMatches>1:
                #raise UFOError, "UFO does not support yet more than one occurence of CTParameters in the #couplings values."+param.name
-	   # HSS
 
         if not CTparam:
             if x==0:
@@ -286,7 +281,6 @@ class Coupling(UFOBaseClass):
             else:
                 return 'ZERO'
         else:
-	    # HSS, 5/11/2012
 	    tempvalue = self.value
 	    for i,ctpar in enumerate(CTparam):
             	#if ctpar.pole(x)=='ZERO':
@@ -307,7 +301,6 @@ class Coupling(UFOBaseClass):
             #	numberOfMatches=len(pattern.findall(tempvalue))
 	    #	if numberOfMatches > 0: raise UFOError,"There is some problem with the substitution of #"+param.name+"."  
 	    return tempvalue
-	    # HSS
 
 all_lorentz = []
 

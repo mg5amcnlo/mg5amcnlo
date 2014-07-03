@@ -284,12 +284,6 @@ def ij_final(pair):
     if len(pair) == 2:
         for i in range(len(pair)):
             set = 0
-# HSS, 05/04/2013
-# generalize it for qcd, ew, susy !!!
-# HSS
-#            if (pair[i]['massless'] and pair[i]['spin'] %2 == 1) or \
-#               (pair[i]['color'] == -3 and pair[1-i]['color'] == 3) and \
-#               not set:
             if (pair[i]['massless'] and pair[i]['self_antipart']) or \
              (not pair[i]['is_part'] and pair[1-i]['is_part'] and\
               (pair[i]['spin']+pair[1-i]['spin'])%2==0) and not set:
