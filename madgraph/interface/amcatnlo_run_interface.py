@@ -1579,6 +1579,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 time_stamps[root_file]=os.path.getmtime(root_file)
             options['appl_start_grid']= \
                 max(time_stamps.iterkeys(), key=(lambda key: time_stamps[key])).split('/')[-2]
+            logger.info('No --appl_start_grid option given. Guessing that start grid from run "%s" should be used.' \
+                            % options['appl_start_grid'])
 
         if 'appl_start_grid' in options.keys() and options['appl_start_grid']:
             self.appl_start_grid = options['appl_start_grid']
