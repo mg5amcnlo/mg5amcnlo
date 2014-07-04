@@ -1116,9 +1116,11 @@ class ProcCard(list):
             # update the counter to pass to the next element
             nline -= 1
         
-    def __getattr__(self, tag):
+    def __getattr__(self, tag, default=None):
         if isinstance(tag, int):
             list.__getattr__(self, tag)
+        elif tag == 'info' or tag == "__setstate__":
+            return default #for pickle
         else:
             return self.info[tag]
             
