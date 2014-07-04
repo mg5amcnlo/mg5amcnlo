@@ -70,32 +70,3 @@
       integer ih_obs(nmax_obs)
       common / appl_ident / nh_obs,ih_obs
 
-************************************************************************
-*     NLO+PS mode of aMC@NLO
-************************************************************************
-*     The type of observable, the bin width and the maximum
-*     and minimum value of the applgrid histograms
-*     so that they automatically match the ones used in aMCatNLO
-      double precision applmc_obsA_binwidth,
-     1     applmc_obsA_min,applmc_obsA_max
-      integer applmc_obsA_type
-      common/applmc_common_histokinA/  applmc_obsA_binwidth,
-     1     applmc_obsA_min,applmc_obsA_max, applmc_obsA_type
-      double precision applmc_obsB_binwidth,
-     1     applmc_obsB_min,applmc_obsB_max
-      integer applmc_obsB_type
-      common/applmc_common_histokinB/  applmc_obsB_binwidth,
-     1     applmc_obsB_min,applmc_obsB_max, applmc_obsB_type
-
-*     The values of the physical observables and the 
-*     event kinematics in the NLO+PS mode
-      double precision applmc_pplab(0:3,maxparticles)
-      double precision applmc_obsA, applmc_obsB
-      double precision applmc_www_histo
-      common/applmc_common_histofill/applmc_pplab,  
-     1     applmc_obsA, applmc_obsB, 
-     2     applmc_www_histo
-
-*     Overal histogram normalization
-      double precision applmc_histonorm
-      common/applmc_common_histonorm/ applmc_histonorm
