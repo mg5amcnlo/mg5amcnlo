@@ -122,7 +122,8 @@ class DecayComparator(object):
                 (pid, lha_code, (value1 - value2) / (value1 + value2))
         return 'True'
 
-    def compare3(self, card1, card2, pid, name1, name2, twobody_decay, log):
+    def compare3(self, card1, card2, pid, name1, name2, twobody_decay, log,
+                 raiseerror=False):
         
         fail = False
         if twobody_decay:
@@ -141,7 +142,10 @@ class DecayComparator(object):
             text += 'total: %s \n' % info2['decay'].get((pid,)).value 
             if info2['decay'].decay_table.has_key(pid):
                 text += str(info2['decay'].decay_table[pid])+'\n'
-            print text
+            if not raiseerror:
+                print text
+            else:
+                raise Exception, text
             return text
         
         if os.path.exists(card1):
@@ -210,15 +214,20 @@ class DecayComparator(object):
         
         if fail:
             text = error_text(card1, card2, pid, name1, name2)
-            return text
-        
+            if not raiseerror:
+                return text
+            else:
+                raise Exception, text
         if abs(width1 - width2) / width1 + width2 > 5e-2 or \
              abs(width1 - width2) / orig_width1 + width2 > 3e-2:
             print width1, width2, abs(width1 - width2) / width1 + width2, abs(width1 - width2) / orig_width1 + width2
             print 'fail for the total cross section (orig: %s)' % orig_width1
             text = error_text(card1, card2, pid, name1, name2)
-            return text + '\n%s has not the same total width: ratio of %s' % \
+            if not raiseerror:
+                return text + '\n%s has not the same total width: ratio of %s' % \
                 (pid, (width1 - width2) / (width1 + width2))
+            else:
+                raise text
         return 'True'
 
 
@@ -241,6 +250,7 @@ class DecayComparator(object):
         # RUN MG5
         #
         start1= time.time()
+        self.cmd.run_cmd("set automatic_html_opening False --no-save")
         try:
             self.cmd.exec_cmd('generate %s > all all --optimize' % particle)
         except InvalidCmd:
@@ -251,7 +261,7 @@ class DecayComparator(object):
             
             files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
                      '%s/Cards/run_card.dat' % dir_name, log=True)
-            
+            self.cmd.exec_cmd("set automatic_html_opening False --no-save")
             self.cmd.exec_cmd('launch -f')
         stop_mg5 = time.time()
         print 'MG5 Running time: %s s ' % (stop_mg5 -start1)
@@ -260,11 +270,13 @@ class DecayComparator(object):
         # Run MG Decay module
         #
         start4= time.time()
+        self.cmd.run_cmd("set automatic_html_opening False --no-save")
         self.cmd.exec_cmd('calculate_width %s 2' % particle)
         if self.cmd._curr_amps:  
             self.cmd.exec_cmd('output %s_dec -f' % dir_name)
             files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
                      '%s_dec/Cards/run_card.dat' % dir_name, log=True)
+            print "279 launch"
             self.cmd.exec_cmd('launch -f')
         stop_mg5 = time.time()
         print 'DECAY Running time: %s s ' % (stop_mg5 -start4)
@@ -274,9 +286,11 @@ class DecayComparator(object):
         #
         if run_fr:    
             me_cmd = me_interface.MadEventCmd(dir_name)
+            self.cmd.define_child_cmd_interface(me_cmd, False)
             start3 = time.time()
             me_cmd.model_name = self.model
-            me_cmd.do_compute_widths(' %s -f --nbody=2' % particle)
+            me_cmd.run_cmd("set automatic_html_opening False --no-save")
+            me_cmd.do_compute_widths(' %s -f --body_decay=2' % particle)
             stop_fr = time.time()
             print 'FR Running time: %s s ' % (stop_fr -start3)
             out1 = self.compare(pjoin(dir_name, 'Cards', 'param_card.dat'),
@@ -285,7 +299,7 @@ class DecayComparator(object):
             out2 = self.compare(pjoin(dir_name, 'Cards', 'param_card.dat'),
                          pjoin('%s_dec' % dir_name, 'Events','run_01','param_card.dat'), 
                          pid, 'FR', 'DECAY')
-              
+            me_cmd.do_quit('')
     
             if out1 == out2 == 'True':
                 os.system('rm -rf %s >/dev/null' % dir_name)
@@ -303,7 +317,8 @@ class DecayComparator(object):
             
             
         
-    def check_3body(self, part, multi1='all', multi2='all', multi3='all', log=None):
+    def check_3body(self, part, multi1='all', multi2='all', multi3='all', log=None,
+                    raiseerror=False):
         """checking the 3body between the decay module and standard MG5"""
         try:
             pid = self.particles_id[part]
@@ -313,20 +328,24 @@ class DecayComparator(object):
             log = open(log,'w')
         
         to_avoid, twobody_decay = self.get_2body(part)
-        to_avoid.update(['a','g'])#, 'u','u~', 'd', 'd~','c', 'c~','s', 's~'])
+        to_avoid.update(['a','g', part])#, 'u','u~', 'd', 'd~','c', 'c~','s', 's~'])
         
         # Generate the MG comparison point:
         start= time.time()
         dir_name = 'TEST_DECAY3_%s_%s' % (self.model,part)
         os.system('rm -rf %s >/dev/null' % dir_name)
         os.system('rm -rf %s_dec >/dev/null' % dir_name)
-        self.cmd.exec_cmd('generate %s > %s %s %s $$ %s --optimize' % 
+        self.cmd.run_cmd('set automatic_html_opening False --no-save')
+        self.cmd.exec_cmd('generate %s > %s %s %s $ all $$ %s --optimize' % 
                           (part, multi1, multi2, multi3, ' '.join(to_avoid)))
+        print 'generate %s > %s %s %s $ all $$ %s --optimize' % \
+                          (part, multi1, multi2, multi3, ' '.join(to_avoid))
         self.cmd.exec_cmd('history hist.cmd')
-        if self.cmd._curr_amps:  
+        if self.cmd._curr_amps:
+            print dir_name  
             self.cmd.exec_cmd('output %s -f' % dir_name)
-            files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
-                         '%s/Cards/run_card.dat' % dir_name, log=True)
+            #files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
+            #             '%s/Cards/run_card.dat' % dir_name, log=True)
                 
             self.cmd.exec_cmd('launch -f')
         stop_mg5 = time.time()
@@ -336,7 +355,7 @@ class DecayComparator(object):
         # Run MG Decay module
         #
         start4= time.time()
-        self.cmd.do_calculate_width('%s 3' % part, skip_2body=True)
+        self.cmd.do_compute_widths('%s --body_decay=3' % part, do2body=True)
         if self.cmd._curr_amps:  
             self.cmd.exec_cmd('output %s_dec -f' % dir_name)
             files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
@@ -349,7 +368,7 @@ class DecayComparator(object):
         return self.compare3(
                          pjoin(dir_name,'Events','run_01','param_card.dat'), 
                          pjoin('%s_dec' % dir_name, 'Events','run_01','param_card.dat'), 
-                         pid, 'MG5', 'DECAY', twobody_decay, log) 
+                         pid, 'MG5', 'DECAY', twobody_decay, log, raiseerror=raiseerror) 
         
         
     def get_2body(self, particle):
@@ -365,9 +384,9 @@ class DecayComparator(object):
         self.cmd.exec_cmd('generate z > e+ e-')
         self.cmd.exec_cmd('output %s -f' % dir_name)
         me_cmd = me_interface.MadEventCmd(dir_name)
+        self.cmd.define_child_cmd_interface(me_cmd, False)
         me_cmd.model_name = self.model
-        me_cmd.do_compute_widths(' %s -f --nbody=2' % particle)
-        
+        me_cmd.do_compute_widths(' %s -f --body_decay=2' % particle)
         # now get the results:
         pids = set()
         path = pjoin(dir_name, 'Cards', 'param_card.dat')
@@ -389,7 +408,8 @@ class DecayComparator(object):
             labels.add(part.get('name'))
             labels.add(part.get('antiname'))
 
-        os.system('rm -rf %s >/dev/null' % dir_name)    
+        os.system('rm -rf %s >/dev/null' % dir_name)  
+        me_cmd.do_quit('') 
         return labels, card['decay'].decay_table[pid]
     
     
@@ -407,7 +427,8 @@ class TestFRDecay(unittest.TestCase):
             self.assertEqual('True', decay_framework.has_same_decay(name))
             print 'done in %s s' % (time.time() - start)
         
-    def test_3body_mssm(self):
+    def notest_3body_mssm(self):
+        #just for comparison
         decay_framework = DecayComparator('mssm')
         
         #add multiparticle
@@ -422,13 +443,13 @@ class TestFRDecay(unittest.TestCase):
             decay_framework.check_3body(name, 'mssm', 'sm', 'sm', log='all_mssm.log')
             print 'done in %s s' % (time.time() - start)
         
-    def test_3body_one_mssm(self):
+    def notest_3body_one_mssm(self):
         decay_framework = DecayComparator('mssm')
         
         #add multiparticle
         decay_framework.cmd.do_define('mssm = go su1 su2 su3 su4 su5 su6 sd1 sd2 sd3 sd4 sd5 sd6 su1~ su2~ su3~ su4~ su5~ su6~ sd1~ sd2~ sd3~ sd4~ sd5~ sd6~ h02 a0 h+ sv1 sv2 sv3 sl1- sl2- sl3- sl4- sl5- sl6- w- h- sv1~ sv2~ sv3~ sl1+ sl2+ sl3+ sl4+ sl5+ sl6+ n1 n2 n3 n4 x1+ x2+ x1- x2-')
         decay_framework.cmd.do_define('sm = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h01 tau+ tau-')
-        mssm = 'go su1 su2 su3 su4 su5 su6 sd1 sd2 sd3 sd4 sd5 sd6 h02 a0 h+ sv1 sv2 sv3 sl1- sl2- sl3- sl4- sl5- sl6- w- h- n1 n2 n3 n4 x1+ x2+ x1- x2-'
+        mssm = 'su1 su2 su3 su4 su5 su6 sd1 sd2 sd3 sd4 sd5 sd6 h02 a0 h+ sv1 sv2 sv3 sl1- sl2- sl3- sl4- sl5- sl6- w- h- n1 n2 n3 n4 x1+ x2+ x1- x2-'
         
 
         import time
@@ -436,6 +457,7 @@ class TestFRDecay(unittest.TestCase):
         #print 'comparing decay for %s %s' % (i, name)
         decay_framework.check_3body('n3', 'mssm', 'sm', 'sm', log='one_mssm.log')
         print 'done in %s s' % (time.time() - start)
+
         
     def test_decay_nmssm1(self):
         decay_framework = DecayComparator('nmssm')

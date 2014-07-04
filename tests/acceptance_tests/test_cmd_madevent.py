@@ -222,7 +222,7 @@ class TestMECmdShell(unittest.TestCase):
         err2 = self.cmd_line.results.current['error']        
         
         self.assertTrue(abs(val2 - val1) / (err1 + err2) < 5)
-        target = 1227400.0
+        target = 1310200.0
         self.assertTrue(abs(val2 - target) / (err2) < 5)
         #check precision
         self.assertTrue(err2 / val2 < 0.005)
@@ -438,6 +438,7 @@ class TestMEfromfile(unittest.TestCase):
         pythia=ON
         %(path)s/../madspin_card.dat
         set nevents 1000
+        set pdlabel cteq6l1
         launch -i
         decay_events run_01 
         %(path)s/../madspin_card2.dat

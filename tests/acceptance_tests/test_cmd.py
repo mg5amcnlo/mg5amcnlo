@@ -138,6 +138,7 @@ class TestCmdShell1(unittest.TestCase):
                     'madanalysis_path': './MadAnalysis', 
                     'cluster_temp_path': None, 
                     'fortran_compiler': None, 
+                    'cpp_compiler': None,
                     'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
                     'automatic_html_opening': True, 

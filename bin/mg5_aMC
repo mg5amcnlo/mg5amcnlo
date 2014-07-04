@@ -126,11 +126,13 @@ try:
             cmd_line = interface.MasterCmdWeb()
             cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
             cmd_line.use_rawinput = False
+            cmd_line.haspiping = False
             cmd_line.run_cmd('import ' + input_file)
             cmd_line.run_cmd('quit')
         else:
             cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
             cmd_line.use_rawinput = False
+            cmd_line.haspiping = False
             cmd_line.run_cmd('import ' + input_file)
             cmd_line.run_cmd('quit')
     else:
