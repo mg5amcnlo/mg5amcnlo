@@ -484,6 +484,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             if self.run_card['iappl'] != '0' and self.run_card['pdlabel'].lower() != 'lhapdf':
                 raise self.InvalidCmd('APPLgrid generation only possible with the use of LHAPDF')
+            if self.run_card['iappl'] != '0' and \
+                    banner_mod.RunCard.format('bool',run_card['reweight_scale']) == '.false.':
+                raise self.InvalidCmd('APPLgrid generation only possible with including' +\
+                                          ' the reweighting to get scale dependence')
 
             if amcatnlo and int(run_card['ickkw']) == 3:
                 # For FxFx merging, make sure that:
