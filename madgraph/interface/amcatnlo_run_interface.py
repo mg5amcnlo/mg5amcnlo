@@ -1558,7 +1558,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
                 os.system(applcomb + " -o "+ \
                               pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root") \
-                              + " -g "+str(unc2_inv)+ " --weight "+str(unc2_inv)+" "+gstring)
+                              + " -s "+str(unc2_inv)+ " --weight "+str(unc2_inv)+" "+gstring)
                 start_gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_in.root") \
                                             for job in all_jobs])
                 os.system("rm -f "+ start_gstring)
