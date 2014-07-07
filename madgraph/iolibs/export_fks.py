@@ -464,7 +464,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'appl_interface_dummy.f',
                      'appl_common.inc',
                      'reweight_appl.inc',
-                     'driver_vegas.f',
                      'driver_reweight.f',
                      'fastjetfortran_madfks_core.cc',
                      'fastjetfortran_madfks_full.cc',
