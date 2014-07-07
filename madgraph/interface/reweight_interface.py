@@ -163,7 +163,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     logger.info('Event nb %s %s' % (event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
-            #event.check() #check 4 momenta/...
+            event.check() #check 4 momenta/...
 
             sum_of_weight += event.wgt
             sum_of_abs_weight += abs(event.wgt)
