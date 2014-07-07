@@ -146,10 +146,10 @@
 #! Set what OLP to use for the loop ME generation
 # OLP = MadLoop
 
-# Set the PJFry++ lib libpjfry.a directory
-# if auto: try to find it automatically on the system (default)
-# if '' or None: not use PJFry++
-# if pjfry=/PATH/TO/pjfry/lib
+#! Set the PJFry++ lib libpjfry.a directory
+#! if auto: try to find it automatically on the system (default)
+#! if '' or None: not use PJFry++
+#! if pjfry=/PATH/TO/pjfry/lib: use that specific installation path for PJFry++
 # pjfry = auto
 
 #! Set how MadLoop dependencies (such as CutTools) should be handled
