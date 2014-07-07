@@ -2453,7 +2453,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
-                       'pjfry':None,
+                       'pjfry':'auto',
                        'lhapdf':'lhapdf-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
@@ -4983,9 +4983,9 @@ This implies that with decay chains:
                 value = value.strip()
                 if name != 'mg5_path':
                     self.options[name] = value
-                if value.lower() == "none":
+                if value.lower() == "none" or value=="":
                     self.options[name] = None
-                    
+
         self.options['stdout_level'] = logging.getLogger('madgraph').level
         if not final:
             return self.options # the return is usefull for unittest
@@ -5025,12 +5025,14 @@ This implies that with decay chains:
                         continue
 
             elif key == 'pjfry':
-                if self.options['pjfry'] == None:
+                if isinstance(self.options['pjfry'],str) and self.options['pjfry'].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('libpjfry.a')
                     if program != None:
                         fpath, fname = os.path.split(program)
                         self.options['pjfry']=fpath
+                    else:
+                        self.options['pjfry']=None
 
             elif key.endswith('path'):
                 pass
@@ -5535,6 +5537,7 @@ This implies that with decay chains:
             if program!=None:
                 res = 0
                 logger.info('set pjfry to %s' % args[1])
+                self.options[args[0]] = args[1]
             else:
                 res = 1
 

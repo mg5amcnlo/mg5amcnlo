@@ -1435,13 +1435,27 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     def link_TIR(self, targetPath,libpath,libname,tir_name='TIR'):
         """Link the TIR source directory inside the target path given
         in argument"""
-
-        if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
-            logger.warning("The %s tensor integration library could not be found"%tir_name\
-             +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
-             +" It will not be available.")
-            self.tir_available_dict[tir_name]=False
-            return ""
+        
+        if tir_name in ['pjfry']:
+            # not self-contained libraries
+            if (not isinstance(libpath,str)) or (not os.path.exists(libpath)) \
+            or (not os.path.isfile(pjoin(libpath,libname))):
+                if isinstance(libpath,str) and (not os.path.isfile(pjoin(libpath,libname))):
+                    # WARNING ONLY appears when the libpath is a wrong specific path.
+                    logger.warning("The %s tensor integration library could not be found"%tir_name\
+                                   +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+                                   +" It will not be available.")
+                self.tir_available_dict[tir_name]=False
+                return ""
+        else:
+            # self-contained libraries
+            if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
+                # WARNING ONLY appears when the libpath is a wrong specific path.
+                logger.warning("The %s tensor integration library could not be found"%tir_name\
+                               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+                               +" It will not be available.")
+                self.tir_available_dict[tir_name]=False
+                return ""
        
         if self.dependencies=='internal':
             if tir_name in ["pjfry"]:
