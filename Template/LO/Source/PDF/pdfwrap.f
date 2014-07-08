@@ -234,6 +234,35 @@ C
       asmz=0.130d0
       nloop=1
       Call SetCtq6(4)
+
+
+c---------------------------------------------------------------
+
+C
+C NNPDF2.3 sets
+C   1      NNPDF2.3QED LO  QCD+QED  alphas(MZ) = 0.119       NNPDF23_lo_as_0119_qed_mem0.grid 
+C   2      NNPDF2.3QED LO  QCD+QED  alphas(MZ) = 0.130       NNPDF23_lo_as_0130_qed_mem0.grid 
+C   3      NNPDF2.3QED NLO  QCD+QED  alphas(MZ) = 0.119       NNPDF23_nlo_as_0130_qed_mc_mem0.grid  -- Positive Definite set
+C
+      elseif (pdlabel .eq. 'nn23lo') then
+      call NNPDFDriver('NNPDF23_lo_as_0119_qed_mem0.grid')      
+      call NNinitPDF(0)
+      asmz=0.119d0
+
+      elseif (pdlabel .eq. 'nn23lo1') then
+      call NNPDFDriver('NNPDF23_lo_as_0130_qed_mem0.grid')      
+      call NNinitPDF(0)
+      asmz=0.130d0
+
+      elseif (pdlabel .eq. 'nn23nlo') then
+      call NNPDFDriver('NNPDF23nlo_as_0119_qed_mem0.grid')      
+      call NNinitPDF(0)
+      asmz=0.119d0
+
+c---------------------------------------------------------------
+c---------------------------------------------------------------
+
+
       else
           write(6,*) 'Unimplemented distribution= ',pdlabel
           write(6,*) 'Implemented are: ',
@@ -248,7 +277,8 @@ C
      .'cteq4a3,','cteq4a4,','cteq4a5,','cteq4hj,','cteq4lq,',
      .'cteq5_m,','cteq5_d,','cteq5_l,','cteq5hj,','cteq5hq,',
      .'cteq5f3,','cteq5f4,','cteq5m1,','ctq5hq1,','cteq5l1,',
-     .'cteq6_m,','cteq6_d,','cteq6_l,','cteq6l1,'
+     .'cteq6_m,','cteq6_d,','cteq6_l,','cteq6l1,',
+     .'nn23lo,','nn23lo1,','nn23nlo,'
 c
 c     make madgraph to stop evaluating
       stop 1

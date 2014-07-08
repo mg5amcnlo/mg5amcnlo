@@ -184,7 +184,7 @@ class Event:
 
     def get_particle_line(self,leg):
 
-        line=" %8d %2d %4d %4d %4d %4d %+13.7e %+13.7e %+13.7e %14.8e %14.8e %10.4e %10.4e" \
+        line=" %8d %2d %4d %4d %4d %4d %+18.11e %+18.11e %+18.11e %18.11e %18.11e %10.4e %10.4e" \
             % (leg["pid"], leg["istup"],leg["mothup1"],leg["mothup2"],\
                leg["colup1"],leg["colup2"],leg["momentum"].px,leg["momentum"].py,\
                 leg["momentum"].pz,leg["momentum"].E, leg["mass"],\
@@ -1293,7 +1293,7 @@ class width_estimate(object):
         to_decay = list(set(to_decay))
         
         if to_decay:
-            logger.info('We need to recalculate the branching fractions')
+            logger.info('We need to recalculate the branching fractions for %s' % ','.join(to_decay))
             if hasattr(self.model.get('particles')[0], 'partial_widths'):
                 logger.info('using the FeynRules formula present in the model (arXiv:1402.1178)')
             else:
@@ -1517,14 +1517,17 @@ class width_estimate(object):
         
         label2pid = self.label2pid
         pid2label = self.label2pid
-        
         for res in self.br.keys():
             particle=self.model.get_particle(label2pid[res])
             if particle['self_antipart']: 
                 continue
             anti_res=pid2label[-label2pid[res]]
             self.br[anti_res] = []
-            self.width_value[anti_res]=self.width_value[res]
+            if res in self.width_value: 
+                self.width_value[anti_res]=self.width_value[res]
+            elif anti_res in self.width_value:
+                self.width_value[res]=self.width_value[anti_res]
+                res, anti_res = anti_res, res
             for chan, decay in enumerate(self.br[res]):
                 self.br[anti_res].append({})
                 bran=decay['br']

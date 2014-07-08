@@ -194,7 +194,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         tool = 'MadLoop' if mode.startswith('ML5') else 'aMC@NLO'
         # The threshold for the triggering of the 'Warning difficult process'
         # message.
-        difficulty_threshold = 35
+        difficulty_threshold = 100
         # Check that we have something    
         if not proc:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
@@ -252,13 +252,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         logger.debug('Process difficulty estimation: %d'%proc_diff)
         if proc_diff >= difficulty_threshold:
             msg = """
-  The %s you attempt to generate 
-  appears to be of challenging difficulty.
-  It had probably never been tried by the authors and hence we cannot 
-  guarantee a correct behavior of the code in this context. Please visit
-  http://amcatnlo.cern.ch/list.htm for a list of processes we have 
-  validated. If your process does not appear and you have successfully
-  studied it with MadGraph5_aMC@NLO, please report it.
+  The %s you attempt to generate appears to be of challenging difficulty, but it will be tried anyway. If you have successfully studied it with MadGraph5_aMC@NLO, please report it.
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
@@ -562,7 +556,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if self._export_format in ['standalone']:
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,

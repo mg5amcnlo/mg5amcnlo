@@ -48,8 +48,7 @@
 #*********************************************************************
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
- 'cteq6l1'    = pdlabel     ! PDF set (lhapdf for using lhapdf)
-  10042        = lhaid      ! PDF number used ONLY for LHAPDF
+ 'nn23lo1'    = pdlabel     ! PDF set                                     
 #*********************************************************************
 # Renormalization and factorization scales                           *
 #*********************************************************************
@@ -70,6 +69,7 @@
  T        = pdfwgt           ! for ickkw=1, perform pdf reweighting
  5        = asrwgtflavor     ! highest quark flavor for a_s reweight
  T        = clusinfo         ! include clustering tag in output
+ 3.0      = lhe_version       ! Change the way clustering information pass to shower.        
 #*********************************************************************
 #**********************************************************
 #

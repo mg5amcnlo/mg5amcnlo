@@ -102,7 +102,7 @@ c $E$ input_file $E$
       read(15,*,err=20) xsec,xerr,xdum,xdum,xdum,xdum,xdum,xdum,xdum,rxsec
       write(*,*) "Results.dat xsec = ",rxsec," abs xsec = ",xsec
  20   close(15)
- 21   if (nreq .gt. 0 .and. xsec .gt. 0) then
+ 21   if (nreq .gt. 0 .and. xsec .ne. 0) then
          goal_wgt = xsec/nreq/4d0   !Extra factor of 4 for weighted events
       else
          goal_wgt = 0d0    !Write out everything
@@ -372,11 +372,12 @@ c     Now write out specific information on the event set
 c
 c
       write(lunw,'(a)') '<MGGenerationInfo>'
-      write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
-      write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
-      write(lunw,'(a30,e10.5)') '#  Max wgt                 :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Average wgt             :  ',wgt
+      write(lunw,'(a30,i11)')   '#  Number of Events        :  ',nevent
+      write(lunw,'(a30,e11.5)') '#  Integrated weight (pb)  :  ',sum
+      write(lunw,'(a30,e11.5)') '#  Max wgt                 :  ',maxwgt
+      write(lunw,'(a30,e11.5)') '#  Average wgt             :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
+
    
     
 
@@ -428,6 +429,14 @@ c
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
      &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
      &     xmaxup(maxpup),lprup(maxpup)
+
+c
+c     Flag on how to write the LHE events
+c     Include <clustering> tag for Pythia 8 CKKW-L matching
+c
+      logical clusinfo
+      double precision lhe_version
+      COMMON/TO_LHEFORMAT/lhe_version,clusinfo
 c
 c     Global
 c
@@ -476,10 +485,10 @@ c     Now write out specific information on the event set
 c
 
       write(lunw,'(a)') '<MGGenerationInfo>'
-      write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
-      write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
-      write(lunw,'(a30,e10.5)') '#  Truncated wgt (pb)      :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Unit wgt                :  ',wgt
+      write(lunw,'(a30,i11)')   '#  Number of Events        :  ',nevent
+      write(lunw,'(a30,e11.5)') '#  Integrated weight (pb)  :  ',sum
+      write(lunw,'(a30,e11.5)') '#  Truncated wgt (pb)      :  ',maxwgt
+      write(lunw,'(a30,e11.5)') '#  Unit wgt                :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
 
 C   Write out compulsory init info
@@ -490,6 +499,10 @@ C   Write out compulsory init info
       do i=1,nprup
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,sum/nevent,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
+      if (lhe_version.ge.3) then
+        write(lunw,'(a)') "<generator name='MadGraph5_aMC@NLO' version='X.X.X'>           "
+        write(lunw,'(a)') "please cite 1405.0301 </generator>"
+      endif
       write(lunw,'(a)') '</init>'
  90   FORMAT(2i9,2e19.11,2i2,2i8,i2,i4)
  91   FORMAT(3e19.11,i4)
