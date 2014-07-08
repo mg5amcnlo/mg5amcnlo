@@ -1632,7 +1632,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         reweight_cmd.check_events()
         
+    ############################################################################
+    def complete_check_events(self, text, line, begidx, endidx):
+        args = self.split_arg(line[0:begidx], error=False)
 
+        if len(args) == 1 and os.path.sep not in text:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','*events.lhe*'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            return  self.list_completion(text, data, line)
+        else:
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+
+        
 
 # lhapdf-related functions
     def link_lhapdf(self, libdir, extra_dirs = []):
