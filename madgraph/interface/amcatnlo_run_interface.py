@@ -2773,8 +2773,8 @@ Integrated cross-section
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             if self.shower_card['pdfcode']==1:
-                lhaid_list = [int(self.run_card['lhaid'])]
-                content += 'PDFCODE=%s\n' % self.run_card['lhaid']
+                lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+                content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
             else:
                 lhaid_list = [abs(int(self.shower_card['pdfcode']))]
                 content += 'PDFCODE=%s\n' % self.shower_card['pdfcode']

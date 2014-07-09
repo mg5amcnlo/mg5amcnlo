@@ -54,8 +54,8 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
- nn23nlo   = pdlabel   ! PDF set                                     
- 230000    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
+ nn23nlo   = pdlabel   ! PDF set
+ 244600    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
 # shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *

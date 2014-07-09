@@ -1,5 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.2.0(XX/XX/XX) RF: Corrected the behaviour of the pdfcode parameter in the shower_card for NLO+PS runs.
+
 2.1.2(03/07/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)
                 OM: Fixing a bug preventing MadWidth to run due to the model prefixing (depending
