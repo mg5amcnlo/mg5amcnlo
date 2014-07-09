@@ -87,6 +87,90 @@ class PolynomialRoutines(object):
 class FortranPolynomialRoutines(PolynomialRoutines):
     """ A daughter class to output the subroutine in the fortran format"""
     
+    def write_golem95_mapping(self):
+        """ Returns a fortran subroutine which fills in the array of tensorial
+        coefficients following golem95 standards using MadLoop coefficients."""
+
+        subroutines = []
+        
+        # Set number of space-time dimensions to 4 here
+        d = 4
+        golem_max_rank = 6
+
+        # First generate the block_info which contains information about the
+        # about the block structure of the system
+        block_info = {}
+        for R in range(1,self.max_rank+1):
+            for k in range(1,min(R,d)+1):
+                LHS, RHS, lst, dic = \
+                        FromGolem95FortranCodeGenerator.generate_equations(R, k)
+                block_info[(R,k)] = (lst, dic)
+     
+        # Helper function
+        def format_power(pow):
+            b, e = pow
+
+            if e == 1:
+                return str(b)
+            else:
+                return "%s^%d" % (b, e)
+                
+        # Write out one subroutine per rank
+        for R in range(min(self.max_rank+1,golem_max_rank+1)):
+            
+            lines=[]
+            
+            if R==0:
+                lines.append(
+                """SUBROUTINE %(sub_prefix)sFILL_GOLEM_COEFF_ARRAY_0(ML_COEFS,GOLEM_COEFS)
+                            use precision_golem, only: ki
+                            include 'coef_specs.inc'
+                            %(coef_format)s ML_COEFS(0:LOOP_MAXCOEFS-1)
+                            complex(ki) GOLEM_COEFS"""
+                %{'sub_prefix':self.sub_prefix,'coef_format':self.coef_format})
+                lines.append("GOLEM_COEFS=ML_COEFS(0)")
+                lines.append("end")
+                subroutines.append('\n'.join(lines))
+                continue
+            
+            # Start by writing out the header:
+            lines.append(
+              """SUBROUTINE %(sub_prefix)sFILL_GOLEM_COEFFS_%(rank)d(ML_COEFS,GOLEM_COEFS)
+                            use tens_rec, only: coeff_type_%(rank)d
+                            include 'coef_specs.inc'
+                            %(coef_format)s ML_COEFS(0:LOOP_MAXCOEFS-1)
+                            type(coeff_type_%(rank)d) GOLEM_COEFS"""
+                            %{'sub_prefix':self.sub_prefix,'rank':R,
+                                                'coef_format':self.coef_format})
+
+
+            # The constant coefficient is treated separately
+            lines.append("c Constant coefficient ")
+            lines.append("GOLEM_COEFS%%c0=ML_COEFS(%d)"\
+                                                 %self.pq.get_coef_position([]))            
+
+            # Now write out the explicit mapping
+            for k in range(1,min(R,d)+1):
+                lst, dic = block_info[(R,k)]
+                dim = len(lst)
+                lab = 0
+                for indices in FromGolem95FortranCodeGenerator.select(range(d), k):
+                    lab += 1
+                    sindices = map(lambda i: "q(%d)" % i, indices)
+                    for i in range(dim):
+                        coeff_str = "*".join(map(format_power,zip(sindices, lst[i])))
+                        ML_indices = sum(
+                          [[ind]*lst[i][j] for j, ind in enumerate(indices)],[])
+                        ML_coef_pos = self.pq.get_coef_position(ML_indices)
+                        ML_sign_convention = ' ' if len(ML_indices)%2==0 else '-'
+                        lines.append("c Coefficient %s"%coeff_str)
+                        lines.append("GOLEM_COEFS%%c%d(%d,%d)=%sML_COEFS(%d)"\
+                               % (k, lab, i+1, ML_sign_convention, ML_coef_pos))
+            
+            subroutines.append('\n'.join(lines+['end']))
+            
+        return '\n\n'.join(subroutines)
+    
     def write_wl_updater(self,r_1,r_2):
         """ Give out the subroutine to update a polynomial of rank r_1 with
         one of rank r_2 """
@@ -254,3 +338,165 @@ class FortranPolynomialRoutines(PolynomialRoutines):
         lines.append("END")
         
         return '\n'.join(lines)
+
+class FromGolem95FortranCodeGenerator():
+    """ Just a container class with helper functions taken from the script 
+    tens.py of golem which generates most of the golem95 tens_rec.f fortran
+    code."""
+    
+    PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29,
+       31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
+       73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
+       127, 131, 137, 139, 149, 151, 157, 163, 167, 173,
+       179, 181, 191, 193, 197, 199, 211, 223, 227, 229,
+       233, 239, 241, 251, 257, 263, 269, 271, 277, 281,
+       283, 293, 307, 311, 313, 317, 331, 337, 347, 349,
+       353, 359, 367, 373, 379, 383, 389, 397, 401, 409,
+       419, 421, 431, 433, 439, 443, 449, 457, 461, 463,
+       467, 479, 487, 491, 499, 503, 509, 521, 523, 541,
+       547, 557, 563, 569, 571, 577, 587, 593, 599, 601,
+       607, 613, 617, 619, 631, 641, 643, 647, 653, 659,
+       661, 673, 677, 683, 691, 701, 709, 719, 727, 733,
+       739, 743, 751, 757, 761, 769, 773, 787, 797, 809,
+       811, 821, 823, 827, 829, 839, 853, 857, 859, 863,
+       877, 881, 883, 887, 907, 911, 919, 929, 937, 941,
+       947, 953, 967, 971, 977, 983, 991, 997, 1009, 1013,
+       1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
+       1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151,
+       1153, 1163, 1171, 1181, 1187, 1193, 1201, 1213, 1217, 1223,
+       1229, 1231, 1237, 1249, 1259, 1277, 1279, 1283, 1289, 1291,
+       1297, 1301, 1303, 1307, 1319, 1321, 1327, 1361, 1367, 1373]
+
+    @classmethod    
+    def combinat(cls, n, k):
+        """
+            Calculates the binomial coefficient (n atop k).
+        """
+        if k < 0 or k > n:
+            return 0
+        else:
+            num = 1
+            den = 1
+            for i in range(1, k+1):
+                num *= n-i+1
+                den *= i
+            return num/den
+
+    @classmethod
+    def generate_mapping(cls, R, k):
+        """
+            Generates a mapping from tensor components \hat{C}(a_1, ..., a_k)
+            into a one dimensional array.
+    
+            PARAMETER
+    
+            R  -- rank
+            k  -- number of non-zero components of q
+    
+            RETURN
+    
+            (lst, dic)
+    
+            lst -- list of (a_1, ..., a_k)
+            dic -- mapping from (a_1, ..., a_k) -> int
+    
+            lst[dic[X]] = X if X in dic
+        """
+    
+        def rec_generator(k, R):
+            if k == 0:
+                yield []
+            elif k <= R:
+                for a_1 in range(1, R - (k - 1) + 1):
+                    if k > 1:
+                        for tail in rec_generator(k - 1, R - a_1):
+                            yield [a_1] + tail
+                    else:
+                        yield [a_1]
+        
+        lst = []
+        dic = {}
+        i = 0
+        for indices in rec_generator(k, R):
+            t = tuple(indices)
+            lst.append(t)
+            dic[t] = i
+            i += 1
+    
+        assert i == cls.combinat(R, k), \
+                "len(%s) != %d, R=%d,k=%d" % (lst,cls.combinat(R, k),R,k)
+        return lst, dic
+
+    @classmethod
+    def generate_equations(cls, R, k):
+        """
+            Generates a set of equations for a given number of non-zero
+            components and fixed maximum rank.
+        
+            PARAMETER
+    
+            R  -- rank
+            k  -- number of non-zero components of q
+    
+            RETURN
+    
+            (LHS, RHS)
+    
+            LHS -- a matrix (i.e. list of lists) of coefficients
+            RHS -- a list of values of q
+        """
+    
+        lst, dic = cls.generate_mapping(R, k)
+        l = len(lst)
+        LHS = []
+        RHS = []
+        for num_eq in range(l):
+            q = map(lambda i: cls.PRIMES[i], lst[num_eq])
+            coeffs = [
+                reduce(lambda x,y: x*y, map(lambda (b,e): b**e, zip(q, term)), 1)
+                for term in lst]
+            LHS.append(coeffs)
+            RHS.append(q)
+    
+        return LHS, RHS, lst, dic
+
+    @classmethod
+    def select(cls, items, k):
+        """
+        Iterator over all selections of k elements from a given list.
+    
+        PARAMETER
+    
+        items  --  list of elements to choose from (no repetitions)
+        k      --  number of elements to select.
+        """
+        n = len(items)
+        # We use the fact that
+        # (n choose k) = (1 choose 1)(n-1 choose k-1)+(1 choose 0)(n-1 choose k)
+        if k == n:
+            yield items[:]
+        elif k == 0:
+            yield []
+        elif 0 < k and k < n:
+            head = items[0:1]
+            tail = items[1:]
+            for result in cls.select(tail, k-1):
+                yield head + result
+            for result in cls.select(tail, k):
+                yield result
+                
+if __name__ == '__main__':
+    """I test here the write_golem95_mapping function"""
+    
+    max_rank=6
+    FPR=FortranPolynomialRoutines(max_rank)
+    print "Output of write_golem95_mapping function for max_rank=%d:\n\n"%max_rank
+
+    import os
+    import sys
+    root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+    sys.path.insert(0, os.path.join(root_path,os.path.pardir))
+    import madgraph.iolibs.file_writers as writers
+    FWriter = writers.FortranWriter("GOLEM95_interface.f")
+    FWriter.writelines(FPR.write_golem95_mapping())
+    
