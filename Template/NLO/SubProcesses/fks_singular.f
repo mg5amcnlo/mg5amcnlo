@@ -1159,8 +1159,9 @@ c MC stuff
       logical lzone(nexternal),flagmc
       logical MCcntcalled
 
-      double precision emsca,scalemax
-      common/cemsca/emsca,scalemax
+      double precision emsca,scalemin,scalemax,emsca_bare
+      logical emscasharp
+      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
 
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
@@ -1203,11 +1204,9 @@ c For tests
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
 
-      character*10 MonteCarlo
-      common/cMonteCarloType/MonteCarlo
-
+      double precision xm12
       integer ileg
-      common/cileg/ileg
+      common/cscaleminmax/xm12,ileg
 
       double precision ximin
       parameter(ximin=0.05d0)
@@ -1238,11 +1237,12 @@ c FxFx merging
       external setclscales,rewgt
 
       double precision rwgt_muR_dep_fac
+      double precision ddum(6)
+      logical ldum
 
       double precision pmass(nexternal)
       include "pmass.inc"
 
-      MonteCarlo=shower_mc
       vegas_weight=vegaswgt
 
 c If there was an exceptional phase-space point found for the 
@@ -2126,6 +2126,11 @@ c Apply the FxFx Sudakov damping on the S events
       deg_swgt = deg_swgt * enhanceS
 
 c Update the shower starting scale with the shape from montecarlocounter
+      if( (.not.MCcntcalled) .and.
+     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+         call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat,pp,ileg,
+     &     xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5),ddum(6),ldum)
+      endif
       if (.not.nbody) then
          call set_cms_stuff(mohdr)
          call set_shower_scale(nFKSprocess*2,.true.)
@@ -2433,26 +2438,24 @@ c based on previous PS points (done in BinothLHA.f)
       end
 
 
+
       subroutine set_shower_scale(iFKS,Hevents)
       implicit none
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
+      integer iFKS
       logical Hevents
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision dot,tmp
-      external dot
       double precision sqrtshat_ev,shat_ev
       common/parton_cms_ev/sqrtshat_ev,shat_ev
-      double precision emsca,scalemax
-      common/cemsca/emsca,scalemax
+      double precision emsca,scalemin,scalemax,emsca_bare
+      logical emscasharp
+      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
       character*4 abrv
-      common /to_abrv/ abrv
-      character*10 MonteCarlo
-      common/cMonteCarloType/MonteCarlo
+      common/to_abrv/abrv
       include 'nFKSconfigs.inc'
-      integer iFKS
       double precision SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
       double precision shower_S_scale(fks_configs*2)
@@ -2460,202 +2463,156 @@ c based on previous PS points (done in BinothLHA.f)
      &     ,pt_hardness
       common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
      &     ,pt_hardness
-      double precision xscalemax,xxscalemax
-      logical condition
-c
-      SCALUP(iFKS)=0d0
-      xscalemax=0d0
-      xxscalemax=0d0
-c
-      xscalemax=scalemax
-      condition=.not.Hevents
 
-      if(condition)then
-         if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid' .and.
-     &        emsca.ne.0d0)then
-            SCALUP(iFKS)=min(emsca,xscalemax)
+      double precision xm12
+      integer ileg
+      common/cscaleminmax/xm12,ileg
+
+c Initialise
+      SCALUP(iFKS)=0d0
+c S events
+      if(.not.Hevents)then
+         if(abrv.ne.'born'.and.abrv.ne.'grid'.and.
+     &      dampMCsubt.and.emsca.ne.0d0)then
+            SCALUP(iFKS)=min(emsca,scalemax)
          else
-            call assign_scalemax(shat_ev,xi_i_fks_ev,xxscalemax)
-            SCALUP(iFKS)=xxscalemax
+            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin,scalemax,ileg,xm12)
+            SCALUP(iFKS)=scalemax
          endif
+         SCALUP(iFKS)=min(SCALUP(iFKS),shower_S_scale(iFKS))
+c H events
       else
          if(dampMCsubt.and.emsca.ne.0d0)then
-            SCALUP(iFKS)=xscalemax
+            SCALUP(iFKS)=scalemax
          else
-            call assign_scalemax(shat_ev,xi_i_fks_ev,xxscalemax)
-            SCALUP(iFKS)=xxscalemax
+            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin,scalemax,ileg,xm12)
+            SCALUP(iFKS)=scalemax
          endif
+         SCALUP(iFKS)=min(SCALUP(iFKS),max(shower_H_scale(iFKS),
+     &                    ref_H_scale(iFKS)-min(emsca,scalemax)))
       endif
+c Minimal starting scale
+      SCALUP(iFKS)=max(SCALUP(iFKS),3d0)
 
-      if (Hevents) then
-         SCALUP(iFKS)=min(SCALUP(iFKS),max(shower_H_scale(iFKS)
-     &        ,ref_H_scale(iFKS)-min(emsca,scalemax)))
-      else
-         SCALUP(iFKS)=min(SCALUP(iFKS),shower_S_scale(iFKS))
-      endif
-
-c Always have a very small minimal starting scale
-      if (SCALUP(iFKS).lt.3d0) SCALUP(iFKS)=3d0
-c
       return
       end
 
 
       subroutine set_shower_scale_noshape(pp,iFKS)
       implicit none
-      integer iFKS,j,i
-      double precision sqrt2,pfrac
-      parameter (sqrt2=1.414213562373095d0)
-      parameter (pfrac=0.9d0)
+      integer iFKS,j,i,iSH,nmax
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
       include 'run.inc'
       include 'nFKSconfigs.inc'
-      integer izero,mohdr
-      parameter (izero=0)
-      parameter (mohdr=-100)
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
       double precision sqrtshat_ev,shat_ev
       common/parton_cms_ev/sqrtshat_ev,shat_ev
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
       double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
       common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
       double precision shower_S_scale(fks_configs*2)
      &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
      &     ,pt_hardness
       common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
      &     ,pt_hardness
-      double precision ptparton,pt,pp(0:3,nexternal)
+      double precision ptparton,pt,pp(0:3,nexternal),ppp(0:3,nexternal)
       external pt
 c jet cluster algorithm
       integer NN,NJET,JET(nexternal)
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal),rfj,sycut
-     $     ,palg,amcatnlo_fastjetdmergemax,di_ev(nexternal)
-     $     ,di_cnt(nexternal)
+     $     ,palg,amcatnlo_fastjetdmergemax,di(nexternal)
       external amcatnlo_fastjetdmergemax
-c FxFx
-      double precision rewgt,rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
-     $     ,rewgt_exp_izero
-      logical setclscales
-      external setclscales,rewgt
-      integer nFxFx_ren_scales
-      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
-      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
-     $     ,FxFx_fac_scale
-c
+
+c Initialise
       NN=0
-      do j=nincoming+1,nexternal
-         if (is_a_j(j)) then
+      ppp=0d0
+      pQCD=0d0
+      pt_hardness=0d0
+      do j=1,nexternal
+         if (j.gt.nincoming.and.is_a_j(j)) then
             NN=NN+1
             ptparton=pt(pp(0,j))
          endif
       enddo
-      if (NN.le.0) then
-         write (*,*) 'Error in set_shower_scale_noshape '/
-     &        /'not enough QCD partons in process',NN
+
+c Unphysical situation
+      if(NN.le.0)then
+         write(*,*)'Error in set_shower_scale_noshape:'
+         write(*,*)'not enough QCD partons in process ',NN
          stop
-      elseif (NN.eq.1) then
-c
-c For processes without jets at the Born
-c
-         pt_hardness=0d0
+c Processes without jets at the Born
+      elseif(NN.eq.1)then
          shower_S_scale(iFKS)=sqrtshat_cnt(0)
          shower_H_scale(iFKS)=sqrtshat_ev-ptparton
 c$$$         shower_H_scale(iFKS)=sqrtshat_cnt(0)
          ref_H_scale(iFKS)=0d0
+c Processes with jets at the Born (iSH = 1 (2) means S (H) events)
       else
-         pt_hardness=0d0        ! updated below if event exists
-c     
-c For processes with jets at the Born
-c Assign shower_S_scale:
-c
-         if (p_born(0,1).gt.0d0) then
-c Put all (light) QCD partons in momentum array for jet clustering.
-c Use here the Born momenta
-            NN=0
-            do j=nincoming+1,nexternal-1
-               if (is_a_j(j))then
-                  NN=NN+1
+         do iSH=1,2
+            if(iSH.eq.1)then
+               nmax=nexternal-1
+               do j=1,nmax
                   do i=0,3
-                     pQCD(i,NN)=p_born(i,j)
+                     ppp(i,j)=p_born(i,j)
                   enddo
-               endif
-            enddo
-c one MUST use kt, and no lower pt cut. The radius parameter
-c can be changed
-            palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
-            sycut=0.d0          ! minimum jet pt
-            rfj=1.0d0           ! the radius parameter
-            call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
-     $           pjet,njet,jet)
-            do i=1,NN
-               di_cnt(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
-               if(i.gt.1) then
-                  if (di_cnt(i).gt.di_cnt(i-1))then
-                     write (*,*) 'Error in set_shower_scale_noshape '/
-     &                    /'-- di_cnt(i) not ordered'
-                     write (*,*) NN,i,di_cnt(i),di_cnt(i-1)
+               enddo
+            elseif(iSH.eq.2)then
+               nmax=nexternal
+               do j=1,nmax
+                  do i=0,3
+                     ppp(i,j)=pp(i,j)
+                  enddo
+               enddo
+            else
+               write(*,*)'Wrong iSH inset_shower_scale_noshape: ',iSH
+               stop
+            endif
+            if(ppp(0,1).gt.0d0)then
+c Put all (light) QCD partons in momentum array for jet clustering.
+               NN=0
+               do j=nincoming+1,nmax
+                  if (is_a_j(j))then
+                     NN=NN+1
+                     do i=0,3
+                        pQCD(i,NN)=ppp(i,j)
+                     enddo
+                  endif
+               enddo
+c One MUST use kt, and no lower pt cut. The radius parameter can be changed
+               palg=1d0         ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+               sycut=0d0        ! minimum jet pt
+               rfj=1d0          ! the radius parameter
+               call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
+     &                                            pjet,njet,jet)
+               do i=1,NN
+                  di(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
+                  if (i.gt.1.and.di(i).gt.di(i-1))then
+                     write(*,*)'Error in set_shower_scale_noshape'
+                     write(*,*)NN,i,di(i),di(i-1)
                      stop
                   endif
+               enddo
+               if(iSH.eq.1)shower_S_scale(iFKS)=di(NN)
+               if(iSH.eq.2)then
+                  ref_H_scale(iFKS)=di(NN-1)
+                  pt_hardness=di(NN)
+c$$$                  shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
+                  shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness/2d0
                endif
-            enddo
-            shower_S_scale(iFKS)=di_cnt(NN)
-         else
-            shower_S_scale(iFKS)=sqrtshat_cnt(0)
-         endif
-c
-c Assign shower_H_scale:
-c
-         if (pp(0,1).gt.0d0) then
-c Put all (light) QCD partons in momentum array for jet clustering.
-c Use here the real-emission momenta
-            NN=0
-            do j=nincoming+1,nexternal
-               if (is_a_j(j))then
-                  NN=NN+1
-                  do i=0,3
-                     pQCD(i,NN)=pp(i,j)
-                  enddo
+            else
+               if(iSH.eq.1)shower_S_scale(iFKS)=sqrtshat_cnt(0)
+               if(iSH.eq.2)then
+                  ref_H_scale(iFKS)=shower_S_scale(iFKS)
+                  shower_H_scale(iFKS)=ref_H_scale(iFKS)
                endif
-            enddo
-c One MUST use kt, and no lower pt cut. The radius parameter
-c can be changed
-            palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
-            sycut=0.d0          ! minimum jet pt
-            rfj=1.0d0           ! the radius parameter
-            call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
-     $           pjet,njet,jet)
-            do i=1,NN
-               di_ev(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
-               if(i.gt.1) then
-                  if (di_ev(i).gt.di_ev(i-1)) then
-                     write (*,*) 'Error in set_shower_scale_noshape '/
-     &                    /'-- di_ev(i) not ordered'
-                     write (*,*) NN,i,di_ev(i),di_ev(i-1)
-                     stop
-                  endif
-               endif
-            enddo
-            ref_H_scale(iFKS)=di_ev(NN-1)
-            pt_hardness=di_ev(NN)
-c$$$            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
-            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness/2d0
-         else
-            ref_H_scale(iFKS)=shower_S_scale(iFKS)
-            shower_H_scale(iFKS)=ref_H_scale(iFKS)
-         endif
+            endif
+         enddo
       endif
+
       return
       end
 

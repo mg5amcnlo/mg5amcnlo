@@ -429,6 +429,14 @@ c
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
      &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
      &     xmaxup(maxpup),lprup(maxpup)
+
+c
+c     Flag on how to write the LHE events
+c     Include <clustering> tag for Pythia 8 CKKW-L matching
+c
+      logical clusinfo
+      double precision lhe_version
+      COMMON/TO_LHEFORMAT/lhe_version,clusinfo
 c
 c     Global
 c
@@ -491,6 +499,10 @@ C   Write out compulsory init info
       do i=1,nprup
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,sum/nevent,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
+      if (lhe_version.ge.3) then
+        write(lunw,'(a)') "<generator name='MadGraph5_aMC@NLO' version='X.X.X'>           "
+        write(lunw,'(a)') "please cite 1405.0301 </generator>"
+      endif
       write(lunw,'(a)') '</init>'
  90   FORMAT(2i9,2e19.11,2i2,2i8,i2,i4)
  91   FORMAT(3e19.11,i4)
