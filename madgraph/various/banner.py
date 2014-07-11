@@ -420,7 +420,7 @@ class Banner(dict):
                     raise                
         elif len(arg) == 2 and tag == 'slha':
             try:
-                return card[arg[0]].get(arg[1:]).value
+                return card[arg[0]].get(arg[1:])
             except KeyError:
                 if 'default' in opt:
                     return opt['default']
