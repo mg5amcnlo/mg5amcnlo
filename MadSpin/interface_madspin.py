@@ -285,7 +285,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not self.list_branches.has_key(init_part):
             self.list_branches[init_part] = []
         self.list_branches[init_part].append(decay_process)
-        print decay_process
         del decay_process, init_part    
         
     
@@ -503,7 +502,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         generate_all = save_load_object.load_from_file(pjoin(self.options['ms_dir'], 'madspin.pkl'))
         # Re-create information which are not save in the pickle.
         generate_all.evtfile = self.events_file
-        generate_all.curr_event = madspin.Event(self.events_file) 
+        generate_all.curr_event = madspin.Event(self.events_file, self.banner ) 
         generate_all.mgcmd = self.mg5cmd
         generate_all.mscmd = self 
         generate_all.pid2width = lambda pid: generate_all.banner.get('param_card', 'decay', abs(pid)).value
