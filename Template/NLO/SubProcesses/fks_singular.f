@@ -5592,6 +5592,7 @@ c Check to see if this channel needs to be included in the multi-channeling
          firsttime=.false.
       endif
 
+      call set_granny(nFKSprocess,iconfig)
       return
 
  99   continue
@@ -5606,6 +5607,116 @@ c Check to see if this channel needs to be included in the multi-channeling
       goto 12
       end
 
+      subroutine set_granny(nFKSprocess,iconfig)
+c This determines of the grandmother of the FKS pair is a resonance. If
+c so, set granny_is_res=.true. and also set to which internal propagator
+c the grandmother corresponds (igranny) as well as the aunt (iaunt).
+c This information can be used to improve the phase-space
+c parametrisation.
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+c common block that is filled by this subroutine
+      logical granny_is_res
+      integer igranny,iaunt
+      common /c_granny_res/igranny,iaunt,granny_is_res
+c other common blocks
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+c local 
+      logical firsttime_fks(fks_configs)
+      data firsttime_fks/fks_configs*.true./
+      integer i,imother
+c save
+      logical granny_is_res_fks(fks_configs)
+      integer igranny_fks(fks_configs),iaunt_fks(fks_configs)
+      save granny_is_res_fks,igranny_fks,iaunt_fks
+c itree info
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      include 'born_conf.inc'
+c propagator info
+      double precision zero
+      parameter (zero=0d0)
+      double precision pmass(-nexternal:0,lmaxconfigs)
+      double precision pwidth(-nexternal:0,lmaxconfigs)
+      integer pow(-nexternal:0,lmaxconfigs)
+      include 'coupl.inc'
+      include 'born_props.inc'
+c
+c If it's the firsttime going into this subroutine for this nFKSprocess,
+c save all the relevant information so that for later calls a simple
+c copy will do.
+      if (firsttime_fks(nFKSprocess)) then
+         firsttime_fks(nFKSprocess)=.false.
+c need to have at least 2->3 (or 1->3) process to have non-trivial
+c grandmother
+         if (nexternal-nincoming.lt.3) then
+            igranny_fks(nFKSprocess)=0
+            iaunt_fks(nFKSprocess)=0
+            granny_is_res_fks(nFKSprocess)=.false.
+            igranny=0
+            iaunt=0
+            granny_is_res=.false.
+            return
+c j_fks needs to be final state to have non-trivial grandmother
+         elseif (j_fks.le.nincoming) then
+            igranny_fks(nFKSprocess)=0
+            iaunt_fks(nFKSprocess)=0
+            granny_is_res_fks(nFKSprocess)=.false.
+            igranny=0
+            iaunt=0
+            granny_is_res=.false.
+            return
+         endif
+c determine if grandmother is an s-channel particle. If so, set igranny
+c and iaunt
+         imother=min(i_fks,j_fks)
+         do i=-1,-(nexternal-4),-1
+            if (iforest(1,i,iconfig).eq.imother) then
+               igranny_fks(nFKSprocess)=i
+               iaunt_fks(nFKSprocess)=iforest(2,i,iconfig)
+               exit
+            elseif (iforest(2,i,iconfig).eq.imother) then
+               igranny_fks(nFKSprocess)=i
+               iaunt_fks(nFKSprocess)=iforest(1,i,iconfig)
+               exit
+            elseif (iforest(1,i,iconfig).eq.1 .or.
+     &              iforest(1,i,iconfig).eq.2) then
+c no more s-channels, so exit the do-loop and set igranny=0
+               igranny_fks(nFKSprocess)=0
+               iaunt_fks(nFKSprocess)=0
+               exit
+            endif
+         enddo
+c if there is an s-channel grandmother, determine if it's a resonance
+         if (igranny_fks(nFKSprocess).ne.0) then
+            if (pmass(igranny_fks(nFKSprocess)).ne.0d0 .and.
+     $           pwidth(igranny_fks(nFKSprocess)).gt.0d0) then
+               granny_is_res_fks(nFKSprocess)=.true.
+            else
+               granny_is_res_fks(nFKSprocess)=.false.
+            endif
+         else
+            granny_is_res_fks(nFKSprocess)=.false.
+         endif
+      endif
+c Here is the simply copy for later calls to this subroutine: set
+c igranny, iaunt and granny_is_res from the saved information
+      if (granny_is_res_fks(nFKSprocess)) then
+         igranny=igranny_fks(nFKSprocess)
+         iaunt=iaunt_fks(nFKSprocess)
+         granny_is_res=.true.
+      else
+         igranny=0
+         iaunt=0
+         granny_is_res=.false.
+      endif
+      return
+      end
 
       subroutine get_helicity(i_fks,j_fks)
       implicit none
