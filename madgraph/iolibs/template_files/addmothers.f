@@ -423,7 +423,7 @@ c       Need to flip initial state color, since might be overwritten
               do i=3,nexternal
                  integ=''
                  float=''
-                 write(integ,'(i1)') i
+                 write(integ,'(i1)') i-2
                  Write(float,'(f16.10)') ptclus(i)
                  temp=trim(temp)//' pt_clust_'//integ//'="'//trim(adjustl(float))//'"'
               enddo
