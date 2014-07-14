@@ -29,8 +29,9 @@ define l- = e- mu-
 define vl = ve vm vt
 define vl~ = ve~ vm~ vt~
 # Specify process(es) to run
-generate p p > e- ve~ @1
-add process p p > e- ve~ j @2
-add process p p > t t~ @3
+generate u d~ > w+ d~ d @1
+#generate p p > e- ve~ @1
+#add process p p > e- ve~ j @2
+#add process p p > t t~ @3
 # Output processes to MadEvent directory
 output -f
