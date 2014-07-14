@@ -19,7 +19,7 @@
 #***********************************************************************
 # Number of events, jobs, errors, and random seeds                     *
 #***********************************************************************
-nevents      = -1     # N evts to shower (< 0 = all)
+nevts_shower = -1     # N evts to shower (< 0 = all)
 nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
 combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
 maxprint     = 2      # N evts to print in the log
@@ -53,8 +53,8 @@ b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
 #***********************************************************************
 # Special settings                                                     *
 #***********************************************************************
-is_4lep      = F    # T if 4-lepton production        !ONLY FOR PYTHIA6!
-is_bbar      = F    # T if bb~ production             !ONLY FOR HERWIG6!
+is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
+is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
 #***********************************************************************
 # Decay channels                                                       *
 # Write down the decay channels for the resonances, to be performed by *

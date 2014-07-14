@@ -291,12 +291,12 @@ then
     linklhapdf
   fi
 fi
-ERR_NUM_PY8=$(echo "$ERR_FR_PY8 * $NEVENTS" | bc)
+ERR_NUM_PY8=$(echo "$ERR_FR_PY8 * $NEVTS_SHOWER" | bc)
 ERR_NUM_PY8=${ERR_NUM_PY8/.*}
 let "ERR_NUM_PY8 += 1"
 
 echo " "
-echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
+echo "*****   Now ready for showering" $NEVTS_SHOWER "events with $MC_TYPE "
 echo " "
 runMCMadFKS
 teststatus runMC
@@ -316,7 +316,7 @@ cat <<EOF > $ifile
 
 ! 1) Settings used in the main program.
 Main:numberOfEvents = $NEVENTS_TOT    ! Number of events in the LHE file
-Main:spareMode1 = $NEVENTS            ! Number of events to be showered
+Main:spareMode1 = $NEVTS_SHOWER       ! Number of events to be showered
 Main:spareWord1 = $EVENT_NORM         ! Event weights are normalized to sum 
                                       ! or average to the cross section
 Main:timesAllowErrors = $ERR_NUM_PY8  ! Number of allowed errors

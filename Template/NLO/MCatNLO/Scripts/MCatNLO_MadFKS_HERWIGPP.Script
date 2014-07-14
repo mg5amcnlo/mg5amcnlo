@@ -275,7 +275,7 @@ runfile="MCATNLO_"$MCMODE
   # create executable if eveything is ok
   echo "#!/bin/bash" > $thisdir/$EXEC_NAMEFF
   echo "./Herwig++ read MCATNLO_"$MCMODE"_input" >> $thisdir/$EXEC_NAMEFF
-  echo "./Herwig++ run -N "$NEVENTS" "$runfile".run" >> $thisdir/$EXEC_NAMEFF
+  echo "./Herwig++ run -N "$NEVTS_SHOWER" "$runfile".run" >> $thisdir/$EXEC_NAMEFF
   chmod +x $thisdir/$EXEC_NAMEFF
 teststatus Compilation
 }
@@ -332,12 +332,12 @@ then
     linklhapdf
   fi
 fi
-ERR_NUM_HWPP=$(echo "$ERR_FR_HWPP * $NEVENTS" | bc)
+ERR_NUM_HWPP=$(echo "$ERR_FR_HWPP * $NEVTS_SHOWER" | bc)
 ERR_NUM_HWPP=${ERR_NUM_HWPP/.*}
 let "ERR_NUM_HWPP += 1"
 
 echo " "
-echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
+echo "*****   Now ready for showering" $NEVTS_SHOWER "events with $MC_TYPE "
 echo " "
 runMCMadFKS
 teststatus runMC
@@ -386,7 +386,7 @@ set /Herwig/EventHandlers/LHEHandler:DecayHandler /Herwig/Decays/DecayHandler
 insert /Herwig/EventHandlers/LHEHandler:PreCascadeHandlers 0 /Herwig/NewPhysics/DecayHandler
 
 set /Herwig/Generators/LHCGenerator:EventHandler /Herwig/EventHandlers/LHEHandler
-set /Herwig/Generators/LHCGenerator:NumberOfEvents $NEVENTS
+set /Herwig/Generators/LHCGenerator:NumberOfEvents $NEVTS_SHOWER
 set /Herwig/Generators/LHCGenerator:RandomNumberGenerator:Seed $RNDEVSEED_HWPP
 set /Herwig/Generators/LHCGenerator:PrintEvent $MAXPR_HWPP
 set /Herwig/Generators/LHCGenerator:MaxErrors $ERR_NUM_HWPP 
@@ -785,7 +785,7 @@ cat <<EOF >> ./$ifile
 # A HepMC dump file (requires --with-hepmc to be set at configure time)
 # insert LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
 insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
-set /Herwig/Analysis/HepMCFile:PrintEvent $NEVENTS
+set /Herwig/Analysis/HepMCFile:PrintEvent $NEVTS_SHOWER
 set /Herwig/Analysis/HepMCFile:Format GenEvent
 set /Herwig/Analysis/HepMCFile:Units GeV_mm
 

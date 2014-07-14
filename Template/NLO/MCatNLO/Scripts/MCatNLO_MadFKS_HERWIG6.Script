@@ -295,7 +295,7 @@ then
   fi
 fi
 echo " "
-echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
+echo "*****   Now ready for showering" $NEVTS_SHOWER "events with $MC_TYPE "
 echo " "
 runMCMadFKS
 teststatus runMC
@@ -311,7 +311,7 @@ fi
 
 cat <<EOF > ./$ifile 
  '$SCRTCH$EVPREFIX'               ! event file
-  $NEVENTS                        ! number of events
+  $NEVTS_SHOWER                   ! number of events
   $pdftype                        ! 0->Herwig PDFs, 1 otherwise
  '$PART1'  '$PART2'               ! hadron types
   $beammom1 $beammom2               ! beam momenta

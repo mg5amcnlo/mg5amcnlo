@@ -2173,7 +2173,7 @@ Integrated cross-section
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
-        logger.info('Prepairing MCatNLO run')
+        logger.info('Preparing MCatNLO run')
         try:
             misc.call(['gunzip', evt_file])
         except Exception:
@@ -2193,8 +2193,8 @@ Integrated cross-section
             self.shower_card['nsplit_jobs'] = 1
 
         # don't split jobs if the user asks to shower only a part of the events
-        if self.shower_card['nevents'] > 0 and \
-           self.shower_card['nevents'] < int(self.banner.get_detail('run_card', 'nevents')) and \
+        if self.shower_card['nevts_shower'] > 0 and \
+           self.shower_card['nevts_shower'] < int(self.banner.get_detail('run_card', 'nevents')) and \
            self.shower_card['nsplit_jobs'] != 1:
             logger.warning(\
                 'Only a part of the events will be showered.\n' + \
@@ -2696,7 +2696,7 @@ Integrated cross-section
         shower = self.banner.get('run_card', 'parton_shower').upper()
         pdlabel = self.banner.get('run_card', 'pdlabel')
         itry = 0
-        nevents = self.shower_card['nevents']
+        nevents = self.shower_card['nevts_shower']
         init_dict = self.get_init_dict(evt_file)
 
         if nevents < 0 or \
@@ -2712,7 +2712,7 @@ Integrated cross-section
             mcmass_dict[pdg] = mass
 
         content = 'EVPREFIX=%s\n' % pjoin(os.path.split(evt_file)[1])
-        content += 'NEVENTS=%d\n' % nevents
+        content += 'NEVTS_SHOWER=%d\n' % nevents
         content += 'NEVENTS_TOT=%d\n' % (int(self.banner.get_detail('run_card', 'nevents')) /\
                                              self.shower_card['nsplit_jobs'])
         content += 'MCMODE=%s\n' % shower
