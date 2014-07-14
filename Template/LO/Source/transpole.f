@@ -165,7 +165,6 @@ c     random number) would have been used to get that value of y.
 c     it also returns the jacobian associated with this choice.
 c**********************************************************************
       implicit none
-      include 'genps.inc'
 c
 c     Constants
 c
@@ -183,6 +182,8 @@ c
       double precision z,zmin,zmax,xmin,xmax,ez
       double precision pole,width,y,xc
       double precision a,b
+      double precision xgmin,xgmax       ! these should be identical 
+      parameter (xgmin=-1d0, xgmax=1d0)  ! to the ones in genps.inc
 c-----
 c  Begin Code
 c-----
