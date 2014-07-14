@@ -316,7 +316,6 @@ cat <<EOF > ./$ifile
  '$PART1'  '$PART2'               ! hadron types
   $beammom1 $beammom2               ! beam momenta
   $LHSOFT                         ! Underlying event on (.TRUE.) or off (.FALSE.)
-  $MODBOS_1 $MODBOS_2             ! Gauge boson decay modes
 EOF
 if [ $pdftype = 1 ]
 then
