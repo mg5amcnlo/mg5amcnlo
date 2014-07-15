@@ -2942,8 +2942,6 @@ Integrated cross-section
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
         njob_split = 0
         self.ijob = 0
-        if self.cluster_mode == 0:
-            self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
 
         #  this is to keep track, if splitting evt generation, of the various 
         # folders/args in order to resubmit the jobs if some of them fail
