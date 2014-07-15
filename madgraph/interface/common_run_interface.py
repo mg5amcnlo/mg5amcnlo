@@ -1943,6 +1943,27 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if var in self.run_card:
                     self.conflict.append(var)
 
+
+        #check if shower_card is present:
+        self.has_shower = False
+        if 'shower_card.dat' in cards:
+            self.has_shower = True
+            try:
+                import madgraph.various.shower_card as showercards
+            except:
+                import internal.shower_card as showercards
+            self.shower_card = showercards.ShowerCard(pjoin(self.me_dir,'Cards','shower_card.dat'))
+            self.shower_vars = self.shower_card.keys()
+            
+            # check for conflict with run_card/param_card
+            for var in self.pname2block:                
+                if var in self.shower_vars:
+                    self.conflict.append(var)           
+            for var in self.shower_vars:
+                if var in self.run_card:
+                    self.conflict.append(var)
+
+
     def complete_set(self, text, line, begidx, endidx):
         """ Complete the set command"""
 
@@ -1959,10 +1980,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if args[-1] in ['Auto', 'default']:
             return
         if len(args) == 1:
-            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':'',}
+            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':''}
             if self.has_mw:
                 allowed['madweight_card'] = ''
                 allowed['mw_block'] = 'all'
+            if self.has_shower:
+                allowed['shower_card'] = ''
         elif len(args) == 2:
             if args[1] == 'run_card':
                 allowed = {'run_card':'default'}
@@ -1976,14 +1999,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'madweight_card':'default', 'mw_block': 'all'}
             elif self.has_mw and args[1] in self.mw_card.keys():
                 allowed = {'mw_block':args[1]}
+            elif args[1] == 'shower_card':
+                allowed = {'shower_card':'default'}
             else:
                 allowed = {'value':''}
         else:
             start = 1
-            if args[1] in  ['run_card', 'param_card', 'MadWeight_card']:
+            if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card']:
                 start = 2
             if args[-1] in self.pname2block.keys():
-                allowed['value'] = 'default'   
+                allowed['value'] = 'default'
             elif args[start] in self.param_card.keys() or args[start] == 'width':
                 if args[start] == 'width':
                     args[start] = 'decay'
@@ -2006,6 +2031,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             categories = ['run_card', 'param_card']
             if self.has_mw:
                 categories.append('MadWeight_card')
+            if self.has_shower:
+                categories.append('shower_card')
             
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -2029,6 +2056,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 opts.append('default')
             possibilities['MadWeight Card'] = self.list_completion(text, opts)            
                                 
+        if 'shower_card' in allowed.keys():
+            opts = self.shower_vars + [k for k in self.shower_card.keys() if k !='comment']
+            if allowed['shower_card'] == 'default':
+                opts.append('default')
+            possibilities['Shower Card'] = self.list_completion(text, opts)            
+
         if 'value' in allowed.keys():
             opts = ['default']
             if 'decay' in args:
@@ -2036,7 +2069,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
                 opts.append('Auto')
             possibilities['Special Value'] = self.list_completion(text, opts)
-
 
         if 'block' in allowed.keys():
             if allowed['block'] == 'all':
@@ -2127,7 +2159,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             args[0] = 'MadWeight_card'
         
-        if args[0] in ['run_card', 'param_card', 'MadWeight_card']:                                    
+        if args[0] == 'shower_card':
+            if not self.shower_card:
+                logger.warning('Invalid Command: No Shower card defined.')
+                return
+            args[0] = 'shower_card'
+
+
+        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card']:
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
                 files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
@@ -2300,6 +2339,38 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             value = args[start+2]
             self.setM(block, name, value)
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
+
+        #### SHOWER CARD
+        if args[start] in [l.lower() for l in self.shower_card.keys()] and card in ['', 'shower_card']:
+            if args[start] not in self.shower_card:
+                args[start] = [l for l in self.shower_card if l.lower() == args[start]][0]
+
+            if args[start+1] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+
+            if args[start+1] == 'default':
+                default = madgraph.various.shower_card.ShowerCard(pjoin(self.me_dir,'Cards','shower_card_default.dat'))
+                if args[start] in default.keys():
+                    self.setS(args[start],default[args[start]])
+                else:
+                    logger.info('remove information %s from the shower_card' % args[start])
+                    del self.shower_card[args[start]]
+            elif  args[start+1].lower() in ['t','.true.','true']:
+                self.setS(args[start], '.true.')
+            elif  args[start+1].lower() in ['f','.false.','false']:
+                self.setS(args[start], '.false.')
+            else:
+                try:
+                    val = eval(args[start+1])
+                except NameError:
+                    val = args[start+1]
+                self.setS(args[start], val)
+                
+                shower = self.run_card['parton_shower'].upper()
+                self.shower_card.write_card(shower,pjoin(self.me_dir,'MCatNLO','shower_card_set.dat'))
+
         #INVALID --------------------------------------------------------------
         else:
             logger.warning('invalid set command %s ' % line)
@@ -2337,6 +2408,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def setR(self, name, value):
         logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
         self.run_card[name] = value
+
+    def setS(self, name, value):
+        logger.info('modify parameter %s of the shower_card.dat to %s' % (name, value))
+        self.shower_card[name] = value
 
     def setP(self, block, lhaid, value):
         if isinstance(value, str):
