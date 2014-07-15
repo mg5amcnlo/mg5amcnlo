@@ -2341,7 +2341,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
 
         #### SHOWER CARD
-        if args[start] in [l.lower() for l in self.shower_card.keys()] and card in ['', 'shower_card']:
+        elif args[start] in [l.lower() for l in self.shower_card.keys()] and card in ['', 'shower_card']:
             if args[start] not in self.shower_card:
                 args[start] = [l for l in self.shower_card if l.lower() == args[start]][0]
 
