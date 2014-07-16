@@ -234,22 +234,10 @@ c                                            particle in pQCD, which doesn't
 c                                            necessarily correspond to the particle
 c                                            label in the process
 c
-         call amcatnlo_fastjetppgenkt_timed(pQCD,nQCD,rfj,sycut,palg,
-     $        pjet,njet,jet)
+         call amcatnlo_fastjetppgenkt_etamax_timed(
+     $    pQCD,nQCD,rfj,sycut,etaj,palg,pjet,njet,jet)
 c
 c******************************************************************************
-
-c Apply the maximal pseudo-rapidity cuts on the jets:      
-         if (etaj.gt.0d0) then 
-c Count the number of jets that pass the pseud-rapidity cut
-            njet_eta=0
-            do i=1,njet
-               if (abs(eta(pjet(0,i))).lt.ETAJ) then
-                  njet_eta=njet_eta+1
-               endif
-            enddo
-            njet=njet_eta
-         endif
 
 c Apply the jet cuts
          if (njet .ne. nQCD .and. njet .ne. nQCD-1) then

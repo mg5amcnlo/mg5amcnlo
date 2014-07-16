@@ -55,6 +55,7 @@ class TestMECmdShell(unittest.TestCase):
     def setUp(self):
         
         self.tmpdir = tempfile.mkdtemp(prefix='amc')
+        self.tmpdir = "/tmp/"
         # if we need to keep the directory for testing purpose
         #if os.path.exists(self.tmpdir):
         #    shutil.rmtree(self.tmpdir)
@@ -62,8 +63,8 @@ class TestMECmdShell(unittest.TestCase):
         self.path = pjoin(self.tmpdir,'MGProcess')
         
     def tearDown(self):
-        
-        shutil.rmtree(self.tmpdir)
+        pass
+        #shutil.rmtree(self.tmpdir)
     
     
     def generate(self, process, model, multiparticles=[]):
@@ -100,9 +101,9 @@ class TestMECmdShell(unittest.TestCase):
         interface.onecmd('output %s -f' % self.path)
         proc_card = open('%s/Cards/proc_card_mg5.dat' % self.path).read()
         self.assertTrue('generate' in proc_card or 'add process' in proc_card)
-        
+        run_cmd('set automatic_html_opening False --no_save')
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '%s' % self.path)
-        self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
+        self.cmd_line.run_cmd('set automatic_html_opening False --no_save')
         self.assertFalse(self.cmd_line.options['automatic_html_opening'])
 
     @staticmethod
@@ -192,10 +193,10 @@ class TestMECmdShell(unittest.TestCase):
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue('    1   = lpp' in card)
         self.assertTrue('6500   = ebeam' in card)
-        self.assertTrue('cteq6_m   = pdlabel' in card)
+        self.assertTrue('nn23nlo   = pdlabel' in card)
         card = card.replace('    1   = lpp', '    0   = lpp')
         card = card.replace('6500   = ebeam', ' 500   = ebeam')
-        card = card.replace('cteq6_m   = pdlabel', '\'lhapdf\' = pdlabel')
+        card = card.replace('nn23nlo   = pdlabel', '\'lhapdf\' = pdlabel')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
 
         self.do('calculate_xsect -f LO')
@@ -306,7 +307,7 @@ class TestMECmdShell(unittest.TestCase):
                     os.system('rm -rf %s/Events/run_01' % self.path)
                     os.system('rm -rf %s/Events/run_01_LO' % self.path)                        
                     self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '%s' % self.path)
-                    self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
+                    self.cmd_line.run_cmd('set automatic_html_opening False --no_save')
 
                     card = open('%s/Cards/run_card_default.dat' % self.path).read()
                     self.assertTrue( '10000 = nevents' in card)
@@ -410,14 +411,14 @@ class TestMECmdShell(unittest.TestCase):
 
     def test_generate_events_shower_scripts(self):
         """test if the generate_events and successively the shower script in 
-        the bin directory works fine"""
-        
+        the bin directory works fine.
+        Also check the splitting of the shower for bot hep and top output"""
+
         self.generate_production()
         # to check that the cleaning of files work well
         os.system('touch %s/SubProcesses/P0_udx_epve/GF1' % self.path)
         self.do('quit')
-        misc.call([pjoin('.','bin','generate_events'), '-f'], cwd='%s' % self.path,
-                stdout = open(os.devnull, 'w'))
+        self.cmd_line.run_cmd('generate_events -f')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
@@ -437,6 +438,32 @@ class TestMECmdShell(unittest.TestCase):
                         os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path))
         self.assertTrue(os.path.getsize('%s/Events/run_01/events_HERWIG6_1.hep.gz' % self.path) > \
                         os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path))
+
+        #splitting of the shower
+        # 1) hep output
+        shower_card = open('%s/Cards/shower_card.dat' % self.path).read()
+        shower_card = shower_card.replace('nsplit_jobs= 1', 'nsplit_jobs= 4')
+        open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
+        self.cmd_line.run_cmd('shower run_01 -f')
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__1.hep.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__2.hep.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__3.hep.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__4.hep.gz' % self.path))
+
+        # 2) top output
+        shower_card = shower_card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   =')  
+        shower_card = shower_card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwan_pp_lvl.o mcatnlo_hbook_gfortran8.o')  
+        open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
+        self.cmd_line.run_cmd('shower run_01 -f')
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.tar.gz' % self.path))
+        self.assertFalse(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__1.top' % self.path))
+        misc.call(['tar', '-xzpvf', '%s/Events/run_01/plot_HERWIG6_1_0.tar.gz' % self.path],
+                  cwd='%s/Events/run_01/'% self.path,
+                  stdout = open(os.devnull, 'w'))
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__1.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__2.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__3.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__4.top' % self.path))
 
 
     def test_generate_events_name(self):
@@ -741,7 +768,7 @@ class TestMECmdShell(unittest.TestCase):
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         # warning, delta may not be compatible with python 2.6 
         try:
-            self.assertAlmostEqual(6699.0, cross_section,delta=50)
+            self.assertAlmostEqual(6754.0, cross_section,delta=50)
         except TypeError:
             self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 

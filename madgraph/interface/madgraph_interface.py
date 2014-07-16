@@ -163,29 +163,8 @@ class CmdExtended(cmd.Cmd):
 
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
-        self.history_header = \
-        '#************************************************************\n' + \
-        '#*                     MadGraph5_aMC@NLO                    *\n' + \
-        '#*                                                          *\n' + \
-        "#*                *                       *                 *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                    * * * * 5 * * * *                     *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                *                       *                 *\n" + \
-        "#*                                                          *\n" + \
-        "#*                                                          *\n" + \
-        info_line + \
-        "#*                                                          *\n" + \
-        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
-        '#*                                                          *\n' + \
-        '#************************************************************\n' + \
-        '#*                                                          *\n' + \
-        '#*               Command File for MadGraph5_aMC@NLO         *\n' + \
-        '#*                                                          *\n' + \
-        '#*     run as ./bin/mg5_aMC  filename                       *\n' + \
-        '#*                                                          *\n' + \
-        '#************************************************************\n'
+        self.history_header = banner_module.ProcCard.history_header % {'info_line': info_line}
+        banner_module.ProcCard.history_header = self.history_header
 
         if info_line:
             info_line = info_line[1:]
@@ -2151,6 +2130,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                           'CRITICAL','default'])
             elif args[1] == 'fortran_compiler':
                 return self.list_completion(text, ['f77','g77','gfortran','default'])
+            elif args[1] == 'cpp_compiler':
+                return self.list_completion(text, ['g++', 'c++', 'clang', 'default'])
             elif args[1] == 'nb_core':
                 return self.list_completion(text, [str(i) for i in range(100)] + ['default'] )
             elif args[1] == 'run_mode':
@@ -2383,6 +2364,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
+                    'cpp_compiler',
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge']
@@ -2407,6 +2389,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'cpp_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
@@ -5311,7 +5294,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             if res != 0 or error:
                 logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). We will use fjcore instead. Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                 'executable (v3+). We will use fjcore instead.\n Please set the \'fastjet\'' + \
+                 'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).' +
+                        '\n MG5_aMC> set fastjet /PATH/TO/fastjet-config\n')
                 self.options[args[0]] = None
                 self.history.pop()
             elif int(output.split('.')[0]) < 3:
@@ -5333,8 +5318,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 1
             if res != 0:
                 logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
-                        'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+                        'executable. \nPlease set the \'lhapdf\' variable to the (absolute) ' + \
+                        '/PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
+                        ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
                          'cluster_retry_wait']:
@@ -5818,13 +5805,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
+            compiler_dict = {'fortran': self.options['fortran_compiler'],
+                             'cpp': self.options['cpp_compiler']}
+
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'],
+                                           compiler_dict,
               output_dependencies = self.options['output_dependencies'],
                                            MG5DIR = MG5DIR)
             # Create configuration file [path to executable] for amcatnlo
@@ -5849,7 +5838,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,
@@ -5885,7 +5873,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
 
     # Calculate decay width
-    def do_compute_widths(self, line, model=None):
+    def do_compute_widths(self, line, model=None, do2body=True):
         """Documented commands:Generate amplitudes for decay width calculation, with fixed
            number of final particles (called level)
            syntax; compute_widths particle [other particles] [--options=]
@@ -5944,48 +5932,51 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         data = model.set_parameters_and_couplings(opts['path'])
 
         # find UFO particles linked to the require names.
-        skip_2body = True
-        decay_info = {}
-        for pid in particles:
-            particle = model.get_particle(pid)
-            if not hasattr(particle, 'partial_widths'):
-                skip_2body = False
-                break
-            elif not decay_info:
-                logger_mg.info('Get two body decay from FeynRules formula')
-            decay_info[pid] = []
-            mass = abs(eval(str(particle.get('mass')), data).real)
-            data = model.set_parameters_and_couplings(opts['path'], scale= mass)
-            total = 0
-
-            for mode, expr in particle.partial_widths.items():
-                tmp_mass = mass
-                for p in mode:
-                    try:
-                        tmp_mass -= abs(eval(str(p.mass), data))
-                    except Exception:
-                        tmp_mass -= abs(eval("mdl_"+str(p.mass), data))
-                if tmp_mass <=0:
-                    continue
-
-                decay_to = [p.get('pdg_code') for p in mode]
-                value = eval(expr,{'cmath':cmath},data).real
-                if -1e-10 < value < 0:
-                    value = 0
-                if -1e-5 < value < 0:
-                    logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
-                    value = 0
-                elif value < 0:
-                    raise Exception, 'Partial width for %s > %s negative: %s' % \
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
-                decay_info[particle.get('pdg_code')].append([decay_to, value])
-                total += value
+        if do2body:
+            skip_2body = True
+            decay_info = {}
+            for pid in particles:
+                particle = model.get_particle(pid)
+                if not hasattr(particle, 'partial_widths'):
+                    skip_2body = False
+                    break
+                elif not decay_info:
+                    logger_mg.info('Get two body decay from FeynRules formula')
+                decay_info[pid] = []
+                mass = abs(eval(str(particle.get('mass')), data).real)
+                data = model.set_parameters_and_couplings(opts['path'], scale= mass)
+                total = 0
+    
+                for mode, expr in particle.partial_widths.items():
+                    tmp_mass = mass
+                    for p in mode:
+                        try:
+                            tmp_mass -= abs(eval(str(p.mass), data))
+                        except Exception:
+                            tmp_mass -= abs(eval("mdl_"+str(p.mass), data))
+                    if tmp_mass <=0:
+                        continue
+    
+                    decay_to = [p.get('pdg_code') for p in mode]
+                    value = eval(expr,{'cmath':cmath},data).real
+                    if -1e-10 < value < 0:
+                        value = 0
+                    if -1e-5 < value < 0:
+                        logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
+                                       (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
+                        value = 0
+                    elif value < 0:
+                        raise Exception, 'Partial width for %s > %s negative: %s' % \
+                                       (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
+                    decay_info[particle.get('pdg_code')].append([decay_to, value])
+                    total += value
+            else:
+                madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,
+                                                       opts['path'], opts['output'])
+                if float(opts['body_decay']) == 2:
+                    return
         else:
-            madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,
-                                                   opts['path'], opts['output'])
-            if float(opts['body_decay']) == 2:
-                return
+            skip_2body = True
 
         #
         # add info from decay module
@@ -6142,7 +6133,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     if amp:
                         self._curr_amps.extend(amp)
                 clevel = 2
-                while part.get('apx_decaywidth_err') > precision:
+                while part.get('apx_decaywidth_err').real > precision:
                     clevel += 1
                     if clevel > max_level:
                         logger_mg.info('    stop to %s body-decay. approximate error: %s' %

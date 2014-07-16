@@ -307,7 +307,7 @@ c     gluon -> quark anti-quark: use both, but take hardest as 1
             idgluon = ida2
             idother = ida1
          endif
-         if (isqcd(idother))then
+         if (isqcd(iddother))then
 c        gluon -> gluon + scalar octet Choose hardest one
             if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
      $         p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then

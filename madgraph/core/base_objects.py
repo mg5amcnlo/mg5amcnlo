@@ -1445,30 +1445,31 @@ class Model(PhysicsObject):
                              name, value in self['parameter_dict'].items())
             self['parameter_dict'] = new_dict
         
-        rep_pattern = re.compile('\\b%s\\b'% (re_expr % ('\\b|\\b'.join(to_change))))
-        
-        # change parameters
-        for key in keys:
-            if key == ('external',):
-                continue
-            for param in self['parameters'][key]:
-                param.expr = rep_pattern.sub(replace, param.expr)
-        # change couplings
-        for key in self['couplings'].keys():
-            for coup in self['couplings'][key]:
-                coup.expr = rep_pattern.sub(replace, coup.expr)
-                
-        # change mass/width
-        for part in self['particles']:
-            if str(part.get('mass')) in to_change:
-                part.set('mass', rep_pattern.sub(replace, str(part.get('mass'))))
-            if str(part.get('width')) in to_change:
-                part.set('width', rep_pattern.sub(replace, str(part.get('width'))))  
-            if  hasattr(part, 'partial_widths'):
-                for key, value in part.partial_widths.items():
-                    print value
-                    print part.partial_widths
-                    part.partial_widths[key] = rep_pattern.sub(replace, value)
+        i=0
+        while i*1000 <= len(to_change): 
+            one_change = to_change[i*1000: min((i+1)*1000,len(to_change))]
+            i+=1
+            rep_pattern = re.compile('\\b%s\\b'% (re_expr % ('\\b|\\b'.join(one_change))))
+            
+            # change parameters
+            for key in keys:
+                if key == ('external',):
+                    continue
+                for param in self['parameters'][key]:
+                    param.expr = rep_pattern.sub(replace, param.expr)
+            # change couplings
+            for key in self['couplings'].keys():
+                for coup in self['couplings'][key]:
+                    coup.expr = rep_pattern.sub(replace, coup.expr)
+                    
+            # change mass/width
+            for part in self['particles']:
+                if str(part.get('mass')) in one_change:
+                    part.set('mass', rep_pattern.sub(replace, str(part.get('mass'))))
+                if str(part.get('width')) in one_change:
+                    part.set('width', rep_pattern.sub(replace, str(part.get('width'))))  
+                if  hasattr(part, 'partial_widths'):
+                    for key, value in part.partial_widths.items():                        part.partial_widths[key] = rep_pattern.sub(replace, value)
                 
         #ensure that the particle_dict is up-to-date
         self['particle_dict'] =''
@@ -2026,7 +2027,7 @@ class Vertex(PhysicsObject):
 
         if ninitial == 1:
             # For one initial particle, all legs are s-channel
-            # Only need to flip particle id if state is False
+            # Only need to flip particle id if state is False            
             if leg.get('state') == True:
                 return leg.get('id')
             else:

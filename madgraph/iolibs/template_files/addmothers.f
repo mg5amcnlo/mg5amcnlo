@@ -68,6 +68,8 @@ c     Variables for combination of color indices (including multipart. vert)
       
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
+      CHARACTER temp*600,temp0*7,integ*1,float*18
+      CHARACTER(LEN=45*nexternal) ptclusstring
 
 C     iproc has the present process number
       integer imirror, iproc
@@ -412,9 +414,25 @@ c       Need to flip initial state color, since might be overwritten
         endif
 
         if(ickkw.gt.0) then
-           write(cform,'(a4,i2,a6)') '(a1,',max(nexternal,10),'e15.7)'
-           write(buff,cform) '#',(ptclus(i),i=3,nexternal)
+            if (lhe_version.lt.3d0) then
+              write(cform,'(a4,i2,a6)') '(a1,',max(nexternal,10),'e15.7)'
+              write(buff,cform) '#',(ptclus(i),i=3,nexternal)
+           else if(nexternal.gt.2)then
+              temp0='<scales '
+              temp=''	
+              do i=3,nexternal
+                 integ=''
+                 float=''
+                 write(integ,'(i1)') i
+                 Write(float,'(f16.10)') ptclus(i)
+                 temp=trim(temp)//' pt_clust_'//integ//'="'//trim(adjustl(float))//'"'
+              enddo
+              ptclusstring=trim(adjustl(temp0//trim(temp)//'></scales>'))
+c             write(*,*)'WRITING THE ptclusscale:',trim(adjustl(ptclusstring))
+              write(buff,'(a)') trim(adjustl(ptclusstring))
+           endif
         endif
+
         npart = nexternal+nres
 
       return
@@ -914,6 +932,69 @@ c     Find "maximum" pairs with minimum 3 and 3bar
      $        allpairs(1,i).ne.max3)
      $        min3=allpairs(1,i)
       enddo
+
+c     Check that the pair are indeed different. Might not be the case if
+c     The process contains some epsilon_ijk somewhere else.
+      if (i3bar.gt.1.and.i3.gt.1)then
+      if (max3bar.eq.min3bar)then
+c        try to change min3bar
+         min3bar=10000
+         do i=1,npairs
+c          search a new pair but with a different index!
+           if(allpairs(1,i).eq.max3.and.
+     $        allpairs(2,i).lt.min3bar.and.
+     $        allpairs(2,i).ne.max3bar)then
+              min3bar=allpairs(2,i)
+              endif
+         enddo
+c        check if we found a new one. If not try to change the other index (max3bar)
+         if (min3bar.eq.10000)then
+            min3bar = max3bar
+            max3bar = 0
+c           search a new pair but with a different index!
+            do i=1,npairs
+               if(allpairs(1,i).eq.min3.and.
+     $              allpairs(2,i).gt.max3bar.and.
+     $              allpairs(2,i).ne.min3bar) then
+                  max3bar = allpairs(2,i)
+               endif
+            enddo
+c           This should not happen.
+            if (max3bar.eq.0)then
+               write(*,*) "colorflow problem"
+               stop 3
+            endif
+         endif
+      endif
+c     Doing the same but for the color index.
+      if (max3.eq.min3)then
+c        try to change min3
+         min3=10000
+         do i=1,npairs
+           if(allpairs(2,i).eq.max3bar.and.
+     $        allpairs(1,i).lt.min3.and.
+     $        allpairs(1,i).ne.max3)then
+              min3=allpairs(1,i)
+              endif
+         enddo
+         if (min3.eq.10000)then
+            min3 = max3 ! restore value
+            max3 = 0
+c         try to change max3
+            do i=1,npairs
+               if(allpairs(2,i).eq.min3bar.and.
+     $              allpairs(1,i).gt.max3.and.
+     $              allpairs(1,i).ne.min3) then
+                  max3 = allpairs(1,i)
+               endif
+            enddo
+            if (max3.eq.0)then
+               write(*,*) "colorflow problem"
+               stop
+            endif
+         endif
+      endif
+      endif
 
       if (max3.gt.0.and.max3bar.gt.0) then
 c       We have found our two pairs, so we're done

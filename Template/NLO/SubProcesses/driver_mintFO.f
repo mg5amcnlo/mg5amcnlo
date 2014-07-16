@@ -259,7 +259,7 @@ c Setup for parton-level NLO reweighting
          write(*,*)'Final result:',ans(2),' +/-',unc(2)
          write(*,*)'chi**2 per D.o.F.:',chi2(1)
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*) ans(1),unc(1),0d0,0,0,0,0,0d0,0d0,ans(2)
+         write(58,*) ans(1),unc(2),0d0,0,0,0,0,0d0,0d0,ans(2)
          close(58)
 c
 c to save grids:
