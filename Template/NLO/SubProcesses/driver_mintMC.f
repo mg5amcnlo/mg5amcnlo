@@ -1029,8 +1029,8 @@ c for the <event> tag in the LHEF file. "npNLO" are the number of Born
 c partons in this multiplicity when running the code at NLO accuracy
 c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
 c "npNLO".
-         if (shower_mc.eq.'PYTHIA8' .and. (ickkw.eq.3.or.ickkw.eq.4))
-     $        then
+         if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIGPP') .and.
+     $        (ickkw.eq.3.or.ickkw.eq.4))then
             nattr=2
             nFKSprocess=1 ! just pick the first nFKSprocess
             call fks_inc_chooser()
