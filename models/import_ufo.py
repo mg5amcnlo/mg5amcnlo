@@ -48,6 +48,8 @@ sys.path.append(root_path)
 sys.path.append(os.path.join(root_path, os.path.pardir, 'Template', 'bin', 'internal'))
 import check_param_card 
 
+pjoin = os.path.join
+
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
 
@@ -104,7 +106,10 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
                 raise Exception, "%s is not a valid path for restrict file" % restrict
     
     #import the FULL model
-    model = import_full_model(model_path, decay, prefix) 
+    model = import_full_model(model_path, decay, prefix)
+    
+    if os.path.exists(pjoin(model_path, "README")):
+        logger.info("Please read carefully the README of the model file for instructions/restrictions of the model.",'$MG:color:BLACK') 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name
