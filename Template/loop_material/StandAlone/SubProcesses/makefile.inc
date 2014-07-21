@@ -63,7 +63,7 @@ $(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o $(patsubst %(dotf)s,%
 	$(FC) $(FFLAGS) -o $(CHECK_SA_BORN_SPLITORDERS) check_sa_born_splitOrders.o $(patsubst %(dotf)s,%(doto)s,$(wildcard *born_matrix.f)) -L$(LIBDIR) -ldhelas -lmodel
 
 %(doto)s : %(dotf)s
-	$(FC) $(FFLAGS) -c $< -o $@
+	$(FC) $(FFLAGS) -c $< -o $@ %(tir_include)s
 
 $(OLP): $(OLP_PROCESS) $(LIBS)
 	$(FC) -shared $(OLP_PROCESS) -o libMadLoop.$(dylibext) $(LINKLIBS)

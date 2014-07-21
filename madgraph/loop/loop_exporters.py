@@ -267,7 +267,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
     # This function is placed here and not in optimized exporterd,
     # because the same makefile.inc should be used in all cases.
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs):
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,tir_include=[]):
         """ Create the file makefile which links to the TIR libraries."""
             
         file = open(os.path.join(self.loop_dir,'StandAlone',
@@ -277,6 +277,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
+        replace_dict['tir_include']=' '.join(tir_include)
         file=file%replace_dict
         if writer:
             writer.writelines(file)
@@ -1356,7 +1357,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     group_loops=True
     
     # List of potential TIR library one wants to link to
-    all_tir=['pjfry','iregi']
+    all_tir=['pjfry','iregi','golem']
     
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
@@ -1367,7 +1368,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                                    dir_path, opt)
 
         # TIR available ones
-        self.tir_available_dict={'pjfry':True,'iregi':True}
+        self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True}
 
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
@@ -1383,6 +1384,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # We must link the TIR to the Library folder of the active Template
         link_tir_libs=[]
         tir_libs=[]
+        tir_include=[]
         # special for PJFry++
         link_pjfry_lib=""
         pjfry_lib=""
@@ -1396,11 +1398,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                               libpath,libname,tir_name=tir_name)
             setattr(self,tir_dir,libpath)
             if libpath != "":
-                if tir=='pjfry':
+                if tir in ['pjfry','golem']:
                     # Apparently it is necessary to link against the original 
                     # location of the pjfry library, so it needs a special treatment.
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
-                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))                
+                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
+                    if tir=='golem':
+                        golem_include=pjoin(os.path.split(libpath)[0],'include','golem95')
+                        tir_include.append('-I %s'%golem_include)                
                 else :
                     link_tir_libs.append('-l%s'%tir)
                     tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
@@ -1415,7 +1420,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             return 0
         filename = 'makefile'
         calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                                     link_tir_libs,tir_libs)
+                                                     link_tir_libs,tir_libs,
+                                                     tir_include=tir_include)
         # Return to original PWD
         os.chdir(cwd)
                      
@@ -1436,7 +1442,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """Link the TIR source directory inside the target path given
         in argument"""
         
-        if tir_name in ['pjfry']:
+        if tir_name in ['pjfry','golem']:
             # not self-contained libraries
             if (not isinstance(libpath,str)) or (not os.path.exists(libpath)) \
             or (not os.path.isfile(pjoin(libpath,libname))):
@@ -1458,7 +1464,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 return ""
        
         if self.dependencies=='internal':
-            if tir_name in ["pjfry"]:
+            if tir_name in ["pjfry","golem"]:
                 self.tir_available_dict[tir_name]=False
                 logger.warning("When using the 'output_dependencies=internal' "+\
 " MG5_aMC option, the tensor integral library %s cannot be employed because"%tir_name+\
@@ -1510,8 +1516,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     self.tir_available_dict[tir_name]=False
                     return ""
             # Apparently it is necessary to link against the original location 
-            # of the pjfry library
-            if tir_name!='pjfry':
+            # of the pjfry/golem library
+            if not tir_name in ['pjfry','golem']:
                 ln(os.path.join(libpath,libname),targetPath,abspath=True)
 
         elif self.dependencies=='environment_paths':
@@ -1522,8 +1528,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 logger.info('MG5_aMC is using %s installation found at %s.'%\
                                                           (tir_name,newlibpath)) 
                 # Apparently it is necessary to link against the original location 
-                # of the pjfry library
-                if tir_name!='pjfry':
+                # of the pjfry/golem library
+                if not tir_name in ['pjfry','golem']:
                     ln(newlibpath,targetPath,abspath=True)
                 self.tir_available_dict[tir_name]=True
                 return os.path.dirname(newlibpath)

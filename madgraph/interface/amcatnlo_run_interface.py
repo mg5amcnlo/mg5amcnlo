@@ -1785,6 +1785,7 @@ Integrated cross-section
                               1 : 'CutTools (double precision)',
                               2 : 'PJFry++',
                               3 : 'IREGI',
+                              4 : 'Golem95',
                               9 : 'CutTools (quadruple precision)'}
         RetUnit_finder =re.compile(
                            r"#Unit\s*(?P<unit>\d+)\s*=\s*(?P<n_occurences>\d+)")

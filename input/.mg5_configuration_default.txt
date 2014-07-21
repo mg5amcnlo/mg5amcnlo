@@ -152,6 +152,13 @@
 #! if pjfry=/PATH/TO/pjfry/lib: use that specific installation path for PJFry++
 # pjfry = auto
 
+#! Set the Golem95 lib libgolem.a directory
+#! if auto: try to find it automatically on the system (default)
+#! if '' or None: not use Golem95
+#! if golem=/PATH/TO/golem/lib: use that speficif installation path for Golem95
+# golem = auto
+
+
 #! Set how MadLoop dependencies (such as CutTools) should be handled
 #!  > external : ML5 places a link to the MG5_aMC-wide libraries
 #!  > internal : ML5 copies all dependencies in the output so that it is independent
