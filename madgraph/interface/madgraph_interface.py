@@ -2606,11 +2606,15 @@ This implies that with decay chains:
                     # Redundant with above, but not completely as in the future
                     # one might think of allowing the core process to be 
                     # corrected by loops.
-                    if myprocdef.decays_have_squared_orders():
-                        raise MadGraph5Error("Decay processes cannot specify "+\
-                                                  "squared orders constraints.")                        
                     if myprocdef.are_decays_perturbed():
                         raise MadGraph5Error("Decay processes cannot be perturbed.")
+                    # The two limitations below have some redundancy, but once
+                    # again, they might be relieved (one at a time or together)
+                    # int he future.
+                    if myprocdef.decays_have_squared_orders() or \
+                                                myprocdef['squared_orders']!={}:
+                        raise MadGraph5Error("Decay processes cannot specify "+\
+                                                  "squared orders constraints.")                        
                     if myprocdef.are_negative_orders_present():
                         raise MadGraph5Error("Decay processes cannot include negative"+\
                                                 " coupling orders constraints.")                    

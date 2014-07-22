@@ -817,6 +817,9 @@ class Amplitude(base_objects.PhysicsObject):
             # Exit condition
             if len(res)==len(new_res):
                 break
+            elif (len(new_res)>len(res)):
+                raise MadGraph5Error(
+                 'Inconsistency in function apply_squared_order_constraints().')
             # Actualizing the list of diagram for the next iteration
             res = new_res
 
@@ -834,7 +837,7 @@ class Amplitude(base_objects.PhysicsObject):
             # negative valued target orders
             self['process']['squared_orders'][neg_order]=target_order
         elif len(neg_orders)>1:
-            raise MadGraph5Error('At most one negative squared order constraint'+\
+            raise InvalidCmd('At most one negative squared order constraint'+\
                                    ' can be specified, not %s.'%str(neg_orders))
 
         return res

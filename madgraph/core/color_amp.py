@@ -69,9 +69,10 @@ class ColorBasis(dict):
 
         # if the process has no QCD particles
         # Return a list filled with ColorOne if all entries are empty ColorString()
-        if all([cs == color_algebra.ColorString() for cs in res_dict.values()]):
-            for key in res_dict.keys():
-                res_dict[key]= color_algebra.ColorString([color_algebra.ColorOne()]) 
+        empty_colorstring = color_algebra.ColorString()
+        if all(cs == empty_colorstring for cs in res_dict.values()):
+            res_dict = dict((key, color_algebra.ColorString(
+                               [color_algebra.ColorOne()])) for key in res_dict)
                     
         return res_dict
 
@@ -697,7 +698,8 @@ class ColorMatrix(dict):
         appearing in struct1. Assumes internal summed indices are negative."""
 
         # First, determines what is the smallest index appearing in struct1
-        list2 = reduce(operator.add,[list(elem[1]) for elem in struct1])
+        #list2 = reduce(operator.add,[list(elem[1]) for elem in struct1])
+        list2 = sum((list(elem[1]) for elem in struct1),[])
         if not list2: 
             min_index = -1
         else:
