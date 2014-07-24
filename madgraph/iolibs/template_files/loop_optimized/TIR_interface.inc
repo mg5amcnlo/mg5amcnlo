@@ -65,6 +65,7 @@ C BEGIN CODE
 C ----------
 
 C INITIALIZE TIR IF NEEDED
+      %(golem_calling)s
       IF (TIRINIT) THEN
 	    TIRINIT=.FALSE.
 		CALL %(proc_prefix)sINITTIR()

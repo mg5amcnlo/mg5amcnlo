@@ -20,6 +20,7 @@ C
 	  USE FORM_FACTOR_4P, ONLY: A40
 	  USE FORM_FACTOR_5P, ONLY: A50
 	  USE FORM_FACTOR_6P, ONLY: A60 
+	  IMPLICIT NONE
 C  
 C CONSTANTS 
 C  
@@ -40,7 +41,7 @@ C                         MadLoop internal ones.
 C     The following is the acceptance threshold used for GOLEM_RUN_MODE = 3
       %(real_dp_format)s coef_check_thrs
       DATA coef_check_thrs/1.0d-13/
-      COMMON/%(proc_prefix)coef_check_thrs/coef_check_thrs
+      COMMON/%(proc_prefix)scoef_check_thrs/coef_check_thrs
 
       LOGICAL PASS_COEF_CHECK     
 C  
@@ -51,7 +52,7 @@ C
       %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1)
       REAL(ki) PGOLEM(NLOOPLINE,0:3)
       %(mass_dp_format)s M2L(NLOOPLINE)
-      COMPLEX(ki) M2GOLEM(NLOOPLINE)
+      COMPLEX(ki) M2LGOLEM(NLOOPLINE)
       %(complex_dp_format)s RES(3)
 	  LOGICAL STABLE	  
 C  
@@ -74,8 +75,15 @@ C         always 0.
 C
 C EXTERNAL FUNCTIONS
 C
-      COMPLEX(KI) %(proc_prefix)GOLEM_LOOPNUM
-      EXTERNAL %(proc_prefix)GOLEM_LOOPNUM
+      COMPLEX(KI) %(proc_prefix)sGOLEM_LOOPNUM
+      EXTERNAL %(proc_prefix)sGOLEM_LOOPNUM
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_0
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_1
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_2
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_3
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_4
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_5
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_6
 C
 C GLOBAL VARIABLES
 C
@@ -353,11 +361,7 @@ C     Fill in the golem coefficents and compute the loop
 	 END SELECT
       ENDIF
       
-      RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%c+2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)
-      RES(2)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%b+2.0*LOG(MU_R)*RES_GOLEM%a)
-      RES(3)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%a)
-	   		
-	  %(finalize_CT)s
+	  %(finalize_GOLEM)s
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
 
 C     Finally free golem memory and cache
@@ -435,14 +439,14 @@ C     ----------
 	    enddo
 	    s_mat(i,j)=DIFFSQ-M2L(i)-M2L(j)
 	    IF(M2L(i).NE.0.0D0)THEN
-	      IF(ABS((DIFFSQ-M2L(i)))/M2L(i).LT.OSThres)THEN
+	      IF(ABS((DIFFSQ-M2L(i))/M2L(i)).LT.OSThres)THEN
 	         s_mat(i,j)=-M2L(j)
  	      ENDIF
 	    ENDIF
 	    IF(M2L(j).NE.0.0D0)THEN
-	       IF(ABS((DIFFSQ-M2L(j))/M2L(j).LT.OSThres)THEN
+	      IF(ABS((DIFFSQ-M2L(j))/M2L(j)).LT.OSThres)THEN
 	         s_mat(i,j)=-M2L(i)
-	       ENDIF
+	      ENDIF
             ENDIF
 C           Chose what seems the most appropriate way to compare
 C           massless onshellness. (here we pick the energy component)
@@ -458,136 +462,136 @@ C           massless onshellness. (here we pick the energy component)
        
       END
 
-      FUNCTION %(proc_prefix)COMPARE_COEFS_0(COEFS_A,COEFS_B)
+      FUNCTION %(proc_prefix)sCOMPARE_COEFS_0(COEFS_A,COEFS_B)
 
       USE PRECISION_GOLEM, ONLY: KI
-      CMPLEX(KI) COEFS_A,COEFS_B
+      COMPLEX(KI) COEFS_A,COEFS_B
       %(real_dp_format)s coef_check_thrs
-      COMMON/%(proc_prefix)coef_check_thrs/coef_check_thrs
+      COMMON/%(proc_prefix)scoef_check_thrs/coef_check_thrs
       %(real_dp_format)s DENOM,NUM
-      LOGICAL %(proc_prefix)COMPARE_COEFS_0
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_0
 
       NUM = ABS(COEFS_A-COEFS_B)
       DENOM = ABS(COEFS_A+COEFS_B)
       IF(DENOM.GT.0d0)THEN
-        %(proc_prefix)COMPARE_COEFS_0=((NUM/DENOM).LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_0=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
-        %(proc_prefix)COMPARE_COEFS_0=(NUM.LT.coef_check_thrs)      
+        %(proc_prefix)sCOMPARE_COEFS_0=(NUM.LT.coef_check_thrs)      
       ENDIF
 
       END
 
-      FUNCTION %(proc_prefix)COMPARE_COEFS_1(COEFS_A,COEFS_B)
+      FUNCTION %(proc_prefix)sCOMPARE_COEFS_1(COEFS_A,COEFS_B)
       
       USE TENS_REC
       TYPE(COEFF_TYPE_1)COEFS_A,COEFS_B
       %(real_dp_format)s COEF_CHECK_THRS
-      COMMON/%(proc_prefix)coef_check_thrs/coef_check_thrs
+      COMMON/%(proc_prefix)scoef_check_thrs/coef_check_thrs
       %(real_dp_format)s DENOM,NUM
-      LOGICAL %(proc_prefix)COMPARE_COEFS_1
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_1
       
-      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))
-      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))
+      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))
+      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))
       
       IF(DENOM.GT.0d0)THEN
-        %(proc_prefix)COMPARE_COEFS_1=((NUM/DENOM).LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_1=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
-        %(proc_prefix)COMPARE_COEFS_1=(NUM.LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_1=(NUM.LT.coef_check_thrs)
       ENDIF
 
       END
 
-      FUNCTION %(proc_prefix)COMPARE_COEFS_2(COEFS_A,COEFS_B)
+      FUNCTION %(proc_prefix)sCOMPARE_COEFS_2(COEFS_A,COEFS_B)
       
       USE TENS_REC
       TYPE(COEFF_TYPE_2) COEFS_A,COEFS_B
       %(real_dp_format)s coef_check_thrs
-      COMMON/%(proc_prefix)coef_check_thrs/coef_check_thrs
+      COMMON/%(proc_prefix)scoef_check_thrs/coef_check_thrs
       %(real_dp_format)s DENOM,NUM
-      LOGICAL %(proc_prefix)COMPARE_COEFS_2
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_2
       
-      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))
-      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))
+      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))
+      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))
       IF(DENOM.GT.0d0)THEN
-        %(proc_prefix)COMPARE_COEFS_2=((NUM/DENOM).LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_2=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
-        %(proc_prefix)COMPARE_COEFS_2=(NUM.LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_2=(NUM.LT.coef_check_thrs)
       ENDIF
 
       END
 
-      FUNCTION %(proc_prefix)COMPARE_COEFS_3(COEFS_A,COEFS_B)
+      FUNCTION %(proc_prefix)sCOMPARE_COEFS_3(COEFS_A,COEFS_B)
 
       USE TENS_REC
       TYPE(COEFF_TYPE_3) COEFS_A, COEFS_B
       %(real_dp_format)s coef_check_thrs
-      COMMON/%(proc_prefix)coef_check_thrs/coef_check_thrs
+      COMMON/%(proc_prefix)scoef_check_thrs/coef_check_thrs
       %(real_dp_format)s DENOM,NUM
-      LOGICAL %(proc_prefix)COMPARE_COEFS_3
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_3
 
-      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))+SUM(ABS(COEFS_A%c3-COEFS_B%c3))
-      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))+SUM(ABS(COEFS_A%c3+COEFS_B%c3))
+      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3-COEFS_B%%c3))
+      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3+COEFS_B%%c3))
       IF(DENOM.GT.0d0)THEN
-        %(proc_prefix)COMPARE_COEFS_3=((NUM/DENOM).LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_3=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
-        %(proc_prefix)COMPARE_COEFS_3=(NUM.LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_3=(NUM.LT.coef_check_thrs)
       ENDIF
 
       END	     
 
-      FUNCTION %(proc_prefix)COMPARE_COEFS_4(COEFS_A,COEFS_B)
+      FUNCTION %(proc_prefix)sCOMPARE_COEFS_4(COEFS_A,COEFS_B)
       
       USE TENS_REC
       TYPE(COEFF_TYPE_4) COEFS_A, COEFS_B
       %(real_dp_format)s coef_check_thrs
-      COMMON/%(proc_prefix)coef_check_thrs/coef_check_thrs
+      COMMON/%(proc_prefix)scoef_check_thrs/coef_check_thrs
       %(real_dp_format)s DENOM,NUM
-      LOGICAL %(proc_prefix)COMPARE_COEFS_4
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_4
 
-      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))+SUM(ABS(COEFS_A%c3-COEFS_B%c3))+SUM(ABS(COEFS_A%c4-COEFS_B%c4))
-      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))+SUM(ABS(COEFS_A%c3+COEFS_B%c3))+SUM(ABS(COEFS_A%c4+COEFS_B%c4))
+      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3-COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4-COEFS_B%%c4))
+      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3+COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4+COEFS_B%%c4))
       IF(DENOM.GT.0d0)THEN
-        %(proc_prefix)COMPARE_COEFS_4=((NUM/DENOM).LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_4=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
-        %(proc_prefix)COMPARE_COEFS_4=(NUM.LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_4=(NUM.LT.coef_check_thrs)
       ENDIF
 
       END
 
-      FUNCTION %(proc_prefix)COMPARE_COEFS_5(COEFS_A,COEFS_B)
+      FUNCTION %(proc_prefix)sCOMPARE_COEFS_5(COEFS_A,COEFS_B)
       
       USE TENS_REC
       TYPE(COEFF_TYPE_5) COEFS_A,COEFS_B
       %(real_dp_format)s coef_check_thrs
-      COMMON/%(proc_prefix)coef_check_thrs/coef_check_thrs
+      COMMON/%(proc_prefix)scoef_check_thrs/coef_check_thrs
       %(real_dp_format)s DENOM,NUM
-      LOGICAL %(proc_prefix)COMPARE_COEFS_5
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_5
 
-      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))+SUM(ABS(COEFS_A%c3-COEFS_B%c3))+SUM(ABS(COEFS_A%c4-COEFS_B%c4))+SUM(ABS(COEFS_A%c5-COEFS_B%c5))
-      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))+SUM(ABS(COEFS_A%c3+COEFS_B%c3))+SUM(ABS(COEFS_A%c4+COEFS_B%c4))+SUM(ABS(COEFS_A%c5+COEFS_B%c5))
+      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3-COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4-COEFS_B%%c4))
+      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3+COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4+COEFS_B%%c4))
       IF(DENOM.GT.0d0)THEN
-        %(proc_prefix)COMPARE_COEFS_5=((NUM/DENOM).LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_5=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
-        %(proc_prefix)COMPARE_COEFS_5=(NUM.LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_5=(NUM.LT.coef_check_thrs)
       ENDIF
 
       END
 
-      FUNCTION %(proc_prefix)COMPARE_COEFS_6(COEFS_A,COEFS_B)
+      FUNCTION %(proc_prefix)sCOMPARE_COEFS_6(COEFS_A,COEFS_B)
       
       USE TENS_REC
       TYPE(COEFF_TYPE_6) COEFS_A,COEFS_B
       %(real_dp_format)s coef_check_thrs
-      COMMON/%(proc_prefix)coef_check_thrs/coef_check_thrs
+      COMMON/%(proc_prefix)scoef_check_thrs/coef_check_thrs
       %(real_dp_format)s DENOM,NUM
-      LOGICAL %(proc_prefix)COMPARE_COEFS_6
+      LOGICAL %(proc_prefix)sCOMPARE_COEFS_6
 
-      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))+SUM(ABS(COEFS_A%c3-COEFS_B%c3))+SUM(ABS(COEFS_A%c4-COEFS_B%c4))+SUM(ABS(COEFS_A%c5-COEFS_B%c5))+SUM(ABS(COEFS_A%c6-COEFS_B%c6))
-      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))+SUM(ABS(COEFS_A%c3+COEFS_B%c3))+SUM(ABS(COEFS_A%c4+COEFS_B%c4))+SUM(ABS(COEFS_A%c5+COEFS_B%c5))+SUM(ABS(COEFS_A%c6+COEFS_B%c6))
+      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3-COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4-COEFS_B%%c4))
+      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3+COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4+COEFS_B%%c4))
       IF(DENOM.GT.0d0)THEN
-        %(proc_prefix)COMPARE_COEFS_6=((NUM/DENOM).LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_6=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
-        %(proc_prefix)COMPARE_COEFS_6=(NUM.LT.coef_check_thrs)
+        %(proc_prefix)sCOMPARE_COEFS_6=(NUM.LT.coef_check_thrs)
       ENDIF
 
       END

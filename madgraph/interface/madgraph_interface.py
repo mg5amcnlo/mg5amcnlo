@@ -3295,12 +3295,17 @@ This implies that with decay chains:
                     MLoptions["MLReductionLib"].remove(3)
         if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
             TIR_dir['pjfry_dir']=self.options['pjfry']
-        if 'golem' in self.options and isinstance(self.options['golem'],str):
-            TIR_dir['golem_dir']=self.options['golem']
         else:
             if "MLReductionLib" in MLoptions:
                 if 2 in MLoptions["MLReductionLib"]:
                     MLoptions["MLReductionLib"].remove(2)
+                    
+        if 'golem' in self.options and isinstance(self.options['golem'],str):
+            TIR_dir['golem_dir']=self.options['golem']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 4 in MLoptions["MLReductionLib"]:
+                    MLoptions["MLReductionLib"].remove(4)
         #if "_pjfry_dir" in dir(self):
         #    TIR_dir['pjfry_dir']=self._pjfry_dir
         

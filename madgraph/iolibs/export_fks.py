@@ -2826,7 +2826,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         # We must link the TIR to the Library folder of the active Template
         link_tir_libs=[]
         tir_libs=[]
-        # special for PJFry++
+        tir_include=[]
+        # special for PJFry++/Golem95
         link_pjfry_lib=""
         pjfry_lib=""
         for tir in self.all_tir:
@@ -2838,11 +2839,14 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                               libpath,libname,tir_name=tir_name)
             setattr(self,tir_dir,libpath)
             if libpath != "":
-                if tir=='pjfry':
+                if tir in ['pjfry','golem']:
                     # Apparently it is necessary to link against the original 
-                    # location of the pjfry library, so it needs a special treatment.
+                    # location of the pjfry/golem library, so it needs a special treatment.
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
+                    if tir=='golem':
+                        golem_include=pjoin(os.path.split(libpath)[0],'include','golem95')
+                        tir_include.append('-I %s'%golem_include)
                 else:
                     link_tir_libs.append('-l%s'%tir)
                     tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
@@ -2857,7 +2861,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             return 0
         filename = 'makefile_loop'
         calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                                         link_tir_libs,tir_libs)
+                                                         link_tir_libs,tir_libs,tir_include=tir_include)
         os.remove(os.path.join(self.dir_path,'Source','make_opts.inc'))
         dirpath = os.path.join(self.dir_path, 'Source')
         try:

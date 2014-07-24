@@ -1545,8 +1545,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
-        """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f and loop_num.f only but with
-        the optimized FortranModel"""
+        """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f,GOLEM_inteface.f 
+        and loop_num.f only but with the optimized FortranModel"""
                 
         # Warn the user that the 'matrix' output where all relevant code is
         # put together in a single file is not supported in this loop output.
@@ -1607,6 +1607,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         filename = 'TIR_interface.f'
         self.write_TIR_interface(writers.FortranWriter(filename),
                                 matrix_element)
+        
+        if 'golem' in self.tir_available_dict and self.tir_available_dict['golem']:
+            filename = 'GOLEM_interface.f'
+            self.write_GOLEM_interface(writers.FortranWriter(filename),
+                                       matrix_element)
 
         filename = 'loop_num.f'
         self.write_loop_num(writers.FortranWriter(filename),\
@@ -1640,6 +1645,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     "IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS"
                     self.general_replace_dict['initiregi']=\
                     "      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)"
+                elif tir=="golem":
+                    self.general_replace_dict['golem_calling']=\
+                    ("IF(MLReductionLib(I_LIB).EQ.4)THEN\n"\
+                     +"C      Using Golem95\n"\
+                     +"        CALL %(proc_prefix)sGOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)\n"\
+                     +"        RETURN\n"\
+                     +"ENDIF")%self.general_replace_dict
                 else:
                     raise MadGraph5Error,"%s was not a well-defined TIR."%tir_name
             else:
@@ -1653,6 +1665,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     +"        STOP"
                     self.general_replace_dict['initiregi']=''
                     self.general_replace_dict['iregi_free_ps']=''
+                elif tir=="golem":
+                    self.general_replace_dict['golem_calling']=''
         # the first entry is the CutTools, we make sure it is available
         looplibs_av=['.TRUE.']
         # one should be careful about the order in the following
@@ -1665,6 +1679,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             looplibs_av.extend(['.FALSE.'])
         if "iregi" in self.all_tir:
             if self.tir_available_dict["iregi"]:             
+                looplibs_av.extend(['.TRUE.'])
+            else:
+                looplibs_av.extend(['.FALSE.'])
+        else:
+            looplibs_av.extend(['.FALSE.'])
+            
+        if "golem" in self.all_tir:
+            if self.tir_available_dict["golem"]:
                 looplibs_av.extend(['.TRUE.'])
             else:
                 looplibs_av.extend(['.FALSE.'])
@@ -1749,6 +1771,41 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
 
         file = file % replace_dict
+        
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
+
+    def write_GOLEM_interface(self, writer, matrix_element):
+        """ Create the file GOLEM_interface.f which does NOT contain the subroutine
+         defining the loop HELAS-like calls along with the general interfacing 
+         subroutine. """
+
+        # First write GOLEM_interface which interfaces MG5 with TIR.
+        replace_dict=copy.copy(self.general_replace_dict)
+        
+        # We finalize TIR result differently wether we used the built-in 
+        # squaring against the born.
+        if matrix_element.get('processes')[0].get('has_born'):
+            factor='2.0D0'
+        else:
+            factor='1.0D0'
+        replace_dict['finalize_GOLEM']='\n'.join([
+        'RES(1)=NORMALIZATION*%s*DBLE(RES_GOLEM%%c+'%factor+\
+        '2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)',\
+            'RES(2)=NORMALIZATION*%s*DBLE(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)'%factor,\
+            'RES(3)=NORMALIZATION*%s*DBLE(RES_GOLEM%%a)'%factor])
+            
+        file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
+ 
+        file = file % replace_dict
+
+        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
+                                                    coef_format=replace_dict['complex_dp_format'],\
+                                                    sub_prefix=replace_dict['proc_prefix'])
+        
+        file += '\n\n'+FPR.write_golem95_mapping()
         
         if writer:
             writer.writelines(file)

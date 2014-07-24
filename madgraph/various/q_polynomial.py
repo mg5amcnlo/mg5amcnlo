@@ -116,13 +116,13 @@ class FortranPolynomialRoutines(PolynomialRoutines):
                 return "%s^%d" % (b, e)
                 
         # Write out one subroutine per rank
-        for R in range(min(self.max_rank+1,golem_max_rank+1)):
+        for R in range(golem_max_rank+1):
             
             lines=[]
             
             if R==0:
                 lines.append(
-                """SUBROUTINE %(sub_prefix)sFILL_GOLEM_COEFF_ARRAY_0(ML_COEFS,GOLEM_COEFS)
+                """SUBROUTINE %(sub_prefix)sFILL_GOLEM_COEFFS_0(ML_COEFS,GOLEM_COEFS)
                             use precision_golem, only: ki
                             include 'coef_specs.inc'
                             %(coef_format)s ML_COEFS(0:LOOP_MAXCOEFS-1)
@@ -143,7 +143,15 @@ class FortranPolynomialRoutines(PolynomialRoutines):
                             %{'sub_prefix':self.sub_prefix,'rank':R,
                                                 'coef_format':self.coef_format})
 
-
+            if R > self.max_rank:
+                lines.append('C Dummy routine for %(sub_prefix)sFILL_GOLEM_COEFS_%(rank)d'\
+                             %{'sub_prefix':self.sub_prefix,'rank':R,
+                                                'coef_format':self.coef_format})
+                lines.append("STOP 'ERROR: %d > %d'"%(R,self.max_rank))
+                lines.append('end')
+                subroutines.append('\n'.join(lines))
+                continue
+                
             # The constant coefficient is treated separately
             lines.append("c Constant coefficient ")
             lines.append("GOLEM_COEFS%%c0=ML_COEFS(%d)"\

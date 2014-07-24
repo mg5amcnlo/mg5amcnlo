@@ -59,9 +59,9 @@ C     These are constants related to the split orders
 	  INTEGER NSQUAREDSOP1
 	  PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 C     The total number of loop reduction libraries
-C     At present, there are only CutTools,PJFry++,IREGI
+C     At present, there are only CutTools,PJFry++,IREGI,Golem95
       INTEGER NLOOPLIB
-      PARAMETER (NLOOPLIB=3)
+      PARAMETER (NLOOPLIB=4)
 C     Only CutTools provides QP
       INTEGER QP_NLOOPLIB
       PARAMETER (QP_NLOOPLIB=1)
@@ -192,7 +192,7 @@ C
 	  DATA MP_DONE/.FALSE./
 	  common/%(proc_prefix)sMP_DONE/MP_DONE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE AVAILABLE OR NOT
-          LOGICAL LOOPLIBS_AVAILABLE(3)
+          LOGICAL LOOPLIBS_AVAILABLE(4)
 	  %(data_looplibs_av)s
 	  common/%(proc_prefix)sLOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 
@@ -1666,6 +1666,8 @@ C     U == 2
 C         Stable with PJFry++.
 C     U == 3
 C         Stable with IREGI.
+C     U == 4
+C         Stable with Golem95
 C     U == 9
 C         Stable with CutTools in quadruple precision.         
 C
