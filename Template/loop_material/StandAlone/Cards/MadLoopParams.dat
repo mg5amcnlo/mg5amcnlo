@@ -161,6 +161,13 @@
 1.0d-9
 ! Default :: 1.0d-9
 
+!     Setting the on-shell threshold for deciding whether the invariant variables
+! of external momenta are on-shell or not. It will only be used in constructing
+! s-matrix in Golem95.
+#OSThres
+1.0d-13
+! Default :: 1.0d-13
+
 !     The setting below is recommended to be on as it allows to systematically used the 
 !     first PS point thrown at ML5 to be used for making sure that the helicity filter
 !     read from HelFilter.dat is consistent as it might be no longer up to date with

@@ -72,6 +72,12 @@
                  stop 'ZeroThres must be > 0'
              endif
 
+           else if (buff .eq. '#OSThres') then
+              read(666,*,end=999) OSThres
+              if (OSThres.le.0.0d0) then
+                 stop 'OSThres must be > 0'
+              endif
+
            else if (buff .eq. '#CheckCycle') then
              read(666,*,end=999) CheckCycle
              if (CheckCycle.lt.1) then
@@ -210,6 +216,7 @@ C     a non existing or malformed parameter file
       write(*,*) ' > LoopInitStartOver         = ',LoopInitStartOver
       write(*,*) ' > HelInitStartOver          = ',HelInitStartOver
       write(*,*) ' > ZeroThres                 = ',ZeroThres
+      write(*,*) ' > OSThres                   = ',OSThres
       write(*,*) ' > WriteOutFilters           = ',WriteOutFilters      
       write(*,*)
      & '==============================================================='
@@ -245,6 +252,7 @@ C     a non existing or malformed parameter file
       HelInitStartOver=.False.
       WriteOutFilters=.True.
       ZeroThres=1.0d-9
+      OSThres=1.0d-13
       ImprovePSPoint=2
 
       end

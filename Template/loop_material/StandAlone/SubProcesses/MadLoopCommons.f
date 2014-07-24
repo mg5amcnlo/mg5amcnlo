@@ -43,9 +43,9 @@
       DATA ML_INIT/.TRUE./
       common/ML_INIT/ML_INIT
 
-      LOGICAL CTINIT,TIRINIT
-      DATA CTINIT,TIRINIT/.TRUE.,.TRUE./
-      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT
+      LOGICAL CTINIT,TIRINIT,GOLEMINIT
+      DATA CTINIT,TIRINIT/.TRUE.,.TRUE.,.TRUE./
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT
 
       character(512) MLPath
       data MLPath/'[[NA]]'/      
@@ -143,6 +143,8 @@ C     U == 2
 C         Stable with PJFry++.
 C     U == 3
 C         Stable with IREGI.
+C     U == 4
+C         Stable with Golem95
 C     U == 9
 C         Stable with CutTools in quadruple precision.
 C
@@ -176,10 +178,10 @@ C
             STOP 'Only CutTools can use quardruple precision'
          ENDIF
       ENDIF
-      IF(MLRed.GE.1.AND.MLRed.LE.3)THEN
+      IF(MLRed.GE.1.AND.MLRed.LE.4)THEN
          SET_RET_CODE_U=MLRed
       ELSE
-         STOP 'Only CutTools,PJFry++,IREGI are available'
+         STOP 'Only CutTools,PJFry++,IREGI,Golem95 are available'
       ENDIF
       END
 
@@ -215,8 +217,11 @@ C PJFry++
       ELSEIF(LIBNUM.EQ.3)THEN
 C IREGI
          CALL DETECT_IREGI(NLOOPLINE,RANK,complex_mass,LPASS)
+      ELSEIF(LIBNUM.EQ.4)THEN
+C Golem95
+         CALL DETECT_GOLEM(NLOOPLINE,RANK,complex_mass,LPASS)
       ELSE
-         STOP 'ONLY CUTTOOLS,PJFry++,IREGI are provided'
+         STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 are provided'
       ENDIF
       RETURN
       END
@@ -302,5 +307,34 @@ C BEGIN CODE
 C ----------
       LPASS=.TRUE.
       IF(NLOOPLINE.GE.8.OR.RANK.GE.7)LPASS=.FALSE.
+      RETURN
+      END
+
+      SUBROUTINE DETECT_GOLEM(NLOOPLINE,RANK,complex_mass,LPASS)
+C
+C DETECT THE Golem95 CAN BE USED OR NOT
+C
+            IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+            INTEGER NLOOPLINE,RANK
+            LOGICAL complex_mass,LPASS
+C
+C LOCAL VARIABLES
+C
+C
+C GLOBAL VARIABLES
+C
+C ----------
+C BEGIN CODE
+C ----------
+
+      LPASS=.TRUE.
+      IF(NLOOPLINE.GE.7.OR.RANK.GE.7.OR.NLOOPLINE.LT.RANK
+     &.OR.NLOOPLINE.LE.1)LPASS=.FALSE.
       RETURN
       END
