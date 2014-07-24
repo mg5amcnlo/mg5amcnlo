@@ -1612,7 +1612,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         export_dir=os.path.join(self.mg_root,("SAVED" if keep_folder else "")+\
                                                 temp_dir_prefix+"_%s"%proc_name)
         
-        tools_name={1:'CutTools',2:'PJFry++',3:'IREGI'}
+        tools_name={1:'CutTools',2:'PJFry++',3:'IREGI',4:'Golem95'}
         return_dict={}
         return_dict['Stability']={}
         infos_save={'Process_output': None,
@@ -2239,6 +2239,8 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                 MLoptions["MLReductionLib"].extend([3])
             if "pjfry_dir" in tir:
                 MLoptions["MLReductionLib"].extend([2])
+            if "golem_dir" in tir:
+                MLoptions["MLReductionLib"].extend([4])
 
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         options=options,param_card=param_card, 
