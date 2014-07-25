@@ -166,8 +166,8 @@
 ! of external momenta are on-shell or not. It will only be used in constructing
 ! s-matrix in Golem95.
 #OSThres
-1.0d-13
-! Default :: 1.0d-13
+1.0d-8
+! Default :: 1.0d-8
 
 !     The setting below is recommended to be on as it allows to systematically used the 
 !     first PS point thrown at ML5 to be used for making sure that the helicity filter
