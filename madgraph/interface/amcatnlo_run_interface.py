@@ -3502,10 +3502,8 @@ Integrated cross-section
                  " seems to have been compiled with a different compiler than"+\
                     " the one specified in MG5_aMC. Please recompile IREGI.")
 
-        # check if virtuals have been generated
-        proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        real_only_re = re.compile(r"\[\s*real\s*=.*\]")
-        if real_only_re.search(proc_card)==None and \
+        # check if MadLoop virtuals have been generated
+        if self.proc_characteristics['has_loops'].lower() == 'true' and \
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
