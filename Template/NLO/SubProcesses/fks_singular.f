@@ -2747,13 +2747,14 @@ c has soft singularities
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
       endif
 
-      if(wgt.lt.0.d0)then
-         write(*,*) 'Fatal error #2 in sreal',wgt,xi_i_fks,y_ij_fks
-         do i=1,nexternal
-            write(*,*) 'particle ',i,', ',(pp(j,i),j=0,3)
-         enddo
-         stop
-      endif
+      write(*,*) 'MZ negative real, delete commented lines'
+c      if(wgt.lt.0.d0)then
+c         write(*,*) 'Fatal error #2 in sreal',wgt,xi_i_fks,y_ij_fks
+c         do i=1,nexternal
+c            write(*,*) 'particle ',i,', ',(pp(j,i),j=0,3)
+c         enddo
+c         stop
+c      endif
 
       return
       end
@@ -3071,8 +3072,7 @@ c g->gg splitting
       elseif ((abs(col1).eq.3 .and. abs(col2).eq.3) .or.
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
 c g/a->qqbar splitting
-         ap(1) = TR * ( z**2 + (1d0-z)**2 )*(1d0-z)
-         ap(2) = ch1 * ch2 * ( z**2 + (1d0-z)**2 )*(1d0-z)
+         ap(2) = 3d0 * ch1**2 * ( z**2 + (1d0-z)**2 )*(1d0-z)
 
       elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
@@ -3085,6 +3085,7 @@ c q->q g/a splitting
 c q->gq splitting
          ap(1) = CF * (1d0+(1d0-z)**2)*(1d0-z)/z
          ap(2) = ch2**2 * (1d0+(1d0-z)**2)*(1d0-z)/z
+
       else
          write (*,*) 'Fatal error in AP_reduced',col1,col2,ch1,ch2
          stop
