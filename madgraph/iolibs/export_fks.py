@@ -194,7 +194,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.copy_python_files()
 
     # I put it here not in optimized one, because I want to use the same makefile_loop.inc
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs):
+    # Also, we overload this function (i.e. it is already defined in 
+    # LoopProcessExporterFortranSA) because the path of the template makefile
+    # is different.
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,tir_include=[]):
         """ Create the file makefile_loop which links to the TIR libraries."""
             
         file = open(os.path.join(self.mgme_dir,'Template','NLO',
@@ -204,6 +207,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
+        replace_dict['tir_include']=' '.join(tir_include)
         file=file%replace_dict
         if writer:
             writer.writelines(file)
@@ -2861,7 +2865,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             return 0
         filename = 'makefile_loop'
         calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                                         link_tir_libs,tir_libs,tir_include=tir_include)
+                                 link_tir_libs,tir_libs,tir_include=tir_include)
         os.remove(os.path.join(self.dir_path,'Source','make_opts.inc'))
         dirpath = os.path.join(self.dir_path, 'Source')
         try:

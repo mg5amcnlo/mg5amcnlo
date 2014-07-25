@@ -111,7 +111,8 @@
 
 !     Choose here what library to chose for CutTools/TIR to compute the scalar loops of the
 !     master integral basis. The choices are as follows:
-!     2 | AVH
+!     (Does not apply for Golem95, where OneLOop is always used)
+!     2 | OneLOop
 !     3 | QCDLoop
 #CTLoopLibrary
 2

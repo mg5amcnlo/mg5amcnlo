@@ -1811,26 +1811,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             writer.writelines(file)
         else:
             return file
-        
-#    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
-#        """ Create the file makefile which links to the TIR libraries."""
-#            
-#        file = open(os.path.join(self.loop_dir,'StandAlone',
-#                                 'SubProcesses','makefile_TIR.inc')).read()  
-#        replace_dict={}
-#        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
-#        replace_dict['tir_libs']=' '.join(tir_libs)
-#        replace_dict['dotf']='%.f'
-#        replace_dict['doto']='%.o'
-#        replace_dict['pjdir']='PJDIR='+PJDIR
-#        if not PJDIR.endswith('/'):
-#            replace_dict['pjdir']=replace_dict['pjdir']+"/"
-#        file=file%replace_dict
-#        
-#        if writer:
-#            writer.writelines(file)
-#        else:
-#            return file
 
     def write_polynomial_subroutines(self,writer,matrix_element):
         """ Subroutine to create all the subroutines relevant for handling
