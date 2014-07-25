@@ -3,6 +3,8 @@ C
 %(info_lines)s
 C 
 C Interface between MG5 and Golem95.
+C The Golem95 version should be higher than 1.3.0.
+C It supports RANK = NLOOPLINE + 1 tensor integrals when 1 < NLOOPLINE < 6.
 C  
 %(process_lines)s
 C
@@ -283,6 +285,8 @@ C     Fill in the golem coefficents and compute the loop
 	     RES_GOLEM = CONTRACT2_1(COEFFS1,PGOLEM,PINCH)
 	 CASE(2)
 	     RES_GOLEM = CONTRACT2_2(COEFFS2,PGOLEM,PINCH)
+	 CASE(3)
+	     RES_GOLEM = CONTRACT2_3(COEFFS3,PGOLEM,PINCH)
 	 CASE DEFAULT
 	     WRITE(*,*)"Golem95 cannot handle with: N,r = ",2,RANK
 	     STOP
@@ -297,6 +301,8 @@ C     Fill in the golem coefficents and compute the loop
 	      RES_GOLEM = CONTRACT3_2(COEFFS2,PGOLEM,PINCH)
 	  CASE(3)
 	      RES_GOLEM = CONTRACT3_3(COEFFS3,PGOLEM,PINCH)
+	  CASE(4)
+	      RES_GOLEM = CONTRACT3_4(COEFFS4,PGOLEM,PINCH)
 	  CASE DEFAULT
 	      WRITE(*,*)"Golem95 cannot handle with: N,r = ",3,RANK
 	      STOP
@@ -313,6 +319,8 @@ C     Fill in the golem coefficents and compute the loop
 	      RES_GOLEM = CONTRACT4_3(COEFFS3,PGOLEM,PINCH)
 	  CASE(4)
 	      RES_GOLEM = CONTRACT4_4(COEFFS4,PGOLEM,PINCH)
+          CASE(5)
+	      RES_GOLEM = CONTRACT4_5(COEFFS5,PGOLEM,PINCH)
 	  CASE DEFAULT
 	      WRITE(*,*)"Golem95 cannot handle with: N,r = ",4,RANK
 	      STOP
@@ -331,6 +339,8 @@ C     Fill in the golem coefficents and compute the loop
 	      RES_GOLEM = CONTRACT5_4(COEFFS4,PGOLEM,PINCH)
 	  CASE(5)
 	      RES_GOLEM = CONTRACT5_5(COEFFS5,PGOLEM,PINCH)
+          CASE(6)
+              RES_GOLEM = CONTRACT5_6(COEFFS6,PGOLEM,PINCH)
 	  CASE DEFAULT
 	      WRITE(*,*)"Golem95 cannot handle with: N,r = ",5,RANK
 	      STOP
@@ -368,6 +378,24 @@ C     Finally free golem memory and cache
       CALL EXITGOLEM95()
 
       END
+
+         FUNCTION %(proc_prefix)sGOLEM_LOOPNUM(Q,mu2)
+	 USE PRECISION_GOLEM, ONLY: KI
+	 REAL(KI),DIMENSION(0:3),INTENT(IN)::Q
+	 REAL(KI),INTENT(IN)::mu2
+	 COMPLEX(KI)::%(proc_prefix)sGOLEM_LOOPNUM
+	 
+	 %(complex_dp_format)s QQ(0:3),num
+	 INTEGER i
+
+	    DO i=0,3
+		QQ(i)=CMPLX(Q(i),0.0d0,KIND=16)
+	    ENDDO
+
+	    CALL %(proc_prefix)sLOOPNUM(QQ,num)
+	    %(proc_prefix)sGOLEM_LOOPNUM=num
+	    RETURN
+	 END FUNCTION
 
 	  SUBROUTINE %(proc_prefix)sINITGOLEM()
 C 

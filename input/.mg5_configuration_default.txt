@@ -153,6 +153,7 @@
 # pjfry = auto
 
 #! Set the Golem95 lib libgolem.a directory
+#! It only supports version higher than 1.3.0
 #! if auto: try to find it automatically on the system (default)
 #! if '' or None: not use Golem95
 #! if golem=/PATH/TO/golem/lib: use that speficif installation path for Golem95
