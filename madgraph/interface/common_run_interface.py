@@ -1574,6 +1574,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run
+        self.banner = madspin_cmd.banner
         self.banner.add(path)
         self.banner.write(pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' %
                                 (self.run_name, self.run_tag)))
@@ -1610,7 +1611,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.check_check_events(args) 
         # args now alway content the path to the valid files
         reweight_cmd = reweight_interface.ReweightInterface(args[0])
-        reweight_cmd. mother = self
+        reweight_cmd.mother = self
         self.update_status('Running check on events', level='check')
         
         reweight_cmd.check_events()

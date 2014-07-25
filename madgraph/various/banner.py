@@ -64,7 +64,9 @@ class Banner(dict):
     def __init__(self, banner_path=None):
         """ """
         if isinstance(banner_path, Banner):
-            return dict.__init__(self, banner_path)     
+            dict.__init__(self, banner_path)
+            self.lhe_version = banner_path.lhe_version
+            return     
         else:
             dict.__init__(self)
         
@@ -76,9 +78,8 @@ class Banner(dict):
             self['mgversion'] = info['version']+'\n'
         
         self.lhe_version = None
-        
 
-            
+   
         if banner_path:
             self.read_banner(banner_path)
 
@@ -229,7 +230,7 @@ class Banner(dict):
             header = open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read()
         else:
             header = open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read()
-    
+            
         if not self.lhe_version:
             self.lhe_version = self.get('run_card', 'lhe_version', default=1.0)
             if float(self.lhe_version) < 3:
@@ -302,6 +303,17 @@ class Banner(dict):
 
     def add_text(self, tag, text):
         """Add the content of the file to the banner"""
+
+        if tag == 'param_card':
+            tag = 'slha'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
+        elif tag == 'FO_analyse_card':
+            tag = 'foanalyse'
         
         self[tag.lower()] = text
     
@@ -402,7 +414,7 @@ class Banner(dict):
             try:
                 return card[arg[0]]
             except KeyError:
-                if opt['default']:
+                if 'default' in opt:
                     return opt['default']
                 else:
                     raise                
@@ -410,7 +422,7 @@ class Banner(dict):
             try:
                 return card[arg[0]].get(arg[1:])
             except KeyError:
-                if opt['default']:
+                if 'default' in opt:
                     return opt['default']
                 else:
                     raise  
@@ -1134,9 +1146,11 @@ class ProcCard(list):
             # update the counter to pass to the next element
             nline -= 1
         
-    def __getattr__(self, tag):
+    def __getattr__(self, tag, default=None):
         if isinstance(tag, int):
             list.__getattr__(self, tag)
+        elif tag == 'info' or tag == "__setstate__":
+            return default #for pickle
         else:
             return self.info[tag]
             
