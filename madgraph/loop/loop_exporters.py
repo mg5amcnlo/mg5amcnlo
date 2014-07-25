@@ -1635,12 +1635,15 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     ("        CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,"\
                     +"PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)\n"\
                     +"C       CONVERT TO MADLOOP CONVENTION\n"\
-                    +"        CALL %(proc_prefix)sSORT_PJCOEFS(RANK,NLOOPCOEFS,PJCOEFS,TIRCOEFS)"\
+                    +"         CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
                     )%self.general_replace_dict
                 elif tir=="iregi":
                     self.general_replace_dict['iregi_calling']=\
-                    "        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
-                    +"RANK,PDEN,M2L,MU_R,TIRCOEFS,STABLE)"
+                    ("        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
+                    +"RANK,PDEN,M2L,MU_R,PJCOEFS,STABLE)\n"\
+                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
+                    +"        CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
+                    )%self.general_replace_dict
                     self.general_replace_dict['iregi_free_ps']=\
                     "IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS"
                     self.general_replace_dict['initiregi']=\
@@ -1771,6 +1774,15 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
 
         file = file % replace_dict
+        
+        
+        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
+                                                    coef_format=replace_dict['complex_dp_format'],\
+                                                    sub_prefix=replace_dict['proc_prefix'])
+        if self.tir_available_dict['pjfry']:
+            file += '\n\n'+FPR.write_pjfry_mapping()
+        if self.tir_available_dict['iregi']:
+            file += '\n\n'+FPR.write_iregi_mapping()
         
         if writer:
             writer.writelines(file)
