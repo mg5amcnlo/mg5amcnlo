@@ -182,6 +182,8 @@ c
       double precision z,zmin,zmax,xmin,xmax,ez
       double precision pole,width,y,xc
       double precision a,b
+      double precision xgmin,xgmax       ! these should be identical 
+      parameter (xgmin=-1d0, xgmax=1d0)  ! to the ones in genps.inc
 c-----
 c  Begin Code
 c-----
@@ -213,6 +215,14 @@ c-----
                x=xmin
             endif
             jac = jac*(xmax-xmin)/del
+c RF (2014/07/07): code is not protected against this special case. In this case,
+c simply set x to 1 and the jac to zero so that this PS point will not
+c contribute (but you do get the correct xbin_min and xbin_max in
+c sample_get_x)
+            if (y.eq.xgmax .and. xmin.ge.xgmax) then
+               x=1d0
+               jac=0d0
+            endif
          else
             jac = jac *(width/cos(width*z))**2*(zmax-zmin)
          endif
