@@ -1797,6 +1797,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             retry = 0
             # We do not use a for loop because we want to manipulate the updater.
             i=start_index
+            if options and 'events' in options:
+                # it is necessary to reuse the events from lhe file
+                import MadSpin.decay as madspin
+                fsock = open(options['events'])
+                self.event_file = madspin.Event(fsock)
             while i<(start_index+nPoints):
                 # To be added to the returned statistics  
                 qp_dict={}
@@ -2225,7 +2230,7 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
         reuse=options['reuse']
     else:
         reuse=False
-    
+
     reuse=options['reuse']
     keep_folder = reuse
     model=process_definition.get('model')
