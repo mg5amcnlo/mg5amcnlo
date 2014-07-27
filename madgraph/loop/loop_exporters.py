@@ -1446,10 +1446,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             # not self-contained libraries
             if (not isinstance(libpath,str)) or (not os.path.exists(libpath)) \
             or (not os.path.isfile(pjoin(libpath,libname))):
-                if isinstance(libpath,str) and (not os.path.isfile(pjoin(libpath,libname))):
+                if isinstance(libpath,str) and libpath != '' and \
+                (not os.path.isfile(pjoin(libpath,libname))):
                     # WARNING ONLY appears when the libpath is a wrong specific path.
+                    #logger.warning("The %s tensor integration library could not be found"%tir_name\
+                    #               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+                    #               +" It will not be available.")
                     logger.warning("The %s tensor integration library could not be found"%tir_name\
-                                   +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+                                   +" with PATH:%s in mg5_configuration.txt."%libpath\
                                    +" It will not be available.")
                 self.tir_available_dict[tir_name]=False
                 return ""
@@ -1457,9 +1461,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             # self-contained libraries
             if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
                 # WARNING ONLY appears when the libpath is a wrong specific path.
+                #logger.warning("The %s tensor integration library could not be found"%tir_name\
+                #               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+                #               +" It will not be available.")
                 logger.warning("The %s tensor integration library could not be found"%tir_name\
-                               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
-                               +" It will not be available.")
+                                   +" with PATH:%s in mg5_configuration.txt."%libpath\
+                                   +" It will not be available.")
                 self.tir_available_dict[tir_name]=False
                 return ""
        

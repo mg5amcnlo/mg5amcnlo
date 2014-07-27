@@ -1642,11 +1642,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 infos=infos_IN
             else:
                 infos=infos_IN[tool_name]
+
             if not infos:
                 infos = self.setup_process(matrix_element,export_dir, \
                                             reusing, param_card,MLoptions,clean)
                 if not infos:
                     return None
+            
             if clean:
                 infos_save['Process_output']=infos['Process_output']
                 infos_save['HELAS_MODEL_compilation']=infos['HELAS_MODEL_compilation']
@@ -1797,7 +1799,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             retry = 0
             # We do not use a for loop because we want to manipulate the updater.
             i=start_index
-            if options and 'events' in options:
+            if options and 'events' in options and options['events']:
                 # it is necessary to reuse the events from lhe file
                 import MadSpin.decay as madspin
                 fsock = open(options['events'])
@@ -2263,7 +2265,7 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                         options=options,param_card=param_card, 
                                                         keep_folder=keep_folder,
                                                         MLOptions=MLoptions)
-
+    
     if stability == None:
         return None
     else:
