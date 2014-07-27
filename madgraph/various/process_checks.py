@@ -1602,7 +1602,19 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         else:
             tools=MLOptions["MLReductionLib"]
             tools=list(set(tools)) # remove the duplication ones
-
+        # not self-contained tir libraries
+        tool_var={'pjfry':2,'golem':4}
+        for tool in ['pjfry','golem']:
+            tool_dir='%s_dir'%tool
+            if not tool_dir in self.tir_dir:
+                continue
+            tool_libpath=self.tir_dir[tool_dir]
+            tool_libname="lib%s.a"%tool
+            if (not isinstance(tool_libpath,str)) or (not os.path.exists(tool_libpath)) \
+                or (not os.path.isfile(pjoin(tool_libpath,tool_libname))):
+                tools.remove(tool_var[tool])
+        if not tools:
+            return None
         # Normally, this should work for loop-induced processes as well
         if not reusing:
             process = matrix_element['processes'][0]

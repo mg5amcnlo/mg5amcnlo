@@ -1453,7 +1453,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     #               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
                     #               +" It will not be available.")
                     logger.warning("The %s tensor integration library could not be found"%tir_name\
-                                   +" with PATH:%s in mg5_configuration.txt."%libpath\
+                                   +" with PATH:%s specified in mg5_configuration.txt."%libpath\
                                    +" It will not be available.")
                 self.tir_available_dict[tir_name]=False
                 return ""
@@ -1465,7 +1465,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 #               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
                 #               +" It will not be available.")
                 logger.warning("The %s tensor integration library could not be found"%tir_name\
-                                   +" with PATH:%s in mg5_configuration.txt."%libpath\
+                                   +" with PATH:%s specified in mg5_configuration.txt."%libpath\
                                    +" It will not be available.")
                 self.tir_available_dict[tir_name]=False
                 return ""
