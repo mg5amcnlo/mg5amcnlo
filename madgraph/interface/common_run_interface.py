@@ -361,6 +361,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'cpp_compiler': None,
                        'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_status_update': (600, 30),
@@ -406,7 +407,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             fsock = open(pjoin(me_dir,'RunWeb'),'w')
             fsock.write(`pid`)
             fsock.close()
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+
+            misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
+                        cwd=me_dir)
 
         self.to_store = []
         self.run_name = None
@@ -478,23 +481,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
-
-            if amcatnlo and int(run_card['ickkw']) == 3:
-                # For FxFx merging, make sure that:
-                # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed
-                scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
-                for scale in scales:
-                    if  banner_mod.RunCard.format('bool',run_card[scale]) == '.true.':
-                        logger.info('''For consistency in the FxFx merging, \'%s\' has been set to false'''
-                                    % scale,'$MG:color:BLACK')
-                        run_card[scale]='F'
-                # 2. Use kT algorithm for jets with pseudo-code size R=1.0
-                jetparams=['jetradius','jetalgo']
-                for jetparam in jetparams:
-                    if float(run_card[jetparam]) != 1.0:
-                        logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
-                               % jetparam ,'$MG:color:BLACK')
-                        run_card[jetparam]='1.0'
 
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
 
@@ -1179,9 +1165,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if args[1] == 'None':
                 args[1] = None
             self.options['fortran_compiler'] = args[1]
-            current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'))
+            current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'), 'fortran')
             if current != args[1] and args[1] != None:
-                misc.mod_compilator(self.me_dir, args[1], current)
+                misc.mod_compilator(self.me_dir, args[1], current, 'gfortran')
+        elif args[0] == "cpp_compiler":
+            if args[1] == 'None':
+                args[1] = None
+            self.options['cpp_compiler'] = args[1]
+            current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'), 'cpp')
+            if current != args[1] and args[1] != None:
+                misc.mod_compilator(self.me_dir, args[1], current, 'cpp')
         elif args[0] == "run_mode":
             if not args[1] in [0,1,2,'0','1','2']:
                 raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'
@@ -1581,6 +1574,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run
+        self.banner = madspin_cmd.banner
         self.banner.add(path)
         self.banner.write(pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' %
                                 (self.run_name, self.run_tag)))
@@ -1617,7 +1611,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.check_check_events(args) 
         # args now alway content the path to the valid files
         reweight_cmd = reweight_interface.ReweightInterface(args[0])
-        reweight_cmd. mother = self
+        reweight_cmd.mother = self
         self.update_status('Running check on events', level='check')
         
         reweight_cmd.check_events()

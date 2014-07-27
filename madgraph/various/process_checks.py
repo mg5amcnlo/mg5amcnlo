@@ -1612,7 +1612,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             tool_libname="lib%s.a"%tool
             if (not isinstance(tool_libpath,str)) or (not os.path.exists(tool_libpath)) \
                 or (not os.path.isfile(pjoin(tool_libpath,tool_libname))):
-                tools.remove(tool_var[tool])
+                if tool_var[tool] in tools:
+                    tools.remove(tool_var[tool])
         if not tools:
             return None
         # Normally, this should work for loop-induced processes as well

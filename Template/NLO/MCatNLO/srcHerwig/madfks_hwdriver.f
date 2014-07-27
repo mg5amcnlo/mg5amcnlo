@@ -69,9 +69,6 @@ C UNDERLYING EVENT
       IF(.NOT.LHSOFT)WRITE(*,*)'Underlying event WILL NOT be generated'
       WRITE(*,*)
 C
-      WRITE(*,*)'Enter decay modes for gauge bosons'
-      READ(*,*)MODBOS(1),MODBOS(2)
-C
       IF(LHSOFT.AND.IPDF.NE.1)THEN
          WRITE(*,*)' '
          WRITE(*,*)'Underlying event requires external PDF sets'

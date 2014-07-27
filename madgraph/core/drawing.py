@@ -1802,10 +1802,10 @@ class DiagramDrawer(object):
                 curved_for_loop = True
                 self.curved_part_start = (0, 0)
         
-        # for tadpole DOES NOT CRASH BUT STILL NEED FIXING
-        elif len([l for l in diagram.lineList if l.loop_line]) == 1:
-            circled_for_loop = True
-            self.curved_part_start = (0, 0)
+            # for tadpole DOES NOT CRASH BUT STILL NEED FIXING
+            elif len([l for l in diagram.lineList if l.loop_line]) == 1:
+                circled_for_loop = True
+                self.curved_part_start = (0, 0)
 
         # drawing the particles
         for line in diagram.lineList:

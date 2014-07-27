@@ -20,6 +20,7 @@ import logging
 import os
 import re
 import sys
+import time
 
 
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
@@ -46,6 +47,8 @@ sys.path.append(root_path)
 
 sys.path.append(os.path.join(root_path, os.path.pardir, 'Template', 'bin', 'internal'))
 import check_param_card 
+
+pjoin = os.path.join
 
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
@@ -104,7 +107,10 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
                 raise Exception, "%s is not a valid path for restrict file" % restrict
     
     #import the FULL model
-    model = import_full_model(model_path, decay, prefix) 
+    model = import_full_model(model_path, decay, prefix)
+    
+    if os.path.exists(pjoin(model_path, "README")):
+        logger.info("Please read carefully the README of the model file for instructions/restrictions of the model.",'$MG:color:BLACK') 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name
@@ -131,6 +137,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
         model.path = model_path
 
     return model
+    
 
 _import_once = []
 def import_full_model(model_path, decay=False, prefix=''):
@@ -158,6 +165,8 @@ def import_full_model(model_path, decay=False, prefix=''):
         pickle_name = 'model.pkl'
     else:
         pickle_name = 'model_Feynman.pkl'
+    if decay:
+        pickle_name = 'dec_%s' % pickle_name
     
     allow_reload = False
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
@@ -180,7 +189,7 @@ def import_full_model(model_path, decay=False, prefix=''):
                             continue
                         if prefix:
                             if value.startswith(prefix):
-                                _import_once.append((model_path, aloha.unitary_gauge, prefix))
+                                _import_once.append((model_path, aloha.unitary_gauge, prefix, decay))
                                 return model
                             else:
                                 logger.info('reload from .py file')
@@ -190,7 +199,7 @@ def import_full_model(model_path, decay=False, prefix=''):
                                 logger.info('reload from .py file')
                                 break                   
                             else:
-                                _import_once.append((model_path, aloha.unitary_gauge, prefix))
+                                _import_once.append((model_path, aloha.unitary_gauge, prefix, decay))
                                 return model
                     else:
                         continue
@@ -198,7 +207,7 @@ def import_full_model(model_path, decay=False, prefix=''):
             else:
                 logger.info('reload from .py file')
 
-    if (model_path, aloha.unitary_gauge, prefix) in _import_once and not allow_reload:
+    if (model_path, aloha.unitary_gauge, prefix, decay) in _import_once and not allow_reload:
         raise MadGraph5Error, 'This model %s is modified on disk. To reload it you need to quit/relaunch MG5_aMC ' % model_path
      
     # Load basic information
@@ -217,7 +226,10 @@ def import_full_model(model_path, decay=False, prefix=''):
     model.set('functions', ufo_model.all_functions)
 
     # Optional UFO part: decay_width information
-    if decay and hasattr(ufo_model, 'all_decays') and ufo_model.all_decays:
+
+
+    if decay and hasattr(ufo_model, 'all_decays') and ufo_model.all_decays:       
+        start = time.time()
         for ufo_part in ufo_model.all_particles:
             name =  ufo_part.name
             if not model['case_sensitive']:
@@ -228,10 +240,13 @@ def import_full_model(model_path, decay=False, prefix=''):
             elif p and not hasattr(p, 'partial_widths'):
                 p.partial_widths = {}
             # might be None for ghost
+        logger.debug("load width takes %s", time.time()-start)
     
     if prefix:
+        start = time.time()
         model.change_parameter_name_with_prefix()
-        
+        logger.debug("model prefixing  takes %s", time.time()-start)
+                     
     path = os.path.dirname(os.path.realpath(model_path))
     path = os.path.join(path, model.get('name'))
     model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
@@ -289,11 +304,18 @@ class UFOMG5Converter(object):
 
         # Check the validity of the model
         # 1) check that all lhablock are single word.
+        def_name = []
         for param in self.ufomodel.all_parameters:
             if param.nature == "external":
                 if len(param.lhablock.split())>1:
                     raise InvalidModel, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\' ''' % (param.name, param.lhablock)
+            if param.name in def_name:
+                raise InvalidModel, "name %s define multiple time. Please correct the UFO model!" \
+                                                                  % (param.name)
+            else:
+                def_name.append(param.name)
+                                                                  
          
         if hasattr(self.ufomodel, 'gauge'):    
             self.model.set('gauge', self.ufomodel.gauge)

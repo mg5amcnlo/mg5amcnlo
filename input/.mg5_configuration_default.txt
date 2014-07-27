@@ -30,6 +30,11 @@
 #!
 # fortran_compiler = None
 
+#! Prefered C++ Compiler
+#! If None: try to find g++ or clang on the system
+#!
+# cpp_compiler = None
+
 #! Prefered Text Editor
 #!  Default: use the shell default Editor
 #!           or try to find one available on the system
