@@ -1602,7 +1602,19 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         else:
             tools=MLOptions["MLReductionLib"]
             tools=list(set(tools)) # remove the duplication ones
-
+        # not self-contained tir libraries
+        tool_var={'pjfry':2}
+        for tool in ['pjfry']:
+            tool_dir='%s_dir'%tool
+            if not tool_dir in self.tir_dir:
+                continue
+            tool_libpath=self.tir_dir[tool_dir]
+            tool_libname="lib%s.a"%tool
+            if (not isinstance(tool_libpath,str)) or (not os.path.exists(tool_libpath)) \
+                or (not os.path.isfile(pjoin(tool_libpath,tool_libname))):
+                tools.remove(tool_var[tool])
+        if not tools:
+            return None
         # Normally, this should work for loop-induced processes as well
         if not reusing:
             process = matrix_element['processes'][0]
@@ -1642,11 +1654,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 infos=infos_IN
             else:
                 infos=infos_IN[tool_name]
+                
             if not infos:
                 infos = self.setup_process(matrix_element,export_dir, \
                                                 reusing, param_card,MLoptions,clean)
                 if not infos:
                     return None
+            
             if clean:
                 infos_save['Process_output']=infos['Process_output']
                 infos_save['HELAS_MODEL_compilation']=infos['HELAS_MODEL_compilation']
@@ -1794,6 +1808,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             retry = 0
             # We do not use a for loop because we want to manipulate the updater.
             i=start_index
+            if options and 'events' in options and options['events']:
+                # it is necessary to reuse the events from lhe file
+                import MadSpin.decay as madspin
+                fsock = open(options['events'])
+                self.event_file = madspin.Event(fsock)
             while i<(start_index+nPoints):
                 # To be added to the returned statistics  
                 qp_dict={}
