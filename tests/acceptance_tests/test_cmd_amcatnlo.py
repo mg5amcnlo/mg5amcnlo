@@ -55,16 +55,13 @@ class TestMECmdShell(unittest.TestCase):
     def setUp(self):
         
         self.tmpdir = tempfile.mkdtemp(prefix='amc')
-        self.tmpdir = "/tmp/"
-        # if we need to keep the directory for testing purpose
         #if os.path.exists(self.tmpdir):
         #    shutil.rmtree(self.tmpdir)
         #os.mkdir(self.tmpdir)
         self.path = pjoin(self.tmpdir,'MGProcess')
         
     def tearDown(self):
-        pass
-        #shutil.rmtree(self.tmpdir)
+        shutil.rmtree(self.tmpdir)
     
     
     def generate(self, process, model, multiparticles=[]):

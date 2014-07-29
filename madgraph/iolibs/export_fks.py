@@ -121,28 +121,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         link_tir_libs=[]
         tir_libs=[]
         os.remove(os.path.join(self.dir_path,'SubProcesses','makefile_loop.inc'))
-        cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
-        try:
-            os.chdir(dirpath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % dirpath)
-            return 0
-        filename = 'makefile_loop'
+        filename = pjoin(self.dir_path, 'SubProcesses','makefile_loop')
         calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
                                                         link_tir_libs,tir_libs)
         os.remove(os.path.join(self.dir_path,'Source','make_opts.inc'))
-        dirpath = os.path.join(self.dir_path, 'Source')
-        try:
-            os.chdir(dirpath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % dirpath)
-            return 0
-        filename = 'make_opts'
+        filename = pjoin(self.dir_path, 'Source','make_opts')
         calls = self.write_make_opts(writers.MakefileWriter(filename),
                                                         link_tir_libs,tir_libs)
-        # Return to original PWD
-        os.chdir(cwd)
         
         # Duplicate run_card and FO_analyse_card
         for card in ['run_card', 'FO_analyse_card', 'shower_card']:
@@ -1371,8 +1357,6 @@ end
                            len(matrix_element.get_all_amplitudes()))
 
         filename = "loop_matrix.ps"
-        writers.FortranWriter(filename).writelines(
-                   """C Post-helas generation loop-drawing is not ready yet.""")
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
               matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
               filename,

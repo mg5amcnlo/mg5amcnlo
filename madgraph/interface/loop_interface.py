@@ -276,11 +276,6 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
     def validate_model(self, loop_type='virtual',coupling_type='QCD', stop=True):
         """ Upgrade the model sm to loop_sm if needed """
 
-        if not self._curr_model:
-            if coupling_type=='QED':
-                self.do_set(self,'gauge Feynman')
-            return
-
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
               (coupling_type not in self._curr_model['perturbation_couplings']):
@@ -304,8 +299,8 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                 if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
                     if not self.options['gauge']=='Feynman' and coupling_type == 'QED':
-                        logger.info('Change to the gauge to Feynman because '+\
-                          'model loop_qcd_qed_sm is still restricted only to Feynman gauge.')
+                        logger.info('Switch to Feynman gauge because '+\
+                          'model loop_qcd_qed_sm is restricted only to Feynman gauge.')
                         self._curr_model = None
                         mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
                     if coupling_type == 'QCD':
@@ -314,7 +309,8 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                         add_on = 'qcd_qed_'
                     else:
 			            raise MadGraph5Error(
-                          "The pertubation coupling cannot be '%s' in loop processes"%coupling_type)
+                          "The pertubation coupling cannot be '%s'"%coupling_type+\
+                                                        " in SM loop processes")
 
                     logger.info("MG5_aMC now loads 'loop_%s%s'."%(add_on,model_name))
 
@@ -332,7 +328,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                  not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
             if 1 in self._curr_model.get('gauge'):
                 logger.info("Setting gauge to Feynman in order to process all"+\
-                           " possible loop computations available in the model")
+                           " possible loop computations available in the model.")
                 mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
             else:
                 logger.warning("You will only be able to do tree level and QCD"+\

@@ -214,8 +214,7 @@ class MadLoopLauncher(ExtLauncher):
                     raise MadGraph5Error,"Could not find result file %s."%\
                                        str(os.path.join(curr_path,'result.dat'))
                 # The result are returned as a dictionary.
-                result = evaluator.parse_check_output(rFile.readlines(),\
-                                                                  format='dict')
+                result = evaluator.parse_check_output(rFile,format='dict')
                 for line in self.format_res_string(result, shell_name):
                     if isinstance(line, str):
                         logger.info(line)
