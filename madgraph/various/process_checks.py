@@ -2892,7 +2892,7 @@ The loop direction test power P is computed as follow:
             color=colorlist[i]
             data_plot=data_plot_dict[key]
             accuracies=accuracy_dict[key]
-            plt.plot(accuracies, data_plot, color=color, marker='o', linestyle='-',\
+            plt.plot(accuracies, data_plot, color=color, marker='', linestyle='-',\
                      label=key)
         plt.axis([min_acc,max_acc,\
                                10**(-int(math.log(nPSmax-0.5)/math.log(10))-1), 1])

@@ -1,5 +1,6 @@
 import array
 import copy
+import math
 
 class PolynomialError(Exception): pass
 
@@ -9,6 +10,59 @@ def get_number_of_coefs_for_rank(r):
     return sum([((3+ri)*(2+ri)*(1+ri))/6 for ri in range(0,r+1)])
 
 class Polynomial(object):
+    """ A class to represent a polynomial in the loop momentum (4-vector) q 
+    and how the symmetrized coefficients are ordered. The ordering rule 
+    correspond to what is presented in Eq. C.15 of arxiv:hep-ph/1405.0301"""
+        
+    def __init__(self, rank):
+        
+        assert rank > -1, "The rank of a q-polynomial should be 0 or positive"
+        self.rank=rank
+        self.init_coef_list()
+        
+    def init_coef_list(self):
+        """ Creates a list whose elements are arrays being the coefficient
+        indices. We order this list according to the algorithm in  
+        get_coef_position. This coef_list can then be used for the function
+        get_coef_at_position()
+        """
+        
+        self.coef_list=[None,]*get_number_of_coefs_for_rank(self.rank)
+        
+        PNO = Polynomial_naive_ordering(self.rank)
+        
+        for coef in PNO.coef_list:            
+            self.coef_list[self.get_coef_position(list(coef))]=coef
+        
+    def get_coef_position(self, indices_list):
+        """ Returns the canonical position for a coefficient characterized 
+        by the value of the indices of the loop momentum q it multiplies,
+        that is for example C_01032 multiplying q_0*q_1*q_0*q_3*q_2.
+        We assume that the explicit construction of the position below is
+        faster than a lookup in a table"""
+
+        fact = math.factorial
+
+        if len(indices_list)==0:
+            return 0
+        
+        res = get_number_of_coefs_for_rank(len(indices_list)-1)
+
+        new_indices_list = copy.copy(indices_list)
+        new_indices_list.sort()
+
+        for i, ind in enumerate(new_indices_list):
+            if ind>0:
+                res = res + (fact(ind+i)/(fact(i+1)*fact(ind - 1)))
+                
+        return res
+
+    def get_coef_at_position(self, pos):
+        """ Returns the coefficient at position pos in the one dimensional
+        vector """
+        return list(self.coef_list[pos])
+
+class Polynomial_naive_ordering(object):
     """ A class to represent a polynomial in the loop momentum (4-vector) q"""
     
     def __init__(self, rank):
@@ -42,7 +96,7 @@ class Polynomial(object):
                     new_tmp_coef_list.append(new_coef)
             tmp_coef_list=new_tmp_coef_list
             self.coef_list.extend(tmp_coef_list)
-    
+
     def get_coef_position(self, indices_list):
         """ Returns the canonical position for a coefficient characterized 
         by the value of the indices of the loop momentum q it multiplies,
