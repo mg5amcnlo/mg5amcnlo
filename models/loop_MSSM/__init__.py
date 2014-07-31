@@ -43,6 +43,6 @@ else:
 gauge = [0, 1]
 
 
-__author__ = "Benjamin Fuks"
+__author__ = "Benjamin Fuks, Celine Degrande"
 __date__ = "26.10.12"
 __version__= "1.3.13"

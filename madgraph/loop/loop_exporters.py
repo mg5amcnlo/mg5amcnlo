@@ -112,11 +112,8 @@ class LoopExporterFortran(object):
             # Create the links to the lib folder
             linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
-                # We don't use the the ln() macro here because we want to
-                # explicitely link to ../Source/<lib>path
-                os.symlink(
-                    pjoin(os.path.pardir,'Source','CutTools','includects',file), 
-                                                   pjoin(targetPath,'lib',file))
+                ln(pjoin(targetPath,'Source','CutTools','includects',file), 
+                                                        pjoin(targetPath,'lib'))
             # Make sure it is recompiled at least once. Because for centralized
             # MG5_aMC installations, it might be that compiler differs.
             # Not necessary anymore because I check the compiler version from
@@ -1507,9 +1504,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                                    new, current)
 
                 # Create the links to the lib folder
-                os.symlink(
-                    pjoin(os.path.pardir,'Source','IREGI','src',libname), 
-                                                      pjoin(targetPath,libname))
+                ln(pjoin(targetPath,os.path.pardir,'Source','IREGI','src',
+                                                            libname),targetPath)
             else:
                 logger.info("Tensor integral reduction library "+\
                                             "%s not implemented yet."%tir_name)

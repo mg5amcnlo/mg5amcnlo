@@ -834,27 +834,19 @@ class CheckValidForCmd(cmd.CheckCmd):
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
-        i=-1
-        options_list = {'--energy':'1000','--split_orders':'-1'}
-        user_options={}
-        while args[i].startswith('--'):
-            option=args[i].split('=')
-            user_options[option[0]]=option[1]
-            i=i-1
-        
-        for option, default_value in options_list.items():
-            if option not in user_options.keys():
-                user_options[option]=default_value    
-        
+        user_options = {'--energy':'1000','--split_orders':'-1'}
+        for arg in args[:]:
+            if arg.startswith('--') and '=' in arg:
+                key, value = arg.split('=')
+                if key not in user_options:
+                    raise self.InvalidCmd, "unknown option %s" % key
+                user_options[key] = value
+                args.remove(arg)
+
+        self.check_process_format(" ".join(args[1:]))
+
         for option, value in user_options.items():
             args.append('%s=%s'%(option,value))
-        
-        self.check_process_format(" ".join(args[1:-len(options_list.keys())]))
-
-        if not args[-1].startswith('--energy='):
-            args.append('--energy=1000')
-
-        self.check_process_format(" ".join(args[1:-1]))
 
         return param_card
 
@@ -2409,6 +2401,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
     _valid_sqso_types = ['==','<=','=','>']
+    _valid_amp_so_types = ['=','<=']
     _OLP_supported = ['MadLoop', 'GoSam']
     _output_dependencies_supported = ['external', 'internal','environment_paths']
 
@@ -3279,12 +3272,15 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 3 in MLoptions["MLReductionLib"]:
+                    logger.warning('IREGI not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(3)
+
         if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
             TIR_dir['pjfry_dir']=self.options['pjfry']
         else:
             if "MLReductionLib" in MLoptions:
                 if 2 in MLoptions["MLReductionLib"]:
+                    logger.warning('PJFRY not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(2)
                     
         if 'golem' in self.options and isinstance(self.options['golem'],str):
@@ -3292,9 +3288,8 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 4 in MLoptions["MLReductionLib"]:
+                    logger.warning('GOLEM not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(4)
-        #if "_pjfry_dir" in dir(self):
-        #    TIR_dir['pjfry_dir']=self._pjfry_dir
         
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
@@ -3360,12 +3355,7 @@ This implies that with decay chains:
 
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
-            nb_processes += len(gauge_result_no_brs)
-            # Maybe the line below was necessary, but not sure :/
-            #HSSVH
-            #self.do_set('loop_optimized_output %s'%
-            #            self.options["loop_optimized_output"], log=False)
-            
+            nb_processes += len(gauge_result_no_brs)            
 
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
@@ -3578,9 +3568,10 @@ This implies that with decay chains:
                 if order.endswith('^2'):
                     new_squared_orders[order[:-2]]=squared_orders[order]
                 else:
-                    if squared_orders[order][1]!='=':
+                    if squared_orders[order][1] not in self._valid_amp_so_types:
                         raise self.InvalidCmd, \
-                          "Amplitude order constraints can only be of type '='"+\
+                          "Amplitude order constraints can only be of type %s"%\
+                                         (', '.join(self._valid_amp_so_types))+\
                                           ", not '%s'."%squared_orders[order][1]
                     orders[order]=squared_orders[order][0]
             squared_orders=new_squared_orders
@@ -3608,10 +3599,10 @@ This implies that with decay chains:
                     squared_orders[order_re.group('name')[:-2]] = \
                                              (int(order_re.group('value')),type)
                 else:
-                    if type != '=':
+                    if type not in self._valid_amp_so_types:
                         raise self.InvalidCmd, \
-                          "Amplitude order constraints can only be of type '='"+\
-                                                          ", not '%s'."%type
+                          "Amplitude order constraints can only be of type %s"%\
+                        (', '.join(self._valid_amp_so_types))+", not '%s'."%type
 
                     orders[order_re.group('name')] = \
                                                     int(order_re.group('value'))                    

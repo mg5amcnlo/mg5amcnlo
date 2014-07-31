@@ -1063,9 +1063,7 @@ class OrganizeModelExpression:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
                     if newCoupling.pole(poleOrder)!='ZERO':                    
                         newCoupling.value=newCoupling.pole(poleOrder)
-                        couplings_list.append(newCoupling)
-            # This is not necessary anymore (!check!)
-            # self.model.all_couplings=copy.copy(couplings_list)             
+                        couplings_list.append(newCoupling)     
         else:
             couplings_list = self.model.all_couplings + additional_couplings                        
                                         
@@ -1245,10 +1243,10 @@ class RestrictModel(model_reader.ModelReader):
                                                     keep_external=keep_external)
 
         # deal with identical parameters
-        #if not keep_external:
-        #    iden_parameters = self.detect_identical_parameters()
-        #    for iden_param in iden_parameters:
-        #        self.merge_iden_parameters(iden_param)
+        if not keep_external:
+            iden_parameters = self.detect_identical_parameters()
+            for iden_param in iden_parameters:
+                self.merge_iden_parameters(iden_param)
     
         iden_parameters = self.detect_identical_parameters()
         for iden_param in iden_parameters:
