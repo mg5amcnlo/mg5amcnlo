@@ -5025,6 +5025,7 @@ This implies that with decay chains:
                     program = misc.which_lib('lib%s.a'%key)
                     if program != None:
                         fpath, fname = os.path.split(program)
+                        logger.info('Using %s library in %s'%(key,fpath))
                         self.options[key]=fpath
                     else:
                         self.options[key]=None
