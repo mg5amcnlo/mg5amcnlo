@@ -1404,7 +1404,21 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
                     if tir=='golem':
-                        golem_include=pjoin(os.path.split(libpath)[0],'include','golem95')
+                        subdirs=os.listdir(pjoin(os.path.split(libpath)[0],'include'))
+                        if not subdirs:
+                            golem_include=pjoin(os.path.split(libpath)[0],'include','golem95')
+                        else:
+                            for subdir in subdirs:
+                                find=False
+                                for f in os.listdir(pjoin(os.path.split(libpath)[0],'include',subdir)):
+                                    if f == 'matrice_s.mod':
+                                        find=True
+                                        break
+                                if find:
+                                    golem_include=pjoin(os.path.split(libpath)[0],'include',subdir)
+                                    break
+                            else:
+                                golem_include=pjoin(os.path.split(libpath)[0],'include','golem95')                                                            
                         tir_include.append('-I %s'%golem_include)                
                 else :
                     link_tir_libs.append('-l%s'%tir)
