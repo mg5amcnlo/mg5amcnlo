@@ -4,7 +4,7 @@
 
 !     
 #MLReductionLib
-4|1
+1|4|3|2
 ! Default :: 1|4|3|2
 !     The tensor integral reduction library.The current choices are:
 !     1 | CutTools
