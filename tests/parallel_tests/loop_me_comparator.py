@@ -261,7 +261,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
 
         init = process_checks.LoopMatrixElementTimer.run_initialization(\
-          run_dir=dir_name, SubProc_dir=os.path.join(working_dir, 'SubProcesses'))
+          run_dir=dir_name, SubProc_dir=os.path.join(working_dir, 'SubProcesses'),
+          attempts = [3,15,25])
        
         if init is None:
             return False
