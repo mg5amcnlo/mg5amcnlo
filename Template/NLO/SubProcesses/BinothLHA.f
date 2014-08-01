@@ -28,8 +28,10 @@ c general MadFKS parameters
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
       double precision p(0:3,nexternal-1)
-      double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
-     $     ,virt_wgts_hel(3),born_wgt_recomputed,born_wgt_recomp_direct
+      double precision virt_wgt,born_wgt,double,single
+     $     ,born_wgt_recomputed,born_wgt_recomp_direct
+      double precision, allocatable :: virt_wgts(:,:)
+      double precision, allocatable :: virt_wgts_hel(:,:)
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -39,6 +41,8 @@ c general MadFKS parameters
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       logical firsttime,firsttime_conversion
       data firsttime,firsttime_conversion /.true.,.true./
+      logical firsttime_run
+      data firsttime_run /.true./
       double precision qes2
       common /coupl_es/ qes2
       integer nvtozero
@@ -52,16 +56,18 @@ c general MadFKS parameters
       parameter (fksprefact=.true.)
       integer ret_code
       double precision madfks_single, madfks_double
-      double precision tolerance,prec_found
+      double precision tolerance, prec_found
+      double precision, allocatable :: accuracies(:)
       integer i,j
       integer nbad, nbadmax
       double precision target,ran2,accum
       external ran2
       double precision wgt_hel(max_bhel)
       common/c_born_hel/wgt_hel
+      integer nsqso, MLResArrayDim
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
-      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       parameter (nbadmax = 5)
       double precision pmass(nexternal)
@@ -86,30 +92,39 @@ c Ellis-Sexton scale)
       single  = 0d0
       double  = 0d0
       prec_found = 1.0d0
-      if (firsttime) then
+      if (firsttime_run) then
+         call get_nsqso_loop(nsqso)
+         call get_answer_dimension(MLResArrayDim)
+         allocate(accuracies(0:nsqso))
+         allocate(virt_wgts(0:3,0:MLResArrayDim))
+         allocate(virt_wgts_hel(0:3,0:MLResArrayDim))
 c Make sure that whenever in the initialisation phase, MadLoop calls
 c itself again to perform stability check to make sure no unstable EPS
 c splips unnoticed.
          CALL FORCE_STABILITY_CHECK(.TRUE.)
-
+         firsttime_run = .false.
+      endif
+      if (firsttime) then
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
          tolerance=IRPoleCheckThreshold/10d0 ! for the pole check below
-         call sloopmatrix_thres(p, virt_wgts, tolerance, prec_found,
+         call sloopmatrix_thres(p, virt_wgts, tolerance, accuracies,
      $        ret_code)
-         virt_wgt= virt_wgts(1)/dble(ngluons)
-         single  = virt_wgts(2)/dble(ngluons)
-         double  = virt_wgts(3)/dble(ngluons)
+         prec_found = accuracies(0)
+         virt_wgt= virt_wgts(1,0)/dble(ngluons)
+         single  = virt_wgts(2,0)/dble(ngluons)
+         double  = virt_wgts(3,0)/dble(ngluons)
       else
          tolerance=PrecisionVirtualAtRunTime
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
          if (mc_hel.eq.0) then
-            call sloopmatrix_thres(p,virt_wgts,tolerance,prec_found
+            call sloopmatrix_thres(p,virt_wgts,tolerance,accuracies
      $           ,ret_code)
-            virt_wgt= virt_wgts(1)/dble(ngluons)
-            single  = virt_wgts(2)/dble(ngluons)
-            double  = virt_wgts(3)/dble(ngluons)
+            prec_found = accuracies(0)            
+            virt_wgt= virt_wgts(1,0)/dble(ngluons)
+            single  = virt_wgts(2,0)/dble(ngluons)
+            double  = virt_wgts(3,0)/dble(ngluons)
          elseif (mc_hel.eq.1) then
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
@@ -142,12 +157,13 @@ c$$$            call get_MC_integer(2,hel(0),ihel,volh)
 c$$$            fillh=.true.
             fillh=.false.
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
-     $           ,tolerance,prec_found,ret_code)
-            virt_wgt = virt_wgt + virt_wgts_hel(1)*dble(goodhel(ihel))
+     $           ,tolerance,accuracies,ret_code)
+            prec_found = accuracies(0)
+            virt_wgt = virt_wgt + virt_wgts_hel(1,0)*dble(goodhel(ihel))
      $           /volh/4d0/dble(ngluons)
-            single   = single   + virt_wgts_hel(2)*dble(goodhel(ihel))
+            single   = single   + virt_wgts_hel(2,0)*dble(goodhel(ihel))
      $           /volh/4d0/dble(ngluons)
-            double   = double   + virt_wgts_hel(3)*dble(goodhel(ihel))
+            double   = double   + virt_wgts_hel(3,0)*dble(goodhel(ihel))
      $           /volh/4d0/dble(ngluons)
 c Average over initial state helicities (and take the ngluon factor into
 c account)
@@ -200,7 +216,12 @@ c MadLoop initialization PS points.
             if (mc_hel.ne.0) then
 c Set-up the MC over helicities. This assumes that the 'HelFilter.dat'
 c exists, which should be the case when firsttime is false.
-               open (unit=67,file='HelFilter.dat',status='old',err=201)
+               if (NHelForMCoverHels.lt.0) then
+                   mc_hel=0
+                   goto 203
+               endif
+               open (unit=67,file='../MadLoop5_resources/HelFilter.dat',
+     $   status='old',err=201)
                hel(0)=0
                j=0
 c optimized loop output
@@ -214,8 +235,18 @@ c optimized loop output
                  endif
                enddo
                goto 203
+201            continue
+               write (*,*) 'Cannot do MC over hel:'/
+     &     /' "HelFilter.dat" does not exist'/
+     &     /' or does not have the correct format.'/
+     $     /' Change NHelForMCoverHels in FKS_params.dat '/
+     &     /'to explicitly summ over them instead.'
+               stop
+c               mc_hel=0
+c               goto 203
+202            continue
 c non optimized loop output
- 202           rewind(67)
+               rewind(67)
                read(67,*,err=201) (include_hel(i),i=1,max_bhel)
                do i=1,max_bhel
                   if (include_hel(i).eq.'T') then
@@ -225,7 +256,7 @@ c non optimized loop output
                      hel(j)=i
                   endif
                enddo
- 203           continue
+203            continue
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities
                if (NHelForMCoverHels.eq.-1) then
@@ -290,9 +321,7 @@ c Update the statistics using the MadLoop return code (ret_code)
       else
          n10=n10+1              ! no known ret_code (10)
       endif
-      if (mod(ret_code,10).ne.0) then
-         n1=n1+1                ! no known ret_code (1)
-      endif
+         n1(mod(ret_code,10))=n1(mod(ret_code,10))+1                ! unit ret code distribution
 
 c Write out the unstable, non-rescued phase-space points (MadLoop return
 c code is in the four hundreds) or the ones that are found by the pole
@@ -342,10 +371,6 @@ c weight, screwing up the complete integration afterward.
      $     .and. ret_code/100.eq.1)virt_wgt=0d0
 
       return
- 201  write (*,*) 'Cannot do MC over hel:'/
-     &     /' "HelFilter.dat" does not exist'/
-     &     /' or does not have the correct format'
-      stop
       end
 
       subroutine BinothLHAInit(filename)

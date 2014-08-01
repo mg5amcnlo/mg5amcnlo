@@ -1,0 +1,109 @@
+!!
+!! Copyright (C) 2014 Andreas van Hameren. 
+!!
+!! This file is part of OneLOop-3.4.
+!!
+!! OneLOop-3.4 is free software: you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation, either version 3 of the License, or
+!! (at your option) any later version.
+!!
+!! OneLOop-3.4 is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with OneLOop-3.4.  If not, see <http://www.gnu.org/licenses/>.
+!!
+!
+  use avh_olo_bub ,only: bub0
+!
+  include 'avh_olo_complex.h90'
+    ,intent(out) :: rslt(0:2)
+  include 'avh_olo_complex.h90' !|momenta=complex
+!#  include 'avh_olo_real.h90'    !|momenta=real
+    ,intent(in)  :: pp
+  include 'avh_olo_complex.h90' !|masses=complex
+!#  include 'avh_olo_real.h90'    !|masses=real
+    ,intent(in)  :: m1,m2
+!#  include 'avh_olo_real.h90' !|mulocal=rmu
+!#   ,intent(in)  :: rmu       !|mulocal=rmu
+!
+  include 'avh_olo_complex.h90'
+    :: ss,r1,r2
+  include 'avh_olo_real.h90'
+    :: app,am1,am2,hh,mulocal,mulocal2
+  character(25+99) ,parameter :: warning=&
+                     'WARNING from OneLOop b0: '//warnonshell
+  if (initz) call init
+  ss = pp
+  r1 = m1
+  r2 = m2
+!
+!{momenta=complex
+  app = areal(ss)
+  if (aimag(ss).ne.RZRO) then
+    if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop b0: ' &
+      ,'ss has non-zero imaginary part, putting it to zero.'
+    ss = acmplx( app )
+  endif
+  app = abs(app)
+!}momenta=complex
+!{momenta=real
+!#  app = abs(pp)
+!}momenta=real
+!
+!{masses=complex
+  am1 = areal(r1)
+  hh  = aimag(r1)
+  if (hh.gt.RZRO) then
+    if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop b0: ' &
+      ,'r1 has positive imaginary part, switching its sign.'
+    r1 = acmplx( am1 ,-hh )
+  endif
+  am1 = abs(am1) + abs(hh)
+!
+  am2 = areal(r2)
+  hh  = aimag(r2)
+  if (hh.gt.RZRO) then
+    if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop b0: ' &
+      ,'r2 has positive imaginary part, switching its sign.'
+    r2 = acmplx( am2 ,-hh )
+  endif
+  am2 = abs(am2) + abs(hh)
+!}masses=complex
+!{masses=real
+!#  am1 = abs(m1)
+!#  am2 = abs(m2)
+!}masses=real
+!
+  mulocal = muscale !|mulocal=muscale
+!#  mulocal = rmu     !|mulocal=rmu
+!
+  mulocal2 = mulocal*mulocal
+!
+  if (nonzerothrs) then
+    hh = onshellthrs
+    if (app.lt.hh) app = 0
+    if (am1.lt.hh) am1 = 0
+    if (am2.lt.hh) am2 = 0
+  elseif (wunit.gt.0) then
+    hh = onshellthrs*max(app,max(am1,max(am2,mulocal2)))
+    if (RZRO.lt.app.and.app.lt.hh) write(wunit,*) warning
+    if (RZRO.lt.am1.and.am1.lt.hh) write(wunit,*) warning
+    if (RZRO.lt.am2.and.am2.lt.hh) write(wunit,*) warning
+  endif
+!
+  call bub0( rslt ,ss,r1,r2 ,app,am1,am2 ,mulocal2 )
+!
+  if (punit.gt.0) then
+    if (nonzerothrs) write(punit,*) 'onshell:',trim(myprint(onshellthrs))
+    write(punit,*) 'muscale:',trim(myprint(mulocal))
+    write(punit,*) ' pp:',trim(myprint(pp))
+    write(punit,*) ' m1:',trim(myprint(m1))
+    write(punit,*) ' m2:',trim(myprint(m2))
+    write(punit,*) 'b0(2):',trim(myprint(rslt(2)))
+    write(punit,*) 'b0(1):',trim(myprint(rslt(1)))
+    write(punit,*) 'b0(0):',trim(myprint(rslt(0)))
+  endif

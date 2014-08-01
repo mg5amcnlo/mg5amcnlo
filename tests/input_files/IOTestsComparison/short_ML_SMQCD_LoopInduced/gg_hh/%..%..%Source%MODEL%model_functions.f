@@ -33,6 +33,18 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       ENDIF
       END
 
+      DOUBLE COMPLEX FUNCTION ARG(COMNUM)
+      IMPLICIT NONE
+      DOUBLE COMPLEX COMNUM
+      DOUBLE COMPLEX IIM
+      IIM = (0.0D0,1.0D0)
+      IF(COMNUM.EQ.(0.0D0,0.0D0)) THEN
+        ARG=(0.0D0,0.0D0)
+      ELSE
+        ARG=LOG(COMNUM/ABS(COMNUM))/IIM
+      ENDIF
+      END
+
 
       COMPLEX*32 FUNCTION MP_COND(CONDITION,TRUECASE,FALSECASE)
       IMPLICIT NONE
@@ -62,5 +74,17 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         MP_REGLOG=(0.0E0_16,0.0E0_16)
       ELSE
         MP_REGLOG=LOG(ARG)
+      ENDIF
+      END
+
+      COMPLEX*32 FUNCTION MP_ARG(COMNUM)
+      IMPLICIT NONE
+      COMPLEX*32 COMNUM
+      COMPLEX*32 IMM
+      IMM = (0.0E0_16,1.0E0_16)
+      IF(COMNUM.EQ.(0.0E0_16,0.0E0_16)) THEN
+        MP_ARG=(0.0E0_16,0.0E0_16)
+      ELSE
+        MP_ARG=LOG(COMNUM/ABS(COMNUM))/IMM
       ENDIF
       END

@@ -80,6 +80,14 @@ class TestCmdShell1(unittest.TestCase):
         self.do('generate e+ e- > z | a > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
+        self.do('generate d d~ > u u~ WEIGHTED^2>-1')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 4)
+        self.do('generate d d~ > u u~ WEIGHTED^2>-2')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 3)
+        self.assertRaises(MadGraph5Error, self.do, 
+                                           'generate d d~ > u u~ WEIGHTED^2>-4')
         self.assertRaises(MadGraph5Error, self.do, 'generate a V > e+ e-')
         self.assertRaises(MadGraph5Error, self.do, 'generate e+ e+|e- > e+ e-')
         self.assertRaises(MadGraph5Error, self.do, 'generate e+ e- > V a')
@@ -130,6 +138,8 @@ class TestCmdShell1(unittest.TestCase):
                     'text_editor': None, 
                     'cluster_queue': None,
                     'nb_core': None,
+                    'pjfry': 'auto',
+                    'golem': 'auto',
                     'run_mode': 2,
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 

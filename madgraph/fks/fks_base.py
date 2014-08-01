@@ -114,9 +114,12 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         # a process such as g g > g g will lead to real emissions 
         #   (e.g: u g > u g g ) which will miss some corresponding born,
         #   leading to non finite results
+        perturbation = []
         for procdef in self['process_definitions']:
             soft_particles = []
             for pert in procdef['perturbation_couplings']:
+                if pert not in perturbation:
+                    perturbation.append(pert)
                 soft_particles.extend(\
                         fks_common.find_pert_particles_interactions(\
                     procdef['model'], pert)['soft_particles'])
@@ -174,7 +177,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
             if n_diag_virt == 0 and n_diag_real ==0:
                 raise fks_common.FKSProcessError(
-                        'This process does not have any correction up to NLO in QCD')
+                        'This process does not have any correction up to NLO in %s'\
+                        %','.join(perturbation))
 
             logger.info(('Generated %d subprocesses with %d real emission diagrams, ' + \
                         '%d born diagrams and %d virtual diagrams') % \
@@ -260,13 +264,13 @@ class FKSRealProcess(object):
         Stores the fks informations into the list of dictionaries fks_infos
         """      
         self.fks_infos = []
-
         for leg in leglist:
             if leg.get('fks') == 'i':
                 i_fks = leg.get('number')
+                # i is a gluon or a photon
                 need_color_links = leg.get('massless') \
                         and leg.get('spin') == 3 \
-                        and leg.get('color') == 8
+                        and leg.get('self_antipart')
             if leg.get('fks') == 'j':
                 j_fks = leg.get('number')
         self.fks_infos.append({'i' : i_fks, 
@@ -291,8 +295,16 @@ class FKSRealProcess(object):
 
         self.process.set('orders', orders)
         legs = [(leg.get('id'), leg) for leg in leglist]
-        self.pdgs = array.array('i',[s[0] for s in legs]) 
-        self.colors = [leg['color'] for leg in leglist]
+        self.pdgs = array.array('i',[s[0] for s in legs])
+        if 'QCD' in perturbed_orders:
+            self.colors = [leg['color'] for leg in leglist]
+            # in QCD, charges are irrelevant !
+            self.charges = [0. for leg in leglist]
+            self.perturbation = 'QCD'
+        else:
+            self.colors = [leg['color'] for leg in leglist]
+            self.charges = [leg['charge'] for leg in leglist]
+            self.perturbation = 'QED'
         self.process.set('legs', MG.LegList(leglist))
         self.process.set('legs_with_decays', MG.LegList())
         self.amplitude = diagram_generation.Amplitude()
@@ -315,20 +327,21 @@ class FKSRealProcess(object):
         for i in self.process.get('legs'):
             fks_j_from_i[i.get('number')] = []
             if i.get('state'):
-                for j in self.process.get('legs'):
-                    if j.get('number') != i.get('number') :
-                        ijlist = fks_common.combine_ij(i, j, self.process.get('model'), dict)
-                        for ij in ijlist:
-                            born_leglist = fks_common.to_fks_legs(
-                                          copy.deepcopy(self.process.get('legs')), 
-                                          self.process.get('model'))
-                            born_leglist.remove(i)
-                            born_leglist.remove(j)
-                            born_leglist.insert(ij.get('number') - 1, ij)
-                            born_leglist.sort()
-                            if [l['id'] for l in born_leglist] in born_pdg_list:
-                                fks_j_from_i[i.get('number')].append(\
-                                                        j.get('number'))                                
+                for j in [l for l in self.process.get('legs') if \
+                        l.get('number') != i.get('number')]:
+                    ijlist = fks_common.combine_ij(i, j, self.process.get('model'), dict,\
+                                                   pert=self.perturbation)
+                    for ij in ijlist:
+                        born_leglist = fks_common.to_fks_legs(
+                                      copy.deepcopy(self.process.get('legs')), 
+                                      self.process.get('model'))
+                        born_leglist.remove(i)
+                        born_leglist.remove(j)
+                        born_leglist.insert(ij.get('number') - 1, ij)
+                        born_leglist.sort(pert = self.perturbation)
+                        if [l['id'] for l in born_leglist] in born_pdg_list:
+                            fks_j_from_i[i.get('number')].append(\
+                                                    j.get('number'))                                
 
         self.fks_j_from_i = fks_j_from_i
         return fks_j_from_i
@@ -375,7 +388,8 @@ class FKSProcess(object):
         self.leglist = []
         self.myorders = {}
         self.pdg_codes = []
-        self.colors = []
+        self.colors = [] # color
+        self.charges = [] # charge
         self.nlegs = 0
         self.fks_ipos = []
         self.fks_j_from_i = {}
@@ -383,31 +397,55 @@ class FKSProcess(object):
         self.remove_reals = remove_reals
         self.nincoming = 0
         self.virt_amp = None
+        self.perturbation = 'QCD'
 
         if not remove_reals in [True, False]:
             raise fks_common.FKSProcessError(\
                     'Not valid type for remove_reals in FKSProcess')
-        
+
         if start_proc:
             if isinstance(start_proc, MG.Process):
-                self.born_proc = fks_common.sort_proc(start_proc) 
-                self.born_amp = diagram_generation.Amplitude(self.born_proc)
+                pertur = start_proc['perturbation_couplings']
+                if pertur:
+                    self.perturbation = sorted(pertur)[0]
+                self.born_proc = fks_common.sort_proc(start_proc,pert = self.perturbation)
+                # filter in Amplitude will legs sorted in bornproc
+                bornproc = copy.copy(self.born_proc) # deepcopy might let T -> array
+                assert bornproc==self.born_proc
+                self.born_amp = diagram_generation.Amplitude(bornproc)
             elif isinstance(start_proc, diagram_generation.Amplitude):
-                self.born_proc = fks_common.sort_proc(start_proc.get('process'))
-                self.born_amp = diagram_generation.Amplitude(self.born_proc)
+                pertur = start_proc.get('process')['perturbation_couplings']
+                if pertur:
+                    self.perturbation = sorted(pertur)[0]
+                self.born_proc = fks_common.sort_proc(start_proc.get('process'),\
+                                                      pert = self.perturbation)
+                # filter in Amplitude will legs sorted in bornproc
+                bornproc = copy.copy(self.born_proc)
+                assert bornproc == self.born_proc
+                self.born_amp = diagram_generation.Amplitude(bornproc)
             else:
                 raise fks_common.FKSProcessError(\
                     'Not valid start_proc in FKSProcess')
-
             self.born_proc.set('legs_with_decays', MG.LegList())
 
             self.leglist = fks_common.to_fks_legs(
                                     self.born_proc['legs'], self.born_proc['model'])
             self.nlegs = len(self.leglist)
             self.pdg_codes = [leg.get('id') for leg in self.leglist]
-            self.colors = [leg.get('color') for leg in self.leglist]
-            self.isr = set([leg.get('color') for leg in self.leglist if not leg.get('state')]) != set([1])
-            self.fsr = set([leg.get('color') for leg in self.leglist if leg.get('state')]) != set([1])
+            if self.perturbation == 'QCD':
+                self.colors = [leg.get('color') for leg in self.leglist]
+                # in QCD, charge is irrelevant but impact the combine process !
+                self.charges = [0. for leg in self.leglist]
+                color = 'color'
+                zero = 1
+            elif self.perturbation == 'QED':
+                self.colors = [leg.get('color') for leg in self.leglist]
+                self.charges = [leg.get('charge') for leg in self.leglist]
+                color = 'charge'
+                zero = 0.
+            # special treatment of photon is needed !
+            self.isr = set([leg.get(color) for leg in self.leglist if not leg.get('state')]) != set([zero])
+            self.fsr = set([leg.get(color) for leg in self.leglist if leg.get('state')]) != set([zero])
             for leg in self.leglist:
                 if not leg['state']:
                     self.nincoming += 1
@@ -461,6 +499,7 @@ class FKSProcess(object):
         born_proc = copy.copy(self.born_proc)
         born_proc['orders'] = self.orders
         for i, list in enumerate(self.reals):
+            # i is a gluon or photon,i.e. g(a) > ffx or gg
             if self.leglist[i]['massless'] and self.leglist[i]['spin'] == 3:
                 ijglu = i + 1
             else:
@@ -468,7 +507,8 @@ class FKSProcess(object):
             for l in list:
                 ij = self.leglist[i].get('number')
                 self.real_amps.append(FKSRealProcess( \
-                        born_proc, l, ij, ijglu))
+                        born_proc, l, ij, ijglu,\
+                        perturbed_orders = [self.perturbation]))
         self.find_reals_to_integrate()
         if combine:
             self.combine_real_amplitudes()
@@ -489,13 +529,15 @@ class FKSProcess(object):
 
     def find_reals(self, pert_order):
         """finds the FKS real configurations for a given process"""
+        if range(len(self.leglist)) != [l['number']-1 for l in self.leglist]:
+            raise fks_common.FKSProcessError('Disordered numbers of leglist')
         for i in self.leglist:
             i_i = i['number'] - 1
             self.reals.append([])
             self.splittings[i_i] = fks_common.find_splittings(i, self.born_proc['model'], {}, pert_order)
             for split in self.splittings[i_i]:
                 self.reals[i_i].append(
-                            fks_common.insert_legs(self.leglist, i, split))
+                            fks_common.insert_legs(self.leglist, i, split,pert=pert_order))
                 
 
 
@@ -540,10 +582,10 @@ class FKSProcess(object):
                                 self.real_amps[m].is_to_integrate = False
                             else:
                                 self.real_amps[n].is_to_integrate = False
-                        # in case of g > qqx splitting, keep the lowest ij
+                        # in case of g(a) > ffx splitting, keep the lowest ij
                         elif i_m == i_n and j_m == j_n and \
-                          abs(real_m.get_leg_j()['color']) == 3 and \
-                          abs(real_m.get_leg_i()['color']) == 3:
+                          not real_m.get_leg_j()['self_antipart'] and \
+                          not real_m.get_leg_i()['self_antipart']:
                             if real_m.fks_infos[0]['ij'] > real_n.fks_infos[0]['ij']:
                                 real_m.is_to_integrate = False
                             else:

@@ -61,8 +61,8 @@ C     ----------
           ENDIF
         ENDDO
       ELSE
-        WRITE(*,*) 'Error in born_hel: should be called only with
-     $    calculatedborn = true'
+        WRITE(*,*) 'Error in born_hel: should be called only wit'
+     $   //'h calculatedborn = true'
         STOP
       ENDIF
       ANS = 0D0
@@ -131,8 +131,8 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       IF (.NOT. CALCULATEDBORN) THEN
-        WRITE(*,*) 'Error in born_hel.f: this should be called only
-     $    with calculatedborn = true'
+        WRITE(*,*) 'Error in born_hel.f: this should be called onl'
+     $   //'y with calculatedborn = true'
         STOP
       ELSEIF (CALCULATEDBORN) THEN
         DO I=1,NGRAPHS

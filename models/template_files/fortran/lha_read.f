@@ -192,6 +192,10 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       character*(*) param_name
       data iunit/21/
       data logfile/22/
+
+      logical WriteParamLog
+      common/IOcontrol/WriteParamLog
+
       GL=0
       npara=1
 
@@ -207,7 +211,9 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       endif
       
       ! Try to open log file
-      open (unit = logfile, file = "param.log")
+      if (WriteParamLog) then
+        open (unit = logfile, file = "param.log")
+      endif
       
       ! Scan the data file
       do while(.true.)  
@@ -243,8 +249,10 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                   param(npara)=ctemp
                   npara=npara+1
                   GL=0
-                  write (logfile,*) 'Parameter ',ctemp,
+                  if (WriteParamLog) then
+                    write (logfile,*) 'Parameter ',ctemp,
      &                                  ' has been read with value ',val
+                  endif
              endif
 
          endif
@@ -252,8 +260,10 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       
       npara=npara-1
 c      close(iunit)
-      close(logfile)
-      
+      if (WriteParamLog) then
+        close(logfile)
+      endif
+
  99   return
  
       end
