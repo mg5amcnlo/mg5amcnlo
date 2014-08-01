@@ -389,11 +389,11 @@ C     Fill in the golem coefficents and compute the loop
         END SELECT
       ENDIF
 
-      RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%C+2.0*LOG(MU_R)
-     $ *RES_GOLEM%B+2.0*LOG(MU_R)**2*RES_GOLEM%A)
-      RES(2)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%B+2.0*LOG(MU_R)
-     $ *RES_GOLEM%A)
-      RES(3)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%A)
+      RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%C+2.0*LOG(MU_R)
+     $ *RES_GOLEM%%B+2.0*LOG(MU_R)**2*RES_GOLEM%%A)
+      RES(2)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%B+2.0*LOG(MU_R)
+     $ *RES_GOLEM%%A)
+      RES(3)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%A)
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
 
 C     Finally free golem memory and cache
@@ -542,8 +542,8 @@ C           massless onshellness. (here we pick the energy component)
       REAL*8 DENOM,NUM
       LOGICAL ML5_0_COMPARE_COEFS_1
 
-      NUM = ABS(COEFS_A%C0-COEFS_B%C0)+SUM(ABS(COEFS_A%C1-COEFS_B%C1))
-      DENOM = ABS(COEFS_A%C0+COEFS_B%C0)+SUM(ABS(COEFS_A%C1+COEFS_B%C1
+      NUM = ABS(COEFS_A%%C0-COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1-COEFS_B%%C1))
+      DENOM = ABS(COEFS_A%%C0+COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1+COEFS_B%%C1
      $ ))
 
       IF(DENOM.GT.0D0)THEN
@@ -563,10 +563,10 @@ C           massless onshellness. (here we pick the energy component)
       REAL*8 DENOM,NUM
       LOGICAL ML5_0_COMPARE_COEFS_2
 
-      NUM = ABS(COEFS_A%C0-COEFS_B%C0)+SUM(ABS(COEFS_A%C1-COEFS_B%C1))
-     $ +SUM(ABS(COEFS_A%C2-COEFS_B%C2))
-      DENOM = ABS(COEFS_A%C0+COEFS_B%C0)+SUM(ABS(COEFS_A%C1+COEFS_B%C1
-     $ ))+SUM(ABS(COEFS_A%C2+COEFS_B%C2))
+      NUM = ABS(COEFS_A%%C0-COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1-COEFS_B%%C1))
+     $ +SUM(ABS(COEFS_A%%C2-COEFS_B%%C2))
+      DENOM = ABS(COEFS_A%%C0+COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1+COEFS_B%%C1
+     $ ))+SUM(ABS(COEFS_A%%C2+COEFS_B%%C2))
       IF(DENOM.GT.0D0)THEN
         ML5_0_COMPARE_COEFS_2=((NUM/DENOM).LT.COEF_CHECK_THRS)
       ELSE
@@ -584,10 +584,10 @@ C           massless onshellness. (here we pick the energy component)
       REAL*8 DENOM,NUM
       LOGICAL ML5_0_COMPARE_COEFS_3
 
-      NUM = ABS(COEFS_A%C0-COEFS_B%C0)+SUM(ABS(COEFS_A%C1-COEFS_B%C1))
-     $ +SUM(ABS(COEFS_A%C2-COEFS_B%C2))+SUM(ABS(COEFS_A%C3-COEFS_B%C3))
-      DENOM = ABS(COEFS_A%C0+COEFS_B%C0)+SUM(ABS(COEFS_A%C1+COEFS_B%C1
-     $ ))+SUM(ABS(COEFS_A%C2+COEFS_B%C2))+SUM(ABS(COEFS_A%C3+COEFS_B%C3
+      NUM = ABS(COEFS_A%%C0-COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1-COEFS_B%%C1))
+     $ +SUM(ABS(COEFS_A%%C2-COEFS_B%%C2))+SUM(ABS(COEFS_A%%C3-COEFS_B%%C3))
+      DENOM = ABS(COEFS_A%%C0+COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1+COEFS_B%%C1
+     $ ))+SUM(ABS(COEFS_A%%C2+COEFS_B%%C2))+SUM(ABS(COEFS_A%%C3+COEFS_B%%C3
      $ ))
       IF(DENOM.GT.0D0)THEN
         ML5_0_COMPARE_COEFS_3=((NUM/DENOM).LT.COEF_CHECK_THRS)
@@ -606,12 +606,12 @@ C           massless onshellness. (here we pick the energy component)
       REAL*8 DENOM,NUM
       LOGICAL ML5_0_COMPARE_COEFS_4
 
-      NUM = ABS(COEFS_A%C0-COEFS_B%C0)+SUM(ABS(COEFS_A%C1-COEFS_B%C1))
-     $ +SUM(ABS(COEFS_A%C2-COEFS_B%C2))+SUM(ABS(COEFS_A%C3-COEFS_B%C3)
-     $ )+SUM(ABS(COEFS_A%C4-COEFS_B%C4))
-      DENOM = ABS(COEFS_A%C0+COEFS_B%C0)+SUM(ABS(COEFS_A%C1+COEFS_B%C1
-     $ ))+SUM(ABS(COEFS_A%C2+COEFS_B%C2))+SUM(ABS(COEFS_A%C3+COEFS_B%C3
-     $ ))+SUM(ABS(COEFS_A%C4+COEFS_B%C4))
+      NUM = ABS(COEFS_A%%C0-COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1-COEFS_B%%C1))
+     $ +SUM(ABS(COEFS_A%%C2-COEFS_B%%C2))+SUM(ABS(COEFS_A%%C3-COEFS_B%%C3)
+     $ )+SUM(ABS(COEFS_A%%C4-COEFS_B%%C4))
+      DENOM = ABS(COEFS_A%%C0+COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1+COEFS_B%%C1
+     $ ))+SUM(ABS(COEFS_A%%C2+COEFS_B%%C2))+SUM(ABS(COEFS_A%%C3+COEFS_B%%C3
+     $ ))+SUM(ABS(COEFS_A%%C4+COEFS_B%%C4))
       IF(DENOM.GT.0D0)THEN
         ML5_0_COMPARE_COEFS_4=((NUM/DENOM).LT.COEF_CHECK_THRS)
       ELSE
@@ -629,12 +629,12 @@ C           massless onshellness. (here we pick the energy component)
       REAL*8 DENOM,NUM
       LOGICAL ML5_0_COMPARE_COEFS_5
 
-      NUM = ABS(COEFS_A%C0-COEFS_B%C0)+SUM(ABS(COEFS_A%C1-COEFS_B%C1))
-     $ +SUM(ABS(COEFS_A%C2-COEFS_B%C2))+SUM(ABS(COEFS_A%C3-COEFS_B%C3)
-     $ )+SUM(ABS(COEFS_A%C4-COEFS_B%C4))
-      DENOM = ABS(COEFS_A%C0+COEFS_B%C0)+SUM(ABS(COEFS_A%C1+COEFS_B%C1
-     $ ))+SUM(ABS(COEFS_A%C2+COEFS_B%C2))+SUM(ABS(COEFS_A%C3+COEFS_B%C3
-     $ ))+SUM(ABS(COEFS_A%C4+COEFS_B%C4))
+      NUM = ABS(COEFS_A%%C0-COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1-COEFS_B%%C1))
+     $ +SUM(ABS(COEFS_A%%C2-COEFS_B%%C2))+SUM(ABS(COEFS_A%%C3-COEFS_B%%C3)
+     $ )+SUM(ABS(COEFS_A%%C4-COEFS_B%%C4))
+      DENOM = ABS(COEFS_A%%C0+COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1+COEFS_B%%C1
+     $ ))+SUM(ABS(COEFS_A%%C2+COEFS_B%%C2))+SUM(ABS(COEFS_A%%C3+COEFS_B%%C3
+     $ ))+SUM(ABS(COEFS_A%%C4+COEFS_B%%C4))
       IF(DENOM.GT.0D0)THEN
         ML5_0_COMPARE_COEFS_5=((NUM/DENOM).LT.COEF_CHECK_THRS)
       ELSE
@@ -652,12 +652,12 @@ C           massless onshellness. (here we pick the energy component)
       REAL*8 DENOM,NUM
       LOGICAL ML5_0_COMPARE_COEFS_6
 
-      NUM = ABS(COEFS_A%C0-COEFS_B%C0)+SUM(ABS(COEFS_A%C1-COEFS_B%C1))
-     $ +SUM(ABS(COEFS_A%C2-COEFS_B%C2))+SUM(ABS(COEFS_A%C3-COEFS_B%C3)
-     $ )+SUM(ABS(COEFS_A%C4-COEFS_B%C4))
-      DENOM = ABS(COEFS_A%C0+COEFS_B%C0)+SUM(ABS(COEFS_A%C1+COEFS_B%C1
-     $ ))+SUM(ABS(COEFS_A%C2+COEFS_B%C2))+SUM(ABS(COEFS_A%C3+COEFS_B%C3
-     $ ))+SUM(ABS(COEFS_A%C4+COEFS_B%C4))
+      NUM = ABS(COEFS_A%%C0-COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1-COEFS_B%%C1))
+     $ +SUM(ABS(COEFS_A%%C2-COEFS_B%%C2))+SUM(ABS(COEFS_A%%C3-COEFS_B%%C3)
+     $ )+SUM(ABS(COEFS_A%%C4-COEFS_B%%C4))
+      DENOM = ABS(COEFS_A%%C0+COEFS_B%%C0)+SUM(ABS(COEFS_A%%C1+COEFS_B%%C1
+     $ ))+SUM(ABS(COEFS_A%%C2+COEFS_B%%C2))+SUM(ABS(COEFS_A%%C3+COEFS_B%%C3
+     $ ))+SUM(ABS(COEFS_A%%C4+COEFS_B%%C4))
       IF(DENOM.GT.0D0)THEN
         ML5_0_COMPARE_COEFS_6=((NUM/DENOM).LT.COEF_CHECK_THRS)
       ELSE
@@ -680,15 +680,15 @@ C           massless onshellness. (here we pick the energy component)
       COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
       TYPE(COEFF_TYPE_1) GOLEM_COEFS
 C     Constant coefficient 
-      GOLEM_COEFS%C0=ML_COEFS(0)
+      GOLEM_COEFS%%C0=ML_COEFS(0)
 C     Coefficient q(0)
-      GOLEM_COEFS%C1(1,1)=-ML_COEFS(1)
+      GOLEM_COEFS%%C1(1,1)=-ML_COEFS(1)
 C     Coefficient q(1)
-      GOLEM_COEFS%C1(2,1)=-ML_COEFS(2)
+      GOLEM_COEFS%%C1(2,1)=-ML_COEFS(2)
 C     Coefficient q(2)
-      GOLEM_COEFS%C1(3,1)=-ML_COEFS(3)
+      GOLEM_COEFS%%C1(3,1)=-ML_COEFS(3)
 C     Coefficient q(3)
-      GOLEM_COEFS%C1(4,1)=-ML_COEFS(4)
+      GOLEM_COEFS%%C1(4,1)=-ML_COEFS(4)
       END
 
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_2(ML_COEFS,GOLEM_COEFS)
@@ -697,35 +697,35 @@ C     Coefficient q(3)
       COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
       TYPE(COEFF_TYPE_2) GOLEM_COEFS
 C     Constant coefficient 
-      GOLEM_COEFS%C0=ML_COEFS(0)
+      GOLEM_COEFS%%C0=ML_COEFS(0)
 C     Coefficient q(0)
-      GOLEM_COEFS%C1(1,1)=-ML_COEFS(1)
+      GOLEM_COEFS%%C1(1,1)=-ML_COEFS(1)
 C     Coefficient q(0)^2
-      GOLEM_COEFS%C1(1,2)= ML_COEFS(5)
+      GOLEM_COEFS%%C1(1,2)= ML_COEFS(5)
 C     Coefficient q(1)
-      GOLEM_COEFS%C1(2,1)=-ML_COEFS(2)
+      GOLEM_COEFS%%C1(2,1)=-ML_COEFS(2)
 C     Coefficient q(1)^2
-      GOLEM_COEFS%C1(2,2)= ML_COEFS(7)
+      GOLEM_COEFS%%C1(2,2)= ML_COEFS(7)
 C     Coefficient q(2)
-      GOLEM_COEFS%C1(3,1)=-ML_COEFS(3)
+      GOLEM_COEFS%%C1(3,1)=-ML_COEFS(3)
 C     Coefficient q(2)^2
-      GOLEM_COEFS%C1(3,2)= ML_COEFS(10)
+      GOLEM_COEFS%%C1(3,2)= ML_COEFS(10)
 C     Coefficient q(3)
-      GOLEM_COEFS%C1(4,1)=-ML_COEFS(4)
+      GOLEM_COEFS%%C1(4,1)=-ML_COEFS(4)
 C     Coefficient q(3)^2
-      GOLEM_COEFS%C1(4,2)= ML_COEFS(14)
+      GOLEM_COEFS%%C1(4,2)= ML_COEFS(14)
 C     Coefficient q(0)*q(1)
-      GOLEM_COEFS%C2(1,1)= ML_COEFS(6)
+      GOLEM_COEFS%%C2(1,1)= ML_COEFS(6)
 C     Coefficient q(0)*q(2)
-      GOLEM_COEFS%C2(2,1)= ML_COEFS(8)
+      GOLEM_COEFS%%C2(2,1)= ML_COEFS(8)
 C     Coefficient q(0)*q(3)
-      GOLEM_COEFS%C2(3,1)= ML_COEFS(11)
+      GOLEM_COEFS%%C2(3,1)= ML_COEFS(11)
 C     Coefficient q(1)*q(2)
-      GOLEM_COEFS%C2(4,1)= ML_COEFS(9)
+      GOLEM_COEFS%%C2(4,1)= ML_COEFS(9)
 C     Coefficient q(1)*q(3)
-      GOLEM_COEFS%C2(5,1)= ML_COEFS(12)
+      GOLEM_COEFS%%C2(5,1)= ML_COEFS(12)
 C     Coefficient q(2)*q(3)
-      GOLEM_COEFS%C2(6,1)= ML_COEFS(13)
+      GOLEM_COEFS%%C2(6,1)= ML_COEFS(13)
       END
 
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_3(ML_COEFS,GOLEM_COEFS)
@@ -734,75 +734,75 @@ C     Coefficient q(2)*q(3)
       COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
       TYPE(COEFF_TYPE_3) GOLEM_COEFS
 C     Constant coefficient 
-      GOLEM_COEFS%C0=ML_COEFS(0)
+      GOLEM_COEFS%%C0=ML_COEFS(0)
 C     Coefficient q(0)
-      GOLEM_COEFS%C1(1,1)=-ML_COEFS(1)
+      GOLEM_COEFS%%C1(1,1)=-ML_COEFS(1)
 C     Coefficient q(0)^2
-      GOLEM_COEFS%C1(1,2)= ML_COEFS(5)
+      GOLEM_COEFS%%C1(1,2)= ML_COEFS(5)
 C     Coefficient q(0)^3
-      GOLEM_COEFS%C1(1,3)=-ML_COEFS(15)
+      GOLEM_COEFS%%C1(1,3)=-ML_COEFS(15)
 C     Coefficient q(1)
-      GOLEM_COEFS%C1(2,1)=-ML_COEFS(2)
+      GOLEM_COEFS%%C1(2,1)=-ML_COEFS(2)
 C     Coefficient q(1)^2
-      GOLEM_COEFS%C1(2,2)= ML_COEFS(7)
+      GOLEM_COEFS%%C1(2,2)= ML_COEFS(7)
 C     Coefficient q(1)^3
-      GOLEM_COEFS%C1(2,3)=-ML_COEFS(18)
+      GOLEM_COEFS%%C1(2,3)=-ML_COEFS(18)
 C     Coefficient q(2)
-      GOLEM_COEFS%C1(3,1)=-ML_COEFS(3)
+      GOLEM_COEFS%%C1(3,1)=-ML_COEFS(3)
 C     Coefficient q(2)^2
-      GOLEM_COEFS%C1(3,2)= ML_COEFS(10)
+      GOLEM_COEFS%%C1(3,2)= ML_COEFS(10)
 C     Coefficient q(2)^3
-      GOLEM_COEFS%C1(3,3)=-ML_COEFS(24)
+      GOLEM_COEFS%%C1(3,3)=-ML_COEFS(24)
 C     Coefficient q(3)
-      GOLEM_COEFS%C1(4,1)=-ML_COEFS(4)
+      GOLEM_COEFS%%C1(4,1)=-ML_COEFS(4)
 C     Coefficient q(3)^2
-      GOLEM_COEFS%C1(4,2)= ML_COEFS(14)
+      GOLEM_COEFS%%C1(4,2)= ML_COEFS(14)
 C     Coefficient q(3)^3
-      GOLEM_COEFS%C1(4,3)=-ML_COEFS(34)
+      GOLEM_COEFS%%C1(4,3)=-ML_COEFS(34)
 C     Coefficient q(0)*q(1)
-      GOLEM_COEFS%C2(1,1)= ML_COEFS(6)
+      GOLEM_COEFS%%C2(1,1)= ML_COEFS(6)
 C     Coefficient q(0)*q(1)^2
-      GOLEM_COEFS%C2(1,2)=-ML_COEFS(17)
+      GOLEM_COEFS%%C2(1,2)=-ML_COEFS(17)
 C     Coefficient q(0)^2*q(1)
-      GOLEM_COEFS%C2(1,3)=-ML_COEFS(16)
+      GOLEM_COEFS%%C2(1,3)=-ML_COEFS(16)
 C     Coefficient q(0)*q(2)
-      GOLEM_COEFS%C2(2,1)= ML_COEFS(8)
+      GOLEM_COEFS%%C2(2,1)= ML_COEFS(8)
 C     Coefficient q(0)*q(2)^2
-      GOLEM_COEFS%C2(2,2)=-ML_COEFS(22)
+      GOLEM_COEFS%%C2(2,2)=-ML_COEFS(22)
 C     Coefficient q(0)^2*q(2)
-      GOLEM_COEFS%C2(2,3)=-ML_COEFS(19)
+      GOLEM_COEFS%%C2(2,3)=-ML_COEFS(19)
 C     Coefficient q(0)*q(3)
-      GOLEM_COEFS%C2(3,1)= ML_COEFS(11)
+      GOLEM_COEFS%%C2(3,1)= ML_COEFS(11)
 C     Coefficient q(0)*q(3)^2
-      GOLEM_COEFS%C2(3,2)=-ML_COEFS(31)
+      GOLEM_COEFS%%C2(3,2)=-ML_COEFS(31)
 C     Coefficient q(0)^2*q(3)
-      GOLEM_COEFS%C2(3,3)=-ML_COEFS(25)
+      GOLEM_COEFS%%C2(3,3)=-ML_COEFS(25)
 C     Coefficient q(1)*q(2)
-      GOLEM_COEFS%C2(4,1)= ML_COEFS(9)
+      GOLEM_COEFS%%C2(4,1)= ML_COEFS(9)
 C     Coefficient q(1)*q(2)^2
-      GOLEM_COEFS%C2(4,2)=-ML_COEFS(23)
+      GOLEM_COEFS%%C2(4,2)=-ML_COEFS(23)
 C     Coefficient q(1)^2*q(2)
-      GOLEM_COEFS%C2(4,3)=-ML_COEFS(21)
+      GOLEM_COEFS%%C2(4,3)=-ML_COEFS(21)
 C     Coefficient q(1)*q(3)
-      GOLEM_COEFS%C2(5,1)= ML_COEFS(12)
+      GOLEM_COEFS%%C2(5,1)= ML_COEFS(12)
 C     Coefficient q(1)*q(3)^2
-      GOLEM_COEFS%C2(5,2)=-ML_COEFS(32)
+      GOLEM_COEFS%%C2(5,2)=-ML_COEFS(32)
 C     Coefficient q(1)^2*q(3)
-      GOLEM_COEFS%C2(5,3)=-ML_COEFS(27)
+      GOLEM_COEFS%%C2(5,3)=-ML_COEFS(27)
 C     Coefficient q(2)*q(3)
-      GOLEM_COEFS%C2(6,1)= ML_COEFS(13)
+      GOLEM_COEFS%%C2(6,1)= ML_COEFS(13)
 C     Coefficient q(2)*q(3)^2
-      GOLEM_COEFS%C2(6,2)=-ML_COEFS(33)
+      GOLEM_COEFS%%C2(6,2)=-ML_COEFS(33)
 C     Coefficient q(2)^2*q(3)
-      GOLEM_COEFS%C2(6,3)=-ML_COEFS(30)
+      GOLEM_COEFS%%C2(6,3)=-ML_COEFS(30)
 C     Coefficient q(0)*q(1)*q(2)
-      GOLEM_COEFS%C3(1,1)=-ML_COEFS(20)
+      GOLEM_COEFS%%C3(1,1)=-ML_COEFS(20)
 C     Coefficient q(0)*q(1)*q(3)
-      GOLEM_COEFS%C3(2,1)=-ML_COEFS(26)
+      GOLEM_COEFS%%C3(2,1)=-ML_COEFS(26)
 C     Coefficient q(0)*q(2)*q(3)
-      GOLEM_COEFS%C3(3,1)=-ML_COEFS(28)
+      GOLEM_COEFS%%C3(3,1)=-ML_COEFS(28)
 C     Coefficient q(1)*q(2)*q(3)
-      GOLEM_COEFS%C3(4,1)=-ML_COEFS(29)
+      GOLEM_COEFS%%C3(4,1)=-ML_COEFS(29)
       END
 
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_4(ML_COEFS,GOLEM_COEFS)
