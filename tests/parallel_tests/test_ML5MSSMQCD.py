@@ -18,7 +18,7 @@ from madgraph.iolibs.files import cp
 import loop_me_comparator
 import me_comparator
 from test_ML5 import procToFolderName
-from test_ML5EW import ML5EWTest
+from test_ML5EW import compare_processes
 # The processes below are treated all together because they are relatively quick
 
 HCR_processes_short = []
@@ -61,7 +61,7 @@ ML5MSSMQCD_processes_long =  [
 ML5MSSMQCD_processes_long_dic = dict((procToFolderName(elem[0])+'_mssm_'+'_'.join(elem[2][0].split()),elem)\
                                 for elem in ML5MSSMQCD_processes_long)
 
-class ML5MSSMQCDTest(ML5EWTest):
+class ML5MSSMQCDTest(unittest.TestCase):
     """ A class to test ML5 QCD corrections in MSSM versus runs from hard-coded reference process. """
 
     test_model_name = 'loop_MSSM-parallel_test'
@@ -87,35 +87,35 @@ class ML5MSSMQCDTest(ML5EWTest):
 #   ('g g > t1 t1~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})
     def test_long_mssm_vs_stored_HCR_gg_t1t1x_QCD(self):
         proc = 'gg_t1t1x_mssm_QCD'
-        self.compare_processes([HCR_processes_long_dic[proc]], 
+        compare_processes(self,[HCR_processes_long_dic[proc]], 
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_mssm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
 
 #   ('g g > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
     def test_long_mssm_vs_stored_HCR_gg_t1t1xg_QCD(self):
         proc = 'gg_t1t1xg_mssm_QCD'
-        self.compare_processes([HCR_processes_long_dic[proc]],
+        compare_processes(self,[HCR_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_mssm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
 
 #   ('u u~ > t1 t1~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}) 
     def test_long_mssm_vs_stored_HCR_uux_t1t1x_QCD(self):
         proc = 'uux_t1t1x_mssm_QCD'
-        self.compare_processes([HCR_processes_long_dic[proc]],
+        compare_processes(self,[HCR_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_mssm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
 
 #   ('u u~ > t1 t1~ g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
     def test_long_mssm_vs_stored_HCR_uux_t1t1xg_QCD(self):
         proc = 'uux_t1t1xg_mssm_QCD'
-        self.compare_processes([HCR_processes_long_dic[proc]],
+        compare_processes(self,[HCR_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_mssm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
 
 #   ('g g > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})
     def test_long_mssm_vs_stored_HCR_gg_gogo_QCD(self):
         proc = 'gg_gogo_mssm_QCD'
-        self.compare_processes([HCR_processes_long_dic[proc]],
+        compare_processes(self,[HCR_processes_long_dic[proc]],
                                model = "loop_MSSM-parallel_test_gogo",
                                pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
@@ -124,7 +124,7 @@ class ML5MSSMQCDTest(ML5EWTest):
 #   ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})
     def test_long_mssm_vs_stored_HCR_uux_gogo_QCD(self):
         proc = 'uux_gogo_mssm_QCD'
-        self.compare_processes([HCR_processes_long_dic[proc]],
+        compare_processes(self,[HCR_processes_long_dic[proc]],
                                model = "loop_MSSM-parallel_test_gogo",
                                pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
@@ -133,7 +133,7 @@ class ML5MSSMQCDTest(ML5EWTest):
 #   ('u u~ > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
     def test_long_mssm_vs_stored_HCR_uux_gogog_QCD(self):
         proc = 'uux_gogog_mssm_QCD'
-        self.compare_processes([HCR_processes_long_dic[proc]],
+        compare_processes(self,[HCR_processes_long_dic[proc]],
                                model = "loop_MSSM-parallel_test_gogo",
                                                       pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
@@ -142,7 +142,7 @@ class ML5MSSMQCDTest(ML5EWTest):
 #   ('g g > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
     def test_long_mssm_vs_stored_HCR_gg_gogog_QCD(self):
         proc = 'gg_gogog_mssm_QCD'
-        self.compare_processes([HCR_processes_long_dic[proc]],
+        compare_processes(self,[HCR_processes_long_dic[proc]],
                                model = "loop_MSSM-parallel_test_gogo",
                                                       pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
@@ -152,7 +152,7 @@ class ML5MSSMQCDTest(ML5EWTest):
 #   ('g g > n1 n1',{},['QCD'],{})
     def test_long_mssm_vs_stored_HCR_gg_n1n1_QCD(self):
         proc = 'gg_n1n1_mssm_QCD'
-        self.compare_processes([HCR_processes_long_dic[proc]],
+        compare_processes(self,[HCR_processes_long_dic[proc]],
                                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
                                loop_induce = True)    
