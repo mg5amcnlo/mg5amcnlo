@@ -59,7 +59,7 @@ class TestMECmdShell(unittest.TestCase):
         #    shutil.rmtree(self.tmpdir)
         #os.mkdir(self.tmpdir)
         self.path = pjoin(self.tmpdir,'MGProcess')
-        
+
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
     

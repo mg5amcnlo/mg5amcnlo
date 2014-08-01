@@ -29,6 +29,8 @@ sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 import tests.unit_tests as unittest
 
+import madgraph.interface.master_interface as MGCmd
+
 import tests.unit_tests.loop.test_loop_diagram_generation as looptest
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -189,6 +191,25 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
           self.runIOTests(verbose=False)
 
 #===============================================================================
+# IOTestMadLoopOutputFromInterface
+#===============================================================================
+class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
+    """Test MadLoop outputs when generated directly from the interface."""
+
+    @IOTests.createIOTest(groupName='MadLoop_output_from_the_interface')
+    def testIO_TIR_output(self):
+        """ target: [ggttx_IOTest/SubProcesses/(.*)\.f]
+        """
+        interface = MGCmd.MasterCmd()
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+
+        run_cmd('generate g g > t t~ [virt=QCD]')
+        interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))
+
+#===============================================================================
 # IOExportMadLoopUTest
 #===============================================================================
 class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
@@ -213,7 +234,7 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
                                    'cuttools_dir':_cuttools_file_path,
                                    'fortran_compiler':'gfortran',
                                    'output_dependencies':'external'})
-        
+
     @IOTests.createIOTest(groupName='LoopSquaredOrder_IOTest')
     def testIO_Loop_sqso_uux_ddx(self):
         """ target: [loop_matrix(.*)\.f]

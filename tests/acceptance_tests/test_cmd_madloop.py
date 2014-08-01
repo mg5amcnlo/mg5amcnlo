@@ -222,10 +222,10 @@ class TestCmdLoop(unittest.TestCase):
                                             'SubProcesses/P0_epem_ttx/result.dat')))
             shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))        
             self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
-            res = open('/tmp/madgraph.check_cmd.log').read()        
+            res = open('/tmp/madgraph.check_cmd.log').read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
-            self.assertTrue('Double precision results' in res)
+            self.assertTrue('Tool (DoublePrec for CT)' in res)
             self.assertTrue('Number of Unstable PS points' in res)
             self.assertTrue(res.count('NA')<=3)
         except:

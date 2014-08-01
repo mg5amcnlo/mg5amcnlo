@@ -5408,6 +5408,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir,
               'iregi_dir':cmd._iregi_dir,
               'pjfry_dir':cmd.options["pjfry"],
+              'golem_dir':cmd.options["golem"],
               'fortran_compiler':cmd.options['fortran_compiler'],
               'output_dependencies':cmd.options['output_dependencies']}
 
@@ -5441,6 +5442,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir,
               'iregi_dir':cmd._iregi_dir,
               'pjfry_dir':cmd.options["pjfry"],
+              'golem_dir':cmd.options["golem"],
               'fortran_compiler':cmd.options['fortran_compiler'],
               'output_dependencies':cmd.options['output_dependencies']}
         if not cmd.options['loop_optimized_output']:

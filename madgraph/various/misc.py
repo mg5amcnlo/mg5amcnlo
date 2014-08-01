@@ -129,6 +129,23 @@ def get_time_info():
     return time_info
 
 #===============================================================================
+# Find the subdirectory which includes the files ending with a given extension 
+#===============================================================================
+def find_includes_path(start_path, extension):
+    """Browse the subdirectories of the path 'start_path' and returns the first
+    one found which contains at least one file ending with the string extension
+    given in argument."""
+    
+    subdirs=[pjoin(start_path,dir) for dir in os.listdir(start_path)]
+    for subdir in subdirs:
+        if os.path.isfile(subdir):
+            if os.path.basename(subdir).endswith(extension):
+                return start_path
+        elif os.path.isdir(subdir):
+            return find_includes_path(subdir, extension)
+    return None
+
+#===============================================================================
 # find a executable
 #===============================================================================
 def which(program):

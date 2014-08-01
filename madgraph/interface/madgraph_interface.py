@@ -436,8 +436,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       output pythia8 ../pythia8/ -name qcdprocs",'$MG:color:GREEN')
 
     def help_check(self):
-
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=]",'$MG:color:BLUE')
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=] [--split_orders=] [--reduction=]",'$MG:color:BLUE')
         logger.info("-- check a process or set of processes.",'$MG:color:BLACK')
         logger.info("General options:",'$MG:color:BLACK')
         logger.info("o full:",'$MG:color:GREEN')
@@ -486,8 +485,14 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   specifying it as an integer just before the [param_card]")
         logger.info("   optional argument.")
         logger.info(" > Notice multiparticle labels cannot be used with these checks.")
+        logger.info(" > \"--reduction=\" allows to change what reduction methods should be used.")
+        logger.info(" > \"--split_orders=\" allows to change what specific combination of coupling orders to consider.")
         logger.info(" > For process syntax, please see help generate.")
-        logger.info("Example: check profile g g > t t~",'$MG:color:GREEN')
+        logger.info(" > In order to save the directory generated or the reuse an existing one")
+        logger.info("   previously generated with the check command, one can add the '-reuse' ")
+        logger.info("   keyword just after the specification of the type of check desired.")
+        logger.info("Example: check profile g g > t t~ [virt=QCD]",'$MG:color:GREEN')
+
 
     def help_generate(self):
 
@@ -834,7 +839,8 @@ class CheckValidForCmd(cmd.CheckCmd):
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
-        user_options = {'--energy':'1000','--split_orders':'-1'}
+        user_options = {'--energy':'1000','--split_orders':'-1',
+                                                       '--reduction':'1|2|3|4'}
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
                 key, value = arg.split('=')
@@ -2430,6 +2436,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
                        'pjfry':'auto',
+                       'golem':'auto',
                        'lhapdf':'lhapdf-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
@@ -3271,13 +3278,24 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 3 in MLoptions["MLReductionLib"]:
+                    logger.warning('IREGI not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(3)
+
         if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
             TIR_dir['pjfry_dir']=self.options['pjfry']
         else:
             if "MLReductionLib" in MLoptions:
                 if 2 in MLoptions["MLReductionLib"]:
+                    logger.warning('PJFRY not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(2)
+                    
+        if 'golem' in self.options and isinstance(self.options['golem'],str):
+            TIR_dir['golem_dir']=self.options['golem']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 4 in MLoptions["MLReductionLib"]:
+                    logger.warning('GOLEM not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(4)
         
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
@@ -4998,15 +5016,16 @@ This implies that with decay chains:
                     else:
                         continue
 
-            elif key == 'pjfry':
-                if isinstance(self.options['pjfry'],str) and self.options['pjfry'].lower() == 'auto':
+            elif key in ['pjfry','golem']:
+                if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
-                    program = misc.which_lib('libpjfry.a')
+                    program = misc.which_lib('lib%s.a'%key)
                     if program != None:
                         fpath, fname = os.path.split(program)
-                        self.options['pjfry']=fpath
+                        logger.info('Using %s library in %s'%(key,fpath))
+                        self.options[key]=fpath
                     else:
-                        self.options['pjfry']=None
+                        self.options[key]=None
 
             elif key.endswith('path'):
                 pass
@@ -5506,19 +5525,20 @@ This implies that with decay chains:
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] == "pjfry":
-            program = misc.which_lib(os.path.join(args[1],"libpjfry.a"))
+        elif args[0] in ["pjfry","golem"]:
+            program = misc.which_lib(os.path.join(args[1],"lib%s.a"%args[0]))
             if program!=None:
                 res = 0
-                logger.info('set pjfry to %s' % args[1])
+                logger.info('set %s to %s' % (args[0],args[1]))
                 self.options[args[0]] = args[1]
             else:
                 res = 1
 
             if res != 0 :
-                logger.warning('%s does not seem to correspond to a valid pjfry lib ' % args[1] + \
-                        '. Please enter the full PATH/TO/pjfry/lib .\n' + \
-                        'You will NOT be able to run PJFry++ otherwise.\n')
+                logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
+                        '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
+                        'You will NOT be able to run %s otherwise.\n'%args[0])
+                
         elif args[0] == 'lhapdf':
             try:
                 res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
