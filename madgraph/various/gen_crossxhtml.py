@@ -21,13 +21,15 @@ import re
 import pickle
 import re
 import glob
+import gzip
 try:
     import internal.files as files
     import internal.save_load_object as save_load_object
+    import internal.lhe_parser as lhe_parser
 except ImportError:
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
-
+    import madgraph.various.lhe_parser as lhe_parser
 pjoin = os.path.join
 exists = os.path.exists
 
@@ -147,6 +149,25 @@ class AllResults(dict):
         self.status = ''
         self.unit = 'pb'
         self.current = None
+        
+        # Check if some directory already exists and if so add them
+        runs = [d for d in os.listdir(pjoin(path, 'Events')) if 
+                                      os.path.isdir(pjoin(path, 'Events', d))]
+        for run in runs:
+            self.readd_old_run(run)
+            
+    def readd_old_run(self, run_name):
+        """ re-create the data-base from scratch if the db was remove """
+        
+        event_path = pjoin(self.path, "Events", run_name, "unweighted_events.lhe")
+        if os.path.exists("%s.gz" % event_path):
+            gzip.open("%s.gz" % event_path)
+            event_file = lhe_parser.EventFile
+            
+            
+        
+
+
     
     def def_current(self, run, tag=None):
         """define the name of the current run

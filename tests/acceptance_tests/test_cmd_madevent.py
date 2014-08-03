@@ -414,7 +414,7 @@ class TestMEfromfile(unittest.TestCase):
         self.check_pythia_output()
         event = '%s/Events/run_01/unweighted_events.lhe' % self.run_dir
         if not os.path.exists(event):
-            os.system('gunzip %s.gz' % event)
+            misc.gunzip(event)
         
         has_zero = False
         has_non_zero = False

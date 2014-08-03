@@ -712,10 +712,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.update_status('Create matching plots for Pythia', level='pythia')
             # recover old data if none newly created
             if not os.path.exists(pjoin(self.me_dir,'Events','events.tree')):
-                misc.call(['gunzip', '-c', pjoin(self.me_dir,'Events',
-                      self.run_name, '%s_pythia_events.tree.gz' % tag)],
-                      stdout=open(pjoin(self.me_dir,'Events','events.tree'),'w')
-                          )
+                misc.gunzip(pjoin(self.me_dir,'Events',
+                      self.run_name, '%s_pythia_events.tree.gz' % tag), keep=True,
+                           stdout=pjoin(self.me_dir,'Events','events.tree'))
                 files.mv(pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'),
                      pjoin(self.me_dir,'Events','xsecs.tree'))
 
@@ -726,10 +725,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             cwd=pjoin(self.me_dir,'Events'))
 
             #Clean output
-            misc.call(['gzip','-f','events.tree'],
-                                                cwd=pjoin(self.me_dir,'Events'))
-            files.mv(pjoin(self.me_dir,'Events','events.tree.gz'),
-                     pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
+            misc.gzip(pjoin(self.me_dir,"Events","events.tree"),
+                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
             files.mv(pjoin(self.me_dir,'Events','xsecs.tree'),
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
 
@@ -765,14 +762,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 output = pjoin(self.me_dir, 'HTML',self.run_name,
                               'plots_%s.html' % tag)
 
-
-
+        misc.sprint("Pass Here",os.path.exists(event_path))
         if not os.path.exists(event_path):
             if os.path.exists(event_path+'.gz'):
-                os.system('gunzip -f %s.gz ' % event_path)
+                misc.gunzip('%s.gz' % event_path)
             else:
                 raise self.InvalidCmd, 'Events file %s does not exist' % event_path
+        elif event_path.endswith(".gz"):
+             misc.gunzip(event_path)
+             event_path = event_path[:-3]
 
+             
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
 
         mode = mode.lower()
@@ -974,8 +974,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             files.mv(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'),
                     pjoin(self.me_dir, 'Events', self.run_name, '%s_pgs_events.lhco' % tag))
             self.create_plot('PGS')
-            misc.call(['gzip','-f', pjoin(self.me_dir, 'Events',
-                                                self.run_name, '%s_pgs_events.lhco' % tag)])
+            misc.gzip(pjoin(self.me_dir, 'Events', self.run_name, '%s_pgs_events.lhco' % tag))
 
         self.update_status('finish', level='pgs', makehtml=False)
 
@@ -1066,7 +1065,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.create_plot('Delphes')
 
         if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name,  '%s_delphes_events.lhco' % tag)):
-            misc.call(['gzip','-f', pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag)])
+            misc.gzip(pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag))
 
 
 
@@ -1508,8 +1507,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """ find a valid run_name for the current job """
 
         name = 'run_%02d'
-        data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
-                        s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
+        data = [int(s[4:]) for s in os.listdir(pjoin(me_dir,'Events')) if
+                        s.startswith('run_') and len(s)>5 and s[4:].isdigit()]
         return name % (max(data+[0])+1)
 
 

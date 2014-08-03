@@ -110,7 +110,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 raise self.InvalidCmd('No such file or directory : %s' % inputfile)
         
         if inputfile.endswith('.gz'):
-            misc.call(['gunzip', inputfile])
+            misc.gunzip(inputfile)
             inputfile = inputfile[:-3]
 
         # Read the banner of the inputfile
@@ -206,7 +206,7 @@ class ReweightInterface(extended_cmd.Cmd):
         if len(args) < 2:
             raise self.InvalidCmd('set command requires at least two argument.')
         
-        valid = ['maz_weight','seed','curr_dir']
+        valid = ['max_weight','seed','curr_dir']
         if args[0] not in self.options and args[0] not in valid:
             raise self.InvalidCmd('Unknown options %s' % args[0])        
     
