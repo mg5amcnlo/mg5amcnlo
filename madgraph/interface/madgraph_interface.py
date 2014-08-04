@@ -2393,7 +2393,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
-                     'update', 'Delphes2', 'SysCalc']
+                     'update', 'Delphes2', 'SysCalc', 'Golem95']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
@@ -4409,7 +4409,7 @@ This implies that with decay chains:
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
-                'SysCalc':'SysCalc'}
+                'SysCalc':'SysCalc', 'Golem95': 'golem95'}
         name = name[args[0]]
 
 
@@ -4473,13 +4473,19 @@ This implies that with decay chains:
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
             elif args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
-
             if path:
                 text = open(path).read()
                 for base in base_compiler:
                     text = text.replace(base,'FC=%s' % compiler)
                 open(path, 'w').writelines(text)
             os.environ['FC'] = compiler
+        
+        # For Golem95, use autotools.
+        if name == 'golem95':
+            # Run the configure script
+            ld_path = misc.Popen(['./configure', 
+            '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
+            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0]
 
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
@@ -4505,7 +4511,14 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
+            if name == 'golem95':
+#                status = misc.call(['make','install'], 
+#                                               cwd = os.path.join(MG5DIR, name))
+                status = 0
+                shutil.rmtree(os.path.join(MG5DIR, name))
+                shutil.copytree('/Users/valentin/TMP/golem95-1.3.1', os.path.join(MG5DIR, name))
+            else:
+                status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -4514,7 +4527,13 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            if name == 'golem95':
+#                status = misc.compile(['install'], mode='', 
+#                                          cwd = os.path.join(MG5DIR, name))
+                status = 0
+                shutil.copytree('/Users/valentin/TMP/golem95-1.3.1', os.path.join(MG5DIR, name), ignore=True)
+            else:
+                status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
 
         if not status:
             logger.info('Compilation succeeded')
@@ -4594,11 +4613,15 @@ This implies that with decay chains:
                            'ExRootAnalysis': 'exrootanalysis_path',
                            'MadAnalysis': 'madanalysis_path',
                            'SysCalc': 'syscalc_path',
-                           'pythia-pgs':'pythia-pgs_path'}
+                           'pythia-pgs':'pythia-pgs_path',
+                           'Golem95': 'golem'}
 
         if args[0] in options_name:
             opt = options_name[args[0]]
-            if self.options[opt] != self.options_configuration[opt]:
+            if opt=='golem':
+                self.options[opt] = pjoin(MG5DIR,name,'lib') 
+                self.exec_cmd('save options')
+            elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options')
 
@@ -5025,7 +5048,12 @@ This implies that with decay chains:
                         logger.info('Using %s library in %s'%(key,fpath))
                         self.options[key]=fpath
                     else:
-                        self.options[key]=None
+                        # Try to look for it locally
+                        local_install = {'pjfry':'PJFRY', 'golem':'golem95'}
+                        if os.path.isdir(pjoin(MG5DIR,local_install[key])):
+                            self.opltions[key]=pjoin(MG5DIR,local_install[key],'lib')
+                        else:
+                            self.options[key]=None
 
             elif key.endswith('path'):
                 pass

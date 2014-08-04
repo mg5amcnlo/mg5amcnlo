@@ -31,6 +31,7 @@ import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.amcatnlo_run_interface as NLOCmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.various.misc as misc
+import tests.IOTests as IOTests
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -232,3 +233,27 @@ class TestCmdLoop(unittest.TestCase):
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
+#===============================================================================
+# IOTestMadLoopOutputFromInterface
+#===============================================================================
+class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
+    """Test MadLoop outputs when generated directly from the interface."""
+
+    @IOTests.createIOTest(groupName='MadLoop_output_from_the_interface')
+    def testIO_TIR_output(self):
+        """ target: [ggttx_IOTest/SubProcesses/(.*)\.f]
+        """
+        interface = MGCmd.MasterCmd()
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+
+        # Make sure the potential TIR are set uniformly across users
+        if interface.options['golem'] in [None,'auto']:
+            interface.run_cmd('install Golem95')
+        interface.options['pjfry']=None
+        
+        run_cmd('generate g g > t t~ [virt=QCD]')
+        interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))
