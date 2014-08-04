@@ -349,6 +349,7 @@ c Main routine for MC counterterms
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
       include "run.inc"
+      include "../../Source/MODEL/input.inc"
       include 'nFKSconfigs.inc'
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
@@ -366,7 +367,7 @@ c Main routine for MC counterterms
       integer jpartner,mpartner
       logical emscasharp
 
-      double precision shattmp,dot,xkern,xkernazi,born_red,
+      double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
      & born_red_tilde
       double precision bornbars(max_bcol), bornbarstilde(max_bcol)
 
@@ -452,6 +453,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtf=1d0/2d0)
       parameter (vca=3d0)
 
+      double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
       include "pmass.inc"
 
@@ -470,6 +472,9 @@ c Initialise
       knbar    = veckbarn_ev
       kn0      = xp0jfks
       nofpartners = ipartners(0)
+      g_ew=sqrt(4.d0*pi/aewm1)
+      qi2=charge(pdg_type(i_fks))**2
+      qj2=charge(pdg_type(j_fks))**2
       tiny = 1d-4
       if (softtest.or.colltest)tiny = 1d-6
 c Logical variables to control the IR limits:
@@ -585,8 +590,8 @@ c Compute dead zones
 c Compute MC subtraction terms
          if(lzone(npartner))then
             if(.not.flagmc)flagmc=.true.
-            if( (ileg.ge.3 .and. m_type.eq.8) .or.
-     &          (ileg.le.2 .and. j_type.eq.8) )then
+            if( (ileg.ge.3 .and. (m_type.eq.8.or.m_type.eq.0)) .or.
+     &          (ileg.le.2 .and. (j_type.eq.8.or.j_type.eq.0)) )then
                if(i_type.eq.8)then
 c g  --> g  g ( icode = 1 )
 c go --> go g
@@ -594,17 +599,17 @@ c go --> go g
                      N_p=2
                      if(isspecial)N_p=1
                      if(limit)then
-                        xkern=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-                        xkernazi=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                        xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+                        xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
                      elseif(non_limit)then
                         xfact=(1-yi)*(1-x)/x
                         prefact=4/(s*N_p)
                         call AP_reduced(m_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                         call Qterms_reduced_spacelike(m_type,i_type,one,z(npartner),Q)
                         Q=Q/(1-z(npartner))
-                        xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
                      endif
 c
                   elseif(ileg.eq.3)then
@@ -615,59 +620,66 @@ c
                         prefact=2/(s*N_p)
                         call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                      endif
 c
                   elseif(ileg.eq.4)then
                      N_p=2
                      if(isspecial)N_p=1
                      if(limit)then
-                        xkern=(g**2/N_p)*( 8*vca*
+                        xkern(1)=(g**2/N_p)*( 8*vca*
      &                       (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
      &                       ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                        xkernazi=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                        xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
                      elseif(non_limit)then
                         xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
                         call AP_reduced(j_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                         call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                         Q=Q/(1-z(npartner))
-                        xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
                      endif
                   endif
                elseif(abs(i_type).eq.3)then
 c g --> q q~ ( icode = 2 )
+c a --> q q~
                   if(ileg.le.2)then
                      N_p=1
                      if(limit)then
-                        xkern=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                        xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                      elseif(non_limit)then
                         xfact=(1-yi)*(1-x)/x
                         prefact=4/(s*N_p)
                         call AP_reduced(m_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                      endif
 c
                   elseif(ileg.eq.4)then
                      N_p=2
                      if(isspecial)N_p=1
                      if(limit)then
-                        xkern=(g**2/N_p)*( 4*vtf*(1-x)*
+                        xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &                        (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &                        ( (s-xm12)**2*(s*x-xm12) )
-                        xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                        xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                      elseif(non_limit)then
                         xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
                         call AP_reduced(j_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                         call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                         Q=Q/(1-z(npartner))
-                        xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                      endif
                   endif
                else
@@ -679,21 +691,26 @@ c
      &              (ileg.le.2 .and. abs(j_type).eq.3) )then
                if(abs(i_type).eq.3)then
 c q --> g q ( icode = 3 )
+c a --> a q
                   if(ileg.le.2)then
                      N_p=2
                      if(isspecial)N_p=1
                      if(limit)then
-                        xkern=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                        xkernazi=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                        xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                        xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                      elseif(non_limit)then
                         xfact=(1-yi)*(1-x)/x
                         prefact=4/(s*N_p)
                         call AP_reduced(m_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
                         call Qterms_reduced_spacelike(m_type,i_type,one,z(npartner),Q)
                         Q=Q/(1-z(npartner))
-                        xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                      endif
 c
                   elseif(ileg.eq.3)then
@@ -703,21 +720,24 @@ c
                         prefact=2/(s*N_p)
                         call AP_reduced(j_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
                      endif
 c
                   elseif(ileg.eq.4)then
                      N_p=1
                      if(limit)then
-                        xkern=(g**2/N_p)*
-     &                        ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
-     &                        ( (s-xm12)*(s*x-xm12)**2 )
+                        xkern(1)=(g**2/N_p)*
+     &                       ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
+     &                       ( (s-xm12)*(s*x-xm12)**2 )
+                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
                      elseif(non_limit)then
                         xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
                         call AP_reduced(j_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
                      endif
                   endif
                elseif(i_type.eq.8)then
@@ -726,13 +746,13 @@ c sq --> sq g
                   if(ileg.le.2)then
                      N_p=1
                      if(limit)then
-                        xkern=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                        xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
                      elseif(non_limit)then
                         xfact=(1-yi)*(1-x)/x
                         prefact=4/(s*N_p)
                         call AP_reduced(m_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                      endif
 c
                   elseif(ileg.eq.3)then
@@ -750,13 +770,13 @@ c
                            call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                         endif
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
                      endif
 c
                   elseif(ileg.eq.4)then
                      N_p=1
                      if(limit)then
-                        xkern=(g**2/N_p)*4*vcf*
+                        xkern(1)=(g**2/N_p)*4*vcf*
      &                        ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &                        ( s*(s-xm12)*(s*x-xm12) )
                      elseif(non_limit)then
@@ -764,7 +784,57 @@ c
                         prefact=2/(s*N_p)
                         call AP_reduced(j_type,i_type,one,z(npartner),ap)
                         ap=ap/(1-z(npartner))
-                        xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                     endif
+                  endif
+               elseif(i_type.eq.0)then
+c q  --> q  a ( icode = 4 )
+c sq --> sq a
+                  if(ileg.le.2)then
+                     N_p=1
+                     if(limit)then
+                        xkern(2)=(g_ew**2/N_p)*4*qj2*(1+x**2)/(s*x)
+                     else
+                        xfact=(1-yi)*(1-x)/x
+                        prefact=4/(s*N_p)
+                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                        ap=ap/(1-z(npartner))
+                        xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                     endif
+c
+                  elseif(ileg.eq.3)then
+                     N_p=1
+                     if(non_limit)then
+                        xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                        prefact=2/(s*N_p)
+                        if(abs(PDG_type(j_fks)).le.6)then
+                           if(shower_mc.ne.'HERWIGPP')
+     &                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                           if(shower_mc.eq.'HERWIGPP')
+     &                     call AP_reduced_massive(j_type,i_type,one,z(npartner),
+     &                                                 xi(npartner),xm12,ap)
+                        else
+                           call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                        endif
+                        ap=ap/(1-z(npartner))
+                        xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                     endif
+c
+                  elseif(ileg.eq.4)then
+                     N_p=1
+                     if(limit)then
+                        xkern(2)=(g_ew**2/N_p)*4*qj2*
+     &                       ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &                       ( s*(s-xm12)*(s*x-xm12) )
+                     else
+                        xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
+                        prefact=2/(s*N_p)
+                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                        ap=ap/(1-z(npartner))
+                        xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
                      endif
                   endif
                else
@@ -814,13 +884,16 @@ c Dead zone
 
         born_red=0d0
         born_red_tilde=0d0
-        xkern=xkern*gfactsf*wcc
-        xkernazi=xkernazi*gfactazi*gfactsf*wcc
+        do i=1,2
+           xkern(i)=xkern(i)*gfactsf*wcc
+           xkernazi(i)=xkernazi(i)*gfactazi*gfactsf*wcc
+        enddo
         do cflows=1,colorflow(npartner,0)
            born_red=born_red+bornbars(colorflow(npartner,cflows))
            born_red_tilde=born_red_tilde+bornbarstilde(colorflow(npartner,cflows))
         enddo
-        xmcxsec(npartner)=xkern*born_red+xkernazi*born_red_tilde
+c Change here, to include also xkern(2)!
+        xmcxsec(npartner)=xkern(1)*born_red+xkernazi(1)*born_red_tilde
         if(dampMCsubt)xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
         wgt=wgt+xmcxsec(npartner)
 
@@ -2650,6 +2723,7 @@ c Definition and initialisation of variables
       zm3=(1-sqrt(1-4*xi/mdip_g**2))/2
 
 c Dead zones
+c IMPLEMENT QED DZ's!
       if(shower_mc.eq.'HERWIG6')then
          lzone=.false.
          if(ileg.le.2.and.z**2.ge.xi)lzone=.true.
@@ -2711,5 +2785,40 @@ c
       return
  999  continue
       lzone=.false.
+      return
+      end
+
+
+
+      function charge(ipdg)
+c computes the electric charge given the pdg code
+      implicit none
+      integer ipdg
+      double precision charge,tmp,dipdg
+
+      dipdg=dble(ipdg)
+c quarks
+      if(abs(dipdg).eq.1) tmp=-1d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.2) tmp= 2d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.3) tmp=-1d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.4) tmp= 2d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.5) tmp=-1d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.6) tmp= 2d0/3d0*sign(1d0,dipdg)
+c leptons
+      if(abs(dipdg).eq.11)tmp=-1d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.12)tmp= 0d0
+      if(abs(dipdg).eq.13)tmp=-1d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.14)tmp= 0d0
+      if(abs(dipdg).eq.15)tmp=-1d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.16)tmp= 0d0
+c bosons
+      if(dipdg.eq.21)     tmp= 0d0
+      if(dipdg.eq.22)     tmp= 0d0
+      if(dipdg.eq.23)     tmp= 0d0
+      if(abs(dipdg).eq.24)tmp= 1d0*sign(1d0,dipdg)
+      if(dipdg.eq.25)     tmp= 0d0
+c
+      charge=tmp
+
       return
       end
