@@ -5617,6 +5617,8 @@ c parametrisation.
       include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
+c arguments
+      integer nFKSprocess,iconfig
 c common block that is filled by this subroutine
       logical granny_is_res
       integer igranny,iaunt
@@ -5694,8 +5696,8 @@ c no more s-channels, so exit the do-loop and set igranny=0
          enddo
 c if there is an s-channel grandmother, determine if it's a resonance
          if (igranny_fks(nFKSprocess).ne.0) then
-            if (pmass(igranny_fks(nFKSprocess)).ne.0d0 .and.
-     $           pwidth(igranny_fks(nFKSprocess)).gt.0d0) then
+            if (pmass(igranny_fks(nFKSprocess),iconfig).ne.0d0 .and.
+     $           pwidth(igranny_fks(nFKSprocess),iconfig).gt.0d0) then
                granny_is_res_fks(nFKSprocess)=.true.
             else
                granny_is_res_fks(nFKSprocess)=.false.

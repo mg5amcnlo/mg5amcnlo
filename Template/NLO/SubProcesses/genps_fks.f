@@ -2158,6 +2158,243 @@ c
       end
 
 
+      subroutine generate_inv_mass_sch_granny(ns_channel,itree,m
+     $     ,sqrtshat_born,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s
+     $     ,x,xjac0,pass)
+c Identical to generate_inv_mass_sch, but that it generates the masses
+c from the inside to the outside (i.e., first the largest one, and then
+c the smaller ones). If granny_is_res, it skips the generation of the
+c invariant mass of the grandmother.
+      implicit none
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+      include 'genps.inc'
+      include 'nexternal.inc'
+      integer ns_channel
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0)
+      double precision M(-max_branch:max_particles),x(99)
+      double precision s(-max_branch:max_particles)
+      double precision sqrtshat_born,totmass,xjac0
+      integer itree(2,-max_branch:-1)
+      integer i,j,nsamp
+      parameter (nsamp=1)
+      double precision smin,smax,xm02,bwmdpl,bwmdmn,bwfmpl,bwfmmn,bwdelf
+     &     ,totalmass,tmp,ximin0,ximax0
+      double precision xbwmass3,bwfunc
+      external xbwmass3,bwfunc
+      logical pass
+      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
+      double precision cBW_mass(-nexternal:-1,-1:1),
+     &     cBW_width(-nexternal:-1,-1:1)
+      double precision b(-1:1),x0
+      double precision s_mass(-nexternal:-1),xi,fract
+      parameter (fract=0.1d0)
+      common/to_phase_space_s_channel/s_mass
+      double precision min_m(-nexternal:nexternal), max_m(
+     $     -nexternal:nexternal)
+c Common block with granny information
+      logical granny_is_res
+      integer igranny,iaunt
+      common /c_granny_res/igranny,iaunt,granny_is_res
+c
+      totalmass=0d0
+      do i=nexternal-1,-ns_channel,-1
+         if (i.gt.0) then
+            min_m(i)=m(i)
+            totalmass=totalmass+m(i)
+         elseif (i.lt.0) then
+            min_m(i)=min_m(itree(1,i))+min_m(itree(2,i))
+            max_m(i)=sqrtshat_born-totalmass+min_m(i)
+         else
+            min_m(i)=0d0
+            max_m(i)=sqrtshat_born
+         endif
+      enddo
+c
+      pass=.true.
+      do i = -ns_channel,-1
+         if (i.ne.igranny) then
+c Generate invariant masses for all s-channel branchings of the Born
+         if ( max_m(i).lt.min_m(i) .or. max_m(i).lt.0.d0
+     &        .or. min_m(i).lt.0.d0)then
+            write(*,*) 'Error #13 in genps_fks.f (granny)'
+            write(*,*) min_m(i),max_m(i),i
+            stop
+         endif
+         smin = min_m(i)**2
+         smax = max_m(i)**2
+c Choose the appropriate s given our constraints smin,smax
+         if(qwidth(i).ne.0.d0 .and. cBW(i).ne.2)then
+c Breit Wigner
+            if (cBW(i).eq.1 .and.
+     &          cBW_width(i,1).gt.0d0 .and. cBW_width(i,-1).gt.0d0) then
+c     conflicting BW on both sides
+               do j=-1,1,2
+                  b(j)=(cBW_mass(i,j)-qmass(i))/
+     &                 (qwidth(i)+cBW_width(i,j))
+                  b(j)=qmass(i)+b(j)*qwidth(i)
+                  b(j)=b(j)**2
+               enddo
+               if (x(-i).lt.1d0/3d0) then
+                  x0=3d0*x(-i)
+                  s(i)=(b(-1)-smin)*x0+smin
+                  xjac0=3d0*xjac0*(b(-1)-smin)
+               elseif (x(-i).gt.1d0/3d0 .and. x(-i).lt.2d0/3d0) then
+                  x0=3d0*x(-i)-1d0
+                  xm02=qmass(i)**2
+                  bwmdpl=b(1)-xm02
+                  bwmdmn=xm02-b(-1)
+                  bwfmpl=atan(bwmdpl/(qmass(i)*qwidth(i)))
+                  bwfmmn=atan(bwmdmn/(qmass(i)*qwidth(i)))
+                  bwdelf=(bwfmpl+bwfmmn)/pi
+                  s(i)=xbwmass3(x0,xm02,qwidth(i),bwdelf
+     &                 ,bwfmmn)
+                  xjac0=3d0*xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
+               else
+                  x0=3d0*x(-i)-2d0
+                  s(i)=(smax-b(1))*x0+b(1)
+                  xjac0=3d0*xjac0*(smax-b(1))
+               endif
+            elseif (cBW(i).eq.1.and.cBW_width(i,1).gt.0d0) then
+c     conflicting BW with alternative mass larger
+               b(1)=(cBW_mass(i,1)-qmass(i))/
+     &              (qwidth(i)+cBW_width(i,1))
+               b(1)=qmass(i)+b(1)*qwidth(i)
+               b(1)=b(1)**2
+               if (x(-i).lt.0.5d0) then
+                  x0=2d0*x(-i)
+                  xm02=qmass(i)**2
+                  bwmdpl=b(1)-xm02
+                  bwmdmn=xm02-smin
+                  bwfmpl=atan(bwmdpl/(qmass(i)*qwidth(i)))
+                  bwfmmn=atan(bwmdmn/(qmass(i)*qwidth(i)))
+                  bwdelf=(bwfmpl+bwfmmn)/pi
+                  s(i)=xbwmass3(x0,xm02,qwidth(i),bwdelf
+     &                 ,bwfmmn)
+                  xjac0=2d0*xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
+               else
+                  x0=2d0*x(-i)-1d0
+                  s(i)=(smax-b(1))*x0+b(1)
+                  xjac0=2d0*xjac0*(smax-b(1))
+               endif
+            elseif (cBW(i).eq.1.and.cBW_width(i,-1).gt.0d0) then
+c     conflicting BW with alternative mass smaller
+               b(-1)=(cBW_mass(i,-1)-qmass(i))/
+     &              (qwidth(i)+cBW_width(i,-1)) ! b(-1) is negative here
+               b(-1)=qmass(i)+b(-1)*qwidth(i)
+               b(-1)=b(-1)**2
+
+               if (b(-1).gt.smax) then
+                   s(i)=(smax-smin)*x(-i)+smin
+                   xjac0=xjac0*(smax-smin)
+               elseif (x(-i).lt.0.5d0) then
+                  x0=2d0*x(-i)
+                  s(i)=(b(-1)-smin)*x0+smin
+                  xjac0=2d0*xjac0*(b(-1)-smin)
+               else
+                  x0=2d0*x(-i)-1d0
+                  xm02=qmass(i)**2
+                  bwmdpl=smax-xm02
+                  bwmdmn=xm02-b(-1)
+                  bwfmpl=atan(bwmdpl/(qmass(i)*qwidth(i)))
+                  bwfmmn=atan(bwmdmn/(qmass(i)*qwidth(i)))
+                  bwdelf=(bwfmpl+bwfmmn)/pi
+                  s(i)=xbwmass3(x0,xm02,qwidth(i),bwdelf
+     &                 ,bwfmmn)
+                  xjac0=2d0*xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
+               endif
+            else
+c     normal BW
+               xm02=qmass(i)**2
+               bwmdpl=smax-xm02
+               bwmdmn=xm02-smin
+               bwfmpl=atan(bwmdpl/(qmass(i)*qwidth(i)))
+               bwfmmn=atan(bwmdmn/(qmass(i)*qwidth(i)))
+               bwdelf=(bwfmpl+bwfmmn)/pi
+               s(i)=xbwmass3(x(-i),xm02,qwidth(i),bwdelf
+     &              ,bwfmmn)
+               xjac0=xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
+            endif
+         else
+c not a Breit Wigner
+            if (smin.eq.0d0 .and. s_mass(i).eq.0d0) then
+c     no lower limit on invariant mass from cuts or final state masses:
+c     use flat distribution
+               s(i) = (smax-smin)*x(-i)+smin
+               xjac0 = xjac0*(smax-smin)
+            elseif (smin.ge.s_mass(i) .and. smin.gt.0d0) then
+c     A lower limit on smin, which is larger than lower limit from cuts
+c     or masses. Use 1/x^nsamp importance sampling
+               ximax0 = smin**(-nsamp)
+               ximin0 = smax**(-nsamp)
+               tmp  = ximin0 +(1d0-x(-i))*(ximax0-ximin0)
+               s(i) = tmp**(-1/dble(nsamp))
+               xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
+            elseif (smin.lt.s_mass(i) .and. s_mass(i).gt.0d0) then
+c     Use flat grid between smin and s_mass(i), and 1/x^nsamp above
+c     s_mass(i)
+               if (x(-i).lt.fract) then
+                  xi=x(-i)/fract ! between 0 and 1
+                  xjac0=xjac0/fract
+                  s(i) = (s_mass(i)-smin)*xi+smin
+                  xjac0 = xjac0*(s_mass(i)-smin)
+               else
+                  xi=(x(-i)-fract)/(1d0-fract) ! between 0 and 1
+                  xjac0=xjac0/(1d0-fract)
+                  ximax0 = s_mass(i)**(-nsamp)
+                  ximin0 = smax**(-nsamp)
+                  tmp  = ximin0 +(1d0-xi)*(ximax0-ximin0)
+                  s(i) = tmp**(-1/dble(nsamp))
+                  xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
+               endif
+            else
+               write (*,*) "ERROR in genps_fks.f:"/
+     $              /" cannot set s-channel without BW"
+               stop 1
+            endif
+         endif
+c If numerical inaccuracy, quit loop
+         if (xjac0 .lt. 0d0) then
+            xjac0 = -6
+            pass=.false.
+            return
+         endif
+         if (s(i) .lt. smin) then
+            xjac0=-5
+            pass=.false.
+            return
+         endif
+c
+c     fill masses, update (upper) integration boundary
+c
+         m(i) = sqrt(s(i))
+         if (itree(1,i).lt.0) then
+            max_m(itree(1,i))=m(i)-min_m(itree(2,i))
+         endif
+         if (itree(2,i).lt.0) then
+            max_m(itree(2,i))=m(i)-min_m(itree(1,i))
+         endif
+
+         elseif (i.eq.igranny .and. granny_is_res) then
+c     Skip the grandmother. Only update the integration bounds to keep
+c     the full range (hence, as if the invariant mass generated was the
+c     maximum possible.
+            if (itree(1,i).lt.0) then
+               max_m(itree(1,i))=max_m(i)-min_m(itree(2,i))
+            endif
+            if (itree(2,i).lt.0) then
+               max_m(itree(2,i))=max_m(i)-min_m(itree(1,i))
+            endif
+         else
+            write (*,*) 'Non consistent granny in genps_fks ',i,igranny
+     $           ,granny_is_res
+            stop
+         endif
+      enddo
+      return
+      end
+
+
       subroutine generate_t_channel_branchings(ns_channel,nbranch,itree
      &     ,m,s,x,pb,xjac0,xpswgt0,pass)
 c First we need to determine the energy of the remaining particles this
