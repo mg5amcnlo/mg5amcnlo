@@ -77,6 +77,7 @@ class OLDMG5Comparator(unittest.TestCase):
                         energy = 500, filename = "", pickle_file = "",
                         tolerance = 1e-06):
         """ """
+        
         mg5_path = self.build_old_mg5()
         
         if 'v4' in model:
@@ -167,7 +168,6 @@ class OLDMG5Comparator(unittest.TestCase):
                 # Store output to a pickle file in the input_files directory
         if print_result:
             print my_comp.results[0]
-
         # Assert that all process comparisons passed the tolerance cut
         my_comp.assert_processes(self, tolerance)
             
@@ -219,8 +219,9 @@ class OLDMG5Comparator(unittest.TestCase):
            Note that if you need to redo this, this is potentially due to a change
            in the model. In consequence, you need to change the old MG5 comparison
            point. (Since the default use another model)."""
-        
+
         return # By default no need this
+        self.create_short_parallel_sqso()
         self.create_short_paralel_sm()
         self.create_short_paralel_mssm()
         self.create_short_paralel_heft()
@@ -284,6 +285,23 @@ class OLDMG5Comparator(unittest.TestCase):
                              pickle_file = pickle_file)
 
 
+    def create_short_parallel_sqso(self):
+        """Test a short list of processes with squared order constraints"""
+        # Create a list of processes to check automatically
+        my_proc_list = ['u u~ > d d~', 
+                        'u u~ > d d~ g', 
+                        'u u~ > d d~ a',
+                        'u u~ > d d~ c c~']
+        
+        # Store list of non-zero processes and results in file
+        pickle_file = os.path.join(_pickle_path, 
+                                              "mg5_short_paralleltest_sqso.pkl")
+        self.compare_processes(my_proc_list,
+                             model='sm',
+                             orders = {'WEIGHTED^2<=':-2},
+                             filename = "short_sqso.log",
+                             pickle_file = pickle_file)
+
 
     ############################################################################    
     #  ROUTINE FOR THE SHORT TEST (USE by the release script)
@@ -303,8 +321,32 @@ class OLDMG5Comparator(unittest.TestCase):
             my_comp.set_me_runners(stored_runner, my_mg5)
 
             # Run the actual comparison
-            my_comp.run_comparison(stored_runner.proc_list,
-                                   'sm',
+            my_comp.run_comparison(stored_runner.proc_list,'sm',
+                                   stored_runner.orders,
+                                   stored_runner.energy)
+
+            my_comp.assert_processes(self)
+
+            # Do some cleanup
+            my_comp.cleanup()
+
+    def test_short_sqso(self): 
+        """Test a short list of processes with squared order constraints"""
+
+        comparisons = me_comparator.PickleRunner.find_comparisons(\
+            os.path.join(_pickle_path, "mg5_short_paralleltest_sqso.pkl"))
+
+        for stored_runner in comparisons:
+            # Create a MERunner object for MG5
+            my_mg5 = me_comparator.MG5_UFO_Runner()
+            my_mg5.setup(MG5DIR, MG5DIR)
+
+            # Create and setup a comparator
+            my_comp = me_comparator.MEComparator()
+            my_comp.set_me_runners(stored_runner, my_mg5)
+
+            # Run the actual comparison
+            my_comp.run_comparison(stored_runner.proc_list,'sm',
                                    stored_runner.orders,
                                    stored_runner.energy)
 
@@ -378,6 +420,19 @@ class OLDMG5Comparator(unittest.TestCase):
         self.compare_cross_section_to_values(values, my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm1.log")
+
+    def test_short_cross_sqso1(self):
+        """Test a process with definite squared order constraints. In this case
+        only the QCD-QED interference."""
+        # Create a list of processes to check automatically                                                                                                                             
+        my_proc_list = ['p p > j j']
+        values = {'number_of_P0': '1',
+                  'cross_P0_qq_qq': '1.987E+05'}
+
+        # Store list of non-zero processes and results in file                                                                                                                          
+        self.compare_cross_section_to_values(values, my_proc_list,
+                             orders = {'QED^2==':2, 'QCD^2==':2},
+                             filename = "short_cs_sqso1.log")
  
     def test_short_cross_sm2(self):
         """Test a short list of sm processes""" 

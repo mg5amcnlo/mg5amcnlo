@@ -6,14 +6,16 @@
 !====================================================================
 !
 	  integer CTModeInit,CTModeRun,CheckCycle,MaxAttempts,
-     &CTLoopLibrary,NRotations_DP,NRotations_QP,ImprovePSPoint
+     &CTLoopLibrary,NRotations_DP,NRotations_QP,ImprovePSPoint,
+     &MLReductionLib(5),IREGIMODE
 
-      real*8 MLStabThres,CTStabThres,ZeroThres
+      real*8 MLStabThres,CTStabThres,ZeroThres,OSThres
 
       logical UseLoopFilter,LoopInitStartOver,DoubleCheckHelicityFilter
-	  logical HelInitStartOver
+	  logical HelInitStartOver,IREGIRECY,WriteOutFilters
 
       common /MADLOOP/CTModeInit,CTModeRun,NRotations_DP,NRotations_QP,
      &ImprovePSPoint,CheckCycle, MaxAttempts,UseLoopFilter,MLStabThres,
      &CTStabThres,CTLoopLibrary,LoopInitStartOver,
-     &DoubleCheckHelicityFilter,ZeroThres,HelInitStartOver
+     &DoubleCheckHelicityFilter,ZeroThres,OSThres,HelInitStartOver,
+     &MLReductionLib,IREGIMODE,IREGIRECY,WriteOutFilters

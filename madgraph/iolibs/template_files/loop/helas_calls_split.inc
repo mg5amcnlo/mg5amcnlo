@@ -1,4 +1,4 @@
-      SUBROUTINE %(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
+      SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
 C  
       IMPLICIT NONE
 C  
@@ -32,11 +32,11 @@ C
 	  include 'mp_coupl.inc'
       %(dp_born_amps_decl)s
 	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
-	  common/WFCTS/W  
+	  common/%(proc_prefix)sWFCTS/W  
 
 	  LOGICAL S(NLOOPAMPS)
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
-	  common/AMPL/AMPL,S
+	  common/%(proc_prefix)sAMPL/AMPL,S
 C
 C ----------
 C BEGIN CODE

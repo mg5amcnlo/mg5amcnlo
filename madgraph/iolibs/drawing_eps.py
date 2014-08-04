@@ -191,7 +191,19 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, '%s Ffermionl' %\
                          curvature)
+    
+    def draw_circled_straight(self, line, cercle):
+        """ADD the EPS code for this fermion line."""
 
+        if not cercle:
+            curvature = 4
+        else:
+            curvature = 5
+        
+        #add the code in the correct format
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Ffermionl' %\
+                         curvature)
     def draw_dashed(self, line):
         """ADD the EPS code for this Higgs line."""
 
@@ -200,6 +212,48 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                          line.end.pos_x, line.end.pos_y, 'Fhiggs')
 
 
+    def draw_circled_dashed(self, line,cercle):
+        """ADD the EPS code for this Higgs line."""
+        if not cercle:
+            curvature = 4
+        else:
+            curvature = 5
+
+        #add the code in the correct format
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Fhiggsl'% curvature)
+
+    def draw_dotted(self,line):
+	"""ADD the EPS code for the ghost line."""
+
+	#add the code in the correct format
+	self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
+			line.end.pos_x, line.end.pos_y, 'Fghost')
+
+    def draw_curved_dotted(self, line, cercle):
+	"""ADD the EPS code for the ghost line."""
+        if not cercle:
+            curvature = 0.4
+        else:
+            curvature = 1
+
+        if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
+            curvature *= -1	
+	#add the code in the correct format
+	self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
+			line.end.pos_x, line.end.pos_y, '%s Fghostl'% curvature)
+
+    def draw_circled_dotted(self, line, cercle):
+	"""ADD the EPS code for the ghost line."""
+        if not cercle:
+            curvature = 4
+        else:
+            curvature = 5
+	
+	#add the code in the correct format
+	self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
+			line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Fghostl'% curvature)
+
     def draw_wavy(self, line, opt=0, type=''):
         """ADD the EPS code for this photon line."""
 
@@ -207,6 +261,28 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, '%d Fphoton%s' % (opt,type))
 
+    def draw_curved_wavy(self, line, cercle, opt=0, type=''):
+        """ADD the EPS code for this photon line."""
+        if not cercle:
+            curvature = 0.4
+        else:
+            curvature = 1
+        if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
+            curvature *= -1
+        #add the code in the correct format
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x, line.end.pos_y, '%d %s Fphotonl%s' % (opt,curvature,type))
+
+    def draw_circled_wavy(self, line, cercle, opt=0, type=''):
+        """ADD the EPS code for this photon line."""
+        if not cercle:
+            curvature = 4
+        else:
+            curvature = 5
+
+        #add the code in the correct format
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x+0.01, line.end.pos_y+0.01, '%d %s Fphotonl%s' % (opt,curvature,type))
 
     def draw_curly(self, line, type=''):
         """ADD the EPS code for this gluon line."""
@@ -352,9 +428,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         x2, y2 = line.end.pos_x, line.end.pos_y
 
         d = line.get_length()
-        if d == 0:
-            raise self.DrawDiagramError('Line can not have 0 length')
-        
         
         # compute gap from middle point
         if abs(x1 - x2) < 1e-3:

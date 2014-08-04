@@ -123,12 +123,32 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       logical islast,isnum,found
       character*20 temp_val
 
+      logical isBlank
+      integer i
+      character(512) IdentCardPath      
+
+      character(512) ParamCardPath
+      data ParamCardPath/'.'/
+      common/ParamCardPath/ParamCardPath
 
 c     *********************************************************************
 c     Try to find a correspondance in ident_card
 c
+
+      IdentCardPath=''
+      i =1
+      isBlank = .False.
+      do while (i.le.LEN(ParamCardPath) .and. 
+     \            .not. isBlank)
+        if (ParamCardPath(i:i).eq.' ') then
+            isBlank=.True.
+        else
+          i=i+1
+        endif
+      enddo
+      IdentCardPath = ParamCardPath(1:i-1)//'/ident_card.dat'
       ref_file = 20
-      call LHA_open_file(ref_file,'ident_card.dat',fopened)
+      call LHA_open_file(ref_file,IdentCardPath,fopened)
       if(.not. fopened) goto 99 ! If the file does not exist -> no matter, use default!
         
       islast=.false.
@@ -192,6 +212,10 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       character*(*) param_name
       data iunit/21/
       data logfile/22/
+
+      logical WriteParamLog
+      common/IOcontrol/WriteParamLog
+
       GL=0
       npara=1
 
@@ -207,7 +231,9 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       endif
       
       ! Try to open log file
-      open (unit = logfile, file = "param.log")
+      if (WriteParamLog) then
+        open (unit = logfile, file = "param.log")
+      endif
       
       ! Scan the data file
       do while(.true.)  
@@ -243,8 +269,10 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                   param(npara)=ctemp
                   npara=npara+1
                   GL=0
-                  write (logfile,*) 'Parameter ',ctemp,
+                  if (WriteParamLog) then
+                    write (logfile,*) 'Parameter ',ctemp,
      &                                  ' has been read with value ',val
+                  endif
              endif
 
          endif
@@ -252,7 +280,9 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       
       npara=npara-1
 c      close(iunit)
-      close(logfile)
+      if (WriteParamLog) then
+        close(logfile)
+      endif
       
  99   return
  
@@ -334,6 +364,7 @@ c
       character*20 param(maxpara),value(maxpara)
       character*(*)  name
       real*16 var,def_value_num
+      real*8 buff
       character*20 c_param,c_name,ctemp
       character*19 def_value
 c
@@ -355,14 +386,16 @@ c
          call LHA_case_trap(c_param)
          found = (c_param .eq. c_name)
          if (found) then
-             read(value(i),*) var
+             read(value(i),*) buff
+             var=buff
          end if
          i=i+1
       enddo
       if (.not.found) then
+         buff = def_value_num
          write (*,*) "Warning: parameter ",name," not found"
          write (*,*) "         setting it to default value ",
-     &def_value_num
+     &buff
          var=def_value_num
       endif
       return
@@ -383,7 +416,7 @@ c
       integer lun
       logical fopened
       character*(*) filename
-      character*90  tempname
+      character*512  tempname
       integer fine
       integer dirup,i
 
@@ -393,6 +426,9 @@ c-----
 c
 c     first check that we will end in the main directory
 c
+      ! Somehow it seems important to make sure the flow is
+      ! iunit is closed before opening it.
+      close(lun)
       open(unit=lun,file=filename,status='old',ERR=20)
 c      write(*,*) 'read model file ',filename
       fopened=.true.

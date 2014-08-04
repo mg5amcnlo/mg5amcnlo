@@ -1696,8 +1696,7 @@ class DecayModel(model_reader.ModelReader):
                 # IMPORTANT
                 # Particle legs must be in front of anti-particle legs
                 # for the sake of HELAS output
-                temp_legs_new.sort(key= lambda leg: leg['id'],
-                                   reverse=True)
+                temp_legs_new.sort(key=lambda leg: leg['id'],reverse=True)
 
                 temp_legs_new.append(inileg)
                 temp_vertex = base_objects.Vertex({'id': inter.get('id'),

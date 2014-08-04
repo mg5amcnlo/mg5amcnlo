@@ -54,14 +54,14 @@ C     ----------
           IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3
      $     ,J)) THEN
             CALCULATEDBORN=.FALSE.
-            WRITE(*,*) 'Error in sb_sf: momenta not the same in the
-     $        born'
+            WRITE(*,*) 'Error in sb_sf: momenta not the same in th'
+     $       //'e born'
             STOP
           ENDIF
         ENDDO
       ELSE
-        WRITE(*,*) 'Error in sb_sf: color_linked borns should be
-     $    called only with calculatedborn = true'
+        WRITE(*,*) 'Error in sb_sf: color_linked borns should b'
+     $   //'e called only with calculatedborn = true'
         STOP
       ENDIF
       ANS = 0D0
@@ -129,8 +129,8 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       IF (.NOT. CALCULATEDBORN) THEN
-        WRITE(*,*) 'Error in b_sf: color_linked borns should be called
-     $    only with calculatedborn = true'
+        WRITE(*,*) 'Error in b_sf: color_linked borns should be calle'
+     $   //'d only with calculatedborn = true'
         STOP
       ELSEIF (CALCULATEDBORN) THEN
         DO I=1,NGRAPHS

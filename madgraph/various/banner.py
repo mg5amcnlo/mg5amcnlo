@@ -885,6 +885,24 @@ class RunCardNLO(RunCard):
         
     def write_include_file(self, output_path):
         """writing the run_card.inc file""" 
+
+        # For FxFx merging, make sure that the following parameters are set correctly:
+        true = ['true', 'True','.true.','T', True, 1,'TRUE']
+        if int(self['ickkw']) == 3:
+                # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed
+            scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
+            for scale in scales:
+                if self[scale] in true :
+                    logger.info('''For consistency in the FxFx merging, \'%s\' has been set to false'''
+                                % scale,'$MG:color:BLACK')
+                    self[scale]='F'
+                # 2. Use kT algorithm for jets with pseudo-code size R=1.0
+            jetparams=['jetradius','jetalgo']
+            for jetparam in jetparams:
+                if float(self[jetparam]) != 1.0:
+                    logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
+                                % jetparam ,'$MG:color:BLACK')
+                    self[jetparam]='1.0'
         
         self.fsock = file_writers.FortranWriter(output_path)    
 ################################################################################

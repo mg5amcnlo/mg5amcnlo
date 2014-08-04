@@ -85,6 +85,34 @@ class MERunner(object):
         the same state as it was initially (e.g., remove temp dirs, ...)
         """
         pass
+    
+    @staticmethod
+    def get_coupling_definitions(orders):
+        """ Return a string specifying the orders specified by the dictionary
+        orders. It makes sure to support the specification of squared order
+        constraints with this syntax: 
+          {'QCD^2==':3, 'QED':4} -> 'QED=4 QCD^2==3'
+        """
+        
+        # The squared order couplings can be specified via the dictionary
+        # squared_orders using either of the two syntax:
+        # {'QCD':2,'QED':4} or {'QCD^2<=':2,'QED^2<=':4}
+        # The latter syntax allowing for specifying the comparator. 
+        # The reg. exp. below makes sure one can separate the two syntaxes.       
+        sq_order_re = re.compile(
+          r"^\s*(?P<coup_name>\w*)\s*\^2\s*(?P<logical_operator>(==)|(<=)|=|>)")
+
+        squared_couplings = []        
+        for coup, value in orders.items():
+            parsed = sq_order_re.match(coup)
+            if not parsed is None:
+                operator = parsed.group('logical_operator')
+                coup_name = parsed.group('coup_name')
+            else:
+                operator = '=' 
+                coup_name = coup
+            squared_couplings.append('%s^2%s%i'% (coup_name,operator,value))
+        return "%s "%' '.join(squared_couplings)
 
 class MG4Runner(MERunner):
     """Runner object for the MG4 Matrix Element generator."""
@@ -220,7 +248,8 @@ class MG4Runner(MERunner):
 
     def format_mg4_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v4 conventions. Does not
-        support v5 decay chain format for the moment."""
+        support v5 decay chain format for the moment not squared order 
+        constraints."""
 
         # TODO: fix the decay chain notation
 
@@ -312,13 +341,16 @@ class MG4Runner(MERunner):
         """Replace the hard coded collision energy in check_sa.f by the given
         energy, assuming a working dir dir_name"""
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'r')
-        check_sa = file.read()
-        file.close()
+        for check_sa_path in glob.glob(\
+                       os.path.join(dir_name, 'SubProcesses','*','check_sa.f')):
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'w')
-        file.write(re.sub("SQRTS=1000d0", "SQRTS=%id0" % int(energy), check_sa))
-        file.close()
+            file = open(check_sa_path, 'r')
+            check_sa = file.read()
+            file.close()
+    
+            file = open(check_sa_path, 'w')
+            file.write(re.sub("SQRTS=1000d0", "SQRTS=%id0" % int(energy), check_sa))
+            file.close()
 
 class MG5Runner(MG4Runner):
     """Runner object for the MG5 Matrix Element generator."""
@@ -406,7 +438,7 @@ class MG5Runner(MG4Runner):
 
         v5_string = "import model_v4 %s\n" % os.path.join(self.model_dir, model)
         v5_string += "set automatic_html_opening False\n"
-        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+        couplings = MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
@@ -429,7 +461,7 @@ class MG5_UFO_Runner(MG5Runner):
         else:
             v5_string = "import model %s \n" %  model
         v5_string += "set automatic_html_opening False\n"
-        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+        couplings = MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
@@ -459,7 +491,7 @@ class MG5_UFO_gauge_Runner(MG5Runner):
         v5_string += 'set gauge %s \n' % self.gauge
         v5_string += "import model %s \n" % os.path.join(self.model_dir, model)
 
-        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+        couplings = MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
@@ -555,7 +587,7 @@ class MG5_UFO_OldRunner(MG5OldRunner):
 
         v5_string = "import model %s \n" % model
         v5_string += "set automatic_html_opening False\n"
-        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+        couplings = MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
@@ -580,7 +612,7 @@ class MG5_CPP_Runner(MG5Runner):
 
         v5_string = "import model %s \n" % model
         v5_string += "set automatic_html_opening False\n"
-        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+        couplings = MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
