@@ -745,7 +745,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 output = pjoin(self.me_dir, 'HTML',self.run_name,
                               'plots_%s.html' % tag)
 
-        misc.sprint("Pass Here",os.path.exists(event_path))
         if not os.path.exists(event_path):
             if os.path.exists(event_path+'.gz'):
                 misc.gunzip('%s.gz' % event_path)
