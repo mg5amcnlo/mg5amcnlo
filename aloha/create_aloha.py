@@ -468,7 +468,8 @@ in presence of majorana particle/flow violation"""
         numerator = self.parse_expression(numerator, needPflipping)
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)
-            self.denominator = eval(self.denominator).simplify().expand().simplify().get((0,))
+            if not isinstance(self.denominator, numbers.Number):
+                self.denominator = eval(self.denominator).simplify().expand().simplify().get((0,))
 
         return eval(numerator)
     
