@@ -2886,9 +2886,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         #os.chdir(os.path.pardir)
 
         obj = gen_infohtml.make_info_html(self.dir_path)
-        [mv(name, './HTML/') for name in os.listdir('.') if \
-                            (name.endswith('.html') or name.endswith('.jpg')) and \
-                            name != 'index.html']               
+              
         if online:
             nb_channel = obj.rep_rule['nb_gen_diag']
             open(pjoin(self.dir_path, 'Online'),'w').write(str(nb_channel))
