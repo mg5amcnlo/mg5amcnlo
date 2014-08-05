@@ -320,7 +320,6 @@ class Event:
             # read the line and assign the date accordingly                
             elif line_type == 'init':
                 line_type = 'event'
-                #Extra information for FxFx and UNLOPS
                 self.assign_scale_line(line)         
                 # initialize some local variable
                 index_prod=0
