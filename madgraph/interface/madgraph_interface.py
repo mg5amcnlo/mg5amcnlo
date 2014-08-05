@@ -4491,7 +4491,7 @@ This implies that with decay chains:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
                 elif not os.environ['LD_LIBRARY_PATH']:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
-                elif 1:#ld_path not in os.environ['LD_LIBRARY_PATH']:
+                elif ld_path not in os.environ['LD_LIBRARY_PATH']:
                     os.environ['LD_LIBRARY_PATH'] += ';%s' % ld_path
             else:
                 raise self.InvalidCmd('lhapdf is required to compile/use SysCalc')

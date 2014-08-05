@@ -1754,6 +1754,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 model = self.find_model_name()
                 process = self.process # define in find_model_name
                 self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+                self.results.resetall(self.me_dir)
             else:                                
                 self.results.resetall(self.me_dir)
         else:
@@ -3357,10 +3358,13 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         if 'pythia' in self.to_store:
             self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
-            misc.gzip('%(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' %
-                        {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),'tag':tag},
-                      stdout = '%s/%s_pythia_events.hep' % (pjoin(self.me_dir,'Events',self.run_name), tag)
-                      )
+            
+            p = pjoin(self.me_dir,'Events')
+            n = self.run_name
+            t = tag
+            misc.gzip(pjoin(p,'pythia_events.hep'), 
+                      stdout=pjoin(p,'%s/%s_pythia_events.hep' % (n,t)))
+
             self.to_store.remove('pythia')
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         
