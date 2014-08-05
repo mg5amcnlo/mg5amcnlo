@@ -175,13 +175,13 @@ c BW stuff
       integer cBW_FKS_level_max(fks_configs),
      &     cBW_FKS(fks_configs,-nexternal:-1),
      &     cBW_FKS_level(fks_configs,-nexternal:-1)
-      double precision cBW_FKS_mass(fks_configs,-nexternal:-1,-1:1),
-     &     cBW_FKS_width(fks_configs,-nexternal:-1,-1:1)
+      double precision cBW_FKS_mass(fks_configs,-1:1,-nexternal:-1),
+     &     cBW_FKS_width(fks_configs,-1:1,-nexternal:-1)
       save cBW_FKS_level_max,cBW_FKS,cBW_FKS_level,cBW_FKS_mass
      $     ,cBW_FKS_width
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-      double precision cBW_mass(-nexternal:-1,-1:1),
-     &     cBW_width(-nexternal:-1,-1:1)
+      double precision cBW_mass(-1:1,-nexternal:-1),
+     &     cBW_width(-1:1,-nexternal:-1)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
       double precision s_mass(-nexternal:-1)
@@ -400,10 +400,10 @@ c mass of the BW
             cBW_FKS_level_max(iFKS)=0
             t_channel=0
             do i=-1,-(nexternal-3),-1 ! All propagators
-               cBW_FKS_mass(iFKS,i,1)=0d0
-               cBW_FKS_width(iFKS,i,1)=0d0
-               cBW_FKS_mass(iFKS,i,-1)=0d0
-               cBW_FKS_width(iFKS,i,-1)=0d0
+               cBW_FKS_mass(iFKS,1,i)=0d0
+               cBW_FKS_width(iFKS,1,i)=0d0
+               cBW_FKS_mass(iFKS,-1,i)=0d0
+               cBW_FKS_width(iFKS,-1,i)=0d0
                masslow(i)=9d99
                widthlow(i)=0d0
                if ( itree(1,i).eq.1 .or. itree(1,i).eq.2 ) t_channel=i
@@ -431,8 +431,8 @@ c     Conflicting Breit-Wigner
 c     Set here the mass (and width) of the alternative mass; it's the
 c     sum of daughter masses. (3rd argument is '1', because this
 c     alternative mass is LARGER than the resonance mass).
-                     cBW_FKS_mass(iFKS,i,1)=xm(i)
-                     cBW_FKS_width(iFKS,i,1)=xw(i)
+                     cBW_FKS_mass(iFKS,1,i)=xm(i)
+                     cBW_FKS_width(iFKS,1,i)=xw(i)
                   endif
 c     set the daughters also as conflicting (recursively)
                   masslow(i)=pmass(i,iconfig)
@@ -459,9 +459,9 @@ c     resonance mass).
                         if (pwidth(itree(k,j),iconfig).eq.0d0 .or.
      $                       masslow(itree(k,j)).ge.pmass(itree(k,j)
      $                       ,iconfig)) cycle
-                        cBW_FKS_mass(iFKS,itree(k,j),-1)=
+                        cBW_FKS_mass(iFKS,-1,itree(k,j))=
      $                       masslow(itree(k,j))
-                        cBW_FKS_width(iFKS,itree(k,j),-1)=
+                        cBW_FKS_width(iFKS,-1,itree(k,j))=
      $                       widthlow(itree(k,j))
                      enddo
                   enddo
@@ -488,8 +488,8 @@ c     conflicting BWs: set all s-channels as conflicting
                   do i=t_channel,-(nexternal-3),-1
                      if (cBW_FKS(iFKS,itree(2,i)).ne.2) then
                         cBW_FKS(iFKS,itree(2,i))=1
-                        cBW_FKS_mass(iFKS,itree(2,i),-1)=sqrt(stot)/2d0
-                        cBW_FKS_width(iFKS,itree(2,i),-1)=xw(itree(2,i))
+                        cBW_FKS_mass(iFKS,-1,itree(2,i))=sqrt(stot)/2d0
+                        cBW_FKS_width(iFKS,-1,itree(2,i))=xw(itree(2,i))
                      endif
                   enddo
                endif
@@ -528,8 +528,8 @@ c
          cBW(i)=cBW_FKS(nFKSprocess,i)
          cBW_level(i)=cBW_FKS_level(nFKSprocess,i)
          do j=-1,1,2
-            cBW_mass(i,j)=cBW_FKS_mass(nFKSprocess,i,j)
-            cBW_width(i,j)=cBW_FKS_width(nFKSprocess,i,j)
+            cBW_mass(j,i)=cBW_FKS_mass(nFKSprocess,j,i)
+            cBW_width(j,i)=cBW_FKS_width(nFKSprocess,j,i)
          enddo
          s_mass(i)=s_mass_FKS(nFKSprocess,i)
       enddo

@@ -5622,7 +5622,8 @@ c arguments
 c common block that is filled by this subroutine
       logical granny_is_res
       integer igranny,iaunt
-      common /c_granny_res/igranny,iaunt,granny_is_res
+      logical granny_chain(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
 c other common blocks
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -5633,7 +5634,8 @@ c local
 c save
       logical granny_is_res_fks(fks_configs)
       integer igranny_fks(fks_configs),iaunt_fks(fks_configs)
-      save granny_is_res_fks,igranny_fks,iaunt_fks
+      logical granny_chain_fks(-nexternal:nexternal,fks_configs)
+      save granny_is_res_fks,igranny_fks,iaunt_fks,granny_chain_fks
 c itree info
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer mapconfig(0:lmaxconfigs)
@@ -5675,27 +5677,33 @@ c j_fks needs to be final state to have non-trivial grandmother
             return
          endif
 c determine if grandmother is an s-channel particle. If so, set igranny
-c and iaunt
+c and iaunt.
          imother=min(i_fks,j_fks)
          do i=-1,-(nexternal-4),-1
-            if (iforest(1,i,iconfig).eq.imother) then
-               igranny_fks(nFKSprocess)=i
-               iaunt_fks(nFKSprocess)=iforest(2,i,iconfig)
-               exit
-            elseif (iforest(2,i,iconfig).eq.imother) then
-               igranny_fks(nFKSprocess)=i
-               iaunt_fks(nFKSprocess)=iforest(1,i,iconfig)
-               exit
-            elseif (iforest(1,i,iconfig).eq.1 .or.
+            if (iforest(1,i,iconfig).eq.1 .or.
      &              iforest(1,i,iconfig).eq.2) then
 c no more s-channels, so exit the do-loop and set igranny=0
                igranny_fks(nFKSprocess)=0
                iaunt_fks(nFKSprocess)=0
                exit
+            elseif (iforest(1,i,iconfig).eq.imother) then
+c Daughter 1 is the fks_mother.
+               igranny_fks(nFKSprocess)=i
+               iaunt_fks(nFKSprocess)=iforest(2,i,iconfig)
+               exit
+            elseif (iforest(2,i,iconfig).eq.imother) then
+c Daughter 2 is the fks_mother.
+               igranny_fks(nFKSprocess)=i
+               iaunt_fks(nFKSprocess)=iforest(1,i,iconfig)
+               exit
             endif
          enddo
-c if there is an s-channel grandmother, determine if it's a resonance
-         if (igranny_fks(nFKSprocess).ne.0) then
+c If there is an s-channel grandmother, determine if it's a resonance by
+c making sure that it's massive and has a non-zero width. In the special
+c case that the grandmother is the s-hat propagator (which means that
+c the process has no t-channels), set granny_is_res to false.
+         if (igranny_fks(nFKSprocess).ne.0 .and.
+     $        igranny_fks(nFKSprocess).ne.-(nexternal-4)) then
             if (pmass(igranny_fks(nFKSprocess),iconfig).ne.0d0 .and.
      $           pwidth(igranny_fks(nFKSprocess),iconfig).gt.0d0) then
                granny_is_res_fks(nFKSprocess)=.true.
@@ -5705,6 +5713,25 @@ c if there is an s-channel grandmother, determine if it's a resonance
          else
             granny_is_res_fks(nFKSprocess)=.false.
          endif
+c Now we have igranny and granny_is_res_fks. We can now determine the
+c chain of s-channels that originates from the grandmother
+         do i=-nexternal,nexternal
+            granny_chain_fks(i,nFKSprocess)=.false.
+         enddo
+         if (granny_is_res_fks(nFKSprocess)) then
+c granny is part of the chain            
+            granny_chain_fks(igranny,nFKSprocess)=.true.
+c loop from the granny to the external particles. If mother was part of
+c the granny chain, so are the daugthers.
+            do i=igranny,-1
+               if (granny_chain_fks(i,nFKSprocess)) then
+                  granny_chain_fks(iforest(1,i,iconfig),nFKSprocess) =
+     $                 .true.
+                  granny_chain_fks(iforest(2,i,iconfig),nFKSprocess) =
+     $                 .true.
+               endif
+            enddo
+         endif
       endif
 c Here is the simply copy for later calls to this subroutine: set
 c igranny, iaunt and granny_is_res from the saved information
@@ -5712,10 +5739,16 @@ c igranny, iaunt and granny_is_res from the saved information
          igranny=igranny_fks(nFKSprocess)
          iaunt=iaunt_fks(nFKSprocess)
          granny_is_res=.true.
+         do i=-nexternal,nexternal
+            granny_chain(i)=granny_chain_fks(i,nFKSprocess)
+         enddo
       else
          igranny=0
          iaunt=0
          granny_is_res=.false.
+         do i=-nexternal,nexternal
+            granny_chain(i)=.false.
+         enddo
       endif
       return
       end
