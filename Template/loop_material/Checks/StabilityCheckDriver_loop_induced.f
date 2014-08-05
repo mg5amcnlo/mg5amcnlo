@@ -24,11 +24,22 @@
 !     
       INTEGER I,J,K
       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
-      REAL*8 SQRTS,MATELEM(3),BORNELEM,AO2PI           ! sqrt(s)= center of mass energy 
+      
+      INTEGER MATELEM_ARRAY_DIM
+      REAL*8 , allocatable :: MATELEM(:,:)
+
+      REAL*8 SQRTS,BORNELEM,AO2PI           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
       CHARACTER*1 EX 
-      INTEGER HELCHOICE
+      INTEGER HELCHOICE, SOCHOICE
+
+!
+!     SAVED VARIABLES
+!
+      LOGICAL INIT
+      DATA INIT/.TRUE./
+      COMMON/INITCHECKSA/INIT
 
 !     
 !     EXTERNAL
@@ -41,14 +52,22 @@
 !-----
 !     
 !---  INITIALIZATION CALLS
-!     
+!    
+
+      IF (INIT) THEN
+         INIT=.FALSE.
+         CALL %(proc_prefix)sGET_ANSWER_DIMENSION(MATELEM_ARRAY_DIM)
+         ALLOCATE(MATELEM(0:3,0:MATELEM_ARRAY_DIM))
+
 !---  Call to initialize the values of the couplings, masses and widths 
 !     used in the evaluation of the matrix element. The primary parameters of the
 !     models are read from Cards/param_card.dat. The secondary parameters are calculated
 !     in Source/MODEL/couplings.f. The values are stored in common blocks that are listed
 !     in coupl.inc .
 
-      call setpara('param_card.dat')  !first call to setup the paramaters
+         call setpara('param_card.dat')  !first call to setup the paramaters
+
+      ENDIF
 
       AO2PI=G**2/(8.D0*(3.14159265358979323846d0**2))
 
@@ -81,15 +100,20 @@
         endif
         write(*,*) "Enter Helicity tag, -1 = summed. For loops only."
         read(*,*) HELCHOICE
+        write(*,*) "Enter split_orders choice, -1 = all."
+        read(*,*) SOCHOICE
+        IF (SOCHOICE.NE.-1) THEN
+          CALL %(proc_prefix)sSET_COUPLINGORDERS_TARGET(SOCHOICE)
+        ENDIF
 !---  Update the couplings with the new MU_R
         CALL UPDATE_AS_PARAM()
 !     
 !     Now we can call the matrix element!
 !
         IF (HELCHOICE.EQ.-1) THEN
-          CALL SLOOPMATRIX(P,MATELEM)
+          CALL %(proc_prefix)sSLOOPMATRIX(P,MATELEM)
         ELSE
-          CALL SLOOPMATRIXHEL(P,HELCHOICE,MATELEM)
+          CALL %(proc_prefix)sSLOOPMATRIXHEL(P,HELCHOICE,MATELEM)
         ENDIF
         write(*,*) '##TAG#RESULT_START#TAG##'
         do i=1,nexternal      
@@ -97,7 +121,7 @@
         enddo
         write (*,'(a3,1x,i2)') 'EXP',-(2*nexternal-8)
         write (*,'(a4,1x,1e25.15)') 'BORN',0.0d0
-        write (*,'(a3,1x,1e25.15)') 'FIN',MATELEM(1)
+        write (*,'(a3,1x,1e25.15)') 'FIN',MATELEM(1,0)
         write (*,'(a4,1x,1e25.15)') '1EPS',0.0d0
         write (*,'(a4,1x,1e25.15)') '2EPS',0.0d0
         write (*,*) 'Export_Format LoopInduced'

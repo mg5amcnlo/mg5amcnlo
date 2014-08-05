@@ -72,10 +72,11 @@ class Event:
     """ class to read an event, record the information, write down the event in the lhe format.
             This class is used both for production and decayed events"""
 
-    def __init__(self, inputfile=None):
+    def __init__(self, inputfile=None, banner=None):
         """Store the name of the event file """
         self.inputfile=inputfile
         self.particle={}
+        self.banner = banner
 
     def give_momenta(self, map_event=None):
         """ return the set of external momenta of the event, 
@@ -166,14 +167,27 @@ class Event:
         line1=' %2d %6d %+13.7e %14.8e %14.8e %14.8e' % \
         (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
         line+=line1+"\n"
+        scales= []
         for item in range(1,len(self.event2mg.keys())+1):
             part=self.event2mg[item]
             if part>0:
                 particle_line=self.get_particle_line(self.particle[part])
+                if abs(self.particle[part]["istup"]) == 1:
+                    if "pt_scale" in self.particle[part]:
+                        scales.append(self.particle[part]["pt_scale"])
+                    else:
+                        scales.append(None)
             else:
                 particle_line=self.get_particle_line(self.resonance[part])
             line+=particle_line        
-
+        
+        if any(scales):
+            sqrts = self.particle[1]["pt_scale"]
+            line += "<scales %s></scales>\n" % ' '.join(['pt_clust_%i=\"%s\"' 
+                                                        %(i-1,s if s else sqrts)
+                                                       for i,s in enumerate(scales)
+                                                       if i>1])
+        
         if self.diese:
             line += self.diese
         if self.rwgt:
@@ -208,7 +222,7 @@ class Event:
                     daughters.append(index)
 
         if len(daughters)!=2:
-            logger.info("Got more than 2 daughters for one particles")
+            logger.info("Got more than 2 (%s) daughters for one particles" % len(daughters))
             logger.info("in one production event (before decay)")
 
 
@@ -292,6 +306,9 @@ class Event:
             elif line_type == 'rwgt' and 'wgt' in line:
                 # force to continue to be in rwgt line up to </rwgt>
                 line_type = 'rwgt'
+            elif "pt_clust_" in line:
+                line_type="clusteringv3" 
+            
             elif '<' in line:
                 line_type = 'other_block'
             
@@ -350,6 +367,17 @@ class Event:
                     "mothup2":mothup2,"colup1":colup1,"colup2":colup2,"momentum":mom,"mass":mass,"helicity":helicity}
                 else: 
                     logger.warning('unknown status in lhe file')
+            elif line_type == "clusteringv3":
+                scales = re.findall(r"""pt_clust_(\d+)=\"([e\+\-.\d]+)\"""", line)
+                scales = sorted(scales, key= lambda x: -1*int(x[0]))
+                for index in range(1,len(self.particle)+1):
+                    if self.particle[index]["istup"] == 1:
+                        self.particle[index]["pt_scale"] = scales.pop()[1]
+                if not self.banner:
+                    self.particle[1]["pt_scale"] = self.particle[1]["momentum"].E + self.particle[2]["momentum"].E
+                else:
+                    self.particle[1]["pt_scale"] = float(self.banner.get('run_card', 'ebeam1'))+float(self.banner.get('run_card', 'ebeam2'))
+                
         return "no_event"
 
 class pid2label(dict):
@@ -1885,7 +1913,7 @@ class decay_all_events(object):
         self.model = ms_interface.model
         self.banner = banner
         self.evtfile = inputfile
-        self.curr_event = Event(self.evtfile) 
+        self.curr_event = Event(self.evtfile, banner) 
         self.inverted_decay_mapping={}
                
         self.curr_dir = os.getcwd()

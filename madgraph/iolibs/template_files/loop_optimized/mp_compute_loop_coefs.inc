@@ -1,4 +1,4 @@
-      SUBROUTINE MP_COMPUTE_LOOP_COEFS(PS,ANSDP)
+      SUBROUTINE %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(PS,ANSDP)
 C  
 %(info_lines)s
 C
@@ -33,63 +33,79 @@ C
       PARAMETER (ZERO=0E0_16)
       %(complex_mp_format)s IMAG1
       PARAMETER (IMAG1=(0e0_16,1e0_16))
+C     These are constants related to the split orders
+      INTEGER    NSO, NSQUAREDSO, NAMPSO
+	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
 C  
 C ARGUMENTS 
 C  
       %(real_mp_format)s PS(0:3,NEXTERNAL)
-      %(real_dp_format)s ANSDP(3)
+      %(real_dp_format)s ANSDP(3,0:NSQUAREDSO)
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H,DUMMY
+      INTEGER I,J,K,H,DUMMY,ITEMP
+      %(real_mp_format)s TEMP2
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       %(real_mp_format)s P(0:3,NEXTERNAL)
 	  DATA IC/NEXTERNAL*1/
-	  %(real_mp_format)s ANS(3)
+	  %(real_mp_format)s ANS(3,0:NSQUAREDSO)
 	  %(complex_mp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_mp_format)s CFTOT
+C
+C FUNCTIONS
+C
+      INTEGER %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP
+	  INTEGER %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP
+	  INTEGER %(proc_prefix)sML5SQSOINDEX
 C  
 C GLOBAL VARIABLES
 C  
 	  include 'mp_coupl_same_name.inc'
 
 	  LOGICAL CHECKPHASE, HELDOUBLECHECKED
-      common/INIT/CHECKPHASE, HELDOUBLECHECKED
+      common/%(proc_prefix)sINIT/CHECKPHASE, HELDOUBLECHECKED
 
 	  INTEGER HELOFFSET
 	  INTEGER GOODHEL(NCOMB)
-	  LOGICAL GOODAMP(NLOOPGROUPS)
-	  common/Filters/GOODAMP,GOODHEL,HELOFFSET
+	  LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
+	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL,HELOFFSET
 
 	  INTEGER HELPICKED
-	  common/HELCHOICE/HELPICKED
+	  common/%(proc_prefix)sHELCHOICE/HELPICKED
+
+	  INTEGER SQSO_TARGET
+	  common/%(proc_prefix)sSOCHOICE/SQSO_TARGET
+      
+	  LOGICAL UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+	  common/%(proc_prefix)sSO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
 	  %(mp_born_amps_decl)s	  
 	  %(complex_mp_format)s W(20,NWAVEFUNCS)
-	  common/MP_W/W  
+	  common/%(proc_prefix)sMP_W/W  
 
 	  %(complex_dp_format)s DPW(20,NWAVEFUNCS)
-	  common/W/DPW
+	  common/%(proc_prefix)sW/DPW
 
 	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
-	  common/MP_WL/WL,PL
+	  common/%(proc_prefix)sMP_WL/WL,PL
 
-	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
-	  common/MP_LCOEFS/LOOPCOEFS
+	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+	  common/%(proc_prefix)sMP_LCOEFS/LOOPCOEFS
 
       %(complex_mp_format)s AMPL(3,NCTAMPS)
-	  common/MP_AMPL/AMPL
+	  common/%(proc_prefix)sMP_AMPL/AMPL
 
 	  INTEGER CF_D(NCOLORROWS,%(color_matrix_size)s)
 	  INTEGER CF_N(NCOLORROWS,%(color_matrix_size)s)
-	  common/CF/CF_D,CF_N
+	  common/%(proc_prefix)sCF/CF_D,CF_N
 
 	  INTEGER HELC(NEXTERNAL,NCOMB)
-	  common/HELCONFIGS/HELC
+	  common/%(proc_prefix)sHELCONFIGS/HELC
 
 	  LOGICAL MP_DONE_ONCE
-	  common/MP_DONE_ONCE/MP_DONE_ONCE
+	  common/%(proc_prefix)sMP_DONE_ONCE/MP_DONE_ONCE
 
 C ----------
 C BEGIN CODE
@@ -130,15 +146,19 @@ DO K=1, 3
   ENDDO
 ENDDO
 
-DO I=1,NLOOPS
+DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
-    LOOPCOEFS(J,I)=(ZERO,ZERO)
+    DO K=1,NSQUAREDSO  
+      LOOPCOEFS(J,K,I)=(ZERO,ZERO)
+	ENDDO
   ENDDO
 ENDDO
 
 DO K=1,3
-  ANSDP(K)=0.0d0
-  ANS(K)=ZERO
+  DO J=0,NSQUAREDSO
+    ANSDP(K,J)=0.0d0
+    ANS(K,J)=ZERO
+  ENDDO
 ENDDO
 
 DO H=1,NCOMB
@@ -146,7 +166,19 @@ DO H=1,NCOMB
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
+
+  MP_UVCT_REQ_SO_DONE=.FALSE.
+  MP_CT_REQ_SO_DONE=.FALSE.
+  MP_LOOP_REQ_SO_DONE=.FALSE.
+
   %(mp_born_ct_helas_calls)s
+2000 CONTINUE
+  MP_CT_REQ_SO_DONE=.TRUE.
+
+  %(mp_uvct_helas_calls)s
+3000 CONTINUE
+  MP_UVCT_REQ_SO_DONE=.TRUE.
+
   IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
     DUMMY=GOODHEL(H)
   ELSE
@@ -159,7 +191,11 @@ DO H=1,NCOMB
 	  %(mp_squaring)s
     ENDDO
   ENDDO 
+
   %(mp_coef_construction)s  
+  4000 CONTINUE
+  MP_LOOP_REQ_SO_DONE=.TRUE.
+
   ENDIF
 ENDDO
 
@@ -171,7 +207,9 @@ DO I=1,NWAVEFUNCS
 ENDDO
 
 DO I=1,3
-  ANSDP(I)=ANS(I)
+  DO J=0,NSQUAREDSO
+    ANSDP(I,J)=ANS(I,J)
+  ENDDO
 ENDDO
 
 %(mp_coef_merging)s

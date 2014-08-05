@@ -228,7 +228,7 @@ c
       enddo
 c Assume helicity summed
       do i=1,nexternal
-         jpart(7,i)=0
+         jpart(7,i)=9
       enddo
       if (firsttime2 .and. isum_hel.ne.0) then
          write (*,*) 'WARNING: for writing the events, no helicity '//

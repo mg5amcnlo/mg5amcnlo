@@ -213,21 +213,30 @@ class MadLoopLauncher(ExtLauncher):
                     rFile.close()
                     raise MadGraph5Error,"Could not find result file %s."%\
                                        str(os.path.join(curr_path,'result.dat'))
-                # Result given in this format: 
-                # ((fin,born,spole,dpole,me_pow), p_out)
-                # I should have used a dictionary instead.
-                result = evaluator.parse_check_output(rFile.readlines(),\
-                                                                  format='dict')
-                logger.info(self.format_res_string(result)%shell_name)
+                # The result are returned as a dictionary.
+                result = evaluator.parse_check_output(rFile,format='dict')
+                for line in self.format_res_string(result, shell_name):
+                    if isinstance(line, str):
+                        logger.info(line)
+                    elif isinstance(line,tuple):
+                        logger.info(line[0],line[1])
 
-    def format_res_string(self, res):
+    def format_res_string(self, res, shell_name):
         """ Returns a good-looking string presenting the results.
         The argument the tuple ((fin,born,spole,dpole,me_pow), p_out)."""
+        
+        main_color='$MG:color:BLUE'
         
         def special_float_format(float):
             return '%s%.16e'%('' if float<0.0 else ' ',float)
         
-        ASCII_bar = ''.join(['='*96])
+        so_order_names = res['Split_Orders_Names']
+        
+        def format_so_orders(so_orders):
+            return ' '.join(['%s=%d'%(so_order_names[i],so_orders[i]) for i in
+                                                         range(len(so_orders))])
+
+        ASCII_bar = ('|'+''.join(['='*96]),main_color)
         
         ret_code_h = res['return_code']//100
         ret_code_t = (res['return_code']-100*ret_code_h)//10
@@ -255,10 +264,10 @@ class MadLoopLauncher(ExtLauncher):
                                                                  'computation.')
         if ret_code_h!=1:
             if res['accuracy']>0.0:
-                StabilityOutput.append('| Estimated accuracy = %.1e'\
+                StabilityOutput.append('| Estimated relative accuracy = %.1e'\
                                                                %res['accuracy'])
             elif res['accuracy']==0.0:
-                StabilityOutput.append('| Estimated accuracy = %.1e'\
+                StabilityOutput.append('| Estimated relative accuracy = %.1e'\
                              %res['accuracy']+' (i.e. beyond double precision)')
             else:
                 StabilityOutput.append('| Estimated accuracy could not be '+\
@@ -269,26 +278,91 @@ class MadLoopLauncher(ExtLauncher):
            special_float_format(pi) for pi in pmom]) for pmom in res['res_p']]))
         PS_point_spec.append('|')
         
-        if res['export_format']=='Default':
-            return '\n'.join(['\n'+ASCII_bar,
-                  '|| Results for process %s',
-                  ASCII_bar]+PS_point_spec+StabilityOutput+[
-                  '|',
-                  '|| Born contribution (GeV^%d):'%res['gev_pow'],
-                  '|    Born        = %s'%special_float_format(res['born']),
-                  '|| Virtual contribution normalized with born*alpha_S/(2*pi):',
-                  '|    Finite      = %s'%special_float_format(res['finite']),
-                  '|    Single pole = %s'%special_float_format(res['1eps']),
-                  '|    Double pole = %s'%special_float_format(res['2eps']),
-                  ASCII_bar+'\n'])
-        elif res['export_format']=='LoopInduced':
-            return '\n'.join(['\n'+ASCII_bar,
-                  '|| Results for process %s (Loop-induced)',
-                  ASCII_bar]+PS_point_spec+StabilityOutput+[
-                  '|',
-                  '|| Loop amplitude squared, must be finite:',
-                  '|    Finite      = %s'%special_float_format(res['finite']),
-                  ASCII_bar+'\n'])
+        str_lines=[]
+        
+        notZeroBorn=True
+        if res['export_format']!='LoopInduced' and len(so_order_names) and \
+                                     len([1 for k in res['Born_kept'] if k])==0:
+            notZeroBorn = False
+            str_lines.append(
+("|  /!\\ There is no Born contribution for the squared orders specified in "+
+                                  "the process definition/!\\",'$MG:color:RED'))
+        
+        if res['export_format']=='Default' and notZeroBorn:
+            str_lines.extend(['\n',ASCII_bar,
+  ('|| Results for process %s'%shell_name,main_color),
+  ASCII_bar]+PS_point_spec+StabilityOutput+[
+  '|',
+  ('|| Total(*) Born contribution (GeV^%d):'%res['gev_pow'],main_color),
+  ('|    Born        = %s'%special_float_format(res['born']),main_color),
+  ('|| Total(*) virtual contribution normalized with born*alpha_S/(2*pi):',main_color),
+  ('|    Finite      = %s'%special_float_format(res['finite']),main_color),
+  ('|    Single pole = %s'%special_float_format(res['1eps']),main_color),
+  ('|    Double pole = %s'%special_float_format(res['2eps']),main_color)])
+        elif res['export_format']=='LoopInduced' and notZeroBorn:
+            str_lines.extend(['\n',ASCII_bar,
+  ('|| Results for process %s (Loop-induced)'%shell_name,main_color),
+  ASCII_bar]+PS_point_spec+StabilityOutput+[
+  '|',
+  ('|| Loop amplitude squared, must be finite:',main_color),
+  ('|    Finite      = %s'%special_float_format(res['finite']),main_color),
+  '|(| Pole residues, indicated only for checking purposes: )',
+  '|(    Single pole = %s )'%special_float_format(res['1eps']),
+  '|(    Double pole = %s )'%special_float_format(res['2eps'])])
+
+        if (len(res['Born_SO_Results'])+len(res['Born_SO_Results']))>0:
+            if notZeroBorn:
+                str_lines.append(
+    ("|  (*) The results above sum all starred contributions below",main_color))
+
+        str_lines.append('|')
+        if not notZeroBorn:
+            str_lines.append(
+("|  The Born contributions below are computed but do not match these squared "+
+                                               "orders constraints",main_color))
+
+        if len(res['Born_SO_Results'])==1:
+            str_lines.append('|| All Born contributions are of split orders *(%s)'\
+                                %format_so_orders(res['Born_SO_Results'][0][0]))
+        elif len(res['Born_SO_Results'])>1:
+            for i, bso_contrib in enumerate(res['Born_SO_Results']):
+                str_lines.append('|| Born contribution of split orders %s(%s) = %s'\
+                                           %('*' if res['Born_kept'][i] else ' ',
+                                               format_so_orders(bso_contrib[0]),
+                                  special_float_format(bso_contrib[1]['BORN'])))
+        
+        if len(so_order_names):
+            str_lines.append('|')
+
+        if len(res['Loop_SO_Results'])==1:
+            str_lines.append('|| All virtual contributions are of split orders *(%s)'\
+                                %format_so_orders(res['Loop_SO_Results'][0][0]))
+        elif len(res['Loop_SO_Results'])>1:
+            if not notZeroBorn:
+                str_lines.append(
+    ("|  The coupling order combinations matching the squared order"+
+                              " constraints are marked with a star",main_color))
+            for i, lso_contrib in enumerate(res['Loop_SO_Results']):
+                str_lines.append('|| Virtual contribution of split orders %s(%s):'\
+                                        %('*' if res['Loop_kept'][i] else ' ',
+                                              format_so_orders(lso_contrib[0])))
+                str_lines.append('|    Accuracy    =  %.1e'%\
+                                                         lso_contrib[1]['ACC']),
+                str_lines.append('|    Finite      = %s'%\
+                                   special_float_format(lso_contrib[1]['FIN'])),
+                if res['export_format']=='LoopInduced':
+                    str_lines.append('|(    Single pole = %s )'%\
+                                   special_float_format(lso_contrib[1]['1EPS']))
+                    str_lines.append('|(    Double pole = %s )'%\
+                                   special_float_format(lso_contrib[1]['2EPS']))
+                else:
+                    str_lines.append('|    Single pole = %s'%\
+                                   special_float_format(lso_contrib[1]['1EPS']))
+                    str_lines.append('|    Double pole = %s'%\
+                                   special_float_format(lso_contrib[1]['2EPS']))              
+        str_lines.extend([ASCII_bar,'\n'])
+
+        return str_lines
 
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """

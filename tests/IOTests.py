@@ -94,7 +94,7 @@ class IOTest(object):
     what kind of IO test will be necessary later """
 
     # Handy definitions
-    proc_files = ['[^.+\.(f|dat|inc)$]']
+    proc_files = ['[^.+\.(f|dat|inc)$]','MadLoop5_resources/[^ML5_.*\.dat]']
     # Some model files are veto because they are sourced by dictionaries whose 
     # order is random.
     model_files = ['../../Source/MODEL/[^.+\.(f|inc)$]',
@@ -646,7 +646,6 @@ class IOTestManager(unittest.TestCase):
                             print colored%(34,'Consider creating it with '+
                                             './test_manager.py -U %s'%test_name)
                             exit(0)
-
                     goal = open(comparison_path).read()%misc.get_pkg_info()
                     if not verbose:
                         self.assertFileContains(open(file_path), goal)
@@ -693,6 +692,9 @@ class IOTestManager(unittest.TestCase):
                     # Transform the package information to make it a template
                     file = open(file_path,'r')
                     target=file.read()
+                    # So that if % appear, we cast them to %% which are not formatted.
+                    target = target.replace('%','%%')
+                    # So that the version and date is automatically updated
                     target = target.replace('MadGraph5_aMC@NLO v. %(version)s, %(date)s'\
                                                            %misc.get_pkg_info(),
                                           'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
@@ -706,7 +708,7 @@ class IOTestManager(unittest.TestCase):
                         else:
                             # Copying the existing reference as a backup
                             tmp_path = pjoin(_hc_comparison_files,folder_name,\
-                                        test_name,self.toFileName(fname)+'.tmp')
+                                        test_name,self.toFileName(fname)+'.BackUp')
                             if os.path.isfile(tmp_path):
                                 os.remove(tmp_path)
                             file = open(tmp_path,'w')

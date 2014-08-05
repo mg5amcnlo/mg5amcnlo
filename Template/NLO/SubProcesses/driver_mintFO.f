@@ -107,7 +107,7 @@ c For MINT:
       common/SHevents/Hevents
       character*10 dum
 c statistics for MadLoop      
-      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
       double precision virtual_over_born
@@ -148,7 +148,9 @@ c
       nqdp=0
       nini=0
       n10=0
-      n1=0
+      do i=0,9
+        n1(i)=0
+      enddo
       
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
@@ -320,7 +322,12 @@ c to save grids:
          write(*,*)
      &        "  Unknown return code (10):                        ",n10
          write(*,*)
-     &        "  Unknown return code (1):                         ",n1
+     &        "  Unit return code distribution (1):               "
+         do j=0,9
+           if (n1(j).ne.0) then
+              write(*,*) "#Unit ",j," = ",n1(j)
+           endif
+         enddo
       endif
 
       call cpu_time(tAfter)
