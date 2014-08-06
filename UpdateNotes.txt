@@ -1,5 +1,11 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.1.3()XX/XX/XX)OM: Fix various compatibility problem created by the LHEFv3 version (Thanks to S. Brochet)
+                OM: Fix a bug for MadSpin in gridpack mode
+                OM: Add a routine to check the validity of LHE file (check_event command)
+                OM: Fix bug for UFO model with custom propagators
+                OM: Fix Bug in the compuation of cross-section in presence of negative contribution 
+
 2.1.2(03/07/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)
                 OM: Fixing a bug preventing MadWidth to run due to the model prefixing (depending
