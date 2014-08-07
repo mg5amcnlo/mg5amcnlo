@@ -280,14 +280,14 @@ foreach $infile (@infiles) {
     } elsif ($stage == 4) {
       $gzline  =~ s/^\s+//;
       @gzparam = split(/\s+/, $gzline);
+      if ($#gzparam != 5) { die "Not right number of param in first line of event"; }
       # Keep weight sign from original LHE file
-      $signed_uwgt = $uwgt;
+      $signed_uwgt = abs($uwgt);
       if ($gzparam[2] < 0) {
 	  $signed_uwgt = -1 * $signed_uwgt;
       }
       $gzline = " $gzparam[0] $gzparam[1] $signed_uwgt $gzparam[3] $gzparam[4] $gzparam[5]\n";
-      if ($#gzparam != 5) { die "Not right number of param in first line of event"; }
-      $gzline = " $gzparam[0] $gzparam[1] $uwgt $gzparam[3] $gzparam[4] $gzparam[5]\n";
+
 
       $stage++;
 
