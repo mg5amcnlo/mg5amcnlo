@@ -430,7 +430,7 @@ CONTAINS
           DO j=1,NLOOPLINE
              indices00(j)=indices00(j)+1
              siz1(i,1:4)=siz1(i,1:4)+&
-                  DBLE(indices0(j))*scalar_integral_reduce2(NLOOPLINE,idim0,indices00,PijMatrix,M2L)
+                  DBLE(indices0(j))*scalar_integral_reduce2(NLOOPLINE,idim,indices00,PijMatrix,M2L)
              indices00(j)=indices00(j)-1
           ENDDO
           indices00(i)=indices00(i)+1
@@ -1013,7 +1013,7 @@ CONTAINS
           DO j=1,NLOOPLINE
              indices00(j)=indices00(j)+1
              siz1(i,1:4)=siz1(i,1:4)+&
-                  DBLE(indices0(j))*scalar_integral_reduce(NLOOPLINE,idim0,indices00,PCL,M2L)
+                  DBLE(indices0(j))*scalar_integral_reduce(NLOOPLINE,idim,indices00,PCL,M2L)
              indices00(j)=indices00(j)-1
           ENDDO
           indices00(i)=indices00(i)+1
