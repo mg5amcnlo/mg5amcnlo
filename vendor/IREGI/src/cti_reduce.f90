@@ -197,7 +197,10 @@ CONTAINS
                 init=init+1
              ENDDO
              scalar(1:4)=comp_scalar_integral_reduce(NLOOPLINE,idim,indices,PDEN,M2L)
-             IF(.NOT.STABLE_IREGI)RETURN
+             IF(.NOT.STABLE_IREGI)THEN
+                WRITE(*,*)"IREGI:WARNING, it detects unstable case, some integrals may set to be 0."
+                RETURN
+             ENDIF
              DO j=1,nntot
                 init=calc_pos(sol(j,1:4))
                 coefs(init,1:4)=coefs(init,1:4)+coco(j)*syfactor(i)*scalar(1:4)
@@ -222,7 +225,10 @@ CONTAINS
                 ! the stability has been improved by IBP reduction
                 scalar(1:4)=comp_pave_opt_reduce(NLOOPLINE,paveindices,PDEN,M2L)
              ENDIF
-             IF(.NOT.STABLE_IREGI)RETURN
+             IF(.NOT.STABLE_IREGI)THEN
+                WRITE(*,*)"IREGI:WARNING, it detects unstable case, some integrals may set to be 0."
+                RETURN
+             ENDIF
              DO j=1,nntot
                 init=calc_pos(sol(j,1:4))
                 coefs(init,1:4)=coefs(init,1:4)+coco(j)*scalar(1:4)

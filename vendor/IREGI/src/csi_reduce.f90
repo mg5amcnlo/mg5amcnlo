@@ -48,6 +48,7 @@ CONTAINS
     TYPE(cibppave_node),POINTER::item
     LOGICAL::find
     REAL(KIND(1d0)),DIMENSION(0:3)::PMOM
+    si(1:4)=DCMPLX(0d0)
     IF(.NOT.STABLE_IREGI)RETURN
     ! trivial 0-point function
     IF(NLOOPLINE.EQ.0)THEN

@@ -31,6 +31,8 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(126)::factor_xi
     LOGICAL::find
     TYPE(ibppave_node2),POINTER::item
+    pave(1:4)=DCMPLX(0d0)
+    IF(.NOT.STABLE_IREGI)RETURN
     IF(RECYCLING)THEN
        PijMatrix1(1,1)=0d0
        PijMatrix1(1,2:NLOOPLINE)=0d0
@@ -192,6 +194,8 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(126)::factor_xi
     LOGICAL::find
     TYPE(ibppave_node),POINTER::item
+    pave(1:4)=DCMPLX(0d0)
+    IF(.NOT.STABLE_IREGI)RETURN
     IF(RECYCLING)THEN
        PCL1(1,0:3)=0d0
        DO i=2,NLOOPLINE
@@ -345,6 +349,7 @@ CONTAINS
     INTEGER,DIMENSION(10)::llarray
     LOGICAL::find
     TYPE(ibppave_node2),POINTER::item
+    pave(1:4)=DCMPLX(0d0)
     IF(.NOT.STABLE_IREGI)RETURN
     IF(RECYCLING)THEN
        !PijMatrix0(1,1)=0d0
@@ -632,6 +637,16 @@ CONTAINS
           jj=paveindices(3)
           CALL XYZMATRICES2(NLOOPLINE,PijMatrix,M2L,&
                   XMATRIX,YMATRIX,ZMATRIX,detY,detZ)
+          !pos=1
+          !xx2=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,2)
+          !DO i=3,NLOOPLINE
+          !   xx1=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,3)
+          !   IF(ABS(xx1).GT.ABS(xx2))THEN
+          !      xx2=xx1
+          !      pos=i-1
+          !   ENDIF
+          !ENDDO
+          !IF(ABS(detZ).GE.EPS.AND.ABS(detZ).GE.EPS*ABS(xx2))THEN
           IF(ABS(detZ).GE.EPS)THEN
              ! Eq.(5.11)
              CALL MNXNINV(NLOOPLINE-1,ZMATRIX(2:NLOOPLINE,2:NLOOPLINE),&
@@ -822,6 +837,16 @@ CONTAINS
        jj=paveindices(3)
        CALL XYZMATRICES2(NLOOPLINE,PijMatrix,M2L,&
             XMATRIX,YMATRIX,ZMATRIX,detY,detZ)
+       !pos=1
+       !xx2=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,2)
+       !DO i=3,NLOOPLINE
+       !   xx1=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,3)
+       !   IF(ABS(xx1).GT.ABS(xx2))THEN
+       !      xx2=xx1
+       !      pos=i-1
+       !   ENDIF
+       !ENDDO
+       !IF(ABS(detZ).GE.EPS.AND.ABS(detZ).GE.EPS*ABS(xx2))THEN
        IF(ABS(detZ).GE.EPS)THEN
           ! Eq.(5.10) 
           indices1(0)=paveindices(0)-2
@@ -1132,12 +1157,12 @@ CONTAINS
              ENDIF
           ELSE
              xx2=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,2)
-             pos=2
+             pos=1
              DO i=3,4
                 xx1=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,i)
                 IF(ABS(xx1).GT.ABS(xx2))THEN
                    xx2=xx1
-                   pos=i
+                   pos=i-1
                 ENDIF
              ENDDO
              IF(ABS(xx2).GE.EPS)THEN
@@ -2295,6 +2320,7 @@ CONTAINS
     INTEGER,DIMENSION(10)::llarray
     TYPE(ibppave_node),POINTER::item
     LOGICAL::find
+    pave(1:4)=DCMPLX(0d0)
     IF(.NOT.STABLE_IREGI)RETURN
     IF(RECYCLING)THEN
        !PCL0(1,0:3)=0d0
@@ -2972,6 +2998,16 @@ CONTAINS
           kk=paveindices(4)
           CALL XYZMATRICES(NLOOPLINE,PCL,M2L,&
                XMATRIX,YMATRIX,ZMATRIX,detY,detZ)
+          !pos=1
+          !xx2=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,2)
+          !DO i=3,NLOOPLINE
+          !   xx1=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,i)
+          !   IF(ABS(xx1).GT.ABS(xx2))THEN
+          !      xx2=xx1
+          !      pos=i-1
+          !   ENDIF
+          !ENDDO
+          !IF(ABS(detZ).GE.EPS.AND.ABS(detZ).GE.ABS(xx2)*EPS)THEN
           IF(ABS(detZ).GE.EPS)THEN
              ! Eq.(5.11)
              CALL MNXNINV(NLOOPLINE-1,ZMATRIX(2:NLOOPLINE,2:NLOOPLINE),&
@@ -3077,13 +3113,18 @@ CONTAINS
                 RETURN
              ENDIF
           ELSE
+             ! HSS: 25/01/2014
+             ! fix a bug: pos:1-(NLOOPLINE-1)
+             ! pos=2 -> pos=1
+             ! pos=i -> pos=i-1
+             ! HSS
              xx2=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,2)
-             pos=2
+             pos=1
              DO i=3,4
                 xx1=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,i)
                 IF(ABS(xx1).GT.ABS(xx2))THEN
                    xx2=xx1
-                   pos=i
+                   pos=i-1
                 ENDIF
              ENDDO
              IF(ABS(xx2).GE.EPS)THEN
@@ -3210,6 +3251,16 @@ CONTAINS
        ll=paveindices(4)
        CALL XYZMATRICES(NLOOPLINE,PCL,M2L,&
             XMATRIX,YMATRIX,ZMATRIX,detY,detZ)
+       !pos=1
+       !xx2=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,2)
+       !DO i=3,NLOOPLINE
+       !   xx1=SIGNED_MINOR11(NLOOPLINE,XMATRIX,1,i)
+       !   IF(ABS(xx1).GT.ABS(xx2))THEN
+       !      xx2=xx1
+       !      pos=i-1
+       !   ENDIF
+       !ENDDO
+       !IF(ABS(detZ).GE.EPS.AND.ABS(detZ).GE.ABS(xx2)*EPS)THEN
        IF(ABS(detZ).GE.EPS)THEN
           ! Eq.(5.10)
           indices1(0)=paveindices(0)-2

@@ -43,6 +43,7 @@ CONTAINS
     INTEGER,DIMENSION(0:NLOOPLINE)::paveindices
     LOGICAL::find
     TYPE(ibppave_node2),POINTER::item
+    si(1:4)=DCMPLX(0d0)
     IF(.NOT.STABLE_IREGI)RETURN
     ! trivial 0-point function
     IF(NLOOPLINE.EQ.0)THEN
@@ -604,6 +605,7 @@ CONTAINS
     LOGICAL::find
     REAL(KIND(1d0)),DIMENSION(0:3)::PMOM
     !INTEGER,DIMENSION(0:NLOOPLINE)::indices_opt
+    si(1:4)=DCMPLX(0d0)
     IF(.NOT.STABLE_IREGI)RETURN
     ! trivial 0-point function
     IF(NLOOPLINE.EQ.0)THEN
@@ -1203,9 +1205,15 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(NLOOPLINE),INTENT(IN)::M2L
     COMPLEX(KIND(1d0)),DIMENSION(4)::res
     REAL(KIND(1d0))::factor
-    INTEGER::idim
+    INTEGER::idim,i
     INTEGER,DIMENSION(NLOOPLINE)::indices
     res(1:4)=pavefun_reduce(NLOOPLINE,paveindices,PCL,M2L)
+    !PRINT *,"===========================",STABLE_IREGI
+    !PRINT *,paveindices(0:NLOOPLINE)
+    !DO i=1,NLOOPLINE
+    !   PRINT *,i,PCL(i,0:3),M2L(i)
+    !ENDDO
+    !PRINT *,res(1:4)
     IF(.NOT.STABLE_IREGI)THEN
        STABLE_IREGI=.TRUE.
        CALL PAVE2IBP(NLOOPLINE,paveindices,factor,idim,indices)
