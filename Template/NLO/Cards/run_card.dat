@@ -30,11 +30,10 @@
     -1 = nevt_job! Max number of events per job in event generation. 
                  !  (-1= no split).
 #***********************************************************************
-# Normalize the weights of LHE events such that they sum or average to
-# the total cross section, or set the weights to +/- 1 (the latter is
-# not recommended when using the build MC@NLO interface to the shower).
+# Normalize the weights of LHE events such that they sum or average to *
+# the total cross section                                              *
 #***********************************************************************
- average = event_norm      ! average, sum or unity
+ average = event_norm      ! average or sum
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************

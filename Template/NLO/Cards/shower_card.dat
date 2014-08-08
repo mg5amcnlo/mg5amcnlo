@@ -53,13 +53,13 @@ b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
 #***********************************************************************
 # Special settings                                                     *
 #***********************************************************************
-is_4lep      = F    # T if 4-lepton production        !ONLY FOR PYTHIA6!
-is_bbar      = F    # T if bb~ production             !ONLY FOR HERWIG6!
+is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
+is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
 #***********************************************************************
-# FxFx merging parameters !ONLY FOR PY8!
+# FxFx merging parameters                             !ONLY FOR PYTHIA8!
 #***********************************************************************
-Qcut       = -1.0   # Merging scale
-njmax      = 0      # Maximal multiplicity in the merging
+Qcut       = -1.0     # Merging scale
+njmax      = 0        # Maximal multiplicity in the merging
 #***********************************************************************
 # Decay channels                                                       *
 # Write down the decay channels for the resonances, to be performed by *
