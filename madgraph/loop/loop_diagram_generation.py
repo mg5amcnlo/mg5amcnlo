@@ -429,12 +429,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # least one coupling order building the loop which is in the list
             # of the perturbed order.
             valid_diag=True
-            #if (diag.get_loop_line_types()-set(allowedpart))!=set() or \
-            #                                           pert_loop_order==set([]):
-            #    valid_diag=False
-            #    if not warned:
-            #        logger.warning(warning_msg)
-            #        warned=True
+            if (diag.get_loop_line_types()-set(allowedpart))!=set() or \
+                                                       pert_loop_order==set([]):
+                valid_diag=False
+                if not warned:
+                    logger.warning(warning_msg)
+                    warned=True
             if len([col for col in [
                    self['process'].get('model').get_particle(pdg).get('color') \
                                      for pdg in diag.get_pdgs_attached_to_loop(\
