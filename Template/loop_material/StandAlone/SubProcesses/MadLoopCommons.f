@@ -306,7 +306,7 @@ C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.8.OR.RANK.GE.7)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.7.OR.RANK.GE.7)LPASS=.FALSE.
       RETURN
       END
 
