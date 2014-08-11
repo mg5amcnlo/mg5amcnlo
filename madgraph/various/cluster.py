@@ -1535,10 +1535,14 @@ class SLURMCluster(Cluster):
         if log is None:
             log = '/dev/null'
         
-        command = ['sbatch','-o', stdout,
+        command = ['sbatch', '-o', stdout,
                    '-J', me_dir, 
                    '-e', stderr, prog] + argument
-                   
+
+        if self.cluster_queue and self.cluster_queue != 'None':
+                command.insert(1, '-p')
+                command.insert(2, self.cluster_queue)
+
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
                                       stdin=subprocess.PIPE, cwd=cwd)

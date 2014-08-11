@@ -90,7 +90,7 @@
 # run_mode = 2
 
 #! Cluster Type [pbs|sge|condor|lsf|ge|slurm] Use for cluster run only
-#!  And cluster queue
+#!  And cluster queue (or partition for slurm)
 # cluster_type = condor
 # cluster_queue = madgraph
 
