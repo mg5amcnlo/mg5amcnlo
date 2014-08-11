@@ -397,8 +397,8 @@ class MadSpinInterface(extended_cmd.Cmd):
     def check_launch(self, args):
         """check the validity of the launch command"""
         
-        if not self.list_branches:
-            raise self.InvalidCmd("Nothing to decay ... Please specify some decay")
+#        if not self.list_branches:
+#            raise self.InvalidCmd("Nothing to decay ... Please specify some decay")
         if not self.events_file:
             raise self.InvalidCmd("No events files defined.")
 
@@ -430,9 +430,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             pid = self.mg5cmd._curr_model.get('name2pdg')[part]
             if pid in self.final_state:
                 break
-        else:
-            logger.info("Nothing to decay ...")
-            return
+#        else:
+#            logger.info("Nothing to decay ...")
+#            return
         
 
         model_line = self.banner.get('proc_card', 'full_model_line')
