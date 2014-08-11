@@ -1883,7 +1883,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         mp_routine = mp_routine % replace_dict
         subroutines.append(dp_routine)
         subroutines.append(mp_routine)        
-        
+
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
                                          matrix_element.get_max_loop_rank(),
