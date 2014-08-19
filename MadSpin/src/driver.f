@@ -492,7 +492,7 @@ c     common
          !write(*,*) random
          !write(*,*) cumulweight(i-1)
          !write(*,*) cumulweight(i)
-         if (random.ge.cumulweight(i-1).and.random.le.cumulweight(i)) then 
+         if (random.le.cumulweight(i)) then 
            iconfig=i
            return
          endif 
