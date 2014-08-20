@@ -229,10 +229,10 @@ c           enddo
            if (jac.lt.0d0) then
              counter2=counter2+1 
              counter3=counter3+1
-             if (counter3.gt.500) then 
-               write(*,*) "500_pts_failed_stop_executation"
-               stop
-             endif  
+c             if (counter3.gt.500) then 
+c               write(*,*) "500_pts_failed_stop_executation"
+c               stop
+c             endif  
              if (counter2.ge.8) then ! use another topology to generate PS points
                do k=1,n_max_cg
                  amp2(k)=0d0
@@ -340,10 +340,10 @@ c        initialize the helicity amps
            if (jac.lt.0d0) then
              counter2=counter2+1 
              counter3=counter3+1 
-             if (counter3.gt.500) then
-               write(*,*) "500_pts_failed_stop_executation"
-               stop
-             endif
+c             if (counter3.gt.500) then
+c               write(*,*) "500_pts_failed_stop_executation"
+c               stop
+c             endif
              if (counter2.ge.8) then ! use another topology to generate PS points
                do k=1,n_max_cg
                  amp2(k)=0d0
@@ -387,7 +387,7 @@ c
           call generate_momenta_conf(jac,x,itree,qmass,qwidth,ptrial,pprod,map_external2res) 
           
           if (jac.lt.0d0) then
-            write(*,*) nexternal,  counter, maxBW, weight, counter2, 0
+            write(*,*) nexternal,  counter, maxBW, weight, counter3, 0
             do i=1,nexternal
                write (*,*) (pfull(j,i), j=0,3)  
             enddo
