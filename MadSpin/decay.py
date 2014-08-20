@@ -3124,14 +3124,20 @@ class decay_all_events(object):
             output = me_value
         elif mode == 'unweighting':
             firstline=external.stdout.readline().split()
-            nexternal=int(firstline[0])
-            trials= int(firstline[1])
-            BWvalue= float(firstline[2])
-            weight= float(firstline[3])
-            failed= float(firstline[4])
-            use_mc_masses=int(firstline[5])
-            momenta=[external.stdout.readline() for i in range(nexternal)]
-            lastline=external.stdout.readline().split()
+            try:
+              nexternal=int(firstline[0])
+              trials= int(firstline[1])
+              BWvalue= float(firstline[2])
+              weight= float(firstline[3])
+              failed= float(firstline[4])
+              use_mc_masses=int(firstline[5])
+              momenta=[external.stdout.readline() for i in range(nexternal)]
+              lastline=external.stdout.readline().split()
+            except:
+              print path
+              print firstline
+              print stdin_text
+              stop
             helicities=[lastline[i] for i in range(len(lastline))]
             output = trials, BWvalue, weight, momenta, failed, use_mc_masses, helicities
 
