@@ -325,6 +325,7 @@ c        initialize the helicity amps
          notpass=.true.
          counter=0
          counter2=0
+         counter3=0
          do while (notpass) 
            maxBW=0d0
            counter=counter+1
@@ -338,6 +339,11 @@ c        initialize the helicity amps
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
            if (jac.lt.0d0) then
              counter2=counter2+1 
+             counter3=counter3+1 
+             if (counter3.gt.500) then
+               write(*,*) "500_pts_failed_stop_executation"
+               stop
+             endif
              if (counter2.ge.8) then ! use another topology to generate PS points
                do k=1,n_max_cg
                  amp2(k)=0d0
@@ -355,6 +361,7 @@ c        initialize the helicity amps
                  qwidth(i)=prwidth(i,iconfig)
                enddo
                call  merge_itree(itree,qmass,qwidth, p,map_external2res)
+               counter2=0
              endif
 
              cycle
