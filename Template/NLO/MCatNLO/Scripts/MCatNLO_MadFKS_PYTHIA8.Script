@@ -106,13 +106,6 @@ function compile {
 architecture
 
 EVTDIR=`pwd`"/../Events"
-# stops if event file is not in the /Events folder
-EVT_NAMEF="$EVPREFIX"
-if [ ! -f $EVTDIR/$EVT_NAMEF ]
-then
-  echo "Event file" $EVTDIR/$EVT_NAMEF "not found: quitting"
-  exit 1
-fi
 
 if [ "$PDFCODE" -ne 0 ]
 then
@@ -303,7 +296,6 @@ ERR_NUM_PY8=${ERR_NUM_PY8/.*}
 let "ERR_NUM_PY8 += 1"
 
 echo " "
-echo "*****   All parameters read from event file $EVT_NAMEF"
 echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
 echo " "
 runMCMadFKS
@@ -346,7 +338,7 @@ Check:epTolErr = 0.001                ! Momentum-conservation tolerance
 Beams:idA = $iA                    ! Beam identities
 Beams:idB = $iB                    ! Beam identities
 Beams:frameType = 4                ! LHE initialization
-Beams:LHEF = $EVT_NAMEF            ! Input LHE file
+Beams:LHEF = events.lhe            ! Input LHE file
 
 ! 4) Switch on/off the key event-generation steps.
 EOF

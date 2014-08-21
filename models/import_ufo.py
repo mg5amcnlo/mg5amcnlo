@@ -20,6 +20,7 @@ import logging
 import os
 import re
 import sys
+import time
 
 
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
@@ -46,6 +47,8 @@ sys.path.append(root_path)
 
 sys.path.append(os.path.join(root_path, os.path.pardir, 'Template', 'bin', 'internal'))
 import check_param_card 
+
+pjoin = os.path.join
 
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
@@ -94,6 +97,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
             restrict_file = os.path.join(model_path,'restrict_default.dat')
         else:
             restrict_file = None
+
         if isinstance(restrict, str):
             if os.path.exists(os.path.join(model_path, restrict)):
                 restrict_file = os.path.join(model_path, restrict)
@@ -103,7 +107,10 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
                 raise Exception, "%s is not a valid path for restrict file" % restrict
     
     #import the FULL model
-    model = import_full_model(model_path, decay, prefix) 
+    model = import_full_model(model_path, decay, prefix)
+    
+    if os.path.exists(pjoin(model_path, "README")):
+        logger.info("Please read carefully the README of the model file for instructions/restrictions of the model.",'$MG:color:BLACK') 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name
@@ -118,7 +125,6 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
             
         if logger_mod.getEffectiveLevel() > 10:
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
-
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
         
@@ -131,6 +137,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
         model.path = model_path
 
     return model
+    
 
 _import_once = []
 def import_full_model(model_path, decay=False, prefix=''):
@@ -138,6 +145,7 @@ def import_full_model(model_path, decay=False, prefix=''):
         (no restriction file use)"""
 
     assert model_path == find_ufo_path(model_path)
+    
     if prefix is True:
         prefix='mdl_'
         
@@ -151,12 +159,14 @@ def import_full_model(model_path, decay=False, prefix=''):
             raise UFOImportError,  "%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename)
         files_list.append(filepath)
-        
+    
     # use pickle files if defined and up-to-date
     if aloha.unitary_gauge: 
         pickle_name = 'model.pkl'
     else:
         pickle_name = 'model_Feynman.pkl'
+    if decay:
+        pickle_name = 'dec_%s' % pickle_name
     
     allow_reload = False
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
@@ -179,7 +189,7 @@ def import_full_model(model_path, decay=False, prefix=''):
                             continue
                         if prefix:
                             if value.startswith(prefix):
-                                _import_once.append((model_path, aloha.unitary_gauge, prefix))
+                                _import_once.append((model_path, aloha.unitary_gauge, prefix, decay))
                                 return model
                             else:
                                 logger.info('reload from .py file')
@@ -189,7 +199,7 @@ def import_full_model(model_path, decay=False, prefix=''):
                                 logger.info('reload from .py file')
                                 break                   
                             else:
-                                _import_once.append((model_path, aloha.unitary_gauge, prefix))
+                                _import_once.append((model_path, aloha.unitary_gauge, prefix, decay))
                                 return model
                     else:
                         continue
@@ -197,7 +207,7 @@ def import_full_model(model_path, decay=False, prefix=''):
             else:
                 logger.info('reload from .py file')
 
-    if (model_path, aloha.unitary_gauge, prefix) in _import_once and not allow_reload:
+    if (model_path, aloha.unitary_gauge, prefix, decay) in _import_once and not allow_reload:
         raise MadGraph5Error, 'This model %s is modified on disk. To reload it you need to quit/relaunch MG5_aMC ' % model_path
      
     # Load basic information
@@ -214,9 +224,12 @@ def import_full_model(model_path, decay=False, prefix=''):
     model.set('parameters', parameters)
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)
-    
+
     # Optional UFO part: decay_width information
-    if decay and hasattr(ufo_model, 'all_decays') and ufo_model.all_decays:
+
+
+    if decay and hasattr(ufo_model, 'all_decays') and ufo_model.all_decays:       
+        start = time.time()
         for ufo_part in ufo_model.all_particles:
             name =  ufo_part.name
             if not model['case_sensitive']:
@@ -227,12 +240,17 @@ def import_full_model(model_path, decay=False, prefix=''):
             elif p and not hasattr(p, 'partial_widths'):
                 p.partial_widths = {}
             # might be None for ghost
+        logger.debug("load width takes %s", time.time()-start)
+    
     if prefix:
+        start = time.time()
         model.change_parameter_name_with_prefix()
-        
+        logger.debug("model prefixing  takes %s", time.time()-start)
+                     
     path = os.path.dirname(os.path.realpath(model_path))
     path = os.path.join(path, model.get('name'))
     model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
+    
     # save in a pickle files to fasten future usage
     if ReadWrite:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
@@ -286,11 +304,18 @@ class UFOMG5Converter(object):
 
         # Check the validity of the model
         # 1) check that all lhablock are single word.
+        def_name = []
         for param in self.ufomodel.all_parameters:
             if param.nature == "external":
                 if len(param.lhablock.split())>1:
                     raise InvalidModel, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\' ''' % (param.name, param.lhablock)
+            if param.name in def_name:
+                raise InvalidModel, "name %s define multiple time. Please correct the UFO model!" \
+                                                                  % (param.name)
+            else:
+                def_name.append(param.name)
+                                                                  
          
         if hasattr(self.ufomodel, 'gauge'):    
             self.model.set('gauge', self.ufomodel.gauge)
@@ -970,7 +995,15 @@ class OrganizeModelExpression:
     def analyze_parameters(self):
         """ separate the parameters needed to be recomputed events by events and
         the others"""
-        
+        # in order to match in Gmu scheme
+        # test whether aEWM1 is the external or not
+        # if not, take Gf as the track_dependant variable
+        present_aEWM1 = any(param.name == 'aEWM1' for param in
+                        self.model.all_parameters if param.nature == 'external')
+
+        if not present_aEWM1:
+            self.track_dependant = ['aS','Gf','MU_R']
+            
         for param in self.model.all_parameters:
             if param.nature == 'external':
                 parameter = base_objects.ParamCardVariable(param.name, param.value, \
@@ -1030,7 +1063,7 @@ class OrganizeModelExpression:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
                     if newCoupling.pole(poleOrder)!='ZERO':                    
                         newCoupling.value=newCoupling.pole(poleOrder)
-                        couplings_list.append(newCoupling)
+                        couplings_list.append(newCoupling)     
         else:
             couplings_list = self.model.all_couplings + additional_couplings                        
                                         
@@ -1040,7 +1073,6 @@ class OrganizeModelExpression:
             expr = self.shorten_expr(coupling.value)
             depend_on = self.find_dependencies(expr)
             parameter = base_objects.ModelVariable(coupling.name, expr, 'complex', depend_on)
-            
             # Add consistently in the couplings/all_expr
             try:
                 self.couplings[depend_on].append(parameter)
@@ -1196,21 +1228,26 @@ class RestrictModel(model_reader.ModelReader):
 
         # remove the out-dated interactions
         self.remove_interactions(zero_couplings)
-                
+        
         # replace in interactions identical couplings
         for iden_coups in iden_couplings:
             self.merge_iden_couplings(iden_coups)
-        
+
         # remove zero couplings and other pointless couplings
         self.del_coup += zero_couplings
         self.remove_couplings(self.del_coup)
-                
+       
         # deal with parameters
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters, simplify=rm_parameter, 
                                                     keep_external=keep_external)
 
         # deal with identical parameters
+        if not keep_external:
+            iden_parameters = self.detect_identical_parameters()
+            for iden_param in iden_parameters:
+                self.merge_iden_parameters(iden_param)
+    
         iden_parameters = self.detect_identical_parameters()
         for iden_param in iden_parameters:
             self.merge_iden_parameters(iden_param, keep_external)
@@ -1223,7 +1260,7 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
-      
+
                     
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex or (particle, counterterm_key) """

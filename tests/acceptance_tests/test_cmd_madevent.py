@@ -30,6 +30,7 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.madevent_interface as MECmd
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.iolibs.files as files
 
 import madgraph.various.misc as misc
 import madgraph.various.lhe_parser as lhe_parser
@@ -67,14 +68,13 @@ class TestMECmdShell(unittest.TestCase):
             shutil.rmtree(self.run_dir)
         except Exception, error:
             pass
-
         interface = MGCmd.MasterCmd()
-        interface.onecmd('import model %s' % model)
+        interface.run_cmd('import model %s' % model)
         if isinstance(process, str):
-            interface.onecmd('generate %s' % process)
+            interface.run_cmd('generate %s' % process)
         else:
             for p in process:
-                interface.onecmd('add process %s' % p)
+                interface.run_cmd('add process %s' % p)
 
         if logging.getLogger('madgraph').level <= 20:
             stdout=None
@@ -123,9 +123,39 @@ class TestMECmdShell(unittest.TestCase):
         self.cmd_line.exec_cmd(line)
         
   
+    def test_madspin_gridpack(self):
+
+        self.out_dir = self.run_dir
+        self.generate('g g > t t~', 'sm')
+
+        #put the MadSpin card
+        ff = open(pjoin(self.out_dir, 'Cards/madspin_card.dat'), 'w')
+        orig_card =  open(pjoin(self.out_dir, 'Cards/madspin_card_default.dat')).read()
+        ff.write('set ms_dir %s' % pjoin(self.out_dir, 'MSDIR1'))
+        ff.write(orig_card)
+        ff.close()
         
+        #reduce the number of events
+        files.cp(pjoin(_file_path, 'input_files', 'run_card_matching.dat'),
+                 pjoin(self.out_dir, 'Cards/run_card.dat'))
+
+        #create the gridpack        
+        self.do('launch -f')
         
-            
+        #move the MS gridpack
+        self.assertTrue(os.path.exists(pjoin(self.out_dir, 'MSDIR1')))
+        files.mv(pjoin(self.out_dir, 'MSDIR1'), pjoin(self.out_dir, 'MSDIR2'))
+        
+        #put the MadSpin card
+        ff = open(pjoin(self.out_dir, 'Cards/madspin_card.dat'), 'w')
+        ff.write('set ms_dir %s' % pjoin(self.out_dir, 'MSDIR2'))
+        ff.write(orig_card)
+        ff.close()
+               
+        #create the gridpack        
+        self.do('launch -f')
+        
+        self.check_parton_output('run_02_decayed_1', 100)           
         
         
     def test_width_computation(self):
@@ -222,7 +252,7 @@ class TestMECmdShell(unittest.TestCase):
         err2 = self.cmd_line.results.current['error']        
         
         self.assertTrue(abs(val2 - val1) / (err1 + err2) < 5)
-        target = 1227400.0
+        target = 1310200.0
         self.assertTrue(abs(val2 - target) / (err2) < 5)
         #check precision
         self.assertTrue(err2 / val2 < 0.005)
@@ -438,6 +468,7 @@ class TestMEfromfile(unittest.TestCase):
         pythia=ON
         %(path)s/../madspin_card.dat
         set nevents 1000
+        set pdlabel cteq6l1
         launch -i
         decay_events run_01 
         %(path)s/../madspin_card2.dat
@@ -586,7 +617,7 @@ class TestMEfromPdirectory(unittest.TestCase):
             shutil.rmtree('/tmp/MGPROCESS/')
         except Exception, error:
             pass
-
+        
         interface = MGCmd.MasterCmd()
         interface.onecmd('import model %s' % model)
         if isinstance(process, str):

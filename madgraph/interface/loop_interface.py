@@ -20,6 +20,7 @@ import os
 import shutil
 import time
 import logging
+import re
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -65,6 +66,22 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         else:
             return mg_interface.CheckValidForCmd.check_tutorial(self,args)
 
+    def check_add(self, args):
+        """ If no model is defined yet, make sure to load the right loop one """
+        
+        if not self._curr_model:
+            pert_coupl_finder = re.compile(r"^(?P<proc>.+)\s*\[\s*((?P<option>\w+)"+
+                        r"\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+            pert_coupl = pert_coupl_finder.match(' '.join(args))
+            model_name = 'loop_sm'
+            if pert_coupl:
+                pert_coupls = pert_coupl.group("pertOrders")
+                if "QED" in pert_coupls:
+                    model_name = 'loop_qcd_qed_sm'
+            self.do_import('model %s'%model_name)
+        
+        mg_interface.MadGraphCmd.check_add(self,args)
+    
     def check_output(self, args):
         """ Check the arguments of the output command in the context
         of the Loop interface."""
@@ -194,7 +211,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         tool = 'MadLoop' if mode.startswith('ML5') else 'aMC@NLO'
         # The threshold for the triggering of the 'Warning difficult process'
         # message.
-        difficulty_threshold = 35
+        difficulty_threshold = 100
         # Check that we have something    
         if not proc:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
@@ -252,26 +269,16 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         logger.debug('Process difficulty estimation: %d'%proc_diff)
         if proc_diff >= difficulty_threshold:
             msg = """
-  The %s you attempt to generate 
-  appears to be of challenging difficulty.
-  It had probably never been tried by the authors and hence we cannot 
-  guarantee a correct behavior of the code in this context. Please visit
-  http://amcatnlo.cern.ch/list.htm for a list of processes we have 
-  validated. If your process does not appear and you have successfully
-  studied it with MadGraph5_aMC@NLO, please report it.
+  The %s you attempt to generate appears to be of challenging difficulty, but it will be tried anyway. If you have successfully studied it with MadGraph5_aMC@NLO, please report it.
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
-    def validate_model(self, loop_type='virtual', stop=True):
+    def validate_model(self, loop_type='virtual',coupling_type='QCD', stop=True):
         """ Upgrade the model sm to loop_sm if needed """
 
-        if not self._curr_model:
-            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-            #import model with correct treatment of the history
-            return
-
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
-           self._curr_model['perturbation_couplings']==[]:
+           self._curr_model['perturbation_couplings']==[] or \
+              (coupling_type not in self._curr_model['perturbation_couplings']):
             if loop_type.startswith('real'):
                 if loop_type == 'real':
                     logger.info(\
@@ -282,23 +289,36 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                       "You are entering aMC@NLO with a model which does not "+\
                                                    " support loop corrections.")
             else:
+                logger.info(\
+                  "The current model %s does not allow to generate"%self._curr_model.get('name')+
+                  " loop corrections of type %s."%coupling_type)
                 model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
+                if model_name.split('-')[0]=='loop_sm':
+		           model_name = model_name[5:]
                 if model_name.split('-')[0]=='sm':
-                    # Once the loop_sm model will support Feynman gauge, please
-                    # uncomment below.
-#                    if self.options['gauge']!='Feynman':
-#                        self._curr_model = None
-#                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-                    logger.info(\
-                      "The default sm model does not allow to generate"+
-                      " loop processes. MG5_aMC now loads 'loop_sm' instead.")
+                    # So that we don't load the model twice
+                    if not self.options['gauge']=='Feynman' and coupling_type == 'QED':
+                        logger.info('Switch to Feynman gauge because '+\
+                          'model loop_qcd_qed_sm is restricted only to Feynman gauge.')
+                        self._curr_model = None
+                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+                    if coupling_type == 'QCD':
+                        add_on = ''
+                    elif coupling_type == 'QED':
+                        add_on = 'qcd_qed_'
+                    else:
+			            raise MadGraph5Error(
+                          "The pertubation coupling cannot be '%s'"%coupling_type+\
+                                                        " in SM loop processes")
+
+                    logger.info("MG5_aMC now loads 'loop_%s%s'."%(add_on,model_name))
+
                     #import model with correct treatment of the history
                     self.history.move_to_last('generate')
                     last_command = self.history[-1]
-                    self.exec_cmd(" import model loop_%s" % model_name, precmd=True)
+                    self.exec_cmd(" import model loop_%s%s" % (add_on,model_name), precmd=True)
                     self.history.append(last_command)
-                    
                 elif stop:
                     raise self.InvalidCmd(
                       "The model %s cannot handle loop processes"%model_name)    
@@ -308,7 +328,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                  not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
             if 1 in self._curr_model.get('gauge'):
                 logger.info("Setting gauge to Feynman in order to process all"+\
-                           " possible loop computations available in the model")
+                           " possible loop computations available in the model.")
                 mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
             else:
                 logger.warning("You will only be able to do tree level and QCD"+\
@@ -349,6 +369,13 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+        # Set where to look for IREGI installation
+        self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        if not os.path.isdir(self._iregi_dir):
+            logger.warning(('Warning: Directory %s is not a valid IREGI directory.'+\
+                            'Using default IREGI instead.')%\
+                           self._iregi_dir)
+            self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
     
     def do_display(self,line, *argss, **opt):
         """ Display born or loop diagrams, otherwise refer to the default display
@@ -562,7 +589,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if self._export_format in ['standalone']:
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,
@@ -598,7 +624,18 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         argss = self.split_arg(line, *args,**opt)
         # Check args validity
-        self.validate_model()
+        perturbation_couplings_pattern = \
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+        perturbation_couplings_re = perturbation_couplings_pattern.match(line)
+        perturbation_couplings=""
+        if perturbation_couplings_re:
+            perturbation_couplings = perturbation_couplings_re.group("pertOrders")
+        QED_found=re.search("QED",perturbation_couplings)
+        if QED_found:
+            self.validate_model(coupling_type='QED')
+        else:
+       	    self.validate_model()
+        
         param_card = self.check_check(argss)
         reuse = argss[1]=="-reuse"   
         argss = argss[:1]+argss[2:]
@@ -607,10 +644,13 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if argss[0] in ['stability', 'profile']:
             stab_statistics = int(argss[1])
             argss = argss[:1]+argss[2:]
+        # Remove the extra options
+        i=-1
+        while argss[i].startswith('--'):
+            i=i-1
         # Now make sure the process is acceptable
-        proc = " ".join(argss[1:-1])
+        proc = " ".join(argss[1:i+1])
         myprocdef = self.extract_process(proc)
-        self.validate_model('virtual')
         self.proc_validity(myprocdef,'ML5_check')
         
         return mg_interface.MadGraphCmd.do_check(self, line, *args,**opt)
@@ -620,10 +660,19 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         existing amplitudes
         """
         args = self.split_arg(line)
-        
         # Check the validity of the arguments
         self.check_add(args)
-        self.validate_model()
+        perturbation_couplings_pattern = \
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+        perturbation_couplings_re = perturbation_couplings_pattern.match(line)
+        perturbation_couplings=""
+        if perturbation_couplings_re:
+            perturbation_couplings = perturbation_couplings_re.group("pertOrders")
+        QED_found=re.search('QED',perturbation_couplings)
+        if QED_found:
+            self.validate_model(coupling_type='QED')
+        else:
+            self.validate_model()
 
         if args[0] == 'process':            
             # Rejoin line
@@ -637,44 +686,48 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
             # Extract process from process definition
-            self.validate_model('virtual')
-            if ',' in line:
-                myprocdef, line = self.extract_decay_chain_process(line)
+
+        myprocdef = self.extract_process(line)
+             
+        # If it is a process for MadLoop standalone, make sure it has a 
+        # unique ID. It is important for building a BLHA library which
+        # contains unique entry point for each process generated.
+        all_ids = [amp.get('process').get('id') for amp in self._curr_amps]
+        if myprocdef.get('id') in all_ids:
+                myprocdef.set('id',max(all_ids)+1)
+             
+        self.proc_validity(myprocdef,'ML5')
+
+        cpu_time1 = time.time()
+
+        # Decide here wether one needs a LoopMultiProcess or a MultiProcess
+        multiprocessclass=None
+        if myprocdef['perturbation_couplings']!=[]:
+            multiprocessclass=loop_diagram_generation.LoopMultiProcess
+        else:
+            multiprocessclass=diagram_generation.MultiProcess
+        
+        myproc = multiprocessclass(myprocdef, collect_mirror_procs = False,
+                                            ignore_six_quark_processes = False)
+        
+        for amp in myproc.get('amplitudes'):
+            if amp not in self._curr_amps:
+                self._curr_amps.append(amp)
             else:
-                myprocdef = self.extract_process(line)
-            self.proc_validity(myprocdef,'ML5')
-
-            cpu_time1 = time.time()
-
-            # Decide here wether one needs a LoopMultiProcess or a MultiProcess
-            multiprocessclass=None
-            if myprocdef['perturbation_couplings']!=[]:
-                multiprocessclass=loop_diagram_generation.LoopMultiProcess
-            else:
-                multiprocessclass=diagram_generation.MultiProcess
-
-            myproc = multiprocessclass(myprocdef, collect_mirror_procs = False,
-                                       ignore_six_quark_processes = False)
-
-            for amp in myproc.get('amplitudes'):
-                if amp not in self._curr_amps:
-                    self._curr_amps.append(amp)
-                else:
-                    warning = "Warning: Already in processes:\n%s" % \
-                                                amp.nice_string_processes()
-                    logger.warning(warning)
-
+                warning = "Warning: Already in processes:\n%s" % \
+                                                     amp.nice_string_processes()
+                logger.warning(warning)
 
             # Reset _done_export, since we have new process
             self._done_export = False
-
+            
             cpu_time2 = time.time()
-
+            
             ndiags = sum([len(amp.get('loop_diagrams')) for \
-                              amp in myproc.get('amplitudes')])
+                      amp in myproc.get('amplitudes')])
             logger.info("Process generated in %0.3f s" % \
-                  (cpu_time2 - cpu_time1))
-   
+            (cpu_time2 - cpu_time1))
+
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass
 

@@ -1,0 +1,8 @@
+#!/bin/csh
+foreach file (*.f *.h *.dat)
+	echo $file
+	diff -w $file ~/ff/$file |more
+	if ( $status ) then
+		cp -i ~/ff/$file .
+	endif
+end

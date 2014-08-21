@@ -128,7 +128,7 @@ c For MINT:
       common/SHevents/Hevents
       character*10 dum
 c statistics for MadLoop      
-      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
 c timing statistics
@@ -161,7 +161,9 @@ c
       nqdp=0
       nini=0
       n10=0
-      n1=0
+      do i=0,9
+        n1(i)=0
+      enddo
       
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
@@ -280,7 +282,7 @@ c
          write(*,*)'Final result:',ans(2),' +/-',unc(2)
          write(*,*)'chi**2 per D.o.F.:',chi2(1)
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*) ans(1),unc(1),0d0,0,0,0,0,0d0,0d0,ans(2)
+         write(58,*) ans(1),unc(2),0d0,0,0,0,0,0d0,0d0,ans(2)
          close(58)
 c
 c to save grids:
@@ -513,7 +515,12 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write(*,*)
      &        "  Unknown return code (10):                        ",n10
          write(*,*)
-     &        "  Unknown return code (1):                         ",n1
+     &        "  Unit return code distribution (1):               "
+         do j=0,9
+           if (n1(j).ne.0) then
+              write(*,*) "#Unit ",j," = ",n1(j)
+           endif
+         enddo
       endif
 
       call cpu_time(tAfter)

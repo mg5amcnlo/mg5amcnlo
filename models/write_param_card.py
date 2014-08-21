@@ -252,6 +252,9 @@ class ParamCardWriter(object):
         
         data.sort(sort)
         for part, param in data:
+            # don't write the width of ghosts particles
+            if part["ghost"]:
+                continue
             if self.model['parameter_dict'][param.name].imag:
                 raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
             value = complex(self.model['parameter_dict'][param.name]).real
@@ -297,6 +300,9 @@ class ParamCardWriter(object):
         text = "" 
         for part in self.model['particles']:
             if part["pdg_code"] in self.sm_pdg or part["pdg_code"] < 0:
+                continue
+            # don't write ghosts in the QNumbers block
+            if part["ghost"]:
                 continue
             text += self.qnumber_str % {'pdg': part["pdg_code"],
                                  'name': part["name"],
