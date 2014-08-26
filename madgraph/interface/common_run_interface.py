@@ -1723,11 +1723,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            os.path.isdir(pjoin(pdfsets_dir, filename)):
             logger.info('%s successfully downloaded and stored in %s' \
                     % (filename, pdfsets_dir))
-        #otherwise save it locally
-        else:
+        #otherwise (if v5) save it locally
+        elif lhapdf_version.startswith('5.'):
             logger.warning('Could not download %s into %s. Trying to save it locally' \
                     % (filename, pdfsets_dir))
             self.install_lhapdf_pdfset(pjoin(self.me_dir, 'lib', 'PDFsets'), filename)
+        else:
+            raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir)
 
 
     def get_lhapdf_pdfsets_list(self, pdfsets_dir):
