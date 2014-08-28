@@ -1326,8 +1326,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if options['reweightonly']:
             event_norm=self.run_card['event_norm']
             nevents=int(self.run_card['nevents'])
-            self.reweight_and_collect_events(options, mode, nevents, event_norm)
-            return
+            return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
         devnull = os.open(os.devnull, os.O_RDWR) 
         if mode in ['LO', 'NLO']:
