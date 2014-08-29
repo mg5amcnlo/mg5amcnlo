@@ -7,6 +7,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Fix Bug in the compuation of cross-section in presence of negative contribution 
                 OM: Change colorflow information of LHE file in presence of two epsilon_ijk
                     since PY8 was not able to handle such flow in that format.
+                OM: Add the function print_result for aMC@(n)LO run.
 
 2.1.2(03/07/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)

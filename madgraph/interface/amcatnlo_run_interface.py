@@ -1121,6 +1121,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         this function just wraps the do_launch one"""
         self.do_launch(line)
 
+
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
         """Advanced commands: this is for creating the correct run_card.inc from the nlo format"""
@@ -1228,6 +1229,53 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 
         self.update_status('', level='all', update_results=True)
+
+    def print_results_in_shell(self, data):
+        """Have a nice results prints in the shell,
+        data should be of type: gen_crossxhtml.OneTagResults"""
+        if not data:
+            return
+        logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
+        if self.ninitial == 1:
+            logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
+        else:
+            logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
+        logger.info("     Nb of events :  %s" % data['nb_event'] )
+        #if data['cross_pythia'] and data['nb_event_pythia']:
+        #    if self.ninitial == 1:
+        #        logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
+        #    else:
+        #        logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
+        #    logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
+        #    if self.run_card['use_syst'] in self.true:
+        #        logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")    
+        logger.info(" " )
+
+    def print_results_in_file(self, data, path, mode='w'):
+        """Have a nice results prints in the shell,
+        data should be of type: gen_crossxhtml.OneTagResults"""
+        if not data:
+            return
+        
+        fsock = open(path, mode)
+        
+        fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
+                    (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
+        
+        if self.ninitial == 1:
+            fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
+        else:
+            fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
+        fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
+        #if data['cross_pythia'] and data['nb_event_pythia']:
+        #    if self.ninitial == 1:
+        #        fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
+        #    else:
+        #        fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
+        #    fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
+        fsock.write(" \n" )
+
+
 
 
 

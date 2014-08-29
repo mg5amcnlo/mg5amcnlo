@@ -979,6 +979,52 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.update_status('finish', level='pgs', makehtml=False)
 
+
+    ############################################################################ 
+    def do_print_results(self, line):
+        """Not in help:Print the cross-section/ number of events for a given run"""
+        
+        args = self.split_arg(line)
+        options={'path':None, 'mode':'w'}
+        for arg in list(args):
+            if arg.startswith('--') and '=' in arg:
+                name,value=arg.split('=',1)
+                name = name [2:]
+                options[name] = value
+                args.remove(arg)
+        
+        
+        if len(args) > 0:
+            run_name = args[0]
+        else:
+            if not self.results.current:
+                raise self.InvalidCmd('no run currently defined. Please specify one.')
+            else:
+                run_name = self.results.current['run_name']
+        if run_name not in self.results:
+            raise self.InvalidCmd('%s is not a valid run_name or it doesn\'t have any information' \
+                                  % run_name)
+
+            
+        if len(args) == 2:
+            tag = args[1]
+            if tag.isdigit():
+                tag = int(tag) - 1
+                if len(self.results[run_name]) < tag:
+                    raise self.InvalidCmd('Only %s different tag available' % \
+                                                    len(self.results[run_name]))
+                data = self.results[run_name][tag]
+            else:
+                data = self.results[run_name].return_tag(tag)
+        else:
+            data = self.results[run_name].return_tag(None) # return the last
+        
+        if options['path']:
+            self.print_results_in_file(data, options['path'], options['mode'])
+        else:
+            self.print_results_in_shell(data)
+
+
     ############################################################################
     def do_delphes(self, line):
         """ run delphes and make associate root file/plot """
@@ -1605,6 +1651,28 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return self.complete_plot(text, line, begidx, endidx)
         else:
             return
+
+    def complete_print_results(self,text, line, begidx, endidx):
+        "Complete the print results command"
+        args = self.split_arg(line[0:begidx], error=False) 
+        if len(args) == 1:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            return tmp1        
+        else:
+            data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
+            data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
+            tmp1 =  self.list_completion(text, data)
+            return tmp1
+            
+    def help_print_result(self):
+        logger.info("syntax: print_result [RUN] [TAG] [options]")
+        logger.info("-- show in text format the status of the run (cross-section/nb-event/...)")
+        logger.info("--path= defines the path of the output file.")
+        logger.info("--mode=a allow to add the information at the end of the file.")
+
 
     ############################################################################
     def do_check_events(self, line):

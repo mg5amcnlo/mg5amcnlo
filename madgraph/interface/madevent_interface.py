@@ -459,9 +459,6 @@ class HelpToCmd(object):
         logger.info("   the optional '-f' allows to by-pass all security question")
         logger.info("   The banner can be remove only if all files are removed first.")
 
-    def help_print_result(self):
-        logger.info("syntax: print_result [RUN] [TAG]")
-        logger.info("-- show in text format the status of the run (cross-section/nb-event/...)")
 
 
 #===============================================================================
@@ -1666,21 +1663,7 @@ class CompleteForCmd(CheckValidForCmd):
 
     complete_delphes = complete_pgs        
 
-    def complete_print_results(self,text, line, begidx, endidx):
-        "Complete the print results command"
-        args = self.split_arg(line[0:begidx], error=False) 
-        if len(args) == 1:
-            #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
-            data = [n.rsplit('/',2)[1] for n in data]
-            tmp1 =  self.list_completion(text, data)
-            return tmp1        
-        else:
-            data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
-            data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
-            tmp1 =  self.list_completion(text, data)
-            return tmp1
-            
+
 
 
 
@@ -2021,49 +2004,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
   
  
 
-    ############################################################################ 
-    def do_print_results(self, line):
-        """Not in help:Print the cross-section/ number of events for a given run"""
-        
-        args = self.split_arg(line)
-        options={'path':None, 'mode':'w'}
-        for arg in list(args):
-            if arg.startswith('--') and '=' in arg:
-                name,value=arg.split('=',1)
-                name = name [2:]
-                options[name] = value
-                args.remove(arg)
-        
-        
-        if len(args) > 0:
-            run_name = args[0]
-        else:
-            if not self.results.current:
-                raise self.InvalidCmd('no run currently defined. Please specify one.')
-            else:
-                run_name = self.results.current['run_name']
-        if run_name not in self.results:
-            raise self.InvalidCmd('%s is not a valid run_name or it doesn\'t have any information' \
-                                  % run_name)
 
-            
-        if len(args) == 2:
-            tag = args[1]
-            if tag.isdigit():
-                tag = int(tag) - 1
-                if len(self.results[run_name]) < tag:
-                    raise self.InvalidCmd('Only %s different tag available' % \
-                                                    len(self.results[run_name]))
-                data = self.results[run_name][tag]
-            else:
-                data = self.results[run_name].return_tag(tag)
-        else:
-            data = self.results[run_name].return_tag(None) # return the last
-        
-        if options['path']:
-            self.print_results_in_file(data, options['path'], options['mode'])
-        else:
-            self.print_results_in_shell(data)
         
 
     ############################################################################
@@ -2097,6 +2038,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                           postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
             self.exec_cmd('store_events', postcmd=False)
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
             self.exec_cmd('create_gridpack', postcmd=False)
         else:
             # Regular run mode
@@ -4265,6 +4207,7 @@ class GridPackCmd(MadEventCmd):
         self.exec_cmd('combine_events')
         self.exec_cmd('store_events')
         self.print_results_in_shell(self.results.current)
+        self.exec_cmd('decay_events -from_cards', postcmd=False)
 
     def refine4grid(self, nb_event):
         """Special refine for gridpack run."""

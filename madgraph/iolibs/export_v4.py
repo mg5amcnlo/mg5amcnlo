@@ -1676,6 +1676,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract version number and date from VERSION file
@@ -2181,6 +2182,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract JAMP lines
@@ -2936,6 +2938,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
 
