@@ -35,6 +35,7 @@ import signal
 import tarfile
 import copy
 import datetime
+import tarfile
 
 try:
     import readline
@@ -1245,7 +1246,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 
     def get_characteristics(self, file):
-        """reads the proc_characteristics file and initialises the correspondent
+        """reads the proc_characteristics file and initialises the correspondant
         dictionary"""
         lines = [l for l in open(file).read().split('\n') if l and not l.startswith('#')]
         self.proc_characteristics = {}
@@ -1263,7 +1264,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         if mode in ['LO', 'NLO'] and self.run_card['iappl'] == '2' and not options['only_generation']:
             options['only_generation'] = True
-
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1329,8 +1329,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if options['reweightonly']:
             event_norm=self.run_card['event_norm']
             nevents=int(self.run_card['nevents'])
-            self.reweight_and_collect_events(options, mode, nevents, event_norm)
-            return
+            return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
         devnull = os.open(os.devnull, os.O_RDWR) 
         if mode in ['LO', 'NLO']:
@@ -1857,15 +1856,28 @@ Integrated cross-section
              r"Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
              r"Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
              r"Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
-             r"Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
-             r"Unknown return code \(1\)\:\s+(?P<n1>\d+)",re.DOTALL)
+             r"Unknown return code \(10\)\:\s+(?P<n10>\d+).*",re.DOTALL)
+    
+        unit_code_meaning = { 0 : 'Not identified (CTModeRun != -1)',
+                              1 : 'CutTools (double precision)',
+                              2 : 'PJFry++',
+                              3 : 'IREGI',
+                              4 : 'Golem95',
+                              9 : 'CutTools (quadruple precision)'}
+        RetUnit_finder =re.compile(
+                           r"#Unit\s*(?P<unit>\d+)\s*=\s*(?P<n_occurences>\d+)")
+    #Unit
     
         for gv_log in log_GV_files:
-            logfile=open(gv_log,'r')            
-            UPS_stats = re.search(UPS_stat_finder,logfile.read())
-            logfile.close()
+            channel_name = '/'.join(gv_log.split('/')[-5:-1])
+            log=open(gv_log,'r').read()                
+            UPS_stats = re.search(UPS_stat_finder,log)
+            for retunit_stats in re.finditer(RetUnit_finder, log):
+                if channel_name not in stats['UPS'].keys():
+                    stats['UPS'][channel_name] = [0]*10+[[0]*10]
+                stats['UPS'][channel_name][10][int(retunit_stats.group('unit'))] \
+                                     += int(retunit_stats.group('n_occurences'))
             if not UPS_stats is None:
-                channel_name = '/'.join(gv_log.split('/')[-5:-1])
                 try:
                     stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
                     stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
@@ -1877,14 +1889,13 @@ Integrated cross-section
                     stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
                     stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
                     stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
-                    stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
                 except KeyError:
                     stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
                       int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
                       int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
                       int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
                       int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
-                      int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
+                      int(UPS_stats.group('n10')),[0]*10]
         debug_msg = ""
         if len(stats['UPS'].keys())>0:
             nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
@@ -1897,7 +1908,8 @@ Integrated cross-section
             nTotini = sum([chan[7] for chan in stats['UPS'].values()],0)
             nTot100 = sum([chan[8] for chan in stats['UPS'].values()],0)
             nTot10  = sum([chan[9] for chan in stats['UPS'].values()],0)
-            nTot1  = sum([chan[10] for chan in stats['UPS'].values()],0)
+            nTot1  = [sum([chan[10][i] for chan in stats['UPS'].values()],0) \
+                                                             for i in range(10)]
             UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
                  float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
@@ -1911,12 +1923,20 @@ Integrated cross-section
             tmpStr += '\n    Only double precision used:          %d'%nTotddp
             tmpStr += '\n    Quadruple precision used:            %d'%nTotqdp
             tmpStr += '\n    Initialization phase-space points:   %d'%nTotini
+            tmpStr += '\n    Reduction methods used:'
+            red_methods = [(unit_code_meaning[i],nTot1[i]) for i in \
+                                         unit_code_meaning.keys() if nTot1[i]>0]
+            for method, n in sorted(red_methods, key= lambda l: l[1], reverse=True):
+                tmpStr += '\n      > %s%s%s'%(method,' '*(33-len(method)),n)                
             if nTot100 != 0:
                 debug_msg += '\n  Unknown return code (100):             %d'%nTot100
             if nTot10 != 0:
                 debug_msg += '\n  Unknown return code (10):              %d'%nTot10
-            if nTot1 != 0:
-                debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+            nUnknownUnit = sum(nTot1[u] for u in range(10) if u \
+                                                not in unit_code_meaning.keys())
+            if nUnknownUnit != 0:
+                debug_msg += '\n  Unknown return code (1):               %d'\
+                                                                   %nUnknownUnit
 
             if maxUPS[1]>0.001:
                 message += tmpStr
@@ -2800,7 +2820,7 @@ Integrated cross-section
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
         #content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
-        content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+        #content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
         content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
         content += 'TWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 6).value
         content += 'ZMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 23).value
@@ -2842,16 +2862,49 @@ Integrated cross-section
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
-        if pdlabel == 'lhapdf':
+        if int(self.shower_card['pdfcode']) > 1 or \
+            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1): 
+            # Use LHAPDF (should be correctly installed, because
+            # either events were already generated with them, or the
+            # user explicitly gives an LHAPDF number in the
+            # shower_card).
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
             lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                          stdout = subprocess.PIPE).stdout.read().strip()
+                                          stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+            if self.shower_card['pdfcode']==1:
+                lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+                content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+            else:
+                lhaid_list = [abs(int(self.shower_card['pdfcode']))]
+                content += 'PDFCODE=%s\n' % self.shower_card['pdfcode']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+        elif int(self.shower_card['pdfcode'])==1:
+            # Try to use LHAPDF because user wants to use the same PDF
+            # as was used for the event generation. However, for the
+            # event generation, LHAPDF was not used, so non-trivial to
+            # see if if LHAPDF is available with the corresponding PDF
+            # set. If not found, give a warning and use build-in PDF
+            # set instead.
+            try:
+                lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
+                                              stdout = subprocess.PIPE).stdout.read().strip()
+                self.link_lhapdf(pjoin(self.me_dir, 'lib'))
+                content += 'LHAPDFPATH=%s\n' % lhapdfpath
+                pdfsetsdir = self.get_lhapdf_pdfsetsdir()
+                lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+                content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+                self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+            except Exception:
+                logger.warning('Trying to shower events using the same PDF in the shower as used in the generation'+\
+                                   ' of the events using LHAPDF. However, no valid LHAPDF installation found with the'+\
+                                   ' needed PDF set. Will use default internal PDF for the shower instead. To use the'+\
+                                   ' same set as was used in the event generation install LHAPDF and set the path using'+\
+                                   ' "set /path_to_lhapdf/bin/lhapdf-config" from the MadGraph5_aMC@NLO python shell')
+                content += 'LHAPDFPATH=\n' 
+                content += 'PDFCODE=0\n'
         else:
-            #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
 
@@ -3023,8 +3076,6 @@ Integrated cross-section
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
         njob_split = 0
         self.ijob = 0
-        if self.cluster_mode == 0:
-            self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
 
         #  this is to keep track, if splitting evt generation, of the various 
         # folders/args in order to resubmit the jobs if some of them fail
@@ -3248,16 +3299,12 @@ Integrated cross-section
             input_files.append(lib)
       
         # File for the loop (might not be present if MadLoop is not used)
-        if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
-            to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
-                                   'ColorNumFactors.dat','HelConfigs.dat']
-            for name in to_add:
-                input_files.append(pjoin(cwd, name))
-
-                to_check = ['HelFilter.dat','LoopFilter.dat']
-            for name in to_check:
-                if os.path.exists(pjoin(cwd, name)):
-                    input_files.append(pjoin(cwd, name))
+        if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
+            tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar'),'w',
+                                                               dereference=True)
+            tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
+            tf.close()
+            input_files.append(pjoin(cwd, 'MadLoop5_resources.tar'))
 
         Ire = re.compile("for i in ([\d\s]*) ; do")
         try : 
@@ -3406,7 +3453,8 @@ Integrated cross-section
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
 
-        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
+        self.get_characteristics(pjoin(self.me_dir, 
+                                        'SubProcesses', 'proc_characteristics'))
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
@@ -3575,11 +3623,42 @@ Integrated cross-section
                  " seems to have been compiled with a different compiler than"+\
                     " the one specified in MG5_aMC. Please recompile CutTools.")
 
-        # check if virtuals have been generated
-        proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
+        # make IREGI (only necessary with MG option output_dependencies='internal')
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libiregi.a'))) \
+           and os.path.exists(pjoin(sourcedir,'IREGI')):
+                logger.info('Compiling IREGI (can take a couple of minutes) ...')
+                misc.compile(['IREGI'], cwd = sourcedir)
+                logger.info('          ...done.')
+
+        if os.path.exists(pjoin(libdir, 'libiregi.a')):
+            # Verify compatibility between current compiler and the one which was
+            # used when last compiling IREGI (if specified).
+            compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
+                                libdir, 'libiregi.a')))),'compiler_version.log')
+            if os.path.exists(compiler_log_path):
+                compiler_version_used = open(compiler_log_path,'r').read()
+                if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
+                       pjoin(sourcedir,'make_opts')))) in compiler_version_used:
+                    if os.path.exists(pjoin(sourcedir,'IREGI')):
+                        logger.info('IREGI was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                        misc.compile(['cleanIR'], cwd = sourcedir)
+                        misc.compile(['IREGI'], cwd = sourcedir)
+                        logger.info('          ...done.')
+                    else:
+                        raise aMCatNLOError("IREGI installation in %s"\
+                                %os.path.realpath(pjoin(libdir, 'libiregi.a'))+\
+                 " seems to have been compiled with a different compiler than"+\
+                    " the one specified in MG5_aMC. Please recompile IREGI.")
+
+        # check if MadLoop virtuals have been generated
         if self.proc_characteristics['has_loops'].lower() == 'true' and \
-           mode in ['NLO', 'aMC@NLO', 'noshower']:
-            tests.append('check_poles')
+                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
+            os.environ['madloop'] = 'true'
+            if mode in ['NLO', 'aMC@NLO', 'noshower']:
+                tests.append('check_poles')
+        else:
+            os.unsetenv('madloop')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)

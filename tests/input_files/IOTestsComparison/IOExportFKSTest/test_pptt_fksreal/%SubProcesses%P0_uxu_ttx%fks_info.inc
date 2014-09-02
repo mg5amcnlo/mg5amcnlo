@@ -2,6 +2,7 @@
       INTEGER FKS_I_D(6), FKS_J_D(6)
       INTEGER FKS_J_FROM_I_D(6, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(6, NEXTERNAL), PDG_TYPE_D(6, NEXTERNAL)
+      REAL*8 PARTICLE_CHARGE_D(6, NEXTERNAL)
 
       DATA FKS_I_D / 5, 5, 5, 5, 5, 5 /
       DATA FKS_J_D / 1, 2, 3, 4, 1, 2 /
@@ -50,4 +51,19 @@ C
       DATA (PDG_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / -2, 21, 6, -6, 
      $ -2 /
 
+C     
+C     Particle charge:
+C     charge is set 0. with QCD corrections, which is irrelevant
+      DATA (PARTICLE_CHARGE_D(1, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(2, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(3, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(4, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(5, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(6, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
 

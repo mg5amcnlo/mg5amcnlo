@@ -262,8 +262,8 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
     IOTestManager.testFolders_filter = arg.split('/')[0].split('&')
     IOTestManager.testNames_filter = arg.split('/')[1].split('&')
     IOTestManager.filesChecked_filter = '/'.join(arg.split('/')[2:]).split('&')
-    #print "INFO:: Using folders %s"%str(IOTestManager.testFolders_filter)    
-    #print "INFO:: Using test names %s"%str(IOTestManager.testNames_filter)         
+    #print "INFO:: Using folders %s"%str(IOTestManager.testFolders_filter)
+    #print "INFO:: Using test names %s"%str(IOTestManager.testNames_filter)
     #print "INFO:: Using file paths %s"%str(IOTestManager.filesChecked_filter)
     
     # Initiate all the IOTests from all the setUp()

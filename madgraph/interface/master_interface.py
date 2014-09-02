@@ -65,7 +65,7 @@ class Switcher(object):
                       'MadLoop':('MG5_aMC',LoopCmd.LoopInterface),
                       'aMC@NLO':('MG5_aMC',amcatnloCmd.aMCatNLOInterface)}
 
-    _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
+    _switch_opts = interface_names.keys()
     current_interface = None
    
     # Helper functions
@@ -169,14 +169,22 @@ class Switcher(object):
         # Use regular expressions to extract the loop mode (if present) and its
         # option, specified in the line with format [ option = loop_orders ] or
         # [ loop_orders ] which implicitly select the 'all' option.
-        loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)\])(.*)$")
+        loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)?\])(.*)$")
         res=loopRE.search(line)
         if res:
+            orders=res.group('orders').split() if res.group('orders') else []
             if res.group('option') and len(res.group('option').split())==1:
-                return ('NLO',res.group('option').split()[0],
-                                    res.group('orders').split())
+                if res.group('option').split()[0]=='tree':
+                    return ('tree',res.group('option').split()[0],orders)
+                else:
+                    return ('NLO',res.group('option').split()[0],orders)
             else:
-                return ('NLO','all',res.group('orders').split())
+                # If not option is set the convention is that the mode is 'all'
+                # unless no perturbation orders is defined.
+                if len(orders)>0:
+                    return ('NLO','all',orders)
+                else:
+                    return ('tree',None,[])               
         else:
             return ('tree',None,[])    
     
@@ -238,8 +246,7 @@ class Switcher(object):
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                     self.change_principal_cmd('MadLoop')
             else:
-                self.change_principal_cmd('MadGraph')
-                
+                self.change_principal_cmd('MadGraph')        
         return self.cmd.do_generate(self, line, *args, **opts)
 
     def do_import(self, *args, **opts):
@@ -564,18 +571,17 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             raise MadGraph5Error, 'Type of interface not valid: %s' % main  
         self.cmd.__init__(self, *args, **opt)     
         self.current_interface = main  
-        
+    
     def complete_switch(self, text, line, begidx, endidx):
         """Complete the switch command"""
         return self.list_completion(text,self._switch_opts)
         
     def do_switch(self, line):
         """Not in help: Allow to switch to any given interface from command line """
-        interface_quick_name=dict([(self.interface_names[name][0],name) for name \
-                                   in self.interface_names.keys()])
+
         args = cmd.Cmd.split_arg(line)
-        if len(args)==1 and args[0] in interface_quick_name.keys():
-            self.change_principal_cmd(interface_quick_name[args[0]])
+        if len(args)==1 and args[0] in self.interface_names.keys():
+            self.change_principal_cmd(args[0])
         else:
             raise self.InvalidCmd("Invalid switch command or non existing interface %s."\
                             %args[0]+" Valid interfaces are %s"\

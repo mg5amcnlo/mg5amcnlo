@@ -7,8 +7,9 @@ if [[ ! -e $1 && -e ../$1 ]] ; then
 fi
 }
 
-
-
+if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then
+    tar -xf MadLoop5_resources.tar
+fi
 
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
@@ -72,19 +73,15 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     fi
     if  [[ ! -e symfact.dat ]] ; then
     	if [[  -e ../symfact.dat ]] ; then
-	    ln -sf ../symfact.dat .
-	else
-	    ln -sf ../../symfact.dat .    
-	fi
+			ln -sf ../symfact.dat .
+		else
+			ln -sf ../../symfact.dat .    
+		fi
     fi
 
-    link1up MadLoopParams.dat
-    link1up HelFilter.dat 
-    link1up LoopFilter.dat
-    link1up ColorDenomFactors.dat
-    link1up HelConfigs.dat
-    link1up ColorNumFactors.dat
     link1up FKS_params.dat
+#   Not necessary anymore
+#    link1up MadLoop5_resources
     link1up OLE_order.olc
     link1up param_card.dat
     link1up libLHAPDF.so

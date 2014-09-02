@@ -9,10 +9,13 @@ C
       double precision pi, zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero = 0d0)
-      integer npoints, npointsChecked,ret_code
+      integer npoints, npointsChecked
       integer i, j, k
-      double precision tolerance
+      integer return_code
+      double precision tolerance, tolerance_default
+      double precision, allocatable :: accuracies(:)
       double precision accuracy
+      parameter (tolerance_default = 1d-5)
       double precision ren_scale, energy
       parameter (ren_scale = 1d2)
       parameter (energy = 1d3)
@@ -23,7 +26,8 @@ C
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       double precision pswgt
-      double precision virt_wgts(3), fks_double, fks_single
+      double precision fks_double, fks_single
+      double precision, allocatable :: virt_wgts(:,:)
       double precision double, single, finite
       double complex born(2)
       logical calculatedborn
@@ -46,19 +50,21 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       include 'q_es.inc'
+      integer nsqso      
       double precision pmass(nexternal), pmass_rambo(nexternal)
       integer nfail
+      logical first_time
+      data first_time/.TRUE./
       
-c general MadFKS parameters
-      include "FKSParams.inc"
-
 C-----
 C  BEGIN CODE
 C-----  
-c
-c     Read general MadFKS parameters
-c
-      call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+      if (first_time) then
+          call get_nsqso_loop(nsqso)          
+          allocate(virt_wgts(0:3,0:nsqso))
+          allocate(accuracies(0:nsqso))
+          first_time = .false.
+      endif
 
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
@@ -71,9 +77,9 @@ c
       read(*,*) npoints
       write(*,*)'Insert the relative tolerance'
       write(*,*)' A negative number will mean use the default one: ',
-     1 IRPoleCheckThreshold 
+     1 tolerance_default 
       read(*,*) tolerance
-      if (tolerance .le. zero) tolerance = IRPoleCheckThreshold
+      if (tolerance .le. zero) tolerance = tolerance_default
 
       mu_r = ren_scale
       qes2 = ren_scale**2
@@ -160,12 +166,13 @@ c initialization
           enddo
 
           call sborn(p_born, born)
-          call sloopmatrix_thres(p_born,virt_wgts,tolerance,accuracy
-     $         ,ret_code) 
+          call sloopmatrix_thres(p_born,virt_wgts,tolerance,
+     1 accuracies,return_code)
+          accuracy=accuracies(0)
 
-          finite = virt_wgts(1)/dble(ngluons)
-          single = virt_wgts(2)/dble(ngluons)
-          double = virt_wgts(3)/dble(ngluons)
+          finite = virt_wgts(1,0)/dble(ngluons)
+          single = virt_wgts(2,0)/dble(ngluons)
+          double = virt_wgts(3,0)/dble(ngluons)
 
 C         If MadLoop was still in initialization mode, then skip this
 C         point for the checks

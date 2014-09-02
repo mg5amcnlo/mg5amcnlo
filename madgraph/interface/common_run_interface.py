@@ -1574,6 +1574,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run
+        self.banner = madspin_cmd.banner
         self.banner.add(path)
         self.banner.write(pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' %
                                 (self.run_name, self.run_tag)))
