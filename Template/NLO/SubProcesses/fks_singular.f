@@ -2136,7 +2136,7 @@ c Apply the FxFx Sudakov damping on the S events
 
 c Update the shower starting scale with the shape from montecarlocounter
       if( (.not.MCcntcalled) .and.
-     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+     &     abrv.ne.'born'.and. abrv.ne.'grid' .and. ickkw.ne.4)then
          call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat,pp,ileg,
      &     xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5),ddum(6),ldum)
       endif
