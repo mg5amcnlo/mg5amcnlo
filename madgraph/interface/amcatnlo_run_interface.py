@@ -1567,9 +1567,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         """Distributes the APPLgrids ready to be filled by a second run of the code"""
         # if no appl_start_grid argument given, guess it from the time stamps of the starting grid files
         if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
-            files=glob.glob(pjoin(self.me_dir, 'Events','*','aMCfast_obs_0_starting_grid.root'))
+            gfiles=glob.glob(pjoin(self.me_dir, 'Events','*','aMCfast_obs_0_starting_grid.root'))
             time_stamps={}
-            for root_file in files:
+            for root_file in gfiles:
                 time_stamps[root_file]=os.path.getmtime(root_file)
             options['appl_start_grid']= \
                 max(time_stamps.iterkeys(), key=(lambda key: time_stamps[key])).split('/')[-2]
