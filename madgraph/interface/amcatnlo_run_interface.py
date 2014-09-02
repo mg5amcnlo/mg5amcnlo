@@ -1265,6 +1265,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if mode in ['LO', 'NLO'] and self.run_card['iappl'] == '2' and not options['only_generation']:
             options['only_generation'] = True
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
+
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
             self.cluster = cluster.from_name[cluster_name](**self.options)
@@ -1545,26 +1546,21 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         nobs  =len([name for name in os.listdir(pjoin(self.me_dir,'SubProcesses',all_jobs[0].rstrip())) \
                         if name.endswith("_out.root")])
         for obs in range(0,nobs):
-            gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") \
-                                  for job in all_jobs])
+            gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
             # combine APPLgrids from different channels for observable 'obs'
             if self.run_card["iappl"] == "1":
-                os.system(applcomb + " -o "+ \
-                              pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root") \
-                              + " --optimise "+gstring)
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
             elif self.run_card["iappl"] == "2":
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
-                os.system(applcomb + " -o "+ \
-                              pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root") \
-                              + " -s "+str(unc2_inv)+ " --weight "+str(unc2_inv)+" "+gstring)
-                start_gstring=" ".join([pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_in.root") \
-                                            for job in all_jobs])
-                os.system("rm -f "+ start_gstring)
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
+                for job in all_jobs:
+                    os.remove(pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_in.root"))
             else:
                 raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
             # after combining, delete the original grids
-            os.system("rm -f "+ gstring)
+            for ggdir in gdir:
+                os.remove(ggdir)
 
         
     def applgrid_distribute(self,options,mode,p_dirs):
@@ -1605,8 +1601,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             for g_dir in g_dirs:
                 for grid in all_grids:
                     obs=grid.split('_')[-3]
-                    os.system("cp -f "+grid+" "+ \
-                                  pjoin(self.me_dir,"SubProcesses",pdir,g_dir,'grid_obs_'+obs+'_in.root'))
+                    files.cp(grid,pjoin(self.me_dir,"SubProcesses",pdir,g_dir,'grid_obs_'+obs+'_in.root'))
 
 
     def collect_log_files(self, folders, istep):
