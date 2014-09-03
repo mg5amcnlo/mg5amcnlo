@@ -8,6 +8,14 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Change colorflow information of LHE file in presence of two epsilon_ijk
                     since PY8 was not able to handle such flow in that format.
                 OM: Add the function print_result for aMC@(n)LO run.
+                OM: Add some shortcut in the card edition 
+                    set ebeam 500 # edit both beams
+                    set lpp 0     # edit both lpp1 and lpp2
+                    set lhc 14    # configure for LHC 14TeV
+                    set ilc 1000  # configure for ilc 1TeV
+                    set fixed_scale 100 # set all scale to fixed and at 100GeV
+                OM: Fix a bug in the card edition mode which was sometimes returning to default value
+                    which were edited by hand and not via the set command.
 
 2.1.2(03/07/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)

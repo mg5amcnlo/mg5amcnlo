@@ -1909,6 +1909,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the
     set command define and modifying the param_card/run_card correctly"""
 
+    special_shortcut = {'ebeam':['run_card ebeam1 %(0)s', 'run_card ebeam2 %(0)s'],
+                        'lpp': ['run_card lpp1 %(0)s', 'run_card lpp2 %(0)s' ],
+                        'lhc': ['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
+                        'lep': ['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2'],
+                        'ilc': ['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2'],
+                        'lcc':['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
+                        'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
+                        }
+    
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
         # Initiation
@@ -2042,7 +2051,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if args[-1] in ['Auto', 'default']:
             return
         if len(args) == 1:
-            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':'',}
+            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':'','shortcut':''}
             if self.has_mw:
                 allowed['madweight_card'] = ''
                 allowed['mw_block'] = 'all'
@@ -2092,6 +2101,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
+        
+        if 'shortcut' in allowed.keys():
+            possibilities['special values'] = self.list_completion(text, self.special_shortcut.keys()+['qcut'])
 
         if 'run_card' in allowed.keys():
             opts = self.run_set
@@ -2184,10 +2196,38 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             arg1, arg2 = args.pop(-1).split('=')
             args += [arg1, arg2]
 
+        # special shortcut:
+        if args[0] in self.special_shortcut:
+            if len(args) == 1:
+                values = {}
+            elif len(args) == 2:  
+                try:  
+                    values = {'0': float(args[1])}
+                except ValueError as e:
+                    logger.warning("Wrong argument: The last entry should be a number.")
+                    return
+            else:
+                logger.warning("too many argument for this command")
+                return
+            
+            for arg in self.special_shortcut[args[0]]:
+                try:
+                    text = arg % values
+                except KeyError:
+                    logger.warning("This command requires one argument")
+                    return
+                except Exception as e:
+                    logger.warning(str(e))
+                    return
+                else:
+                    self.do_set(arg % values)
+            return
+
+        
         start = 0
         if len(args) < 2:
             logger.warning('Invalid set command %s (need two arguments)' % line)
-            return
+            return            
 
         # Special case for the qcut value
         if args[0].lower() == 'qcut':
@@ -2202,6 +2242,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     p_card = '%s \n QCUT= %s' % (p_card, args[1])
                 open(pythia_path, 'w').write(p_card)
                 return
+            
 
         card = '' #store which card need to be modify (for name conflict)
         if args[0] == 'madweight_card':
@@ -2650,3 +2691,22 @@ You can also copy/paste, your event file here.''')
                 self.open_file(path)
             else:
                 raise
+            
+        # reload object to have it in sync
+        if path == pjoin(self.me_dir,'Cards','param_card.dat'):
+            try:
+                self.param_card = check_param_card.ParamCard(path) 
+            except (check_param_card.InvalidParamCard, ValueError) as e:
+                logger.error('Current param_card is not valid. We are going to use the default one.')
+                logger.error('problem detected: %s' % e)
+                logger.error('Please re-open the file and fix the problem.')
+                logger.warning('using the \'set\' command without opening the file will discard all your manual change')
+        elif path == pjoin(self.me_dir,'Cards','run_card.dat'):
+            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        elif path == pjoin(self.me_dir,'Cards','MadWeight_card.dat'):
+            try:
+                import madgraph.madweight.Cards as mwcards
+            except:
+                import internal.madweight.Cards as mwcards
+            self.mw_card = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
+ 
