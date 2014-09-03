@@ -5053,7 +5053,7 @@ This implies that with decay chains:
                         # Try to look for it locally
                         local_install = {'pjfry':'PJFRY', 'golem':'golem95'}
                         if os.path.isdir(pjoin(MG5DIR,local_install[key])):
-                            self.opltions[key]=pjoin(MG5DIR,local_install[key],'lib')
+                            self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
                         else:
                             self.options[key]=None
 
