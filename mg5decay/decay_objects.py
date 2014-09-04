@@ -1199,7 +1199,7 @@ class DecayParticle(base_objects.Particle):
             approx_width = amp.get('apx_decaywidth')
             if min_br:
                 br = approx_width / total_width
-                if br < min_br:
+                if br.real < min_br:
                     self.decay_amplitudes[clevel].remove(amp)
                 
         self.get_amplitudes(clevel).sort(amplitudecmp_width)
@@ -1696,8 +1696,7 @@ class DecayModel(model_reader.ModelReader):
                 # IMPORTANT
                 # Particle legs must be in front of anti-particle legs
                 # for the sake of HELAS output
-                temp_legs_new.sort(key= lambda leg: leg['id'],
-                                   reverse=True)
+                temp_legs_new.sort(key=lambda leg: leg['id'],reverse=True)
 
                 temp_legs_new.append(inileg)
                 temp_vertex = base_objects.Vertex({'id': inter.get('id'),
@@ -6009,7 +6008,7 @@ def channelcmp_final(x, y):
 
 def amplitudecmp_width(x, y):
     """ Sort the amplitudes by their width."""
-    mycmp = cmp(x['apx_decaywidth'], y['apx_decaywidth'])
+    mycmp = cmp(x['apx_decaywidth'].real, y['apx_decaywidth'].real)
 
     return -mycmp
 

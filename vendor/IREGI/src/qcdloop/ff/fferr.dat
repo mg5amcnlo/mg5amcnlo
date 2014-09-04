@@ -1,0 +1,101 @@
+This file is called fferr.dat and contains (i4) err number
+and (a80) error message.  The first two lines are skipped.
+  1 ffca0:  error: minimum value complex logarithm gives problem, change mu.
+  2 ffxa0:  error: minimum value real logarithm gives problem, change mu.
+  3 ffcb0:  error: minimum value complex logarithm gives problem, change mu.
+  4 ffxb0:  error: minimum value real logarithm gives problem, change mu.
+  5 ffcb0p: error: cannot handle complex k^2 yet
+  6 ffcb0p: error: minimum value complex log gives problem in unequal masses.
+  7 ffxb0p: error: divergence for k->0, m1=m2=0.
+  8 ffxb0p: error: minimum value real log gives problem in equal masses.
+  9 ffxb0p: error: minimum value real log gives problem in unequal masses.
+ 10 ffcc0p: error: cannot handle two spacelike momenta and one zero.
+ 11 ffxc0p: error: cannot handle two spacelike momenta and one zero.
+ 12 ffcs3:  error: illegal code for isoort(1) (should not occur)
+ 13 ffcs3:  error: illegal code for isoort(2) (should not occur)
+ 14 ffcs3:  error: imaginary part wrong, will be improved later
+ 15 ffcs3:  error: isoort = -1,0 not yet ready
+ 16 ffcs3:  error: illegal combination in isoort (should not occur)
+ 17 ffcxs3: error: illegal code for isoort(1) (should not occur)
+ 18 ffcxs3: error: illegal code for isoort(2) (should not occur)
+ 19 ffcs4:  error: imaginary part is wrong (should be updated)
+ 20 ffdcrr: error: Taylor expansion in 1/x not yet ready
+ 21 ffdcxr: error: imaginary part is wrong
+ 22 ffdcxr: error: Taylor expansion in 1/x not yet ready
+ 23 ffcrr:  error: minimum value complex log causes correction term to be wrong.
+ 24 ffcxr:  error: minimum value real log causes correction term to be wrong.
+ 25 ffcrr:  error: illegal code for iclas1 (should not occur)
+ 26 ffcxr:  error: illegal code for iclas1 (should not occur)
+ 27 ffcrr:  error: illegal code for iclas2 (should not occur)
+ 28 ffcxr:  error: illegal code for iclas2 (should not occur)
+ 29 ffxli2: error: argument too large (should not occur)
+ 30 ffzli2: error: argument too large (should not occur)
+ 31 ffzzdl: error: imaginary part dilog is undefined for real x > 1.
+ 32 nffeta: error: eta is not defined for real negative numbers a,b, ab.
+ 33 nffet1: error: eta is not defined for real negative numbers a,b, ab.
+ 34 ffcota: error: illegal flag (should not occur)
+ 35 ffrota: error: illegal flag (should not occur)
+ 36 ffccyz: error: I took the wrong value for calpha... (should not occur)
+ 37 ffxxyz: error: I took the wrong value for alpha... (should not occur)
+ 38 ffcoot: error: a=0, trying to find two roots of a linear equation ...
+ 39 ffroot: error: a=0, trying to find two roots of a linear equation ...
+ 40 ffrot3: error: all three external masses zero !
+ 41 ffxc0:  error: lambda(p1,p2,p3) < 0, unphysical configuration
+ 42 ffxc0:  error: cannot handle this case (p1,p2,p3 dependent, on threshold)
+ 43 ffcxs3: error: illegal code for isoort(1) (should not occur)
+ 44 ffxd0:  error: lambda(p1,p2,p3,p4) < 0, unphysical configuration
+ 45 ffxd0:  error: cannot handle this case (p1,p2,p3 dependent, on threshold)
+ 46 ffxd0p: error: correction terms for Ai <0 infinite (mass zero?)
+ 47 ffcxyz: error: p_i^2 = 0 (should not occur)
+ 48 ffeta:  error: answer not consistent with normal result (old)
+ 49 ffcc0:  error: cannot handle complex external momenta or im > 0
+ 50 ffcd0:  error: cannot handle complex external momenta.
+ 51 zfflog: error: imaginary part undefined for real z < 0.
+ 52 zxfflg: error: imaginary part undefined for x < 0.
+ 53 ffcs3:  error: eta changes within (0,1), add sophisticated terms...
+ 54 ffrot4: error: cannot find any physical vertex to apply transformation.
+ 55 fftra0: error: too many vectors parallel, p_1.p_7 or p_2.p_7 is zero.
+ 56 zfflog: error: tiny imaginary part in conflict with ieps prescription.
+ 57 ffxe0:  error: lambda(p1,p2,p3,p4,p5) < 0, unphysical
+ 58 ffxc0j: error: IR divergent C0 with lambda(p1,p2,p3)=0.
+ 59 ffxc0i: error: IR divergent C0 with delta=0. specify cutoff delta in /ffcut/
+ 60 ffxc0j: error: IR divergent C0 obtained from D0 is singular. Contact author.
+ 61 ffxd0p: error: IR divergent D0 with delta=0. specify cutoff delta in /ffcut/
+ 62 ffxc0p: error: I never expected complex roots in an IR divergent diagram.
+ 63 ffxd0p: error: can only handle one IR divergence per 3point function
+ 64 ffxd0p: error: can not handle a threshold in (3,4), rotated wrongly.
+ 65 ffcxr:  error: IR divergence but iclass!=3.  should not occur.
+ 66 ffcxs3: error: different imaginary signs should not occur for ipole=3.
+ 67 ffxdbd: error: I cannot use this algorithm for a linear IR divergence
+ 68 ffxd0:  error: cannot find a proj. transformation; try another permutation.
+ 69 ff5ind: error: could not find independent momenta (should not occur).
+ 70 ffxdna: error: lambda(pi,pj,pk) < 0, unphysical configuration
+ 71 ffxdna: error: cannot handle lambda(pi,pj,pk) = 0, dependent momenta.
+ 72 ffxd0e: error: could not find a stable root; please try another permutation
+ 73 ffxdir: error: cannot handle a linearly divergent four point function (yet)
+ 74 ffxdbd: error: IR divergent B0' without cutoff delta in /ffcut/
+ 75 ffdcxr: error: dyz=0, should not occur
+ 76 ffdcrr: error: cdwz=0, but iepsz!=iepsz and significant
+ 77 ffdcrr: error: cdyz=0, should not occur
+ 78 ffdcc0: error: imaginary part wrong
+ 79 ffdcs:  error: error: cannot handle isoort=0
+ 80 ffdcs:  error: mixed up iep's, 2*pi^2 wrong somewhere
+ 81 ffdcs:  error: wrong value for isoort
+ 82 ffdxc0: error: imaginary part Ai<0 terms uncertain
+ 83 ffxc0j: error: sorry, complex roots not yet supported here
+ 84 ffxc0p: error: imaginary part Ai<0 terms uncertain
+ 85 ffxd0a: error: t3=t4, donot know what to do
+ 86 ffxdbp: error: cannot compute derivative, lam=0
+ 87 ffxdi:  error: dependent momenta not yet supported (boundary of phase space)
+ 88 ffxxyz: error: xk = 0 not yet implemented
+ 89 aaxi3:  error: cannot invert matrix with zero determinant.
+ 90 aaxi4:  error: cannot invert matrix with zero determinant.
+ 91 aaxi5:  error: cannot invert matrix with zero determinant.
+ 92 ffxc1:  error: cannot invert matrix with zero determinant.
+ 93 ffze0:  error: Im(m^2) > 0
+ 94 ffze0:  error: Im(p^2) != 0
+ 95 ffzf0:  error: Im(m^2) > 0
+ 96 ffzf0:  error: Im(p^2) != 0
+ 97 ffxc0j: error: ill-defined IR-divergent C0 for massless charged particles.
+ 98 ffxdbd: error: ill-defined IR-divergent D0 for massless charged particles.
+ 100 ffrcvr: math error: probably underflow, I do not know where or how severe..

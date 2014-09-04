@@ -28,6 +28,7 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
 import madgraph.interface.master_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -79,6 +80,14 @@ class TestCmdShell1(unittest.TestCase):
         self.do('generate e+ e- > z | a > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
+        self.do('generate d d~ > u u~ WEIGHTED^2>-1')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 4)
+        self.do('generate d d~ > u u~ WEIGHTED^2>-2')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 3)
+        self.assertRaises(MadGraph5Error, self.do, 
+                                           'generate d d~ > u u~ WEIGHTED^2>-4')
         self.assertRaises(MadGraph5Error, self.do, 'generate a V > e+ e-')
         self.assertRaises(MadGraph5Error, self.do, 'generate e+ e+|e- > e+ e-')
         self.assertRaises(MadGraph5Error, self.do, 'generate e+ e- > V a')
@@ -129,6 +138,8 @@ class TestCmdShell1(unittest.TestCase):
                     'text_editor': None, 
                     'cluster_queue': None,
                     'nb_core': None,
+                    'pjfry': 'auto',
+                    'golem': 'auto',
                     'run_mode': 2,
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 
@@ -138,6 +149,7 @@ class TestCmdShell1(unittest.TestCase):
                     'madanalysis_path': './MadAnalysis', 
                     'cluster_temp_path': None, 
                     'fortran_compiler': None, 
+                    'cpp_compiler': None,
                     'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
                     'automatic_html_opening': True, 
@@ -548,6 +560,8 @@ class TestCmdShell2(unittest.TestCase,
         self.assertTrue(me_groups)
         self.assertAlmostEqual(float(me_groups.group('value')), 5.8183784340260782)
     
+    
+     
         
     def test_v4_heft(self):
         """Test standalone directory for UFO HEFT model"""

@@ -50,26 +50,34 @@
   end subroutine allocate_loopfun
 !
   subroutine allocate_loopfuna
+   ierr= -1 
    allocate (aloopfun(0:2,dmns_a), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in allocate_loopfuna"
    aloopfun= 0.d0
   end subroutine allocate_loopfuna
 !
   subroutine allocate_loopfunb
+   ierr= -1 
    allocate (  bloopfun(0:2,dmns_b), stat=ierr)
    allocate ( b1loopfun(0:2,dmns_b), stat=ierr)
    allocate (b11loopfun(0:2,dmns_b), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in allocate_loopfunb"
      bloopfun= 0.d0 
     b1loopfun= 0.d0
    b11loopfun= 0.d0
   end subroutine allocate_loopfunb
 !
   subroutine allocate_loopfunc
+   ierr= -1 
    allocate (cloopfun(0:2,dmns_c), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in allocate_loopfunc"
    cloopfun= 0.d0
   end subroutine allocate_loopfunc
 !
   subroutine allocate_loopfund
+   ierr= -1 
    allocate (dloopfun(0:2,dmns_d), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in allocate_loopfund"
    dloopfun= 0.d0
   end subroutine allocate_loopfund
 !
@@ -334,26 +342,34 @@
   end subroutine allocate_mp_loopfun
 !
   subroutine allocate_mp_loopfuna
+   ierr= -1 
    allocate (mp_aloopfun(0:2,dmns_a), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in allocate_mp_loopfuna"
    mp_aloopfun= mp_czero
   end subroutine allocate_mp_loopfuna
 !
   subroutine allocate_mp_loopfunb
+   ierr= -1 
    allocate (  mp_bloopfun(0:2,dmns_b), stat=ierr)
    allocate ( mp_b1loopfun(0:2,dmns_b), stat=ierr)
    allocate (mp_b11loopfun(0:2,dmns_b), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in allocate_mp_loopfunb"
      mp_bloopfun= mp_czero 
     mp_b1loopfun= mp_czero
    mp_b11loopfun= mp_czero
   end subroutine allocate_mp_loopfunb
 !
   subroutine allocate_mp_loopfunc
+   ierr= -1 
    allocate (mp_cloopfun(0:2,dmns_c), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in allocate_mp_loopfunc"
    mp_cloopfun= mp_czero
   end subroutine allocate_mp_loopfunc
 !
   subroutine allocate_mp_loopfund
+   ierr= -1 
    allocate (mp_dloopfun(0:2,dmns_d), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in allocate_mp_loopfund"
    mp_dloopfun= mp_czero
   end subroutine allocate_mp_loopfund
 !

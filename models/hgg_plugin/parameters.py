@@ -32,6 +32,12 @@ MT = Parameter(name = 'MT',
                lhablock = 'MASS',
                lhacode = [ 6 ])
 
+MW = Parameter(name = 'MW',
+               nature = 'internal',
+               type = 'real',
+               value = 'cmath.sqrt(MZ**2/2. + cmath.sqrt(MZ**4/4. - (aEW*cmath.pi*MZ**2)/(Gf*cmath.sqrt(2))))',
+               texname = 'M_W')
+
 Gf = Parameter(name = 'Gf',
                nature = 'external',
                type = 'real',
@@ -147,3 +153,8 @@ Gphi = Parameter(name = 'Gphi',
                  value = '-(G**2*(1 + MH**6/(560.*MT**6) + MH**4/(90.*MT**4) + MH**2/(12.*MT**2)))/(8.*cmath.pi**2*v)',
                  texname = 'G_h')
 
+AH = Parameter(name = 'AH',
+               nature = 'internal',
+               type = 'real',
+               value = '(47*ee**2*(1 - (2*MH**4)/(987.*MT**4) - (14*MH**2)/(705.*MT**2) + (213*MH**12)/(2.634632e7*MW**12) + (5*MH**10)/(119756.*MW**10) + (41*MH**8)/(180950.*MW**8) + (87*MH**6)/(65800.*MW**6) + (57*MH**4)/(6580.*MW**4) + (33*MH**2)/(470.*MW**2)))/(72.*cmath.pi**2*v)',
+               texname = 'A_H')

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FILES="Cards HTML SubProcesses bin lib Source Events index.html README README.lhapdf TemplateVersion.txt MGMEVersion.txt"
+FILES="Cards HTML SubProcesses bin lib Source Events index.html README TemplateVersion.txt MGMEVersion.txt"
 
 rm -f gridpack.tar gridpack.tar.gz >& /dev/null
 mv Events Events1

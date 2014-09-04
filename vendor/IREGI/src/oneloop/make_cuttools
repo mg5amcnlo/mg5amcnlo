@@ -1,0 +1,26 @@
+#KIND16 = no
+KIND16 = yes
+
+OLODIR = ./src
+
+all: avh_olo.f90
+
+ifeq ($(KIND16),yes)
+avh_olo.f90:; $(OLODIR)/avh_olo.py dpkind="kind(1d0)" qpkind="16" mptype="mpfun90"
+
+else
+avh_olo.f90:; $(OLODIR)/avh_olo.py dpkind="kind(1d0)" mptype="mpfun90"
+
+endif
+
+# OLODIR should be the directory with the source files of OneLOop.
+# The possible options to  "avh_olo.py"  are:
+#   dpkind  : the double precision kind parameter
+#   qpkind  : the quadruple precision kind parameter
+#   kindmod : a possible module providing the kinds
+#   ddtype  : the program providing the double double precision type
+#   qdtype  : the program providing the quad double precision type
+#   mptype  : the program providing the multi-precision type
+#   tlevel  : should be "yes" if you need the non-module routines
+#   cppintf : should be "yes" if you want to use OneLOop in C++ programs
+

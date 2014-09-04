@@ -121,6 +121,21 @@ c DeltaR and invariant mass cuts
                            return
                         endif
                      endif
+                     if (ipdg(i).eq.-ipdg(j)) then
+                        if (drll_sf.gt.0d0) then
+                           if (R2_04(p(0,i),p(0,j)).lt.drll_sf**2) then
+                              passcuts_user=.false.
+                              return
+                           endif
+                        endif
+                        if (mll_sf.gt.0d0) then
+                           if (invm2_04(p(0,i),p(0,j),1d0).lt.mll_sf**2)
+     $                          then
+                              passcuts_user=.false.
+                              return
+                           endif
+                        endif
+                     endif
                   endif
                enddo
             endif
@@ -197,22 +212,10 @@ c                                            particle in pQCD, which doesn't
 c                                            necessarily correspond to the particle
 c                                            label in the process
 c
-         call amcatnlo_fastjetppgenkt_timed(pQCD,nQCD,rfj,sycut,palg,
-     $        pjet,njet,jet)
+         call amcatnlo_fastjetppgenkt_etamax_timed(
+     $    pQCD,nQCD,rfj,sycut,etaj,palg,pjet,njet,jet)
 c
 c******************************************************************************
-
-c Apply the maximal pseudo-rapidity cuts on the jets:      
-         if (etaj.gt.0d0) then 
-c Count the number of jets that pass the pseud-rapidity cut
-            njet_eta=0
-            do i=1,njet
-               if (abs(eta(pjet(0,i))).lt.ETAJ) then
-                  njet_eta=njet_eta+1
-               endif
-            enddo
-            njet=njet_eta
-         endif
 
 c Apply the jet cuts
          if (njet .ne. nQCD .and. njet .ne. nQCD-1) then

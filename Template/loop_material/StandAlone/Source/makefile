@@ -80,7 +80,7 @@ setrun.o: setrun.f nexternal.inc leshouche.inc
 
 clean:
 	$(RM) *.o $(LIBRARIES)
-	cd PDF; make clean; cd ..
+	if [ -d PDF ]; then cd PDF; make clean; cd ..; fi
+	if [ -d CERNLIB ]; then cd CERNLIB; make clean; cd ..; fi
 	cd DHELAS; make clean; cd ..
-	cd CERNLIB; make clean; cd ..
 	cd MODEL; make clean; cd ..

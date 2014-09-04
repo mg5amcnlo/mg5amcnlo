@@ -253,7 +253,8 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
         for path in args['required_output']:
             if args['cwd']:
                 path = pjoin(args['cwd'], path)
-            if not os.path.exists(path):
+# check that file exists and is not empty.
+            if not (os.path.exists(path) and os.stat(path).st_size != 0) :
                 break
         else:
             # all requested output are present
@@ -1534,10 +1535,14 @@ class SLURMCluster(Cluster):
         if log is None:
             log = '/dev/null'
         
-        command = ['sbatch','-o', stdout,
+        command = ['sbatch', '-o', stdout,
                    '-J', me_dir, 
                    '-e', stderr, prog] + argument
-                   
+
+        if self.cluster_queue and self.cluster_queue != 'None':
+                command.insert(1, '-p')
+                command.insert(2, self.cluster_queue)
+
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
                                       stdin=subprocess.PIPE, cwd=cwd)

@@ -163,29 +163,8 @@ class CmdExtended(cmd.Cmd):
 
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
-        self.history_header = \
-        '#************************************************************\n' + \
-        '#*                     MadGraph5_aMC@NLO                    *\n' + \
-        '#*                                                          *\n' + \
-        "#*                *                       *                 *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                    * * * * 5 * * * *                     *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                *                       *                 *\n" + \
-        "#*                                                          *\n" + \
-        "#*                                                          *\n" + \
-        info_line + \
-        "#*                                                          *\n" + \
-        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
-        '#*                                                          *\n' + \
-        '#************************************************************\n' + \
-        '#*                                                          *\n' + \
-        '#*               Command File for MadGraph5_aMC@NLO         *\n' + \
-        '#*                                                          *\n' + \
-        '#*     run as ./bin/mg5_aMC  filename                       *\n' + \
-        '#*                                                          *\n' + \
-        '#************************************************************\n'
+        self.history_header = banner_module.ProcCard.history_header % {'info_line': info_line}
+        banner_module.ProcCard.history_header = self.history_header
 
         if info_line:
             info_line = info_line[1:]
@@ -457,8 +436,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       output pythia8 ../pythia8/ -name qcdprocs",'$MG:color:GREEN')
 
     def help_check(self):
-
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=]",'$MG:color:BLUE')
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=] [--split_orders=] [--reduction=]",'$MG:color:BLUE')
         logger.info("-- check a process or set of processes.",'$MG:color:BLACK')
         logger.info("General options:",'$MG:color:BLACK')
         logger.info("o full:",'$MG:color:GREEN')
@@ -507,19 +485,31 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   specifying it as an integer just before the [param_card]")
         logger.info("   optional argument.")
         logger.info(" > Notice multiparticle labels cannot be used with these checks.")
+        logger.info(" > \"--reduction=\" allows to change what reduction methods should be used.")
+        logger.info(" > \"--split_orders=\" allows to change what specific combination of coupling orders to consider.")
         logger.info(" > For process syntax, please see help generate.")
-        logger.info("Example: check profile g g > t t~",'$MG:color:GREEN')
+        logger.info(" > In order to save the directory generated or the reuse an existing one")
+        logger.info("   previously generated with the check command, one can add the '-reuse' ")
+        logger.info("   keyword just after the specification of the type of check desired.")
+        logger.info("Example: check profile g g > t t~ [virt=QCD]",'$MG:color:GREEN')
+
 
     def help_generate(self):
 
         logger.info("-- generate diagrams for a given process",'$MG:color:BLUE')
         logger.info("General leading-order syntax:",'$MG:color:BLACK')
-        logger.info(" o generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
+        logger.info(" o generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2^2=ORDER2 @N")
         logger.info(" o Example: generate l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1",'$MG:color:GREEN')
         logger.info(" > Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
         logger.info(" > If no coupling orders are given, MG5 will try to determine")
         logger.info("   orders to ensure maximum number of QCD vertices.")
+        logger.info(" > Desired coupling orders combination can be specified directly for")
+        logger.info("   the squared matrix element by appending '^2' to the coupling name.")
+        logger.info("   For example, 'p p > j j QED^2==2 QCD^==2' selects the QED-QCD")
+        logger.info("   interference terms only. The other two operators '<=' and '>' are")
+        logger.info("   supported. Finally, a negative value COUP^2==-I refers to the")
+        logger.info("   N^(-I+1)LO term in the expansion of the COUP order.")
         logger.info(" > To generate a second process use the \"add process\" command")
         logger.info("Decay chain syntax:",'$MG:color:BLACK')
         logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
@@ -806,7 +796,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_check(self, args):
         """check the validity of args"""
-
+        
         if  not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
@@ -848,11 +838,21 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
+        
+        user_options = {'--energy':'1000','--split_orders':'-1',
+                                                       '--reduction':'1|2|3|4'}
+        for arg in args[:]:
+            if arg.startswith('--') and '=' in arg:
+                key, value = arg.split('=')
+                if key not in user_options:
+                    raise self.InvalidCmd, "unknown option %s" % key
+                user_options[key] = value
+                args.remove(arg)
 
-        if not args[-1].startswith('--energy='):
-            args.append('--energy=1000')
+        self.check_process_format(" ".join(args[1:]))
 
-        self.check_process_format(" ".join(args[1:-1]))
+        for option, value in user_options.items():
+            args.append('%s=%s'%(option,value))
 
         return param_card
 
@@ -1741,10 +1741,12 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) > 0 and args[-1] != '>' and n_part_entered > 0:
             syntax.append('>')
         if '>' in args and args.index('>') < len(args) - 1:
-            couplings.extend([c + "=" for c in self._couplings] + ['WEIGHTED='])
+            couplings.extend(sum([[c+"=",c+'^2'] for c in \
+                                              self._couplings+['WEIGHTED']],[]))
             syntax.extend(['@','$','/','>',','])
             if '[' not in line and ',' not in line and len(pert_couplings_allowed)>0:
                 syntax.append('[')
+            
         # If information for the virtuals has been specified already, do not
         # propose syntax or particles input anymore
         if '[' in line:
@@ -1780,6 +1782,20 @@ class CompleteForCmd(cmd.CompleteCmd):
         # Return list of particle names and multiparticle names, as well as
         # coupling orders and allowed symbols
         args = self.split_arg(line[0:begidx])
+
+        valid_sqso_operators=['==','<=','>']
+        if any(line.endswith('^2 %s '%op) for op in valid_sqso_operators):
+            return
+        if args[-1].endswith('^2'):
+            return self.list_completion(text,valid_sqso_operators)
+        match_op = [o for o in valid_sqso_operators if o.startswith(args[-1])]            
+        if args[-2].endswith('^2') and len(match_op)>0:
+            if args[-1] in valid_sqso_operators:
+                return self.list_completion(text,' ')
+            if len(match_op)==1:
+                return self.list_completion(text,[match_op[0][len(args[-1]):]])
+            else:
+                return self.list_completion(text,match_op)
 
         if len(args) > 2 and args[-1] == '@' or ( args[-1].endswith('=') and \
                             (not '[' in line or ('[' in line and ']' in line))):
@@ -2151,6 +2167,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                           'CRITICAL','default'])
             elif args[1] == 'fortran_compiler':
                 return self.list_completion(text, ['f77','g77','gfortran','default'])
+            elif args[1] == 'cpp_compiler':
+                return self.list_completion(text, ['g++', 'c++', 'clang', 'default'])
             elif args[1] == 'nb_core':
                 return self.list_completion(text, [str(i) for i in range(100)] + ['default'] )
             elif args[1] == 'run_mode':
@@ -2375,7 +2393,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
-                     'update', 'Delphes2', 'SysCalc']
+                     'update', 'Delphes2', 'SysCalc', 'Golem95']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
@@ -2383,10 +2401,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
+                    'cpp_compiler',
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+    _valid_sqso_types = ['==','<=','=','>']
+    _valid_amp_so_types = ['=','<=']
     _OLP_supported = ['MadLoop', 'GoSam']
     _output_dependencies_supported = ['external', 'internal','environment_paths']
 
@@ -2407,12 +2428,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'cpp_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
+                       'pjfry':'auto',
+                       'golem':'auto',
                        'lhapdf':'lhapdf-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
@@ -2487,10 +2511,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+        self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
         self._comparisons = None
         self._nlo_modes_for_completion = ['all','virt','real']
 
-        # Load the configuration file
+        # Load the configuration file,i.e.mg5_configuration.txt
         self.set_configuration()
 
     def setup(self):
@@ -2569,9 +2594,30 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # Extract process from process definition
             if ',' in line:
-                myprocdef, line = self.extract_decay_chain_process(line)
-                if myprocdef.are_decays_perturbed():
-                    raise MadGraph5Error("Decay processes cannot be perturbed")
+                if ']' in line or '[' in line:
+                    error_msg=\
+"""The '[' and ']' syntax cannot be used in cunjunction with decay chains.
+This implies that with decay chains:
+  > Squared coupling order limitations are not available.
+  > Loop corrections cannot be considered."""
+                    raise MadGraph5Error(error_msg)
+                else:
+                    myprocdef, line = self.extract_decay_chain_process(line)
+                    # Redundant with above, but not completely as in the future
+                    # one might think of allowing the core process to be 
+                    # corrected by loops.
+                    if myprocdef.are_decays_perturbed():
+                        raise MadGraph5Error("Decay processes cannot be perturbed.")
+                    # The two limitations below have some redundancy, but once
+                    # again, they might be relieved (one at a time or together)
+                    # int he future.
+                    if myprocdef.decays_have_squared_orders() or \
+                                                myprocdef['squared_orders']!={}:
+                        raise MadGraph5Error("Decay processes cannot specify "+\
+                                                  "squared orders constraints.")                        
+                    if myprocdef.are_negative_orders_present():
+                        raise MadGraph5Error("Decay processes cannot include negative"+\
+                                                " coupling orders constraints.")                    
             else:
                 myprocdef = self.extract_process(line)
 
@@ -2582,7 +2628,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # existing processes
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
                myprocdef.get_ninitial():
-                raise self.InvalidCmd("Can not mix processes with different number of initial states.")
+                raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+            
+            # Negative coupling order contraints can be given on at most one
+            # coupling order (and either in squared orders or orders, not both)
+            if len([1 for val in myprocdef.get('orders').values()+\
+                          myprocdef.get('squared_orders').values() if val<0])>1:
+                raise MadGraph5Error("Negative coupling order constraints"+\
+                  " can only be given on one type of coupling and either on"+\
+                               " squared orders or amplitude orders, not both.")
 
             cpu_time1 = time.time()
 
@@ -2672,7 +2726,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         #Need to do the work!!!        
         import models.usermod as usermod
         base_model = usermod.UFOModel(self._curr_model.get('modelpath'))
-        base_model.add_model(path=model_path)
+        
+        identify = dict(tuple(a.split('=')) for a in args if '=' in a)
+        base_model.add_model(path=model_path, identify_particles=identify)
         base_model.write(output_dir)
         
         new_model_name = output_dir
@@ -3085,9 +3141,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif selection=='loop' or type == 'loop':
                 diags=base_objects.DiagramList([d for d in
                         amp.get('loop_diagrams') if d.get('type')>0])
-                if len(diags) > 1000:
-                    logger.warning('Displaying only the first 1000 diagrams')
-                    diags = base_objects.DiagramList(diags[:1000])
+                if len(diags) > 5000:
+                    logger.warning('Displaying only the first 5000 diagrams')
+                    diags = base_objects.DiagramList(diags[:5000])
 
             plot = draw.MultiEpsDiagramDrawer(diags,
                                           filename,
@@ -3124,17 +3180,27 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         aloha_lib.KERNEL.clean()
         # Back up the gauge for later
         gauge = str(self.options['gauge'])
-
         options['reuse'] = args[1]=="-reuse"
-        args = args[:1]+args[2:]
+        args = args[:1]+args[2:] 
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
         if args[0] in ['stability', 'profile']:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-
-        options['energy'] = float(args[-1].split('=')[1])
-        args = args[:-1]
+            
+        MLoptions={}
+        i=-1
+        while args[i].startswith('--'):
+            option = args[i].split('=')
+            if option[0] =='--energy':
+                options['energy']=float(option[1])
+            elif option[0]=='--split_orders':
+                options['split_orders']=int(option[1])
+            elif option[0]=='--reduction':
+                MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
+            i=i-1
+        args = args[:i+1]
+        
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
 
@@ -3146,8 +3212,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
-        if args[0] in ['timing','stability', 'profile'] and \
-                                    myprocdef.get('perturbation_couplings')==[]:
+        if args[0] in ['timing','stability', 'profile'] and not \
+                                        myprocdef.get('perturbation_couplings'):
             raise self.InvalidCmd("Only loop processes can have their "+
                                   " timings or stability checked.")
 
@@ -3202,22 +3268,55 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             CT_dir = self._cuttools_dir
         else:
             CT_dir =""
+            if "MLReductionLib" in MLoptions:
+                if 1 in MLoptions["MLReductionLib"]:
+                    MLoptions["MLReductionLib"].remove(1)
+        # directories for TIR
+        TIR_dir={}
+        if "_iregi_dir" in dir(self):
+            TIR_dir['iregi_dir']=self._iregi_dir
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 3 in MLoptions["MLReductionLib"]:
+                    logger.warning('IREGI not available on your system; it will be skipped.')                    
+                    MLoptions["MLReductionLib"].remove(3)
 
+        if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
+            TIR_dir['pjfry_dir']=self.options['pjfry']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 2 in MLoptions["MLReductionLib"]:
+                    logger.warning('PJFRY not available on your system; it will be skipped.')                    
+                    MLoptions["MLReductionLib"].remove(2)
+                    
+        if 'golem' in self.options and isinstance(self.options['golem'],str):
+            TIR_dir['golem_dir']=self.options['golem']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 4 in MLoptions["MLReductionLib"]:
+                    logger.warning('GOLEM not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(4)
+        
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
+                                                  tir=TIR_dir,
                                                   options = options,
+                                                  cmd = self,
                                                   output_path = output_path,
-                                                  cmd = self)
+                                                  MLOptions = MLoptions
+                                                  )        
 
         if args[0] in ['stability']:
-            stability = process_checks.check_stability(myprocdef,
+            stability=process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
+                                                  tir=TIR_dir,
                                                   options = options,
                                                   output_path = output_path,
-                                                  cmd = self)
+                                                  cmd = self,
+                                                  MLOptions = MLoptions)
 
         if args[0] in ['profile']:
             # In this case timing and stability will be checked one after the
@@ -3225,7 +3324,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
+                                                  tir=TIR_dir,
                                                   options = options,
+                                                  MLOptions = MLoptions,
                                                   output_path = output_path,
                                                   cmd = self)
 
@@ -3253,20 +3354,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                 param_card = param_card,
                                                 options=options,
                                                 cuttools=CT_dir,
+                                                tir=TIR_dir,
                                                 reuse = options['reuse'],
                                                 output_path = output_path,
                                                 cmd = self)
 
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
-
-            nb_processes += len(gauge_result_no_brs)
+            nb_processes += len(gauge_result_no_brs)            
 
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                             param_card = param_card,
                                             quick = True,
                                             cuttools=CT_dir,
+                                            tir=TIR_dir,
                                             reuse = options['reuse'],
                                             cmd = self,
                                             output_path = output_path,
@@ -3278,6 +3380,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             lorentz_result = process_checks.check_lorentz(myprocdeff,
                                           param_card = param_card,
                                           cuttools=CT_dir,
+                                          tir=TIR_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
                                           output_path = output_path,
@@ -3288,6 +3391,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
                                           cuttools=CT_dir,
+                                          tir=TIR_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
                                           output_path = output_path,
@@ -3295,7 +3399,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             nb_processes += len(gauge_result)
 
         cpu_time2 = time.time()
-
         logger.info("%i checked performed in %0.3f s" \
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
@@ -3382,7 +3485,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Call add process
         args = self.split_arg(line)
         args.insert(0, 'process')
-
         self.do_add(" ".join(args))
 
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
@@ -3392,7 +3494,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check basic validity of the line
         if not line.count('>') in [1,2]:
             self.do_help('generate')
-            print
             raise self.InvalidCmd('Wrong use of \">\" special character.')
 
 
@@ -3416,17 +3517,30 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Now check for squared orders, specified after the perturbation orders.
         # If it turns out there is no perturbation order then we will use these orders
         # for the regular orders.
-        squared_order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        squared_order_pattern = re.compile(\
+            "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
         squared_order_re = squared_order_pattern.match(line)
         squared_orders = {}
+        # The 'split_orders' (i.e. those for which individual matrix element
+        # evalutations must be provided for each corresponding order value) are
+        # defined from the orders specified in between [] and any order for
+        # which there are squared order constraints.
+        split_orders = []
         while squared_order_re:
-            squared_orders[squared_order_re.group(2)] = int(squared_order_re.group(3))
-            line = squared_order_re.group(1)
+            type = squared_order_re.group('type')
+            if type not in self._valid_sqso_types:
+                raise self.InvalidCmd, "Type of squared order constraint '%s'"\
+                                                      %type+" is not supported."
+            squared_orders[squared_order_re.group('name')] = \
+                                     (int(squared_order_re.group('value')),type)
+            line = squared_order_re.group('before')
             squared_order_re = squared_order_pattern.match(line)
 
         # Now check for perturbation orders, specified in between squared brackets
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
+                               "(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings = ""
         LoopOption= 'tree'
@@ -3446,29 +3560,73 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        "Valid modes are %s. "%str(self._valid_nlo_modes)
             else:
                 LoopOption='all'
+
             line = perturbation_couplings_re.group("proc")+\
                      perturbation_couplings_re.group("rest")
 
-        # Now if perturbation orders are defined, we will scan for the
-        # amplitudes orders. If not we will use the squared orders above instead.
+        # Now if perturbation orders placeholders [] have been found,
+        # we will scan for the amplitudes orders. If not we will use the 
+        # squared orders above instead.
         orders = {}
-        if perturbation_couplings == "":
-            for order in squared_orders:
-                orders[order]=squared_orders[order]
-            squared_orders={}
+        if not perturbation_couplings_re:
+            new_squared_orders = {}
+            for order in squared_orders.keys():
+                if order.endswith('^2'):
+                    new_squared_orders[order[:-2]]=squared_orders[order]
+                else:
+                    if squared_orders[order][1] not in self._valid_amp_so_types:
+                        raise self.InvalidCmd, \
+                          "Amplitude order constraints can only be of type %s"%\
+                                         (', '.join(self._valid_amp_so_types))+\
+                                          ", not '%s'."%squared_orders[order][1]
+                    orders[order]=squared_orders[order][0]
+            squared_orders=new_squared_orders
         else:
+            # Make sure all squared orders defined at this stage do no include
+            # the appended ^2
+            new_squared_orders = {}
+            for order in squared_orders.keys():
+                new_squared_orders[order[:-2] if order.endswith('^2') else order]=\
+                                                           squared_orders[order]
+            squared_orders=new_squared_orders                
             # We take the coupling orders (identified by "=")
-            order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+            # Notice that one can have a negative value of the squared order to
+            # indicate that one should take the N^{n}LO contribution into account.
+            order_pattern = re.compile(\
+           "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
             order_re = order_pattern.match(line)
             while order_re:
-                orders[order_re.group(2)] = int(order_re.group(3))
-                line = order_re.group(1)
-                order_re = order_pattern.match(line)
-        # if the squared orders are defined but not the orders, assume orders=sq_orders
-        if not orders and squared_orders:
-            for order in squared_orders:
-                orders[order]=squared_orders[order]
+                type = order_re.group('type')
+                if order_re.group('name').endswith('^2'):
+                    if type not in self._valid_sqso_types:
+                        raise self.InvalidCmd, "Type of squared order "+\
+                                     "constraint '%s'"%type+" is not supported."
+                    squared_orders[order_re.group('name')[:-2]] = \
+                                             (int(order_re.group('value')),type)
+                else:
+                    if type not in self._valid_amp_so_types:
+                        raise self.InvalidCmd, \
+                          "Amplitude order constraints can only be of type %s"%\
+                        (', '.join(self._valid_amp_so_types))+", not '%s'."%type
 
+                    orders[order_re.group('name')] = \
+                                                    int(order_re.group('value'))                    
+                line = order_re.group('before')
+                order_re = order_pattern.match(line)
+
+        # If the squared orders are defined but not the orders, assume 
+        # orders=sq_orders. In case the squared order has a negative value or is
+        # defined with the '>' operato, then this order correspondingly set to 
+        # be maximal (99) since there is no way to know, during generation, if 
+        # the amplitude being contstructed will be leading or not.
+        if orders=={} and squared_orders!={}:
+            for order in squared_orders.keys():
+                if squared_orders[order][0]>=0 and squared_orders[order][1]!='>':
+                    orders[order]=squared_orders[order][0]
+                else:
+                    orders[order]=99
+        
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
@@ -3548,6 +3706,23 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             perturbation_couplings_list = perturbation_couplings.split()
             if perturbation_couplings_list==['']:
                 perturbation_couplings_list=[]
+            # Correspondingly set 'split_order' from the squared orders and the
+            # perturbation couplings list
+            split_orders=list(set(perturbation_couplings_list+squared_orders.keys()))
+            try:
+                split_orders.sort(key=lambda elem: 0 if elem=='WEIGHTED' else
+                                       self._curr_model['order_hierarchy'][elem])
+            except KeyError:
+                raise self.InvalidCmd, "The loaded model does not defined a "+\
+                    " coupling order hierarchy for these couplings: %s"%\
+                      str([so for so in split_orders if so!='WEIGHTED' and so not 
+                                 in self._curr_model['order_hierarchy'].keys()])
+
+            # If the loopOption is 'tree' then the user used the syntax 
+            # [tree= Orders] for the sole purpose of setting split_orders. We
+            # then empty the perturbation_couplings_list at this stage.
+            if LoopOption=='tree':
+                perturbation_couplings_list = []
             if perturbation_couplings_list and LoopOption!='real':
                 if not isinstance(self._curr_model,loop_base_objects.LoopModel):
                     raise self.InvalidCmd(\
@@ -3559,6 +3734,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                 "Perturbation order %s is not among" % pert_order + \
                                 " the perturbation orders allowed for by the loop model.")
 
+            if not self.options['loop_optimized_output'] and \
+                         LoopOption not in ['tree','real'] and split_orders!=[]:
+                logger.info('The default output mode (loop_optimized_output'+\
+                  ' = False) does not support evaluations for given powers of'+\
+                  ' coupling orders. MadLoop output will therefore not be'+\
+                  ' able to provide such quantities.')
+                split_orders = []
+                       
             # Now extract restrictions
             forbidden_particle_ids = \
                               self.extract_particle_ids(forbidden_particles)
@@ -3586,24 +3769,34 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if required_schannel_ids and not \
                    isinstance(required_schannel_ids[0], list):
                 required_schannel_ids = [required_schannel_ids]
-
+            
+            sqorders_values = dict([(k,v[0]) for k, v in squared_orders.items()])
+            if len([1 for sqo_v in sqorders_values.values() if sqo_v<0])>1:
+                raise self.InvalidCmd(
+                  "At most one negative squared order constraint can be specified.")
+            
+            sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
+            
+            
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
                               'id': proc_number,
                               'orders': orders,
-                              'squared_orders':squared_orders,
+                              'squared_orders':sqorders_values,
+                              'sqorders_types':sqorders_types,
                               'forbidden_particles': forbidden_particle_ids,
                               'forbidden_onsh_s_channels': forbidden_onsh_schannel_ids,
-                              'forbidden_s_channels': \
-                                                forbidden_schannel_ids,
+                              'forbidden_s_channels': forbidden_schannel_ids,
                               'required_s_channels': required_schannel_ids,
                               'overall_orders': overall_orders,
                               'perturbation_couplings': perturbation_couplings_list,
                               'has_born':HasBorn,
-                              'NLO_mode':LoopOption
+                              'NLO_mode':LoopOption,
+                              'split_orders':split_orders
                               })
         #                       'is_decay_chain': decay_process\
+
 
     @staticmethod
     def split_process_line(procline):
@@ -3722,15 +3915,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif particle in self._multiparticles:
                 final.update(set(self._multiparticles[particle]))
         return final
-
-
-
-
-
-
-
-
-
 
     def extract_particle_ids(self, args):
         """Extract particle ids from a list of particle names. If
@@ -3907,7 +4091,20 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                       helas_call_writers.FortranHelasCallWriter(\
                                                                self._curr_model)
             else:
+                # avoid loading the qcd/qed model twice
+                if (args[1].startswith('loop_qcd_qed_sm') or\
+                    args[1].split('/')[-1].startswith('loop_qcd_qed_sm')) and\
+                     self.options['gauge']!='Feynman':
+                    logger.info('Switching to Feynman gauge because '+\
+                          'it is the only one supported by the model loop_qcd_qed_sm.')
+                    self._curr_model = None
+                    self.do_set('gauge Feynman',log=False)
                 prefix = not '--noprefix' in args
+                if prefix:
+                    aloha.aloha_prefix='mdl_'
+                else:
+                    aloha.aloha_prefix=''
+                
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix)
                 except import_ufo.UFOImportError, error:
@@ -4212,7 +4409,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
-                'SysCalc':'SysCalc'}
+                'SysCalc':'SysCalc', 'Golem95': 'golem95'}
         name = name[args[0]]
 
 
@@ -4276,13 +4473,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
             elif args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
-
             if path:
                 text = open(path).read()
                 for base in base_compiler:
                     text = text.replace(base,'FC=%s' % compiler)
                 open(path, 'w').writelines(text)
             os.environ['FC'] = compiler
+        
+        # For Golem95, use autotools.
+        if name == 'golem95':
+            # Run the configure script
+            ld_path = misc.Popen(['./configure', 
+            '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
+            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0]
 
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
@@ -4308,7 +4511,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
+            if name == 'golem95':
+#                status = misc.call(['make','install'], 
+#                                               cwd = os.path.join(MG5DIR, name))
+                status = 0
+                shutil.rmtree(os.path.join(MG5DIR, name))
+                shutil.copytree('/Users/valentin/TMP/golem95-1.3.1', os.path.join(MG5DIR, name))
+            else:
+                status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -4317,7 +4527,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            if name == 'golem95':
+#                status = misc.compile(['install'], mode='', 
+#                                          cwd = os.path.join(MG5DIR, name))
+                status = 0
+                shutil.copytree('/Users/valentin/TMP/golem95-1.3.1', os.path.join(MG5DIR, name), ignore=True)
+            else:
+                status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
 
         if not status:
             logger.info('Compilation succeeded')
@@ -4382,8 +4598,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
             out.write(data)
         if args[0] == 'Delphes3':
-            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS_PileUp.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_CMS.dat'))
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_ATLAS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_ATLAS.dat'))
+            
 
         #reset the position of the executable
         options_name = {'Delphes': 'delphes_path',
@@ -4392,11 +4613,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                            'ExRootAnalysis': 'exrootanalysis_path',
                            'MadAnalysis': 'madanalysis_path',
                            'SysCalc': 'syscalc_path',
-                           'pythia-pgs':'pythia-pgs_path'}
+                           'pythia-pgs':'pythia-pgs_path',
+                           'Golem95': 'golem'}
 
         if args[0] in options_name:
             opt = options_name[args[0]]
-            if self.options[opt] != self.options_configuration[opt]:
+            if opt=='golem':
+                self.options[opt] = pjoin(MG5DIR,name,'lib') 
+                self.exec_cmd('save options')
+            elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options')
 
@@ -4773,7 +4998,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 value = value.strip()
                 if name != 'mg5_path':
                     self.options[name] = value
-                if value.lower() == "none":
+                if value.lower() == "none" or value=="":
                     self.options[name] = None
 
         self.options['stdout_level'] = logging.getLogger('madgraph').level
@@ -4814,6 +5039,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     else:
                         continue
 
+            elif key in ['pjfry','golem']:
+                if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
+                    # try to find it automatically on the system                                                                                                                                            
+                    program = misc.which_lib('lib%s.a'%key)
+                    if program != None:
+                        fpath, fname = os.path.split(program)
+                        logger.info('Using %s library in %s'%(key,fpath))
+                        self.options[key]=fpath
+                    else:
+                        # Try to look for it locally
+                        local_install = {'pjfry':'PJFRY', 'golem':'golem95'}
+                        if os.path.isdir(pjoin(MG5DIR,local_install[key])):
+                            self.opltions[key]=pjoin(MG5DIR,local_install[key],'lib')
+                        else:
+                            self.options[key]=None
+
             elif key.endswith('path'):
                 pass
             elif key in ['run_mode', 'auto_update']:
@@ -4831,7 +5072,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 else:
                     if key in self.options_madgraph:
                         self.history.append('set %s %s' % (key, self.options[key]))
-
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
 
@@ -5298,8 +5538,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 1
 
             if res != 0 or error:
-                logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
+                 'executable (v3+). We will use fjcore instead.\n Please set the \'fastjet\'' + \
+                 'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).' +
+                        '\n MG5_aMC> set fastjet /PATH/TO/fastjet-config\n')
                 self.options[args[0]] = None
                 self.history.pop()
             elif int(output.split('.')[0]) < 3:
@@ -5311,6 +5553,20 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
+        elif args[0] in ["pjfry","golem"]:
+            program = misc.which_lib(os.path.join(args[1],"lib%s.a"%args[0]))
+            if program!=None:
+                res = 0
+                logger.info('set %s to %s' % (args[0],args[1]))
+                self.options[args[0]] = args[1]
+            else:
+                res = 1
+
+            if res != 0 :
+                logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
+                        '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
+                        'You will NOT be able to run %s otherwise.\n'%args[0])
+                
         elif args[0] == 'lhapdf':
             try:
                 res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
@@ -5321,8 +5577,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 res = 1
             if res != 0:
                 logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
-                        'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+                        'executable. \nPlease set the \'lhapdf\' variable to the (absolute) ' + \
+                        '/PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
+                        ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
                          'cluster_retry_wait']:
@@ -5755,7 +6013,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def finalize(self, nojpeg, online = False):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
-
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
                                    'standalone_msF', 'standalone_rw', 'NLO', 'madweight']:
 
@@ -5775,7 +6032,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                                wanted_lorentz,
                                                wanted_couplings)
-
+        
         if self._export_format == 'standalone_cpp':
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are
@@ -5806,15 +6063,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
+            compiler_dict = {'fortran': self.options['fortran_compiler'],
+                             'cpp': self.options['cpp_compiler']}
+
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'],
+                                           compiler_dict,
               output_dependencies = self.options['output_dependencies'],
                                            MG5DIR = MG5DIR)
+            
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
@@ -5837,7 +6097,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,
@@ -5873,7 +6132,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
 
     # Calculate decay width
-    def do_compute_widths(self, line, model=None):
+    def do_compute_widths(self, line, model=None, do2body=True):
         """Documented commands:Generate amplitudes for decay width calculation, with fixed
            number of final particles (called level)
            syntax; compute_widths particle [other particles] [--options=]
@@ -5932,45 +6191,51 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         data = model.set_parameters_and_couplings(opts['path'])
 
         # find UFO particles linked to the require names.
-        skip_2body = True
-        decay_info = {}
-        for pid in particles:
-            particle = model.get_particle(pid)
-            if not hasattr(particle, 'partial_widths'):
-                skip_2body = False
-                break
-            elif not decay_info:
-                logger_mg.info('Get two body decay from FeynRules formula')
-            decay_info[pid] = []
-            mass = abs(eval(str(particle.get('mass')), data).real)
-            data = model.set_parameters_and_couplings(opts['path'], scale= mass)
-            total = 0
-
-            for mode, expr in particle.partial_widths.items():
-                tmp_mass = mass
-                for p in mode:
-                    tmp_mass -= abs(eval(str(p.mass), data))
-                if tmp_mass <=0:
-                    continue
-
-                decay_to = [p.get('pdg_code') for p in mode]
-                value = eval(expr,{'cmath':cmath},data).real
-                if -1e-10 < value < 0:
-                    value = 0
-                if -1e-5 < value < 0:
-                    logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
-                    value = 0
-                elif value < 0:
-                    raise Exception, 'Partial width for %s > %s negative: %s' % \
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
-                decay_info[particle.get('pdg_code')].append([decay_to, value])
-                total += value
+        if do2body:
+            skip_2body = True
+            decay_info = {}
+            for pid in particles:
+                particle = model.get_particle(pid)
+                if not hasattr(particle, 'partial_widths'):
+                    skip_2body = False
+                    break
+                elif not decay_info:
+                    logger_mg.info('Get two body decay from FeynRules formula')
+                decay_info[pid] = []
+                mass = abs(eval(str(particle.get('mass')), data).real)
+                data = model.set_parameters_and_couplings(opts['path'], scale= mass)
+                total = 0
+    
+                for mode, expr in particle.partial_widths.items():
+                    tmp_mass = mass
+                    for p in mode:
+                        try:
+                            tmp_mass -= abs(eval(str(p.mass), data))
+                        except Exception:
+                            tmp_mass -= abs(eval("mdl_"+str(p.mass), data))
+                    if tmp_mass <=0:
+                        continue
+    
+                    decay_to = [p.get('pdg_code') for p in mode]
+                    value = eval(expr,{'cmath':cmath},data).real
+                    if -1e-10 < value < 0:
+                        value = 0
+                    if -1e-5 < value < 0:
+                        logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
+                                       (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
+                        value = 0
+                    elif value < 0:
+                        raise Exception, 'Partial width for %s > %s negative: %s' % \
+                                       (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
+                    decay_info[particle.get('pdg_code')].append([decay_to, value])
+                    total += value
+            else:
+                madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,
+                                                       opts['path'], opts['output'])
+                if float(opts['body_decay']) == 2:
+                    return
         else:
-            madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,
-                                                   opts['path'], opts['output'])
-            if float(opts['body_decay']) == 2:
-                return
+            skip_2body = True
 
         #
         # add info from decay module
@@ -6127,7 +6392,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     if amp:
                         self._curr_amps.extend(amp)
                 clevel = 2
-                while part.get('apx_decaywidth_err') > precision:
+                while part.get('apx_decaywidth_err').real > precision:
                     clevel += 1
                     if clevel > max_level:
                         logger_mg.info('    stop to %s body-decay. approximate error: %s' %

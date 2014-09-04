@@ -1,6 +1,9 @@
+import collections
 import re
 import misc
 
+import logging
+logger = logging.getLogger("madgraph.lhe_parser")
 
 class Particle(object):
     """ """
@@ -127,9 +130,19 @@ class EventFile(file):
         if mode == 'r':
             line = ''
             while '</init>' not in line.lower():
-                line  = file.next(self)
+                try:
+                    line  = file.next(self)
+                except StopIteration:
+                    self.seek(0)
+                    self.banner = ''
+                    break 
+                if "<event>" in line.lower():
+                    self.seek(0)
+                    self.banner = ''
+                    break                     
+
                 self.banner += line
-                
+
     def get_banner(self):
         """return a banner object"""
         import madgraph.various.banner as banner
@@ -217,6 +230,53 @@ class Event(list):
             except ValueError, error:
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]
+    
+    def check(self):
+        """check various property of the events"""
+        
+        #1. Check that the 4-momenta are conserved
+        E, px, py, pz = 0,0,0,0
+        absE, abspx, abspy, abspz = 0,0,0,0
+        for particle in self:
+            coeff = 1
+            if particle.status == -1:
+                coeff = -1
+            elif particle.status != 1:
+                continue
+            E += coeff * particle.E
+            absE += abs(particle.E)
+            px += coeff * particle.px
+            py += coeff * particle.py
+            pz += coeff * particle.pz
+            abspx += abs(particle.px)
+            abspy += abs(particle.py)
+            abspz += abs(particle.pz)
+        # check that relative error is under control
+        threshold = 5e-11
+        if E/absE > threshold:
+            logger.critical(self)
+            raise Exception, "Do not conserve Energy %s, %s" % (E/absE, E)
+        if px/abspx > threshold:
+            logger.critical(self)
+            raise Exception, "Do not conserve Px %s, %s" % (px/abspx, px)         
+        if py/abspy > threshold:
+            logger.critical(self)
+            raise Exception, "Do not conserve Py %s, %s" % (py/abspy, py)
+        if pz/abspz > threshold:
+            logger.critical(self)
+            raise Exception, "Do not conserve Pz %s, %s" % (pz/abspz, pz)
+            
+        #2. check the color of the event
+        self.check_color_structure()
+            
+            
+            
+            
+            
+            
+            
+            
+        
 
         
 
@@ -260,7 +320,102 @@ class Event(list):
         initial.sort(), final.sort()
         tag = (tuple(initial), tuple(final))
         return tag, order
-     
+    
+    def check_color_structure(self):
+        """check the validity of the color structure"""
+        
+        #1. check that each color is raised only once.
+        color_index = collections.defaultdict(int)
+        for particle in self:
+            if particle.status in [-1,1]:
+                if particle.color1:
+                    color_index[particle.color1] +=1
+                if particle.color2:
+                    color_index[particle.color2] +=1     
+                
+        for key,value in color_index.items():
+            if value > 2:
+                print self
+                print key, value
+                raise Exception, 'Wrong color_flow'           
+        
+        #2. check that each parent present have coherent color-structure
+        check = []
+        popup_index = [] #check that the popup index are created in a unique way
+        for particle in self:
+            mothers = []
+            childs = []
+            if particle.mother1:
+                mothers.append(particle.mother1)
+            if particle.mother2 and particle.mother2 is not particle.mother1:
+                mothers.append(particle.mother2)                 
+            if not mothers:
+                continue
+            if (particle.mother1.event_id, particle.mother2.event_id) in check:
+                continue
+            check.append((particle.mother1.event_id, particle.mother2.event_id))
+            
+            childs = [p for p in self if p.mother1 is particle.mother1 and \
+                                         p.mother2 is particle.mother2]
+            
+            mcolors = []
+            manticolors = []
+            for m in mothers:
+                if m.color1:
+                    if m.color1 in manticolors:
+                        manticolors.remove(m.color1)
+                    else:
+                        mcolors.append(m.color1)
+                if m.color2:
+                    if m.color2 in mcolors:
+                        mcolors.remove(m.color2)
+                    else:
+                        manticolors.append(m.color2)
+            ccolors = []
+            canticolors = []
+            for m in childs:
+                if m.color1:
+                    if m.color1 in canticolors:
+                        canticolors.remove(m.color1)
+                    else:
+                        ccolors.append(m.color1)
+                if m.color2:
+                    if m.color2 in ccolors:
+                        ccolors.remove(m.color2)
+                    else:
+                        canticolors.append(m.color2)
+            for index in mcolors[:]:
+                if index in ccolors:
+                    mcolors.remove(index)
+                    ccolors.remove(index)
+            for index in manticolors[:]:
+                if index in canticolors:
+                    manticolors.remove(index)
+                    canticolors.remove(index)             
+                        
+            if mcolors != []:
+                #only case is a epsilon_ijk structure.
+                if len(canticolors) + len(mcolors) != 3:
+                    logger.critical(str(self))
+                    raise Exception, "Wrong color flow for %s -> %s" ([m.pid for m in mothers], [c.pid for c in childs])              
+                else:
+                    popup_index += canticolors
+            elif manticolors != []:
+                #only case is a epsilon_ijk structure.
+                if len(ccolors) + len(manticolors) != 3:
+                    logger.critical(str(self))
+                    raise Exception, "Wrong color flow for %s -> %s" ([m.pid for m in mothers], [c.pid for c in childs])              
+                else:
+                    popup_index += ccolors
+
+            # Check that color popup (from epsilon_ijk) are raised only once
+            if len(popup_index) != len(set(popup_index)):
+                logger.critical(self)
+                raise Exception, "Wrong color flow: identical poping-up index, %s" % (popup_index)
+            
+            
+            
+            
     
         
     def __str__(self):

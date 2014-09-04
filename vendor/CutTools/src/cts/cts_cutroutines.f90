@@ -109,21 +109,25 @@
    dmns_1= nbn1(number_propagators)
    allocate  (bbn1(number_propagators,dmns_1), stat=ierr)
    if (ierr.ne.0) STOP "Not enough memory to allocate bbn1"
+   bbn1= 0
   endif
   if (number_propagators.ge.2) then 
    dmns_2= nbn2(number_propagators)
    allocate  (bbn2(number_propagators,dmns_2), stat=ierr)
    if (ierr.ne.0) STOP "Not enough memory to allocate bbn2"
+   bbn2= 0
   endif
   if (number_propagators.ge.3) then 
    dmns_3= nbn3(number_propagators)
    allocate  (bbn3(number_propagators,dmns_3), stat=ierr)
    if (ierr.ne.0) STOP "Not enough memory to allocate bbn3"
+   bbn3= 0
   endif
   if (number_propagators.ge.4) then 
    dmns_4= nbn4(number_propagators)
    allocate  (bbn4(number_propagators,dmns_4), stat=ierr)
    if (ierr.ne.0) STOP "Not enough memory to allocate bbn4"
+   bbn4= 0
   endif
 !
   do i= 1,number_propagators  

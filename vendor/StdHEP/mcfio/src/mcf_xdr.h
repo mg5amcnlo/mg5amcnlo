@@ -89,7 +89,7 @@ typedef struct _mcfxdrEventTable{
 	int *storenums; /* The list of Store number within a Run */
 	int *runnums;   /* The list of run numbers */
 	int *trigMasks; /* The list of user-defined Trigger masks */
-	unsigned int *ptrEvents;
+	off_t *ptrEvents;
 			/* The list of XDR pointers for these events */ 
 } mcfxdrEventTable;
 
@@ -117,7 +117,7 @@ typedef struct _mcfxdrEventHeader{
 	unsigned int nBlocks;  /* The number of Blocks  */
 	unsigned int dimBlocks; /* The dimension of the two following arrays */
 	int *blockIds;     /* The list of Block identifiers */
-	unsigned int *ptrBlocks;
+	off_t *ptrBlocks;
 			/* The list of XDR pointers for these blocks */ 
 	unsigned int nNTuples;
 	                /* The number of Ntuples defined for this event */
@@ -125,7 +125,7 @@ typedef struct _mcfxdrEventHeader{
 	unsigned int dimNTuples; /* The dimension of the two following arrays */
 	int *nTupleIds; /* The list of Ntuple identifiers, pointing to the 
 				global list array */                				
-	unsigned int *ptrNTuples;
+	off_t *ptrNTuples;
 			/* The list of XDR pointers for these NTuples */ 
 	
 } mcfxdrEventHeader;

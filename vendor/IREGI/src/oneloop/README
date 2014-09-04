@@ -1,0 +1,155 @@
+
+########################################################################
+
+If you need more information than provided by this file, contact the
+author: Andreas van Hameren <hamerenREMOVETHIS@ifj.edu.pl>
+
+########################################################################
+
+To create a source file for CutTools, execute
+
+make -f make_cuttools
+
+########################################################################
+
+To create a static library "libavh_olo.a", 
+set your Fortran compiler in the file "makefile_config", and execute
+
+./create.py
+
+########################################################################
+
+To create a dynamic library "libavh_olo.so" with gfortran,
+set the Fortran compiler in the file "makefile_config" to gfortran, and execute
+
+./create.py dynamic
+
+Put the library "libavh_olo.so" where the linker can find it,
+or add its position to the path, eg. in bash:
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:DirectoryWhereLibraryIs
+
+########################################################################
+
+To create just a source file, execute
+
+./create.py source
+
+########################################################################
+
+If you chose create a library, you can link it to your program.
+You will then have a module "avh_olo" at your disposal, which provides
+routines described in the file DESCRIPTION.
+
+Many compilers require access to a module-file "avh_olo.mod", which is
+created along with the library, in order to make the module available
+to your program when it is compiled. 
+
+An example of use is given in the directory ./example .
+
+If you want just a source file, instead of what is described above you
+can also execute
+
+./src/avh_olo.py
+
+You can use this if you want to include the creation of the source file
+into the build of your program. Have a look at the file "make_cuttools".
+
+There are some variables in the file "makefile_config" you can set:
+
+   FFLAGS: flags for the Fortran compiler
+
+   DPKIND: sets the kind of all real and complex variables. The
+           value of DPKIND is a piece of Fortran that goes directly
+           into the source file.
+
+   QPKIND: if your compiler provides quadruple precision, you can
+           set this variable to the quadruple precision kind.
+
+           If you want more than 2 intrinsic kinds, you need to add
+           the necessary lines in the files
+             "avh_olo_comb.f90" and "avh_pc_olo.py".
+
+  KINDMOD: the values of the kinds may be parameters that are provided
+           by a module you can set with KINDMOD. For example
+             DPKIND = my_real_kind
+             KINDMOD = my_kind_module
+           where my_kind_module provides the parameter my_real_kind.
+           Realize that if you set KINDMOD, you have to compile
+           the source file yourself in order to provide the module.
+
+   DDTYPE: if you want to use OneLOop at double double precision in
+           combination with  dd  or  qd , then you should set this
+           variable to  ddfun90  or  qdcpp  respectively. If not,
+           then DDTYPE should stay empty.
+
+   QDTYPE: if you want to use OneLOop at quad double precision in
+           combination with  qd , then you should set this variable
+           to  qdcpp . If not, then QDTYPE should stay empty.
+
+   MPTYPE: if you want to use OneLOop at arbitrary precision in
+           combination with  mpfun90  or  arprec , then you should set
+           this variable to the respective value. If not, then MPTYPE
+           should stay empty.
+
+ DDF90MOD: if you want to create the library in combination with  dd ,
+           then you need to set the directory where the modules
+           of  dd  can be found. This is not necessary if you
+           just want to create the source file. If you want to use  qd ,
+           then only the source file can be provided, and you have
+           to build the library yourself.
+
+ MPF90MOD: if you want to create the library in combination with
+           mpfun90, you need to set the directory where the modules
+           of mpfun90 can be found. This is not necessary if you
+           just want to create the source file. If you want to use
+           arprec, only the source file can be provided, and you have
+           to build the library yourself.
+
+   TLEVEL: if you don't want to use the module, but the old-style
+           toplevel routines "avh_olo_..." instead, you need to set
+           TLEVEL = yes
+
+  CPPINTF: if you want to use OneLOop in C++, then you need to set
+           CPPINTF = yes
+           Have a look at the README in the directory example_cpp
+
+########################################################################
+
+References:
+
+Routines for IR-divergent functions with all internal masses equal zero
+based on  G. Duplancic and B. Nizic,
+          Eur.Phys.J.C20:357-370,2001 (arXiv:hep-ph/0006249)
+  and on  Z. Bern, L.J. Dixon and D.A. Kosower,
+          Nucl.Phys.B412,751(1994) (arXiv:hep-ph/9306240) 
+
+Routines for IR-divergent functions with non-zero internal masses
+based on  R. Keith Ellis and G. Zanderighi,
+          JHEP 0802:002,2008 (arXiv:0712.1851)
+  and on  W. Beenakker, H. Kuijf, W.L. van Neerven, J. Smith,
+          Phys.Rev.D40,54(1989)
+  and on  W. Beenakker, S. Dittmaier, M. Kramer, B. Plumper, M. Spira,
+          P.M. Zerwas, Nucl.Phys.B653:151-203,2003(arXiv:hep-ph/0211352)
+  and on  E.L. Berger, M. Klasen, T.M.P. Tait,
+          Phys.Rev.D62:095014,2000. (arXiv:hep-ph/0005196)
+  and on  W. Beenakker and D. Denner, Nucl.Phys.B338,349(1990)
+
+Routines for finite 4-point functions with real masses
+based on  A. Denner, U. Nierste, R. Scharf, Nucl.Phys.B367(1991)637-656
+
+Routines for finite 3-point functions obtained from these by sending
+one mass to infinity, and based on the formulas from
+          G. 't Hooft and M.J.G. Veltman, Nucl.Phys.B153:365-401,1979 
+
+Routines for finite 4-point functions with complex masses
+based on  Dao Thi Nhung and Le Duc Ninh,
+          Comput.Phys.Commun.180:2258-2267,2009,(arXiv:0902.0325)
+  and on  G. 't Hooft and M.J.G. Veltman, Nucl.Phys.B153:365-401,1979 
+
+Routines for 2-point functions
+based on  A. Denner and S. Dittmaier,
+          Nucl.Phys.B734 (2006) 62-115 (hep-ph/0509141)
+
+########################################################################
+

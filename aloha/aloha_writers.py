@@ -33,7 +33,6 @@ class WriteALOHA:
 
             
     def __init__(self, abstract_routine, dirpath):
-        
         if aloha.loop_mode:
             self.momentum_size = 4
         else:
@@ -53,21 +52,19 @@ class WriteALOHA:
         self.routine = abstract_routine
         self.tag = self.routine.tag
         self.name = name
+
         self.particles =  [self.type_to_variable[spin] for spin in \
                           abstract_routine.spins]
-        
+
         self.offshell = abstract_routine.outgoing # position of the outgoing in particle list        
         self.outgoing = self.offshell             # expected position for the argument list
         if 'C%s' %((self.outgoing + 1) // 2) in self.tag:
             #flip the outgoing tag if in conjugate
             self.outgoing = self.outgoing + self.outgoing % 2 - (self.outgoing +1) % 2
-        
         self.outname = '%s%s' % (self.particles[self.outgoing -1], \
                                                                self.outgoing)
-        
         #initialize global helper routine
         self.declaration = Declaration_list()
-
                                    
                                        
     def pass_to_HELAS(self, indices, start=0):
@@ -200,7 +197,8 @@ class WriteALOHA:
         # couplings
         if  couplings is None:
             detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
-            detected_couplings.sort()
+            coup_sort = lambda x,y: int(x[4:])-int(y[4:])
+            detected_couplings.sort(coup_sort)
             if detected_couplings:
                 couplings = detected_couplings
             else:
@@ -449,12 +447,16 @@ class ALOHAWriterForFortran(WriteALOHA):
                    'im': 'imag(%s)',
                    'cmath.sqrt':'sqrt(dble(%s))', 
                    'sqrt': 'sqrt(dble(%s))',
-                   'complexconjugate': 'conjg(%s)',
+                   'complexconjugate': 'conjg(dcmplx(%s))',
                    '/' : '{0}/(%s)'.format(one),
                    'pow': '(%s)**(%s)',
                    'log': 'log(dble(%s))',
                    'asin': 'asin(dble(%s))',
                    'acos': 'acos(dble(%s))',
+                   'abs': 'abs(%s)',
+                   'fabs': 'abs(%s)',
+                   'math.abs': 'abs(%s)',
+                   'cmath.abs': 'abs(%s)',
                    '':'(%s)'
                    }
             
@@ -654,7 +656,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if isinstance(name, aloha_lib.ExtVariable):
             # external parameter nothing to do
             self.has_model_parameter = True
-            return name
+            return '%s%s' % (aloha.aloha_prefix, name)
         
         if '_' in name:
             vtype = name.type
@@ -685,7 +687,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     if number.imag == 1:
                         out = 'CI'
                     elif number.imag == -1:
-                        out = '-CI'
+			            out = '-CI'
                     else: 
                         out = '%s * CI' % self.change_number_format(number.imag)
             else:
@@ -724,8 +726,9 @@ class ALOHAWriterForFortran(WriteALOHA):
         keys.sort(sort_fct)
         for name in keys:
             fct, objs = self.routine.fct[name]
-            format = ' %s = %s\n' % (name, self.get_fct_format(fct))
-            try:
+
+	    format = ' %s = %s\n' % (name, self.get_fct_format(fct))
+	    try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])
             except TypeError:
                 text = format % tuple([self.write_obj(obj) for obj in objs])
@@ -905,10 +908,10 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         # position of the outgoing in particle list        
         self.l_id = [int(c[1:]) for c in abstract_routine.tag if c[0] == 'L'][0] 
         self.l_helas_id = self.l_id   # expected position for the argument list
-        if 'C%s' %((self.outgoing + 1) // 2) in abstract_routine.tag:
+        if 'C%s' %((self.l_id + 1) // 2) in abstract_routine.tag:
             #flip the outgoing tag if in conjugate
-            self.l_helas_id += self.l_id % 2 - (self.l_id +1) % 2 
-        
+            self.l_helas_id += self.l_id % 2 - (self.l_id +1) % 2
+         
 
     def define_expression(self):
         """Define the functions in a 100% way """
@@ -1011,30 +1014,25 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         """define a list with the string of object required as incoming argument"""
 
         conjugate = [2*(int(c[1:])-1) for c in self.tag if c[0] == 'C']
-        call_arg = [('list_complex', 'P%s'% self.l_helas_id)] #incoming argument of the routine
+        call_arg = []
+        #incoming argument of the routine
+        call_arg.append( ('list_complex', 'P%s'% self.l_helas_id) )
+        
         self.declaration.add(call_arg[0])
         
         for index,spin in enumerate(self.particles):
-            if self.offshell == index + 1:
+            if self.outgoing == index + 1:
                 continue
             if self.l_helas_id == index + 1:
                 continue
-            
-            if index in conjugate:
-                index2, spin2 = index+1, self.particles[index+1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
-                #call_arg.append('%s%d' % (spin, index +1)) 
-            elif index-1 in conjugate:
-                index2, spin2 = index-1, self.particles[index-1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
-            else:
-                call_arg.append(('complex','%s%d' % (spin, index +1)))
+            call_arg.append(('complex','%s%d' % (spin, index +1)))
             self.declaration.add(('list_complex', call_arg[-1][-1])) 
         
         # couplings
         if couplings is None:
             detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
-            detected_couplings.sort()
+            coup_sort = lambda x,y: int(x[4:])-int(y[4:])
+            detected_couplings.sort(coup_sort)
             if detected_couplings:
                 couplings = detected_couplings
             else:
@@ -1055,7 +1053,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 self.declaration.add(('double','W%s' % self.outgoing))
             
         self.call_arg = call_arg
-                
+        
         return call_arg
 
     def get_momenta_txt(self):
@@ -1311,8 +1309,9 @@ class ALOHAWriterForCPP(WriteALOHA):
                    'im': 'imag(%s)',
                    'cmath.sqrt':'sqrt(%s)', 
                    'sqrt': 'sqrt(%s)',
-                   'complexconjugate': 'conj(%s)',
-                   '/' : '{0}/%s'.format(one) 
+                   'complexconjugate': 'conj(dcmplx(%s))',
+                   '/' : '{0}/%s'.format(one),
+                   'abs': 'abs(%s)'
                    }
             
         if fct in self.fct_format:
@@ -2093,7 +2092,6 @@ class Declaration_list(set):
 class WriterFactory(object):
     
     def __new__(cls, data, language, outputdir, tags):
-        
         language = language.lower()
         if isinstance(data.expr, aloha_lib.SplitCoefficient):
             assert language == 'fortran'
@@ -2101,7 +2099,6 @@ class WriterFactory(object):
                 return ALOHAWriterForFortranLoopQP(data, outputdir)
             else:
                 return ALOHAWriterForFortranLoop(data, outputdir)
-        
         if language == 'fortran':
             if 'MP' in tags:
                 return ALOHAWriterForFortranQP(data, outputdir)
