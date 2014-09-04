@@ -298,8 +298,10 @@ in presence of majorana particle/flow violation"""
                 propa = [t[1:] for t in self.tag if t.startswith('P')]
                 if propa == ['0']: 
                     massless = True
+                    self.denominator = None
                 elif propa == []:
                     massless = False
+                    self.denominator = None
                 else:
                     lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
                     continue
