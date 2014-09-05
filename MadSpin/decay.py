@@ -291,7 +291,7 @@ class Event:
             if '<event' in line:
                 #start new_event
                 #Get the right attributes (e.g. <event id='123' npNLO='-1'>)
-                self.event_init_line=line.replace('nplo','npLO').replace('npnlo','npNLO')
+                self.event_init_line=line.lstrip().replace('nplo','npLO').replace('npnlo','npNLO')
                 line_type = 'init'
                 continue
             elif '<rwgt>' in line:

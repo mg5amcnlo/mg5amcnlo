@@ -100,7 +100,7 @@ class TestEvent(unittest.TestCase):
         event.assign_scale_line("8 3 0.1 125 0.1 0.3")
         event.change_wgt(factor=0.4)
         
-        self.assertEqual(event.string_event().split('\n'), """<event> 
+        self.assertEqual(event.string_event().split('\n'), """<event>
   8      3 +4.0000000e-02 1.25000000e+02 1.00000000e-01 3.00000000e-01
        21 -1    0    0  503  502 +0.00000000000e+00 +0.00000000000e+00 +5.86839540000e+02  5.86840020000e+02  7.50000000000e-01 0.0000e+00 0.0000e+00
        21 -1    0    0  501  503 +0.00000000000e+00 +0.00000000000e+00 -1.82087600000e+02  1.82089140000e+02  7.50000000000e-01 0.0000e+00 0.0000e+00
@@ -128,7 +128,7 @@ class TestEvent(unittest.TestCase):
         event =events
         self.assertEqual(event.get_tag(), (((21, 21), (-6, 6, 21)), [[21, 21], [6, 21, -6]]))
                 
-        self.assertEqual(event.string_event().split('\n'), """<event> 
+        self.assertEqual(event.string_event().split('\n'), """<event>
   5     66 +3.2366351e+02 4.39615290e+02 7.54677160e-03 1.02860750e-01
        21 -1    0    0  503  502 +0.00000000000e+00 +0.00000000000e+00 +1.20582240000e+03  1.20582260000e+03  7.50000000000e-01 0.0000e+00 0.0000e+00
        21 -1    0    0  501  503 +0.00000000000e+00 +0.00000000000e+00 -5.46836110000e+01  5.46887540000e+01  7.50000000000e-01 0.0000e+00 0.0000e+00
