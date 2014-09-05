@@ -435,13 +435,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                     shutil.rmtree(self._export_dir)
                 except OSError:
                     raise self.InvalidCmd('Could not remove directory %s.'\
-                                                         %str(self._export_dir))     
-
-        if not self._curr_amps[0].get('process').get('has_born') and \
-                                          self.options['loop_optimized_output']:
-            logger.warning('The loop optimized output is not available for '+\
-                     'loop-induced processes. Now setting this option to False.')
-            self.do_set('loop_optimized_output False')
+                                                         %str(self._export_dir))
 
         self._curr_exporter = export_v4.ExportV4Factory(self, \
                                                  noclean, output_type='madloop')

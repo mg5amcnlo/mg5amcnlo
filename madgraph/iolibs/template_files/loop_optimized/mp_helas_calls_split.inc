@@ -11,6 +11,8 @@ C
       PARAMETER (NCOMB=%(ncomb)d)
 	  INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d)
+	  INTEGER    NLOOPAMPS
+	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
 	  INTEGER MAXLWFSIZE
@@ -58,15 +60,13 @@ C
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sMP_WL/WL,PL
 
-	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
-	  common/%(proc_prefix)sMP_LCOEFS/LOOPCOEFS
-
+## if(not LoopInduced){
       %(complex_mp_format)s AMPL(3,NCTAMPS)
+## } else {
+      %(complex_mp_format)s AMPL(3,NLOOPAMPS)
+## } 
 	  common/%(proc_prefix)sMP_AMPL/AMPL
 
-      %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
-	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
-	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
 C
 C ----------
 C BEGIN CODE

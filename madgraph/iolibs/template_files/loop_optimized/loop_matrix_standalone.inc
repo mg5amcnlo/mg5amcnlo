@@ -30,8 +30,10 @@ C
 	  %(nbornamps_decl)s
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d)
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NCOLORROWS
-	  PARAMETER (NCOLORROWS=%(nloopamps)d)
+	  PARAMETER (NCOLORROWS=NLOOPAMPS)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
@@ -123,6 +125,14 @@ C IF UNSTABLE IT GOES TO THE SAME PATTERN BUT STAB_INDEX IS THEN I+20.
 	  INTEGER N_DP_EVAL, N_QP_EVAL
 	  DATA N_DP_EVAL/1/
 	  DATA N_QP_EVAL/1/
+## if(LoopInduced){	  
+C This is used for loop-induced where the reference scale for comparisons is infered from the previous points.
+      %(real_dp_format)s NEXTREF
+      DATA NEXTREF/ZERO/
+      INTEGER NPSPOINTS
+      DATA NPSPOINTS/0/
+## }
+  
 	  %(real_dp_format)s ACC(0:NSQUAREDSO)
 	  %(real_dp_format)s DP_RES(3,0:NSQUAREDSO,MAXSTABILITYLENGTH)
 C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
@@ -135,7 +145,13 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  INTEGER ITEMP
 	  LOGICAL LTEMP
 	  %(real_dp_format)s BORNBUFF(0:NSQSO_BORN)
-	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO),TEMP2
+	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO)
+## if(not LoopInduced){
+	  %(real_dp_format)s TEMP2
+## }else{
+	  %(real_dp_format)s TEMP2(3)
+## }
+	  
 	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
@@ -232,7 +248,7 @@ C     Typically, the hel_offset is 10000
 	  INTEGER USERHEL
 	  DATA USERHEL/-1/
 	  common/%(proc_prefix)sUSERCHOICE/USERHEL
-
+	  
 C     This integer can be accessed by an external user to set its target squared split order.
 C     If set to a value different than -1, the code will try to avoid computing anything which
 C     does not contribute to contributions of squared split orders SQSO_TARGET and below.
@@ -264,7 +280,7 @@ C TILL NOW, ONLY CUTTOOLS PROVIDE QP
        	  INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
        	  common/%(proc_prefix)sLOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
 
-	  %(dp_born_amps_decl)s	  
+	  %(dp_born_amps_decl)s 
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/W  
 
@@ -275,16 +291,24 @@ C TILL NOW, ONLY CUTTOOLS PROVIDE QP
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/WL,PL
 
+## if(not LoopInduced){
 	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## } else {
+	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
 	  common/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
+## if(not LoopInduced){
       %(complex_dp_format)s AMPL(3,NCTAMPS)
+## } else {
+      %(complex_dp_format)s AMPL(3,NLOOPAMPS)
+## }
 	  common/%(proc_prefix)sAMPL/AMPL
 
       %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
 	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
 	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
-
+	  
 	  INTEGER CF_D(NCOLORROWS,%(color_matrix_size)s)
 	  INTEGER CF_N(NCOLORROWS,%(color_matrix_size)s)
 	  common/%(proc_prefix)sCF/CF_D,CF_N
@@ -445,9 +469,48 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
   ENDIF
 ENDIF
 
-%(compute_born)s
+## if(LoopInduced){
+C The born is of course 0 for loop-induced processes.
+DO I=0,NSQUAREDSO
+  ANS(0,I)=0.0d0
+ENDDO
+## }else{
+C First compute the borns, it will store them in ANS(0,I)
+C It is left untouched for the rest of MadLoop evaluation.
+C Notice that the squared split order index I does NOT
+C correspond to the same ordering of J for the loop ME 
+C results stored in ANS(K,J), with K in [1-3].The ordering 
+C of each can be obtained with ML5SOINDEX_FOR_SQUARED_ORDERS 
+C and SQSOINDEX_FROM_ORDERS for the loop ME and born ME 
+C respectively. For this to work, we assume that there is 
+C always more squared split orders in the loop ME than in the
+C born ME, which is practically always true. In any case, only
+C the split_order summed value I=0 is used in ML5 code.
+DO I=0,NSQSO_BORN
+  BORNBUFF(I)=0.0d0
+ENDDO
+CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,BORNBUFF(0))
+DO I=0,NSQSO_BORN
+  ANS(0,I)=BORNBUFF(I)
+ENDDO
+## }
 
-%(set_reference)s
+## if(LoopInduced){
+C For loop-induced, the reference for comparison is set later from the total contribution of the previous PS point considered.
+C But you can edit here the value to be used for the first PS points.    
+ref=1.0d-50
+IF (NPSPOINTS.EQ.0) THEN
+  REF=1.0D-50
+ELSE
+  REF=NEXTREF/DBLE(NPSPOINTS)
+ENDIF
+## }else{
+C We set here the reference to the born summed over all split orders
+REF=0.0d0
+DO I=1,NSQSO_BORN
+REF=REF+ANS(0,I)
+ENDDO
+## }
 
 MP_DONE=.FALSE.
 MP_DONE_ONCE=.FALSE.
@@ -564,7 +627,11 @@ DO K=1, 3
   DO I=0,NSQUAREDSO
     BUFFR(K,I)=0.0d0
   ENDDO
+## if(not LoopInduced){
   DO I=1,NCTAMPS
+## }else{
+  DO I=1,NLOOPAMPS
+## }
     AMPL(K,I)=(0.0d0,0.0d0)
   ENDDO
 ENDDO
@@ -572,6 +639,15 @@ C     USE THE FIRST LOOP REDUCTION LIBRARY AND THE FIRST QP LOOP REDUCTION LIBRA
 I_LIB=1
 I_QP_LIB=1
 200 CONTINUE
+
+## if(LoopInduced){
+300 CONTINUE
+## }
+
+## if(LoopInduced){
+C     Free cache when using IREGI
+%(iregi_free_ps)s
+## }
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
   CALL %(proc_prefix)sSET_MP_PS(P_USER)
@@ -583,6 +659,7 @@ LSCALE=DSQRT(ABS((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1
 CTCALL_REQ_SO_DONE=.FALSE.
 FILTER_SO = (.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.(SQSO_TARGET.ne.-1)
 
+## if(not LoopInduced){
 DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
     DO K=1,NSQUAREDSO
@@ -590,6 +667,7 @@ DO I=1,NLOOPGROUPS
 	ENDDO
   ENDDO
 ENDDO
+## }
 
 DO I=1,NLOOPGROUPS
   DO J=1,3
@@ -615,7 +693,12 @@ C   It should be safe to directly set MP_DONE to true already here. But maybe I 
 C Even if MP_DONE is .TRUE. we should anyway skip the
 C double precision evaluation as it as already been
 c computed in quadruple precision.
+## if(not LoopInduced){
   goto 300
+## }else{
+  goto 301
+## }
+
 ENDIF
 
 DO H=1,NCOMB
@@ -627,6 +710,22 @@ DO H=1,NCOMB
   UVCT_REQ_SO_DONE=.FALSE.
   CT_REQ_SO_DONE=.FALSE.
   LOOP_REQ_SO_DONE=.FALSE.
+ 
+## if(LoopInduced){
+  CTCALL_REQ_SO_DONE=.FALSE.
+  
+  DO I=1,NLOOPGROUPS
+    DO J=0,LOOPMAXCOEFS-1
+      LOOPCOEFS(J,I)=(0.0d0,0.0d0)
+    ENDDO
+  ENDDO
+  
+  DO K=1,3
+    DO I=1,NLOOPAMPS
+      AMPL(K,I)=(0.0d0,0.0d0)
+    ENDDO
+  ENDDO
+## }
 
 C Helas calls for the born amplitudes and counterterms associated to given loops
   %(born_ct_helas_calls)s
@@ -648,20 +747,84 @@ c FeynRules, there are none of these type of counterterms.
   ELSE
     DUMMY=1
   ENDIF
-  DO I=1,%(nctamps_or_nloopamps)s
-    DO J=1,%(nbornamps_or_nloopamps)s
+## if(not LoopInduced) {
+  DO I=1,NCTAMPS
+    DO J=1,NCTAMPS
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
-	  %(squaring)s
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
+	  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+        DO K=1,3
+          TEMP2 = 2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))
+          ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
+          ANS(K,0)=ANS(K,0)+TEMP2
+        ENDDO
+      ENDIF
     ENDDO
   ENDDO
+## }
   
   %(coef_construction)s
 4000 CONTINUE
   LOOP_REQ_SO_DONE=.TRUE.
 
+## if(LoopInduced) {
+  IF(SKIPLOOPEVAL) THEN
+    GOTO 5000
+  ENDIF
+  DO I=1,NSQUAREDSO
+    DO J=1,NLOOPGROUPS
+      S(I,J)=.TRUE.
+    ENDDO
+  ENDDO
+C We need the dummy argument I_SO for the squared order index to conform to the structure that the call to the LOOP* subroutine takes for processes with Born diagrams.
+  I_SO=1
+%(loop_CT_calls)s
+5000 CONTINUE
+  CTCALL_REQ_SO_DONE=.TRUE.
+
+  DO I=1,NLOOPAMPS
+    DO J=1,NLOOPAMPS
+	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
+      IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
+      TEMP2(1) = DUMMY*DBLE(CFTOT*(AMPL(1,I)*DCONJG(AMPL(1,J))))
+C Computing the quantities below is not strictly necessary since the result should be finite
+C It is however a good cross-check.
+      TEMP2(2) = DUMMY*DBLE(CFTOT*(AMPL(2,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(2,J))))
+      TEMP2(3) = DUMMY*DBLE(CFTOT*(AMPL(3,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(3,J))+AMPL(2,I)*DCONJG(AMPL(2,J))))
+C To mimick the structure of the non loop-induced processes, we add here the
+C squared counterterm contribution directly the result ANS() and put the 
+C loop contributions in the LOOPRES array which will be added to ANS later
+      IF (I.LE.NCTAMPS) THEN
+        IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+          DO K=1,3
+            ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2(K)
+            ANS(K,0)=ANS(K,0)+TEMP2(K)
+          ENDDO
+        ENDIF
+      ELSE
+        DO K=1,3
+          LOOPRES(K,ITEMP,I-NCTAMPS)=LOOPRES(K,ITEMP,I-NCTAMPS)+TEMP2(K)
+C During the evaluation of the AMPL, we had stored the stability in S(1,*) so
+C we now copy over this flag to the relevant contributing Squared orders.
+          S(ITEMP,I-NCTAMPS)=S(1,I-NCTAMPS)
+        ENDDO
+      ENDIF
+    ENDDO
+  ENDDO
+## }
+
   ENDIF
 ENDDO
+
+## if (LoopInduced) {
+301 CONTINUE
+
+IF(SKIPLOOPEVAL) THEN
+  GOTO 1226
+ENDIF
+## } else {
 
 %(coef_merging)s
 
@@ -672,6 +835,7 @@ DO I=0,NSQUAREDSO
 ENDDO
 
 300 CONTINUE
+
 C     Free cache when using IREGI
 %(iregi_free_ps)s
 
@@ -696,12 +860,31 @@ DO I_SO=1,NSQUAREDSO
   CTCALL_REQ_SO_DONE=.TRUE.
 5001 CONTINUE
 ENDDO
+## }
 
-%(actualize_ans)s
+DO I=1,NLOOPGROUPS
+  LTEMP=.TRUE.
+  DO K=1,NSQUAREDSO
+    IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.K) THEN
+      IF (.NOT.S(K,I)) LTEMP=.FALSE.
+      DO J=1,3
+        ANS(J,K)=ANS(J,K)+LOOPRES(J,K,I)
+        ANS(J,0)=ANS(J,0)+LOOPRES(J,K,I)
+      ENDDO
+    ENDIF
+  ENDDO
+  IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.LTEMP)) THEN
+    WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'           
+  ENDIF
+ENDDO
 
 1226 CONTINUE
 
 IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
+## if(LoopInduced){
+C Update of NEXTREF, will be used for loop induced only.
+  NEXTREF = NEXTREF + ANS(1,0) + ANS(2,0) + ANS(3,0)
+## }
   IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
 C   TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING CHECK PHASE
     DO I=0,NSQUAREDSO
@@ -853,6 +1036,10 @@ c    ENDDO
         ANS(K,I)=BUFFR(K,I)
       ENDDO
 	ENDDO
+## if(LoopInduced){
+C We add one here to the number of PS points used for building the reference scale for comparison (used only for loop-induced processes).
+    NPSPOINTS = NPSPOINTS+1
+## }   
 	IF(NTRY.EQ.0) THEN
 	  NATTEMPTS=NATTEMPTS+1
 	  IF(NATTEMPTS.EQ.MAXATTEMPTS) THEN

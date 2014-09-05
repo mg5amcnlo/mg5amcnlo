@@ -17,8 +17,10 @@ C
 	  %(nbornamps_decl)s
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d) 
+      INTEGER    NLOOPAMPS
+	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NCOLORROWS
-	  PARAMETER (NCOLORROWS=%(nloopamps)d)
+	  PARAMETER (NCOLORROWS=NLOOPAMPS)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
@@ -44,8 +46,13 @@ C
 C  
 C LOCAL VARIABLES 
 C  
+      LOGICAL DPW_COPIED
       INTEGER I,J,K,H,DUMMY,ITEMP
-      %(real_mp_format)s TEMP2
+## if(not LoopInduced){
+	  %(real_mp_format)s TEMP2
+## }else{
+	  %(real_mp_format)s TEMP2(3)
+## }      
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       %(real_mp_format)s P(0:3,NEXTERNAL)
 	  DATA IC/NEXTERNAL*1/
@@ -91,11 +98,31 @@ C
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sMP_WL/WL,PL
 
+## if(not LoopInduced){
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## } else {
+	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
 	  common/%(proc_prefix)sMP_LCOEFS/LOOPCOEFS
 
+## if(not LoopInduced){
       %(complex_mp_format)s AMPL(3,NCTAMPS)
+## } else {
+      %(complex_mp_format)s AMPL(3,NLOOPAMPS)
+## } 
 	  common/%(proc_prefix)sMP_AMPL/AMPL
+
+## if(LoopInduced){
+      %(complex_mp_format)s DP_AMPL(3,NLOOPAMPS)
+	  common/%(proc_prefix)sAMPL/DP_AMPL
+
+      %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
+	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
+	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
+
+	  integer I_SO
+	  common/%(proc_prefix)sI_SO/I_SO
+## }
 
 	  INTEGER CF_D(NCOLORROWS,%(color_matrix_size)s)
 	  INTEGER CF_N(NCOLORROWS,%(color_matrix_size)s)
@@ -141,11 +168,16 @@ DO I=1,MAXLWFSIZE
 ENDDO
 
 DO K=1, 3
+## if(not LoopInduced){
   DO I=1,NCTAMPS
+## }else{
+  DO I=1,NLOOPAMPS
+## }
     AMPL(K,I)=(ZERO,ZERO)
   ENDDO
 ENDDO
 
+## if(not LoopInduced){
 DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
     DO K=1,NSQUAREDSO  
@@ -153,6 +185,7 @@ DO I=1,NLOOPGROUPS
 	ENDDO
   ENDDO
 ENDDO
+## }
 
 DO K=1,3
   DO J=0,NSQUAREDSO
@@ -161,6 +194,7 @@ DO K=1,3
   ENDDO
 ENDDO
 
+DPW_COPIED = .False.
 DO H=1,NCOMB
   IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H).NE.0)))) THEN
   DO I=1,NEXTERNAL
@@ -169,7 +203,23 @@ DO H=1,NCOMB
 
   MP_UVCT_REQ_SO_DONE=.FALSE.
   MP_CT_REQ_SO_DONE=.FALSE.
-  MP_LOOP_REQ_SO_DONE=.FALSE.
+  MP_LOOP_REQ_SO_DONE=.FALSE.  
+
+## if(LoopInduced){
+  CTCALL_REQ_SO_DONE=.FALSE.
+  
+  DO I=1,NLOOPGROUPS
+    DO J=0,LOOPMAXCOEFS-1
+      LOOPCOEFS(J,I)=(ZERO,ZERO)
+    ENDDO
+  ENDDO
+  
+ DO K=1, 3
+  DO I=1,NLOOPAMPS
+    AMPL(K,I)=(ZERO,ZERO)
+  ENDDO
+ENDDO
+## }
 
   %(mp_born_ct_helas_calls)s
 2000 CONTINUE
@@ -184,26 +234,97 @@ DO H=1,NCOMB
   ELSE
     DUMMY=1
   ENDIF
-  DO I=1,%(nctamps_or_nloopamps)s
-    DO J=1,%(nbornamps_or_nloopamps)s
+  
+## if(not LoopInduced) { 
+  DO I=1,NCTAMPS
+    DO J=1,NBORNAMPS
 	  CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16),0.0e0_16,KIND=16)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
-	  %(mp_squaring)s
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
+	  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+        DO K=1,3
+          TEMP2 = DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
+          ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
+          ANS(K,0)=ANS(K,0)+TEMP2
+        ENDDO
+      ENDIF
     ENDDO
-  ENDDO 
+  ENDDO
+## }
 
   %(mp_coef_construction)s  
   4000 CONTINUE
   MP_LOOP_REQ_SO_DONE=.TRUE.
 
-  ENDIF
-ENDDO
-
 c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
-DO I=1,NWAVEFUNCS
-  DO J=1,MAXLWFSIZE+4
-    DPW(J,I)=W(J,I)
+C This needs to be done once since only the momenta of these WF matters.
+  IF(.NOT.DPW_COPIED) THEN
+    DO I=1,NWAVEFUNCS
+      DO J=1,MAXLWFSIZE+4
+        DPW(J,I)=DBLE(W(J,I))
+      ENDDO
+    ENDDO
+    DPW_COPIED=.True.
+  ENDIF
+
+## if(LoopInduced) {
+  DO I=1,NSQUAREDSO
+    DO J=1,NLOOPGROUPS
+      S(I,J)=.TRUE.
+    ENDDO
   ENDDO
+  
+C We need a dummy argument for the squared order index to conform to the 
+C structure that the call to the LOOP* subroutine takes for processes with Born diagrams.
+  I_SO=1
+%(loop_CT_calls)s
+5000 CONTINUE
+  CTCALL_REQ_SO_DONE=.TRUE.
+
+C Copy the loop amplitudes computed (whose final result was stored in a double
+C precision variable) to the AMPL multiple precision array.
+  DO I=NCTAMPS+1,NLOOPAMPS
+    DO K=1,3
+      AMPL(K,I)=DP_AMPL(K,I)
+    ENDDO
+  ENDDO
+  
+  DO I=1,NLOOPAMPS
+    DO J=1,NLOOPAMPS
+	  CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16),0.0e0_16,KIND=16)
+      IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
+      TEMP2(1) = DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J)),KIND=16)
+C Computing the quantities below is not strictly necessary since the result should be finite
+C It is however a good cross-check.
+      TEMP2(2) = DUMMY*REAL(CFTOT*(AMPL(2,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(2,J))),KIND=16)
+      TEMP2(3) = DUMMY*REAL(CFTOT*(AMPL(3,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(3,J))+AMPL(2,I)*CONJG(AMPL(2,J))),KIND=16)
+C To mimic the structure of the non loop-induced processes, we add here the
+C squared counterterm contribution directly the result ANS() and put the 
+C loop contributions in the LOOPRES array which will be added to ANS later
+      IF (I.LE.NCTAMPS) THEN
+        IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+          DO K=1,3
+            ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2(K)
+            ANS(K,0)=ANS(K,0)+TEMP2(K)
+          ENDDO
+        ENDIF
+      ELSE
+        DO K=1,3
+C This LOOPRES array entries will be added to the main result ANS(*,*) later
+C in the loop_matrix.f file. It is in double precision however, so the cast of
+C the temporary variable TEMP2 is necessary.
+          LOOPRES(K,ITEMP,I-NCTAMPS)=LOOPRES(K,ITEMP,I-NCTAMPS)+DBLE(TEMP2(K))
+C During the evaluation of the AMPL, we had stored the stability in S(1,*) so
+C we now copy over this flag to the relevant contributing Squared orders.
+          S(ITEMP,I-NCTAMPS)=S(1,I-NCTAMPS)
+        ENDDO
+      ENDIF
+    ENDDO
+  ENDDO
+## }
+
+  ENDIF
 ENDDO
 
 DO I=1,3
@@ -212,6 +333,8 @@ DO I=1,3
   ENDDO
 ENDDO
 
+## if(not LoopInduced) {
 %(mp_coef_merging)s
+## }
 
 END

@@ -5415,15 +5415,9 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
             if not cmd.options['loop_optimized_output']:
                 ExporterClass=loop_exporters.LoopProcessExporterFortranSA
             else:
-                if all([amp['process']['has_born'] for amp in cmd._curr_amps]):
-                    ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
-                    options['export_format'] = 'madloop_optimized'
-                else:
-                    logger.warning('ML5 can only exploit the optimized output for '+\
-                                   ' processes with born diagrams. The optimization '+\
-                                   ' option is therefore turned off for this process.')
-                    ExporterClass=loop_exporters.LoopProcessExporterFortranSA
-                    options['export_format'] = 'madloop_default'
+                ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                options['export_format'] = 'madloop_optimized'
+
             return ExporterClass(cmd._mgme_dir, cmd._export_dir, options)
         else:
             raise MadGraph5Error('MG5_aMC cannot find the \'loop_material\' directory'+\

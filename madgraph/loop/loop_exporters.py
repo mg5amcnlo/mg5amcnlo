@@ -550,10 +550,16 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 
+    def get_context(self,matrix_element):
+        """ Returns the contextual variables which need to be set when
+        preprocessing the template files."""
+
+        return {'LoopInduced':
+                         not matrix_element.get('processes')[0].get('has_born')}
+
     #===========================================================================
     # generate_subprocess_directory_v4
     #===========================================================================
-    
     def generate_loop_subprocess(self, matrix_element, fortran_model):
         """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
         including the necessary loop_matrix.f, born_matrix.f and include files.
@@ -1034,7 +1040,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         file="\n".join(files)
         
         if writer:
-            writer.writelines(file)
+            writer.writelines(file,context=self.get_context(matrix_element))
         else:
             return file
 
@@ -1043,12 +1049,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     def split_HELASCALLS(self, writer, replace_dict, template_name, masterfile, \
                          helas_calls, entry_name, bunch_name,n_helas=2000,
                          required_so_broadcaster = 'LOOP_REQ_SO_DONE',
-                         continue_label = 1000):
+                         continue_label = 1000, context={}):
         """ Finish the code generation with splitting.         
         Split the helas calls in the argument helas_calls into bunches of 
         size n_helas and place them in dedicated subroutine with name 
         <bunch_name>_i. Also setup the corresponding calls to these subroutine 
-        in the replace_dict dictionary under the entry entry_name. """
+        in the replace_dict dictionary under the entry entry_name.
+        The context specified will be forwarded to the the fileWriter."""
         helascalls_replace_dict=copy.copy(replace_dict)
         helascalls_replace_dict['bunch_name']=bunch_name
         helascalls_files=[]
@@ -1071,14 +1078,15 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         if writer:
             for i, helascalls_file in enumerate(helascalls_files):
                 filename = '%s_%d.f'%(bunch_name,i+1)
-                writers.FortranWriter(filename).writelines(helascalls_file)
+                writers.FortranWriter(filename).writelines(helascalls_file,
+                                                                context=context)
         else:
                 masterfile='\n'.join([masterfile,]+helascalls_files)                
 
         return masterfile
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
-                         noSplit=False):
+                                                                 noSplit=False):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \
@@ -1607,7 +1615,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         filename = 'improve_ps.f'
         calls = self.write_improve_ps(writers.FortranWriter(filename),
-                                                             matrix_element)
+                                                                 matrix_element)
         
         filename = 'CT_interface.f'
         self.write_CT_interface(writers.FortranWriter(filename),\
@@ -1624,7 +1632,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         filename = 'loop_num.f'
         self.write_loop_num(writers.FortranWriter(filename),\
-                                matrix_element,OptimizedFortranModel)
+                                           matrix_element,OptimizedFortranModel)
         
         filename = 'mp_compute_loop_coefs.f'
         self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
@@ -1756,7 +1764,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         file = open(os.path.join(self.template_dir,'loop_num.inc')).read()  
         file = file % replace_dict
-        writer.writelines(file)
+        writer.writelines(file,context=self.get_context(matrix_element))
 
     def write_CT_interface(self, writer, matrix_element):
         """ We can re-use the mother one for the loop optimized output."""
@@ -1794,7 +1802,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             file += '\n\n'+FPR.write_iregi_mapping()
         
         if writer:
-            writer.writelines(file)
+            writer.writelines(file,context=self.get_context(matrix_element))
         else:
             return file
 
@@ -1829,7 +1837,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         file += '\n\n'+FPR.write_golem95_mapping()
         
         if writer:
-            writer.writelines(file)
+            writer.writelines(file,context=self.get_context(matrix_element))
         else:
             return file
 
@@ -1899,7 +1907,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                      wl_update[0],wl_update[1]))
             subroutines.append(mp_poly_writer.write_wl_updater(\
                                                      wl_update[0],wl_update[1]))
-        writer.writelines('\n\n'.join(subroutines))
+        writer.writelines('\n\n'.join(subroutines),
+                                       context=self.get_context(matrix_element))
 
     def write_mp_compute_loop_coefs(self, writer, matrix_element, fortran_model, \
                                     noSplit=False):
@@ -1915,31 +1924,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         replace_dict = copy.copy(self.general_replace_dict)                 
 
-        # These entries are specific for the output for loop-induced processes
-        # Also sets here the details of the squaring of the loop ampltiudes
-        # with the born or the loop ones.
-        if not matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['nctamps_or_nloopamps']='nctamps'
-            replace_dict['nbornamps_or_nloopamps']='nctamps'
-            replace_dict['mp_squaring']=\
-"""ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
-TEMP2 = DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J)),KIND=16)
-IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
-  ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2
-  ANS(1,0)=ANS(1,0)+TEMP2
-ENDIF"""%self.general_replace_dict  
-        else:
-            replace_dict['nctamps_or_nloopamps']='nctamps'
-            replace_dict['nbornamps_or_nloopamps']='nbornamps'
-            replace_dict['mp_squaring']=\
-"""ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
-IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN                               
-DO K=1,3
-TEMP2 = DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
-ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
-ANS(K,0)=ANS(K,0)+TEMP2
-ENDDO
-ENDIF"""%self.general_replace_dict
         # Extract helas calls
         squared_orders = matrix_element.get_squared_order_contribs()
         split_orders = matrix_element.get('processes')[0].get('split_orders')
@@ -1961,6 +1945,9 @@ ENDIF"""%self.general_replace_dict
         file = open(os.path.join(self.template_dir,\
                                            'mp_compute_loop_coefs.inc')).read()
 
+        # Setup the contextual environment which is used in the splitting
+        # functions below
+        context = self.get_context(matrix_element)
         # Decide here wether we need to split the loop_matrix.f file or not.
         # 200 is reasonable but feel free to change it.
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
@@ -1968,28 +1955,28 @@ ENDIF"""%self.general_replace_dict
                             'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
                             'mp_born_ct_helas_calls','mp_helas_calls_ampb',
                             required_so_broadcaster = 'MP_CT_REQ_SO_DONE',
-                            continue_label = 2000)
+                            continue_label = 2000,context=context)
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'mp_helas_calls_split.inc',file,uvct_helas_calls,\
                             'mp_uvct_helas_calls','mp_helas_calls_uvct',
                             required_so_broadcaster = 'MP_UVCT_REQ_SO_DONE',
-                            continue_label = 3000)
+                            continue_label = 3000,context=context)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'mp_helas_calls_split.inc',file,coef_construction,\
                     'mp_coef_construction','mp_coef_construction',
                     required_so_broadcaster = 'MP_LOOP_REQ_SO_DONE',
-                    continue_label = 4000)
+                    continue_label = 4000,context=context)
         else:
             replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['mp_uvct_helas_calls']='\n'.join(uvct_helas_calls)
             replace_dict['mp_coef_construction']='\n'.join(coef_construction)
         
         replace_dict['mp_coef_merging']='\n'.join(coef_merging)
-        
+                    
         file = file % replace_dict
  
         # Write the file
-        writer.writelines(file)  
+        writer.writelines(file,context=context)
 
     def fix_coef_specs(self, overall_max_lwf_size, overall_max_loop_vert_rank):
         """ If processes with different maximum loop wavefunction size or
@@ -2188,90 +2175,6 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
         # When the user asks for the polarized matrix element we must 
         # multiply back by the helicity averaging factor
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
-
-        # These entries are specific for the output for loop-induced processes
-        # Also sets here the details of the squaring of the loop ampltiudes
-        # with the born or the loop ones.
-        if not matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['compute_born']=\
-"""
-C The born is of course 0 for loop-induced processes.
-DO I=0,NSQUAREDSO
-  ANS(0,I)=0.0d0
-ENDDO
-"""
-            replace_dict['set_reference']='\n'.join([
-              'C Chose the arbitrary scale of reference to use for comparisons'+\
-              ' for this loop-induced process.','ref=1.0d-50',
-              'DO I=0,NSQUAREDSO','ANS(I,0)=0.0d0','ENDDO'])
-            replace_dict['nctamps_or_nloopamps']='nctamps'
-            replace_dict['nbornamps_or_nloopamps']='nctamps'
-            replace_dict['squaring']='\n'.join([\
-              'ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))'%self.general_replace_dict,
-              'TEMP2 = DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))',
-              'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
-              'ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2',
-              'ANS(1,0)=ANS(1,0)+TEMP2',
-              'ENDIF'])       
-        else:
-            replace_dict['compute_born']=\
-"""
-C First compute the borns, it will store them in ANS(0,I)
-C It is left untouched for the rest of MadLoop evaluation.
-C Notice that the squared split order index I does NOT
-C correspond to the same ordering of J for the loop ME 
-C results stored in ANS(K,J), with K in [1-3].The ordering 
-C of each can be obtained with ML5SOINDEX_FOR_SQUARED_ORDERS 
-C and SQSOINDEX_FROM_ORDERS for the loop ME and born ME 
-C respectively. For this to work, we assume that there is 
-C always more squared split orders in the loop ME than in the
-C born ME, which is practically always true. In any case, only
-C the split_order summed value I=0 is used in ML5 code.
-DO I=0,NSQSO_BORN
-  BORNBUFF(I)=0.0d0
-ENDDO
-CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,BORNBUFF(0))
-DO I=0,NSQSO_BORN
-  ANS(0,I)=BORNBUFF(I)
-ENDDO
-"""%self.general_replace_dict
-            replace_dict['set_reference']='\n'.join(
-              ['C We set here the reference to the born summed over all split orders',
-              'REF=0.0d0','DO I=1,NSQSO_BORN','REF=REF+ANS(0,I)','ENDDO'])
-            replace_dict['nctamps_or_nloopamps']='nctamps'
-            replace_dict['nbornamps_or_nloopamps']='nbornamps'
-            replace_dict['squaring']='\n'.join([
-              'ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))'%self.general_replace_dict,
-              'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
-              'DO K=1,3',
-              'TEMP2 = 2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
-              'ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2',
-              'ANS(K,0)=ANS(K,0)+TEMP2',
-              'ENDDO',                   
-              'ENDIF'])
-
-        # Actualize results from the loops computed. Only necessary for
-        # processes with a born.
-        actualize_ans=[]
-        if matrix_element.get('processes')[0].get('has_born'):
-            actualize_ans.append(
-"""DO I=1,NLOOPGROUPS
-LTEMP=.TRUE.
-DO K=1,NSQUAREDSO
-  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.K) THEN
-    IF (.NOT.S(K,I)) LTEMP=.FALSE.
-    DO J=1,3
-      ANS(J,K)=ANS(J,K)+LOOPRES(J,K,I)
-      ANS(J,0)=ANS(J,0)+LOOPRES(J,K,I)
-    ENDDO
-  ENDIF
-ENDDO""")
-            actualize_ans.append(\
-               "IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.LTEMP)) THEN")
-            actualize_ans.append(\
-                   "WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'")            
-            actualize_ans.extend(["ENDIF","ENDDO"])            
-        replace_dict['actualize_ans']='\n'.join(actualize_ans)
         
         if write_auxiliary_files:
             # Write out the color matrix
@@ -2314,34 +2217,49 @@ ENDDO""")
         file = open(os.path.join(self.template_dir,\
                                            'loop_matrix_standalone.inc')).read()
 
+        # Setup the contextual environment which is used in the splitting
+        # functions below
+        context = self.get_context(matrix_element)
         # Decide here wether we need to split the loop_matrix.f file or not.
-        # 200 is reasonable but feel free to change it.        
-        if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
+        # 200 is reasonable but feel free to change it.
+        if not noSplit and (len(matrix_element.get_all_amplitudes())>200):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
                             'born_ct_helas_calls','helas_calls_ampb',
                             required_so_broadcaster = 'CT_REQ_SO_DONE',
-                            continue_label = 2000)
+                            continue_label = 2000, context = context)
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,uvct_helas_calls,\
                             'uvct_helas_calls','helas_calls_uvct',
                             required_so_broadcaster = 'UVCT_REQ_SO_DONE',
-                            continue_label = 3000)
+                            continue_label = 3000, context=context)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,coef_construction,\
                     'coef_construction','coef_construction',
                     required_so_broadcaster = 'LOOP_REQ_SO_DONE',
-                    continue_label = 4000)
-            file=self.split_HELASCALLS(writer,replace_dict,\
-                    'helas_calls_split.inc',file,loop_CT_calls,\
-                    'loop_CT_calls','loop_CT_calls',
-                    required_so_broadcaster = 'CTCALL_REQ_SO_DONE',
-                    continue_label = 5000)
+                    continue_label = 4000, context=context)
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['uvct_helas_calls']='\n'.join(uvct_helas_calls)
             replace_dict['coef_construction']='\n'.join(coef_construction)
+    
+        # For loop induced processes, always split the loop_CT_calls because
+        # they are used both in loop_matrix.f and mp_compute_loop_coef.f so 
+        # that it is quite nice to have them placed in the same subroutine.
+        if not noSplit and ( (len(matrix_element.get_all_amplitudes())>200) or
+                        not matrix_element.get('processes')[0].get('has_born')):
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                    'helas_calls_split.inc',file,loop_CT_calls,\
+                    'loop_CT_calls','loop_CT_calls',
+                    required_so_broadcaster = 'CTCALL_REQ_SO_DONE',
+                    continue_label = 5000, context=context)
+        else:
             replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
+       
+        # For loop induced processes, add the 'loop_CT_calls' entry to the
+        # general_replace_dict so that it can be used by 
+        # write_mp_compute_loop_coefs later
+        self.general_replace_dict['loop_CT_calls']=replace_dict['loop_CT_calls']            
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
         replace_dict['iregi_free_ps']=self.general_replace_dict['iregi_free_ps']
@@ -2351,8 +2269,9 @@ ENDDO""")
                                                                  loop_CT_calls))   
         if writer:
             # Write the file
-            writer.writelines(file)  
+            writer.writelines(file,context=context)
             return number_of_calls
         else:
-            # Return it to be written along with the others
-            return number_of_calls, file
+            # The single file 'matrix only' output not available for loops.
+            raise MadGraph5Error,"Single-file 'matrix only' output not available for loops."
+        

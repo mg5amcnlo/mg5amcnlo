@@ -1,3 +1,4 @@
+## if(not LoopInduced){
 C THE SUBROUTINE TO CREATE THE COEFFICIENTS FROM LAST LOOP WF AND 
 C MULTIPLY BY THE BORN
 
@@ -86,3 +87,55 @@ C
       ENDDO
 
 	  END
+## }else{
+C The subroutine to create the loop coefficients form the last loop wf.
+C In this case of loop-induced process, the reduction is performed at the loop
+C amplitude level so that no multiplication is performed.
+
+      SUBROUTINE %(mp_prefix)s%(proc_prefix)sCREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE,LOOP_GROUP_NUMBER,SYMFACT)
+	  implicit none
+C  
+C CONSTANTS 
+C 
+	  %(real_format)s ZERO,ONE
+	  PARAMETER (ZERO=%(zero_def)s,ONE=%(one_def)s)
+	  %(complex_format)s IMAG1
+      PARAMETER (IMAG1=(ZERO,ONE))
+	  %(complex_format)s CMPLX_ZERO
+	  PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
+	  INTEGER MAXLWFSIZE
+	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+	  INTEGER LOOPMAXCOEFS
+	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+	  INTEGER    NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
+	  INTEGER    NCOMB
+      PARAMETER (NCOMB=%(ncomb)d)
+C  
+C ARGUMENTS 
+C  
+      %(complex_format)s LOOP_WF(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+	  INTEGER RANK, SYMFACT, LCUT_SIZE, LOOP_GROUP_NUMBER
+C  
+C LOCAL VARIABLES 
+C
+      %(complex_format)s CONST
+      INTEGER I,J
+C  
+C FUNCTIONS
+C
+      INTEGER %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP, %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP, %(proc_prefix)sML5SQSOINDEX
+C
+C GLOBAL VARIABLES
+C
+      %(complex_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+	  common/%(proc_prefix)s%(mp_prefix)sLCOEFS/LOOPCOEFS
+C
+C BEGIN CODE
+C
+	  CONST=CMPLX(ONE*SYMFACT,ZERO,KIND=16)
+
+      CALL %(mp_prefix)s%(proc_prefix)sMERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST,LOOPCOEFS(0,LOOP_GROUP_NUMBER))
+
+	  END
+## }
