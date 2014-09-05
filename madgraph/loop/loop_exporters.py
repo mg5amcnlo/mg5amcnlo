@@ -1818,15 +1818,19 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # squaring against the born.
         if matrix_element.get('processes')[0].get('has_born'):
             replace_dict['loop_induced_sqsoindex']=',SQSOINDEX'
-            factor='2.0D0'
+            replace_dict['finalize_GOLEM']='\n'.join([
+        'RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%c+'+\
+        '2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)',\
+            'RES(2)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%b+2.0*LOG(MU_R)*RES_GOLEM%a)',\
+            'RES(3)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%a)'])
         else:
             replace_dict['loop_induced_sqsoindex']=''
             factor='1.0D0'
-        replace_dict['finalize_GOLEM']='\n'.join([
-        'RES(1)=NORMALIZATION*%s*DBLE(RES_GOLEM%%c+'%factor+\
+            replace_dict['finalize_GOLEM']='\n'.join([
+        'RES(1)=NORMALIZATION*(RES_GOLEM%c+'+\
         '2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)',\
-            'RES(2)=NORMALIZATION*%s*DBLE(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)'%factor,\
-            'RES(3)=NORMALIZATION*%s*DBLE(RES_GOLEM%%a)'%factor])
+            'RES(2)=NORMALIZATION*(RES_GOLEM%b+2.0*LOG(MU_R)*RES_GOLEM%a)',\
+            'RES(3)=NORMALIZATION*(RES_GOLEM%a)'])
             
         file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
  
