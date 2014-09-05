@@ -131,6 +131,8 @@ C This is used for loop-induced where the reference scale for comparisons is inf
       DATA NEXTREF/ZERO/
       INTEGER NPSPOINTS
       DATA NPSPOINTS/0/
+      LOGICAL FIRSTLOOPINDUCEDFILTERCHECK
+      DATA FIRSTLOOPINDUCEDFILTERCHECK/.TRUE./      
 ## }
   
 	  %(real_dp_format)s ACC(0:NSQUAREDSO)
@@ -526,6 +528,13 @@ IF(.NOT.BYPASS_CHECK) THEN
   NTRY=NTRY+1
 ENDIF
 
+## if(LoopInduced){
+C After the first two PS points ever computed by MadLoop, the REF scale use for determining the vanishing contribution is set and can be used, so we now allow the comparison with filtering already found by setting FIRSTLOOPINDUCEDFILTERCHECK to false. 
+IF(FIRSTLOOPINDUCEDFILTERCHECK.AND.NTRY.EQ.3) THEN
+  FIRSTLOOPINDUCEDFILTERCHECK=.FALSE.
+ENDIF
+## }
+
 IF (USER_STAB_PREC.GT.0.0d0) THEN
   MLSTABTHRES_BU=MLSTABTHRES
   MLSTABTHRES=USER_STAB_PREC
@@ -903,7 +912,11 @@ C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
 	  HEL_INCONSISTENT=.FALSE.
       IF(%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+## if(LoopInduced){
+        IF(NTRY.EQ.1.OR.FIRSTLOOPINDUCEDFILTERCHECK) THEN
+## }else{
         IF(NTRY.EQ.1) THEN
+## }
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
 		  WRITE(*,*) '##W02A WARNING Inconsistent helicity ',HELPICKED
@@ -920,7 +933,11 @@ C   SET THE HELICITY FILTER
 C           Be looser for helicity check, bring a factor 100
 		    DUMMY=%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,H),REF,.FALSE.)
 		    IF(DUMMY.NE.0) THEN
-		      IF(NTRY.EQ.1) THEN
+## if(LoopInduced){
+              IF(NTRY.EQ.1.OR.FIRSTLOOPINDUCEDFILTERCHECK) THEN
+## }else{
+              IF(NTRY.EQ.1) THEN
+## }
 C               Set the matching helicity to be contributing once more
 		        GOODHEL(H)=GOODHEL(H)+DUMMY
 C               Use an offset to clearly show it is linked to an other one and to avoid overlap
@@ -971,7 +988,11 @@ C   SET THE LOOP FILTER
   	  DO I=1,NLOOPGROUPS
 	    DO J=1,NSQUAREDSO
           IF(.NOT.%(proc_prefix)sIsZero(ABS(LOOPRES(1,J,I))+ABS(LOOPRES(2,J,I))+ABS(LOOPRES(3,J,I)),(REF*1.0d-4),I,J)) THEN
-            IF(NTRY.EQ.1) THEN
+## if(LoopInduced){
+              IF(NTRY.EQ.1.OR.FIRSTLOOPINDUCEDFILTERCHECK) THEN
+## }else{
+              IF(NTRY.EQ.1) THEN
+## }
 	          GOODAMP(J,I)=.TRUE.
 		      LOOPFILTERBUFF(J,I)=.TRUE.
 	        ELSEIF(.NOT.LOOPFILTERBUFF(J,I)) THEN
