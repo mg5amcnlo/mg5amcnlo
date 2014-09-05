@@ -1326,8 +1326,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if options['reweightonly']:
             event_norm=self.run_card['event_norm']
             nevents=int(self.run_card['nevents'])
-            self.reweight_and_collect_events(options, mode, nevents, event_norm)
-            return
+            return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
         devnull = os.open(os.devnull, os.O_RDWR) 
         if mode in ['LO', 'NLO']:
@@ -2742,7 +2741,7 @@ Integrated cross-section
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
         #content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
-        content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+        #content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
         content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
         content += 'TWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 6).value
         content += 'ZMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 23).value
@@ -2784,16 +2783,49 @@ Integrated cross-section
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
-        if pdlabel == 'lhapdf':
+        if int(self.shower_card['pdfcode']) > 1 or \
+            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1): 
+            # Use LHAPDF (should be correctly installed, because
+            # either events were already generated with them, or the
+            # user explicitly gives an LHAPDF number in the
+            # shower_card).
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
             lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                          stdout = subprocess.PIPE).stdout.read().strip()
+                                          stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+            if self.shower_card['pdfcode']==1:
+                lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+                content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+            else:
+                lhaid_list = [abs(int(self.shower_card['pdfcode']))]
+                content += 'PDFCODE=%s\n' % self.shower_card['pdfcode']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+        elif int(self.shower_card['pdfcode'])==1:
+            # Try to use LHAPDF because user wants to use the same PDF
+            # as was used for the event generation. However, for the
+            # event generation, LHAPDF was not used, so non-trivial to
+            # see if if LHAPDF is available with the corresponding PDF
+            # set. If not found, give a warning and use build-in PDF
+            # set instead.
+            try:
+                lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
+                                              stdout = subprocess.PIPE).stdout.read().strip()
+                self.link_lhapdf(pjoin(self.me_dir, 'lib'))
+                content += 'LHAPDFPATH=%s\n' % lhapdfpath
+                pdfsetsdir = self.get_lhapdf_pdfsetsdir()
+                lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+                content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+                self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+            except Exception:
+                logger.warning('Trying to shower events using the same PDF in the shower as used in the generation'+\
+                                   ' of the events using LHAPDF. However, no valid LHAPDF installation found with the'+\
+                                   ' needed PDF set. Will use default internal PDF for the shower instead. To use the'+\
+                                   ' same set as was used in the event generation install LHAPDF and set the path using'+\
+                                   ' "set /path_to_lhapdf/bin/lhapdf-config" from the MadGraph5_aMC@NLO python shell')
+                content += 'LHAPDFPATH=\n' 
+                content += 'PDFCODE=0\n'
         else:
-            #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
 

@@ -2,21 +2,24 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.2.0(21/07/14) VH: General mixed order corrections in MadLoop (only), including QCD/EW/QED and 
                     the UFO@NLO model 'loop_qcd_qed_sm'.
-			    VH: Re-design of both the tree and MadLoop matrix elements output to compute 
-				    contributions of different coupling order combinations independently from one another.
-			 VH+HS: Tensor integral reduction as implemented in PJFry and IREGI readily available and 
-			        interfaced to MadLoop's output.
-			    VH: Re-structuring of MadLoop's standalone output so as to easily create a single dynamic 
-				    library including many processes at once. Useful for interfacing MadLoop to other MC's 
-					and already working with Sherpa.
-			 VH+HS: This branch contains all the fixes for proper treatment of the latest BSM@NLO models 
-			        produced by FeynRules@NLO. In particular, the fixed related to the presence of majorana 
-					particles in loop ME's.
-
-          PT: Redesigned shower_card.dat and eliminated modbos options for Herwig6          
-          RF: Change the SPINUP information in the NLO LHEF from 0 to 9 (i.e. sum over helicities)
-          RF: Fixed a bug in the check on the determination of the conflicting BWs.
-          MZ: enabled LHAPDF6 interface 
+                VH: Re-design of both the tree and MadLoop matrix elements output to compute
+                    contributions of different coupling order combinations independently from one another.
+                VH+HS: Tensor integral reduction as implemented in PJFry and IREGI readily available
+                    and interfaced to MadLoop's output.
+                VH: Re-structuring of MadLoop's standalone output so as to easily create a single dynamic 
+                    library including many processes at once. Useful for interfacing MadLoop to other MC's
+                    and already working with Sherpa.
+                VH+HS: This branch contains all the fixes for proper treatment of the latest BSM@NLO models 
+                    produced by FeynRules@NLO. In particular, the fixed related to the presence of majorana 
+                    particles in loop ME's.
+                RF: Corrected the behaviour of the pdfcode parameter in the shower_card for NLO+PS runs.
+                PT: Redesigned shower_card.dat and eliminated modbos options for Herwig6          
+                RF: Change the SPINUP information in the NLO LHEF from 0 to 9 (i.e. sum over helicities)
+                RF: Fixed a bug in the check on the determination of the conflicting BWs.
+                PT: Redesigned shower_card.dat and eliminated modbos options for Herwig6          
+                RF: Change the SPINUP information in the NLO LHEF from 0 to 9 (i.e. sum over helicities)
+                RF: Fixed a bug in the check on the determination of the conflicting BWs.
+                MZ: enabled LHAPDF6 interface 
 
 2.1.2(03/07/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)

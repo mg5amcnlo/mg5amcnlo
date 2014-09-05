@@ -171,14 +171,14 @@
       Q2 = Q*Q
 *     check bounds
       if (x.lt.xmingrid.or.x.lt.xgrid(1).or.x.gt.xgrid(nx)) then
-         write(6,*) "Parton interpolation: x out of range -- freezed"
+c$$$         write(6,*) "Parton interpolation: x out of range -- freezed"
          if (x.lt.xgrid(1)) x = xgrid(1)
 *         if (x.lt.xmingrid) x = xmingrid
          if (x.gt.xgrid(nx))x = xgrid(nx)
       endif
       if (Q2.lt.q2grid(1).or.Q2.gt.q2grid(nq2)) then
-         write(6,*) "Parton interpolation: Q2 out of range -- freezed"
-         write(6,*) "Q2 = ",Q2, " GeV2", q2grid(1)
+c$$$         write(6,*) "Parton interpolation: Q2 out of range -- freezed"
+c$$$         write(6,*) "Q2 = ",Q2, " GeV2", q2grid(1)
          if (Q2.lt.q2grid(1)) Q2 = q2grid(1)
          if (Q2.gt.q2grid(nq2)) Q2 = q2grid(nq2)
       endif
