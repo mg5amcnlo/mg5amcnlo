@@ -37,6 +37,9 @@ C
       INTEGER PAIRING(NLOOPLINE),WE(%(nwfsargs)d)
       INTEGER I, J, K, TEMP,I_LIB
       LOGICAL complex_mass,doing_qp
+## if(LoopInduced){
+      LOGICAL AMP_CONTRIBUTES
+## }
 C
 C GLOBAL VARIABLES
 C
@@ -81,7 +84,12 @@ C ----------
 ## if(not LoopInduced){
 	  IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
 ## }else{
-	  IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(1,LOOPNUM)) THEN
+C For loop-induced processes, we must reduce this loop amplitude if it contributes to any squared split order contribution.
+      AMP_CONTRIBUTES = .FALSE.
+      DO I=1,NSQUAREDSO
+        IF (GOODAMP(I,LOOPNUM)) AMP_CONTRIBUTES=.TRUE.
+	  ENDDO
+	  IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.AMP_CONTRIBUTES) THEN
 ## }
 	  %(weset)s
       %(mset)s

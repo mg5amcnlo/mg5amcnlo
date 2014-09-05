@@ -349,6 +349,20 @@ IF(ML_INIT) THEN
   CALL setMadLoopPath(TMP)
   CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
   CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
+## if(LoopInduced){
+  IF(.NOT.LoopInitStartOver) THEN
+    WRITE(*,*) 'INFO: For loop-induced processes it is preferable to always set the parameter LoopInitStartOver to True, so it is hard-set here to True.'
+    LoopInitStartOver=.TRUE.
+  ENDIF
+  IF(.NOT.HelInitStartOver) THEN
+    WRITE(*,*) "INFO: For loop-induced processes it is preferable to always set the parameter HelInitStartOver to True, so it is hard-set here to True.'
+    HelInitStartOver=.TRUE.
+  ENDIF
+  IF (CheckCycle.LT.5) THEN
+    WRITE(*,*) "INFO: Due to the dynamic setting of the reference scale for contributions comparisons, it is preferable to set the parameter CheckCycle to a value larger than 4, so it is hard-set here to 5.'
+    CheckCycle=5
+  ENDIF
+## }
   ML_INIT = .FALSE.
 ENDIF
 

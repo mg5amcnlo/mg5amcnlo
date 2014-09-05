@@ -14,7 +14,7 @@ C
       PARAMETER (READPS = .FALSE.)
 
       INTEGER NPSPOINTS
-      PARAMETER (NPSPOINTS = 4)
+      PARAMETER (NPSPOINTS = 10)
 
 	  character(512) MadLoopResourcePath
 
