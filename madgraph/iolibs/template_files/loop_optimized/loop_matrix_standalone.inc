@@ -130,9 +130,7 @@ C This is used for loop-induced where the reference scale for comparisons is inf
       %(real_dp_format)s NEXTREF
       DATA NEXTREF/ZERO/
       INTEGER NPSPOINTS
-      DATA NPSPOINTS/0/
-      LOGICAL FIRSTLOOPINDUCEDFILTERCHECK
-      DATA FIRSTLOOPINDUCEDFILTERCHECK/.TRUE./      
+      DATA NPSPOINTS/0/      
 ## }
   
 	  %(real_dp_format)s ACC(0:NSQUAREDSO)
@@ -524,16 +522,15 @@ DO I=2,MAXSTABILITYLENGTH
   EVAL_DONE(I)=.FALSE.
 ENDDO
 
+## if(LoopInduced) {
+C For loop-induced processes, we should make sure not to use the first points
+C to set the filters because it doesn't have a reasonable REF scale yet.
+IF(.NOT.BYPASS_CHECK.AND.NPSPOINTS.GE.1) THEN
+## } else {
 IF(.NOT.BYPASS_CHECK) THEN
+## }
   NTRY=NTRY+1
 ENDIF
-
-## if(LoopInduced){
-C After the first two PS points ever computed by MadLoop, the REF scale use for determining the vanishing contribution is set and can be used, so we now allow the comparison with filtering already found by setting FIRSTLOOPINDUCEDFILTERCHECK to false. 
-IF(FIRSTLOOPINDUCEDFILTERCHECK.AND.NTRY.EQ.3) THEN
-  FIRSTLOOPINDUCEDFILTERCHECK=.FALSE.
-ENDIF
-## }
 
 IF (USER_STAB_PREC.GT.0.0d0) THEN
   MLSTABTHRES_BU=MLSTABTHRES
@@ -905,16 +902,16 @@ C SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING THE HELICITY FI
   HELSAVED(2,HELPICKED)=ANS(2,0)
   HELSAVED(3,HELPICKED)=ANS(3,0)
 
-  IF (CHECKPHASE) THEN
+## if(LoopInduced){
+C We make sure not to perform any check when NTRY is 0 because this means that
+C the REF scale has not been set to the result of the evaluation for the first PS point.
+## }
+  IF (CHECKPHASE.AND.NTRY.NE.0) THEN
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
 	  HEL_INCONSISTENT=.FALSE.
       IF(%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
-## if(LoopInduced){
-        IF(NTRY.EQ.1.OR.FIRSTLOOPINDUCEDFILTERCHECK) THEN
-## }else{
         IF(NTRY.EQ.1) THEN
-## }
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
 		  WRITE(*,*) '##W02A WARNING Inconsistent helicity ',HELPICKED
@@ -931,11 +928,7 @@ C   SET THE HELICITY FILTER
 C           Be looser for helicity check, bring a factor 100
 		    DUMMY=%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,H),REF,.FALSE.)
 		    IF(DUMMY.NE.0) THEN
-## if(LoopInduced){
-              IF(NTRY.EQ.1.OR.FIRSTLOOPINDUCEDFILTERCHECK) THEN
-## }else{
               IF(NTRY.EQ.1) THEN
-## }
 C               Set the matching helicity to be contributing once more
 		        GOODHEL(H)=GOODHEL(H)+DUMMY
 C               Use an offset to clearly show it is linked to an other one and to avoid overlap
@@ -986,11 +979,7 @@ C   SET THE LOOP FILTER
   	  DO I=1,NLOOPGROUPS
 	    DO J=1,NSQUAREDSO
           IF(.NOT.%(proc_prefix)sIsZero(ABS(LOOPRES(1,J,I))+ABS(LOOPRES(2,J,I))+ABS(LOOPRES(3,J,I)),(REF*1.0d-4),I,J)) THEN
-## if(LoopInduced){
-              IF(NTRY.EQ.1.OR.FIRSTLOOPINDUCEDFILTERCHECK) THEN
-## }else{
               IF(NTRY.EQ.1) THEN
-## }
 	          GOODAMP(J,I)=.TRUE.
 		      LOOPFILTERBUFF(J,I)=.TRUE.
 	        ELSEIF(.NOT.LOOPFILTERBUFF(J,I)) THEN
@@ -1432,7 +1421,7 @@ C If the helicity can be constructed progressively while allowing inconsistency,
 		    IF(.NOT.%(proc_prefix)sIsZero(ABS(resB(J))+ABS(resA(J)),ref,-1,-1)) THEN
 		      GOTO 1231
 			ENDIF
-C         Be loser for helicity comparison, so bring a factor 100
+C         Be looser for helicity comparison, so bring a factor 100
 		  ELSEIF(.NOT.%(proc_prefix)sIsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref*100.0d0,-1,-1)) THEN
 		    GOTO 1231		    
 		  ENDIF
