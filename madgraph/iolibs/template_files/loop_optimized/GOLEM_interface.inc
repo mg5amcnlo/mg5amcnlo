@@ -107,7 +107,11 @@ C
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
 
+## if(not LoopInduced){	  
       %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## }else{
+      %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
       COMMON/%(proc_prefix)sLCOEFS/LOOPCOEFS
 C ----------
 C BEGIN CODE
@@ -188,7 +192,7 @@ C     Fill in the golem coefficents and compute the loop
         PASS_COEF_CHECK=.TRUE.
 	SELECT CASE(RANK)
 	CASE(0)
-	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_0(LOOPCOEFS(0,SQSOINDEX,ID),COEFFS0)
+	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_0(LOOPCOEFS(0%(loop_induced_sqsoindex)s,ID),COEFFS0)
 	    IF(GOLEM_RUN_MODE.EQ.3)THEN
 		COEFFS0_REC = %(proc_prefix)sGOLEM_LOOPNUM(NULL_VEC,0.0_ki)
 		PASS_COEF_CHECK=%(proc_prefix)sCOMPARE_COEFS_0(COEFFS0,COEFFS0_REC)

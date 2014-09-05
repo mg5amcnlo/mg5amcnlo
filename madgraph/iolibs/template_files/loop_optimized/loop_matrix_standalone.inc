@@ -650,12 +650,10 @@ I_QP_LIB=1
 200 CONTINUE
 
 ## if(LoopInduced){
-300 CONTINUE
-## }
-
-## if(LoopInduced){
 C     Free cache when using IREGI
 %(iregi_free_ps)s
+
+300 CONTINUE
 ## }
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN

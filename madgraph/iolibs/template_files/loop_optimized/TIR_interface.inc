@@ -56,8 +56,11 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
-
+## if(not LoopInduced){
        %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## }else{
+       %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
        COMMON/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
 C ----------
@@ -131,9 +134,13 @@ C     IREGI
       END SELECT
 
       DO I=1,3
-      	 RES(I)=LOOPCOEFS(0,I_SQSO,I_LOOPGROUP)*TIRCOEFS(0,I)
-      	 DO J=1,NLOOPCOEFS-1
-	    RES(I)=RES(I)+LOOPCOEFS(J,I_SQSO,I_LOOPGROUP)*TIRCOEFS(J,I)
+	     RES(I)=(0.0d0,0.0d0)
+      	 DO J=0,NLOOPCOEFS-1
+## if(not LoopInduced){
+	       RES(I)=RES(I)+LOOPCOEFS(J,I_SQSO,I_LOOPGROUP)*TIRCOEFS(J,I)
+## }else{
+	       RES(I)=RES(I)+LOOPCOEFS(J,I_LOOPGROUP)*TIRCOEFS(J,I)
+## }
 	 ENDDO
       ENDDO
           %(finalize_TIR)s

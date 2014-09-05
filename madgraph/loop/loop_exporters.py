@@ -1817,8 +1817,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # We finalize TIR result differently wether we used the built-in 
         # squaring against the born.
         if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['loop_induced_sqsoindex']=',SQSOINDEX'
             factor='2.0D0'
         else:
+            replace_dict['loop_induced_sqsoindex']=''
             factor='1.0D0'
         replace_dict['finalize_GOLEM']='\n'.join([
         'RES(1)=NORMALIZATION*%s*DBLE(RES_GOLEM%%c+'%factor+\
