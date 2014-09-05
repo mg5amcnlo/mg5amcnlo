@@ -2201,6 +2201,10 @@ class decay_all_events(object):
                                                       event_map, momenta_in_decay,use_mc_masses, helicities)
             
             
+            # Treat the case we get too many failures for the PS generation.
+            if failed > 500 :
+                logger.debug('Got a production event with %s failures for the phase-space generation generation ' % failed)
+
             # Treat the case that we ge too many overweight.
             if weight > decay_me['max_weight']:
                 report['over_weight'] += 1
