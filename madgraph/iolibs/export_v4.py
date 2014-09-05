@@ -17,6 +17,7 @@
 import copy
 from cStringIO import StringIO
 from distutils import dir_util
+import itertools
 import fractions
 import glob
 import logging
@@ -1536,20 +1537,32 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         if self.opt['sa_symmetry']:
             # avoid symmetric output
-            for proc in matrix_element.get('processes'):
+            for i,proc in enumerate(matrix_element.get('processes')):
+                        
+                initial = []    #filled in the next line
+                final = [l.get('id') for l in proc.get('legs')\
+                      if l.get('state') or initial.append(l.get('id'))]
+                decay_finals = proc.get_final_ids_after_decay()
+                decay_finals.sort()
+                tag = (tuple(initial), tuple(decay_finals))
+                legs = proc.get('legs')[:]
                 leg0 = proc.get('legs')[0]
                 leg1 = proc.get('legs')[1]
                 if not leg1.get('state'):
                     proc.get('legs')[0] = leg1
                     proc.get('legs')[1] = leg0
-                    dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
-                           "P%s" % proc.shell_string())
-                    #restore original order
-                    proc.get('legs')[1] = leg1
-                    proc.get('legs')[0] = leg0                
-                    if os.path.exists(dirpath2):
-                        logger.info('Symmetric directory exists')
-                        return 0
+                    flegs = proc.get('legs')[2:]
+                    for perm in itertools.permutations(flegs):
+                        for i,p in enumerate(perm):
+                            proc.get('legs')[i+2] = p
+                        dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
+                               "P%s" % proc.shell_string())
+                        #restore original order
+                        proc.get('legs')[2:] = legs[2:]              
+                        if os.path.exists(dirpath2):
+                            proc.get('legs')[:] = legs
+                            return 0
+                proc.get('legs')[:] = legs
 
         try:
             os.mkdir(dirpath)

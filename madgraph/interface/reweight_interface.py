@@ -619,7 +619,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     tag = (tag[0], tuple(decay_finals))
                 Pdir = pjoin(path_me, 'rw_me', 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
-                assert os.path.exists(Pdir)
+                assert os.path.exists(Pdir), "Pdir %s do not exists" % Pdir                        
                 if tag in self.id_to_path:
                     if not Pdir == self.id_to_path[tag][1]:
                         misc.sprint(tag, Pdir, self.id_to_path[tag][1])
