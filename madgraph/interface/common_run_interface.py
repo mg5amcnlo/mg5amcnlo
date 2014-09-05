@@ -1629,33 +1629,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if lhapdf_version.startswith('5.'):
             pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
-                     stdout = subprocess.PIPE).stdout.read().strip()
-            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
-            # link the static library in lib
-            lhalib = 'libLHAPDF.a'
-
-        elif lhapdf_version.startswith('6.'):
-            pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
-                     stdout = subprocess.PIPE).stdout.read().strip()
-            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
-            # link the dynamic library in lib
-            if os.path.exists(pjoin(lhalibdir, 'libLHAPDF.so')):
-                lhalib = 'libLHAPDF.so'
-            elif os.path.exists(pjoin(lhalibdir, 'libLHAPDF.dylib')):
-                lhalib = 'libLHAPDF.dylib'
-            else:
-                raise MadGraph5Error('Dynamic library not found for LHAPDF6')
-
+                 stdout = subprocess.PIPE).stdout.read().strip()
         else:
-            raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
+            pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
+                 stdout = subprocess.PIPE).stdout.read().strip()
+        
+        self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
+        # link the static library in lib
+        lhalib = 'libLHAPDF.a'
 
         if os.path.exists(pjoin(libdir, lhalib)):
             files.rm(pjoin(libdir, lhalib))
         files.ln(pjoin(lhalibdir, lhalib), libdir)
-        # link the dynamic library for v6 in extra_dirs
-        if lhapdf_version.startswith('6.'):
-            for d in extra_dirs:
-                files.ln(pjoin(libdir, lhalib), pjoin(self.me_dir, d))
         # just create the PDFsets dir, the needed PDF set will be copied at run time
         if not os.path.isdir(pjoin(libdir, 'PDFsets')):
             os.mkdir(pjoin(libdir, 'PDFsets'))
@@ -1682,9 +1667,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         'lhaid and PDF_set_min/max in the run_card do not correspond to the' + \
                         'same PDF set. Please check the run_card.')
             except KeyError:
-                raise MadGraph5Error(\
+                if self.lhapdf_version.startswith('5'):
+                    raise MadGraph5Error(\
                         ('invalid lhaid set in th run_card: %d .\nPlease note that some sets' % lhaid) + \
-                    '(eg MSTW 90%CL error sets) \nare not available in aMC@NLO + LHAPDF 5.x.x')
+                         '(eg MSTW 90%CL error sets) \nare not available in aMC@NLO + LHAPDF 5.x.x')
+                else:
+                    logger.debug('%d not found in pdfsets.index' % lhaid)
 
 
         # check if the file exists, otherwise install it:
@@ -1696,13 +1684,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             except OSError:
                 pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
 
-        if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-            self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
-            
-        if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-            files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
-        elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
-            files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+        #check that the pdfset is not already there
+        if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
+           not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)):
+
+            if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+                self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
+
+            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+                files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+            elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
+                files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
             
 
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
@@ -1731,11 +1723,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            os.path.isdir(pjoin(pdfsets_dir, filename)):
             logger.info('%s successfully downloaded and stored in %s' \
                     % (filename, pdfsets_dir))
-        #otherwise save it locally
-        else:
+        #otherwise (if v5) save it locally
+        elif lhapdf_version.startswith('5.'):
             logger.warning('Could not download %s into %s. Trying to save it locally' \
                     % (filename, pdfsets_dir))
             self.install_lhapdf_pdfset(pjoin(self.me_dir, 'lib', 'PDFsets'), filename)
+        else:
+            raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir)
 
 
     def get_lhapdf_pdfsets_list(self, pdfsets_dir):
@@ -1787,8 +1783,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         stdout = subprocess.PIPE).stdout.read().strip()
 
         # this will be removed once some issues in lhapdf6 will be fixed
-        if self.lhapdf_version.startswith('6.'):
-            raise MadGraph5Error('LHAPDF 6 not yet supported. Please use v5.x.x')
+        if self.lhapdf_version.startswith('6.0'):
+            raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
 
         return self.lhapdf_version
 

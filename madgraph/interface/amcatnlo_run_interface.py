@@ -3212,12 +3212,6 @@ Integrated cross-section
         if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
 
-        # LHAPDF dynamic libraries (needed for lhapdf6)
-        lhalibs = ['libLHAPDF.dylib', 'libLHAPDF.so'] 
-        for lib in [pjoin(self.me_dir, 'lib', l) for l in lhalibs \
-           if os.path.exists(pjoin(self.me_dir, 'lib', l))]:
-            input_files.append(lib)
-      
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
             tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar'),'w',

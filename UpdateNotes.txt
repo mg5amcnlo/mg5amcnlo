@@ -16,6 +16,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 PT: Redesigned shower_card.dat and eliminated modbos options for Herwig6          
                 RF: Change the SPINUP information in the NLO LHEF from 0 to 9 (i.e. sum over helicities)
                 RF: Fixed a bug in the check on the determination of the conflicting BWs.
+                PT: Redesigned shower_card.dat and eliminated modbos options for Herwig6          
+                RF: Change the SPINUP information in the NLO LHEF from 0 to 9 (i.e. sum over helicities)
+                RF: Fixed a bug in the check on the determination of the conflicting BWs.
+                MZ: enabled LHAPDF6 interface 
 
 2.1.2(03/07/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)

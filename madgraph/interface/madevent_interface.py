@@ -3524,20 +3524,21 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # limit the number of event to 100k
         self.check_nb_events()
 
+        # this is in order to avoid conflicts between runs with and without
+        # lhapdf
+        misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
+        
         # set environment variable for lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
             os.environ['lhapdf'] = 'True'
             self.link_lhapdf(pjoin(self.me_dir,'lib'))
-            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
-            #remove lhapdf stuff
-            self.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
             
         # set random number
         if self.run_card['iseed'] != '0':
