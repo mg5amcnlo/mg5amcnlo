@@ -298,6 +298,11 @@ C TILL NOW, ONLY CUTTOOLS PROVIDE QP
 ## }
 	  common/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
+## if(LoopInduced){
+	  LOGICAL TIR_DONE(NLOOPGROUPS)
+	  COMMON/%(proc_prefix)sTIRCACHING/TIR_DONE
+## }
+
 ## if(not LoopInduced){
       %(complex_dp_format)s AMPL(3,NCTAMPS)
 ## } else {
@@ -665,6 +670,8 @@ C     Free cache when using IREGI
 %(iregi_free_ps)s
 
 300 CONTINUE
+
+TIR_DONE(1:NLOOPGROUPS)=.FALSE.
 ## }
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN

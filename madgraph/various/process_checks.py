@@ -1328,6 +1328,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         dir_name = pjoin(export_dir, 'SubProcesses', shell_name)
         infos['dir_path']=dir_name
 
+        attempts = [3,15]
         # remove check and check_sa.o for running initialization again
         try:
             os.remove(pjoin(dir_name,'check'))
