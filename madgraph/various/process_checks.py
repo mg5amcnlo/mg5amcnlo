@@ -1158,6 +1158,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 raise MadGraph5Error, 'Could not find a valid running directory'+\
                                                       ' in %s.'%str(SubProc_dir)
 
+        # Use the presence of the file born_matrix.f to decide if it is a 
+        # loop-induced process or not. It's not crucial, but just that because
+        # of the dynamic adjustment of the ref scale used for deciding what are
+        # the zero contributions, more points are neeeded for loop-induced.
+        if not os.path.isfile(pjoin(run_dir,'born_matrix.f')):
+            if len(attempts)>=1 and attempts[0]<8:
+                attempts[0]=8
+            if len(attempts)>=2 and attempts[1]<25:
+                attempts[1]=25
+
         to_attempt = copy.copy(attempts)
         to_attempt.reverse()
         my_req_files = copy.copy(req_files)
@@ -1318,13 +1328,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         dir_name = pjoin(export_dir, 'SubProcesses', shell_name)
         infos['dir_path']=dir_name
 
-        # Use the presence of the file born_matrix.f to decide if it is a loop-induced process or not.
-        # It's not crucial, but just that because of the dynamic adjustment of the ref scale used
-        # for deciding what are the zero contributions, more points are neeeded for loop-induced.
-        if os.path.isfile(pjoin(dir_name,'born_matrix.f')):
-            attempts = [3,15]
-        else:
-            attempts = [8,25]
         # remove check and check_sa.o for running initialization again
         try:
             os.remove(pjoin(dir_name,'check'))
