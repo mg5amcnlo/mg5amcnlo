@@ -46,8 +46,8 @@ C
        %(complex_dp_format)s PJCOEFS(0:LOOPMAXCOEFS-1,3)
 ## if(LoopInduced){
        %(complex_dp_format)s TIRCOEFS_CACHING(3,0:LOOPMAXCOEFS-1,NLOOPGROUPS)
-## }
        SAVE TIRCOEFS_CACHING
+## }
 C
 C EXTERNAL FUNCTIONS
 C
