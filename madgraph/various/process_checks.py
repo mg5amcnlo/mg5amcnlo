@@ -1237,7 +1237,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.close()
 
     def setup_process(self, matrix_element, export_dir, reusing = False,
-                                                param_card = None,MLOptions={},clean=True):
+                                      param_card = None,MLOptions={},clean=True):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
@@ -1318,7 +1318,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         dir_name = pjoin(export_dir, 'SubProcesses', shell_name)
         infos['dir_path']=dir_name
 
-        attempts = [3,15]
+        # Use the presence of the file born_matrix.f to decide if it is a loop-induced process or not.
+        # It's not crucial, but just that because of the dynamic adjustment of the ref scale used
+        # for deciding what are the zero contributions, more points are neeeded for loop-induced.
+        if os.path.isfile(pjoin(dir_name,'born_matrix.f')):
+            attempts = [3,15]
+        else:
+            attempts = [8,25]
         # remove check and check_sa.o for running initialization again
         try:
             os.remove(pjoin(dir_name,'check'))
@@ -1349,10 +1355,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                        MLOptions = {}):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
-        
-        # Normally, this should work for loop-induced processes as well
-#        if not matrix_element.get('processes')[0]['has_born']:
-#            return None
 
         if options and 'split_orders' in options.keys():
             split_orders = options['split_orders']
@@ -1428,8 +1430,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['n_contrib_hel']=n_contrib_hel
         res_timings['n_tot_hel']=len(helicities)
         
-        # We aim at a 30 sec run
-        target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,5)
+        # We aim at a 15 sec run
+        target_pspoints_number = max(int(15.0/time_per_ps_estimate)+1,5)
 
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
@@ -2156,8 +2158,6 @@ def generate_loop_matrix_element(process_definition, reuse, output_path=None,
     # Make sure to disable loop_optimized_output when considering loop induced 
     # processes
     loop_optimized_output = cmd.options['loop_optimized_output']
-    if not amplitude.get('process').get('has_born'):
-        loop_optimized_output = False
     timing['Diagrams_generation']=time.time()-start
     timing['n_loops']=len(amplitude.get('loop_diagrams'))
     start=time.time()
@@ -2205,9 +2205,7 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
     options['reuse'] = reusing
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
                                   model=model, output_path=output_path, cmd=cmd)
-    
-    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
-        myProfiler.loop_optimized_output=False
+
     if not myProfiler.loop_optimized_output:
         MLoptions={}
     else:
@@ -2257,8 +2255,7 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
     options['reuse'] = reusing
     myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
                                     output_path=output_path,model=model,cmd=cmd)
-    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
-        myStabilityChecker.loop_optimized_output=False
+
     if not myStabilityChecker.loop_optimized_output:
         MLoptions = {}
     else:
@@ -2305,8 +2302,7 @@ def check_timing(process_definition, param_card= None, cuttools="",tir={},
     options['reuse'] = reusing
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model,tir_dir=tir,
                                                output_path=output_path, cmd=cmd)
-    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
-        myTimer.loop_optimized_output=False
+
     if not myTimer.loop_optimized_output:
         MLoptions = {}
     else:
@@ -2482,8 +2478,6 @@ def check_process(process, evaluator, quick, options):
                 loop_base_objects.cutting_method = 'optimal' if \
                                             number_checked%2 == 0 else 'default'
                 amplitude = loop_diagram_generation.LoopAmplitude(newproc)
-                if not amplitude.get('process').get('has_born'):
-                    evaluator.loop_optimized_output = False   
         except InvalidCmd:
             result=False
         else:
@@ -3201,8 +3195,6 @@ def check_gauge_process(process, evaluator, options=None):
             amplitude = diagram_generation.Amplitude(process)
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
-            if not amplitude.get('process').get('has_born'):
-                evaluator.loop_optimized_output = False
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -3454,8 +3446,6 @@ def check_lorentz_process(process, evaluator,options=None):
             amplitude = diagram_generation.Amplitude(process)
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
-            if not amplitude.get('process').get('has_born'):
-                evaluator.loop_optimized_output = False 
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -3663,8 +3653,6 @@ def get_value(process, evaluator, p=None, options=None):
             amplitude = diagram_generation.Amplitude(process)
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
-            if not amplitude.get('process').get('has_born'):
-                evaluator.loop_optimized_output = False
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
