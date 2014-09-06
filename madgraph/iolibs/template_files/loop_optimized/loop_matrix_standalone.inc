@@ -703,6 +703,7 @@ ENDDO
 
 C Check if we directly go to multiple precision
 IF (CTMODE.GE.4) THEN
+## if(not LoopInduced){
   IF (.NOT.MP_DONE) THEN
     CALL %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
 C   It should be safe to directly set MP_DONE to true already here. But maybe I overlooked something.
@@ -711,12 +712,12 @@ C   It should be safe to directly set MP_DONE to true already here. But maybe I 
 C Even if MP_DONE is .TRUE. we should anyway skip the
 C double precision evaluation as it as already been
 c computed in quadruple precision.
-## if(not LoopInduced){
   goto 300
 ## }else{
+  CALL %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
+C We must skip the double precision computation of both loop amplitudes and CT amplitudes because they will all be computed in MP_COMPUTE_LOOP_COEFS.
   goto 301
 ## }
-
 ENDIF
 
 DO H=1,NCOMB
@@ -836,15 +837,9 @@ C we now copy over this flag to the relevant contributing Squared orders.
   ENDIF
 ENDDO
 
-## if (LoopInduced) {
-301 CONTINUE
-
-IF(SKIPLOOPEVAL) THEN
-  GOTO 1226
-ENDIF
-## } else {
-
+## if(not LoopInduced){
 %(coef_merging)s
+## }
 
 DO I=0,NSQUAREDSO
   DO J=1,3
@@ -852,10 +847,14 @@ DO I=0,NSQUAREDSO
   ENDDO
 ENDDO
 
+## if(not LoopInduced){
 300 CONTINUE
 
 C     Free cache when using IREGI
 %(iregi_free_ps)s
+## }else{
+301 CONTINUE
+## }
 
 DO I=0,NSQUAREDSO
   DO J=1,3
@@ -867,6 +866,7 @@ IF(SKIPLOOPEVAL) THEN
   GOTO 1226
 ENDIF
 
+## if(not LoopInduced){
 DO I_SO=1,NSQUAREDSO
   DO J=1,NLOOPGROUPS
     S(I_SO,J)=.TRUE.

@@ -106,12 +106,12 @@ C ----------
       ENDDO
 	  QRES=(0.0e0_16,0.0e0_16)
 
+## if(not LoopInduced) {
       IF (.NOT.MP_DONE) THEN
 	    CALL %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(MP_P,DUMMY)
 	    MP_DONE=.TRUE.
 	  ENDIF
 
-## if(not LoopInduced) {
 	  CALL MP_%(proc_prefix)sEVAL_POLY(LOOPCOEFS(0,SQSOINDEX,ID),RANK,-QQ,QRES)
 ## }else{
 	  CALL MP_%(proc_prefix)sEVAL_POLY(LOOPCOEFS(0,ID),RANK,-QQ,QRES)

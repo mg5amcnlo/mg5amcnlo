@@ -113,7 +113,7 @@ C
 	  common/%(proc_prefix)sMP_AMPL/AMPL
 
 ## if(LoopInduced){
-      %(complex_mp_format)s DP_AMPL(3,NLOOPAMPS)
+      %(complex_dp_format)s DP_AMPL(3,NLOOPAMPS)
 	  common/%(proc_prefix)sAMPL/DP_AMPL
 
       %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
