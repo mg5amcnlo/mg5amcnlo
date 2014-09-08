@@ -35,7 +35,7 @@ c      integer mapconfig(0:lmaxconfigs)
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),jac
       double precision M_PROD, M_FULL
       logical notpass
-      integer counter,mode,nbpoints, counter2
+      integer counter,mode,nbpoints, counter2, counter3
       double precision mean, variance, maxweight,weight,std
       double precision temp
       double precision Pprod(0:3,nexternal_prod)
@@ -212,6 +212,7 @@ c        max_m=0d0
 c        max_jac=0d0
 
         counter2=0
+        counter3=0
         do i=1,nbpoints
            jac=1d0
            ivar=0
@@ -227,7 +228,16 @@ c           enddo
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
            if (jac.lt.0d0) then
              counter2=counter2+1 
-             if (counter2.ge.3) then ! use another topology to generate PS points
+             counter3=counter3+1
+c             if (counter3.gt.500) then 
+c               write(*,*) "500_pts_failed_stop_executation"
+c               stop
+c             endif  
+             if (counter2.ge.8) then ! use another topology to generate PS points
+               do k=1,n_max_cg
+                 amp2(k)=0d0
+               enddo
+               CALL SMATRIX_PROD(P,M_PROD)
                call get_config(iconfig)
                do k=-nexternal_prod+2,-1
                 do j=1,2
@@ -240,6 +250,7 @@ c           enddo
                  qwidth(k)=prwidth(k,iconfig)
                enddo
                call  merge_itree(itree,qmass,qwidth, p,map_external2res)
+               counter2=0
              endif
 
            cycle
@@ -314,6 +325,7 @@ c        initialize the helicity amps
          notpass=.true.
          counter=0
          counter2=0
+         counter3=0
          do while (notpass) 
            maxBW=0d0
            counter=counter+1
@@ -327,7 +339,16 @@ c        initialize the helicity amps
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
            if (jac.lt.0d0) then
              counter2=counter2+1 
-             if (counter2.ge.3) then ! use another topology to generate PS points
+             counter3=counter3+1 
+c             if (counter3.gt.500) then
+c               write(*,*) "500_pts_failed_stop_executation"
+c               stop
+c             endif
+             if (counter2.ge.8) then ! use another topology to generate PS points
+               do k=1,n_max_cg
+                 amp2(k)=0d0
+               enddo
+               CALL SMATRIX_PROD(P,M_PROD)
                call get_config(iconfig)
                do i=-nexternal_prod+2,-1
                 do j=1,2
@@ -340,6 +361,7 @@ c        initialize the helicity amps
                  qwidth(i)=prwidth(i,iconfig)
                enddo
                call  merge_itree(itree,qmass,qwidth, p,map_external2res)
+               counter2=0
              endif
 
              cycle
@@ -365,7 +387,7 @@ c
           call generate_momenta_conf(jac,x,itree,qmass,qwidth,ptrial,pprod,map_external2res) 
           
           if (jac.lt.0d0) then
-            write(*,*) nexternal,  counter, maxBW, weight, counter2, 0
+            write(*,*) nexternal,  counter, maxBW, weight, counter3, 0
             do i=1,nexternal
                write (*,*) (pfull(j,i), j=0,3)  
             enddo
@@ -492,7 +514,7 @@ c     common
          !write(*,*) random
          !write(*,*) cumulweight(i-1)
          !write(*,*) cumulweight(i)
-         if (random.ge.cumulweight(i-1).and.random.le.cumulweight(i)) then 
+         if (random.le.cumulweight(i)) then 
            iconfig=i
            return
          endif 

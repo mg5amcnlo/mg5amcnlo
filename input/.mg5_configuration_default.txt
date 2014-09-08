@@ -89,7 +89,7 @@
 #!  0: single machine/ 1: cluster / 2: multicore
 # run_mode = 2
 
-#! Cluster Type [pbs|sge|condor|lsf|ge|slurm] Use for cluster run only
+#! Cluster Type [pbs|sge|condor|lsf|ge|slurm|htcaas|htcaas2] Use for cluster run only
 #!  And cluster queue (or partition for slurm)
 # cluster_type = condor
 # cluster_queue = madgraph
