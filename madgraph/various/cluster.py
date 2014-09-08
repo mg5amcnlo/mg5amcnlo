@@ -201,9 +201,16 @@ class Cluster(object):
         """Wait that all job are finish.
         if minimal_job set, then return if idle + run is lower than that number"""
         
+        
+        mode = 1 # 0 is long waiting/ 1 is short waiting
         nb_iter = 0
+        nb_short = 0 
         change_at = 5 # number of iteration from which we wait longer between update.
+        #usefull shortcut for readibility
+        longtime, shorttime = self.options['cluster_status_update']
+        
         while 1: 
+            old_mode = mode
             nb_iter += 1
             idle, run, finish, fail = self.control(me_dir)
             if fail:
@@ -215,23 +222,47 @@ class Cluster(object):
             if idle + run < minimal_job:
                 return
             fct(idle, run, finish)
-            if idle < run or nb_iter < change_at:
-                time.sleep(self.options['cluster_status_update'][1])
-            elif nb_iter == change_at:
+            #Determine how much we have to wait (mode=0->long time, mode=1->short time)
+            if nb_iter < change_at:
+                mode = 1
+            elif idle < run:
+                if old_mode == 0:
+                    if nb_short:
+                        mode = 0 #we already be back from short to long so stay in long
+                    #check if we need to go back to short mode
+                    elif idle:
+                        if nb_iter > change_at + int(longtime)//shorttime:
+                            mode = 0 #stay in long waiting mode
+                        else:
+                            mode = 1 # pass in short waiting mode
+                            nb_short =0
+                    else:
+                        mode = 1 # pass in short waiting mode
+                        nb_short = 0
+                elif old_mode == 1:
+                    nb_short +=1
+                    if nb_short > 3* max(change_at, int(longtime)//shorttime):
+                        mode = 0 #go back in slow waiting
+            else:
+                mode = 0
+            
+            #start to wait 
+            if old_mode > mode:
                 logger.info('''Start to wait %ss between checking status.
 Note that you can change this time in the configuration file.
-Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
+Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])            
+            if mode == 0:
                 try:
                     time.sleep(self.options['cluster_status_update'][0])
                 except KeyboardInterrupt:
                     logger.info('start to update the status')
                     nb_iter = min(0, change_at -2)
+                    nb_short = 0                
+            
+            if mode == 1:
+                time.sleep(self.options['cluster_status_update'][mode])
             else:
-                try:
-                    time.sleep(self.options['cluster_status_update'][0])
-                except KeyboardInterrupt:
-                    logger.info('start to update the status')
-                    nb_iter = min(0, change_at -2)
+                time.sleep(self.options['cluster_status_update'][1])
                     
                     
         self.submitted = 0
