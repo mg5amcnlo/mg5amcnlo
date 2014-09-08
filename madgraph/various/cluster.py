@@ -246,11 +246,13 @@ class Cluster(object):
             else:
                 mode = 0
             
-            #start to wait 
+            #if pass from fast(mode=1) to slow(mode=0) make a print statement:
             if old_mode > mode:
                 logger.info('''Start to wait %ss between checking status.
 Note that you can change this time in the configuration file.
-Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])            
+Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])   
+            
+            #now Waiting!        
             if mode == 0:
                 try:
                     time.sleep(self.options['cluster_status_update'][0])
@@ -258,9 +260,6 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
                     logger.info('start to update the status')
                     nb_iter = min(0, change_at -2)
                     nb_short = 0                
-            
-            if mode == 1:
-                time.sleep(self.options['cluster_status_update'][mode])
             else:
                 time.sleep(self.options['cluster_status_update'][1])
                     

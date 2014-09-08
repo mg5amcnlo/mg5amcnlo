@@ -894,7 +894,7 @@ c      enddo
                endif
             enddo
  10         continue
-            if (.not.found)then
+            if (found)then
                call correct_external_flow_epsilon(icol, jpart, maxcolor,
      &              icol(k,i))
             endif
