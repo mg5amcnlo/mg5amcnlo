@@ -722,7 +722,7 @@ c          Remove non-gluon jets that lead up to non-jet vertices
 c          The ishft gives the FS particle corresponding to imocl
               if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)then
                  iqjets(ipart(1,imocl(n)))=0
-              else if (ipdgcl(imocl(n),igraphs(1),iproc).eq.21)
+              else if (ipdgcl(imocl(n),igraphs(1),iproc).eq.21)then
 c                special case for g > g h remove also the hardest gluon
                  iqjets(ipart(1,imocl(n)))=0
               endif
