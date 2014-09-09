@@ -27,6 +27,7 @@ import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
 import madgraph.various.misc as misc 
 
+
 logger = logging.getLogger('madgraph.base_objects')
 pjoin = os.path.join
 
@@ -2593,7 +2594,8 @@ class Process(PhysicsObject):
                         "%s is not a valid ProcessList" % str(value)
 
         if name == 'NLO_mode':
-            if value not in ['real','all','virt','tree']:
+            import madgraph.interface.madgraph_interface as mg
+            if value not in mg.MadGraphCmd._valid_nlo_modes:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid NLO_mode" % str(value)
         return True

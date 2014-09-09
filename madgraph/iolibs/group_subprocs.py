@@ -34,6 +34,8 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 
 import madgraph.various.misc as misc
 
@@ -194,7 +196,11 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         amplitudes = copy.copy(self.get('amplitudes'))
 
-        self.set('matrix_elements',
+        if isinstance(amplitudes[0], loop_diagram_generation.LoopAmplitude):
+            self.set('matrix_elements', 
+                    loop_helas_objects.LoopHelasProcess.generate_matrix_elements(amplitudes))
+        else:
+            self.set('matrix_elements',
                  helas_objects.HelasMultiProcess.\
                                    generate_matrix_elements(amplitudes))
 

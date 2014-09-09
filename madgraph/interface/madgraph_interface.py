@@ -2405,7 +2405,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge']
-    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=']
     _OLP_supported = ['MadLoop', 'GoSam']
@@ -2650,13 +2650,6 @@ This implies that with decay chains:
                            "ignore_six_quark_processes" in self.options \
                            else []
 
-            # Decide here wether one needs a LoopMultiProcess or a MultiProcess
-            multiprocessclass=None
-            if myprocdef['perturbation_couplings']!=[]:
-                multiprocessclass=loop_diagram_generation.LoopMultiProcess
-            else:
-                multiprocessclass=diagram_generation.MultiProcess
-
             myproc = diagram_generation.MultiProcess(myprocdef,
                                      collect_mirror_procs = collect_mirror_procs,
                                      ignore_six_quark_processes = ignore_six_quark_processes,
@@ -2785,6 +2778,10 @@ This implies that with decay chains:
         self.check_display(args)
 
         if args[0] == 'diagrams':
+            if self._curr_amps: 
+                misc.sprint("has it here")  
+            else:
+                misc.sprint("missing") 
             self.draw(' '.join(args[1:]))
 
         if args[0] == 'particles' and len(args) == 1:
@@ -3109,6 +3106,10 @@ This implies that with decay chains:
         """ draw the Feynman diagram for the given process.
         Type refers to born, real or loop"""
 
+        if self._curr_amps: 
+            misc.sprint("has it here")   
+        else:
+            misc.sprint("Missing!")
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_draw(args)
@@ -3796,6 +3797,111 @@ This implies that with decay chains:
                               'split_orders':split_orders
                               })
         #                       'is_decay_chain': decay_process\
+
+
+    def create_loop_induced(self, line, myprocdef=None):
+        """ Routine to create the MultiProcess for the loop-induced case"""
+        
+        args = self.split_arg(line)
+        
+        warning_duplicate = True
+        if '--no_warning=duplicate' in args:
+            warning_duplicate = False
+            args.remove('--no_warning=duplicate')
+        
+        # Check the validity of the arguments
+        self.check_add(args)
+        if args[0] == 'process':
+            args = args[1:]
+        
+        # special option for 1->N to avoid generation of kinematically forbidden
+        #decay.
+        if args[-1].startswith('--optimize'):
+            optimize = True
+            args.pop()
+        else:
+            optimize = False
+
+    
+        if not myprocdef:
+            myprocdef = self.extract_process(' '.join(args))
+        
+        myprocdef.set('NLO_mode', 'noborn')
+            
+        # store the first process (for the perl script)
+        if not self._generate_info:
+            self._generate_info = line
+                
+        # Reset Helas matrix elements
+        #self._curr_matrix_elements = helas_objects.HelasLoopInducedMultiProcess()
+
+
+        # Check that we have the same number of initial states as
+        # existing processes
+        if self._curr_amps and self._curr_amps[0].get_ninitial() != \
+               myprocdef.get_ninitial():
+            raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+      
+        if self._curr_amps and (not isinstance(self._curr_amps[0], loop_diagram_generation.LoopAmplitude) or \
+             self._curr_amps[0]['has_born']):
+            raise self.InvalidCmd("Can not mix loop induced process with not loop induced process")
+            
+        # Negative coupling order contraints can be given on at most one
+        # coupling order (and either in squared orders or orders, not both)
+        if len([1 for val in myprocdef.get('orders').values()+\
+                      myprocdef.get('squared_orders').values() if val<0])>1:
+            raise MadGraph5Error("Negative coupling order constraints"+\
+              " can only be given on one type of coupling and either on"+\
+                           " squared orders or amplitude orders, not both.")
+
+        cpu_time1 = time.time()
+
+        # Generate processes
+        if self.options['group_subprocesses'] == 'Auto':
+                collect_mirror_procs = True
+        else:
+            collect_mirror_procs = self.options['group_subprocesses']
+        ignore_six_quark_processes = \
+                       self.options['ignore_six_quark_processes'] if \
+                       "ignore_six_quark_processes" in self.options \
+                       else []
+
+        # Decide here wether one needs a LoopMultiProcess or a MultiProcess
+
+        myproc = loop_diagram_generation.LoopInducedMultiProcess(myprocdef,
+                                 collect_mirror_procs = collect_mirror_procs,
+                                 ignore_six_quark_processes = ignore_six_quark_processes,
+                                 optimize=optimize)
+
+
+        for amp in myproc.get('amplitudes'):
+            if amp not in self._curr_amps:
+                self._curr_amps.append(amp)
+            elif warning_duplicate:
+                raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
+                                            amp.nice_string_processes()
+
+
+        # Reset _done_export, since we have new process
+        self._done_export = False
+
+        cpu_time2 = time.time()
+
+        nprocs = len(myproc.get('amplitudes'))
+        ndiags = sum([amp.get_number_of_diagrams() for \
+                          amp in myproc.get('amplitudes')])
+        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
+              (nprocs, ndiags, (cpu_time2 - cpu_time1)))
+        ndiags = sum([amp.get_number_of_diagrams() for \
+                          amp in self._curr_amps])
+        logger.info("Total: %i processes with %i diagrams" % \
+              (len(self._curr_amps), ndiags))        
+            
+
+                
+        
+
+
 
 
     @staticmethod

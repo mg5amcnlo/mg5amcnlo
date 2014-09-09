@@ -1570,3 +1570,17 @@ class LoopMultiProcess(diagram_generation.MultiProcess):
             of the process proc """
         return LoopAmplitude({"process": proc})
 
+
+
+
+#===============================================================================
+# LoopInducedMultiProcess
+#===============================================================================
+class LoopInducedMultiProcess(diagram_generation.MultiProcess):
+    """Special mode for the LoopInduced."""
+    
+    @classmethod
+    def get_amplitude_from_proc(cls,proc):
+        """ Return the correct amplitude type according to the characteristics of
+            the process proc """
+        return LoopAmplitude({"process": proc})   

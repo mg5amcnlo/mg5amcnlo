@@ -44,10 +44,12 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import aloha.create_aloha as create_aloha
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
 import models.check_param_card as check_param_card
+
 
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 from madgraph.iolibs.files import cp, ln, mv
@@ -5451,6 +5453,13 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
 
     # Then the default tree-level output
     elif output_type=='default':
+        
+
+        
+        
+        
+        
+        
         #check if we need to group processes
         if cmd.options['group_subprocesses'] == 'Auto':
             if cmd._curr_amps[0].get_ninitial()  == 2:
@@ -5468,6 +5477,12 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
                'model': cmd._curr_model.get('name') }
 
         format = cmd._export_format #shortcut
+
+        #check if we have the loop induced type of output.
+        if isinstance(cmd._curr_amps[0], loop_diagram_generation.LoopInducedMultiProcess):
+            print format
+            raise Exception
+
 
         if format in ['standalone_msP', 'standalone_msF', 'standalone_rw']:
             opt['sa_symmetry'] = True        

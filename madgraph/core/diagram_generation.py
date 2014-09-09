@@ -29,6 +29,9 @@ import madgraph.various.misc as misc
 from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.diagram_generation')
 
+
+class NoDiagramException(InvalidCmd): pass
+
 #===============================================================================
 # DiagramTag mother class
 #===============================================================================
@@ -118,6 +121,7 @@ class DiagramTag(object):
     def get_external_numbers(self):
         """Get the order of external particles in this tag"""
 
+        misc.sprint(type(self.tag))
         return self.tag.get_external_numbers()
 
     def diagram_from_tag(self, model):
@@ -1660,34 +1664,8 @@ class MultiProcess(base_objects.PhysicsObject):
                         continue
 
                 # Setup process
-                process = base_objects.Process({\
-                              'legs':legs,
-                              'model':process_definition.get('model'),
-                              'id': process_definition.get('id'),
-                              'orders': process_definition.get('orders'),
-                              'required_s_channels': \
-                                 process_definition.get('required_s_channels'),
-                              'forbidden_onsh_s_channels': \
-                                 process_definition.get('forbidden_onsh_s_channels'),
-                              'forbidden_s_channels': \
-                                 process_definition.get('forbidden_s_channels'),
-                              'forbidden_particles': \
-                                 process_definition.get('forbidden_particles'),
-                              'is_decay_chain': \
-                                 process_definition.get('is_decay_chain'),
-                              'perturbation_couplings': \
-                                 process_definition.get('perturbation_couplings'),
-                              'squared_orders': \
-                                 process_definition.get('squared_orders'),
-                              'sqorders_types': \
-                                 process_definition.get('sqorders_types'),                              
-                              'overall_orders': \
-                                 process_definition.get('overall_orders'),
-                              'has_born': \
-                                 process_definition.get('has_born'),
-                              'split_orders': \
-                                 process_definition.get('split_orders')                                
-                                 })
+                process = process_definition.get_process_with_legs(legs) 
+                
                 fast_proc = \
                           array.array('i',[leg.get('id') for leg in legs])
                 if collect_mirror_procs and \
@@ -1759,7 +1737,7 @@ class MultiProcess(base_objects.PhysicsObject):
             if len(failed_procs) == 1 and 'error' in locals():
                 raise error
             else:
-                raise InvalidCmd, \
+                raise NoDiagramException, \
             "No amplitudes generated from process %s. Please enter a valid process" % \
                   process_definition.nice_string()
         

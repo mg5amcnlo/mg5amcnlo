@@ -2393,6 +2393,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif os.path.exists(line):
             self.copy_file(line)
             self.value = 'repeat'
+        elif os.path.exists(pjoin(self.me_dir, line)):
+            self.copy_file(pjoin(self.me_dir,line))
+            self.value = 'repeat'            
         elif line.strip() != '0' and line.strip() != 'done' and \
             str(line) != 'EOF' and line.strip() in self.allow_arg:
             self.open_file(line)
