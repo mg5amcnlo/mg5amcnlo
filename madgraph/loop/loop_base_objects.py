@@ -71,6 +71,11 @@ class LoopDiagram(base_objects.Diagram):
         # This stores the list of amplitudes vertices which give the R2/UV
         # counter-terms to this loop.
         self['CT_vertices'] = base_objects.VertexList()
+        # The 'contracted_diagram' is the diagram constructed by the function
+        # get_contracted_loop_diagram' which corresponds to the list of vertices
+        # to construct the equivalent diagram to this one when the loop is shrunk
+        # to one point.
+        self['contracted_diagram'] = None
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -110,11 +115,16 @@ class LoopDiagram(base_objects.Diagram):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value)
 
+        if name == 'contracted_diagram':
+            if not isinstance(value, base_objects.Diagram):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid Diagram." % str(value)                            
+
         else:
             super(LoopDiagram, self).filter(name, value)
 
         return True
-    
+
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         
@@ -176,6 +186,35 @@ class LoopDiagram(base_objects.Diagram):
         mystr=mystr[:-1]
 
         return mystr
+
+    def get_contracted_loop_diagram(self, struct_rep=None):
+        """ Returns a base_objects.Diagram which correspond to this loop diagram
+        with the loop shrunk to a point."""
+        
+        if self['contracted_diagram']:
+            return self['contracted_diagram']
+        
+        if not struct_rep:
+            raise MadGraph5Error, "Function get_contracted_loop_diagram() called"+\
+                            " for the first time without specifying struct_rep." 
+                    
+        contracted_diagram_vertices = base_objects.VertexList()
+        contracted_vertex = base_objects.Vertex({'id':-1})
+        # First scan all structures to add their vertices and at the same time
+        # construct the legs of the final vertex which corresponds the the
+        # shrunk loop.
+        for tagelem in self['tag']:
+            contracted_vertex.get('legs').extend([struct_rep[
+                     struct_ID].get('binding_leg') for struct_ID in tagelem[1]])
+            contracted_diagram_vertices.extend(sum([struct_rep[
+                    struct_ID].get('vertices') for struct_ID in tagelem[1]],[]))
+        
+        # Add the shrunk vertex to the contracted diagram vertices list.
+        contracted_diagram_vertices.append(contracted_vertex)
+        contracted_diagram = base_objects.Diagram(
+           {'vertices':contracted_diagram_vertices,'orders':self.get('orders')})
+        self['contracted_diagram'] = contracted_diagram
+        return contracted_diagram
 
     def get_CT(self,model,string=None):
         """ Returns the CounterTerms of the type passed in argument. If None

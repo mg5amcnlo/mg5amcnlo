@@ -83,12 +83,18 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         if not identical_particle_factor:
             identical_particle_factor = process.identical_particle_factor()
         if process.get('perturbation_couplings') and \
-                process.get('NLO_mode') not in ['virt', 'loop', 'noborn']:
+                process.get('NLO_mode') not in ['virt', 'loop','noborn']:
             sorted_tags = sorted([IdentifyMETagFKS(d, model, ninitial) for d in \
                                       amplitude.get('diagrams')])
+        elif process.get('NLO_mode')=='noborn':
+            # For loop-induced processes, make sure to create the Tag based on
+            # the contracted diagram            
+            sorted_tags = sorted([cls(d.get_contracted_loop_diagram(
+             amplitude.get('structure_repository')), model, ninitial) for d in \
+                                                     amplitude.get('diagrams')])
         else:
             sorted_tags = sorted([cls(d, model, ninitial) for d in \
-                                      amplitude.get('diagrams')])
+                                                     amplitude.get('diagrams')])
 
         # Do not use this for loop diagrams as for now the HelasMultiProcess
         # always contain only exactly one loop amplitude.

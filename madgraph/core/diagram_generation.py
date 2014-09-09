@@ -62,12 +62,13 @@ class DiagramTag(object):
         """Exception for any problems in DiagramTags"""
         pass
 
-    def __init__(self, diagram, model = None, ninitial = 2):
+    def __init__(self, diagram, model=None, ninitial=2, struct_rep=None):
         """Initialize with a diagram. Create DiagramTagChainLinks according to
         the diagram, and figure out if we need to shift the central vertex."""
 
         # wf_dict keeps track of the intermediate particles
         leg_dict = {}
+        
         # Create the chain which will be the diagram tag
         for vertex in diagram.get('vertices'):
             # Only add incoming legs
