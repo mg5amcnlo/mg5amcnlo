@@ -4758,6 +4758,12 @@ This implies that with decay chains:
                     if not os.path.exists(pjoin(MG5DIR, new)):
                         files.ln(old, os.path.dirname(new), os.path.basename(new))
 
+            # Re-compile CutTools and IREGI
+            if os.path.isfile(pjoin(MG5DIR,'vendor','CutTools','includects','libcts.a')):
+                misc.compile(cwd=pjoin(MG5DIR,'vendor','CutTools'))
+            if os.path.isfile(pjoin(MG5DIR,'vendor','IREGI','src','libiregi.a')):
+                misc.compile(cwd=pjoin(MG5DIR,'vendor','IREGI','src'))
+
             # check if it need to download binary:
             pattern = re.compile("""^Binary files old/(\S*).*and new/(\S*).*$""", re.M)
             if pattern.search(text):
