@@ -48,6 +48,7 @@ CONTAINS
     TYPE(cibppave_node),POINTER::item
     LOGICAL::find
     REAL(KIND(1d0)),DIMENSION(0:3)::PMOM
+    si(1:4)=DCMPLX(0d0)
     IF(.NOT.STABLE_IREGI)RETURN
     ! trivial 0-point function
     IF(NLOOPLINE.EQ.0)THEN
@@ -440,7 +441,7 @@ CONTAINS
           DO j=1,NLOOPLINE
              indices00(j)=indices00(j)+1
              siz1(i,1:4)=siz1(i,1:4)+&
-                  DCMPLX(indices0(j))*comp_scalar_integral_reduce(NLOOPLINE,idim0,indices00,PCL,M2L)
+                  DCMPLX(indices0(j))*comp_scalar_integral_reduce(NLOOPLINE,idim,indices00,PCL,M2L)
              indices00(j)=indices00(j)-1
           ENDDO
           indices00(i)=indices00(i)+1

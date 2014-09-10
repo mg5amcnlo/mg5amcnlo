@@ -1408,7 +1408,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
                             golem_include = '<Not_found_define_it_yourself>'                
-                        tir_include.append('-I %s'%str(golem_include))                
+                        tir_include.append('-I %s'%str(golem_include))
+                        # To be able to easily compile a MadLoop library using
+                        # makefiles built outside of the MG5_aMC framework
+                        # (such as what is done with the Sherpa interface), we
+                        # place here an easy handle on the golem includes
+                        ln(golem_include, starting_dir=pjoin(self.dir_path,'lib'),
+                                            name='golem95_include',abspath=True)
+                        
                 else :
                     link_tir_libs.append('-l%s'%tir)
                     tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
@@ -1876,7 +1883,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         mp_routine = mp_routine % replace_dict
         subroutines.append(dp_routine)
         subroutines.append(mp_routine)        
-        
+
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
                                          matrix_element.get_max_loop_rank(),

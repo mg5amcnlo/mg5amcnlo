@@ -767,8 +767,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                                    not os.path.basename(dir_path)=='check_sa.f':
             file_path = pjoin(dir_path,'check_sa.f')
             if not os.path.isfile(file_path):
-                directories = glob.glob(pjoin(dir_path,'P0_*'))
-                if len(directories)>0 and os.path.isdir(directories[0]):
+                directories = [d for d in glob.glob(pjoin(dir_path,'P*_*')) \
+                         if (re.search(r'.*P\d+_\w*$', d) and os.path.isdir(d))]
+                if len(directories)>0:
                      file_path = pjoin(directories[0],'check_sa.f')
         if not os.path.isfile(file_path):
             raise MadGraph5Error('Could not find the location of check_sa.f'+\

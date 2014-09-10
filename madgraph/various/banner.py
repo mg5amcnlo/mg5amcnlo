@@ -25,7 +25,7 @@ try:
     import madgraph.iolibs.file_writers as file_writers
     import madgraph.iolibs.files as files 
     import models.check_param_card as param_card_reader
-    from madgraph import MG5DIR
+    from madgraph import MG5DIR, InvalidCmd
     MADEVENT = False
 except ImportError:
     MADEVENT = True
@@ -33,6 +33,7 @@ except ImportError:
     import internal.files as files
     import internal.check_param_card as param_card_reader
     import internal.misc as misc
+    from internal import InvalidCmd
     
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
@@ -535,7 +536,8 @@ def recover_banner(results_object, level, run=None, tag=None):
     
 
 
-
+class InvalidRunCard(InvalidCmd):
+    pass
 
 class RunCard(dict):
     """A class object for the run_card"""
@@ -650,7 +652,7 @@ class RunCard(dict):
     
         self.add_line('maxjetflavor', 'int', 4)
         if int(self['maxjetflavor']) > 6:
-            raise Exception, 'maxjetflavor should be lower than 5! (6 is partly supported)'
+            raise InvalidRunCard, 'maxjetflavor should be lower than 5! (6 is partly supported)'
         self.add_line('auto_ptj_mjj', 'bool', True)
         self.add_line('cut_decays', 'bool', True)
         # minimum pt
@@ -822,7 +824,7 @@ class RunCard(dict):
                     logger.warning('Since use_syst=T, We change the value of \'alpsfact\' to 1')
                     self['alpsfact'] = 1.0
             if int(self['maxjetflavor']) == 6:
-                raise Exception, 'maxjetflavor at 6 is NOT supported for matching!'
+                raise InvalidRUnCard, 'maxjetflavor at 6 is NOT supported for matching!'
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
             self.add_line('clusinfo', 'bool', False)
@@ -860,6 +862,12 @@ class RunCard(dict):
         self.add_line('bwcutoff', 'float', 15.0)
         #  Collider pdf
         self.add_line('pdlabel','str','cteq6l1')
+        
+        # check validity of the pdf set
+        possible_set = ['lhapdf','mrs02nl','mrs02nn', 'mrs0119','mrs0117','mrs0121','mrs01_j', 'mrs99_1','mrs99_2','mrs99_3','mrs99_4','mrs99_5','mrs99_6', 'mrs99_7','mrs99_8','mrs99_9','mrs9910','mrs9911','mrs9912', 'mrs98z1','mrs98z2','mrs98z3','mrs98z4','mrs98z5','mrs98ht', 'mrs98l1','mrs98l2','mrs98l3','mrs98l4','mrs98l5', 'cteq3_m','cteq3_l','cteq3_d', 'cteq4_m','cteq4_d','cteq4_l','cteq4a1','cteq4a2', 'cteq4a3','cteq4a4','cteq4a5','cteq4hj','cteq4lq', 'cteq5_m','cteq5_d','cteq5_l','cteq5hj','cteq5hq', 'cteq5f3','cteq5f4','cteq5m1','ctq5hq1','cteq5l1', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo']
+        if self['pdlabel'] not in possible_set:
+            raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
+    
         if self['pdlabel'] == 'lhapdf':
             self.add_line('lhaid', 'int', 10042)
         else:
@@ -974,6 +982,13 @@ class RunCardNLO(RunCard):
         self.add_line('isoEM', 'bool', True)
         #  Collider pdf
         self.add_line('pdlabel','str','cteq6_m')
+        # check validity of the pdf set
+        possible_set = ['lhapdf','mrs02nl','mrs02nn', 'mrs0119','mrs0117','mrs0121','mrs01_j', 'mrs99_1','mrs99_2','mrs99_3','mrs99_4','mrs99_5','mrs99_6', 'mrs99_7','mrs99_8','mrs99_9','mrs9910','mrs9911','mrs9912', 'mrs98z1','mrs98z2','mrs98z3','mrs98z4','mrs98z5','mrs98ht', 'mrs98l1','mrs98l2','mrs98l3','mrs98l4','mrs98l5', 'cteq3_m','cteq3_l','cteq3_d', 'cteq4_m','cteq4_d','cteq4_l','cteq4a1','cteq4a2', 'cteq4a3','cteq4a4','cteq4a5','cteq4hj','cteq4lq', 'cteq5_m','cteq5_d','cteq5_l','cteq5hj','cteq5hq', 'cteq5f3','cteq5f4','cteq5m1','ctq5hq1','cteq5l1', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo']
+        if self['pdlabel'] not in possible_set:
+            raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
+    
+        
+        
         if self['pdlabel'] == 'lhapdf':
             self.add_line('lhaid', 'int', 21100)
         else:

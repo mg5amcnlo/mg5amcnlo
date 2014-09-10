@@ -1122,6 +1122,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         this function just wraps the do_launch one"""
         self.do_launch(line)
 
+
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
         """Advanced commands: this is for creating the correct run_card.inc from the nlo format"""
@@ -1230,6 +1231,53 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         self.update_status('', level='all', update_results=True)
 
+    def print_results_in_shell(self, data):
+        """Have a nice results prints in the shell,
+        data should be of type: gen_crossxhtml.OneTagResults"""
+        if not data:
+            return
+        logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
+        if self.ninitial == 1:
+            logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
+        else:
+            logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
+        logger.info("     Nb of events :  %s" % data['nb_event'] )
+        #if data['cross_pythia'] and data['nb_event_pythia']:
+        #    if self.ninitial == 1:
+        #        logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
+        #    else:
+        #        logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
+        #    logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
+        #    if self.run_card['use_syst'] in self.true:
+        #        logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")    
+        logger.info(" " )
+
+    def print_results_in_file(self, data, path, mode='w'):
+        """Have a nice results prints in the shell,
+        data should be of type: gen_crossxhtml.OneTagResults"""
+        if not data:
+            return
+        
+        fsock = open(path, mode)
+        
+        fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
+                    (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
+        
+        if self.ninitial == 1:
+            fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
+        else:
+            fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
+        fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
+        #if data['cross_pythia'] and data['nb_event_pythia']:
+        #    if self.ninitial == 1:
+        #        fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
+        #    else:
+        #        fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
+        #    fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
+        fsock.write(" \n" )
+
+
+
 
 
     def update_random_seed(self):
@@ -1326,8 +1374,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if options['reweightonly']:
             event_norm=self.run_card['event_norm']
             nevents=int(self.run_card['nevents'])
-            self.reweight_and_collect_events(options, mode, nevents, event_norm)
-            return
+            return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
         devnull = os.open(os.devnull, os.O_RDWR) 
         if mode in ['LO', 'NLO']:
@@ -2744,7 +2791,7 @@ Integrated cross-section
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
         #content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
-        content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+        #content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
         content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
         content += 'TWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 6).value
         content += 'ZMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 23).value
@@ -2786,16 +2833,49 @@ Integrated cross-section
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm').lower()
         # check if need to link lhapdf
-        if pdlabel == 'lhapdf':
+        if int(self.shower_card['pdfcode']) > 1 or \
+            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1): 
+            # Use LHAPDF (should be correctly installed, because
+            # either events were already generated with them, or the
+            # user explicitly gives an LHAPDF number in the
+            # shower_card).
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
             lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                          stdout = subprocess.PIPE).stdout.read().strip()
+                                          stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+            if self.shower_card['pdfcode']==1:
+                lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+                content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+            else:
+                lhaid_list = [abs(int(self.shower_card['pdfcode']))]
+                content += 'PDFCODE=%s\n' % self.shower_card['pdfcode']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+        elif int(self.shower_card['pdfcode'])==1:
+            # Try to use LHAPDF because user wants to use the same PDF
+            # as was used for the event generation. However, for the
+            # event generation, LHAPDF was not used, so non-trivial to
+            # see if if LHAPDF is available with the corresponding PDF
+            # set. If not found, give a warning and use build-in PDF
+            # set instead.
+            try:
+                lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
+                                              stdout = subprocess.PIPE).stdout.read().strip()
+                self.link_lhapdf(pjoin(self.me_dir, 'lib'))
+                content += 'LHAPDFPATH=%s\n' % lhapdfpath
+                pdfsetsdir = self.get_lhapdf_pdfsetsdir()
+                lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+                content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+                self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+            except Exception:
+                logger.warning('Trying to shower events using the same PDF in the shower as used in the generation'+\
+                                   ' of the events using LHAPDF. However, no valid LHAPDF installation found with the'+\
+                                   ' needed PDF set. Will use default internal PDF for the shower instead. To use the'+\
+                                   ' same set as was used in the event generation install LHAPDF and set the path using'+\
+                                   ' "set /path_to_lhapdf/bin/lhapdf-config" from the MadGraph5_aMC@NLO python shell')
+                content += 'LHAPDFPATH=\n' 
+                content += 'PDFCODE=0\n'
         else:
-            #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
 
@@ -3186,12 +3266,6 @@ Integrated cross-section
         if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
 
-        # LHAPDF dynamic libraries (needed for lhapdf6)
-        lhalibs = ['libLHAPDF.dylib', 'libLHAPDF.so'] 
-        for lib in [pjoin(self.me_dir, 'lib', l) for l in lhalibs \
-           if os.path.exists(pjoin(self.me_dir, 'lib', l))]:
-            input_files.append(lib)
-      
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
             tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar'),'w',

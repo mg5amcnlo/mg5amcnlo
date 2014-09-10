@@ -2203,6 +2203,10 @@ class decay_all_events(object):
                                                       event_map, momenta_in_decay,use_mc_masses, helicities)
             
             
+            # Treat the case we get too many failures for the PS generation.
+            if failed > 500 :
+                logger.debug('Got a production event with %s failures for the phase-space generation generation ' % failed)
+
             # Treat the case that we ge too many overweight.
             if weight > decay_me['max_weight']:
                 report['over_weight'] += 1
@@ -2895,7 +2899,16 @@ class decay_all_events(object):
             except ValueError, error:
                 continue
             else:
-                label2width[particle_label]=float(width.value)
+                if (width.value > 0.001):  
+                    label2width[particle_label]=float(width.value)
+                else: # the width is less than 1 MeV, need to use an effective width !!
+                      # this is useful to handle cases like tau decays
+                    label2width[particle_label]=0.001
+                    need_param_card_modif = True
+                    logger.warning('ATTENTION')
+                    logger.warning('Found a very small width in the param_card for particle '\
+                                   +str(particle_label))
+                    logger.warning('Use instead an effective width of 1 MeV ' )
                 #label2mass[particle_label]=float(mass.value)
                 #pid2mass[part]=label2mass[particle_label]
                 pid2width[abs(part)]=label2width[particle_label]
@@ -2903,18 +2916,19 @@ class decay_all_events(object):
                     need_param_card_modif = True
                     for param in self.model["parameters"][('external',)]:
                         if param.lhablock=="DECAY" and param.lhacode==[abs(part)]:
-                            label2width[particle_label]=param.value
+                            label2width[particle_label]=max(param.value,0.001)
                             pid2width[abs(part)]=label2width[particle_label]
                     logger.warning('ATTENTION')
                     logger.warning('Found a zero width in the param_card for particle '\
                                    +str(particle_label))
-                    logger.warning('Use instead the default value '\
+                    logger.warning('Use instead the default/effective value '\
                                    +str(label2width[particle_label]))
+               
         # now we need to modify the values of the width
         # in param_card.dat, since this is where the input 
         # parameters will be read when evaluating matrix elements
         if need_param_card_modif:
-            decay_misc.modify_param_card(self.pid2width, self.path_me)            
+            decay_misc.modify_param_card(pid2width, self.path_me)            
             
     def get_max_weight_from_event(self, decay_mapping):
         """ """

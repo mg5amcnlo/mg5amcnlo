@@ -52,6 +52,9 @@ foreach $infile (@ARGV) {
   # Keep track if we are in the init block or not
   $initblock = 0;
 
+  # LHE version extracted from current file ; 1 by default
+  $lhe_version = 1.0;
+
   while (1) {
     $gzbytes = $gzin->gzreadline($gzline);
     if ($gzbytes == -1) { die("Error reading from file $infile\n"); }
@@ -61,6 +64,7 @@ foreach $infile (@ARGV) {
     if ($initblock == 0) {
       if ($gzline =~ s/#  Number of Events\s*:\s*(.*)\n/$1/) { $noevents = $gzline; }
       if ($gzline =~ s/#  Integrated weight \(pb\)\s*:\s*(.*)\n/$1/) { $xsec = $gzline; }
+      if ($gzline =~ s/\s*(.*)\s*=\s*lhe_version.*\n/$1/) { $lhe_version = $gzline; }
 
       # Check if we enter <init> block
       if ($gzline =~ m/$begin_init/) { $initblock++; next; }
@@ -74,6 +78,12 @@ foreach $infile (@ARGV) {
       # Remove leading whitespace and split
       $gzline  =~ s/^\s+//;
       @gzparam = split(/\s+/, $gzline);
+     
+      # Skip the <generator> block introduced in LHE version 3
+      if ($lhe_version >= 3 && $gzline =~ m/<generator/) {
+        push(@gzinit, $gzline);
+        next;
+      }
 
       # Check <init> block line has right no. of entries
       if ($initblock == 1) {
@@ -95,7 +105,7 @@ foreach $infile (@ARGV) {
   }
 
   # Store information for later
-  push(@infiles, [ $infile, $noevents, $xsec, [ @gzinit ] ]);
+  push(@infiles, [ $infile, $noevents, $xsec, [ @gzinit ], $lhe_version ]);
 }
 
 
@@ -104,10 +114,11 @@ foreach $infile (@ARGV) {
 ###########################################################################
 $oldxsec        = $infiles[0][2];
 @oldinit        = @{$infiles[0][3]};
+$oldlhe_version = $infiles[0][4];
 $totevents = 0;  $totxsec = 0.0;
 foreach $infile (@infiles) {
   print "Input file: $infile->[0]\n";
-  print " No. Events = $infile->[1], Cross-section = $infile->[2]\n";
+  print " No. Events = $infile->[1], Cross-section = $infile->[2], LHE version = $infile->[4]\n";
 
   # Check that cross sections do not differ too much
   $newxsec = $infile->[2];
@@ -115,6 +126,11 @@ foreach $infile (@infiles) {
     print " WARNING Cross sections do not agree with a 5\% precision!\n";
   }
   $oldxsec = $newxsec;
+
+  $curlhe_version = $infile->[4];
+  if (abs($curlhe_version - $oldlhe_version) > 0.001) {
+    die("LHE version does not match");
+  }
 
   @currinit = @{$infile->[3]};
   # Same number of lines in <init> block?
@@ -131,6 +147,11 @@ foreach $infile (@infiles) {
 
   # Create new init block (overwrite first file's init block data)
   for ($i = 1; $i <= $#oldinit; $i++) {
+    if ($oldinit[$i] =~ /^<generator/) {
+      if ($oldinit[$i] ne $currinit[$i]) { die("Init blocks do not match"); } 
+      next;
+    }
+
     if ($oldinit[$i][3] != $currinit[$i][3]) { die("Init blocks do not match"); }
 
     print " xsecup = $currinit[$i][0], xerrup = $currinit[$i][1]\n";
@@ -166,6 +187,7 @@ print "\n";
 
 # Finish calculation of XSECUP and XERRUP
 for ($i = 1; $i <= $#oldinit; $i++) {
+  if ($oldinit[$i] =~ /^<generator/) { next; }
   $oldinit[$i][0] /= $totevents;
   $oldinit[$i][0] = sprintf('%0.5E', $oldinit[$i][0]);
 
@@ -184,6 +206,7 @@ print "Banner file: $bannerfile\n";
 print "Output file: $outfile\n";
 print " No. Events = $totevents, Cross-section = $dispxsec\n";
 for ($i = 1; $i <= $#oldinit; $i++) {
+  if ($oldinit[$i] =~ /^<generator/) { next; }
   print " xsecup = $oldinit[$i][0], xerrup = $oldinit[$i][1]\n";
   print " xmaxup = $oldinit[$i][2], lprup = $oldinit[$i][3]\n";
 }
@@ -232,6 +255,11 @@ foreach $infile (@infiles) {
         $gzline = "<init>\n";
 
         for ($i = 0; $i <= $#oldinit; $i++) {
+          if ($oldinit[$i] =~ /^<generator/) {
+            $gzline .= $oldinit[$i];
+            next;
+          }
+
           $gzline .= "  ";
           for ($j = 0; $j <= $#{$oldinit[$i]}; $j++) {
             $gzline .= "$oldinit[$i][$j] ";
@@ -252,14 +280,14 @@ foreach $infile (@infiles) {
     } elsif ($stage == 4) {
       $gzline  =~ s/^\s+//;
       @gzparam = split(/\s+/, $gzline);
+      if ($#gzparam != 5) { die "Not right number of param in first line of event"; }
       # Keep weight sign from original LHE file
-      $signed_uwgt = $uwgt;
+      $signed_uwgt = abs($uwgt);
       if ($gzparam[2] < 0) {
 	  $signed_uwgt = -1 * $signed_uwgt;
       }
       $gzline = " $gzparam[0] $gzparam[1] $signed_uwgt $gzparam[3] $gzparam[4] $gzparam[5]\n";
-      if ($#gzparam != 5) { die "Not right number of param in first line of event"; }
-      $gzline = " $gzparam[0] $gzparam[1] $uwgt $gzparam[3] $gzparam[4] $gzparam[5]\n";
+
 
       $stage++;
 

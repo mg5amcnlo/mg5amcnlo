@@ -33,6 +33,8 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(126)::factor_xi
     LOGICAL::find
     TYPE(cibppave_node),POINTER::item
+    pave(1:4)=DCMPLX(0d0)
+    IF(.NOT.STABLE_IREGI)RETURN
     IF(RECYCLING)THEN
        PCL1(1,0:3)=0d0
        DO i=2,NLOOPLINE
@@ -190,6 +192,7 @@ CONTAINS
     INTEGER,DIMENSION(10)::llarray
     TYPE(cibppave_node),POINTER::item
     LOGICAL::find
+    pave(1:4)=DCMPLX(0d0)
     IF(.NOT.STABLE_IREGI)RETURN
     IF(RECYCLING)THEN
        ALLOCATE(item)
@@ -964,12 +967,12 @@ CONTAINS
              ENDIF
           ELSE
              xx2=SIGNED_CMINOR11(NLOOPLINE,XMATRIX,1,2)
-             pos=2
+             pos=1
              DO i=3,4
                 xx1=SIGNED_CMINOR11(NLOOPLINE,XMATRIX,1,i)
                 IF(ABS(xx1).GT.ABS(xx2))THEN
                    xx2=xx1
-                   pos=i
+                   pos=i-1
                 ENDIF
              ENDDO
              IF(ABS(xx2).GE.EPS)THEN
