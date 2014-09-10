@@ -5531,7 +5531,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # Identical matrix element found
                     other_processes = identified_matrix_elements[me_index].\
                                       get('processes')
-                    misc.sprint(type(amplitude_tag[-1][0]))
                     other_processes.append(cls.reorder_process(\
                         amplitude.get('process'),
                         permutations[me_index],
@@ -5570,11 +5569,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
     def reorder_process(process, org_perm, proc_perm):
         """Reorder the legs in the process according to the difference
         between org_perm and proc_perm"""
-        
-        misc.sprint(process.get('legs_with_decays'))
-        misc.sprint( proc_perm, org_perm)
-        misc.sprint(diagram_generation.DiagramTag.reorder_permutation(\
-                       proc_perm, org_perm))
 
         leglist = base_objects.LegList(\
                   [copy.copy(process.get('legs_with_decays')[i]) for i in \

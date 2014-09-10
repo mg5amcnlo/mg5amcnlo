@@ -5741,6 +5741,14 @@ This implies that with decay chains:
         except Exception:
             pass
 
+
+        ################
+        # Loop Induced #
+        ################
+        if self._export_format == 'madevent' and isinstance(
+                      self._curr_amps[0],loop_diagram_generation.LoopAmplitude):
+            loop_induced_amplitudes = self._curr_amps
+
         ################
         # ALOHA OUTPUT #
         ################
@@ -5948,6 +5956,7 @@ This implies that with decay chains:
         # First treat madevent and pythia8 exports, where we need to
         # distinguish between grouped and ungrouped subprocesses
 
+        misc.sprint(type(self._curr_exporter))
         # MadEvent
         if self._export_format == 'madevent':
             if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):

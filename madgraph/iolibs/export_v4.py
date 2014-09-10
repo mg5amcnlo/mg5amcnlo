@@ -78,6 +78,12 @@ class ProcessExporterFortran(object):
             self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madevent', 'mp': False}
 
+    def get_matrix_element(self, matrix_element):
+        """ Return the matrix_element given in argument with possibly special
+        treatment if needed for a particular daughter. Useful for example for
+        Loop induced processes where the loop diagrams must be shrunk."""
+        return matrix_element
+
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -5396,7 +5402,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
         and 'default' for tree-level outputs."""
 
     group_subprocesses = cmd.options['group_subprocesses']
-    
+        
     # First treat the MadLoop5 standalone case
     if output_type=='madloop':
         import madgraph.loop.loop_exporters as loop_exporters
@@ -5453,13 +5459,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
 
     # Then the default tree-level output
     elif output_type=='default':
-        
 
-        
-        
-        
-        
-        
         #check if we need to group processes
         if cmd.options['group_subprocesses'] == 'Auto':
             if cmd._curr_amps[0].get_ninitial()  == 2:
@@ -5478,12 +5478,6 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
 
         format = cmd._export_format #shortcut
 
-        #check if we have the loop induced type of output.
-        if isinstance(cmd._curr_amps[0], loop_diagram_generation.LoopInducedMultiProcess):
-            print format
-            raise Exception
-
-
         if format in ['standalone_msP', 'standalone_msF', 'standalone_rw']:
             opt['sa_symmetry'] = True        
     
@@ -5492,10 +5486,21 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
                                             format=format)
         
         elif format in ['madevent'] and group_subprocesses:
-            return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
-                                                                            opt)
+            if isinstance(cmd._curr_amps[0], 
+                                         loop_diagram_generation.LoopAmplitude):
+                return  ProcessExporterFortranMEGroupLoopInduced(cmd._mgme_dir, 
+                                                            cmd._export_dir,opt)
+            else:
+                return  ProcessExporterFortranMEGroup(cmd._mgme_dir, 
+                                                            cmd._export_dir,opt)                
         elif format in ['madevent']:
-            return ProcessExporterFortranME(cmd._mgme_dir, cmd._export_dir,opt)
+            if isinstance(cmd._curr_amps[0], 
+                                         loop_diagram_generation.LoopAmplitude):
+                return  ProcessExporterFortranMELoopInduced(cmd._mgme_dir, 
+                                                            cmd._export_dir,opt)
+            else:
+                return  ProcessExporterFortranME(cmd._mgme_dir, 
+                                                            cmd._export_dir,opt)
         elif cmd._export_format in ['madweight'] and group_subprocesses:
 
             return ProcessExporterFortranMWGroup(cmd._mgme_dir, cmd._export_dir,
@@ -5799,6 +5804,32 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         writer.writelines(all_lines)
 
         return True
+
+#===============================================================================
+# ProcessExporterFortranMEGroupLoopInduced
+#===============================================================================
+class ProcessExporterFortranMEGroupLoopInduced(ProcessExporterFortranMEGroup):
+    """Class to take care of exporting a set of grouped loop induced matrix 
+    elements"""
+    
+    #===========================================================================
+    # write_matrix_element_v4
+    #===========================================================================
+    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
+                                                proc_id = "", config_map = []):
+        return 0, 0 
+
+    def get_matrix_element(self, matrix_element):
+        """ Return the matrix_element given in argument with possibly special
+        treatment if needed for a particular daughter. Useful for example for
+        Loop induced processes where the loop diagrams must be shrunk."""
+        return matrix_element
+
+#===============================================================================
+# ProcessExporterFortranMELoopInduced
+#===============================================================================
+class ProcessExporterFortranMELoopInduced(ProcessExporterFortranME):
+    """Class to take care of exporting a set of loop induced matrix elements"""
 
 
 

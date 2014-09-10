@@ -122,7 +122,6 @@ class DiagramTag(object):
     def get_external_numbers(self):
         """Get the order of external particles in this tag"""
 
-        misc.sprint(type(self.tag))
         return self.tag.get_external_numbers()
 
     def diagram_from_tag(self, model):

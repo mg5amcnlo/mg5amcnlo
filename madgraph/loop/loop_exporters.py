@@ -2089,7 +2089,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             return 0
 
         # Set lowercase/uppercase Fortran code
-        
         writers.FortranWriter.downcase = False
 
         # We start off with the treatment of the split_orders since some 
@@ -2280,4 +2279,3 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
         else:
             # The single file 'matrix only' output not available for loops.
             raise MadGraph5Error,"Single-file 'matrix only' output not available for loops."
-        
