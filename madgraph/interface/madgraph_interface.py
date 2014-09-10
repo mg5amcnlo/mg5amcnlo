@@ -4514,11 +4514,8 @@ This implies that with decay chains:
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
             if name == 'golem95':
-#                status = misc.call(['make','install'], 
-#                                               cwd = os.path.join(MG5DIR, name))
-                status = 0
-                shutil.rmtree(os.path.join(MG5DIR, name))
-                shutil.copytree('/Users/valentin/TMP/golem95-1.3.1', os.path.join(MG5DIR, name))
+                status = misc.call(['make','install'], 
+                                               cwd = os.path.join(MG5DIR, name))
             else:
                 status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
@@ -4762,6 +4759,12 @@ This implies that with decay chains:
             for new, old in pattern.findall(text):
                     if not os.path.exists(pjoin(MG5DIR, new)):
                         files.ln(old, os.path.dirname(new), os.path.basename(new))
+
+            # Re-compile CutTools and IREGI
+            if os.path.isfile(pjoin(MG5DIR,'vendor','CutTools','includects','libcts.a')):
+                misc.compile(cwd=pjoin(MG5DIR,'vendor','CutTools'))
+            if os.path.isfile(pjoin(MG5DIR,'vendor','IREGI','src','libiregi.a')):
+                misc.compile(cwd=pjoin(MG5DIR,'vendor','IREGI','src'))
 
             # check if it need to download binary:
             pattern = re.compile("""^Binary files old/(\S*).*and new/(\S*).*$""", re.M)

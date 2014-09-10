@@ -68,9 +68,9 @@ rw_events.o: rw_events.f run_config.inc
 run_card.inc: ../Cards/run_card.dat
 	../bin/madevent treatcards run
 
-clean_lhapdf:
-	rm -f $(LIBDIR)libgeneric.$(libext)
-	cd PDF; make clean_lhapdf
+clean4pdf:
+	rm -f ../lib/libpdf.$(libext)
+	rm -f ../lib/libgeneric.$(libext)
 
 clean:
 	$(RM) *.o $(LIBRARIES) $(BINARIES)

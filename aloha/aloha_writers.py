@@ -755,7 +755,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 coeff = 'denom*'    
                 if not aloha.complex_mass:
                     if self.routine.denominator:
-                        out.write('    denom = %(COUP)s/%(denom)s\n' % {'COUP': coup_name,\
+                        out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
                                 'denom':self.write_obj(self.routine.denominator)}) 
                     else:
                         out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
@@ -1524,7 +1524,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                 coeff = 'denom'
                 if not aloha.complex_mass:
                     if self.routine.denominator:
-                        out.write('    denom = %(COUP)s/%(denom)s\n' % {'COUP': coup_name,\
+                        out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
                                 'denom':self.write_obj(self.routine.denominator)}) 
                     else:
                         out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
@@ -1856,7 +1856,7 @@ class ALOHAWriterForPython(WriteALOHA):
                 coeff = 'denom'
                 if not aloha.complex_mass:
                     if self.routine.denominator:
-                        out.write('    denom = %(COUP)s/%(denom)s\n' % {'COUP': coup_name,\
+                        out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
                                 'denom':self.write_obj(self.routine.denominator)}) 
                     else:
                         out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s * (M%(i)s -1j* W%(i)s))\n' % 
