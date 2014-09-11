@@ -1315,7 +1315,7 @@ c FxFx merging
       endif
 c Set the upper value of the shower scale for the H and S events,
 c respectively
-      if (ickkw.ne.3) then
+      if (ickkw.ne.3 .and. ickkw.ne.4) then
          call set_cms_stuff(mohdr)
          call set_shower_scale_noshape(pp,nFKSprocess*2)
          call set_cms_stuff(izero)
@@ -1434,6 +1434,9 @@ c
 c
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi' .or. nbody) goto 540
+
+c For UNLOPS, skip MC counter events
+      if (ickkw.eq.4) goto 540
 
       call set_cms_stuff(mohdr)
 c     Compute the scales and sudakov-reweighting for the FxFx merging
@@ -1983,9 +1986,15 @@ com-- muR-dependent fac is reweighted here
              unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
      &            +PD(j)*xsec*(1-probne)*CONV * rwgt_muR_dep_fac(scale)
 com-- muR-dependent fac is reweighted here
-             unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
-     &            +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
+             if (ickkw.ne.4) then
+                unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
+     &               +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
 com-- muR-dependent fac is reweighted here
+             else         ! for UNLOPS, add the H-events to the S-events
+                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
+     &               +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
+             endif
           enddo
           if(doreweight)then
              if(ifill1H.eq.0)then
@@ -2022,7 +2031,7 @@ com-- muR-dependent fac is reweighted here
  550  continue
 
       if( (.not.MCcntcalled) .and.
-     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+     &     abrv.ne.'born'.and. abrv.ne.'grid' .and. ickkw.ne.4)then
          if(pp(0,1).ne.-99d0)then
             call set_cms_stuff(mohdr)
             call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
@@ -2127,7 +2136,7 @@ c Apply the FxFx Sudakov damping on the S events
 
 c Update the shower starting scale with the shape from montecarlocounter
       if( (.not.MCcntcalled) .and.
-     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+     &     abrv.ne.'born'.and. abrv.ne.'grid' .and. ickkw.ne.4)then
          call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat,pp,ileg,
      &     xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5),ddum(6),ldum)
       endif
@@ -2145,6 +2154,11 @@ c Update the shower starting scale with the shape from montecarlocounter
      &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
+
+c Add the H-events to the S-events for UNLOPS
+         if (ickkw.eq.4) then
+            dsigS=dsigS+totH_wgt*fkssymmetryfactor
+         endif
 
          call unweight_function(p_born,unwgtfun)
          dsigS=dsigS*unwgtfun
@@ -2260,7 +2274,7 @@ c
      &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactor
                enddo
             endif
-            if(check_reweight.and.doreweight) then
+            if(check_reweight.and.doreweight .and. ickkw.ne.4) then
                do i_process=1,iproc_save(nFKSprocess)
                   if (nbody) then
                      call fill_reweight0inc_nbody(i_process)
@@ -2302,6 +2316,9 @@ c Plot observables for counterevents and Born
      &           (plotEv.or.plotKin) )
      &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_born)
          endif
+
+c For UNLOPS, the H-events are already added to the S-events
+         if (ickkw.eq.4) return
 
          dsigH = totH_wgt*fkssymmetryfactor
          call unweight_function(p_born,unwgtfun)

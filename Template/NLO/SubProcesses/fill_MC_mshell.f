@@ -12,15 +12,15 @@ c
       do i=-16,21
         mcmass(i)=-1.d10
       enddo
-      if (MonteCarlo.eq.'HERWIG6') then
+      if (MonteCarlo(1:7).eq.'HERWIG6') then
          include "MCmasses_HERWIG6.inc"
-      elseif(MonteCarlo.eq.'HERWIGPP')then
+      elseif(MonteCarlo(1:8).eq.'HERWIGPP')then
          include "MCmasses_HERWIGPP.inc"
-      elseif(MonteCarlo.eq.'PYTHIA6Q')then
+      elseif(MonteCarlo(1:8).eq.'PYTHIA6Q')then
          include "MCmasses_PYTHIA6Q.inc"
-      elseif(MonteCarlo.eq.'PYTHIA6PT')then
+      elseif(MonteCarlo(1:9).eq.'PYTHIA6PT')then
          include "MCmasses_PYTHIA6PT.inc"
-      elseif(MonteCarlo.eq.'PYTHIA8')then
+      elseif(MonteCarlo(1:7).eq.'PYTHIA8')then
          include "MCmasses_PYTHIA8.inc"
       else
          write (*,*) 'Wrong MC ', MonteCarlo, ' in fill_MC_mshell'

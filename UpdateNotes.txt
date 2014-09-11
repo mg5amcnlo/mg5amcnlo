@@ -46,6 +46,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Fixing a bug in MadSpin in the mssm model
 		RF: Added the invariant mass and DeltaR cuts for *same flavour* opposite sign lepton
                     pairs to the run_card for NLO-type generations.
+		RF: Added FxFx and UNLOPS merging with Pythia8
 		RF: Prevent an infinite loop in MadSpin by forcing the correct sign to the invariants
 		RF: Catch a possible error related to grouping subprocesses and setcuts
 		OM: Fix an error when using the "customize_model" command

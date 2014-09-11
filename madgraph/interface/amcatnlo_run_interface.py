@@ -1666,11 +1666,11 @@ Integrated cross-section
         proc_card_lines = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read().split('\n')
         process = ''
         for line in proc_card_lines:
-            if line.startswith('generate'):
-                process = line.replace('generate ', '')
+            if line.startswith('generate') or line.startswith('add process'):
+                process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
         lpp = {'0':'l', '1':'p', '-1':'pbar'}
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
-        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
+        (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
         
         # Gather some basic statistics for the run and extracted from the log files.
@@ -1708,11 +1708,11 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.' and int(self.run_card['ickkw']) != 4:
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.':
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.' and int(self.run_card['ickkw']) != 4:
                    message = message + \
                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -2208,7 +2208,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
+        if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') and int(self.run_card['ickkw']) != 4 :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton', update_results=True)
@@ -2217,8 +2217,10 @@ Integrated cross-section
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
                 stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
-        if event_norm == 'sum':
+        if event_norm.lower() == 'sum':
             p.communicate(input = '1\n')
+        elif event_norm.lower() == 'unity':
+            p.communicate(input = '3\n')
         else:
             p.communicate(input = '2\n')
 
@@ -2829,7 +2831,7 @@ Integrated cross-section
             content += 'TAUMASS=%s\n' % new_mcmass_dict['mcmass(15)']
 
         content += 'GMASS=%s\n' % mcmass_dict[21]
-        content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
+        content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm').lower()
         # check if need to link lhapdf
         if int(self.shower_card['pdfcode']) > 1 or \
             (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1): 
@@ -2877,6 +2879,8 @@ Integrated cross-section
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
 
+        content += 'ICKKW=%s\n' % self.banner.get_detail('run_card', 'ickkw')
+        content += 'PTJCUT=%s\n' % self.banner.get_detail('run_card', 'ptj')
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
@@ -3121,6 +3125,8 @@ Integrated cross-section
         # then open the nevents_unweighted_splitted file and look for the 
         # number of splittings to be done
         nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
+        # This skips the channels with zero events, because they are
+        # not of the form GFXX_YY, but simply GFXX
         pattern = re.compile(r"%s_(\d+)/events.lhe" % \
                           pjoin(pdir, 'G%s%s' % (arg,channel)))
         matches = re.findall(pattern, nevents_file)
@@ -3954,7 +3960,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
                     logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
                     raise self.InvalidCmd(error)
-                elif self.run_card['parton_shower'].upper() != 'HERWIG6':
+                elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8':
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
                     answers = ['n','y']
