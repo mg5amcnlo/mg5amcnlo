@@ -191,6 +191,13 @@ c     First check number of resonant s-channel propagators
         ns=0
         nres=0
         tchannel=.false.
+c     Ensure that mother-daughter information starts from 0
+        do i=-nexternal+3,0
+           jpart(2,i) = 0
+           jpart(3,i) = 0
+        enddo
+ 
+
 c     Loop over propagators to find mother-daughter information
         do i=-1,-nexternal+2,-1
 c       Daughters
@@ -894,7 +901,7 @@ c      enddo
                endif
             enddo
  10         continue
-            if (found)then
+            if (.not.found)then
                call correct_external_flow_epsilon(icol, jpart, maxcolor,
      &              icol(k,i))
             endif
