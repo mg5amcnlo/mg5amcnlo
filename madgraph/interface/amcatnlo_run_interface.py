@@ -4195,6 +4195,9 @@ _calculate_xsect_parser.add_option("-o", "--only_generation", default=False, act
                             "the last available results")
 _calculate_xsect_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
                             help="For use with APPLgrid only: start from existing grids")
+_calculate_xsect_parser.add_option("-o", "--only_generation", default=False, action='store_true',
+                            help="Skip grid set up, just generate events starting from " + \
+                            "the last available results")
 
 _shower_usage = 'shower run_name [options]\n' + \
         '-- do shower/hadronization on parton-level file generated for run run_name\n' + \
