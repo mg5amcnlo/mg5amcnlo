@@ -7,7 +7,7 @@ if [[ ! -e $1 && -e ../$1 ]] ; then
 fi
 }
 
-if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then
+if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources/HelConfigs.dat ]]; then
     tar -xf MadLoop5_resources.tar
 fi
 
