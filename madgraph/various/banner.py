@@ -912,6 +912,13 @@ class RunCardNLO(RunCard):
                                 % jetparam ,'$MG:color:BLACK')
                     self[jetparam]='1.0'
         
+        # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
+        if self['iappl'] != '0' and self['pdlabel'].lower() != 'lhapdf':
+            raise self.InvalidCmd('APPLgrid generation only possible with the use of LHAPDF')
+        if self['iappl'] != '0' and self['reweight_scale'] not in true:
+            raise self.InvalidCmd('APPLgrid generation only possible with including' +\
+                                      ' the reweighting to get scale dependence')
+
         self.fsock = file_writers.FortranWriter(output_path)    
 ################################################################################
 #      Writing the lines corresponding to the cuts
@@ -962,9 +969,9 @@ class RunCardNLO(RunCard):
         self.add_line('reweight_PDF', 'bool', True, fortran_name='do_rwgt_pdf')
         self.add_line('PDF_set_min', 'int', 21101)
         self.add_line('PDF_set_max', 'int', 21140)
+        self.add_line('iappl', 'int', 0)
         # FxFx merging stuff
         self.add_line('ickkw', 'int', 0)
-        # self.add_line('fixed_couplings', 'bool', True, log=10)
         self.add_line('jetalgo', 'float', 1.0)
         # Collider energy and type
         self.add_line('lpp1', 'int', 1, fortran_name='lpp(1)')

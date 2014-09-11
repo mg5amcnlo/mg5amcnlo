@@ -73,6 +73,15 @@ else
   reweight_xsec_events_pdf_dummy=reweight_xsec_events_pdf_dummy.o
 endif
 
+# Option APPLGrid
+ifdef applgrid
+  APPLLIBS=$(shell applgrid-config --ldcflags) $(shell amcfast-config --ldflags)
+  applgrid_interface=appl_interface.o
+else
+  APPLLIBS=
+  applgrid_interface=appl_interface_dummy.o
+endif
+
 # Madloop
 ifdef madloop
   libmadloop=libMadLoop.a

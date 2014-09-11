@@ -1310,8 +1310,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        self.get_characteristics(pjoin(self.me_dir, 
-                                        'SubProcesses', 'proc_characteristics'))
+        if mode in ['LO', 'NLO'] and self.run_card['iappl'] == '2' and not options['only_generation']:
+            options['only_generation'] = True
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1370,6 +1371,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_always_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
+
+        if self.run_card['iappl']=='2':
+            self.applgrid_distribute(options,mode,p_dirs)
 
         if options['reweightonly']:
             event_norm=self.run_card['event_norm']
@@ -1459,7 +1463,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 
             cross, error = sum_html.make_all_html_results(self, folder_names[mode])
             self.results.add_detail('cross', cross)
-            self.results.add_detail('error', error) 
+            self.results.add_detail('error', error)
+            if self.run_card['iappl'] != '0':
+                self.applgrid_combine(cross,error)
             self.update_status('Run complete', level='parton', update_results=True)
 
             return
@@ -1576,6 +1582,74 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         event_norm=self.run_card['event_norm']
         self.collect_log_files(folder_names[mode], 2)
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
+
+
+    def applgrid_combine(self,cross,error):
+        """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
+        logger.debug('Combining APPLgrids \n')
+        applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),'applgrid-combine')
+        with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
+            all_jobs=dirf.readlines()
+        ngrids=len(all_jobs)
+        nobs  =len([name for name in os.listdir(pjoin(self.me_dir,'SubProcesses',all_jobs[0].rstrip())) \
+                        if name.endswith("_out.root")])
+        for obs in range(0,nobs):
+            gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
+            # combine APPLgrids from different channels for observable 'obs'
+            if self.run_card["iappl"] == "1":
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
+            elif self.run_card["iappl"] == "2":
+                unc2_inv=pow(cross/error,2)
+                unc2_inv_ngrids=pow(cross/error,2)*ngrids
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
+                for job in all_jobs:
+                    os.remove(pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_in.root"))
+            else:
+                raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
+            # after combining, delete the original grids
+            for ggdir in gdir:
+                os.remove(ggdir)
+
+        
+    def applgrid_distribute(self,options,mode,p_dirs):
+        """Distributes the APPLgrids ready to be filled by a second run of the code"""
+        # if no appl_start_grid argument given, guess it from the time stamps of the starting grid files
+        if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
+            gfiles=glob.glob(pjoin(self.me_dir, 'Events','*','aMCfast_obs_0_starting_grid.root'))
+            time_stamps={}
+            for root_file in gfiles:
+                time_stamps[root_file]=os.path.getmtime(root_file)
+            options['appl_start_grid']= \
+                max(time_stamps.iterkeys(), key=(lambda key: time_stamps[key])).split('/')[-2]
+            logger.info('No --appl_start_grid option given. Guessing that start grid from run "%s" should be used.' \
+                            % options['appl_start_grid'])
+
+        if 'appl_start_grid' in options.keys() and options['appl_start_grid']:
+            self.appl_start_grid = options['appl_start_grid']
+            start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_start_grid)
+            # check that this dir exists and at least one grid file is there
+            if not os.path.exists(pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root')):
+                raise self.InvalidCmd('APPLgrid file not found: %s' % \
+                                  pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root'))
+            else:
+                all_grids=[pjoin(start_grid_dir,name) for name in os.listdir(start_grid_dir) \
+                               if name.endswith("_starting_grid.root")]
+                nobs =len(all_grids)
+                gstring=" ".join(all_grids)
+        if not hasattr(self, 'appl_start_grid') or not self.appl_start_grid:
+            raise self.InvalidCmd('No APPLgrid name currently defined. Please provide this information.')             
+        if mode == 'NLO':
+            gdir='all_G'
+        elif mode == 'LO':
+            gdir='born_G'
+        #copy the grid to all relevant directories
+        for pdir in p_dirs:
+            g_dirs = [file for file in os.listdir(pjoin(self.me_dir,"SubProcesses",pdir)) \
+                      if file.startswith(gdir) and os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
+            for g_dir in g_dirs:
+                for grid in all_grids:
+                    obs=grid.split('_')[-3]
+                    files.cp(grid,pjoin(self.me_dir,"SubProcesses",pdir,g_dir,'grid_obs_'+obs+'_in.root'))
 
 
     def collect_log_files(self, folders, istep):
@@ -3257,6 +3331,7 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
+                     pjoin(cwd, 'initial_states_map.dat'),
                      pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
@@ -3303,6 +3378,9 @@ Integrated cross-section
                         to_move = ['mint_grids', 'grid.MC_integer']
                     else: 
                         to_move  = []
+                    if self.run_card['iappl'] =='2':
+                        for grid in glob.glob(pjoin(cwd,base,'grid_obs_*_in.root')):
+                            to_move.append(grid)
                     if not os.path.exists(pjoin(cwd,current)):
                         os.mkdir(pjoin(cwd,current))
                         input_files.append(pjoin(cwd, current))
@@ -3483,6 +3561,41 @@ Integrated cross-section
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
+            except KeyError:
+                pass
+
+        # read the run_card to find if applgrid is used or not
+        if self.run_card['iappl'] != '0':
+            os.environ['applgrid'] = 'True'
+            # check versions of applgrid and amcfast
+            for code in ['applgrid','amcfast']:
+                try:
+                    p = subprocess.Popen([self.options[code], '--version'], \
+                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    output, error = p.communicate()
+                    if code is 'applgrid' and output < '1.4.63':
+                        raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
+                                                +' You are using %s',output)
+                    if code is 'amcfast' and output < '1.1.1':
+                        raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
+                                                +' You are using %s',output)
+                except Exception:
+                    raise aMCatNLOError(('No valid %s installation found. \n' + \
+                          'Please set the path to %s-config by using \n' + \
+                          'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+            # set-up the Source/make_opts with the correct applgrid-config file
+            appllibs="  APPLLIBS=$(shell %s --ldcflags) $(shell %s --ldflags) \n" \
+                             % (self.options['applgrid'],self.options['amcfast'])
+            text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
+            text_out=[]
+            for line in text:
+                if line.strip().startswith('APPLLIBS=$'):
+                    line=appllibs
+                text_out.append(line)
+            open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
+        else:
+            try:
+                del os.environ['applgrid']
             except KeyError:
                 pass
 
@@ -4025,6 +4138,8 @@ _launch_parser.add_option("-o", "--only_generation", default=False, action='stor
                             "the last available results")
 _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
+_launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
+                            help="For use with APPLgrid only: start from existing grids")
 
 
 _generate_events_usage = "generate_events [MODE] [options]\n" + \
@@ -4075,6 +4190,11 @@ _calculate_xsect_parser.add_option("-x", "--nocompile", default=False, action='s
                             help="Skip compilation. Ignored if no executable is found")
 _calculate_xsect_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
+_calculate_xsect_parser.add_option("-o", "--only_generation", default=False, action='store_true',
+                            help="Skip grid set up, just start from " + \
+                            "the last available results")
+_calculate_xsect_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
+                            help="For use with APPLgrid only: start from existing grids")
 
 _shower_usage = 'shower run_name [options]\n' + \
         '-- do shower/hadronization on parton-level file generated for run run_name\n' + \

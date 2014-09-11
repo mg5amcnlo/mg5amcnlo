@@ -606,6 +606,8 @@ c
 c
       subroutine clear_events()
       end
+      subroutine initplot
+      end
       subroutine store_events()
       end
       integer function n_unwgted()

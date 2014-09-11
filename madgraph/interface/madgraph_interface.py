@@ -2438,6 +2438,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'pjfry':'auto',
                        'golem':'auto',
                        'lhapdf':'lhapdf-config',
+                       'applgrid':'applgrid-config',
+                       'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,

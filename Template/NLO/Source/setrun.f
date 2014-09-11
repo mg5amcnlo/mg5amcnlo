@@ -57,16 +57,14 @@ c
 c
       include 'nexternal.inc'
       include 'leshouche_info.inc'
-c
-c
-c
       logical gridrun,gridpack
       integer          iseed
       common /to_seed/ iseed
       integer nevents
-
       character*7 event_norm
       common /event_normalisation/event_norm
+      integer iappl
+      common /for_applgrid/ iappl
 c
 c----------
 c     start

@@ -199,6 +199,14 @@ c
       common/to_mass/emass
       logical firsttime
       data firsttime /.true./
+      if (firsttime) then
+         do i = 1,lmaxconfigs
+            do j = -nexternal,0
+               pmass(j,i) = 0d0
+               pwidth(j,i) = 0d0
+            end do
+         end do
+      endif
       include "born_props.inc"
 
       if(.not.IS_A_J(NEXTERNAL))then
@@ -216,6 +224,11 @@ c not necessarily the softest.  Therefore, it could be that even though
 c the Born does not have enough energy to pass the cuts set by ptj, the
 c event could.
       if (firsttime) then
+         do i=-nexternal,nexternal
+            xm(i)=0d0
+            xw(i)=0d0
+            mass_min(i)=0d0
+         end do
          firsttime=.false.
          do iFKS=1,fks_configs
             j_fks=FKS_J_D(iFKS)

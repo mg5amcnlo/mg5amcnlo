@@ -253,9 +253,9 @@ class CompleteFKS(mg_interface.CompleteForCmd):
             out['Options'] = self.list_completion(text, opt, line)
         else:
 
-            opt = ['-f', '-c', '-m', '-i', '-n', '-r', '-p', '-o',
+            opt = ['-f', '-c', '-m', '-i', '-x', '-r', '-p', '-o', '-n', 'a',
                     '--force', '--cluster', '--multicore', '--interactive',
-                    '--nocompile', '--reweightonly', '--parton', '--only_generation']
+                    '--nocompile', '--reweightonly', '--parton', '--only_generation', '--name', '--appl_start_grid']
             out['Options'] = self.list_completion(text, opt, line)
         
 
@@ -681,3 +681,5 @@ _launch_parser.add_option("-o", "--only_generation", default=False, action='stor
 # 'name' entry of the options, not the run_name one
 _launch_parser.add_option("-n", "--name", default=False, dest='name',
                             help="Provide a name to the run")
+_launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
+                            help="For use with APPLgrid only: start from existing grids")

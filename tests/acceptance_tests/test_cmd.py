@@ -170,7 +170,9 @@ class TestCmdShell1(unittest.TestCase):
                     'syscalc_path':'./SysCalc',
                     'hepmc_path': './hepmc',
                     'hwpp_path': './herwigPP',
-                    'thepeg_path': './thepeg'
+                    'thepeg_path': './thepeg',
+                    'amcfast': 'amcfast-config',
+                    'applgrid': 'applgrid-config'
                     }
 
         self.assertEqual(config, expected)
