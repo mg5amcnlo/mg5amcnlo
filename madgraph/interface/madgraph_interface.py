@@ -4527,10 +4527,8 @@ This implies that with decay chains:
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
             if name == 'golem95':
-#                status = misc.compile(['install'], mode='', 
-#                                          cwd = os.path.join(MG5DIR, name))
-                status = 0
-                shutil.copytree('/Users/valentin/TMP/golem95-1.3.1', os.path.join(MG5DIR, name), ignore=True)
+                status = misc.compile(['install'], mode='', 
+                                          cwd = os.path.join(MG5DIR, name))
             else:
                 status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
 
