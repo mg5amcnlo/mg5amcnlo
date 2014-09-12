@@ -7,8 +7,18 @@ if [[ ! -e $1 && -e ../$1 ]] ; then
 fi
 }
 
-if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources/HelConfigs.dat ]]; then
-    tar -xf MadLoop5_resources.tar
+tarCounter=0
+while [[ (-e MadLoop5_resources.tar.gz) && (! -e MadLoop5_resources/HelConfigs.dat) && ($tarCounter < 10) ]]; do
+	if [[ $tarCounter > 0 ]]; then
+		sleep 2s
+	fi
+    tar -xzf MadLoop5_resources.tar.gz
+	tarCounter=$[$tarCounter+1]
+done
+
+if [[ ! -e MadLoop5_resources/HelConfigs.dat ]]; then
+    echo "Cannot untar and unzip file `pwd`/MadLoop5_resources.tar.gz." > log.txt
+    exit
 fi
 
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
