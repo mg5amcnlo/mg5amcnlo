@@ -286,7 +286,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
           'lightyellow':93,'lightblue':94,'lightmagenta':95,'lightcyan':96,
                                                            'white':97,'none':-1}
         
-        reference = "Ref: hep-ph/1103.0621v2"
+        reference = "Ref: arXiv:1103.0621v2, arXiv:1405.0301"
         version = "v%(version)s (%(date)s)"%misc.get_pkg_info()
         versionref = "%s, %s"%(version,reference)
         if style.lower() not in MadLoopBannerStyles.get_style_keys():

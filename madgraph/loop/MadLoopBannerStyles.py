@@ -33,8 +33,8 @@ r"""
  |_|  |_|\__,_|\__,_|______\___/ \___/| .__/ 
                                       | |    
                                       |_|   
-
-   %(versionref)s
+   %(version)s
+   %(ref)s
 """
 
     styles['classic2'] = \
@@ -49,7 +49,7 @@ r"""
 .JML. `'  .JMML.`Moo9^Yo.`Wbmd"MML..JMMmmmmMMM  `Ybmd9'   `Ybmd9'  MMbmmd'  
                                                                    MM       
                                                                  .JMML.
-        %(versionref)s
+%(versionref)s
 """
 
     styles['classic3'] = \
@@ -61,7 +61,8 @@ r"""
  |_|  |_|\__,_|\__,_|_____\___/ \___/| .__/ 
                                      |_|    
         
- %(versionref)s
+%(version)s
+%(ref)s
 """
 
     styles['big'] = \
@@ -95,7 +96,8 @@ r"""
                 \ \._,\ '/                                               '-----------'           
                  `--'  `"                                                                        
 
-        %(versionref)s
+
+  %(versionref)s
 """
         
     styles['curly'] = \
@@ -107,7 +109,8 @@ r"""
 (_/   '                (_____   .-/    
                               )(_/    
    
- %(versionref)s
+%(version)s
+%(ref)s
 """
 
 
@@ -118,7 +121,8 @@ r"""
 ||__|||__|||__|||__|||__|||__|||__||
 |/__\|/__\|/__\|/__\|/__\|/__\|/__\|
         
-%(versionref)s
+%(version)s
+%(ref)s
 """
 
     styles['bubbles'] = \
@@ -133,8 +137,8 @@ o        O o   O  O   o  o     . o   O o   O o   O
 O        o `OoO'o `OoO'o OOoOooO `OoO' `OoO' oOoO' 
                                              O     
                                              o'    
- 
- %(versionref)s
+%(version)s
+%(ref)s
 """
 
     styles['mario'] = \
@@ -145,8 +149,8 @@ r"""
 / /\/\ \ (_| | (_| / /__| (_) | (_) | |_) |
 \/    \/\__,_|\__,_\____/\___/ \___/| .__/ 
                                     |_|   
-
- %(versionref)s
+%(version)s
+%(ref)s
 """
 
     styles['wiggly'] = \
@@ -159,7 +163,7 @@ r"""
  /_/      \_\   /  /\  \   / /__/ /  __| |___) )  \ \__/ /   \ \__/ /  ( (      
 (/          \) /__(  )__\ (______/   \________/    \____/     \____/   /__\     
                                                                         
-   %(versionref)s
+%(versionref)s
 """
 
     styles['printed'] = \
@@ -185,8 +189,8 @@ r"""
  / /  / / /_/ / /_/ / /___/ /_/ / /_/ / /_/ /
 /_/  /_/\__,_/\__,_/_____/\____/\____/ .___/ 
                                     /_/
-
- %(versionref)s
+%(version)s
+%(ref)s
 """
 
     styles['isometric'] = \
