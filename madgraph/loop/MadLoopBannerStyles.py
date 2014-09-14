@@ -14,6 +14,8 @@
 ################################################################################
 
 import madgraph.various.misc as misc
+import random
+from madgraph import MadGraph5Error
 
 #===============================================================================
 # MadLoopBannerStyles
@@ -22,7 +24,7 @@ class MadLoopBannerStyles(object):
     """ A container class to specify all banner styles. """
     # a dictionary contaning all banner styles
     ordered_style_keys = ['classic','classic2','classic3','big','funky',
-                          'curly','keyboard','bubbles','mario','wiggly',
+                          'curly','bubbles','mario','wiggly',
                           'printed','fast','isometric']
     styles = {}
     styles['classic'] = \
@@ -214,7 +216,11 @@ r"""
 
     @classmethod
     def get_raw_banner(cls,style):
-        return cls.styles[style]
+        if style.lower()=='random':
+            chosen = random.choice(cls.get_style_keys())
+            return cls.styles[chosen]
+        else:
+            return cls.styles[style]
 
     @classmethod
     def get_style_keys(cls):
@@ -232,12 +238,15 @@ r"""
           'lightyellow':93,'lightblue':94,'lightmagenta':95,'lightcyan':96,
                                                            'white':97,'none':-1}
         
+        if style.lower()=='random':
+            color = random.choice(['blue','green','red'])
+        
         reference = "Ref: arXiv:1103.0621v2, arXiv:1405.0301"
         version = "v%(version)s (%(date)s)"%misc.get_pkg_info()
         versionref = "%s, %s"%(version,reference)
-        if style.lower() not in cls.get_style_keys():
+        if style.lower() not in cls.get_style_keys()+['random']:
             raise MadGraph5Error('Incorrect style in MadLoopBanner. Must be'+\
-          ' one of the following: %s'%str(cls.get_style_keys()))
+          ' one of the following: %s'%str(cls.get_style_keys()+['random']))
 
         if isinstance(color,int):
             color_start ="char(27)//'[%im"%int
@@ -334,3 +343,57 @@ r"""
         return format_banner(
                  cls.get_raw_banner(style.lower())
                  %{'versionref':versionref, 'ref':reference, 'version':version})
+
+# Below we have a small standalone code to test the MadLoop Banner output
+if __name__=='__main__':
+    import madgraph.iolibs.file_writers as writers
+    import os
+    import copy
+    pjoin = os.path.join
+    writer = writers.FortranWriter('test_ML_banner.f')
+
+    styles = copy.copy(MadLoopBannerStyles.get_style_keys())
+    styles.append('random')
+    # Edit the line above and select here a subset of the available styles to 
+    # show. Possibilities are:
+    # ['classic','classic2','classic3','big','funky',
+    # 'curly','keyboard','bubbles','mario','wiggly',
+    # 'printed','fast','isometric','random']
+    # styles = ['funky']
+    
+    f_code = ""
+    
+    for style in styles:
+        f_code += "\nwrite(*,*) ''\nwrite(*,*) 'Style %s with default options.'\n"%style
+        f_code += MadLoopBannerStyles.get_MadLoop_Banner(style=style)
+
+    for style in styles:
+        f_code += "\nwrite(*,*) ''\nwrite(*,*) 'Style %s in red.'\n"%style
+        f_code += MadLoopBannerStyles.get_MadLoop_Banner(style=style, color='red')
+
+    for style in styles:
+        f_code += "\nwrite(*,*) ''\nwrite(*,*) 'Style %s in green.'\n"%style
+        f_code += MadLoopBannerStyles.get_MadLoop_Banner(style=style, color='green')
+
+    for style in styles:
+        f_code += "\nwrite(*,*) ''\nwrite(*,*) 'Style %s without frame.'\n"%style
+        f_code += MadLoopBannerStyles.get_MadLoop_Banner(style=style, print_frame=False)
+    
+    for style in styles:
+        f_code += "\nwrite(*,*) ''\nwrite(*,*) 'Style %s with a different frame.'\n"%style
+        f_code += MadLoopBannerStyles.get_MadLoop_Banner(
+            side_margin=10, up_margin=3,
+            top_frame_char = '-',
+            bottom_frame_char = '-',
+            left_frame_char = '*',
+            right_frame_char = '*',
+            style=style)
+    
+    writer.writelines("program testMLBanner\n%s\nend\n"%f_code)
+    writer.close()
+    # Now compile and run the code
+    if os.path.isfile(pjoin(os.getcwd(),'test_ML_banner')):
+        os.remove(pjoin(os.getcwd(),'test_ML_banner'))
+    misc.call('gfortran -o test_ML_banner test_ML_banner.f',
+                                                     cwd=os.getcwd(),shell=True)
+    misc.call('./test_ML_banner',cwd=os.getcwd(),shell=True)
