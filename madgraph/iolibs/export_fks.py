@@ -54,8 +54,6 @@ pjoin = os.path.join
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
 
-
-
 #=================================================================================
 # Class for used of the (non-optimized) Loop process
 #=================================================================================
@@ -162,11 +160,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                     "SubProcesses","MadLoopCommons.inc")).read()
         writer = writers.FortranWriter(os.path.join(self.dir_path, 
                                              "SubProcesses","MadLoopCommons.f"))
-        writer.writelines(MadLoopCommon%{'print_banner_commands':
-                self.get_MadLoop_Banner(style='classic2', color='green', 
-               top_frame_char = '=', bottom_frame_char = '=',
-               left_frame_char = '{',right_frame_char = '}',
-               print_frame=True, side_margin = 7, up_margin = 1)})
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
         writer.close()
                                        
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
@@ -2910,11 +2905,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                     "SubProcesses","MadLoopCommons.inc")).read()
         writer = writers.FortranWriter(os.path.join(self.dir_path, 
                                              "SubProcesses","MadLoopCommons.f"))
-        writer.writelines(MadLoopCommon%{'print_banner_commands':
-                self.get_MadLoop_Banner(style='classic2', color='green', 
-               top_frame_char = '=', bottom_frame_char = '=',
-               left_frame_char = '{',right_frame_char = '}',
-               print_frame=True, side_margin = 7, up_margin = 1)})
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
         writer.close()
 
         # link the files from the MODEL

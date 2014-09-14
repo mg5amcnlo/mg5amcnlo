@@ -13,6 +13,8 @@
 #
 ################################################################################
 
+import madgraph.various.misc as misc
+
 #===============================================================================
 # MadLoopBannerStyles
 #===============================================================================
@@ -218,3 +220,117 @@ r"""
     def get_style_keys(cls):
         return cls.ordered_style_keys
 
+    @classmethod
+    def get_MadLoop_Banner(cls, style='classic', color='blue', 
+               top_frame_char = '=', bottom_frame_char = '=',
+               left_frame_char = '{',right_frame_char = '}',
+               print_frame=True, side_margin = 7, up_margin = 1):
+        """ Writes out MadLoop banner."""
+        
+        colors = {'black':30,'red':31,'green':32,'yellow':33,
+          'blue':34,'magenta':35,'cyan':36,'lightred':91,'lightgreen':92,
+          'lightyellow':93,'lightblue':94,'lightmagenta':95,'lightcyan':96,
+                                                           'white':97,'none':-1}
+        
+        reference = "Ref: arXiv:1103.0621v2, arXiv:1405.0301"
+        version = "v%(version)s (%(date)s)"%misc.get_pkg_info()
+        versionref = "%s, %s"%(version,reference)
+        if style.lower() not in cls.get_style_keys():
+            raise MadGraph5Error('Incorrect style in MadLoopBanner. Must be'+\
+          ' one of the following: %s'%str(cls.get_style_keys()))
+
+        if isinstance(color,int):
+            color_start ="char(27)//'[%im"%int
+            color_end = "char(27)//'[0m"
+        elif color.lower() in colors:
+            if color.lower()=='none':
+                color_start = ""
+                color_end = ""
+            else:
+                color_start ="char(27)//'[%im"%colors[color.lower()]
+                color_end = "char(27)//'[0m"                    
+        else:
+            raise MadGraph5Error('Incorrect color in MadLoopBanner. Must be and'+\
+              ' intenger or one of the following: %s'%str(colors.keys()))
+
+        def format_banner(banner):
+            """ Format the raw banner text to give it a frame, colors and a 
+            margin.""" 
+
+            def fw(*args):
+                """Fortran write line"""
+                elems = []
+                for arg in args:
+                    if arg.startswith('char('):
+                        elems.append("%s'"%arg)
+                        continue
+                    # Hard-set the single and double quotes in the text to
+                    # make sure it is not processed by the FileWriter.
+                    arg = arg.replace("'","'//char(39)//'")
+                    arg = arg.replace('"',"'//char(34)//'")
+                    if len(arg)>0:
+                        elems.append("'%s'"%arg)
+                return "write(*,*) %s"%("//".join(elems))
+            
+            banner_lines = banner.split('\n')
+            formatted_lines = []
+
+            # Determine the target width
+            width = side_margin*2 + max(len(line) for line in banner_lines)
+            if print_frame:
+                width += 2
+                
+            # Print the upper frame
+            if print_frame:
+                formatted_lines.append(fw(" %s "%(top_frame_char*(width-2))))
+            
+            # Print the upper margin
+            for i in range(up_margin):
+                formatted_lines.append(fw("%(lside)s%(width)s%(rside)s"%
+                  {'lside':left_frame_char if print_frame else '',
+                   'rside':right_frame_char if print_frame else '',
+                                                'width':' '*(width-2)}))
+            
+            # Now print the banner 
+            for line in banner_lines:
+                line_elements = []
+                line_elements.append((left_frame_char if 
+                                           print_frame else '')+' '*side_margin)
+                # Colorize the logo
+                line_elements.append(color_start)
+                # Make sure to write the reference in black
+                found = False
+                for tag in [versionref, reference, version]:
+                    if tag in line:
+                        line_elements.extend([line[:line.index(tag)],
+                                color_end,tag,color_start,
+                                   line[line.index(tag)+len(tag):]+
+                                       ' '*(width-2*(side_margin+1)-len(line))])
+                        found = True
+                        break
+                if not found:
+                    line_elements.append(line+
+                                 ' '*(width-2*(side_margin+1)-len(line)))
+                line_elements.append(color_end)
+                line_elements.append(' '*side_margin+(right_frame_char 
+                                                        if print_frame else ''))    
+                formatted_lines.append(fw(*line_elements))
+
+            # Print the lower margin (of height equal to up margin)
+            for i in range(up_margin):
+                formatted_lines.append(fw("%(lside)s%(width)s%(rside)s"%
+                  {'lside':left_frame_char if print_frame else '',
+                   'rside':right_frame_char if print_frame else '',
+                                                        'width':' '*(width-2)}))
+                                
+            # Print the lower frame
+            if print_frame:
+                formatted_lines.append(fw(" %s "%(bottom_frame_char*(width-2))))
+            
+            return '\n'.join(formatted_lines)
+            
+        # Now we define the raw banner text for each style:
+        
+        return format_banner(
+                 cls.get_raw_banner(style.lower())
+                 %{'versionref':versionref, 'ref':reference, 'version':version})
