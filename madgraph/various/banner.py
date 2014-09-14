@@ -471,7 +471,7 @@ class Banner(dict):
             card[args[:-1]] = args[-1]
         
     
-
+    @misc.multiple_try()
     def add_to_file(self, path, seed=None):
         """Add the banner to a file and change the associate seed in the banner"""
 
