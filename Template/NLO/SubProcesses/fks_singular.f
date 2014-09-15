@@ -3121,7 +3121,7 @@ c g->gg splitting
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
 c g/a->qqbar splitting
          apprime(1) = -2 * TR * z * (1d0-z)**2
-         apprime(2) = -2 * ch1 * ch2 * z * (1d0-z)**2
+         apprime(2) = 3d0 * ch1**2 * z * (1d0-z)**2
          
       elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
@@ -3169,7 +3169,7 @@ c g->gg splitting
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
 c g/a ->qqbar splitting
          Qterms(1) = 4d0 * TR * z*(1d0-z)**2
-         Qterms(2) = 4d0 * ch1 * ch2 * z*(1d0-z)**2
+         Qterms(2) = 4d0 * 3d0 * ch1**2 * z*(1d0-z)**2
          
       elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
