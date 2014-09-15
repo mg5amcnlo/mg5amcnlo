@@ -13,8 +13,15 @@
 #
 ################################################################################
 
-import madgraph.various.misc as misc
 import random
+if __name__=='__main__':
+    # Make sure paths are accessible
+    import os
+    import sys
+    root_path = os.path.split(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))[0]
+    sys.path.insert(0, root_path)
+
+import madgraph.various.misc as misc
 from madgraph import MadGraph5Error
 
 #===============================================================================
