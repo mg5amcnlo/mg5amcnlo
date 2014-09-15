@@ -599,10 +599,6 @@ c
 c
 c To convert diagram number to configuration
 c
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
       include 'born_conf.inc'
 c
 c Vegas stuff

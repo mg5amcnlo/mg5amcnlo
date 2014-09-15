@@ -32,10 +32,16 @@ c
 c     
       call cpu_time(tBefore)
 c
+      write(*,*) 'GENERATE MOMENTA'
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
       do i=-max_branch,-1
+         do j=1,2
+            itree(j,i)=0
+         enddo
+      enddo
+      do i=-max_branchb_used,-1
          do j=1,2
             itree(j,i)=iforest(j,i,iconfig)
          enddo

@@ -18,9 +18,6 @@ c
 c
 c     Local
 c
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
       integer itree(2,-max_branch:-1)
       integer imatch
       integer use_config(0:lmaxconfigs)
@@ -102,7 +99,6 @@ c      integer icomp
 c
 c     DATA
 c
-      integer tprid(-max_branch:-1,lmaxconfigs)
       include 'born_conf.inc'
 c$$$      integer mapbconf(0:lmaxconfigs)
 c$$$      integer b_from_r(lmaxconfigs)
@@ -528,8 +524,6 @@ c
       integer iarray(imax)
       logical lconflict(-max_branch:nexternal)
       logical done
-      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
-      include 'born_decayBW.inc'
       integer lname
       character*30 mname
       character*30 fname
@@ -544,7 +538,6 @@ c-----
       ic = 0      
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
-            call bw_conflict(i,iforest(1,-max_branch,i),lconflict)
             nbw=0               !Look for B.W. resonances
             do j=1,imax
                iarray(j)=0      !Assume no cuts on BW
@@ -553,14 +546,6 @@ c-----
                if (pwidth(-j,i) .gt. 1d-20) then
                   nbw=nbw+1
                   write(*,*) 'Got bw',-nbw,j
-                  if(lconflict(-j).or.gForceBW(-j,i)) then
-                     if(lconflict(-j)) write(*,*) 'Got conflict ',-nbw,j
-                     if(gForceBW(-j,i)) write(*,*) 'Got forced BW ',-nbw,j
-                     iarray(nbw)=1 !Cuts on BW
-                     if (nbw .gt. imax) then
-                        write(*,*) 'Too many BW w conflicts',nbw,imax
-                     endif
-                  endif
                endif
             enddo
 c            do j=1,2**nbw
@@ -607,7 +592,7 @@ c                 write(26,'($a)') '.000'
                   stop
                endif
                write(26,'(a$)') ' '
-               call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
+               call bw_increment_array(iarray,imax,ibase,done)
             enddo
          endif
       enddo
@@ -625,7 +610,6 @@ c
 c        Need to write appropriate number of BW sets this is
 c        same thing as above for the bash file
 c
-            call bw_conflict(i,iforest(1,-max_branch,i),lconflict)
             nbw=0               !Look for B.W. resonances
             if (jcomp .eq. 0 .or. jcomp .eq. 1 .or. .true.) then
                do j=1,imax
@@ -635,12 +619,6 @@ c
                   if (pwidth(-j,i) .gt. 1d-20) then
                      nbw=nbw+1
                      write(*,*) 'Got bw',nbw,j
-                     if(lconflict(-j).or.gForceBW(-j,i)) then
-                        iarray(nbw)=1 !Cuts on BW
-                        if (nbw .gt. imax) then
-                           write(*,*) 'Too many BW w conflicts',nbw,imax
-                        endif
-                     endif
                   endif
                enddo
             endif            
@@ -653,7 +631,7 @@ c
                else
                   write(26,'(2i6)') mapconfig(i),use_config(i)
                endif
-               call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
+               call bw_increment_array(iarray,imax,ibase,done)
             enddo
          else
             write(26,'(2i6)') mapconfig(i),-mapconfig(-use_config(i))
@@ -697,6 +675,9 @@ c-----
 c  Begin Code
 c-----
       include 'born_props.inc'   !Propagator mass and width information pmass,pwidth
+C updated for the ew stuff, it is not needed anymore
+      write(*,*) 'BW_conflict should not be called'
+      stop
       write(*,*) 'Checking for BW ',iconfig
 c
 c     Reset variables
@@ -711,6 +692,7 @@ c     chain, or could potentially conflict
 c
       i=1
       do while (i .lt. nexternal-3 .and. itree(1,-i) .ne. 1)
+         write (*,*) 'HERE', i,itree(1,-i),itree(2,-i)
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
          if (pwidth(-i,iconfig) .gt. 0d0) then
             if (xmass(-i) .gt. pmass(-i,iconfig)) then  !Can't be on shell
@@ -752,7 +734,7 @@ c
 
 
 
-      subroutine bw_increment_array(iarray,imax,ibase,force,done)
+      subroutine bw_increment_array(iarray,imax,ibase,done)
 c************************************************************************
 c     Increments iarray     
 c************************************************************************
@@ -762,7 +744,6 @@ c     Arguments
 c
       integer imax          !Input, number of elements in iarray
       integer ibase         !Base for incrementing, 0 is skipped
-      logical force(imax)   !Force onshell BW, counting from -imax to -1
       integer iarray(imax)  !Output:Array of values being incremented
       logical done          !Output:Set when no more incrementing
 
@@ -784,7 +765,7 @@ c-----
       do while (i .le. imax .and. .not. found)
          if (iarray(i) .eq. 0) then    !don't increment this
             i=i+1
-         elseif (iarray(i) .lt. ibase-1 .and. .not. force(imax+1-i)) then
+         elseif (iarray(i) .lt. ibase-1 ) then
             found = .true.
             iarray(i)=iarray(i)+1
          else

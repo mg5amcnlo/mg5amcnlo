@@ -6,7 +6,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "genps.inc"
       include "nexternal.inc"
       include "born_nhel.inc"
-      include "coloramps.inc"
+      include "born_coloramps.inc"
       include "reweight0.inc"
       include "nFKSconfigs.inc"
       include "leshouche_info.inc"
@@ -593,9 +593,6 @@ c
       parameter (ZERO=0d0)
       integer itree(2,-max_branch:-1)
       integer sprop_tree(-max_branch:-1)
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs),mapconfig(0:lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
       include "born_conf.inc"
       integer i,j,jj
       double precision pmass(-nexternal:0,lmaxconfigs)
@@ -822,11 +819,6 @@ c
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      integer    maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
       include 'born_leshouche.inc'
       integer IDUP_tmp(nexternal),i
 c
@@ -1022,12 +1014,7 @@ c
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
-      integer    maxflow
-      parameter (maxflow=999)
       integer i
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
       include "born_leshouche.inc"
       integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
 c

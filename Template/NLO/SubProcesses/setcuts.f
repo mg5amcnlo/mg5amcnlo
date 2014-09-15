@@ -202,11 +202,6 @@ c
 
       include "born_props.inc"
 
-      if(.not.IS_A_J(NEXTERNAL))then
-        write(*,*)'Fatal error in set_tau_min'
-        write(*,*) 'IGNORING'
-cc        stop
-      endif
 c The following assumes that light QCD particles are at the end of the
 c list. Exclude one of them to set tau bound at the Born level This
 c sets a hard cut in the minimal shat of the Born phase-space
@@ -218,6 +213,11 @@ c not necessarily the softest.  Therefore, it could be that even though
 c the Born does not have enough energy to pass the cuts set by ptj, the
 c event could.
       if (firsttime) then
+         if(.not.IS_A_J(NEXTERNAL))then
+            write(*,*)'Fatal error in set_tau_min'
+            write(*,*) 'IGNORING'
+c            stop
+         endif
          firsttime=.false.
          do iFKS=1,fks_configs
             j_fks=FKS_J_D(iFKS)

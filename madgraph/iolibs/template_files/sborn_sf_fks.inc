@@ -37,6 +37,8 @@ C check if need color or charge links, and include the gs/w**2 term here
       else if (need_charge_links) then
       chargeprod = charges_born(m) * charges_born(n)
       if ((m.le.nincoming.and.n.gt.nincoming) .or. (n.le.nincoming.and.m.gt.nincoming)) chargeprod = - chargeprod
+C add a factor 1/2 for the self-eikonal soft link
+      if (m.eq.n) chargeprod = chargeprod / 2d0
       wgt = dble(ans_cnt(1, qed_pos)) * chargeprod * dble(gal(1))**2
       endif
 
