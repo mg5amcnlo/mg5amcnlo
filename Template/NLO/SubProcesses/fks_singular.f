@@ -3072,6 +3072,7 @@ c g->gg splitting
       elseif ((abs(col1).eq.3 .and. abs(col2).eq.3) .or.
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
 c g/a->qqbar splitting
+         ap(1) = TR * ( z**2 + (1d0-z)**2 )*(1d0-z)
          ap(2) = 3d0 * ch1**2 * ( z**2 + (1d0-z)**2 )*(1d0-z)
 
       elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
