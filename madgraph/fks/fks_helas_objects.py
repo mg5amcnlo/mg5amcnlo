@@ -242,7 +242,7 @@ class FKSHelasProcess(object):
             for extra_cnt in fksproc.extra_cnt_amp_list:
                 self.extra_cnt_me_list.append(helas_objects.HelasMatrixElement(extra_cnt, **opts))
 
-            # combine for example u u~ > t t~ and d d~ > t t~
+            # combine for example u u~ > t t~ and c c~ > t t~
             for proc in fksproc.real_amps:
                 if proc.amplitude['diagrams']:
                     fksreal_me = FKSHelasRealProcess(proc, real_me_list, real_amp_list, **opts)
@@ -350,6 +350,7 @@ class FKSHelasProcess(object):
 
         # now the reals
         reals2 = copy.copy(other.real_processes)
+
         for real in  self.real_processes:
             try:
                 reals2.remove(real)
@@ -456,7 +457,24 @@ class FKSHelasRealProcess(object): #test written
     def __eq__(self, other):
         """Equality operator:
         compare two FKSHelasRealProcesses by comparing their dictionaries"""
-        return self.__dict__ == other.__dict__
+
+        for key in [k for k in self.__dict__.keys() if k not in ['fks_infos']]:
+            if self.__dict__[key] != other.__dict__[key]:
+                return False
+
+        # special care for the fks_infos, ignore the various PDG ids
+        if (len(self.fks_infos) != len(other.fks_infos)):
+            return False
+
+        tocheck_info = [k for k in self.fks_infos[0].keys() if k not in ['ij_id', 'underlying_born']]
+        for selfinfo, otherinfo in zip(self.fks_infos, other.fks_infos):
+            if len(selfinfo['underlying_born']) != len(otherinfo['underlying_born']):
+                return False
+            for key in tocheck_info:
+                if selfinfo[key] != otherinfo [key]:
+                    return False
+
+        return True
     
     def __ne__(self, other):
         """Inequality operator:

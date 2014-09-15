@@ -21,6 +21,7 @@ import madgraph.interface.master_interface as mgcmd
 import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.amcatnlo_interface as amcatnlocmd
 import os
+import madgraph.fks.fks_helas_objects as fks_helas
 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -29,7 +30,7 @@ root_path = os.path.dirname(root_path)
 pjoin = os.path.join
 
 class TestAMCatNLOEW(unittest.TestCase):
-    """ check if the ValidCmd works correctly """
+    """ a suite of extra tests for the ew stuff """
     
     interface = mgcmd.MasterCmd()
 
@@ -181,4 +182,26 @@ class TestAMCatNLOEW(unittest.TestCase):
 
             self.assertEqual(nrealprocs, len(fksprocess.real_amps))
 
+
+
+    def test_combine_equal_processes(self):
+        """check that two processes with the same matrix-elements are equal"""
+        newinterface = mgcmd.MasterCmd()
+        # generate the processes
+        self.interface.do_generate('u u~ > t t~ [real=QCD QED]')
+        newinterface.do_generate('c c~ > t t~ [real=QCD QED]')
+
+        fksproc1 = self.interface._fks_multi_proc
+        fksproc2 = newinterface._fks_multi_proc
+        fksme1 = fks_helas.FKSHelasMultiProcess(fksproc1)['matrix_elements'][0]
+        fksme2 = fks_helas.FKSHelasMultiProcess(fksproc2)['matrix_elements'][0]
+        
+        # check the reals, they should be in the same order
+        for i1, r1, in enumerate(fksme1.real_processes): 
+            for i2, r2, in enumerate(fksme2.real_processes): 
+                if i1 == i2:
+                    self.assertEqual(r1,r2)
+                else:
+                    self.assertNotEqual(r1,r2)
+        self.assertEqual(fksme1, fksme2)
 
