@@ -54,8 +54,6 @@ pjoin = os.path.join
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
 
-
-
 #=================================================================================
 # Class for used of the (non-optimized) Loop process
 #=================================================================================
@@ -151,12 +149,20 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
-                  "SubProcesses/MadLoopCommons.f",
                   "SubProcesses/MadLoopParams.inc"]
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+                                       
+        # We need minimal editing of MadLoopCommons.f
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
+        writer.close()
                                        
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
@@ -2887,13 +2893,21 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                        
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
-                  "SubProcesses/MadLoopCommons.f",
                   "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParams.inc"]
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+
+        # We need minimal editing of MadLoopCommons.f
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
+        writer.close()
 
         # link the files from the MODEL
         model_path = self.dir_path + '/Source/MODEL/'

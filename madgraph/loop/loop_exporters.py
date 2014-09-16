@@ -49,6 +49,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
+from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
 
 pjoin = os.path.join
 
@@ -193,14 +194,19 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
 
+    MadLoop_banner = MadLoopBannerStyles.get_MadLoop_Banner(
+               style='classic2', color='green', 
+               top_frame_char = '=', bottom_frame_char = '=',
+               left_frame_char = '{',right_frame_char = '}',
+               print_frame=True, side_margin = 7, up_margin = 1)
+
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
         super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
         
         # We must change some files to their version for NLO computations
-        cpfiles= ["Source/makefile",\
-                  "SubProcesses/MadLoopCommons.f",
+        cpfiles= ["Source/makefile",
                   "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParamReader.f",
                   "SubProcesses/MadLoopParams.inc"]
@@ -224,7 +230,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
-
+            
+        # We need minimal editing of MadLoopCommons.f
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
+        writer.close()
+        
+        
         # Copy the whole MadLoop5_resources directory (empty at this stage)
         if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
                                                         'MadLoop5_resources')):
