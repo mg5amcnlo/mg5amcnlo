@@ -370,11 +370,11 @@ class FKSHelasProcess(object):
         # first add the born process
         #need to store pdg lists rather than processes in order to keep mirror processes different
         this_pdgs = [[leg['id'] for leg in proc['legs']] \
-                for proc in born_me['processes']]
+                for proc in self.born_me['processes']]
         for oth_proc in other.born_me['processes']:
             oth_pdgs = [leg['id'] for leg in oth_proc['legs']]
             if oth_pdgs not in this_pdgs:
-                this_born['processes'].append(oth_proc)
+                self.born_me['processes'].append(oth_proc)
                 this_pdgs.append(oth_pdgs)
 
         # then the virtuals (if generated)

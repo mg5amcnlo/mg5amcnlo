@@ -185,7 +185,8 @@ class TestAMCatNLOEW(unittest.TestCase):
 
 
     def test_combine_equal_processes(self):
-        """check that two processes with the same matrix-elements are equal"""
+        """check that two processes with the same matrix-elements are equal
+        and check that the add_process function works as expected"""
         newinterface = mgcmd.MasterCmd()
         # generate the processes
         self.interface.do_generate('u u~ > t t~ [real=QCD QED]')
@@ -204,4 +205,10 @@ class TestAMCatNLOEW(unittest.TestCase):
                 else:
                     self.assertNotEqual(r1,r2)
         self.assertEqual(fksme1, fksme2)
+
+        fksme1.add_process(fksme2)
+
+        self.assertEqual(len(fksme1.born_me['processes']), 2)
+        for real in fksme1.real_processes:
+            self.assertEqual(len(real.matrix_element['processes']), 2)
 
