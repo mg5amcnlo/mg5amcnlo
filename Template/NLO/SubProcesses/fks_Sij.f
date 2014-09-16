@@ -34,6 +34,10 @@ c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
+      logical is_charged(nexternal)
+      common /c_is_charged/is_charged
       include "fks_powers.inc"
       include "coupl.inc"
 
@@ -81,10 +85,13 @@ c Unphysical kinematics: set S function equal to zero
         return
       endif
 
-      if(particle_type(jj_fks).eq.8.and.particle_type(ii_fks).ne.8.and.
-     &     jj_fks.gt.nincoming)then
+CMZ check j FS glu, i not glu
+CMZ      if(particle_type(jj_fks).eq.8.and.particle_type(ii_fks).ne.8.and.
+CMZ
+      if(is_aorg(jj_fks).and..not.is_aorg(ii_fks).and.
+     #   jj_fks.gt.nincoming)then
         write(*,*)'Error #0 in fks_Sij',ii_fks,jj_fks,
-     #    particle_type(ii_fks),particle_type(jj_fks)
+     #    is_aorg(ii_fks),is_aorg(jj_fks)
         stop
       endif
 
@@ -137,6 +144,7 @@ c entering this function
       endif
       
       if (firsttime) then
+CMZ why firsttime is always true???
 c         firsttime=.false.
          do k = 1,nexternal
            do l = 1,nexternal
@@ -152,9 +160,10 @@ c         firsttime=.false.
                ijskip(kk,ll) = 1
             elseif ( ijskip(kk,ll).eq.0 .and. ijskip(ll,kk).eq.1 ) then
                ijskip(kk,ll) = 2
-               if(particle_type(kk).ne.8.or.particle_type(ll).ne.8)then
+CMZ               if(particle_type(kk).ne.8.or.particle_type(ll).ne.8)then
+               if(.not.is_aorg(kk).or..not.is_aorg(ll))then
                  write(*,*)'Error #1 in fks_Sij',kk,ll,
-     #             particle_type(kk),particle_type(ll)
+     #             is_aorg(kk),is_aorg(ll)
                  do k=1,nexternal
                     write (*,*) k,(ijskip(k,l),l=1,nexternal)
                  enddo
@@ -179,24 +188,31 @@ c         firsttime=.false.
          kk = i
          ll = fks_j_from_i(i,j)
          if(ijskip(kk,ll).ne.1)goto 222
-         if(particle_type(ll).eq.8.and.particle_type(kk).ne.8.and.
+CMZ k(=i) is not a glu, LL is a FS gluon
+CMZ         if(particle_type(ll).eq.8.and.particle_type(kk).ne.8.and.
+         if(is_aorg(ll).and..not.is_aorg(kk).and.
      #      ll.gt.nincoming)then
            write(*,*)'Error #3 in fks_Sij',kk,ll,
-     #       particle_type(kk),particle_type(ll)
+     #       is_aorg(kk),is_aorg(ll)
            stop
          endif
-         if( particle_type(ll).ne.8.and.particle_type(kk).ne.8 .and.
+CMZ k no glu, ll no glu but massive
+CMZ also in anycase if k is massive
+CMZ         if( particle_type(ll).ne.8.and.particle_type(kk).ne.8 .and.
+         if( .not.is_aorg(ll).and..not.is_aorg(kk) .and.
      #       pmass(ll).ne.zero.or.pmass(kk).ne.zero )then
            write(*,*)'Error #4 in fks_Sij',kk,ll,
-     #       particle_type(kk),particle_type(ll),
+     #       is_aorg(kk),is_aorg(ll),
      #       pmass(kk),pmass(ll)
            stop
          endif
+CMZ if this is the ij conf which is integrated in this dir
          if ( (kk.eq.ii_fks .and. ll.eq.jj_fks) .or.
      #        (ll.eq.ii_fks .and. kk.eq.jj_fks) )then
             inverseSij=inverseSij+1d0
-            if( particle_type(ll).eq.8 .and.
-     #          particle_type(kk).eq.8 .and.
+CMZ            if( particle_type(ll).eq.8 .and.
+CMZ     #          particle_type(kk).eq.8 .and.
+            if( is_aorg(ll).and.is_aorg(kk).and.
      #          jj_fks.gt.nincoming )then
               z=p(0,ii_fks)/(p(0,ii_fks)+p(0,jj_fks))
               hfact=hfact*h_damp(z)

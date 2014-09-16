@@ -94,6 +94,10 @@ c fks.inc information
       include 'orders.inc'
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
+      logical is_charged(nexternal)
+      common /c_is_charged/is_charged
 c
       i_fks=fks_i_D(nFKSprocess)
       j_fks=fks_j_D(nFKSprocess)
@@ -113,6 +117,13 @@ c
          particle_type(i)=particle_type_D(nFKSprocess,i)
          particle_charge(i)=particle_charge_D(nFKSprocess,i)
          pdg_type(i)=pdg_type_D(nFKSprocess,i)
+         ! is_aorg is true if the particle can induce soft singularities
+         ! currencly it is based on the pdg id (photon or gluon)
+         is_aorg(i) = pdg_type(i).eq.21.or.pdg_type(i).eq.22
+         ! is_charged is true if the particle has any color or electric
+         ! charge
+         is_charged(i) = particle_type(i).ne.1.or.
+     &                   particle_charge(i).ne.0d0
       enddo
       do i=1,nexternal
 
