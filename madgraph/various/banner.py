@@ -471,7 +471,7 @@ class Banner(dict):
             card[args[:-1]] = args[-1]
         
     
-
+    @misc.multiple_try()
     def add_to_file(self, path, seed=None):
         """Add the banner to a file and change the associate seed in the banner"""
 
@@ -912,6 +912,8 @@ class RunCardNLO(RunCard):
                                 % jetparam ,'$MG:color:BLACK')
                     self[jetparam]='1.0'
         
+        #ensure that iappl is present in the card!
+        self.get_default('iappl', '0', log_level=10)
         # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
         if self['iappl'] != '0' and self['pdlabel'].lower() != 'lhapdf':
             raise self.InvalidCmd('APPLgrid generation only possible with the use of LHAPDF')
