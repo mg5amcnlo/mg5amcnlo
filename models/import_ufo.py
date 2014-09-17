@@ -1327,7 +1327,7 @@ class RestrictModel(model_reader.ModelReader):
                 null_parameters.append(name)
             elif value == 1:
                 one_parameters.append(name)
-                
+        
         return null_parameters, one_parameters
     
     def detect_identical_parameters(self):
@@ -1572,9 +1572,9 @@ class RestrictModel(model_reader.ModelReader):
                           '|'.join(special_parameters[split:])]
             else:
                 re_str = [ re_str ]
+            used = set()
             for expr in re_str:
                 re_pat = re.compile(r'''\b(%s)\b''' % expr)
-                used = set()
                 # check in coupling
                 for name, coupling_list in self['couplings'].items():
                     for coupling in coupling_list:
