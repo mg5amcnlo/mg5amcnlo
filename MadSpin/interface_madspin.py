@@ -116,7 +116,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 raise self.InvalidCmd('No such file or directory : %s' % inputfile)
         
         if inputfile.endswith('.gz'):
-            misc.call(['gunzip', inputfile])
+            misc.gunzip(inputfile)
             inputfile = inputfile[:-3]
 
         # Read the banner of the inputfile
@@ -465,10 +465,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.events_file.close()
         except:
             pass
-        misc.call(['gzip -f %s' % evt_path], shell=True)
+        misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        shutil.move(pjoin(self.options['curr_dir'],'decayed_events.lhe'), decayed_evt_file)
-        misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
+        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+                  stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
 
@@ -546,10 +546,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.events_file.close()
         except:
             pass
-        misc.call(['gzip -f %s' % evt_path], shell=True)
+        misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        shutil.move(pjoin(self.options['curr_dir'],'decayed_events.lhe'), decayed_evt_file)
-        misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
+        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+                  stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
     

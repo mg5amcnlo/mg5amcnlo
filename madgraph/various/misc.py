@@ -26,6 +26,7 @@ import sys
 import optparse
 import time
 import shutil
+import gzip as ziplib
 
 try:
     # Use in MadGraph
@@ -697,7 +698,38 @@ class TMP_directory(object):
         
     def __enter__(self):
         return self.path
+#
+# GUNZIP/GZIP
+#
+def gunzip(path, keep=False, stdout=None):
+    """ a standard replacement for os.system('gunzip -f %s.gz ' % event_path)"""
 
+    if not path.endswith(".gz"):
+        if os.path.exists("%s.gz" % path):
+            path = "%s.gz" % path
+        else:
+            raise Exception, "%(path)s does not finish by .gz and the file %(path)s.gz does not exists" %\
+                              {"path": path}         
+    if not stdout:
+        stdout = path[:-3]
+    open(stdout,'w').write(ziplib.open(path, "r").read())
+    if not keep:
+        os.remove(path)
+
+def gzip(path, stdout=None, error=True):
+    """ a standard replacement for os.system('gzip %s ' % path)"""
+    if not stdout:
+        stdout = "%s.gz" % path
+    elif not stdout.endswith(".gz"):
+        stdout = "%s.gz" % stdout
+    try:
+        ziplib.open(stdout,"w").write(open(path).read())
+    except:
+        if error:
+            raise
+    else:
+        os.remove(path)
+    
 #
 # Global function to open supported file types
 #

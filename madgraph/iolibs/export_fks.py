@@ -253,6 +253,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
+        cp(_file_path+'/various/lhe_parser.py', 
+                                       self.dir_path+'/bin/internal/lhe_parser.py') 
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
         cp(_file_path+'/interface/coloring_logging.py', 

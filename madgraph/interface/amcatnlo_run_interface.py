@@ -971,13 +971,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if any([arg in ['parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip(filename)
             if  os.path.exists(filename):
                 logger.info('Found events.lhe file for run %s' % self.run_name) 
                 shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
                 self.create_plot('parton')
                 shutil.move(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'), filename)
-                os.system('gzip -f %s' % filename)
+                misc.gzip(filename)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'MADatNLO.top')
@@ -1021,31 +1021,30 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                                 self.run_name)
                     return
                 filename = filenames[0]
-                os.system('gunzip -c -f %s > %s' % (filename,
-                          pjoin(self.me_dir, 'Events','pythia_events.hep')))
-
+                misc.gunzip(filename, keep=True, stdout=pjoin(self.me_dir, 'Events','pythia_events.hep'))
+                
                 if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
                     files.cp(pjoin(self.me_dir, 'Cards', 'pythia_card_default.dat'),
                              pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
                 self.run_hep2lhe()
             else:
                 filename = filenames[0]
-                os.system('gunzip -c -f %s > %s' % (filename,
-                          pjoin(self.me_dir, 'Events','pythia_events.lhe')))
+                misc.gunzip(filename, keep=True, stdout=pjoin(self.me_dir, 'Events','pythia_events.hep'))
+
             self.create_plot('Pythia')
             lhe_file_name = filename.replace('.hep.gz', '.lhe')
             shutil.move(pjoin(self.me_dir, 'Events','pythia_events.lhe'), 
                         lhe_file_name)
-            os.system('gzip -f %s' % lhe_file_name)
+            misc.gzip(lhe_file_name)
                     
         if any([arg in ['all','pgs'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 
                                             '%s_pgs_events.lhco' % self.run_tag)
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip(filename)
             if  os.path.exists(filename):
                 self.create_plot('PGS')
-                os.system('gzip -f %s' % filename)                
+                misc.gzip(filename)                
             else:
                 logger.info('No valid files for pgs plot')
                 
@@ -1053,12 +1052,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             filename = pjoin(self.me_dir, 'Events', self.run_name, 
                                         '%s_delphes_events.lhco' % self.run_tag)
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip(filename)
             if  os.path.exists(filename):
                 #shutil.move(filename, pjoin(self.me_dir, 'Events','delphes_events.lhco'))
                 self.create_plot('Delphes')
                 #shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
-                os.system('gzip -f %s' % filename)                
+                misc.gzip(filename)                
             else:
                 logger.info('No valid files for delphes plot')
 
@@ -2306,24 +2305,22 @@ Integrated cross-section
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created. Check collect_events.log')
-        evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
-        files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
-        misc.call(['gzip', evt_file])
+        evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+        misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
-        logger.info('The %s.gz file has been generated.\n' \
-                % (evt_file))
+        logger.info('The %s file has been generated.\n' % (evt_file))
         self.results.add_detail('nb_event', nevents)
         self.update_status('Events generated', level='parton', update_results=True)
-        return evt_file
+        return evt_file[:-3]
 
 
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
         logger.info('Prepairing MCatNLO run')
-        try:
-            misc.call(['gunzip', evt_file])
+        try:     
+            misc.gunzip(evt_file)
         except Exception:
             pass
 
@@ -2676,7 +2673,7 @@ Integrated cross-section
             shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
         # end of the run, gzip files and print out the message/warning
         for f in to_gzip:
-            misc.call(['gzip', f])
+            misc.gzip(f)
         if message:
             logger.info(message)
         if warning:
@@ -2790,15 +2787,6 @@ Integrated cross-section
             return 
         
         tag = self.run_card['run_tag']
-#        if 'pythia' in self.to_store:
-#            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
-#            os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
-#                  {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),
-#                   'tag':tag})
-#            os.system('gzip -f %s/%s_pythia_events.hep' % ( 
-#                                pjoin(self.me_dir,'Events',self.run_name), tag))
-#            self.to_store.remove('pythia')
-#            self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
 

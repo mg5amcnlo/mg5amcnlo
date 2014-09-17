@@ -408,7 +408,7 @@ class Banner(dict):
                 try:
                     return card.info[arg[0]]
                 except KeyError, error:
-                    if opt['default']:
+                    if 'default' in opt:
                         return opt['default']
                     else:
                         raise
@@ -427,6 +427,8 @@ class Banner(dict):
                     return opt['default']
                 else:
                     raise  
+        elif len(arg) == 0:
+            return card
         else:
             raise Exception, "Unknow command"
     
