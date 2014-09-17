@@ -33,7 +33,6 @@ c
 c     
       call cpu_time(tBefore)
 c
-      write(*,*) 'GENERATE MOMENTA'
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig

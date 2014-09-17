@@ -879,6 +879,7 @@ c$$$      else
          enhanceS=enhance
 c$$$      endif
 
+
       cnt_wgt = cnt_wgt * enhanceS
       cnt_swgt = cnt_swgt * enhanceS
       bsv_wgt = bsv_wgt * enhanceS
@@ -936,7 +937,7 @@ c$$$      endif
            call reweight_fill_extra()
            if(check_reweight.and.doreweight)
      #       call check_rwgt_wgt("NLO")
-           if(do_rwgt_scale.or.do_rwgt_pdf)call fill_rwgt_NLOplot()
+           if(doreweight)call fill_rwgt_NLOplot()
 c Example of reweighted cross section (scale changed)
 c           dsig_new=compute_rwgt_wgt_NLO(new_muR_fact,new_muF1_fact,
 c     #                                   new_muF2_fact,new_QES_fact,
@@ -3063,6 +3064,13 @@ c fraction of the energy of part1 and t is the invariant mass of the mother.
 
       include "coupl.inc"
 
+C sanity check
+      if (col1.eq.8.and.dabs(ch1).ne.0d0 .or.
+     1 col2.eq.8.and.dabs(ch2).ne.0d0) then
+         write (*,*) 'Fatal Error #0 in AP_reduced',col1,col2,ch1,ch2
+         stop
+      endif
+
       if (col1.eq.8 .and. col2.eq.8)then
 c g->gg splitting
          ap(1) = 2d0 * CA * ( (1d0-z)**2/z + z + z*(1d0-z)**2 )
@@ -3087,7 +3095,7 @@ c q->gq splitting
          ap(2) = ch2**2 * (1d0+(1d0-z)**2)*(1d0-z)/z
 
       else
-         write (*,*) 'Fatal error in AP_reduced',col1,col2,ch1,ch2
+         write (*,*) 'Fatal Error #1 in AP_reduced',col1,col2,ch1,ch2
          stop
       endif
 
@@ -4556,9 +4564,9 @@ c Born contribution:
      #       abrv.eq.'viLC') goto 547
 
 c Q contribution eq 5.5 and 5.6 of FKS
-      Q=0d0
 C loop over QCD/QED (iord=1,2 respectively)
       do iord= 1,2
+         Q=0d0
 C skip what we don't need
          if (iord.eq.1) ipos_ord = qcd_pos
          if (iord.eq.2) ipos_ord = qed_pos
@@ -4566,8 +4574,8 @@ C skip what we don't need
          do i=1 ,nexternal
             if (i.ne.i_fks .and. 
      #         pmass(i).eq.ZERO)then
-            !FIXIFIXIFXIX
-            write(*,*) 'FIXIFIXFIXFIX'
+c set the various color factors according to the 
+c type of the leg
                if (particle_type(i).eq.8) then
                   aj=0
                elseif(abs(particle_type(i)).eq.3) then
@@ -4580,6 +4588,7 @@ C skip what we don't need
                    write(*,*) 'NOT IMPLEMENTED'
                    stop
                endif
+
                if (ipos_ord.eq.qcd_pos) then
 C                 set colour factors
                   if (aj.eq.-1) cycle
@@ -4587,12 +4596,12 @@ C                 set colour factors
                   gamma_used = gamma(aj)
                   gammap_used = gammap(aj)
                else if (ipos_ord.eq.qed_pos) then
-                  write(*,*) 'SETSETSET'
 C                 set charge factors
                   c_used = particle_charge(i)**2
                   gamma_used = 3d0/2d0 * particle_charge(i)**2
                   gammap_used = (13d0/2d0 - 2d0 * pi**2 / 3d0) * particle_charge(i)**2
                endif
+
                if (i.gt.nincoming) then 
 C Q terms for final state partons
                 if(abrv.eq.'novA')then
@@ -4663,6 +4672,7 @@ c 1+2+3+4
                endif
           endif
          enddo
+C end of the external particle loop
          if (ipos_ord.eq.qcd_pos) bsv_wgt =
      $      bsv_wgt+aso2pi*Q*dble(ans_cnt(1,qcd_pos))
          if (ipos_ord.eq.qed_pos) bsv_wgt =
@@ -4718,7 +4728,7 @@ c convert to Binoth Les Houches Accord standards
 c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                call cpu_time(tAfter)
                tOLP=tOLP+(tAfter-tBefore)
-               write(*,*) 'MZ fix virt tricks'
+c               write(*,*) 'MZ fix virt tricks'
 ccMZ               virtual_over_born=virt_wgt/(born_wgt*ao2pi)
 ccMZ               virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
 ccMZ               if (abrv.ne.'virt') then
@@ -5613,8 +5623,10 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       integer fac_i_FKS(fks_configs),fac_j_FKS(fks_configs)
      $     ,i_type_FKS(fks_configs),j_type_FKS(fks_configs)
      $     ,m_type_FKS(fks_configs),ngluons_FKS(fks_configs)
+      double precision
+     $ ch_i_FKS(fks_configs),ch_j_FKS(fks_configs),ch_m_FKS(fks_configs)
       save fac_i_FKS,fac_j_FKS,i_type_FKS,j_type_FKS,m_type_FKS
-     $     ,ngluons_FKS
+     $     ,ngluons_FKS,ch_i_FKS,ch_j_FKS,ch_m_FKS
 
       character*13 filename
 
@@ -5768,14 +5780,19 @@ c Set color types of i_fks, j_fks and fks_mother.
          i_type_FKS(nFKSprocess)=i_type
          j_type_FKS(nFKSprocess)=j_type
          m_type_FKS(nFKSprocess)=m_type
+         ch_i_FKS(nFKSprocess)=ch_i
+         ch_j_FKS(nFKSprocess)=ch_j
+         ch_m_FKS(nFKSprocess)=ch_m
       endif
 
       i_type=i_type_FKS(nFKSprocess)
       j_type=j_type_FKS(nFKSprocess)
       m_type=m_type_FKS(nFKSprocess)
+      ch_i=ch_i_FKS(nFKSprocess)
+      ch_j=ch_j_FKS(nFKSprocess)
+      ch_m=ch_m_FKS(nFKSprocess)
 
 c Set matrices used by MC counterterms
-      write(*,*) 'FIX SET_MC_MATRICES'
 c      call set_mc_matrices
 
       fac_i=fac_i_FKS(nFKSprocess)
@@ -5855,7 +5872,6 @@ C the type and charges of the mother particle
      &    abs(ch_i).eq.abs(ch_j) .and. 
      &    abs(i_type).gt.1) then
         ! neutral color octet splitting
-         write(*,*) 'FIX COLOR OCTET SPLITTING!!!!!!'
          m_type=8
          ch_m = 0d0
          if ( (j_fks.le.nincoming .and.

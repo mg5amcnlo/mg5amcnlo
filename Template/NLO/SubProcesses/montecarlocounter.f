@@ -306,7 +306,8 @@ c
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -476,7 +477,8 @@ c alazi and beazi are the parameters that control gfunazi
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision zero,one,tiny,vtiny,ymin
       parameter (zero=0d0)
@@ -1367,7 +1369,8 @@ c alazi and beazi are the parameters that control gfunazi
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision zero,one,tiny,vtiny,ymin
       parameter (zero=0d0)
@@ -2240,7 +2243,8 @@ c alazi and beazi are the parameters that control gfunazi
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision zero,one,tiny,vtiny,ymin
       parameter (zero=0d0)
@@ -3208,7 +3212,8 @@ c alazi and beazi are the parameters that control gfunazi
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision zero,one,tiny,vtiny,ymin
       parameter (zero=0d0)
@@ -4108,7 +4113,8 @@ c alazi and beazi are the parameters that control gfunazi
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision zero,one,tiny,vtiny,ymin
       parameter (zero=0d0)
@@ -5007,7 +5013,8 @@ c the same method
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
 c
 c BORN

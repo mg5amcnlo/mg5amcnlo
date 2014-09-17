@@ -273,7 +273,8 @@ c      include "fks.inc"
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn

@@ -178,7 +178,8 @@ c      include "fks.inc"
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision pmass(nexternal),zero
       parameter (zero=0d0)
