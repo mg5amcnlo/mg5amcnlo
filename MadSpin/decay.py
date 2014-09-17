@@ -2146,7 +2146,33 @@ class decay_all_events(object):
             production_tag, event_map = self.load_event()
             if production_tag == 0 == event_map: #end of file
                 break
+ 
+            numdecays=0
+            for decay in self.all_ME[production_tag]['decays']:
+              if decay['decay_tag']:
+                  numdecays = numdecays + 1
 
+            if not numdecays:
+                #no decays for this production mode, run in passthrough mode, only adding the helicities to the events
+                nb_mc_masses=0
+                p, p_str=self.curr_event.give_momenta(event_map)
+                stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0)
+                stdin_text+=p_str
+                # here I also need to specify the Monte Carlo Masses
+                stdin_text+=" %s \n" % nb_mc_masses
+                
+                mepath = self.all_ME[production_tag]['path']
+                mepath = mepath.replace('production_me','full_me');
+                                
+                trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = self.loadfortran( 'unweighting', mepath, stdin_text)
+                                
+                self.reset_helicityonly_in_prod_event(event_map, helicities)
+                event_nb+=1
+                decayed_event = self.curr_event
+                self.outputfile.write(decayed_event.string_event())
+                #print "number of trials: "+str(trial_nb)
+                trial_nb_all_events+=trial_nb
+                continue
             
             # Here we need to select a decay configuration on a random basis:
             decay = self.all_ME.get_random_decay(production_tag)
@@ -2330,6 +2356,19 @@ class decay_all_events(object):
                     else:
                         self.curr_event.particle[part_for_curr_evt]['mass']=self.MC_masses[abs(pid)]
 
+ 
+    def reset_helicityonly_in_prod_event(self, event_map, helicities):
+
+        """ Reset the external momenta in the production event, since
+            the virtuality of decaying particles has slightly changed the kinematics
+        """
+       
+        for index in self.curr_event.event2mg.keys():
+            if self.curr_event.event2mg[index]>0:
+                part=self.curr_event.event2mg[index]       # index for production ME
+                part_for_curr_evt=event_map[part-1]+1 # index for curr event
+                pid=self.curr_event.particle[part_for_curr_evt]['pid']
+                self.curr_event.particle[part_for_curr_evt]['helicity']=helicities[part-1]
 
     def get_mom(self,momenta):
         """ input: list of momenta in a string format 
@@ -2611,7 +2650,10 @@ class decay_all_events(object):
                 final_states.add(label)
         for key in self.list_branches.keys():
             if key not in final_states and key not in self.mgcmd._multiparticles:
-                del self.list_branches[key]
+                if (len(self.list_branches)>1):
+                  del self.list_branches[key]
+                else:
+                  logger.info('keeping dummy decay for passthrough mode')
 
         # 4. compute the full matrix element -----------------------------------
         logger.info('generating the full square matrix element (with decay)')
