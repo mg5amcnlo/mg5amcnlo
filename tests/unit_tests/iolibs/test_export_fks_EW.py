@@ -452,7 +452,8 @@ Parameters              alpha_s
             self.myfks_me,
             self.myfortranmodel)
         self.assertFileContains(self.created_files[0], goal)
-        
+
+    @PostponeToEW
     def test_write_fks_info_file_EW(self):
         """tests the correct writing of fks_info.inc file, containing the 
         relevant informations for all the splittings"""
