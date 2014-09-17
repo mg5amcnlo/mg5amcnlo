@@ -21,8 +21,8 @@
       integer nfl,nx,nq2,mem,rep
       double precision alphas
       double precision xgrid(100),logxgrid(100)
-      double precision q2grid(50),logq2grid(50)
-      double precision pdfgrid(0:100,14,100,50)
+      double precision q2grid(60),logq2grid(60)
+      double precision pdfgrid(0:100,14,100,60)
       logical hasphoton
       common /nnpdf/nfl,nx,nq2,mem,rep,hasphoton,alphas,xgrid,logxgrid,
      1     q2grid,logq2grid,pdfgrid
@@ -31,7 +31,7 @@
 *
       nfl = 13
       nx = 100
-      nq2 = 50
+      nq2 = 60
       mem = 1
       rep = 0
       alphas = 0
@@ -54,8 +54,8 @@
       integer nfl,nx,nq2,mem,rep
       double precision alphas
       double precision xgrid(100),logxgrid(100)
-      double precision q2grid(50),logq2grid(50)
-      double precision pdfgrid(0:100,14,100,50)
+      double precision q2grid(60),logq2grid(60)
+      double precision pdfgrid(0:100,14,100,60)
       logical hasphoton
       common /nnpdf/nfl,nx,nq2,mem,rep,hasphoton,alphas,xgrid,logxgrid,
      1     q2grid,logq2grid,pdfgrid
@@ -78,8 +78,8 @@
       integer nfl,nx,nq2,mem,rep
       double precision alphas
       double precision xgrid(100),logxgrid(100)
-      double precision q2grid(50),logq2grid(50)
-      double precision pdfgrid(0:100,14,100,50)
+      double precision q2grid(60),logq2grid(60)
+      double precision pdfgrid(0:100,14,100,60)
       logical hasphoton
       common /nnpdf/nfl,nx,nq2,mem,rep,hasphoton,alphas,xgrid,logxgrid,
      1     q2grid,logq2grid,pdfgrid
@@ -161,8 +161,8 @@
       integer nfl,nx,nq2,mem,rep
       double precision alphas
       double precision xgrid(100),logxgrid(100)
-      double precision q2grid(50),logq2grid(50)
-      double precision pdfgrid(0:100,14,100,50)
+      double precision q2grid(60),logq2grid(60)
+      double precision pdfgrid(0:100,14,100,60)
       logical hasphoton
       common /nnpdf/nfl,nx,nq2,mem,rep,hasphoton,alphas,xgrid,logxgrid,
      1     q2grid,logq2grid,pdfgrid

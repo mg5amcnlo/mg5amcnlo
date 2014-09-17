@@ -39,6 +39,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Fix a bug in the card edition mode which was sometimes returning to default value
                     which were edited by hand and not via the set command.
                 Seoyoung Kim (by OM): Implementation of the htcaas (super-)cluster support.
+		Juan Rojo (by RF): extended the 3 internal NNPDF sets for scales relevant for a 100TeV collider.
 
 2.1.2(03/07/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)
