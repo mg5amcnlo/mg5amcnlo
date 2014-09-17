@@ -296,7 +296,7 @@ c Multi channel stuff:
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       common/to_mconfigs/mapconfig, iconfig
 
-      double complex wgt1(2)
+      double precision wgt1
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
@@ -1096,7 +1096,7 @@ c Multi channel stuff:
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       common/to_mconfigs/mapconfig, iconfig
 
-      double complex wgt1(2)
+      double precision wgt1
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
@@ -3343,7 +3343,7 @@ c      include "fks.inc"
 
       double precision softcontr,pp(0:3,nexternal),wgt,eik,xi_i_fks
      &     ,y_ij_fks
-      double complex wgt1(2)
+      double precision wgt1
       integer i,j
 
       double precision p_born(0:3,nexternal-1)
@@ -4845,7 +4845,7 @@ c         stop
 
       double precision p_born(0:3,nexternal-1)
       double precision bpower,born_wgt
-      double complex wgt1(2)
+      double precision wgt1
 
       integer           isum_hel
       logical                   multi_channel
@@ -4869,7 +4869,7 @@ c non-zero Born)
       calculatedBorn=.false.
       call sborn(p_born,wgt1)
 c Born contribution:
-      born_wgt=dble(wgt1(1))
+      born_wgt=wgt1
       
 c Multiply the strong coupling by 10
       if (g.ne.0d0) then
@@ -4888,7 +4888,7 @@ c recompute the Born with the new couplings
       call sborn(p_born,wgt1)
 
 c Compute bpower
-      bpower=Log10(dble(wgt1(1))/born_wgt)/2d0
+      bpower=Log10(wgt1/born_wgt)/2d0
       if(abs(bpower-dble(nint(bpower))) .gt. tiny) then
          write(*,*)'Error in computation of bpower:'
          write(*,*)' not an integer',bpower
@@ -5361,7 +5361,7 @@ c      include "fks.inc"
       common/pborn/p_born
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double complex wgt1(2)
+      double precision wgt1
       double precision born,wgt,kikj,dot,vij,aso2pi,aeo2pi
       double precision contr1, contr2
       integer aj,i,j,m,n,ilink
