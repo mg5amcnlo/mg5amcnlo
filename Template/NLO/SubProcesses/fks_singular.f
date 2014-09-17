@@ -3120,7 +3120,7 @@ c g->gg splitting
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
 c g/a->qqbar splitting
          apprime(1) = -2 * TR * z * (1d0-z)**2
-         apprime(2) = 3d0 * ch1**2 * z * (1d0-z)**2
+         apprime(2) = -2 * 3d0 * ch1**2 * z * (1d0-z)**2
          
       elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
@@ -4486,6 +4486,10 @@ c For the MINT folding
       logical need_color_links_used, need_charge_links_used
       data need_color_links_used / .false. /
       data need_charge_links_used / .false. /
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
+      logical split_type_used(nsplitorders)
+      data split_type_used /nsplitorders * .false./
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       complex*16 ans_cnt(2, nsplitorders)
@@ -4495,16 +4499,18 @@ c For the MINT folding
       include 'nFKSconfigs.inc'
       INTEGER nFKSprocess, nFKSprocess_save
       COMMON/c_nFKSprocess/nFKSprocess
-      logical need_color_link_used, need_charge_link_used
       include "pmass.inc"
-
+      
       if (firsttime) then
 C check if any real emission need cahrge/color links
          nFKSprocess_save = nFKSprocess
          do nFKSprocess = 1, FKS_configs
             call fks_inc_chooser()
-            need_color_link_used = need_color_link_used .or. need_color_links
-            need_charge_link_used = need_charge_link_used .or. need_charge_links
+            need_color_links_used = need_color_links_used .or. need_color_links
+            need_charge_links_used = need_charge_links_used .or. need_charge_links
+            do i=1, nsplitorders
+              split_type_used(i) = split_type_used(i) .or. split_type(i)
+            enddo
          enddo
          firsttime = .false.
          nFKSprocess = nFKSprocess_save
@@ -4553,14 +4559,13 @@ c Q contribution eq 5.5 and 5.6 of FKS
       Q=0d0
 C loop over QCD/QED (iord=1,2 respectively)
       do iord= 1,2
-C skype what we don't need
-         if ((iord.eq.1.and..not.need_color_links_used) .or.
-     #       (iord.eq.2.and..not.need_charge_links_used)) cycle
+C skip what we don't need
          if (iord.eq.1) ipos_ord = qcd_pos
          if (iord.eq.2) ipos_ord = qed_pos
-         do i=nincoming+1,nexternal
+         if (.not.split_type_used(ipos_ord)) cycle
+         do i=1 ,nexternal
             if (i.ne.i_fks .and. 
-     #          pmass(i).eq.ZERO)then
+     #         pmass(i).eq.ZERO)then
             !FIXIFIXIFXIX
             write(*,*) 'FIXIFIXFIXFIX'
                if (particle_type(i).eq.8) then
@@ -4571,6 +4576,10 @@ C skype what we don't need
                   aj=-1
                endif
                Ej=p(0,i)
+               if (pdg_type(i).eq.22) then
+                   write(*,*) 'NOT IMPLEMENTED'
+                   stop
+               endif
                if (ipos_ord.eq.qcd_pos) then
 C                 set colour factors
                   if (aj.eq.-1) cycle
@@ -4584,7 +4593,9 @@ C                 set charge factors
                   gamma_used = 3d0/2d0 * particle_charge(i)**2
                   gammap_used = (13d0/2d0 - 2d0 * pi**2 / 3d0) * particle_charge(i)**2
                endif
-               if(abrv.eq.'novA')then
+               if (i.gt.nincoming) then 
+C Q terms for final state partons
+                if(abrv.eq.'novA')then
 c 2+3+4
                   Q = Q
      &             -2*dlog(shat/QES2)*dlog(xicut_used)*c_used
@@ -4594,19 +4605,19 @@ c 2+3+4
      &             +gammap_used
      &             +2d0*c_used*dlog(2d0*Ej/sqrtshat)**2
      &             -2d0*gamma_used*dlog(2d0*Ej/sqrtshat)
-               elseif(abrv.eq.'novB')then
+                elseif(abrv.eq.'novB')then
 c 2+3+4_mu
                   Q = Q
      &             -2*dlog(shat/QES2)*dlog(xicut_used)*c_used
      &             -( dlog(deltaO/2d0)*( gamma_used-
      &                     2d0*c_used*dlog(2d0*Ej/xicut_used/sqrtshat) )
      &               +2*dlog(xicut_used)**2*c_used )
-               elseif(abrv.eq.'viSA')then
+                elseif(abrv.eq.'viSA')then
 c 1                
                   Q = Q
      &              -dlog(shat/QES2)*( gamma_used-
      &                      2d0*c_used*dlog(2d0*Ej/sqrtshat) )
-               elseif(abrv.eq.'viSB')then
+                elseif(abrv.eq.'viSB')then
 c 1+4_L
                   Q = Q
      &              -dlog(shat/QES2)*( gamma_used-
@@ -4614,7 +4625,7 @@ c 1+4_L
      &             +gammap_used
      &             +2d0*c_used*dlog(2d0*Ej/sqrtshat)**2
      &             -2d0*gamma_used*dlog(2d0*Ej/sqrtshat)
-               elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
+                elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
      #                abrv.ne.'viLC')then
 c 1+2+3+4
                   Q = Q+gammap_used
@@ -4623,31 +4634,34 @@ c 1+2+3+4
      &              +2d0*c_used*( dlog(2d0*Ej/sqrtshat)**2
      &              -dlog(xicut_used)**2 )
      &              -2d0*gamma_used*dlog(2d0*Ej/sqrtshat)
-               else
+                else
                   write(*,*)'Error in bornsoftvirtual'
                   write(*,*)'abrv in Q:',abrv
                   stop
-               endif
-            endif
+                endif
 
-            if(abrv.eq.'novA'.or.abrv.eq.'novB')then
+               else
+C Q terms for initial state partons
+                if(abrv.eq.'novA'.or.abrv.eq.'novB')then
 c 2+3+4 or 2+3+4_mu
-               Q=Q-2*dlog(shat/QES2)*dlog(xicut_used)*c_used
-     &            -dlog(q2fact(i)/shat)*(
+                    Q=Q-2*dlog(shat/QES2)*dlog(xicut_used)*c_used
+     &              -dlog(q2fact(i)/shat)*(
      &              gamma_used+2d0*c_used*dlog(xicut_used) )
-            elseif(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
+                elseif(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
 c 1 or 1+4_L
-               Q=Q-dlog(shat/QES2)*gamma_used
-            elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
+                    Q=Q-dlog(shat/QES2)*gamma_used
+                elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
      #             abrv.ne.'viLC')then
 c 1+2+3+4
-               Q=Q-dlog(q2fact(i)/QES2)*(
+                    Q=Q-dlog(q2fact(i)/QES2)*(
      &               gamma_used+2d0*c_used*dlog(xicut_used))
-            else
-               write(*,*)'Error in bornsoftvirtual'
-               write(*,*)'abrv in Q:',abrv
-               stop
-            endif
+                else
+                    write(*,*)'Error in bornsoftvirtual'
+                    write(*,*)'abrv in Q:',abrv
+                    stop
+                endif
+               endif
+          endif
          enddo
          if (ipos_ord.eq.qcd_pos) bsv_wgt =
      $      bsv_wgt+aso2pi*Q*dble(ans_cnt(1,qcd_pos))

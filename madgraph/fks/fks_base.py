@@ -352,7 +352,10 @@ class FKSRealProcess(object):
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
         self.colors = [leg['color'] for leg in leglist]
-        self.charges = [leg['charge'] for leg in leglist]
+        if not self.process['perturbation_couplings'] == ['QCD']:
+            self.charges = [leg['charge'] for leg in leglist]
+        else:
+            self.charges = [0.] * len(leglist)
         self.perturbation = 'QCD'
         self.process.set('legs', MG.LegList(leglist))
         self.process.set('legs_with_decays', MG.LegList())

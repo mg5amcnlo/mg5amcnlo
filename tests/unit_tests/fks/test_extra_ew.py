@@ -184,21 +184,28 @@ class TestAMCatNLOEW(unittest.TestCase):
 
 
 
-    def test_combine_equal_processes(self):
+    def test_combine_equal_processes_qcd_qed(self):
         """check that two processes with the same matrix-elements are equal
         and check that the add_process function works as expected"""
         newinterface = mgcmd.MasterCmd()
+        newinterface2 = mgcmd.MasterCmd()
         # generate the processes
         self.interface.do_generate('u u~ > t t~ [real=QCD QED]')
         newinterface.do_generate('c c~ > t t~ [real=QCD QED]')
+        newinterface2.do_generate('d d~ > t t~ [real=QCD QED]')
 
         fksproc1 = self.interface._fks_multi_proc
         fksproc2 = newinterface._fks_multi_proc
+        fksproc3 = newinterface2._fks_multi_proc
         fksme1 = fks_helas.FKSHelasMultiProcess(fksproc1)['matrix_elements'][0]
         fksme2 = fks_helas.FKSHelasMultiProcess(fksproc2)['matrix_elements'][0]
+        fksme3 = fks_helas.FKSHelasMultiProcess(fksproc3)['matrix_elements'][0]
+
+        self.assertNotEqual(fksme2,fksme3)
         
         # check the reals, they should be in the same order
         for i1, r1, in enumerate(fksme1.real_processes): 
+            self.assertNotEqual(r1.charges, [0.] * 5)
             for i2, r2, in enumerate(fksme2.real_processes): 
                 if i1 == i2:
                     self.assertEqual(r1,r2)
@@ -212,3 +219,33 @@ class TestAMCatNLOEW(unittest.TestCase):
         for real in fksme1.real_processes:
             self.assertEqual(len(real.matrix_element['processes']), 2)
 
+
+    def test_combine_equal_processes_qcd(self):
+        """check that two processes with the same matrix-elements are equal
+        and check that the add_process function works as expected"""
+        newinterface = mgcmd.MasterCmd()
+        newinterface2 = mgcmd.MasterCmd()
+        # generate the processes
+        self.interface.do_generate('u u~ > t t~ [real=QCD]')
+        newinterface.do_generate('d d~ > t t~ [real=QCD]')
+
+        fksproc1 = self.interface._fks_multi_proc
+        fksproc2 = newinterface._fks_multi_proc
+        fksme1 = fks_helas.FKSHelasMultiProcess(fksproc1)['matrix_elements'][0]
+        fksme2 = fks_helas.FKSHelasMultiProcess(fksproc2)['matrix_elements'][0]
+        
+        # check the reals, they should be in the same order
+        for i1, r1, in enumerate(fksme1.real_processes): 
+            self.assertEqual(r1.charges, [0.] * 5)
+            for i2, r2, in enumerate(fksme2.real_processes): 
+                if i1 == i2:
+                    self.assertEqual(r1,r2)
+                else:
+                    self.assertNotEqual(r1,r2)
+        self.assertEqual(fksme1, fksme2)
+
+        fksme1.add_process(fksme2)
+
+        self.assertEqual(len(fksme1.born_me['processes']), 2)
+        for real in fksme1.real_processes:
+            self.assertEqual(len(real.matrix_element['processes']), 2)

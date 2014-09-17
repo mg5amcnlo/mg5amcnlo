@@ -8,7 +8,8 @@ c     Timing profile statistics
       double precision wgt,x(99),p(0:3,nexternal)
       include "born_conf.inc"
       integer this_config
-      common/to_mconfigs/mapconfig, this_config
+      integer mapconfig_local(0:lmaxconfigs)
+      common/to_mconfigs/mapconfig_local, this_config
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
@@ -45,6 +46,10 @@ c
          do j=1,2
             itree(j,i)=iforest(j,i,iconfig)
          enddo
+      enddo
+
+      do i =0,lmaxconfigsb_used
+        mapconfig_local(i) = mapconfig(i)
       enddo
       do i=-nexternal,0
          qmass(i)=pmass(i,iconfig)

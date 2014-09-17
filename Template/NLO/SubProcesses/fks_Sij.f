@@ -85,9 +85,6 @@ c Unphysical kinematics: set S function equal to zero
         return
       endif
 
-CMZ check j FS glu, i not glu
-CMZ      if(particle_type(jj_fks).eq.8.and.particle_type(ii_fks).ne.8.and.
-CMZ
       if(is_aorg(jj_fks).and..not.is_aorg(ii_fks).and.
      #   jj_fks.gt.nincoming)then
         write(*,*)'Error #0 in fks_Sij',ii_fks,jj_fks,
@@ -144,7 +141,7 @@ c entering this function
       endif
       
       if (firsttime) then
-CMZ why firsttime is always true???
+C can be optimized using firsttime configuration by configuration 
 c         firsttime=.false.
          do k = 1,nexternal
            do l = 1,nexternal
@@ -160,7 +157,6 @@ c         firsttime=.false.
                ijskip(kk,ll) = 1
             elseif ( ijskip(kk,ll).eq.0 .and. ijskip(ll,kk).eq.1 ) then
                ijskip(kk,ll) = 2
-CMZ               if(particle_type(kk).ne.8.or.particle_type(ll).ne.8)then
                if(.not.is_aorg(kk).or..not.is_aorg(ll))then
                  write(*,*)'Error #1 in fks_Sij',kk,ll,
      #             is_aorg(kk),is_aorg(ll)
@@ -188,17 +184,12 @@ CMZ               if(particle_type(kk).ne.8.or.particle_type(ll).ne.8)then
          kk = i
          ll = fks_j_from_i(i,j)
          if(ijskip(kk,ll).ne.1)goto 222
-CMZ k(=i) is not a glu, LL is a FS gluon
-CMZ         if(particle_type(ll).eq.8.and.particle_type(kk).ne.8.and.
          if(is_aorg(ll).and..not.is_aorg(kk).and.
      #      ll.gt.nincoming)then
            write(*,*)'Error #3 in fks_Sij',kk,ll,
      #       is_aorg(kk),is_aorg(ll)
            stop
          endif
-CMZ k no glu, ll no glu but massive
-CMZ also in anycase if k is massive
-CMZ         if( particle_type(ll).ne.8.and.particle_type(kk).ne.8 .and.
          if( .not.is_aorg(ll).and..not.is_aorg(kk) .and.
      #       pmass(ll).ne.zero.or.pmass(kk).ne.zero )then
            write(*,*)'Error #4 in fks_Sij',kk,ll,
@@ -206,12 +197,9 @@ CMZ         if( particle_type(ll).ne.8.and.particle_type(kk).ne.8 .and.
      #       pmass(kk),pmass(ll)
            stop
          endif
-CMZ if this is the ij conf which is integrated in this dir
          if ( (kk.eq.ii_fks .and. ll.eq.jj_fks) .or.
      #        (ll.eq.ii_fks .and. kk.eq.jj_fks) )then
             inverseSij=inverseSij+1d0
-CMZ            if( particle_type(ll).eq.8 .and.
-CMZ     #          particle_type(kk).eq.8 .and.
             if( is_aorg(ll).and.is_aorg(kk).and.
      #          jj_fks.gt.nincoming )then
               z=p(0,ii_fks)/(p(0,ii_fks)+p(0,jj_fks))

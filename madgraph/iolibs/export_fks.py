@@ -492,11 +492,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               matrix_element,
                               fortran_model)
         
-##        filename = 'real_from_born_configs.inc'
-##        self.write_real_from_born_configs(
-##                              writers.FortranWriter(filename), 
-##                              matrix_element,
-##                              fortran_model)
+# THIS IS A TEMPORARY FIX!!!!
+        filename = 'real_from_born_configs.inc'
+        self.write_real_from_born_configs_dummy(
+                              writers.FortranWriter(filename), 
+                              matrix_element,
+                              fortran_model)
 
         filename = 'ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
@@ -827,6 +828,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                          % (max_links,len(matrix_element.get_fks_info_list())))
         # Write the file
         writer.writelines(lines2+lines)
+
+    def write_real_from_born_configs_dummy(self, writer, matrix_element, fortran_model):
+        """write a dummy file"""
+        max_links = 10
+        lines2 = []
+        lines2.append("integer irfbc")
+        lines2.append("integer real_from_born_conf(%d,%d)" \
+                         % (max_links,len(matrix_element.get_fks_info_list())))
+        # Write the file
+        writer.writelines(lines2)
+
 
 
     def write_orders_file(self, writer, matrix_element):
