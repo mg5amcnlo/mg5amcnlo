@@ -334,6 +334,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.seed = int(args[1])
         elif args[0] == 'BW_cut':
             self.options[args[0]] = float(args[1])
+        elif args[0] == 'onlyhelicity':
+            self.options['onlyhelicity'] = True
         else:
             self.options[args[0]] = int(args[1])
     
