@@ -703,12 +703,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         for sqsos in squared_orders:
             is_a_match = True
             for user_sqso, value in user_squared_orders.items():
-                if (process.get_squared_order_type(user_sqso) =='==' and \
+                if user_sqso != 'WEIGHTED' and \
+                   ((process.get_squared_order_type(user_sqso) =='==' and \
                         value!=sqsos[split_orders.index(user_sqso)]) or \
                    (process.get_squared_order_type(user_sqso) in ['<=','='] and \
                                 value<sqsos[split_orders.index(user_sqso)]) or \
                    (process.get_squared_order_type(user_sqso) == '>' and \
-                                value>=sqsos[split_orders.index(user_sqso)]):
+                                value>=sqsos[split_orders.index(user_sqso)])):
                     is_a_match = False
                     break
             res.append('.true.' if is_a_match else '.false.')

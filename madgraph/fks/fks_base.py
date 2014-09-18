@@ -515,10 +515,6 @@ class FKSProcess(object):
                     'Not valid start_proc in FKSProcess')
             self.born_amp['process'].set('legs_with_decays', MG.LegList())
 
-            logger.info("Generating FKS-subtracted matrix elements for born process%s" \
-                % self.born_amp['process'].nice_string(print_weighted=False).replace(\
-                                                                 'Process', '')) 
-
             # special treatment of photon is needed !
             #MZ to be fixed
             ###self.isr = set([leg.get(color) for leg in self.leglist if not leg.get('state')]) != set([zero])
