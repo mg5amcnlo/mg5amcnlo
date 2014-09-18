@@ -522,7 +522,7 @@ C
       END
 
 
-      SUBROUTINE GET_NSQSO_BORN(NSQSO)
+      SUBROUTINE GET_NSQSO_B(NSQSO)
 C
 C     Simple subroutine returning the number of squared split order
 C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
