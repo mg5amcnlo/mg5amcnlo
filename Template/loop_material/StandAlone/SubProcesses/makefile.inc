@@ -33,7 +33,8 @@ PROCESS= MadLoopParamReader.o MadLoopCommons.o \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard coef_construction_*.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard loop_CT_calls_*.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard mp_coef_construction_*.f)) \
-		 $(patsubst %(dotf)s,%(doto)s,$(wildcard TIR_interface.f))
+		 $(patsubst %(dotf)s,%(doto)s,$(wildcard TIR_interface.f)) \
+		 $(patsubst %(dotf)s,%(doto)s,$(wildcard GOLEM_interface.f))
 
 OLP_PROCESS= MadLoopParamReader.o MadLoopCommons.o \
                  $(patsubst %(dotf)s,%(doto)s,$(wildcard P*/loop_matrix.f)) \
@@ -50,7 +51,8 @@ OLP_PROCESS= MadLoopParamReader.o MadLoopCommons.o \
                  $(patsubst %(dotf)s,%(doto)s,$(wildcard P*/coef_construction_*.f)) \
                  $(patsubst %(dotf)s,%(doto)s,$(wildcard P*/loop_CT_calls_*.f)) \
                  $(patsubst %(dotf)s,%(doto)s,$(wildcard P*/mp_coef_construction_*.f)) \
-		 $(patsubst %(dotf)s,%(doto)s,$(wildcard P*/TIR_interface.f))
+		 $(patsubst %(dotf)s,%(doto)s,$(wildcard P*/TIR_interface.f)) \
+		 $(patsubst %(dotf)s,%(doto)s,$(wildcard P*/GOLEM_interface.f))
 
 $(PROG): check_sa.o $(PROCESS) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) check_sa.o $(PROCESS) $(LINKLIBS)
@@ -63,7 +65,7 @@ $(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o $(patsubst %(dotf)s,%
 	$(FC) $(FFLAGS) -o $(CHECK_SA_BORN_SPLITORDERS) check_sa_born_splitOrders.o $(patsubst %(dotf)s,%(doto)s,$(wildcard *born_matrix.f)) -L$(LIBDIR) -ldhelas -lmodel
 
 %(doto)s : %(dotf)s
-	$(FC) $(FFLAGS) -c $< -o $@
+	$(FC) $(FFLAGS) -c $< -o $@ %(tir_include)s
 
 $(OLP): $(OLP_PROCESS) $(LIBS)
 	$(FC) -shared $(OLP_PROCESS) -o libMadLoop.$(dylibext) $(LINKLIBS)

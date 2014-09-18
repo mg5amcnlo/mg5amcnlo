@@ -42,6 +42,7 @@ CONTAINS
     ENDIF
     MU_R_IREGI=MU
     IF(first.EQ.0)THEN
+       IF(.NOT.print_banner)THEN
        WRITE(*,*)"#####################################################################################"
        WRITE(*,*)"#                                                                                   #"
        WRITE(*,*)"#                           IREGI-alpha-1.0.0                                       #"
@@ -51,6 +52,8 @@ CONTAINS
        WRITE(*,*)"#    b) PH Department, TH Unit, CERN, Geneva, Switzerland                           #"
        WRITE(*,*)"#                                                                                   #"
        WRITE(*,*)"#####################################################################################"
+       print_banner=.TRUE.
+       ENDIF
        ! initialization xiarray and metric
        CALL all_Integers(1,1,1,sol11,factor1)
        DO i=0,3
@@ -96,8 +99,8 @@ CONTAINS
        ENDIF
     ENDDO
     n=NLOOPLINE-numzerp
-    IF(n.GE.6.OR.MAXRANK.GE.6)THEN
-       WRITE(*,*)"ERROR: out of range of comp_tensor_integral_reduce (N<8,R<7)"
+    IF(n.GE.6.OR.MAXRANK.GT.6)THEN
+       WRITE(*,*)"ERROR: out of range of comp_tensor_integral_reduce (N<7,R<7)"
        STOP
     ENDIF
     CALL sytensor(n,MAXRANK,ntot,sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2))
@@ -197,7 +200,10 @@ CONTAINS
                 init=init+1
              ENDDO
              scalar(1:4)=comp_scalar_integral_reduce(NLOOPLINE,idim,indices,PDEN,M2L)
-             IF(.NOT.STABLE_IREGI)RETURN
+             IF(.NOT.STABLE_IREGI)THEN
+                WRITE(*,*)"IREGI:WARNING, it detects unstable case, some integrals may set to be 0."
+                RETURN
+             ENDIF
              DO j=1,nntot
                 init=calc_pos(sol(j,1:4))
                 coefs(init,1:4)=coefs(init,1:4)+coco(j)*syfactor(i)*scalar(1:4)
@@ -222,7 +228,10 @@ CONTAINS
                 ! the stability has been improved by IBP reduction
                 scalar(1:4)=comp_pave_opt_reduce(NLOOPLINE,paveindices,PDEN,M2L)
              ENDIF
-             IF(.NOT.STABLE_IREGI)RETURN
+             IF(.NOT.STABLE_IREGI)THEN
+                WRITE(*,*)"IREGI:WARNING, it detects unstable case, some integrals may set to be 0."
+                RETURN
+             ENDIF
              DO j=1,nntot
                 init=calc_pos(sol(j,1:4))
                 coefs(init,1:4)=coefs(init,1:4)+coco(j)*scalar(1:4)

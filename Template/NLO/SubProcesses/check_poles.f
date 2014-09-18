@@ -452,3 +452,5 @@ c     just a dummy subroutine
       end
 
       
+      subroutine initplot
+      end

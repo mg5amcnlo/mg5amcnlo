@@ -91,9 +91,7 @@ class FeynmanLine(object):
 
         assert isinstance(vertex, VertexPoint), 'The begin point should be a ' + \
                  'Vertex_Point object'
-	# HSS, 24/10/2012
-        # assert vertex is not self.end
-	# HSS
+
         self.begin = vertex
         vertex.add_line(self)
         return
@@ -103,9 +101,7 @@ class FeynmanLine(object):
 
         assert isinstance(vertex, VertexPoint), 'The end point should be a ' + \
                  'Vertex_Point object'
-	# HSS, 24/10/2012
-        # assert vertex is not self.begin
-        # HSS         
+
         self.end = vertex
         vertex.add_line(self)
         return
@@ -1797,29 +1793,28 @@ class DiagramDrawer(object):
 
         # check if we need curved loop particles
         curved_for_loop = False
-	# HSS, 22/10/2012
-	circled_for_loop = False
-	# HSS
+        circled_for_loop = False
+        
         if isinstance(diagram, LoopFeynmanDiagram):
             # If only 2 particle in the loop require that those lines are
             # curved
             if len([l for l in diagram.lineList if l.loop_line]) == 2:
                 curved_for_loop = True
                 self.curved_part_start = (0, 0)
-        # HSS, 22/10/2012
-	    # for tagpole
-	    elif len([l for l in diagram.lineList if l.loop_line]) == 1:
-		circled_for_loop = True
-		self.curved_part_start = (0, 0)
+        
+            # for tadpole DOES NOT CRASH BUT STILL NEED FIXING
+            elif len([l for l in diagram.lineList if l.loop_line]) == 1:
+                circled_for_loop = True
+                self.curved_part_start = (0, 0)
+
         # drawing the particles
-        for line in diagram.lineList:    
+        for line in diagram.lineList:
             if (not curved_for_loop and not circled_for_loop) or not line.loop_line:
                 self.draw_line(line)
-	    elif circled_for_loop:
-		self.draw_circled_line(line)
+            elif circled_for_loop:
+                self.draw_circled_line(line)
             else:
-                self.draw_curved_line(line) 
-	# HSS   
+                self.draw_curved_line(line)
                 
         # Finalize information related to the graph. First, associate a diagram
         #position to the diagram representation.
@@ -1866,12 +1861,11 @@ class DiagramDrawer(object):
             number = line.number
             self.associate_number(line, number)
 
-    # HSS , 22/10/2012
+    # To draw tadpole
     def draw_circled_line(self, line):
         """Draw the line information.
         First, call the method associate the line type [draw_circled_XXXXXX]
         Then finalize line representation by adding his name."""
-
 
         # if 4 point (or more interaction at the beginning/end of the loop
         # need to reduce curvature
@@ -1894,7 +1888,6 @@ class DiagramDrawer(object):
         
         #store begin for helping future curving
         self.curved_part_start = (line.begin.pos_x, line.begin.pos_y*1.2)
-    # HSS
 
     def draw_curved_line(self, line):
         """Draw the line information.

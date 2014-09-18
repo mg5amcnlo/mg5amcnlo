@@ -296,8 +296,10 @@ in presence of majorana particle/flow violation"""
                 propa = [t[1:] for t in self.tag if t.startswith('P')]
                 if propa == ['0']: 
                     massless = True
+                    self.denominator = None
                 elif propa == []:
                     massless = False
+                    self.denominator = None
                 else:
                     lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
                     continue
@@ -466,7 +468,9 @@ in presence of majorana particle/flow violation"""
         numerator = self.parse_expression(numerator, needPflipping)
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)
-            self.denominator = eval(self.denominator).simplify().expand().simplify().get((0,))
+            self.denominator = eval(self.denominator)
+            if not isinstance(self.denominator, numbers.Number):
+                self.denominator = self.denominator.simplify().expand().simplify().get((0,))
 
         return eval(numerator)
     

@@ -201,9 +201,16 @@ class Cluster(object):
         """Wait that all job are finish.
         if minimal_job set, then return if idle + run is lower than that number"""
         
+        
+        mode = 1 # 0 is long waiting/ 1 is short waiting
         nb_iter = 0
+        nb_short = 0 
         change_at = 5 # number of iteration from which we wait longer between update.
+        #usefull shortcut for readibility
+        longtime, shorttime = self.options['cluster_status_update']
+        
         while 1: 
+            old_mode = mode
             nb_iter += 1
             idle, run, finish, fail = self.control(me_dir)
             if fail:
@@ -215,23 +222,46 @@ class Cluster(object):
             if idle + run < minimal_job:
                 return
             fct(idle, run, finish)
-            if idle < run or nb_iter < change_at:
-                time.sleep(self.options['cluster_status_update'][1])
-            elif nb_iter == change_at:
+            #Determine how much we have to wait (mode=0->long time, mode=1->short time)
+            if nb_iter < change_at:
+                mode = 1
+            elif idle < run:
+                if old_mode == 0:
+                    if nb_short:
+                        mode = 0 #we already be back from short to long so stay in long
+                    #check if we need to go back to short mode
+                    elif idle:
+                        if nb_iter > change_at + int(longtime)//shorttime:
+                            mode = 0 #stay in long waiting mode
+                        else:
+                            mode = 1 # pass in short waiting mode
+                            nb_short =0
+                    else:
+                        mode = 1 # pass in short waiting mode
+                        nb_short = 0
+                elif old_mode == 1:
+                    nb_short +=1
+                    if nb_short > 3* max(change_at, int(longtime)//shorttime):
+                        mode = 0 #go back in slow waiting
+            else:
+                mode = 0
+            
+            #if pass from fast(mode=1) to slow(mode=0) make a print statement:
+            if old_mode > mode:
                 logger.info('''Start to wait %ss between checking status.
 Note that you can change this time in the configuration file.
-Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
+Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])   
+            
+            #now Waiting!        
+            if mode == 0:
                 try:
                     time.sleep(self.options['cluster_status_update'][0])
                 except KeyboardInterrupt:
                     logger.info('start to update the status')
                     nb_iter = min(0, change_at -2)
+                    nb_short = 0                
             else:
-                try:
-                    time.sleep(self.options['cluster_status_update'][0])
-                except KeyboardInterrupt:
-                    logger.info('start to update the status')
-                    nb_iter = min(0, change_at -2)
+                time.sleep(self.options['cluster_status_update'][1])
                     
                     
         self.submitted = 0
@@ -253,7 +283,8 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
         for path in args['required_output']:
             if args['cwd']:
                 path = pjoin(args['cwd'], path)
-            if not os.path.exists(path):
+# check that file exists and is not empty.
+            if not (os.path.exists(path) and os.stat(path).st_size != 0) :
                 break
         else:
             # all requested output are present
@@ -1534,10 +1565,14 @@ class SLURMCluster(Cluster):
         if log is None:
             log = '/dev/null'
         
-        command = ['sbatch','-o', stdout,
+        command = ['sbatch', '-o', stdout,
                    '-J', me_dir, 
                    '-e', stderr, prog] + argument
-                   
+
+        if self.cluster_queue and self.cluster_queue != 'None':
+                command.insert(1, '-p')
+                command.insert(2, self.cluster_queue)
+
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
                                       stdin=subprocess.PIPE, cwd=cwd)
@@ -1624,8 +1659,585 @@ class SLURMCluster(Cluster):
         cmd = "scancel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
+class HTCaaSCluster(Cluster):
+    """Class for dealing with cluster submission on a HTCaaS cluster using GPFS """
+
+    name= 'htcaas'
+    job_id = 'HTCAAS_JOBID'
+
+    @store_input()
+    @multiple_try()
+    def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None,
+                log=None, input_files=[], output_files=[], required_output=[],
+                nb_submit=0):
+        """Submit the HTCaaS job on the cluster with NO SHARE DISK
+           input/output file should be give relative to cwd
+        """
+        # To make workspace name(temp)
+        if 'ajob' in prog:
+            prog_num = prog.rsplit("ajob",1)[1]
+        else:
+            prog_num = '0'
+
+        cur_usr = os.getenv('USER')
+
+        if cwd is None:
+            cwd = os.getcwd()
+
+        cwd_cp = cwd.rsplit("/",2)
+        #print 'This is HTCaaS Mode'
+
+        if not stdout is None:
+            print "stdout: %s" % stdout
+
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
+
+        if not required_output and output_files:
+            required_output = output_files
+
+
+        if not 'combine' and not 'pythia' in prog :
+         cwd_arg = cwd+"/arguments"
+         temp = ' '.join([str(a) for a in argument])
+         arg_cmd="echo '"+temp+"' > " + cwd_arg
+         #print arg_cmd
+         #aa = misc.Popen([arg_cmd], shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+         command = ['htcaas-mgjob-submit','-d',cwd,'-e',os.path.basename(prog)]
+         if argument :
+            command.extend(['-a ', '='.join([str(a) for a in argument])])
+         print command
+         a = misc.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, cwd=cwd)
+         id = a.stdout.read().strip()
+
+        else:
+         cwd_arg = cwd+"/arguments"
+         temp = ' '.join([str(a) for a in argument])
+         #arg_cmd="echo '"+temp+"' > " + cwd_arg
+         #print arg_cmd
+         #aa = misc.Popen([arg_cmd], shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+         #print os.path.basename(prog)
+         temp_file_name = "sub." + os.path.basename(prog)
+         text = """#!/bin/bash
+         MYPWD=%(cwd)s
+         cd $MYPWD
+         input_files=(%(input_files)s )
+         for i in ${input_files[@]}
+         do
+          chmod -f +x $i
+         done
+         /bin/bash %(prog)s %(arguments)s > %(stdout)s
+         """
+         dico = {'cwd':cwd, 'input_files': ' '.join(input_files + [prog]), 'stdout': stdout, 'prog':prog,
+                 'arguments': ' '.join([str(a) for a in argument]),
+                 'program': ' ' if '.py' in prog else 'bash'}
+
+         # writing a new script for the submission
+         new_prog = pjoin(cwd, temp_file_name)
+         open(new_prog, 'w').write(text % dico)
+         misc.Popen(['chmod','+x',new_prog],cwd=cwd)
+         command = ['htcaas-mgjob-submit','-d',cwd,'-e',temp_file_name]
+         a = misc.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, cwd=cwd)
+         id = a.stdout.read().strip()
+
+        nb_try=0
+        nb_limit=5
+        if not id.isdigit() :
+                print "[ID is not digit]:" + id
+
+        while not id.isdigit() :
+            nb_try+=1
+            print "[fail_retry]:"+ nb_try
+            a=misc.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, cwd=cwd)
+            id = a.stdout.read().strip()
+            if nb_try > nb_limit :
+              raise ClusterManagementError, 'fail to submit to the HTCaaS cluster: \n %s' % id
+              break
+
+        self.submitted += 1
+        self.submitted_ids.append(id)
+
+        return id
+
+    @multiple_try(nb_try=10, sleep=10)
+    def control_one_job(self, id):
+        """ control the status of a single job with it's cluster id """
+
+        if id == 0 :
+         status_out ='C'
+        else  :
+         cmd = 'htcaas-job-status -m '+str(id)+ " -s | grep Status "
+         status = misc.Popen([cmd], shell=True,stdout=subprocess.PIPE,
+                                                         stderr=subprocess.PIPE)
+         error = status.stderr.read()
+         if status.returncode or error:
+             raise ClusterManagmentError, 'htcaas-job-submit returns error: %s' % error
+         status_out= status.stdout.read().strip()
+         status_out= status_out.split(":",1)[1]
+         if status_out == 'waiting':
+              status_out='I'
+         elif status_out == 'preparing' or status_out == 'running':
+              status_out = 'R'
+         elif status_out != 'done':
+              status_out = 'F'
+         elif status_out == 'done':
+              status_out = 'C'
+
+        return status_out
+
+    @multiple_try(nb_try=15, sleep=1)
+    def control(self, me_dir):
+        """ control the status of a single job with it's cluster id """
+        #print "HTCaaS2 Control"
+        if not self.submitted_ids:
+            return 0, 0, 0, 0
+
+        ongoing = []
+        idle, run, fail = 0, 0, 0
+
+        if id == 0 :
+         return 0 , 0, 0, 0
+        else :
+         for i in range(len(self.submitted_ids)):
+            ongoing.append(int(self.submitted_ids[i]))
+            cmd = "htcaas-job-status -m " + self.submitted_ids[i] + " -s | grep Status "
+            status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            status_out= status.stdout.read().strip()
+            status_out= status_out.split(":",1)[1]
+            if status_out == 'waiting':
+                idle += 1
+            elif status_out == 'preparing':
+                run += 1
+            elif status_out == 'running':
+                run += 1
+            elif status_out != 'done':
+                fail += 1
+
+            if status_out != 'done':
+                print "["+ self.submitted_ids[i] + "] " + status_out
+        '''
+        for i in range(len(self.submitted_ids)):
+            if int(self.submitted_ids[i]) not in ongoing:
+               status = self.check_termination(int(self.submitted_ids[i]))
+               if status = 'waiting':
+                    idle += 1
+               elif status == 'resubmit':
+                    idle += 1
+               elif status == 'failed':
+                    fail += 1
+        '''
+
+        return idle, run, self.submitted - (idle+run+fail), fail
+
+    @multiple_try()
+    def remove(self, *args, **opts):
+        """Clean the jobson the cluster"""
+
+        if not self.submitted_ids:
+            return
+        for i in range(len(self.submitted_ids)):
+         cmd = "htcaas-job-cancel -m %s" % ' '.join(self.submitted_ids[i])
+         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+
+ 
+class HTCaaS2Cluster(Cluster):
+    """Class for dealing with cluster submission on a HTCaaS cluster"""    
+      
+    name= 'htcaas2'
+    job_id = 'HTCAAS2_JOBID' 
+      
+    @store_input()
+    @multiple_try() 
+    def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
+                log=None, input_files=[], output_files=[], required_output=[], 
+                nb_submit=0):
+        """Submit the job on the cluster NO SHARE DISK
+           input/output file should be give relative to cwd
+        """
+        # To make workspace name(temp) 
+        if 'ajob' in prog:          
+            prog_num = prog.rsplit("ajob",1)[1]
+        elif 'run_combine' in prog: 
+            prog_num = '0'
+        else:
+            prog_num = prog
+
+        cur_usr = os.getenv('USER')
+
+        import uuid
+        dir = str(uuid.uuid4().hex)
+        #dir = str(int(time()))        
+        prog_dir = '_run%s'% prog_num
+        prog_dir = dir+prog_dir
+
+        if cwd is None:
+            cwd = os.getcwd()
+            
+        cwd_cp = cwd.rsplit("/",2)      
+
+        if stdout is None:
+            stdout='/dev/null'
+
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
+            
+        if not required_output and output_files:
+            required_output = output_files
+
+        if '/' in argument :
+            temp_file_name = "sub." + os.path.basename(prog) 
+        else :
+            temp_file_name = "sub." + os.path.basename(prog) + '.'.join(argument)
+                        
+        
+        if 'combine' in prog or 'pythia' in prog :
+         text = """#!/bin/bash
+        MYPWD=%(cwd)s
+        cd $MYPWD
+        script=%(script)s
+        input_files=(%(input_files)s )
+        if [ $# -ge 1 ]; then
+           arg1=$1
+        else
+           arg1=''
+        fi
+        args=' %(arguments)s'
+        for i in ${input_files[@]}; do
+          if [[ "$i" == *$script* ]]; then
+                script=$i
+          fi
+          chmod -f +x $i
+        done
+        /bin/bash ${script}  ${args} > %(stdout)s
+        """
+
+        elif 'shower' in prog :
+         text = """#!/bin/bash
+        MYPWD=%(cwd)s
+        cd $MYPWD
+        args=' %(arguments)s'
+        input_files=( %(input_files)s )
+        for i in ${input_files[@]}
+        do
+          chmod -f +x $i
+        done
+        /bin/bash %(script)s   ${args} > $MYPWD/done
+         """
+
+        else :
+         text = """#!/bin/bash
+        MYPWD=%(cwd)s
+        #mkdir -p $MYTMP
+        cd $MYPWD
+        input_files=( %(input_files)s )
+        for i in ${input_files[@]}
+        do
+         if [[ $i != */*/* ]]; then
+            i=$PWD"/"$i
+         fi
+         echo $i
+         if [ -d $i ]; then
+            htcaas-file-put -l $i -r /pwork01/%(cur_usr)s/MG5_workspace/%(prog_dir)s/ -i %(cur_usr)s
+         else
+           htcaas-file-put -f $i -r /pwork01/%(cur_usr)s/MG5_workspace/%(prog_dir)s/ -i %(cur_usr)s
+         fi
+        done
+         """
+
+        dico = {'cur_usr' : cur_usr, 'script': os.path.basename(prog),
+                'cwd': cwd, 'job_id': self.job_id, 'prog_dir': prog_dir,
+                'input_files': ' '.join(input_files + [prog]),
+                'output_files': ' '.join(output_files), 'stdout': stdout,
+                'arguments': ' '.join([str(a) for a in argument]),
+                'program': ' ' if '.py' in prog else 'bash'}
+
+        # writing a new script for the submission
+        new_prog = pjoin(cwd, temp_file_name)
+        open(new_prog, 'w').write(text % dico)
+        misc.Popen(['chmod','+x',new_prog],cwd=cwd)
+
+       # print temp_file_name
+        cmd1='/bin/bash '+ cwd+'/'+temp_file_name
+        status1 = misc.Popen([cmd1], shell=True, stdout=subprocess.PIPE,
+                                                         stderr=subprocess.PIPE)
+        #print '%s' % status1.stdout.read()
+
+
+        if not 'combine' in prog and not 'shower' in prog and not 'pythia' in prog:
+
+         cmd3 = """htcaas-mgjob-submit -d /pwork01/%(cur_usr)s/MG5_workspace/%(prog_dir)s/ -e %(script)s %(arguments)s""" 
+         dico3 = {'cur_usr' : cur_usr, 'script': os.path.basename(prog), 
+                  'arguments': ' ' if not argument else "-a " + '='.join([str(a) for a in argument]) ,
+                  'prog_dir': prog_dir }
+         status3 = misc.Popen([cmd3 % dico3], shell=True, stdout=subprocess.PIPE,
+                                                         stderr=subprocess.PIPE)
+         id = status3.stdout.read().strip()
+         ## exception
+         nb_try=0
+         nb_limit=5
+         while not id.isdigit() :
+            nb_try+=1
+            a=misc.Popen( [cmd3 % dico3], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, cwd=cwd)
+            id = a.stdout.read().strip()
+            if nb_try > nb_limit :
+              raise ClusterManagmentError, 'Fail to submit to the HTCaaS cluster: \n %s' % id
+              break
+
+         temp_file_name2 = "sub." +id
+         text2 = """#!/bin/bash
+         MYPWD=%(cwd)s
+         output_files=( %(output_files)s )
+         result=done
+         if [ ! -e ${MYPWD}/done.%(job_id)s ]; then 
+                 for i in ${output_files[@]}
+                 do
+                        htcaas-file-get -l ${MYPWD}/$i -r /pwork01/%(cur_usr)s/MG5_workspace/%(prog_dir)s/$i -i %(cur_usr)s
+                    chmod -Rf 777 ${MYPWD}/$i
+                 done
+                 for i in ${output_files[@]}; do 
+                    if [[ -e ${MYPWD}/$i ]]; then
+                        result=done        
+                    else 
+                        result=running
+                        echo $result
+                        exit 0
+                    fi 
+                 done
+                 echo $result
+                 touch ${MYPWD}/done.%(job_id)s
+         else
+                  for i in ${output_files[@]}; do
+                    if [ -e ${MYPWD}/$i ]; then
+                        result=done
+                    else
+                        rm -f ${MYPWD}/done.%(job_id)s
+                        result=running
+                        echo $result
+                        exit 0
+                    fi
+                 done         
+                echo $result
+
+         fi        
+         
+         """
+         dico2 = {'cur_usr' : cur_usr, 'script': os.path.basename(prog),
+                'cwd': cwd, 'job_id': self.job_id, 'prog_dir': prog_dir,
+                'output_files': ' '.join(output_files), 'job_id': id,
+                'program': ' ' if '.py' in prog else 'bash'}
+
+         homePath = os.getenv("HOME")
+         outPath = homePath +"/MG5"
+
+         new_prog2 = pjoin(outPath, temp_file_name2)
+         open(new_prog2, 'w').write(text2 % dico2)
+         misc.Popen(['chmod','+x',new_prog2],cwd=cwd)
+
+         
+         self.submitted += 1
+         self.submitted_ids.append(id)
+
+        elif 'combine' in prog or 'shower' in prog or 'pythia' in prog:
+          if '/dev/null' in stdout :
+              stdout=''
+        
+          temp_file_shower = "sub.out"
+          text_shower = """#!/bin/bash
+          MYPWD=%(cwd)s
+          result=done
+          output_files=(%(output_files)s)
+          for i in ${output_files[@]}; do
+            if [ -e $MYPWD/$i -o  -e $i ]; then
+                result=done
+            else 
+                result=running
+                echo $result
+                exit 0
+            fi
+          done
+          echo $result
+          """
+          dico_shower = { 'cwd': cwd, 'output_files': ' '.join([stdout]+output_files),
+                'program': ' ' if '.py' in prog else 'bash'}
+          homePath = os.getenv("HOME")
+          outPath = homePath +"/MG5"
+          new_prog_shower = pjoin(outPath, temp_file_shower)
+          open(new_prog_shower, 'w').write(text_shower % dico_shower)
+          misc.Popen(['chmod','+x',new_prog_shower],cwd=cwd) 
+          
+          id='-1'
+          self.submitted += 1
+          self.submitted_ids.append(id) 
+
+        else :  
+         id='-2'
+         self.submitted += 1
+         self.submitted_ids.append(id)
+
+        return id
+   
+    @multiple_try(nb_try=10, sleep=10)
+    def control_one_job(self, id):
+        """ control the status of a single job with it's cluster id """   
+     
+        homePath = os.getenv("HOME")
+        outPath = homePath +"/MG5"
+
+ 
+        if id == '0' or id=='-2' :
+           status_out ='done' 
+        elif id == '-1' :
+           cmd='/bin/bash ' +outPath+'/sub.out'
+           status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+           status_out=status.stdout.read().strip()
+           print "["+id+"]" + status_out
+           if status_out == 'waiting': 
+                status_out='wait'
+           elif status_out == 'preparing' or status_out == 'running':
+                status_out = 'R'
+           elif status_out != 'done':
+                status_out = 'F'
+           elif status_out == 'done':
+                status_out = 'C'
+                
+           print "["+id+"]" + status_out
+        else  :
+         cmd = 'htcaas-job-status -m '+str(id)+ " -s | grep Status "  
+         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
+                                                         stderr=subprocess.PIPE)
+         error = status.stderr.read()
+         if status.returncode or error:
+             raise ClusterManagmentError, 'htcaas-job-submit returns error: %s' % error        
+         status_out= status.stdout.read().strip()
+         status_out= status_out.split(":",1)[1]
+         print "["+id+"]" + status_out
+         if status_out == 'waiting':
+              status_out='wait'
+         elif status_out == 'preparing' or status_out == 'running':
+              status_out = 'R'
+         elif status_out == 'failed' :
+              args = self.retry_args[id]
+              id_temp = self.submit2(**args)
+              del self.retry_args[id]
+              self.submitted_ids.remove(id)
+              status_out = 'I'
+         elif status_out != 'done':
+              status_out = 'F'
+         elif status_out == 'done':
+              status_out = 'C'
+
+        return status_out
+
+   
+    @check_interupt()
+    @multiple_try(nb_try=15, sleep=10)
+    def control(self, me_dir):
+        """ control the status of a single job with it's cluster id """
+ 
+        if not self.submitted_ids:
+            return 0, 0, 0, 0 
+
+        ongoing = []
+        idle, run, fail = 0, 0, 0      
+
+        homePath = os.getenv("HOME")
+        outPath = homePath +"/MG5"
+
+        for i in range(len(self.submitted_ids)):
+           ongoing.append(self.submitted_ids[i])
+           if self.submitted_ids[i] == '-2' :
+              return 0,0,0,0
+           if self.submitted_ids[i] == '0' :
+                      # ongoing.append('0')
+                        status_out='done'            
+           elif self.submitted_ids[i] == '-1' :
+              cmd='/bin/bash ' +outPath+'/sub.out'
+              status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE) 
+              status_out=status.stdout.read().strip()
+              if status_out == 'waiting':
+                idle += 1
+              elif status_out == 'preparing':
+                run += 1
+              elif status_out == 'running':
+                run += 1
+              elif status_out != 'done':
+                fail += 1
+           else : 
+              args = self.retry_args[str(self.submitted_ids[i])]
+              if 'required_output'in args and not args['required_output']:
+                 args['required_output'] = args['output_files']
+                 self.retry_args[str(self.submitted_ids[i])] = args
+
+              cmd = "htcaas-job-status -m " + self.submitted_ids[i] + " -s | grep Status "
+              status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+              status_out= status.stdout.read().strip()
+              status_out= status_out.split(":",1)[1]
+              if status_out == 'waiting':
+                idle += 1
+              elif status_out == 'preparing':
+                run += 1
+              elif status_out == 'running':
+                run += 1
+              elif status_out == 'failed' or status_out == 'canceled': 
+                id = self.submit2(**args)
+                #self.submitted_ids[i]=id
+                del self.retry_args[self.submitted_ids[i]]
+                self.submitted_ids.remove(self.submitted_ids[i])
+                self.submitted-=1
+                idle += 1
+              elif status_out != 'done':
+                fail += 1
+              if status_out == 'done': 
+                 cmd2='/bin/bash '+ outPath+'/sub.'+self.submitted_ids[i]
+                 status2 = misc.Popen([cmd2], shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+                 aa= status2.stdout.read().strip()
+                 #result= self.check_termination(str(self.submitted_ids[i]))
+                 #print result
+                 #if not result : 
+                 #if not self.check_termination(str(self.submitted_ids[i])):
+                #        print "not_self" + self.submitted_ids[i]
+                #        idle += 1
+                 #else :
+                 for path in args['required_output']:
+                       if args['cwd']:
+                           path = pjoin(args['cwd'], path)
+                       # check that file exists and is not empty.
+                       temp1=os.path.exists(path)
+                       temp2=os.stat(path).st_size
+                       if not (os.path.exists(path) and os.stat(path).st_size != 0) :
+                            status2 = misc.Popen([cmd2], shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+                            aa= status2.stdout.read().strip()
+                            if aa == 'done':
+                                self.submitted_ids[i] = '0' 
+                            elif aa == 'running':
+                                run += 1
+                       else :
+                                   self.submitted_ids[i]='0' 
+
+        
+        for i in range(len(self.submitted_ids)):
+             if str(self.submitted_ids[i]) not in ongoing:
+                status2= self.check_termination(str(self.submitted_ids[i]))
+                if status2 == 'wait':
+                   run += 1
+                elif status2 == 'resubmit':
+                   idle += 1
+
+        return idle, run, self.submitted - (idle+run+fail), fail
+ 
+    @multiple_try()
+    def remove(self, *args, **opts):
+        """Clean the jobson the cluster"""
+        
+        if not self.submitted_ids:
+            return
+        for i in range(len(self.submitted_ids)):
+         cmd = "htcaas-job-cancel -m %s" % ' '.join(self.submitted_ids[i])        
+         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
-             'lsf': LSFCluster, 'ge':GECluster, 'slurm': SLURMCluster}
+             'lsf': LSFCluster, 'ge':GECluster, 'slurm': SLURMCluster, 
+             'htcaas':HTCaaSCluster, 'htcaas2':HTCaaS2Cluster}
 
 

@@ -20,9 +20,7 @@ import os
 import shutil
 import time
 import logging
-# HSS, 13/11/2012
 import re
-# HSS
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -213,7 +211,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         tool = 'MadLoop' if mode.startswith('ML5') else 'aMC@NLO'
         # The threshold for the triggering of the 'Warning difficult process'
         # message.
-        difficulty_threshold = 35
+        difficulty_threshold = 100
         # Check that we have something    
         if not proc:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
@@ -271,23 +269,12 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         logger.debug('Process difficulty estimation: %d'%proc_diff)
         if proc_diff >= difficulty_threshold:
             msg = """
-  The %s you attempt to generate 
-  appears to be of challenging difficulty.
-  It had probably never been tried by the authors and hence we cannot 
-  guarantee a correct behavior of the code in this context. Please visit
-  http://amcatnlo.cern.ch/list.htm for a list of processes we have 
-  validated. If your process does not appear and you have successfully
-  studied it with MadGraph5_aMC@NLO, please report it.
+  The %s you attempt to generate appears to be of challenging difficulty, but it will be tried anyway. If you have successfully studied it with MadGraph5_aMC@NLO, please report it.
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
     def validate_model(self, loop_type='virtual',coupling_type='QCD', stop=True):
         """ Upgrade the model sm to loop_sm if needed """
-
-        if not self._curr_model:
-            if coupling_type=='QED':
-                self.do_set(self,'gauge Feynman')
-            return
 
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
@@ -312,8 +299,8 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                 if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
                     if not self.options['gauge']=='Feynman' and coupling_type == 'QED':
-                        logger.info('Change to the gauge to Feynman because '+\
-                          'model loop_qcd_qed_sm is still restricted only to Feynman gauge.')
+                        logger.info('Switch to Feynman gauge because '+\
+                          'model loop_qcd_qed_sm is restricted only to Feynman gauge.')
                         self._curr_model = None
                         mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
                     if coupling_type == 'QCD':
@@ -322,7 +309,8 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                         add_on = 'qcd_qed_'
                     else:
 			            raise MadGraph5Error(
-                          "The pertubation coupling cannot be '%s' in loop processes"%coupling_type)
+                          "The pertubation coupling cannot be '%s'"%coupling_type+\
+                                                        " in SM loop processes")
 
                     logger.info("MG5_aMC now loads 'loop_%s%s'."%(add_on,model_name))
 
@@ -340,7 +328,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                  not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
             if 1 in self._curr_model.get('gauge'):
                 logger.info("Setting gauge to Feynman in order to process all"+\
-                           " possible loop computations available in the model")
+                           " possible loop computations available in the model.")
                 mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
             else:
                 logger.warning("You will only be able to do tree level and QCD"+\
@@ -388,13 +376,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                             'Using default IREGI instead.')%\
                            self._iregi_dir)
             self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
-        # Set where to look for PJFry++ installation
-        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
-        #if not os.path.isdir(self._pjfry_dir):
-        #    logger.warning(('Warning: Directory %s is not a valid PJFry++ directory.'+\
-        #                    'Using default PJFry++ instead.')%\
-        #                   self._pjfry_dir)
-        #    self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
     
     def do_display(self,line, *argss, **opt):
         """ Display born or loop diagrams, otherwise refer to the default display
@@ -608,7 +589,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if self._export_format in ['standalone']:
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,
@@ -644,19 +624,18 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         argss = self.split_arg(line, *args,**opt)
         # Check args validity
-	# HSS,13/11/2012
         perturbation_couplings_pattern = \
           re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings=""
         if perturbation_couplings_re:
             perturbation_couplings = perturbation_couplings_re.group("pertOrders")
-        args2=re.search("QED",perturbation_couplings)
-        if args2:
+        QED_found=re.search("QED",perturbation_couplings)
+        if QED_found:
             self.validate_model(coupling_type='QED')
         else:
        	    self.validate_model()
-	# HSS
+        
         param_card = self.check_check(argss)
         reuse = argss[1]=="-reuse"   
         argss = argss[:1]+argss[2:]
@@ -672,13 +651,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Now make sure the process is acceptable
         proc = " ".join(argss[1:i+1])
         myprocdef = self.extract_process(proc)
-	# HSS, 13/11/2012
-	# Is it useless ?
-        if args2:
-            self.validate_model(loop_type='virtual',coupling_type='QED')
-        else:
-            self.validate_model(loop_type='virtual')
-	# HSS
         self.proc_validity(myprocdef,'ML5_check')
         
         return mg_interface.MadGraphCmd.do_check(self, line, *args,**opt)
@@ -690,19 +662,17 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_add(args)
-	# HSS, 13/11/2012
         perturbation_couplings_pattern = \
           re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings=""
         if perturbation_couplings_re:
             perturbation_couplings = perturbation_couplings_re.group("pertOrders")
-        args2=re.search('QED',perturbation_couplings)
-        if args2:
+        QED_found=re.search('QED',perturbation_couplings)
+        if QED_found:
             self.validate_model(coupling_type='QED')
         else:
             self.validate_model()
-	   # HSS
 
         if args[0] == 'process':            
             # Rejoin line
@@ -716,12 +686,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
             # Extract process from process definition
-	    # HSS, 13/11/2012
-	    # Is it useless ?
-        if args2:
-            self.validate_model(loop_type='virtual',coupling_type='QED')
-        else:
-            self.validate_model(loop_type='virtual')
 
         myprocdef = self.extract_process(line)
              

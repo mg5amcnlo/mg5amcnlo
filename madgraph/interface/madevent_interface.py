@@ -459,9 +459,6 @@ class HelpToCmd(object):
         logger.info("   the optional '-f' allows to by-pass all security question")
         logger.info("   The banner can be remove only if all files are removed first.")
 
-    def help_print_result(self):
-        logger.info("syntax: print_result [RUN] [TAG]")
-        logger.info("-- show in text format the status of the run (cross-section/nb-event/...)")
 
 
 #===============================================================================
@@ -899,7 +896,7 @@ class CheckValidForCmd(object):
             #    restrict_file = pjoin(ufo_path, 'restrict_default.dat')
             model = import_ufo.import_model(modelname, decay=True, 
                         restrict=True)
-            if self.mother.options['complex_mass_scheme']:
+            if self.mother and self.mother.options['complex_mass_scheme']:
                 model.change_mass_to_complex_scheme()
         else:
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
@@ -964,6 +961,8 @@ class CheckValidForCmd(object):
             else:
                 self.help_compute_widths()
                 raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
+        if self.force:
+            output['force'] = True
 
         if not output['particles']:
             raise self.InvalidCmd, '''This routines requires at least one particle in order to compute
@@ -1060,7 +1059,7 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
             files.cp(input_file, output_file)
         else:
-            os.system('gunzip -c %s > %s' % (input_file, output_file))
+            misc.gunzip(input_file, keep=True, stdout=output_file)
         
         args.append(mode)
     
@@ -1664,21 +1663,7 @@ class CompleteForCmd(CheckValidForCmd):
 
     complete_delphes = complete_pgs        
 
-    def complete_print_results(self,text, line, begidx, endidx):
-        "Complete the print results command"
-        args = self.split_arg(line[0:begidx], error=False) 
-        if len(args) == 1:
-            #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
-            data = [n.rsplit('/',2)[1] for n in data]
-            tmp1 =  self.list_completion(text, data)
-            return tmp1        
-        else:
-            data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
-            data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
-            tmp1 =  self.list_completion(text, data)
-            return tmp1
-            
+
 
 
 
@@ -1745,8 +1730,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
-            self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
-            self.results.resetall(self.me_dir)
+            try:
+                self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
+            except Exception:
+                #the pickle fail -> need to recreate the library
+                model = self.find_model_name()
+                process = self.process # define in find_model_name
+                self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+                self.results.resetall(self.me_dir)
+            else:                                
+                self.results.resetall(self.me_dir)
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
@@ -1838,7 +1831,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         #gunzip the file
         if event_path.endswith('.gz'):
             need_zip = True
-            subprocess.call(['gunzip', event_path])
+            misc.gunzip(event_path)
             event_path = event_path[:-3]
         else:
             need_zip = False
@@ -1879,7 +1872,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         files.mv('%s_2vertex.lhe' % event_path, event_path)
         
         if need_zip:
-            subprocess.call(['gzip', event_path])
+            misc.gzip(event_path)
         
     ############################################################################
     def do_banner_run(self, line): 
@@ -2019,49 +2012,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
   
  
 
-    ############################################################################ 
-    def do_print_results(self, line):
-        """Not in help:Print the cross-section/ number of events for a given run"""
-        
-        args = self.split_arg(line)
-        options={'path':None, 'mode':'w'}
-        for arg in list(args):
-            if arg.startswith('--') and '=' in arg:
-                name,value=arg.split('=',1)
-                name = name [2:]
-                options[name] = value
-                args.remove(arg)
-        
-        
-        if len(args) > 0:
-            run_name = args[0]
-        else:
-            if not self.results.current:
-                raise self.InvalidCmd('no run currently defined. Please specify one.')
-            else:
-                run_name = self.results.current['run_name']
-        if run_name not in self.results:
-            raise self.InvalidCmd('%s is not a valid run_name or it doesn\'t have any information' \
-                                  % run_name)
 
-            
-        if len(args) == 2:
-            tag = args[1]
-            if tag.isdigit():
-                tag = int(tag) - 1
-                if len(self.results[run_name]) < tag:
-                    raise self.InvalidCmd('Only %s different tag available' % \
-                                                    len(self.results[run_name]))
-                data = self.results[run_name][tag]
-            else:
-                data = self.results[run_name].return_tag(tag)
-        else:
-            data = self.results[run_name].return_tag(None) # return the last
-        
-        if options['path']:
-            self.print_results_in_file(data, options['path'], options['mode'])
-        else:
-            self.print_results_in_shell(data)
         
 
     ############################################################################
@@ -2095,6 +2046,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                           postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
             self.exec_cmd('store_events', postcmd=False)
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
             self.exec_cmd('create_gridpack', postcmd=False)
         else:
             # Regular run mode
@@ -2377,8 +2329,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         eradir = self.options['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
             self.update_status("Create Root file", level='parton')
-            os.system('gunzip %s/%s/unweighted_events.lhe.gz' % 
+            misc.gunzip('%s/%s/unweighted_events.lhe.gz' % 
                                   (pjoin(self.me_dir,'Events'), self.run_name))
+
             self.create_root_file('%s/unweighted_events.lhe' % self.run_name,
                                   '%s/unweighted_events.root' % self.run_name)
             
@@ -2388,8 +2341,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                          pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
                          )
         
-        os.system('gzip -f %s/%s/unweighted_events.lhe' % 
-                                  (pjoin(self.me_dir, 'Events'), self.run_name))
+        misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
 
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
@@ -2726,12 +2678,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                                      '%s_%s_banner.txt' % (self.run_name, tag)))
         
-        misc.call(['%s/put_banner' % self.dirbin, 'events.lhe',
-                   str(self.random_orig)],
-                            cwd=pjoin(self.me_dir, 'Events'))
-        misc.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe',
-                   str(self.random_orig)],
-                            cwd=pjoin(self.me_dir, 'Events'))
+        
+        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'))
+        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'))        
+
         
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
@@ -2822,9 +2772,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                             os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
                         input = pjoin(G_path, name)
                         output = pjoin(G_path, '%s_%s' % (run,name))
-                        files.mv(input, output) 
-                        misc.call(['gzip', output], stdout=devnull, 
-                                        stderr=devnull, cwd=G_path)
+                        files.mv(input, output)
+                        misc.gzip(pjoin(G_path, output), error=None) 
                 # Delete ftn25 to ensure reproducible runs
                 if os.path.exists(pjoin(G_path, 'ftn25')):
                     os.remove(pjoin(G_path, 'ftn25'))
@@ -2843,9 +2792,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     os.remove(pjoin(O_path, '%s.gz' % name))
                 input = pjoin(E_path, name)
                 output = pjoin(O_path, name)
-                files.mv(input, output) 
-                misc.call(['gzip', output], stdout=devnull, stderr=devnull, 
-                                                                     cwd=O_path) 
+                misc.gzip(input, stdout="%s.gz" % output, error=False)
+
         self.update_status('End Parton', level='parton', makehtml=False)
         devnull.close()
     
@@ -3033,11 +2981,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # Creating LHE file
         self.run_hep2lhe(banner_path)
         if int(self.run_card['ickkw']):
-            misc.call(['gzip','-f','beforeveto.tree'], 
-                                                cwd=pjoin(self.me_dir,'Events'))
-            files.mv(pjoin(self.me_dir,'Events','beforeveto.tree.gz'), 
-                     pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
-             
+            misc.gzip(pjoin(self.me_dir,'Events','beforeveto.tree'),
+                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
+                         
         if self.run_card['use_syst'] in self.true:
             # Calculate syscalc info based on syst.dat
             try:
@@ -3046,27 +2992,22 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 logger.error(str(error))
             else:
                 # Store syst.dat
-                subprocess.call(['gzip','-f','syst.dat'],
-                                cwd=pjoin(self.me_dir,'Events'))          
-                files.mv(pjoin(self.me_dir,'Events','syst.dat.gz'), 
-                         pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
+                misc.gzip(pjoin(self.me_dir,'Events', 'syst.dat'),
+                          stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
+                         
                 # Store syscalc.dat
                 if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
                     filename = pjoin(self.me_dir, 'Events' ,self.run_name,
                                               '%s_syscalc.dat' % self.run_tag)
-                    shutil.move(pjoin(self.me_dir, 'Events','syscalc.dat'), 
-                                filename)
-                    os.system('gzip -f %s' % filename)
+                    misc.gzip(pjoin(self.me_dir, 'Events','syscalc.dat'),
+                              stdout = "%s.gz" % filename)
 
         # Plot for pythia
         self.create_plot('Pythia')
 
         if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.lhe')):
-            shutil.move(pjoin(self.me_dir,'Events','pythia_events.lhe'),
-            pjoin(self.me_dir,'Events', self.run_name,'%s_pythia_events.lhe' % tag))
-            os.system('gzip -f %s' % pjoin(self.me_dir,'Events', self.run_name,
-                                        '%s_pythia_events.lhe' % tag))      
-
+            misc.gzip(pjoin(self.me_dir,'Events','pythia_events.lhe'),
+                      stdout=pjoin(self.me_dir,'Events', self.run_name,'%s_pythia_events.lhe.gz' % tag))
         
         self.update_status('finish', level='pythia', makehtml=False)
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
@@ -3242,12 +3183,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip('%s.gz' % filename)
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
                 self.create_plot('parton')
-                shutil.move(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'), filename)
-                os.system('gzip -f %s' % filename)
+                misc.gzip(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'),
+                          stdout= "%s.gz" % filename)
             else:
                 logger.info('No valid files for partonic plot') 
                 
@@ -3255,12 +3196,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             filename = pjoin(self.me_dir, 'Events' ,self.run_name,
                                           '%s_pythia_events.lhe' % self.run_tag)
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip("%s.gz" % filename)
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events','pythia_events.lhe'))
                 self.create_plot('Pythia')
-                shutil.move(pjoin(self.me_dir, 'Events','pythia_events.lhe'), filename)
-                os.system('gzip -f %s' % filename)                
+                misc.gzip(pjoin(self.me_dir, 'Events','pythia_events.lhe'),
+                          stdout= "%s.gz" % filename)
             else:
                 logger.info('No valid files for pythia plot')
                 
@@ -3269,10 +3210,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             filename = pjoin(self.me_dir, 'Events', self.run_name, 
                                             '%s_pgs_events.lhco' % self.run_tag)
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip("%s.gz" % filename)
             if  os.path.exists(filename):
                 self.create_plot('PGS')
-                os.system('gzip -f %s' % filename)                
+                misc.gzip(filename)
             else:
                 logger.info('No valid files for pgs plot')
                 
@@ -3280,12 +3221,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             filename = pjoin(self.me_dir, 'Events', self.run_name, 
                                         '%s_delphes_events.lhco' % self.run_tag)
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip("%s.gz" % filename)
             if  os.path.exists(filename):
-                #shutil.move(filename, pjoin(self.me_dir, 'Events','delphes_events.lhco'))
                 self.create_plot('Delphes')
-                #shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
-                os.system('gzip -f %s' % filename)                
+                misc.gzip(filename)              
             else:
                 logger.info('No valid files for delphes plot')
 
@@ -3309,12 +3248,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip("%s.gz" % filename)
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
                 self.run_syscalc('parton')
-                shutil.move(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'), filename)
-                os.system('gzip -f %s' % filename)
+                misc.gzip(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'),
+                          stdout="%s.gz" % filename)
             else:
                 logger.info('No valid files for parton level systematics run.')
                 
@@ -3322,7 +3261,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             filename = pjoin(self.me_dir, 'Events' ,self.run_name,
                                           '%s_pythia_syst.dat' % self.run_tag)
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip("%s.gz" % filename)
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events','syst.dat'))
                 try:
@@ -3330,14 +3269,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 except SysCalcError, error:
                     logger.warning(str(error))
                     return
-                    
-                shutil.move(pjoin(self.me_dir, 'Events','syst.dat'), filename)
-                os.system('gzip -f %s' % filename)                
+                misc.gzip(pjoin(self.me_dir, 'Events','syst.dat'), "%s.gz" % filename)
                 filename = pjoin(self.me_dir, 'Events' ,self.run_name,
                                           '%s_syscalc.dat' % self.run_tag)
-                shutil.move(pjoin(self.me_dir, 'Events','syscalc.dat'), 
-                            filename)
-                os.system('gzip -f %s' % filename)
+                misc.gzip(pjoin(self.me_dir, 'Events','syscalc.dat'),
+                          stdout=filename)
             else:
                 logger.info('No valid files for pythia level')
 
@@ -3360,17 +3296,17 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                                                      error=True)
         if 'event' in self.to_store:
             if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')):
-                os.system('gzip -f %s/unweighted_events.lhe' % \
-                                     pjoin(self.me_dir,'Events',self.run_name) )                
-            
+                misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))
         
         if 'pythia' in self.to_store:
             self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
-            os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
-                  {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),
-                   'tag':tag})
-            os.system('gzip -f %s/%s_pythia_events.hep' % ( 
-                                pjoin(self.me_dir,'Events',self.run_name), tag))
+            
+            p = pjoin(self.me_dir,'Events')
+            n = self.run_name
+            t = tag
+            misc.gzip(pjoin(p,'pythia_events.hep'), 
+                      stdout=pjoin(p,'%s/%s_pythia_events.hep' % (n,t)))
+
             self.to_store.remove('pythia')
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         
@@ -3524,20 +3460,21 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # limit the number of event to 100k
         self.check_nb_events()
 
+        # this is in order to avoid conflicts between runs with and without
+        # lhapdf
+        misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
+        
         # set environment variable for lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
             os.environ['lhapdf'] = 'True'
             self.link_lhapdf(pjoin(self.me_dir,'lib'))
-            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
-            #remove lhapdf stuff
-            self.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
             
         # set random number
         if self.run_card['iseed'] != '0':
@@ -3584,7 +3521,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             return default
         
     ############################################################################
-    def set_run_name(self, name, tag=None, level='parton', reload_card=False):
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False,
+                     allow_new_tag=True):
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
@@ -3657,7 +3595,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 tag = self.results[self.run_name][-1]['tag']
                 self.run_card['run_tag'] = tag # ensure that run_tag is correct                
                    
-        if name in self.results and not new_tag:
+        if allow_new_tag and (name in self.results and not new_tag):
             self.results.def_current(self.run_name)
         else:
             self.results.add_run(self.run_name, self.run_card)
@@ -3785,7 +3723,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             # check that filepath exists
             if os.path.exists(issudfile):
                 path = pjoin(self.me_dir, 'lib', 'issudgrid.dat')
-                os.system('gunzip -fc %s > %s' % (issudfile, path))
+                misc.gunzip(issudfile, keep=True, stdout=path)
             else:
                 msg = 'No sudakov grid file for parameter choice. Start to generate it. This might take a while'
                 logger.info(msg)
@@ -3800,7 +3738,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 for i in range(-2,6):
                     path = pjoin(self.me_dir, 'lib', 'issudgrid.dat')
                     os.system('cat %s/gensudgrid%s.log >> %s' % (self.me_dir, path))
-                    os.system('gzip -fc %s > %s' % (path, issudfile))
+                    misc.gzip(path, stdout=issudfile)
                                      
     ############################################################################
     def create_root_file(self, input='unweighted_events.lhe', 
@@ -3863,7 +3801,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
         if not os.path.exists(event_path):
             if os.path.exists(event_path+'.gz'):
-                os.system('gzip -f %s.gz ' % event_path)
+                misc.gzip(event_path)
             else:
                 raise SysCalcError, 'Events file %s does not exits' % event_path
         
@@ -4264,6 +4202,7 @@ class GridPackCmd(MadEventCmd):
         self.exec_cmd('combine_events')
         self.exec_cmd('store_events')
         self.print_results_in_shell(self.results.current)
+        self.exec_cmd('decay_events -from_cards', postcmd=False)
 
     def refine4grid(self, nb_event):
         """Special refine for gridpack run."""

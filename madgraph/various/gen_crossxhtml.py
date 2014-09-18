@@ -21,13 +21,17 @@ import re
 import pickle
 import re
 import glob
+
 try:
     import internal.files as files
     import internal.save_load_object as save_load_object
+    import internal.lhe_parser as lhe_parser
+    import internal.misc as misc
 except ImportError:
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
-
+    import madgraph.various.lhe_parser as lhe_parser
+    import madgraph.various.misc as misc
 pjoin = os.path.join
 exists = os.path.exists
 
@@ -132,7 +136,7 @@ class AllResults(dict):
     
     web = False 
     
-    def __init__(self, model, process, path):
+    def __init__(self, model, process, path, recreateold=True):
         
         dict.__init__(self)
         self.order = []
@@ -147,7 +151,38 @@ class AllResults(dict):
         self.status = ''
         self.unit = 'pb'
         self.current = None
-    
+        
+        # Check if some directory already exists and if so add them
+        runs = [d for d in os.listdir(pjoin(path, 'Events')) if 
+                                      os.path.isdir(pjoin(path, 'Events', d))]
+        if runs:
+            if recreateold:
+                for run in runs:
+                    self.readd_old_run(run)
+                self.current = self[run]
+            else:
+                logger.warning("Previous runs exists but they will not be present in the html output.")
+    def readd_old_run(self, run_name):
+        """ re-create the data-base from scratch if the db was remove """
+        
+        event_path = pjoin(self.path, "Events", run_name, "unweighted_events.lhe")
+        
+        import banner as bannerlib
+        
+        if os.path.exists("%s.gz" % event_path):
+            misc.gunzip(event_path, keep=True)
+        banner = bannerlib.Banner(event_path)
+        
+        # load the information to add a new Run:
+        run_card = banner.charge_card("run_card")
+        process = banner.get_detail("proc_card", "generate")
+        #create the new object
+        run = RunResults(run_name, run_card, process, self.path)
+        run.recreate(banner)
+        self[run_name] = run
+        self.order.append(run_name)
+        
+            
     def def_current(self, run, tag=None):
         """define the name of the current run
             The first argument can be a OneTagResults
@@ -439,7 +474,9 @@ class AllResults(dict):
 
 class AllResultsNLO(AllResults):
     """Store the results for a NLO run of a given directory"""
-    pass
+    
+    def __init__(self,model, process, path, recreateold=False):
+        return AllResults.__init__(self, model, process, path, recreateold=recreateold)
        
 
 class RunResults(list):
@@ -520,6 +557,79 @@ class RunResults(list):
             return self[-1]
         
         raise Exception, '%s is not a valid tag' % name
+    
+    def recreate(self, banner):
+        """Fully recreate the information due to a hard removal of the db
+        Work for LO ONLY!"""
+        
+        run_name = self.info["run_name"]
+        run_card = banner.get("run_card")
+        path = self.info["me_dir"]
+        # Recover the main information (cross-section/number of event)
+        informations = banner['mggenerationinfo']
+        #number of events
+        nb_event = re.search(r"Number\s*of\s*Events\s*:\s*(\d*)", informations)
+        if nb_event:
+            nb_event = int(nb_event.group(1))
+        else:
+            nb_event = 0
+            
+        # cross-section
+        cross = re.search(r"Integrated\s*weight\s*\(\s*pb\s*\)\s*:\s*([\+\-\d.e]+)", informations,
+                          re.I)
+        if cross:
+            cross = float(cross.group(1))
+        else:
+            cross = 0
+
+        # search pythia file for tag: tag_1_pythia.log
+        path = pjoin(self.info['me_dir'],'Events', self.info['run_name'])
+        files = [pjoin(path, f) for f in os.listdir(path) if
+                 os.path.isfile(pjoin(path,f)) and f.endswith('pythia.log')]
+        #order them by creation date.
+        files.sort(key=lambda x: os.path.getmtime(x))
+        tags = [os.path.basename(name[:-11]) for name in files]
+
+     
+        # No pythia only a single run:}
+        if not tags:
+            self.current['nb_event'] = nb_event
+            self.current['cross'] = cross
+          
+        #Loop over pythia run
+        for tag in tags:
+            if tag not in self.tags:
+                tagresult = OneTagResults(run_name, run_card, path)
+                tagresult['tag'] = tag
+                self.add(tagresult)
+            else:
+                tagresult = self.return_tag(tag)
+            tagresult['nb_event'] = nb_event
+            tagresult['cross'] = cross
+            if run_card['ickkw'] != '0':
+                #parse the file to have back the information
+                pythia_log = misc.BackRead(pjoin(path, '%s_pythia.log' % tag))
+                pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+                for line in pythia_log:
+                    info = pythiare.search(line)
+                    if not info:
+                        continue
+                    try:
+                        # Pythia cross section in mb, we want pb
+                        sigma_m = float(info.group('xsec').replace('D','E')) *1e9
+                        Nacc = int(info.group('generated'))
+                    except ValueError:
+                        # xsec is not float - this should not happen
+                        tagresult['cross_pythia'] = 0
+                        tagresult['nb_event_pythia'] = 0
+                        tagresult['error_pythia'] = 0
+                    else:
+                        tagresult['cross_pythia'] = sigma_m
+                        tagresult['nb_event_pythia'] = Nacc
+                        tagresult['error_pythia'] = 0
+                    break                 
+                pythia_log.close()   
+
     
     def is_empty(self):
         """Check if this run contains smtg else than html information"""

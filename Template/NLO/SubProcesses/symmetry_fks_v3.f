@@ -780,6 +780,8 @@ c
 c Dummy routines
 c
 c
+      subroutine initplot
+      end
       subroutine outfun(pp,www,iplot)
       end
 

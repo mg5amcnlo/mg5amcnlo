@@ -164,11 +164,9 @@ class Tr(ColorObject):
 
         return None
 
-# HSS, 24/10/2012
 #===============================================================================
 # ColorOne
 #===============================================================================
-
 class ColorOne(ColorObject):
     """The one of the color object"""
 
@@ -181,9 +179,8 @@ class ColorOne(ColorObject):
 
     def simplify(self):
         """"""
-	assert len(self)==0,"There is argument(s) in color object ColorOne."
-            
-	col_str = ColorString()
+        assert len(self)==0, "There is argument(s) in color object ColorOne."
+        col_str = ColorString()
         col_str.coeff = fractions.Fraction(1, 1)
         return ColorFactor([col_str])
 
@@ -191,12 +188,10 @@ class ColorOne(ColorObject):
     def pair_simplify(self, col_obj):
         """Implement ColorOne product simplification"""
 
-        if isinstance(col_obj, Tr) or isinstance(col_obj,T) or isinstance(col_obj,f) or isinstance(col_obj,d) or isinstance(col_obj,ColorOne):
-           col_str = ColorString([col_obj])
-           return ColorFactor([col_str])
-
-	return None
-# HSS
+        if any(isinstance(col_obj, c_type) for c_type in [Tr,T,f,d,ColorOne]):
+            col_str = ColorString([col_obj])
+            return ColorFactor([col_str])
+        return None
 
 
 #===============================================================================
@@ -740,9 +735,10 @@ class ColorString(list):
 
         ret_list = [(col_obj.__class__.__name__, tuple(col_obj)) \
                         for col_obj in self]
-	# HSS,24/10/2012
-	if not ret_list and self.coeff:ret_list=[("ColorOne",tuple([]))]
-	# HSS
+
+        if not ret_list and self.coeff:
+            ret_list=[("ColorOne",tuple([]))]
+
         ret_list.sort()
         self.immutable = tuple(ret_list)
 

@@ -4,12 +4,13 @@
 
 !     
 #MLReductionLib
-1|2|3
-! Default :: 1|2|3
+1|4|3|2
+! Default :: 1|4|3|2
 !     The tensor integral reduction library.The current choices are:
 !     1 | CutTools
 !     2 | PJFry++
 !     3 | IREGI
+!     4 | Golem95
 !     One can use the combinations to reduce integral,e.g.
 !     1|2|3 means first use CutTools, if it is not stable, use PJFry++, 
 !     if it is still unstable, use IREGI. If it failed, use QP of CutTools.
@@ -110,7 +111,8 @@
 
 !     Choose here what library to chose for CutTools/TIR to compute the scalar loops of the
 !     master integral basis. The choices are as follows:
-!     2 | AVH
+!     (Does not apply for Golem95, where OneLOop is always used)
+!     2 | OneLOop
 !     3 | QCDLoop
 #CTLoopLibrary
 2
@@ -160,6 +162,13 @@
 #ZeroThres
 1.0d-9
 ! Default :: 1.0d-9
+
+!     Setting the on-shell threshold for deciding whether the invariant variables
+! of external momenta are on-shell or not. It will only be used in constructing
+! s-matrix in Golem95.
+#OSThres
+1.0d-8
+! Default :: 1.0d-8
 
 !     The setting below is recommended to be on as it allows to systematically used the 
 !     first PS point thrown at ML5 to be used for making sure that the helicity filter

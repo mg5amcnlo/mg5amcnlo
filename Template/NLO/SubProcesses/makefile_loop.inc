@@ -17,10 +17,11 @@ PROCESS= loop_matrix.o improve_ps.o born_matrix.o loop_num.o CT_interface.o	MadL
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard coef_construction_*.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard loop_CT_calls_*.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard mp_coef_construction_*.f)) \
-		 $(patsubst %(dotf)s,%(doto)s,$(wildcard TIR_interface.f))
+		 $(patsubst %(dotf)s,%(doto)s,$(wildcard TIR_interface.f)) \
+		 $(patsubst %(dotf)s,%(doto)s,$(wildcard GOLEM_interface.f))		 
 
 %(doto)s : %(dotf)s
-	$(FC) $(FFLAGS) -c $<
+	$(FC) $(FFLAGS) -c $< %(tir_include)s
 
 all: cleanlib $(LOOPLIB) 
 

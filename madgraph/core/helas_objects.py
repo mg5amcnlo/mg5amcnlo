@@ -900,12 +900,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self.set('particle', self.get('antiparticle'))
         self.set('antiparticle', part)
     
-    # HSS, 30/01/2013
     def is_anticommutating_ghost(self):
         """ Return True if the particle of this wavefunction is a ghost"""
         return self.get('particle').get('ghost')
-    #    return self.get('particle').get('ghost') and self.get('color')!=1
-    # HSS
     
     def is_fermion(self):
         return self.get('spin') % 2 == 0
@@ -1262,37 +1259,32 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                 diagram_wavefunctions.insert(i, new_wf)
                                 break
                         else:
-                            # For regular wavefunctions, we can simply add it
-                            # at the new wf at the ened of the diag_wfs list.
-                            if not new_wf['is_loop']:
-                                diagram_wavefunctions.append(new_wf)
-                            # For loop wavefunctions, more care is needed since
+                            # For loop processes, care is needed since
                             # some loop wavefunctions in the diag_wfs might have
                             # the new_wf in their mother, so we want to place 
-                            # this new_wf as early as possible in the list.
-                            else:
-                                # We first look if any mother of the wavefunction
-                                # we want to add appears in the diagram_wavefunctions
-                                # list. If it doesn't, max_mother_index is -1.
-                                # If it does, then max_mother_index is the maximum
-                                # index in diagram_wavefunctions of those of the 
-                                # mothers present in this list.
-                                max_mother_index = max([-1]+
-                                    [diagram_wavefunctions.index(wf) for wf in 
-                                            mothers if wf in diagram_wavefunctions])
-                                
-                                # We want to insert this new_wf as early as 
-                                # possible in the diagram_wavefunctions list so that
-                                # we are guaranteed that it will be placed *before*
-                                # wavefunctions that have new_wf as a mother.
-                                # We therefore place it at max_mother_index+1.
-                                if max_mother_index<len(diagram_wavefunctions)-1:
-                                    new_wf.set('number',diagram_wavefunctions[
-                                                  max_mother_index+1].get('number'))
-                                for wf in diagram_wavefunctions[max_mother_index+1:]:
-                                    wf.set('number',wf.get('number')+1)
-                                diagram_wavefunctions.insert(max_mother_index+1,
-                                                                             new_wf)
+                            # new_wf as early as possible in the list.
+                            # We first look if any mother of the wavefunction
+                            # we want to add appears in the diagram_wavefunctions
+                            # list. If it doesn't, max_mother_index is -1.
+                            # If it does, then max_mother_index is the maximum
+                            # index in diagram_wavefunctions of those of the 
+                            # mothers present in this list.
+                            max_mother_index = max([-1]+
+                                [diagram_wavefunctions.index(wf) for wf in 
+                                        mothers if wf in diagram_wavefunctions])
+                            
+                            # We want to insert this new_wf as early as 
+                            # possible in the diagram_wavefunctions list so that
+                            # we are guaranteed that it will be placed *before*
+                            # wavefunctions that have new_wf as a mother.
+                            # We therefore place it at max_mother_index+1.
+                            if max_mother_index<len(diagram_wavefunctions)-1:
+                                new_wf.set('number',diagram_wavefunctions[
+                                              max_mother_index+1].get('number'))
+                            for wf in diagram_wavefunctions[max_mother_index+1:]:
+                                wf.set('number',wf.get('number')+1)
+                            diagram_wavefunctions.insert(max_mother_index+1,
+                                                                         new_wf)
 
             # Set new mothers
             new_wf.set('mothers', mothers)
@@ -1878,13 +1870,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 'legs': legs})
 
             # Add s- and t-channels going down towards leg 1
-	    # HSS, 24/09/2012
-	    # legs[1]-> legs[-2]. Why is legs[1] ?
-	    # Thanks to Johan for confirming !
             mother_s, tchannels = \
                       init_mothers1.get_s_and_t_channels(ninitial, legs[-2],
                                                          reverse_t_ch)
-	    # HSS	
             schannels.extend(mother_s)
 
             # Add vertex
@@ -3654,7 +3642,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         return helas_diagrams
 
-    
+    def restore_original_wavefunctions(self):
+        """This restore the original memory print and revert
+           change the wavefunctions id used in the writer to minimize the 
+           memory used by the wavefunctions."""
+        
+        helas_diagrams = self.get('diagrams')
+        
+        for diag in helas_diagrams:
+            for wf in diag['wavefunctions']:
+                wf.set('me_id',wf.get('number'))
+        
+        return helas_diagrams
+
+
     def insert_decay_chains(self, decay_dict):
         """Iteratively insert decay chains decays into this matrix
         element.        
@@ -4473,12 +4474,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Gives (number or external particles, number of
         incoming particles)"""
 
-        # HSS 25/09/2012
-        external_wfs = filter(lambda wf: not wf.get('mothers'),self.get_all_wavefunctions())
-        #external_wfs = filter(lambda wf: wf.get('leg_state') != \
-        #                      'intermediate',
-        #                      self.get_all_wavefunctions())
-        # HSS
+        external_wfs = filter(lambda wf: not wf.get('mothers'),
+                                                   self.get_all_wavefunctions())
 
         return (len(set([wf.get('number_external') for wf in \
                          external_wfs])),
@@ -4799,9 +4796,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # Compare bulk process properties (number of external legs,
         # identity factors, number of diagrams, number of wavefunctions
         # initial leg, final state legs
-	# HSS 25/09/2012
-	# len(decay1.get('processes')[0].get("legs"))!=len(decay1.get('processes')[0].get("legs"))
-	# correct the second decay1 as decay2
         if len(decay1.get('processes')[0].get("legs")) != \
            len(decay2.get('processes')[0].get("legs")) or \
            len(decay1.get('diagrams')) != len(decay2.get('diagrams')) or \

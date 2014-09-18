@@ -5860,7 +5860,6 @@ CALL IOSXXX(W(1,6),W(1,3),W(1,9),GT1GOP,AMP(6))""".split('\n'))
         #print helas_call_writers.FortranHelasCallWriter().get_JAMP_line(matrix_element)
 
 
-
         # I have checked that the resulting Helas calls below give
         # identical result as MG4 (when fermionfactors are taken into
         # account)
@@ -5878,37 +5877,37 @@ CALL HIOXXX(W(1,5),W(1,7),MGVX494,Msl2,Wsl2,W(1,9))
 # Amplitude(s) for diagram number 1
 CALL IOSXXX(W(1,8),W(1,6),W(1,9),MGVX350,AMP(1))
 CALL OXXXXX(P(0,2),me,NHEL(2),-1*IC(2),W(1,9))
-CALL IXXXXX(P(0,1),me,NHEL(1),+1*IC(1),W(1,10))
-CALL FSICXX(W(1,10),W(1,3),MGVX350,Mneu1,Wneu1,W(1,11))
-CALL HIOXXX(W(1,11),W(1,6),MGVX350,Msl2,Wsl2,W(1,10))
-CALL FSOCXX(W(1,9),W(1,4),MGVX494,Mneu1,Wneu1,W(1,11))
+CALL FSOCXX(W(1,9),W(1,4),MGVX494,Mneu1,Wneu1,W(1,10))
+CALL IXXXXX(P(0,1),me,NHEL(1),+1*IC(1),W(1,9))
+CALL FSICXX(W(1,9),W(1,3),MGVX350,Mneu1,Wneu1,W(1,11))
+CALL HIOXXX(W(1,11),W(1,6),MGVX350,Msl2,Wsl2,W(1,9))
 # Amplitude(s) for diagram number 2
-CALL IOSXXX(W(1,5),W(1,11),W(1,10),MGVX494,AMP(2))
-CALL FSIXXX(W(1,5),W(1,4),MGVX494,Mneu1,Wneu1,W(1,9))
+CALL IOSXXX(W(1,5),W(1,10),W(1,9),MGVX494,AMP(2))
+CALL FSIXXX(W(1,5),W(1,4),MGVX494,Mneu1,Wneu1,W(1,11))
 CALL HIOXXX(W(1,2),W(1,7),MGVX494,Msl2,Wsl2,W(1,12))
 # Amplitude(s) for diagram number 3
-CALL IOSXXX(W(1,9),W(1,6),W(1,12),MGVX350,AMP(3))
+CALL IOSXXX(W(1,11),W(1,6),W(1,12),MGVX350,AMP(3))
 CALL OXXXXX(P(0,5),me,NHEL(5),+1*IC(5),W(1,12))
 CALL FSOCXX(W(1,12),W(1,4),MGVX494,Mneu1,Wneu1,W(1,7))
 # Amplitude(s) for diagram number 4
-CALL IOSXXX(W(1,2),W(1,7),W(1,10),MGVX494,AMP(4))
-CALL FSOXXX(W(1,6),W(1,3),MGVX350,Mneu1,Wneu1,W(1,10))
+CALL IOSXXX(W(1,2),W(1,7),W(1,9),MGVX494,AMP(4))
+CALL FSOXXX(W(1,6),W(1,3),MGVX350,Mneu1,Wneu1,W(1,9))
 CALL HIOXXX(W(1,8),W(1,1),MGVX350,Msl2,Wsl2,W(1,6))
 # Amplitude(s) for diagram number 5
-CALL IOSXXX(W(1,5),W(1,10),W(1,6),MGVX494,AMP(5))
+CALL IOSXXX(W(1,5),W(1,9),W(1,6),MGVX494,AMP(5))
 CALL IXXXXX(P(0,6),me,NHEL(6),-1*IC(6),W(1,6))
 CALL FSICXX(W(1,6),W(1,3),MGVX350,Mneu1,Wneu1,W(1,8))
 CALL HIOXXX(W(1,8),W(1,1),MGVX350,Msl2,Wsl2,W(1,6))
 # Amplitude(s) for diagram number 6
-CALL IOSXXX(W(1,5),W(1,11),W(1,6),MGVX494,AMP(6))
+CALL IOSXXX(W(1,5),W(1,10),W(1,6),MGVX494,AMP(6))
 # Amplitude(s) for diagram number 7
 CALL IOSXXX(W(1,2),W(1,7),W(1,6),MGVX494,AMP(7))
-CALL HIOXXX(W(1,9),W(1,1),MGVX350,Msl2,Wsl2,W(1,6))
+CALL HIOXXX(W(1,11),W(1,1),MGVX350,Msl2,Wsl2,W(1,6))
 # Amplitude(s) for diagram number 8
-CALL IOSXXX(W(1,2),W(1,10),W(1,6),MGVX494,AMP(8))""".split('\n'))
+CALL IOSXXX(W(1,2),W(1,9),W(1,6),MGVX494,AMP(8))""".split('\n'))
 
         # Test find_outgoing_number
-        goal_numbers = [1, 2, 3, 2, 3, 1, 2, 3, 1, 1, 3, 2, 3, 3]
+        goal_numbers = [1, 2, 3, 1, 2, 3, 2, 3, 1, 1, 3, 2, 3, 3]
 
         i = 0
         for wf in matrix_element.get_all_wavefunctions():
@@ -5916,14 +5915,14 @@ CALL IOSXXX(W(1,2),W(1,10),W(1,6),MGVX494,AMP(8))""".split('\n'))
                 continue
             self.assertEqual(wf.find_outgoing_number(), goal_numbers[i])
             i += 1
-
         # Test get_used_lorentz
         # Wavefunctions
-        goal_lorentz_list = [(('',), (), 1), (('',), (), 2), (('',), (), 3),
-                             (('',), ('C1',), 2),(('',), (), 3), (('',), ('C1',), 1),
-                             (('',), (), 2), (('',), (), 3),(('',), ('C1',), 1),
-                             (('',), (), 1), (('',), (), 3),(('',), ('C1',), 2),
+        goal_lorentz_list = [(('',), (), 1), (('',), (), 2), (('',), (), 3), 
+                             (('',), ('C1',), 1), (('',), ('C1',), 2), (('',), (), 3), 
+                             (('',), (), 2), (('',), (), 3), (('',), ('C1',), 1), 
+                             (('',), (), 1), (('',), (), 3), (('',), ('C1',), 2), 
                              (('',), (), 3), (('',), (), 3)]
+        
         # Amplitudes
         goal_lorentz_list += [(('',), (), 0)] * 8
         self.assertEqual(matrix_element.get_used_lorentz(),

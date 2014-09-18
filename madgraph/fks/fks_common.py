@@ -313,12 +313,6 @@ def ij_final(pair):
     if len(pair) == 2:
         for i in range(len(pair)):
             set = 0
-# HSS, 05/04/2013
-# generalize it for qcd, ew, susy !!!
-# HSS
-#            if (pair[i]['massless'] and pair[i]['spin'] %2 == 1) or \
-#               (pair[i]['color'] == -3 and pair[1-i]['color'] == 3) and \
-#               not set:
             if (pair[i]['massless'] and pair[i]['self_antipart']) or \
              (not pair[i]['is_part'] and pair[1-i]['is_part'] and\
               (pair[i]['spin']+pair[1-i]['spin'])%2==0) and not set:
@@ -511,26 +505,26 @@ def insert_color_links(col_basis, col_obj, links): #test written
             
         this_col_obj = []
         for old_dict in col_obj:
-            dict = copy.copy(old_dict)
-            for k, string in dict.items():
-                dict[k] = string.create_copy()
-                for col in dict[k]:
+            new_dict = dict(old_dict)
+            for k, string in new_dict.items():
+                new_dict[k] = string.create_copy()
+                for col in new_dict[k]:
                     for ind in col:
                         for pair in link['replacements']:
                             if ind == pair[0]:
                                 col[col.index(ind)] = pair[1]
-                dict[k].product(link['string'])
-            this_col_obj.append(dict)
+                new_dict[k].product(link['string'])
+            this_col_obj.append(new_dict)
         basis_link = color_amp.ColorBasis()
-        for ind, dict in enumerate(this_col_obj):
-            basis_link.update_color_basis(dict, ind)
+        for ind, new_dict in enumerate(this_col_obj):
+            basis_link.update_color_basis(new_dict, ind)
    
         this['link_basis'] = basis_link
         this['link_matrix'] = color_amp.ColorMatrix(col_basis,basis_link)               
         result.append(this)
     basis_orig = color_amp.ColorBasis()
-    for ind, dict in enumerate(col_obj):
-            basis_orig.update_color_basis(dict, ind)
+    for ind, new_dict in enumerate(col_obj):
+            basis_orig.update_color_basis(new_dict, ind)
     
     for link in result:
         link['orig_basis'] = basis_orig

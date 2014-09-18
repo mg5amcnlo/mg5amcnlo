@@ -163,29 +163,8 @@ class CmdExtended(cmd.Cmd):
 
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
-        self.history_header = \
-        '#************************************************************\n' + \
-        '#*                     MadGraph5_aMC@NLO                    *\n' + \
-        '#*                                                          *\n' + \
-        "#*                *                       *                 *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                    * * * * 5 * * * *                     *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                *                       *                 *\n" + \
-        "#*                                                          *\n" + \
-        "#*                                                          *\n" + \
-        info_line + \
-        "#*                                                          *\n" + \
-        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
-        '#*                                                          *\n' + \
-        '#************************************************************\n' + \
-        '#*                                                          *\n' + \
-        '#*               Command File for MadGraph5_aMC@NLO         *\n' + \
-        '#*                                                          *\n' + \
-        '#*     run as ./bin/mg5_aMC  filename                       *\n' + \
-        '#*                                                          *\n' + \
-        '#************************************************************\n'
+        self.history_header = banner_module.ProcCard.history_header % {'info_line': info_line}
+        banner_module.ProcCard.history_header = self.history_header
 
         if info_line:
             info_line = info_line[1:]
@@ -457,8 +436,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       output pythia8 ../pythia8/ -name qcdprocs",'$MG:color:GREEN')
 
     def help_check(self):
-
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=]",'$MG:color:BLUE')
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=] [--split_orders=] [--reduction=]",'$MG:color:BLUE')
         logger.info("-- check a process or set of processes.",'$MG:color:BLACK')
         logger.info("General options:",'$MG:color:BLACK')
         logger.info("o full:",'$MG:color:GREEN')
@@ -507,8 +485,14 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   specifying it as an integer just before the [param_card]")
         logger.info("   optional argument.")
         logger.info(" > Notice multiparticle labels cannot be used with these checks.")
+        logger.info(" > \"--reduction=\" allows to change what reduction methods should be used.")
+        logger.info(" > \"--split_orders=\" allows to change what specific combination of coupling orders to consider.")
         logger.info(" > For process syntax, please see help generate.")
-        logger.info("Example: check profile g g > t t~",'$MG:color:GREEN')
+        logger.info(" > In order to save the directory generated or the reuse an existing one")
+        logger.info("   previously generated with the check command, one can add the '-reuse' ")
+        logger.info("   keyword just after the specification of the type of check desired.")
+        logger.info("Example: check profile g g > t t~ [virt=QCD]",'$MG:color:GREEN')
+
 
     def help_generate(self):
 
@@ -855,27 +839,20 @@ class CheckValidForCmd(cmd.CheckCmd):
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
-        i=-1
-        options_list = {'--energy':'1000','--split_orders':'-1'}
-        user_options={}
-        while args[i].startswith('--'):
-            option=args[i].split('=')
-            user_options[option[0]]=option[1]
-            i=i-1
-        
-        for option, default_value in options_list.items():
-            if option not in user_options.keys():
-                user_options[option]=default_value    
-        
+        user_options = {'--energy':'1000','--split_orders':'-1',
+                                                       '--reduction':'1|2|3|4'}
+        for arg in args[:]:
+            if arg.startswith('--') and '=' in arg:
+                key, value = arg.split('=')
+                if key not in user_options:
+                    raise self.InvalidCmd, "unknown option %s" % key
+                user_options[key] = value
+                args.remove(arg)
+
+        self.check_process_format(" ".join(args[1:]))
+
         for option, value in user_options.items():
             args.append('%s=%s'%(option,value))
-        
-        self.check_process_format(" ".join(args[1:-len(options_list.keys())]))
-
-        if not args[-1].startswith('--energy='):
-            args.append('--energy=1000')
-
-        self.check_process_format(" ".join(args[1:-1]))
 
         return param_card
 
@@ -2189,7 +2166,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR',
                                                           'CRITICAL','default'])
             elif args[1] == 'fortran_compiler':
-                return self.list_completion(text, ['gfortran','f77','g77','default'])
+                return self.list_completion(text, ['f77','g77','gfortran','default'])
+            elif args[1] == 'cpp_compiler':
+                return self.list_completion(text, ['g++', 'c++', 'clang', 'default'])
             elif args[1] == 'nb_core':
                 return self.list_completion(text, [str(i) for i in range(100)] + ['default'] )
             elif args[1] == 'run_mode':
@@ -2414,7 +2393,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
-                     'update', 'Delphes2', 'SysCalc']
+                     'update', 'Delphes2', 'SysCalc', 'Golem95']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
@@ -2422,11 +2401,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
+                    'cpp_compiler',
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
     _valid_sqso_types = ['==','<=','=','>']
+    _valid_amp_so_types = ['=','<=']
     _OLP_supported = ['MadLoop', 'GoSam']
     _output_dependencies_supported = ['external', 'internal','environment_paths']
 
@@ -2447,14 +2428,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'cpp_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
-                       'pjfry':None,
+                       'pjfry':'auto',
+                       'golem':'auto',
                        'lhapdf':'lhapdf-config',
+                       'applgrid':'applgrid-config',
+                       'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
@@ -2529,7 +2514,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._mgme_dir = MG4DIR
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
-        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
         self._comparisons = None
         self._nlo_modes_for_completion = ['all','virt','real']
 
@@ -2624,11 +2608,15 @@ This implies that with decay chains:
                     # Redundant with above, but not completely as in the future
                     # one might think of allowing the core process to be 
                     # corrected by loops.
-                    if myprocdef.decays_have_squared_orders():
-                        raise MadGraph5Error("Decay processes cannot specify "+\
-                                                  "squared orders constraints.")                        
                     if myprocdef.are_decays_perturbed():
                         raise MadGraph5Error("Decay processes cannot be perturbed.")
+                    # The two limitations below have some redundancy, but once
+                    # again, they might be relieved (one at a time or together)
+                    # int he future.
+                    if myprocdef.decays_have_squared_orders() or \
+                                                myprocdef['squared_orders']!={}:
+                        raise MadGraph5Error("Decay processes cannot specify "+\
+                                                  "squared orders constraints.")                        
                     if myprocdef.are_negative_orders_present():
                         raise MadGraph5Error("Decay processes cannot include negative"+\
                                                 " coupling orders constraints.")                    
@@ -3292,15 +3280,24 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 3 in MLoptions["MLReductionLib"]:
+                    logger.warning('IREGI not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(3)
+
         if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
             TIR_dir['pjfry_dir']=self.options['pjfry']
         else:
             if "MLReductionLib" in MLoptions:
                 if 2 in MLoptions["MLReductionLib"]:
+                    logger.warning('PJFRY not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(2)
-        #if "_pjfry_dir" in dir(self):
-        #    TIR_dir['pjfry_dir']=self._pjfry_dir
+                    
+        if 'golem' in self.options and isinstance(self.options['golem'],str):
+            TIR_dir['golem_dir']=self.options['golem']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 4 in MLoptions["MLReductionLib"]:
+                    logger.warning('GOLEM not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(4)
         
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
@@ -3366,12 +3363,7 @@ This implies that with decay chains:
 
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
-            nb_processes += len(gauge_result_no_brs)
-            # Maybe the line below was necessary, but not sure :/
-            #HSSVH
-            #self.do_set('loop_optimized_output %s'%
-            #            self.options["loop_optimized_output"], log=False)
-            
+            nb_processes += len(gauge_result_no_brs)            
 
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
@@ -3584,9 +3576,10 @@ This implies that with decay chains:
                 if order.endswith('^2'):
                     new_squared_orders[order[:-2]]=squared_orders[order]
                 else:
-                    if squared_orders[order][1]!='=':
+                    if squared_orders[order][1] not in self._valid_amp_so_types:
                         raise self.InvalidCmd, \
-                          "Amplitude order constraints can only be of type '='"+\
+                          "Amplitude order constraints can only be of type %s"%\
+                                         (', '.join(self._valid_amp_so_types))+\
                                           ", not '%s'."%squared_orders[order][1]
                     orders[order]=squared_orders[order][0]
             squared_orders=new_squared_orders
@@ -3614,10 +3607,10 @@ This implies that with decay chains:
                     squared_orders[order_re.group('name')[:-2]] = \
                                              (int(order_re.group('value')),type)
                 else:
-                    if type != '=':
+                    if type not in self._valid_amp_so_types:
                         raise self.InvalidCmd, \
-                          "Amplitude order constraints can only be of type '='"+\
-                                                          ", not '%s'."%type
+                          "Amplitude order constraints can only be of type %s"%\
+                        (', '.join(self._valid_amp_so_types))+", not '%s'."%type
 
                     orders[order_re.group('name')] = \
                                                     int(order_re.group('value'))                    
@@ -4418,7 +4411,7 @@ This implies that with decay chains:
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
-                'SysCalc':'SysCalc'}
+                'SysCalc':'SysCalc', 'Golem95': 'golem95'}
         name = name[args[0]]
 
 
@@ -4482,13 +4475,19 @@ This implies that with decay chains:
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
             elif args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
-
             if path:
                 text = open(path).read()
                 for base in base_compiler:
                     text = text.replace(base,'FC=%s' % compiler)
                 open(path, 'w').writelines(text)
             os.environ['FC'] = compiler
+        
+        # For Golem95, use autotools.
+        if name == 'golem95':
+            # Run the configure script
+            ld_path = misc.Popen(['./configure', 
+            '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
+            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0]
 
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
@@ -4500,7 +4499,7 @@ This implies that with decay chains:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
                 elif not os.environ['LD_LIBRARY_PATH']:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
-                elif 1:#ld_path not in os.environ['LD_LIBRARY_PATH']:
+                elif ld_path not in os.environ['LD_LIBRARY_PATH']:
                     os.environ['LD_LIBRARY_PATH'] += ';%s' % ld_path
             else:
                 raise self.InvalidCmd('lhapdf is required to compile/use SysCalc')
@@ -4514,7 +4513,11 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
+            if name == 'golem95':
+                status = misc.call(['make','install'], 
+                                               cwd = os.path.join(MG5DIR, name))
+            else:
+                status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -4523,7 +4526,11 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            if name == 'golem95':
+                status = misc.compile(['install'], mode='', 
+                                          cwd = os.path.join(MG5DIR, name))
+            else:
+                status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
 
         if not status:
             logger.info('Compilation succeeded')
@@ -4603,11 +4610,15 @@ This implies that with decay chains:
                            'ExRootAnalysis': 'exrootanalysis_path',
                            'MadAnalysis': 'madanalysis_path',
                            'SysCalc': 'syscalc_path',
-                           'pythia-pgs':'pythia-pgs_path'}
+                           'pythia-pgs':'pythia-pgs_path',
+                           'Golem95': 'golem'}
 
         if args[0] in options_name:
             opt = options_name[args[0]]
-            if self.options[opt] != self.options_configuration[opt]:
+            if opt=='golem':
+                self.options[opt] = pjoin(MG5DIR,name,'lib') 
+                self.exec_cmd('save options')
+            elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options')
 
@@ -4746,6 +4757,12 @@ This implies that with decay chains:
             for new, old in pattern.findall(text):
                     if not os.path.exists(pjoin(MG5DIR, new)):
                         files.ln(old, os.path.dirname(new), os.path.basename(new))
+
+            # Re-compile CutTools and IREGI
+            if os.path.isfile(pjoin(MG5DIR,'vendor','CutTools','includects','libcts.a')):
+                misc.compile(cwd=pjoin(MG5DIR,'vendor','CutTools'))
+            if os.path.isfile(pjoin(MG5DIR,'vendor','IREGI','src','libiregi.a')):
+                misc.compile(cwd=pjoin(MG5DIR,'vendor','IREGI','src'))
 
             # check if it need to download binary:
             pattern = re.compile("""^Binary files old/(\S*).*and new/(\S*).*$""", re.M)
@@ -4984,9 +5001,9 @@ This implies that with decay chains:
                 value = value.strip()
                 if name != 'mg5_path':
                     self.options[name] = value
-                if value.lower() == "none":
+                if value.lower() == "none" or value=="":
                     self.options[name] = None
-                    
+
         self.options['stdout_level'] = logging.getLogger('madgraph').level
         if not final:
             return self.options # the return is usefull for unittest
@@ -5025,13 +5042,21 @@ This implies that with decay chains:
                     else:
                         continue
 
-            elif key == 'pjfry':
-                if self.options['pjfry'] == None:
+            elif key in ['pjfry','golem']:
+                if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
-                    program = misc.which_lib('libpjfry.a')
+                    program = misc.which_lib('lib%s.a'%key)
                     if program != None:
                         fpath, fname = os.path.split(program)
-                        self.options['pjfry']=fpath
+                        logger.info('Using %s library in %s'%(key,fpath))
+                        self.options[key]=fpath
+                    else:
+                        # Try to look for it locally
+                        local_install = {'pjfry':'PJFRY', 'golem':'golem95'}
+                        if os.path.isdir(pjoin(MG5DIR,local_install[key])):
+                            self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
+                        else:
+                            self.options[key]=None
 
             elif key.endswith('path'):
                 pass
@@ -5517,7 +5542,9 @@ This implies that with decay chains:
 
             if res != 0 or error:
                 logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). We will use fjcore instead. Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                 'executable (v3+). We will use fjcore instead.\n Please set the \'fastjet\'' + \
+                 'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).' +
+                        '\n MG5_aMC> set fastjet /PATH/TO/fastjet-config\n')
                 self.options[args[0]] = None
                 self.history.pop()
             elif int(output.split('.')[0]) < 3:
@@ -5529,18 +5556,20 @@ This implies that with decay chains:
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] == "pjfry":
-            program = misc.which_lib(os.path.join(args[1],"libpjfry.a"))
+        elif args[0] in ["pjfry","golem"]:
+            program = misc.which_lib(os.path.join(args[1],"lib%s.a"%args[0]))
             if program!=None:
                 res = 0
-                logger.info('set pjfry to %s' % args[1])
+                logger.info('set %s to %s' % (args[0],args[1]))
+                self.options[args[0]] = args[1]
             else:
                 res = 1
 
             if res != 0 :
-                logger.warning('%s does not seem to correspond to a valid pjfry lib ' % args[1] + \
-                        '. Please enter the full PATH/TO/pjfry/lib .\n' + \
-                        'You will NOT be able to run PJFry++ otherwise.\n')
+                logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
+                        '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
+                        'You will NOT be able to run %s otherwise.\n'%args[0])
+                
         elif args[0] == 'lhapdf':
             try:
                 res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
@@ -5551,8 +5580,10 @@ This implies that with decay chains:
                 res = 1
             if res != 0:
                 logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
-                        'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+                        'executable. \nPlease set the \'lhapdf\' variable to the (absolute) ' + \
+                        '/PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
+                        ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
                          'cluster_retry_wait']:
@@ -6035,14 +6066,16 @@ This implies that with decay chains:
                         ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
+            compiler_dict = {'fortran': self.options['fortran_compiler'],
+                             'cpp': self.options['cpp_compiler']}
+
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'],
-                  output_dependencies = self.options['output_dependencies'],
+                                           compiler_dict,
+              output_dependencies = self.options['output_dependencies'],
                                            MG5DIR = MG5DIR)
             
             # Create configuration file [path to executable] for amcatnlo
@@ -6067,7 +6100,6 @@ This implies that with decay chains:
 
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
-                                           [self.history_header] + \
                                            self.history,
                                            not nojpeg,
                                            online,
@@ -6103,7 +6135,7 @@ This implies that with decay chains:
 
 
     # Calculate decay width
-    def do_compute_widths(self, line, model=None):
+    def do_compute_widths(self, line, model=None, do2body=True):
         """Documented commands:Generate amplitudes for decay width calculation, with fixed
            number of final particles (called level)
            syntax; compute_widths particle [other particles] [--options=]
@@ -6162,48 +6194,51 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         data = model.set_parameters_and_couplings(opts['path'])
 
         # find UFO particles linked to the require names.
-        skip_2body = True
-        decay_info = {}
-        for pid in particles:
-            particle = model.get_particle(pid)
-            if not hasattr(particle, 'partial_widths'):
-                skip_2body = False
-                break
-            elif not decay_info:
-                logger_mg.info('Get two body decay from FeynRules formula')
-            decay_info[pid] = []
-            mass = abs(eval(str(particle.get('mass')), data).real)
-            data = model.set_parameters_and_couplings(opts['path'], scale= mass)
-            total = 0
-
-            for mode, expr in particle.partial_widths.items():
-                tmp_mass = mass
-                for p in mode:
-                    try:
-                        tmp_mass -= abs(eval(str(p.mass), data))
-                    except Exception:
-                        tmp_mass -= abs(eval("mdl_"+str(p.mass), data))
-                if tmp_mass <=0:
-                    continue
-
-                decay_to = [p.get('pdg_code') for p in mode]
-                value = eval(expr,{'cmath':cmath},data).real
-                if -1e-10 < value < 0:
-                    value = 0
-                if -1e-5 < value < 0:
-                    logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
-                    value = 0
-                elif value < 0:
-                    raise Exception, 'Partial width for %s > %s negative: %s' % \
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
-                decay_info[particle.get('pdg_code')].append([decay_to, value])
-                total += value
+        if do2body:
+            skip_2body = True
+            decay_info = {}
+            for pid in particles:
+                particle = model.get_particle(pid)
+                if not hasattr(particle, 'partial_widths'):
+                    skip_2body = False
+                    break
+                elif not decay_info:
+                    logger_mg.info('Get two body decay from FeynRules formula')
+                decay_info[pid] = []
+                mass = abs(eval(str(particle.get('mass')), data).real)
+                data = model.set_parameters_and_couplings(opts['path'], scale= mass)
+                total = 0
+    
+                for mode, expr in particle.partial_widths.items():
+                    tmp_mass = mass
+                    for p in mode:
+                        try:
+                            tmp_mass -= abs(eval(str(p.mass), data))
+                        except Exception:
+                            tmp_mass -= abs(eval("mdl_"+str(p.mass), data))
+                    if tmp_mass <=0:
+                        continue
+    
+                    decay_to = [p.get('pdg_code') for p in mode]
+                    value = eval(expr,{'cmath':cmath},data).real
+                    if -1e-10 < value < 0:
+                        value = 0
+                    if -1e-5 < value < 0:
+                        logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
+                                       (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
+                        value = 0
+                    elif value < 0:
+                        raise Exception, 'Partial width for %s > %s negative: %s' % \
+                                       (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
+                    decay_info[particle.get('pdg_code')].append([decay_to, value])
+                    total += value
+            else:
+                madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,
+                                                       opts['path'], opts['output'])
+                if float(opts['body_decay']) == 2:
+                    return
         else:
-            madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,
-                                                   opts['path'], opts['output'])
-            if float(opts['body_decay']) == 2:
-                return
+            skip_2body = True
 
         #
         # add info from decay module
@@ -6360,7 +6395,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     if amp:
                         self._curr_amps.extend(amp)
                 clevel = 2
-                while part.get('apx_decaywidth_err') > precision:
+                while part.get('apx_decaywidth_err').real > precision:
                     clevel += 1
                     if clevel > max_level:
                         logger_mg.info('    stop to %s body-decay. approximate error: %s' %

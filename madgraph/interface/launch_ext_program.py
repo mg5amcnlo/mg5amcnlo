@@ -214,8 +214,7 @@ class MadLoopLauncher(ExtLauncher):
                     raise MadGraph5Error,"Could not find result file %s."%\
                                        str(os.path.join(curr_path,'result.dat'))
                 # The result are returned as a dictionary.
-                result = evaluator.parse_check_output(rFile.readlines(),\
-                                                                  format='dict')
+                result = evaluator.parse_check_output(rFile,format='dict')
                 for line in self.format_res_string(result, shell_name):
                     if isinstance(line, str):
                         logger.info(line)
@@ -282,7 +281,8 @@ class MadLoopLauncher(ExtLauncher):
         str_lines=[]
         
         notZeroBorn=True
-        if len([1 for k in res['Born_kept'] if k])==0:
+        if res['export_format']!='LoopInduced' and len(so_order_names) and \
+                                     len([1 for k in res['Born_kept'] if k])==0:
             notZeroBorn = False
             str_lines.append(
 ("|  /!\\ There is no Born contribution for the squared orders specified in "+
@@ -535,9 +535,11 @@ class aMCatNLOLauncher(ExtLauncher):
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
-                if self.options[opt] and not opt in ['cluster', 'multicore', 'name']])
+                if self.options[opt] and not opt in ['cluster', 'multicore', 'name', 'appl_start_grid']])
         if self.options['name']:
-            option_line += '--name %s' %  self.options['name']  
+            option_line += ' --name %s' %  self.options['name']  
+        if self.options['appl_start_grid']:
+            option_line += ' --appl_start_grid %s' %  self.options['appl_start_grid']
         command = 'launch ' + self.run_mode + ' ' + option_line
 
         if mode == "1":

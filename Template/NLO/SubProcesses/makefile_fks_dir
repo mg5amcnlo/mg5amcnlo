@@ -30,16 +30,18 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 real_me_lum_chooser.o chooser_functions.o			\
 	 genps_fks.o setcuts.o setscales.o 		 		\
 	 $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) 			\
-	 born.o born_hel.o 			\
-	 $(patsubst %.f,%.o,$(wildcard sborn_sf.f)) 			\
+	 born.o $(patsubst %.f,%.o,$(wildcard sborn_sf.f)) 		\
 	 fks_Sij.o trapfpe.o $(fastjetfortran_madfks) fks_singular.o	\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
-	 get_color.o FKSParamReader.o\
-	 MC_integer.o $(reweight_xsec_events_pdf_dummy)
+	 initcluster.o cluster.o 					\
+	 reweight.o get_color.o FKSParamReader.o iproc_map.o		\
+	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
+	 $(applgrid_interface)
 
 # Files needed for vegas, mint & mintMC
-RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o	\
-	madfks_plot.o fill_MC_mshell.o open_output_files.o reweight.o  initcluster.o cluster.o 
+RUN= $(FO_ANALYSE) $(FILES) cuts.o pythia_unlops.o recluster.o 		\
+	fill_MC_mshell.o born_hel.o open_output_files.o			\
+	add_write_info.o BinothLHA.o madfks_plot.o
 
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
@@ -49,17 +51,18 @@ MINTFO= $(RUN) driver_mintFO.o mint-integrator2.o handling_lhe_events.o
 
 # Files for mintMC
 MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
-	handling_lhe_events.o iproc_map.o
+	handling_lhe_events.o
 
 # Files for Born reweighting
 BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o		\
 	write_event.o
 
 # Files for check_poles
-POLES= $(FILES) cuts.o check_poles.o BinothLHA.o
+POLES= $(FILES) cuts.o pythia_unlops.o recluster.o check_poles.o	\
+       BinothLHA.o born_hel.o
 
 # Files for tests
-TEST= $(FILES) BinothLHADummy.o cuts.o
+TEST= $(FILES) BinothLHADummy.o cuts.o pythia_unlops.o recluster.o
 
 # Files for gensym
 SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
@@ -70,7 +73,7 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	cuts.o $(fastjetfortran_madfks) boostwdir2.o 			\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	reweight.o get_color.o iproc_map.o fks_inc_chooser.o 		\
-	leshouche_inc_chooser.o
+	leshouche_inc_chooser.o pythia_unlops.o recluster.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. $<
@@ -90,34 +93,34 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(CXX) $(CXXFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
 
 gensym: $(SYM)
-	$(FC) $(LDFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o gensym $(SYM) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
 	rm fks_singular.o
 
 test_Sij: symmetry_fks_test_Sij.o $(TEST)
-	$(FC) $(LDFLAGS) -o test_Sij symmetry_fks_test_Sij.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_Sij symmetry_fks_test_Sij.o $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
 
 test_ME: symmetry_fks_test_ME.o $(TEST)
-	$(FC) $(LDFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
 	rm symmetry_fks_test_ME.o
 
 test_MC: symmetry_fks_test_MC.o $(TEST) 
-	$(FC) $(LDFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
 	rm symmetry_fks_test_MC.o
 
 check_poles: $(POLES) $(libmadloop)
-	$(FC) $(LDFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
+	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
+	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
+	$(FC) $(LDFLAGS) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
+	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)

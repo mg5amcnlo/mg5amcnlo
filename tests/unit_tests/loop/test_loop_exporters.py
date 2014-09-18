@@ -29,6 +29,8 @@ sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 import tests.unit_tests as unittest
 
+import madgraph.interface.master_interface as MGCmd
+
 import tests.unit_tests.loop.test_loop_diagram_generation as looptest
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -199,7 +201,7 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
     def setUp(self):
        """Loading the different writers, exporters and model used for these
        IOTests"""
-       
+
        if not hasattr(self, 'model'):
            self.model=import_ufo.import_model('loop_qcd_qed_sm-full')
            
@@ -213,7 +215,7 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
                                    'cuttools_dir':_cuttools_file_path,
                                    'fortran_compiler':'gfortran',
                                    'output_dependencies':'external'})
-        
+
     @IOTests.createIOTest(groupName='LoopSquaredOrder_IOTest')
     def testIO_Loop_sqso_uux_ddx(self):
         """ target: [loop_matrix(.*)\.f]

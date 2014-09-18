@@ -67,15 +67,12 @@ class ColorBasis(dict):
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
 
-	# HSS,24/10/2012
-	# if the process has no QCD particles
-        # Return an empty list if all entries are empty
-        if all([cs == color_algebra.ColorString() \
-                        for cs in res_dict.values()]):
-            # res_dict = {}
-            for key in res_dict.keys():
-                res_dict[key]= color_algebra.ColorString([color_algebra.ColorOne()]) 
-	# HSS
+        # if the process has no QCD particles
+        # Return a list filled with ColorOne if all entries are empty ColorString()
+        empty_colorstring = color_algebra.ColorString()
+        if all(cs == empty_colorstring for cs in res_dict.values()):
+            res_dict = dict((key, color_algebra.ColorString(
+                               [color_algebra.ColorOne()])) for key in res_dict)
                     
         return res_dict
 
@@ -699,17 +696,15 @@ class ColorMatrix(dict):
         """Returns a copy of the immutable Color String representation struct2 
         where summed indices are modified to avoid duplicates with those
         appearing in struct1. Assumes internal summed indices are negative."""
-	# HSS, 23/10/2012
-	#list2 = []
-	#if struct1:
-        list2 = reduce(operator.add,
-                       [list(elem[1]) for elem in struct1])
-	if not list2: 
-	   min_index = -1
-	else:
-           # First, determines what is the smallest index appearing in struct1
+
+        # First, determines what is the smallest index appearing in struct1
+        #list2 = reduce(operator.add,[list(elem[1]) for elem in struct1])
+        list2 = sum((list(elem[1]) for elem in struct1),[])
+        if not list2: 
+            min_index = -1
+        else:
            min_index = min(list2) - 1
-	# HSS
+
         # Second, determines the summed indices in struct2 and create a 
         # replacement dictionary
         repl_dict = {}
@@ -741,10 +736,8 @@ class ColorMatrix(dict):
     @staticmethod
     def lcmm(*args):
         """Return lcm of args."""
-	# HSS , 5/11/2012
-	if args:
-           return reduce(ColorMatrix.lcm, args)
+        if args:
+            return reduce(ColorMatrix.lcm, args)
         else:
-           return 1
-        # HSS
+            return 1
 

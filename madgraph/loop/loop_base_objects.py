@@ -212,61 +212,55 @@ class LoopDiagram(base_objects.Diagram):
         else:
             return None
 
-    # HSS 19/09/2012
     def is_vanishing_tadpole(self,model):
-	"""Return None if there is no loop or if a tag has not yet been set and returns True if this graph contains a vanishing tadpole loop and False if not. """
-	if not self.is_tadpole():return self.is_tadpole()
-	# absorbed by renormalization of vev
-	if(len(self['tag'][0][1])<=1):return True
-	# massless tadpole
-       	return any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items()\
-	 if pdg==abs(self['tag'][0][0]['id'])])
-     # HSS
+        """Return None if there is no loop or if a tag has not yet been set and 
+        returns True if this graph contains a vanishing tadpole loop and False 
+        if not. """
+
+        if not self.is_tadpole():
+            return False
+
+        # absorbed by renormalization of vev
+        if(len(self['tag'][0][1])<=1):
+            return True
+        # massless tadpole
+       	return any([part['mass'].lower()=='zero' for pdg,part in \
+                                         model.get('particle_dict').items() if \
+                                             pdg==abs(self['tag'][0][0]['id'])])
 
     def is_wf_correction(self, struct_rep, model):
         """ Return None if there is no loop or if a tag has not yet been set and
         returns True if this graph contains a wave-function correction and False
         if not. """
 
-        if(self['tag']):
+        if self['tag'] :
             # Makes sure only one current flows off each side of the bubble
-            if(len(self['tag'])==2 and len(self['tag'][0][1])==1 \
-               and len(self['tag'][1][1])==1):   
+            if len(self['tag'])==2 and len(self['tag'][0][1])==1 \
+               and len(self['tag'][1][1])==1:   
                 # Checks that at least one of the two structure is external
-                if(struct_rep[self['tag'][0][1][0]].is_external() or \
-                   struct_rep[self['tag'][1][1][0]].is_external()):
+                if struct_rep[self['tag'][0][1][0]].is_external() or \
+                                 struct_rep[self['tag'][1][1][0]].is_external():
                     # Check that the two binding legs are of the same nature
                     inLegID=struct_rep[self['tag'][0][1][0]]['binding_leg']['id']
                     outLegID=struct_rep[self['tag'][1][1][0]]['binding_leg']['id']
-		    # HSS,19/09/2012
-		    # remove the following
-                    #if not model.get('particle_dict')[inLegID]['self_antipart']:
-                    #    inLegID=model.get('particle_dict')[inLegID].\
-                    #                                         get_anti_pdg_code()
-                    #if inLegID==outLegID:
-		            #          return True
                     return True
-		    # HSS
-	    # HSS 19/09/2012
-	    # check a wf correction with tadpole (massive)	
-	    if(len(self['tag'])==1):
-		if(len(self['tag'][0][1])==2):
-		    if(struct_rep[self['tag'][0][1][0]].is_external() or struct_rep[self['tag'][0][1][1]].is_external()):
-			return True
-	    # HSS
+            
+            # check a wf correction with tadpole (massive)
+            if len(self['tag'])==1 and len(self['tag'][0][1])==2 and \
+               (struct_rep[self['tag'][0][1][0]].is_external() or
+                                struct_rep[self['tag'][0][1][1]].is_external()):
+                return True
 
             return False
         else:
             return None
 
-    # HSS, 22/10/2012
     def get_nloopline(self):
-	"""Return the number of loop lines. """
-	if(self['tag']):
-	    return len(self['tag'])
-	else:
-	    return None
-    # HSS
+        """Return the number of loop lines. """
+        if self['tag']:
+            return len(self['tag'])
+        else:
+            return None
 
     @classmethod
     def compute_weight(cls, FD_ids_list, struct_rep, number_legs):
@@ -348,14 +342,13 @@ class LoopDiagram(base_objects.Diagram):
         # of the same particle. If these bubbles are not made of the same
         # two particle, the tag chosen is the one starting from the biggest 
         # particle id.
-        # HSS, 14/02/2013
         # Remove the redundant bubble diagrams, like [a W- a] and [W+ a W-]
         # add abs when it is a bubble,i.e. len(tag)==2
-        if((len(tag)==2 and abs(canonical_mirrored_tag[0][0]['id'])>\
-         abs(canonical_tag[0][0]['id'])) or (len(tag)>2 and \
-          canonical_mirrored_tag[1][1]<canonical_tag[1][1])):
-        # HSS
+        if (len(tag)==2 and abs(canonical_mirrored_tag[0][0]['id'])>\
+                            abs(canonical_tag[0][0]['id'])) or (len(tag)>2 and \
+                              canonical_mirrored_tag[1][1]<canonical_tag[1][1]):
             canonical_tag=canonical_mirrored_tag
+
         return canonical_tag        
 
     def tag(self, struct_rep, start_in, end_in, process):

@@ -199,7 +199,14 @@ c
       common/to_mass/emass
       logical firsttime
       data firsttime /.true./
-
+      if (firsttime) then
+         do i = 1,lmaxconfigs
+            do j = -nexternal,0
+               pmass(j,i) = 0d0
+               pwidth(j,i) = 0d0
+            end do
+         end do
+      endif
       include "born_props.inc"
 
 c The following assumes that light QCD particles are at the end of the
@@ -218,6 +225,11 @@ c event could.
             write(*,*) 'IGNORING'
 c            stop
          endif
+         do i=-nexternal,nexternal
+            xm(i)=0d0
+            xw(i)=0d0
+            mass_min(i)=0d0
+         end do
          firsttime=.false.
          do iFKS=1,fks_configs
             j_fks=FKS_J_D(iFKS)
@@ -411,7 +423,7 @@ c mass of the BW
                if ( itree(1,i).eq.1 .or. itree(1,i).eq.2 ) t_channel=i
                if (t_channel.ne.0) exit ! only s-channels
                mass_min(i)=mass_min(itree(1,i))+mass_min(itree(2,i))
-               if (xm(i).lt.mass_min(i)) then
+               if (xm(i).lt.mass_min(i)-vtiny) then
                   write (*,*)
      $                 'ERROR in the determination of conflicting BW',i
      $                 ,xm(i),mass_min(i)

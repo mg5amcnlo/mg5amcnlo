@@ -55,11 +55,11 @@ class UnPickler(pickle.Unpickler):
            Due to ME call via MG some libraries might be messed up on the pickle
            This routine helps to find back which one we need. 
         """
-        # HSS, 05/04/2013
-        # I don't understand why when testing the test_ML5EW.py, the module is just loop_me_comparator
-        # if it is resolved, please comment the following line.
-        if module == 'loop_me_comparator':module = 'tests.parallel_tests.loop_me_comparator'
-        # HSS
+
+        # A bit of an ugly hack, but it works and has no side effect.
+        if module == 'loop_me_comparator':
+            module = 'tests.parallel_tests.loop_me_comparator'
+
         try:
             return pickle.Unpickler.find_class(self, module, name)
         except ImportError:

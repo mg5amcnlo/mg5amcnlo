@@ -62,9 +62,9 @@ C     These are constants related to the split orders
       INTEGER NSQUAREDSOP1
       PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 C     The total number of loop reduction libraries
-C     At present, there are only CutTools,PJFry++,IREGI
+C     At present, there are only CutTools,PJFry++,IREGI,Golem95
       INTEGER NLOOPLIB
-      PARAMETER (NLOOPLIB=3)
+      PARAMETER (NLOOPLIB=4)
 C     Only CutTools provides QP
       INTEGER QP_NLOOPLIB
       PARAMETER (QP_NLOOPLIB=1)
@@ -211,9 +211,14 @@ C
       COMMON/ML5_0_MP_DONE/MP_DONE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE
 C      AVAILABLE OR NOT
-      LOGICAL LOOPLIBS_AVAILABLE(3)
-      DATA LOOPLIBS_AVAILABLE /.TRUE.,.FALSE.,.FALSE./
+      LOGICAL LOOPLIBS_AVAILABLE(4)
+      DATA LOOPLIBS_AVAILABLE /.TRUE.,.FALSE.,.FALSE.,.FALSE./
       COMMON/ML5_0_LOOPLIBS_AV/ LOOPLIBS_AVAILABLE
+C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS
+C      AVAILABLE OR NOT IN THE LOOPLIBS
+C     PJFry++ and Golem95 do not support direction test
+      LOGICAL LOOPLIBS_DIRECTEST(4)
+      DATA LOOPLIBS_DIRECTEST /.TRUE.,.FALSE.,.TRUE.,.FALSE./
 
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
@@ -353,6 +358,7 @@ C     BEGIN CODE
 C     ----------
 
       IF(ML_INIT) THEN
+        CALL PRINT_MADLOOP_BANNER()
         TMP = 'auto'
         CALL SETMADLOOPPATH(TMP)
         CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
@@ -1221,8 +1227,26 @@ C        METHODS
 
         IF(.NOT.EVAL_DONE(2)) THEN
           EVAL_DONE(2)=.TRUE.
-          CTMODE=BASIC_CT_MODE+1
-          GOTO 300
+          IF(LOOPLIBS_DIRECTEST(MLREDUCTIONLIB(I_LIB)))THEN
+            CTMODE=BASIC_CT_MODE+1
+            GOTO 300
+          ELSE
+C           NO DIRECTION TEST LIBRARIES: e.g. PJFry++ and Golem95
+            STAB_INDEX=STAB_INDEX+1
+            IF(DOING_QP_EVALS)THEN
+              DO I=0,NSQUAREDSO
+                DO K=1,3
+                  QP_RES(K,I,STAB_INDEX)=ANS(K,I)
+                ENDDO
+              ENDDO
+            ELSE
+              DO I=0,NSQUAREDSO
+                DO K=1,3
+                  DP_RES(K,I,STAB_INDEX)=ANS(K,I)
+                ENDDO
+              ENDDO
+            ENDIF
+          ENDIF
         ENDIF
 
         CTMODE=BASIC_CT_MODE
@@ -2064,6 +2088,8 @@ C     U == 2
 C     Stable with PJFry++.
 C     U == 3
 C     Stable with IREGI.
+C     U == 4
+C     Stable with Golem95
 C     U == 9
 C     Stable with CutTools in quadruple precision.         
 C     
@@ -2122,5 +2148,4 @@ C     Reset it to default value not to affect next runs
       RET_CODE=100*H+10*T+U
 
       END
-
 

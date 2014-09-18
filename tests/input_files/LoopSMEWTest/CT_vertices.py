@@ -36,9 +36,7 @@ V_R23G = CTVertex(name = 'V_R23G',
 # or anytime one of the outter gluon of the vertex is offshell.
 
 # Keep in mind that Delta8(a,b) is 1/2 Tr(a,b)
-# EDIT HSS
 # I am still puzzled by the normalization factors.
-# END EDIT HSS
 
 #V_R24G = CTVertex(name = 'V_R24G',
 #              particles = [ P.G, P.G, P.G,  P.G ],

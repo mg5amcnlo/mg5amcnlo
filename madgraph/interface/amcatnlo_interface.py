@@ -254,9 +254,9 @@ class CompleteFKS(mg_interface.CompleteForCmd):
             out['Options'] = self.list_completion(text, opt, line)
         else:
 
-            opt = ['-f', '-c', '-m', '-i', '-n', '-r', '-p', '-o',
+            opt = ['-f', '-c', '-m', '-i', '-x', '-r', '-p', '-o', '-n', 'a',
                     '--force', '--cluster', '--multicore', '--interactive',
-                    '--nocompile', '--reweightonly', '--parton', '--only_generation']
+                    '--nocompile', '--reweightonly', '--parton', '--only_generation', '--name', '--appl_start_grid']
             out['Options'] = self.list_completion(text, opt, line)
         
 
@@ -323,13 +323,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                             'Using default IREGI instead.')%\
                            self._iregi_dir)
             self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
-        # Set where to look for PJFry++ installation
-        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
-        #if not os.path.isdir(self._pjfry_dir):
-        #    logger.warning(('Warning: Directory %s is not a valid PJFry++ directory.'+\
-        #                    'Using default PJFry++ instead.')%\
-        #                   self._pjfry_dir)
-        #    self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
 
     def do_display(self, line, output=sys.stdout):
         # if we arrive here it means that a _fks_display_opts has been chosen
@@ -699,3 +692,5 @@ _launch_parser.add_option("-o", "--only_generation", default=False, action='stor
 # 'name' entry of the options, not the run_name one
 _launch_parser.add_option("-n", "--name", default=False, dest='name',
                             help="Provide a name to the run")
+_launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
+                            help="For use with APPLgrid only: start from existing grids")

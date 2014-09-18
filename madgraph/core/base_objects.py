@@ -479,6 +479,8 @@ class ParticleList(PhysicsObjectList):
         corresponding particle (first one in the list), with the 
         is_part flag set accordingly. None otherwise."""
         
+        assert isinstance(name, str)
+        
         part = self.find_name(name)
         if not part:
             # Then try to look for a particle with that PDG
@@ -499,7 +501,6 @@ class ParticleList(PhysicsObjectList):
 
             return None
         part = copy.copy(part)
-        pname = name 
           
         if part.get('name') == name:
             part.set('is_part', True)
@@ -2077,7 +2078,7 @@ class Vertex(PhysicsObject):
 
         if ninitial == 1:
             # For one initial particle, all legs are s-channel
-            # Only need to flip particle id if state is False
+            # Only need to flip particle id if state is False            
             if leg.get('state') == True:
                 return leg.get('id')
             else:
@@ -2386,63 +2387,6 @@ class DiagramList(PhysicsObjectList):
                                        {order:target_order}, {order:order_type})
         
         return new_list, target_order
-        
-#             neg_order=[elem for elem in self['process'].get('orders').items()+\
-#                   self['process'].get('squared_orders').items() if elem[1]<0][0]
-#             # Make sure there still are some diagrams
-#             if len(res)==0:
-#                 raise IndexError
-#             min_amp_order=min(diag.get_order(neg_order[0]) for diag in res)
-#             target_order=min_amp_order+2*(-neg_order[1]-1)
-#             # When not including loop corrections, restricting a coupling
-#             # order with a negative value at the amplitude level or at the
-#             # squared order level does not make a difference.
-#             # The expansion is in terms of alpha_x, not g_x, hence the
-#             # factor 2.
-#             if self['process']['sqorders_types'][neg_order[0]]=='==':
-#                 res = base_objects.DiagramList(filter(lambda diag: \
-#                   (target_order-diag.get_order(neg_order[0])) in \
-#                                   res.get_order_values(neg_order[0]),res))
-#             elif self['process']['sqorders_types'][neg_order[0]] in ['<=','=']:
-#                 res = base_objects.DiagramList(filter(lambda diag: \
-#                          diag.get_order(neg_order[0])<= target_order,res))
-#         
-# 
-#             filtered_diag_list = DiagramList()
-#             
-#             # We must treat indepdently each type of constraint
-#             if order_type in ['<=','=']:
-#                 # We ask for up to N^(-value) Leading Order in the coupling
-#                 upper_bound=ref_diag_list.get_min_order(order)+2*(-value-1)
-#                 # The target order is equal to  
-#                 # upper_bound+diagRef.get_min_order(order)
-#                 # which is more efficiently rewritten as
-#                 target_order=2*(upper_bound+value+1)
-#                 filtered_diag_list=DiagramList([diag for diag in \
-#                     self if diag.get_order(order)<=upper_bound])
-#                 if self['process']['has_born']:
-#                     AllBornDiagrams=base_objects.DiagramList([diag for diag in \
-#                            AllBornDiagrams if diag.get_order(order)<=max_order])
-# 
-#             elif sqorders_types[order]=='==':
-#                 ref_order_values = set(diagRef.get_order_values(order))
-#                 if value<0:
-#                     # ask for exactly the N^(-value) Leading Order in the coupling
-#                     target_order=2*(diagRef.get_min_order(order)-value-1)
-#                 else:
-#                     target_order=value
-#                                        
-#                 AllLoopDiagrams=base_objects.DiagramList([diag for diag in \
-#                     AllLoopDiagrams if (target_order-diag.get_order(order)) in
-#                                                               ref_order_values])
-#                 if self['process']['has_born']:
-#                     allDiags_order_values = ref_order_values.union(
-#                                         AllLoopDiagrams.get_order_values(order))
-#                     AllBornDiagrams=base_objects.DiagramList([diag for diag in \
-#                     AllBornDiagrams if (target_order-diag.get_order(order)) in
-#                                                          allDiags_order_values])  
-
-        
         
     def apply_positive_sq_orders(self, ref_diag_list, sq_orders, sq_order_types):
         """ This function returns a filtered version of self which contain

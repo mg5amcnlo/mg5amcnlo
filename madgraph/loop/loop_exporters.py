@@ -48,9 +48,8 @@ import madgraph.various.progressbar as pbar
 import madgraph.core.color_amp as color_amp
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
-# HSS, 24/10/2012
-import madgraph.loop.loop_base_objects as loop_objects
-# HSS
+from madgraph.loop.loop_base_objects import LoopDiagram
+from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
 
 pjoin = os.path.join
 
@@ -114,11 +113,8 @@ class LoopExporterFortran(object):
             # Create the links to the lib folder
             linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
-                # We don't use the the ln() macro here because we want to
-                # explicitely link to ../Source/<lib>path
-                os.symlink(
-                    pjoin(os.path.pardir,'Source','CutTools','includects',file), 
-                                                   pjoin(targetPath,'lib',file))
+                ln(pjoin(targetPath,'Source','CutTools','includects',file), 
+                                                        pjoin(targetPath,'lib'))
             # Make sure it is recompiled at least once. Because for centralized
             # MG5_aMC installations, it might be that compiler differs.
             # Not necessary anymore because I check the compiler version from
@@ -198,14 +194,19 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
 
+    MadLoop_banner = MadLoopBannerStyles.get_MadLoop_Banner(
+               style='classic2', color='green', 
+               top_frame_char = '=', bottom_frame_char = '=',
+               left_frame_char = '{',right_frame_char = '}',
+               print_frame=True, side_margin = 7, up_margin = 1)
+
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
         super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
         
         # We must change some files to their version for NLO computations
-        cpfiles= ["Source/makefile",\
-                  "SubProcesses/MadLoopCommons.f",
+        cpfiles= ["Source/makefile",
                   "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParamReader.f",
                   "SubProcesses/MadLoopParams.inc"]
@@ -229,7 +230,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
-
+            
+        # We need minimal editing of MadLoopCommons.f
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
+        writer.close()
+        
+        
         # Copy the whole MadLoop5_resources directory (empty at this stage)
         if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
                                                         'MadLoop5_resources')):
@@ -269,7 +280,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
     # This function is placed here and not in optimized exporterd,
     # because the same makefile.inc should be used in all cases.
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs):
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,tir_include=[]):
         """ Create the file makefile which links to the TIR libraries."""
             
         file = open(os.path.join(self.loop_dir,'StandAlone',
@@ -279,6 +290,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
+        replace_dict['tir_include']=' '.join(tir_include)
         file=file%replace_dict
         if writer:
             writer.writelines(file)
@@ -614,7 +626,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # The user can always decide to do it manually, if really needed
         loop_diags = [loop_diag for loop_diag in\
 		  matrix_element.get('base_amplitude').get('loop_diagrams')\
-		  if isinstance(loop_diag,loop_objects.LoopDiagram) and \
+		  if isinstance(loop_diag,LoopDiagram) and \
                                                       loop_diag.get('type') > 0]
         if len(loop_diags)>5000:
             logger.info("There are more than 5000 loop diagrams."+\
@@ -1358,7 +1370,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     group_loops=True
     
     # List of potential TIR library one wants to link to
-    all_tir=['pjfry','iregi']
+    all_tir=['pjfry','iregi','golem']
     
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
@@ -1369,7 +1381,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                                    dir_path, opt)
 
         # TIR available ones
-        self.tir_available_dict={'pjfry':True,'iregi':True}
+        self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True}
 
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
@@ -1385,6 +1397,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # We must link the TIR to the Library folder of the active Template
         link_tir_libs=[]
         tir_libs=[]
+        tir_include=[]
         # special for PJFry++
         link_pjfry_lib=""
         pjfry_lib=""
@@ -1398,11 +1411,27 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                               libpath,libname,tir_name=tir_name)
             setattr(self,tir_dir,libpath)
             if libpath != "":
-                if tir=='pjfry':
+                if tir in ['pjfry','golem']:
                     # Apparently it is necessary to link against the original 
                     # location of the pjfry library, so it needs a special treatment.
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
-                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))                
+                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
+                    if tir=='golem':
+                        trgt_path = pjoin(os.path.dirname(libpath),'include')
+                        golem_include = misc.find_includes_path(trgt_path,'.mod')
+                        if golem_include is None:
+                            logger.error(
+'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
+'Generation carries on but you will need to edit the include path by hand in the makefiles.')
+                            golem_include = '<Not_found_define_it_yourself>'                
+                        tir_include.append('-I %s'%str(golem_include))
+                        # To be able to easily compile a MadLoop library using
+                        # makefiles built outside of the MG5_aMC framework
+                        # (such as what is done with the Sherpa interface), we
+                        # place here an easy handle on the golem includes
+                        ln(golem_include, starting_dir=pjoin(self.dir_path,'lib'),
+                                            name='golem95_include',abspath=True)
+                        
                 else :
                     link_tir_libs.append('-l%s'%tir)
                     tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
@@ -1417,7 +1446,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             return 0
         filename = 'makefile'
         calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                                     link_tir_libs,tir_libs)
+                                                     link_tir_libs,tir_libs,
+                                                     tir_include=tir_include)
         # Return to original PWD
         os.chdir(cwd)
                      
@@ -1437,16 +1467,37 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     def link_TIR(self, targetPath,libpath,libname,tir_name='TIR'):
         """Link the TIR source directory inside the target path given
         in argument"""
-
-        if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
-            logger.warning("The %s tensor integration library could not be found"%tir_name\
-             +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
-             +" It will not be available.")
-            self.tir_available_dict[tir_name]=False
-            return ""
+        
+        if tir_name in ['pjfry','golem']:
+            # not self-contained libraries
+            if (not isinstance(libpath,str)) or (not os.path.exists(libpath)) \
+            or (not os.path.isfile(pjoin(libpath,libname))):
+                if isinstance(libpath,str) and libpath != '' and \
+                (not os.path.isfile(pjoin(libpath,libname))):
+                    # WARNING ONLY appears when the libpath is a wrong specific path.
+                    #logger.warning("The %s tensor integration library could not be found"%tir_name\
+                    #               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+                    #               +" It will not be available.")
+                    logger.warning("The %s tensor integration library could not be found"%tir_name\
+                                   +" with PATH:%s specified in mg5_configuration.txt."%libpath\
+                                   +" It will not be available.")
+                self.tir_available_dict[tir_name]=False
+                return ""
+        else:
+            # self-contained libraries
+            if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
+                # WARNING ONLY appears when the libpath is a wrong specific path.
+                #logger.warning("The %s tensor integration library could not be found"%tir_name\
+                #               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+                #               +" It will not be available.")
+                logger.warning("The %s tensor integration library could not be found"%tir_name\
+                                   +" with PATH:%s specified in mg5_configuration.txt."%libpath\
+                                   +" It will not be available.")
+                self.tir_available_dict[tir_name]=False
+                return ""
        
         if self.dependencies=='internal':
-            if tir_name in ["pjfry"]:
+            if tir_name in ["pjfry","golem"]:
                 self.tir_available_dict[tir_name]=False
                 logger.warning("When using the 'output_dependencies=internal' "+\
 " MG5_aMC option, the tensor integral library %s cannot be employed because"%tir_name+\
@@ -1468,9 +1519,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                                    new, current)
 
                 # Create the links to the lib folder
-                os.symlink(
-                    pjoin(os.path.pardir,'Source','IREGI','src',libname), 
-                                                      pjoin(targetPath,libname))
+                ln(pjoin(targetPath,os.path.pardir,'Source','IREGI','src',
+                                                            libname),targetPath)
             else:
                 logger.info("Tensor integral reduction library "+\
                                             "%s not implemented yet."%tir_name)
@@ -1498,8 +1548,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     self.tir_available_dict[tir_name]=False
                     return ""
             # Apparently it is necessary to link against the original location 
-            # of the pjfry library
-            if tir_name!='pjfry':
+            # of the pjfry/golem library
+            if not tir_name in ['pjfry','golem']:
                 ln(os.path.join(libpath,libname),targetPath,abspath=True)
 
         elif self.dependencies=='environment_paths':
@@ -1510,8 +1560,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 logger.info('MG5_aMC is using %s installation found at %s.'%\
                                                           (tir_name,newlibpath)) 
                 # Apparently it is necessary to link against the original location 
-                # of the pjfry library
-                if tir_name!='pjfry':
+                # of the pjfry/golem library
+                if not tir_name in ['pjfry','golem']:
                     ln(newlibpath,targetPath,abspath=True)
                 self.tir_available_dict[tir_name]=True
                 return os.path.dirname(newlibpath)
@@ -1527,8 +1577,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
-        """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f and loop_num.f only but with
-        the optimized FortranModel"""
+        """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f,GOLEM_inteface.f 
+        and loop_num.f only but with the optimized FortranModel"""
                 
         # Warn the user that the 'matrix' output where all relevant code is
         # put together in a single file is not supported in this loop output.
@@ -1589,6 +1639,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         filename = 'TIR_interface.f'
         self.write_TIR_interface(writers.FortranWriter(filename),
                                 matrix_element)
+        
+        if 'golem' in self.tir_available_dict and self.tir_available_dict['golem']:
+            filename = 'GOLEM_interface.f'
+            self.write_GOLEM_interface(writers.FortranWriter(filename),
+                                       matrix_element)
 
         filename = 'loop_num.f'
         self.write_loop_num(writers.FortranWriter(filename),\
@@ -1612,16 +1667,26 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     ("        CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,"\
                     +"PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)\n"\
                     +"C       CONVERT TO MADLOOP CONVENTION\n"\
-                    +"        CALL %(proc_prefix)sSORT_PJCOEFS(RANK,NLOOPCOEFS,PJCOEFS,TIRCOEFS)"\
+                    +"         CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
                     )%self.general_replace_dict
                 elif tir=="iregi":
                     self.general_replace_dict['iregi_calling']=\
-                    "        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
-                    +"RANK,PDEN,M2L,MU_R,TIRCOEFS,STABLE)"
+                    ("        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
+                    +"RANK,PDEN,M2L,MU_R,PJCOEFS,STABLE)\n"\
+                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
+                    +"        CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
+                    )%self.general_replace_dict
                     self.general_replace_dict['iregi_free_ps']=\
                     "IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS"
                     self.general_replace_dict['initiregi']=\
                     "      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)"
+                elif tir=="golem":
+                    self.general_replace_dict['golem_calling']=\
+                    ("IF(MLReductionLib(I_LIB).EQ.4)THEN\n"\
+                     +"C      Using Golem95\n"\
+                     +"        CALL %(proc_prefix)sGOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)\n"\
+                     +"        RETURN\n"\
+                     +"ENDIF")%self.general_replace_dict
                 else:
                     raise MadGraph5Error,"%s was not a well-defined TIR."%tir_name
             else:
@@ -1635,6 +1700,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     +"        STOP"
                     self.general_replace_dict['initiregi']=''
                     self.general_replace_dict['iregi_free_ps']=''
+                elif tir=="golem":
+                    self.general_replace_dict['golem_calling']=''
         # the first entry is the CutTools, we make sure it is available
         looplibs_av=['.TRUE.']
         # one should be careful about the order in the following
@@ -1647,6 +1714,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             looplibs_av.extend(['.FALSE.'])
         if "iregi" in self.all_tir:
             if self.tir_available_dict["iregi"]:             
+                looplibs_av.extend(['.TRUE.'])
+            else:
+                looplibs_av.extend(['.FALSE.'])
+        else:
+            looplibs_av.extend(['.FALSE.'])
+            
+        if "golem" in self.all_tir:
+            if self.tir_available_dict["golem"]:
                 looplibs_av.extend(['.TRUE.'])
             else:
                 looplibs_av.extend(['.FALSE.'])
@@ -1732,30 +1807,54 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         file = file % replace_dict
         
+        
+        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
+                                                    coef_format=replace_dict['complex_dp_format'],\
+                                                    sub_prefix=replace_dict['proc_prefix'])
+        if self.tir_available_dict['pjfry']:
+            file += '\n\n'+FPR.write_pjfry_mapping()
+        if self.tir_available_dict['iregi']:
+            file += '\n\n'+FPR.write_iregi_mapping()
+        
         if writer:
             writer.writelines(file)
         else:
             return file
+
+    def write_GOLEM_interface(self, writer, matrix_element):
+        """ Create the file GOLEM_interface.f which does NOT contain the subroutine
+         defining the loop HELAS-like calls along with the general interfacing 
+         subroutine. """
+
+        # First write GOLEM_interface which interfaces MG5 with TIR.
+        replace_dict=copy.copy(self.general_replace_dict)
         
-#    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
-#        """ Create the file makefile which links to the TIR libraries."""
-#            
-#        file = open(os.path.join(self.loop_dir,'StandAlone',
-#                                 'SubProcesses','makefile_TIR.inc')).read()  
-#        replace_dict={}
-#        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
-#        replace_dict['tir_libs']=' '.join(tir_libs)
-#        replace_dict['dotf']='%.f'
-#        replace_dict['doto']='%.o'
-#        replace_dict['pjdir']='PJDIR='+PJDIR
-#        if not PJDIR.endswith('/'):
-#            replace_dict['pjdir']=replace_dict['pjdir']+"/"
-#        file=file%replace_dict
-#        
-#        if writer:
-#            writer.writelines(file)
-#        else:
-#            return file
+        # We finalize TIR result differently wether we used the built-in 
+        # squaring against the born.
+        if matrix_element.get('processes')[0].get('has_born'):
+            factor='2.0D0'
+        else:
+            factor='1.0D0'
+        replace_dict['finalize_GOLEM']='\n'.join([
+        'RES(1)=NORMALIZATION*%s*DBLE(RES_GOLEM%%c+'%factor+\
+        '2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)',\
+            'RES(2)=NORMALIZATION*%s*DBLE(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)'%factor,\
+            'RES(3)=NORMALIZATION*%s*DBLE(RES_GOLEM%%a)'%factor])
+            
+        file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
+ 
+        file = file % replace_dict
+
+        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
+                                                    coef_format=replace_dict['complex_dp_format'],\
+                                                    sub_prefix=replace_dict['proc_prefix'])
+        
+        file += '\n\n'+FPR.write_golem95_mapping()
+        
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
 
     def write_polynomial_subroutines(self,writer,matrix_element):
         """ Subroutine to create all the subroutines relevant for handling
@@ -1800,7 +1899,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         mp_routine = mp_routine % replace_dict
         subroutines.append(dp_routine)
         subroutines.append(mp_routine)        
-        
+
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
                                          matrix_element.get_max_loop_rank(),

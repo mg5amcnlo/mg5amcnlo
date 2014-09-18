@@ -210,9 +210,9 @@ C
         OUT=OUT+C(1)*Q(0)+C(2)*Q(1)+C(3)*Q(2)+C(4)*Q(3)
       ENDIF
       IF (R.GE.2) THEN
-        OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(0)*Q(2)+C(8)*Q(0)
-     $   *Q(3)+C(9)*Q(1)*Q(1)+C(10)*Q(1)*Q(2)+C(11)*Q(1)*Q(3)
-     $   +C(12)*Q(2)*Q(2)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+        OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
+     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       END
 
@@ -228,9 +228,9 @@ C
         OUT=OUT+C(1)*Q(0)+C(2)*Q(1)+C(3)*Q(2)+C(4)*Q(3)
       ENDIF
       IF (R.GE.2) THEN
-        OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(0)*Q(2)+C(8)*Q(0)
-     $   *Q(3)+C(9)*Q(1)*Q(1)+C(10)*Q(1)*Q(2)+C(11)*Q(1)*Q(3)
-     $   +C(12)*Q(2)*Q(2)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+        OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
+     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       END
 
@@ -532,12 +532,12 @@ C
             OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
             OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
             OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,7,I)=OUT(J,7,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
-            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,2,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
+            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
             OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
           ENDDO
@@ -567,12 +567,12 @@ C
             OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
             OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
             OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,7,I)=OUT(J,7,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
-            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,2,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
+            OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
             OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
           ENDDO

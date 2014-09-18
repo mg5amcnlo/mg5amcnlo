@@ -17,6 +17,7 @@
 import copy
 from cStringIO import StringIO
 from distutils import dir_util
+import itertools
 import fractions
 import glob
 import logging
@@ -1399,7 +1400,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         return res_str + '*'
 
-    def set_compiler(self, default_compiler, force=False):
+
+    def set_fortran_compiler(self, default_compiler, force=False):
         """Set compiler based on what's available on the system"""
                 
         # Check for compiler
@@ -1417,14 +1419,44 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             raise MadGraph5Error, 'No Fortran Compiler detected! Please install one'
         logger.info('Use Fortran compiler ' + compiler)
-        self.replace_make_opt_compiler(compiler)
+        self.replace_make_opt_f_compiler(compiler)
         # Replace also for Template but not for cluster
         if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
-            self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
+            self.replace_make_opt_f_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
         
         return compiler
 
-    def replace_make_opt_compiler(self, compiler, root_dir = ""):
+    # an alias for backward compatibility
+    set_compiler = set_fortran_compiler
+
+
+    def set_cpp_compiler(self, default_compiler, force=False):
+        """Set compiler based on what's available on the system"""
+                
+        # Check for compiler
+        if default_compiler and misc.which(default_compiler):
+            compiler = default_compiler
+        elif misc.which('g++'):
+            compiler = 'g++'
+        elif misc.which('c++'):
+            compiler = 'c++'
+        elif misc.which('clang'):
+            compiler = 'clang'
+        elif default_compiler:
+            logger.warning('No c++ Compiler detected! Please install one')
+            compiler = default_compiler # maybe misc fail so try with it
+        else:
+            raise MadGraph5Error, 'No c++ Compiler detected! Please install one'
+        logger.info('Use c++ compiler ' + compiler)
+        self.replace_make_opt_c_compiler(compiler)
+        # Replace also for Template but not for cluster
+        if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
+            self.replace_make_opt_c_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
+        
+        return compiler
+
+
+    def replace_make_opt_f_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
 
         mod = False #avoid to rewrite the file if not needed
@@ -1440,6 +1472,52 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 if compiler != FC_result.group(2):
                     mod = True
                 lines[iline] = FC_result.group(1) + "FC=" + compiler
+        if not mod:
+            return
+        try:
+            outfile = open(make_opts, 'w')
+        except IOError:
+            if root_dir == self.dir_path:
+                logger.info('Fail to set compiler. Trying to continue anyway.')
+            return
+        outfile.write('\n'.join(lines))
+
+
+    def replace_make_opt_c_compiler(self, compiler, root_dir = ""):
+        """Set CXX=compiler in Source/make_opts.
+        The version is also checked, in order to set some extra flags
+        if the compiler is clang (on MACOS)"""
+
+        
+        p = misc.Popen([compiler, '--version'], stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE)
+        output, error = p.communicate()
+        is_clang = 'LLVM' in output
+
+        mod = False #avoid to rewrite the file if not needed
+        if not root_dir:
+            root_dir = self.dir_path
+        make_opts = pjoin(root_dir, 'Source', 'make_opts')
+        lines = open(make_opts).read().split('\n')
+        CC_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
+        for iline, line in enumerate(lines):
+            CC_result = CC_re.match(line)
+            if CC_result:
+                if compiler != CC_result.group(2):
+                    mod = True
+                lines[iline] = CC_result.group(1) + "CXX=" + compiler
+
+        if is_clang:
+            CFLAGS_re=re.compile('^(\s*)CFLAGS\s*=\s*(.+)\s*$')
+            CXXFLAGS_re=re.compile('^(\s*)CXXFLAGS\s*=\s*(.+)\s*$')
+            flags= '-O -stdlib=libstdc++ -mmacosx-version-min=10.6'
+            for iline, line in enumerate(lines):
+                CF_result = CFLAGS_re.match(line)
+                CXXF_result = CXXFLAGS_re.match(line)
+                if CF_result:
+                    lines[iline] = CF_result.group(1) + "CFLAGS= " + flags
+                if CXXF_result:
+                    lines[iline] = CXXF_result.group(1) + "CXXFLAGS= " + flags
         if not mod:
             return
         try:
@@ -1562,25 +1640,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                               online = False, compiler='gfortran'):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
-	    # HSS,13/11/2012
-        mg5_configuration=pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
-        lines = open(mg5_configuration).read().split('\n')
-        FC_re = re.compile('^\s*fortran_compiler\s*=\s*(.+)\s*$')
-        for iline, line in enumerate(lines):
-            FC_result = FC_re.match(line)
-            if FC_result:
-		compiler=FC_result.group(1)
-	    # HSS
         self.compiler_choice(compiler)
         self.make()
 
         # Write command history as proc_card_mg5
-        if os.path.isdir(pjoin(self.dir_path, 'Cards')):
+        if history and os.path.isdir(pjoin(self.dir_path, 'Cards')):
             output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
@@ -1604,20 +1670,32 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         if self.opt['sa_symmetry']:
             # avoid symmetric output
-            for proc in matrix_element.get('processes'):
+            for i,proc in enumerate(matrix_element.get('processes')):
+                        
+                initial = []    #filled in the next line
+                final = [l.get('id') for l in proc.get('legs')\
+                      if l.get('state') or initial.append(l.get('id'))]
+                decay_finals = proc.get_final_ids_after_decay()
+                decay_finals.sort()
+                tag = (tuple(initial), tuple(decay_finals))
+                legs = proc.get('legs')[:]
                 leg0 = proc.get('legs')[0]
                 leg1 = proc.get('legs')[1]
                 if not leg1.get('state'):
                     proc.get('legs')[0] = leg1
                     proc.get('legs')[1] = leg0
-                    dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
-                           "P%s" % proc.shell_string())
-                    #restore original order
-                    proc.get('legs')[1] = leg1
-                    proc.get('legs')[0] = leg0                
-                    if os.path.exists(dirpath2):
-                        logger.info('Symmetric directory exists')
-                        return 0
+                    flegs = proc.get('legs')[2:]
+                    for perm in itertools.permutations(flegs):
+                        for i,p in enumerate(perm):
+                            proc.get('legs')[i+2] = p
+                        dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
+                               "P%s" % proc.shell_string())
+                        #restore original order
+                        proc.get('legs')[2:] = legs[2:]              
+                        if os.path.exists(dirpath2):
+                            proc.get('legs')[:] = legs
+                            return 0
+                proc.get('legs')[:] = legs
 
         try:
             os.mkdir(dirpath)
@@ -1746,6 +1824,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract version number and date from VERSION file
@@ -2124,10 +2203,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Write command history as proc_card_mg5
         if os.path.isdir(os.path.join(self.dir_path, 'Cards')):
             output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
     #===========================================================================
     # export model files
@@ -2342,6 +2418,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract JAMP lines
@@ -3046,9 +3123,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         #os.chdir(os.path.pardir)
 
         obj = gen_infohtml.make_info_html(self.dir_path)
-        [mv(name, './HTML/') for name in os.listdir('.') if \
-                            (name.endswith('.html') or name.endswith('.jpg')) and \
-                            name != 'index.html']               
+              
         if online:
             nb_channel = obj.rep_rule['nb_gen_diag']
             open(pjoin(self.dir_path, 'Online'),'w').write(str(nb_channel))
@@ -3056,10 +3131,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Write command history as proc_card_mg5
         if os.path.isdir(pjoin(self.dir_path,'Cards')):
             output_file = pjoin(self.dir_path,'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+            history.write(output_file)
 
         misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
@@ -3103,6 +3175,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
 
@@ -4848,15 +4921,14 @@ class UFO_model_to_mg4(object):
                                  %(mp_prefix)sgal(2) = 1d0 
                                  """ %{'mp_prefix':self.mp_prefix})
                 pass
-        # HSS 27/10/2013
         # in Gmu scheme, aEWM1 is not external but Gf is an exteranl variable
         elif ('Gf',) in self.model['parameters']:
             if dp:
-                fsock.writelines(""" gal(1) = 2.3784142300054421*MW*SW*DSQRT(Gf)
+                fsock.writelines(""" gal(1) = 2.3784142300054421*MDL_MW*MDL_SW*DSQRT(MDL_Gf)
                                  gal(2) = 1d0
                          """)
             elif mp:
-                fsock.writelines(""" %(mp_prefix)sgal(1) = 2*MP__MW*MP__SW*SQRT(SQRT(2e0_16)*MP__Gf)
+                fsock.writelines(""" %(mp_prefix)sgal(1) = 2*MP__MDL_MW*MP__MDL_SW*SQRT(SQRT(2e0_16)*MP__MDL_Gf)
                                  %(mp_prefix)sgal(2) = 1d0
                                  """ %{'mp_prefix':self.mp_prefix})
                 pass
@@ -5027,13 +5099,15 @@ class UFO_model_to_mg4(object):
           implicit none"""%('mp_' if mp and not dp else '',nb_file))
         if dp:
             fsock.writelines("""
-              double precision PI
+              double precision PI, ZERO
               parameter  (PI=3.141592653589793d0)
+              parameter  (ZERO=0d0)
               include 'input.inc'
               include 'coupl.inc'""")
         if mp:
-            fsock.writelines("""%s MP__PI
+            fsock.writelines("""%s MP__PI, MP__ZERO
                                 parameter (MP__PI=3.1415926535897932384626433832795e0_16)
+                                parameter (MP__ZERO=0e0_16)
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
                         """%self.mp_real_format) 
@@ -5349,6 +5423,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir,
               'iregi_dir':cmd._iregi_dir,
               'pjfry_dir':cmd.options["pjfry"],
+              'golem_dir':cmd.options["golem"],
               'fortran_compiler':cmd.options['fortran_compiler'],
               'output_dependencies':cmd.options['output_dependencies']}
 
@@ -5382,6 +5457,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir,
               'iregi_dir':cmd._iregi_dir,
               'pjfry_dir':cmd.options["pjfry"],
+              'golem_dir':cmd.options["golem"],
               'fortran_compiler':cmd.options['fortran_compiler'],
               'output_dependencies':cmd.options['output_dependencies']}
         if not cmd.options['loop_optimized_output']:

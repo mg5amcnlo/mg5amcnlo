@@ -118,12 +118,21 @@ CONTAINS
                   DBLE(factorial(xiarray_5_2(j,k)))
           ENDDO
        ENDDO
+       CALL calc_all_integers(2,7,6,xiarray_6_2(1:7,1:2))
+       DO j=1,7
+          factor_xiarray_6_2(j)=DBLE(factorial(6))
+          DO k=1,2
+             factor_xiarray_6_2(j)=factor_xiarray_6_2(j)/&
+                  DBLE(factorial(xiarray_6_2(j,k)))
+          ENDDO
+       ENDDO
        ntot_xiarray(0,2)=1
        ntot_xiarray(1,2)=2
        ntot_xiarray(2,2)=3
        ntot_xiarray(3,2)=4
        ntot_xiarray(4,2)=5
        ntot_xiarray(5,2)=6
+       ntot_xiarray(6,2)=7
        ! n=3
        CALL calc_all_integers(3,1,0,xiarray_0_3(1:1,1:3))
        factor_xiarray_0_3(1)=1d0
@@ -167,12 +176,21 @@ CONTAINS
                   DBLE(factorial(xiarray_5_3(j,k)))
           ENDDO
        ENDDO
+       CALL calc_all_integers(3,28,6,xiarray_6_3(1:28,1:3))
+       DO j=1,28
+          factor_xiarray_6_3(j)=DBLE(factorial(6))
+          DO k=1,3
+             factor_xiarray_6_3(j)=factor_xiarray_6_3(j)/&
+                  DBLE(factorial(xiarray_6_3(j,k)))
+          ENDDO
+       ENDDO
        ntot_xiarray(0,3)=1
        ntot_xiarray(1,3)=3
        ntot_xiarray(2,3)=6
        ntot_xiarray(3,3)=10
        ntot_xiarray(4,3)=15
        ntot_xiarray(5,3)=21
+       ntot_xiarray(6,3)=28
        ! n=4
        CALL calc_all_integers(4,1,0,xiarray_0_4(1:1,1:4))
        factor_xiarray_0_4(1)=1d0
@@ -216,12 +234,21 @@ CONTAINS
                   DBLE(factorial(xiarray_5_4(j,k)))
           ENDDO
        ENDDO
+       CALL calc_all_integers(4,84,6,xiarray_6_4(1:84,1:4))
+       DO j=1,84
+          factor_xiarray_6_4(j)=DBLE(factorial(6))
+          DO k=1,4
+             factor_xiarray_6_4(j)=factor_xiarray_6_4(j)/&
+                  DBLE(factorial(xiarray_6_4(j,k)))
+          ENDDO
+       ENDDO
        ntot_xiarray(0,4)=1
        ntot_xiarray(1,4)=4
        ntot_xiarray(2,4)=10
        ntot_xiarray(3,4)=20
        ntot_xiarray(4,4)=35
        ntot_xiarray(5,4)=56
+       ntot_xiarray(6,4)=84
        ! n=5
        CALL calc_all_integers(5,1,0,xiarray_0_5(1:1,1:5))
        factor_xiarray_0_5(1)=1d0
@@ -265,12 +292,21 @@ CONTAINS
                   DBLE(factorial(xiarray_5_5(j,k)))
           ENDDO
        ENDDO
+       CALL calc_all_integers(5,210,6,xiarray_6_5(1:210,1:5))
+       DO j=1,210
+          factor_xiarray_6_5(j)=DBLE(factorial(6))
+          DO k=1,5
+             factor_xiarray_6_5(j)=factor_xiarray_6_5(j)/&
+                  DBLE(factorial(xiarray_6_5(j,k)))
+          ENDDO
+       ENDDO
        ntot_xiarray(0,5)=1
        ntot_xiarray(1,5)=5
        ntot_xiarray(2,5)=15
        ntot_xiarray(3,5)=35
        ntot_xiarray(4,5)=70
        ntot_xiarray(5,5)=126
+       ntot_xiarray(6,5)=210
        ifirst=1
     ENDIF
     IF(n.EQ.1.AND.i.GT.10)THEN
@@ -281,8 +317,8 @@ CONTAINS
        WRITE(*,*)"ERROR:ntot should be 1 when n=1 in all_integers"
        STOP
     ENDIF
-    IF(n.GE.2.AND.n.LE.5.AND.i.GT.5)THEN
-       WRITE(*,*)"ERROR: i is out of the range 5 for 2<=n<=5 in all_integers"
+    IF(n.GE.2.AND.n.LE.5.AND.i.GT.6)THEN
+       WRITE(*,*)"ERROR: i is out of the range 6 for 2<=n<=5 in all_integers"
        STOP
     ENDIF
     IF(n.GE.2.AND.n.LE.5)THEN
@@ -320,6 +356,9 @@ CONTAINS
              CASE(5)
                 sol(1:ntot,1:n)=xiarray_5_2(1:ntot,1:n)
                 factor(1:ntot)=factor_xiarray_5_2(1:ntot)
+             CASE(6)
+                sol(1:ntot,1:n)=xiarray_6_2(1:ntot,1:n)
+                factor(1:ntot)=factor_xiarray_6_2(1:ntot)
           END SELECT
        CASE(3)
           SELECT CASE(i)
@@ -341,6 +380,9 @@ CONTAINS
              CASE(5)
                 sol(1:ntot,1:n)=xiarray_5_3(1:ntot,1:n)
                 factor(1:ntot)=factor_xiarray_5_3(1:ntot)
+             CASE(6)
+                sol(1:ntot,1:n)=xiarray_6_3(1:ntot,1:n)
+                factor(1:ntot)=factor_xiarray_6_3(1:ntot)
           END SELECT
        CASE(4)
           SELECT CASE(i)
@@ -362,6 +404,9 @@ CONTAINS
              CASE(5)
                 sol(1:ntot,1:n)=xiarray_5_4(1:ntot,1:n)
                 factor(1:ntot)=factor_xiarray_5_4(1:ntot)
+             CASE(6)
+                sol(1:ntot,1:n)=xiarray_6_4(1:ntot,1:n)
+                factor(1:ntot)=factor_xiarray_6_4(1:ntot)
           END SELECT
        CASE(5)
           SELECT CASE(i)
@@ -383,6 +428,9 @@ CONTAINS
              CASE(5)
                 sol(1:ntot,1:n)=xiarray_5_5(1:ntot,1:n)
                 factor(1:ntot)=factor_xiarray_5_5(1:ntot)
+             CASE(6)
+                sol(1:ntot,1:n)=xiarray_6_5(1:ntot,1:n)
+                factor(1:ntot)=factor_xiarray_6_5(1:ntot)
           END SELECT
     END SELECT
     RETURN
