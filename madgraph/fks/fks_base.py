@@ -289,7 +289,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         for i, born in enumerate(self['born_processes']):
             logger.info('Generating virtual matrix elements using MadLoop:')
-            myproc = copy.copy(born.born_proc)
+            myproc = copy.copy(born.born_amp['process'])
             # take the orders that are actually used bu the matrix element
             myproc['orders'] = loop_orders
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
