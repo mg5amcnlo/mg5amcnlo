@@ -79,6 +79,7 @@ c statistics for MadLoop
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
       logical cpol
+      include 'orders.inc'
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -110,10 +111,28 @@ c splips unnoticed.
          tolerance=IRPoleCheckThreshold/10d0 ! for the pole check below
          call sloopmatrix_thres(p, virt_wgts, tolerance, accuracies,
      $        ret_code)
+C        look for orders which match the nlo order constraint 
+         do i = 1, nsqso
+           do j = 1, nsplitorders
+             if(getordpowfromindexV(j, i) .gt. nlo_orders(j)) then
+               keep_order(i) = .false.
+               exit
+             endif
+           enddo
+           if (keep_order(i)) then
+             write(*,*) 'VIRT: keeping split order ', i
+           else
+             write(*,*) 'VIRT: not keeping split order ', i
+           endif
+         enddo
          prec_found = accuracies(0)
-         virt_wgt= virt_wgts(1,0)/dble(ngluons)
-         single  = virt_wgts(2,0)/dble(ngluons)
-         double  = virt_wgts(3,0)/dble(ngluons)
+         do i = 1, nsqso
+           if (keep_order(i)) then
+             virt_wgt= virt_wgt + virt_wgts(1,i)/dble(ngluons)
+             single  = single + virt_wgts(2,i)/dble(ngluons)
+             double  = double + virt_wgts(3,i)/dble(ngluons)
+           endif
+         enddo
       else
          tolerance=PrecisionVirtualAtRunTime
 c Just set the accuracy found to a positive value as it is not specified
@@ -122,12 +141,17 @@ c once the initial pole check is performed.
             call sloopmatrix_thres(p,virt_wgts,tolerance,accuracies
      $           ,ret_code)
             prec_found = accuracies(0)            
-            virt_wgt= virt_wgts(1,0)/dble(ngluons)
-            single  = virt_wgts(2,0)/dble(ngluons)
-            double  = virt_wgts(3,0)/dble(ngluons)
-         elseif (mc_hel.eq.1) then
+            do i = 1, nsqso
+              if (keep_order(i)) then
+                virt_wgt= virt_wgt + virt_wgts(1,i)/dble(ngluons)
+                single  = single + virt_wgts(2,i)/dble(ngluons)
+                double  = double + virt_wgts(3,i)/dble(ngluons)
+              endif
+         enddo
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
+            write(*,*) 'MC over HEL not yet available for FKSEW'
+            stop
             call sborn_hel(p,born_wgt_recomp_direct)
             born_wgt_recomputed=0d0
             do ihel=1,hel(0)

@@ -28,6 +28,8 @@ C
       common /c_born_cnt/ ans_cnt
       integer ord_subtract
       data firsttime / .TRUE. /
+      double precision tiny
+      parameter (tiny = 1d-12)
 C
 C     FUNCTIONS
 C
@@ -92,14 +94,17 @@ enddo
 
 C quantities for the counterterms
 do j = 1, nsplitorders
- ans_cnt(1,j) = dcmplx(0d0, 0d0)
- ans_cnt(2,j) = dcmplx(0d0, 0d0)
+ ans_cnt(1,j) = (0d0, 0d0)
+ ans_cnt(2,j) = (0d0, 0d0)
  do i = 1, nsqampso
   if (keep_order_cnt(j,i)) then 
    ANS_CNT(1,j) = ANS_CNT(1,J) + ANS(1,I)
    ANS_CNT(2,j) = ANS_CNT(2,J) + ANS(2,I)
   endif
  enddo
+C this is to avoid fake non-zero contributions 
+ if (abs(ans_cnt(1,j)).lt.ans_summed*tiny) ans_cnt(1,j)=(0d0,0d0)
+ if (abs(ans_cnt(2,j)).lt.ans_summed*tiny) ans_cnt(2,j)=(0d0,0d0)
 enddo
 
 return
