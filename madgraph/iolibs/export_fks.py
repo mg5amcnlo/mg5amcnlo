@@ -458,10 +458,21 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                      matrix_element.extra_cnt_me_list, 
                                      fortran_model)
         for i, extra_cnt_me in enumerate(matrix_element.extra_cnt_me_list):
+            replace_dict = {}
+
+            replace_dict['nconfs'] = 1
+
+            den_factor_lines = self.get_den_factor_lines(matrix_element)
+            replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+
+            ij_lines = self.get_ij_lines(matrix_element)
+            replace_dict['ij_lines'] = '\n'.join(ij_lines)
+
             filename = 'born_cnt_%d.f' % (i+1)
             self.write_split_me_fks(writers.FortranWriter(filename),
-                                        fksreal.matrix_element, 
-                                        fortran_model, 'cnt', '%d' % (i+1))
+                                        extra_cnt_me, 
+                                        fortran_model, 'cnt', '%d' % (i+1),
+                                        replace_dict)
 
         self.write_pdf_calls(matrix_element, fortran_model)
 
@@ -1256,7 +1267,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """
 
         iflines = ''
-        for i, cnt in cnt_me_list:
+        for i, cnt in enumerate(cnt_me_list):
             mydict = {'icnt': i}
             if not iflines:
                 iflines += \
@@ -1405,6 +1416,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             file = open(pjoin(_file_path, \
             'iolibs/template_files/realmatrix_splitorders_fks.inc')).read()
         elif proc_type=='cnt':
+            # MZ this is probably not the best way to go
             file = open(pjoin(_file_path, \
             'iolibs/template_files/born_cnt_splitorders_fks.inc')).read()
 
