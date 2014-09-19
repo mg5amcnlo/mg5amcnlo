@@ -55,6 +55,9 @@ cc
       integer nfail
       logical first_time
       data first_time/.TRUE./
+      integer getordpowfromindex_ml5
+      logical, allocatable, save :: keep_order(:)
+      include 'orders.inc'
       
 C-----
 C  BEGIN CODE
@@ -63,6 +66,7 @@ C-----
           call get_nsqso_loop(nsqso)          
           allocate(virt_wgts(0:3,0:nsqso))
           allocate(accuracies(0:nsqso))
+          allocate(keep_order(nsqso))
           first_time = .false.
       endif
 
@@ -106,6 +110,9 @@ c initialization
       CALL FORCE_STABILITY_CHECK(.TRUE.)
 
 200   continue
+          finite=0d0
+          single=0d0
+          double=0d0
           calculatedborn = .false.
           if (nincoming.eq.1) then
               call rambo(0, nexternal-nincoming-1, pmass(1), 
@@ -170,9 +177,28 @@ c initialization
      1 accuracies,return_code)
           accuracy=accuracies(0)
 
-          finite = virt_wgts(1,0)/dble(ngluons)
-          single = virt_wgts(2,0)/dble(ngluons)
-          double = virt_wgts(3,0)/dble(ngluons)
+C        look for orders which match the nlo order constraint 
+         do i = 1, nsqso
+           keep_order(i) = .true.
+           do j = 1, nsplitorders
+             if(getordpowfromindex_ML5(j, i) .gt. nlo_orders(j)) then
+               keep_order(i) = .false.
+               exit
+             endif
+           enddo
+           if (keep_order(i)) then
+             write(*,*) 'VIRT: keeping split order ', i
+           else
+             write(*,*) 'VIRT: not keeping split order ', i
+           endif
+         enddo
+         do i = 1, nsqso
+           if (keep_order(i)) then
+             finite  = finite + virt_wgts(1,i)/dble(ngluons)
+             single  = single + virt_wgts(2,i)/dble(ngluons)
+             double  = double + virt_wgts(3,i)/dble(ngluons)
+           endif
+         enddo
 
 C         If MadLoop was still in initialization mode, then skip this
 C         point for the checks

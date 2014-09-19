@@ -79,6 +79,8 @@ c statistics for MadLoop
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
       logical cpol
+      integer getordpowfromindex_ml5
+      logical, allocatable, save :: keep_order(:)
       include 'orders.inc'
 c masses
       include 'pmass.inc'
@@ -99,6 +101,7 @@ c Ellis-Sexton scale)
          allocate(accuracies(0:nsqso))
          allocate(virt_wgts(0:3,0:MLResArrayDim))
          allocate(virt_wgts_hel(0:3,0:MLResArrayDim))
+         allocate(keep_order(nsqso))
 c Make sure that whenever in the initialisation phase, MadLoop calls
 c itself again to perform stability check to make sure no unstable EPS
 c splips unnoticed.
@@ -113,8 +116,9 @@ c splips unnoticed.
      $        ret_code)
 C        look for orders which match the nlo order constraint 
          do i = 1, nsqso
+           keep_order(i) = .true.
            do j = 1, nsplitorders
-             if(getordpowfromindexV(j, i) .gt. nlo_orders(j)) then
+             if(getordpowfromindex_ML5(j, i) .gt. nlo_orders(j)) then
                keep_order(i) = .false.
                exit
              endif
@@ -147,7 +151,8 @@ c once the initial pole check is performed.
                 single  = single + virt_wgts(2,i)/dble(ngluons)
                 double  = double + virt_wgts(3,i)/dble(ngluons)
               endif
-         enddo
+            enddo
+         elseif (mc_hel.eq.1) then
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
             write(*,*) 'MC over HEL not yet available for FKSEW'
