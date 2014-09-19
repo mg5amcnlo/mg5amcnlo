@@ -19,7 +19,6 @@ C
       INTEGER I,J,K
       include 'orders.inc'
       include 'coupl.inc'
-      double precision ans_summed
       COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
       LOGICAL  KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
       save keep_order_cnt 
@@ -28,7 +27,7 @@ C
 C
 C     FUNCTIONS
 C
-      integer GETORDPOWFROMINDEXB_CNT%(proc_prefix)s
+      integer GETORDPOWFROMINDEX_B_CNT%(proc_prefix)s
 C
 C BEGIN CODE
 C
@@ -46,7 +45,7 @@ C this is for the orders of the counterterms
     else
      ord_subtract=0
     endif
-    if(GETORDPOWFROMINDEXB_CNT%(proc_prefix)s(k, i) .gt. nlo_orders(k)-ord_subtract) then
+    if(GETORDPOWFROMINDEX_B_CNT%(proc_prefix)s(k, i) .gt. nlo_orders(k)-ord_subtract) then
      keep_order_cnt(j,i) = .false.
      EXIT 
     endif
@@ -108,7 +107,7 @@ C
       INTEGER NAMPSO, NSQAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
       INTEGER    THEL
-      PARAMETER (THEL=NCOMB*%(nconfs)d)
+      PARAMETER (THEL=NCOMB)
       INTEGER NGRAPHS
       PARAMETER (NGRAPHS=   %(ngraphs)d)
 C  
@@ -119,11 +118,10 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER IHEL,IDEN,i,j,jj,glu_ij
+      INTEGER IHEL,IDEN,i,glu_ij
       REAL*8 borns(2,NSQAMPSO)
-      COMPLEX*16 BORNTILDE
-      INTEGER NTRY(%(nconfs)d)
-      DATA NTRY /%(nconfs)d*0/
+      INTEGER NTRY
+      DATA NTRY / 0 /
       COMPLEX*16 T(2,NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1,NCOMB)
 %(helicity_lines)s
@@ -137,12 +135,12 @@ C use also the amp from the counterterms for the multichannelling
 C      Double Precision amp2(maxamps), jamp2(0:maxamps,0:NAMPSO)
 C      common/to_amps/  amp2,       jamp2
 C
-      DATA jamp2(0,0) /   %(ncolor)d/          
-      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
+C MZ      DATA jamp2(0,0) /   %(ncolor)d/          
+      LOGICAL GOODHEL(NCOMB)
       save goodhel
       double precision hel_fac
-      integer get_hel,skip(%(nconfs)d)
-      common/cBorn/hel_fac,get_hel,skip
+      integer get_hel,skip
+      common/cBorn_CNT%(proc_prefix)s/hel_fac,get_hel,skip
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
 C ----------
@@ -150,22 +148,22 @@ C BEGIN CODE
 C ----------
       iden=iden_values(nfksprocess)
       glu_ij = ij_values(nfksprocess)
-      NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
-      if (NTRY(nFKSprocess).lt.2) then
-         skip(nFKSprocess)=1			 
-         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.1)
-            skip(nFKSprocess)=skip(nFKSprocess)+1
+      NTRY=NTRY+1
+      if (NTRY.lt.2) then
+         skip=1			 
+         do while(nhel(glu_ij ,skip).ne.1)
+            skip=skip+1
          enddo
-         skip(nFKSprocess)=skip(nFKSprocess)-1
+         skip=skip-1
       endif
-      DO JJ=1,NGRAPHS
-          amp2(jj)=0d0
-      ENDDO
-      DO I=0,NAMPSO
-      DO JJ=1,int(jamp2(0,0))
-          jamp2(jj,I)=0d0
-      ENDDO
-      ENDDO
+c MZ      DO JJ=1,NGRAPHS
+c          amp2(jj)=0d0
+c      ENDDO
+c      DO I=0,NAMPSO
+c      DO JJ=1,int(jamp2(0,0))
+c          jamp2(jj,I)=0d0
+c      ENDDO
+c MZ      ENDDO
       DO I=0,NSQAMPSO
           ANS(1,I) = 0D0
           ANS(2,I) = 0D0
@@ -173,18 +171,18 @@ C ----------
       hel_fac=1d0
       DO IHEL=1,NCOMB
         if (nhel(glu_ij,ihel).le.0) then
-          IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
+          IF ((GOODHEL(IHEL) .OR. GOODHEL(IHEL+SKIP) .OR. NTRY .LT. 2) ) THEN
             
             CALL BORN_CNT%(proc_prefix)s(P1,NHEL(1,IHEL),IHEL,T,borns)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
             ENDDO
-            if ( borns(1,1).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess) ) then
-              GOODHEL(IHEL,nFKSprocess)=.TRUE.
+            if ( borns(1,1).ne.0d0 .AND. .NOT. GOODHEL(IHEL) ) then
+              GOODHEL(IHEL)=.TRUE.
             endif
-            if ( borns(2,1).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) ) then
-              GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess)=.TRUE.
+            if ( borns(2,1).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP) ) then
+              GOODHEL(IHEL+SKIP)=.TRUE.
             endif
 	  ENDIF
         ENDIF
@@ -247,20 +245,20 @@ C MZ uncomment and change these lines if we'll decide to
 C use also the amp from the counterterms for the multichannelling
 C      double precision amp2(maxamps), jamp2(0:maxamps,nampso)
 C      common/to_amps/  amp2,       jamp2
-C      double complex saveamp(ngraphs,max_bhel)
-C      common/to_saveamp/saveamp
+      double complex saveamp(ngraphs,max_bhel)
+      common/to_saveamp/saveamp
       double precision hel_fac
-      integer get_hel,skip(%(nconfs)d)
-      common/cBorn/hel_fac,get_hel,skip
+      integer get_hel,skip
+      common/cBorn_CNT%(proc_prefix)s/hel_fac,get_hel,skip
       logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
+      common/ccalculatedBorn_CNT%(proc_prefix)s/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
 
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEXB
+      INTEGER SQSOINDEXB_CNT%(proc_prefix)s
 
 %(ij_lines)s
 C  
@@ -270,6 +268,9 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+
+C don't chache for extra counterterms
+      calculatedBorn=.false.
       glu_ij = ij_values(nfksprocess)
       DO I = 1, NSQAMPSO
         ANS(1,I)=0D0
@@ -287,9 +288,9 @@ C ----------
           if(ihel.eq.-1)then
             saveamp(i,hell)=amp(i)
           elseif(ihel.eq.1)then
-            saveamp(i,hell+skip(nFKSprocess))=amp(i)
+            saveamp(i,hell+skip)=amp(i)
           else
-            write(*,*) "ERROR #1 in born.f"
+            write(*,*) "ERROR #1 in born_cnt_%(proc_prefix)s.f"
             stop
           endif
         enddo
@@ -298,9 +299,9 @@ C ----------
           if(ihel.eq.-1)then
             amp(i)=saveamp(i,hell)
           elseif(ihel.eq.1)then
-            amp(i)=saveamp(i,hell+skip(nFKSprocess))
+            amp(i)=saveamp(i,hell+skip)
           else
-            write(*,*) "ERROR #1 in born.f"
+            write(*,*) "ERROR #1 in born_cnt_%(proc_prefix)s.f"
             stop
           endif
         enddo
@@ -345,17 +346,6 @@ c          Jamp2(i,J)=Jamp2(i,J)+Jamp(i,J)*dconjg(Jamp(i,J))
       nhel(glu_ij) = back_hel
       END
        
-
-      BLOCK DATA GOODHELS
-      INTEGER     NCOMB
-      PARAMETER ( NCOMB=  %(ncomb)d )
-      INTEGER    THEL
-      PARAMETER (THEL=NCOMB*%(nconfs)d)
-      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
-      common /c_goodhel/goodhel
-      DATA GOODHEL/THEL*.FALSE./
-      end
-
 
 
 C

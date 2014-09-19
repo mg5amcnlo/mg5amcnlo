@@ -53,7 +53,7 @@
 ! this to '-1' if you want to forbid the use of this method
 ! altogether.
 #NHelForMCoverHels
-4
+-1
 ! Default :: 4
 !
 ! This parameter sets for which fraction of the events the virtual

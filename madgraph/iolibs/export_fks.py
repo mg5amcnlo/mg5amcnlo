@@ -460,9 +460,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for i, extra_cnt_me in enumerate(matrix_element.extra_cnt_me_list):
             replace_dict = {}
 
-            replace_dict['nconfs'] = 1
-
-            den_factor_lines = self.get_den_factor_lines(matrix_element)
+            den_factor_lines = self.get_den_factor_lines(matrix_element,
+                                                         extra_cnt_me)
             replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
 
             ij_lines = self.get_ij_lines(matrix_element)
@@ -1268,7 +1267,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         iflines = ''
         for i, cnt in enumerate(cnt_me_list):
-            mydict = {'icnt': i}
+            mydict = {'icnt': i+1}
             if not iflines:
                 iflines += \
                    'if (icnt.eq.%(icnt)d) then\n call sborn_cnt%(icnt)d(p,cnts)\n' % \
@@ -2158,6 +2157,27 @@ Parameters              %(params)s\n\
 
         bool_dict = {True: '.true.', False: '.false.'}
 
+        # extra array to be filled, with the type of the splitting of the born and of the extra cnt
+        isplitorder_born = []
+        isplitorder_cnt = []
+        for info in fks_info_list:
+            # fill 0 if no extra_cnt is needed
+            if info['fks_info']['extra_cnt_index'] == -1:
+                isplitorder_born.append(0)
+                isplitorder_cnt.append(0)
+            else:
+                # the 0th component of split_type correspond to the born, the 1st
+                # to the extra_cnt
+                isplitorder_born.append(split_orders.index(
+                                        info['fks_info']['splitting_type'][0]) + 1)
+                isplitorder_cnt.append(split_orders.index(
+                                       info['fks_info']['splitting_type'][1]) + 1)
+
+        replace_dict['isplitorder_born_values'] = \
+                        ', '.join(['%d' % n for n in isplitorder_born])
+        replace_dict['isplitorder_cnt_values'] = \
+                        ', '.join(['%d' % n for n in isplitorder_cnt])
+
         col_lines = []
         pdg_lines = []
         charge_lines = []
@@ -2622,17 +2642,21 @@ Parameters              %(params)s\n\
     #===============================================================================
     # get_den_factor_lines
     #===============================================================================
-    def get_den_factor_lines(self, fks_born):
+    def get_den_factor_lines(self, fks_born, born_me=None):
         """returns the lines with the information on the denominator keeping care
-        of the identical particle factors in the various real emissions"""
+        of the identical particle factors in the various real emissions
+        If born_me is procided, it is used instead of fksborn.born_me"""
+        
+        if not born_me:
+            born_me = fks_born.born_me
     
         lines = []
         info_list = fks_born.get_fks_info_list()
         lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
         lines.append('DATA IDEN_VALUES /' + \
                      ', '.join(['%d' % ( 
-                     fks_born.born_me.get_denominator_factor() / \
-                     fks_born.born_me['identical_particle_factor'] * \
+                     born_me.get_denominator_factor() / \
+                     born_me['identical_particle_factor'] * \
                      fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
                      for info in info_list]) + '/')
 

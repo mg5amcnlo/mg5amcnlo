@@ -2800,6 +2800,9 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       common /c_split_type/split_type
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
       common /c_born_cnt/ ans_cnt
+      double complex ans_extra_cnt(2,nsplitorders)
+      integer iextra_cnt, isplitorder_born, isplitorder_cnt
+      common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
 C  
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
@@ -2823,16 +2826,36 @@ c might flip when rotating the momenta.
         CalculatedBorn=.false.
         call sborn(p_born_rot,wgt_born)
         CalculatedBorn=.false.
+        if (iextra_cnt.gt.0)
+     1    call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
       else
         call sborn(p_born,wgt_born)
+        if (iextra_cnt.gt.0)
+     1    call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
       endif
       call AP_reduced(j_type,i_type,ch_j,ch_i,t,z,ap)
       call Qterms_reduced_timelike(j_type,i_type,ch_i,ch_j,t,z,Q)
       wgt=0d0
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
-        wgt1(1) = ans_cnt(1,iord)
-        wgt1(2) = ans_cnt(2,iord)
+C check if any extra_cnt is needed
+        if (iextra_cnt.gt.0) then
+            if (iord.eq.isplitorder_born) then
+            ! this is the contribution from the born ME
+               wgt1(1) = ans_cnt(1,iord)
+               wgt1(2) = ans_cnt(2,iord)
+            else if (iord.eq.isplitorder_cnt) then
+            ! this is the contribution from the extra cnt
+               wgt1(1) = ans_extra_cnt(1,iord)
+               wgt1(2) = ans_extra_cnt(2,iord)
+            else
+               write(*,*) 'ERROR in sborncol_fsr', iord
+               stop
+            endif
+        else
+           wgt1(1) = ans_cnt(1,iord)
+           wgt1(2) = ans_cnt(2,iord)
+        endif
         if ((abs(j_type).eq.3 .and.i_type.eq.8) .or.
      #      (dabs(ch_j).ne.0d0 .and.ch_i.eq.0d0)) then
            Q(1)=0d0
@@ -2937,6 +2960,9 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       common /c_split_type/split_type
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
       common /c_born_cnt/ ans_cnt
+      double complex ans_extra_cnt(2,nsplitorders)
+      integer iextra_cnt, isplitorder_born, isplitorder_cnt
+      common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
 C  
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
@@ -2965,16 +2991,36 @@ c might flip when rotating the momenta.
         CalculatedBorn=.false.
         call sborn(p_born_rot,wgt_born)
         CalculatedBorn=.false.
+        if (iextra_cnt.gt.0)
+     1    call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
       else
         call sborn(p_born,wgt_born)
+        if (iextra_cnt.gt.0)
+     1    call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
       endif
       call AP_reduced(m_type,i_type,ch_m,ch_i,t,z,ap)
       call Qterms_reduced_spacelike(m_type,i_type,ch_m,ch_i,t,z,Q)
       wgt=0d0
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
-        wgt1(1) = ans_cnt(1,iord)
-        wgt1(2) = ans_cnt(2,iord)
+C check if any extra_cnt is needed
+        if (iextra_cnt.gt.0) then
+            if (iord.eq.isplitorder_born) then
+            ! this is the contribution from the born ME
+               wgt1(1) = ans_cnt(1,iord)
+               wgt1(2) = ans_cnt(2,iord)
+            else if (iord.eq.isplitorder_cnt) then
+            ! this is the contribution from the extra cnt
+               wgt1(1) = ans_extra_cnt(1,iord)
+               wgt1(2) = ans_extra_cnt(2,iord)
+            else
+               write(*,*) 'ERROR in sborncol_isr', iord
+               stop
+            endif
+        else
+           wgt1(1) = ans_cnt(1,iord)
+           wgt1(2) = ans_cnt(2,iord)
+        endif
         if (abs(m_type).eq.3.or.ch_m.ne.0d0) then
            Q(1)=0d0
            Q(2)=0d0

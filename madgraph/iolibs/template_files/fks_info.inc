@@ -1,6 +1,6 @@
       INTEGER IPOS, JPOS
       INTEGER FKS_I_D(%(nconfs)d), FKS_J_D(%(nconfs)d)
-      INTEGER EXTRA_CNT_D(%(nconfs)d)
+      INTEGER EXTRA_CNT_D(%(nconfs)d), ISPLITORDER_BORN_D(%(nconfs)d), ISPLITORDER_CNT_D(%(nconfs)d)
       INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
       REAL*8 PARTICLE_CHARGE_D(%(nconfs)d, NEXTERNAL)
@@ -19,8 +19,12 @@ C     Split type: the order of elements is %(splitorders_name)s
 %(split_type_lines)s
 
 C     Extra cnt: if the real emission needs an extra cnt (g/a > qqbar), then
-C     this is the id of the extra cnt. Otherwise it should be set to 0
+C     this is the id of the extra cnt. Otherwise it should be set to 0.
+C     If not 0, store also the position in the splitorders array of the 
+C     coupling corresponding to the splitting type
 data extra_cnt_D / %(extra_cnt_values)s /
+data isplitorder_born_D / %(isplitorder_born_values)s /
+data isplitorder_cnt_D / %(isplitorder_cnt_values)s /
 
 C     
 C     Particle type:
