@@ -2335,13 +2335,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.create_root_file('%s/unweighted_events.lhe' % self.run_name,
                                   '%s/unweighted_events.root' % self.run_name)
             
-        
-        self.create_plot('parton', '%s/%s/unweighted_events.lhe' %
-                         (pjoin(self.me_dir, 'Events'),self.run_name),
+        path = pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe")        
+        self.create_plot('parton', path,
                          pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
                          )
         
-        misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
+
+        if not os.path.exists('%s.gz' % path):        
+            misc.gzip(path)
 
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
