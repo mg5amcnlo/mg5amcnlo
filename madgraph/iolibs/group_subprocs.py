@@ -27,6 +27,7 @@ import shutil
 import subprocess
 
 import madgraph.core.base_objects as base_objects
+import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
@@ -114,7 +115,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         self['diagram_maps'] = {}
         self['diagrams_for_configs'] = []
         self['amplitude_map'] = {}
-        
+        self['matrix_element_opts'] = {}
 
     def filter(self, name, value):
         """Filter for valid property values."""
@@ -148,6 +149,11 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid dict object" % str(value)
+
+        if name == 'matrix_element_opts':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dictionary object" % str(value)
 
         return True
 
@@ -196,9 +202,12 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         amplitudes = copy.copy(self.get('amplitudes'))
 
+        # The conditional statement tests whether we are dealing with a 
+        # loop induced process.
         if isinstance(amplitudes[0], loop_diagram_generation.LoopAmplitude):
             self.set('matrix_elements', 
-                    loop_helas_objects.LoopHelasProcess.generate_matrix_elements(amplitudes))
+              loop_helas_objects.LoopHelasProcess.generate_matrix_elements(
+              amplitudes, matrix_element_opts = self['matrix_element_opts']))
         else:
             self.set('matrix_elements',
                  helas_objects.HelasMultiProcess.\
@@ -297,7 +306,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
         masswidth_to_pdg = {}
 
         for ime, me in enumerate(matrix_elements):
-            diagrams = me.get('base_amplitude').get('diagrams')
+            diagrams = [d.get_contracted_loop_diagram() if isinstance(d, 
+                                loop_base_objects.LoopDiagram) else d for d 
+                                    in me.get('base_amplitude').get('diagrams')]
             # Check the minimal number of legs we need to include in order
             # to make sure we'll have some valid configurations
             max_legs = min([max([len(v.get('legs')) for v in \
@@ -358,7 +369,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
     # group_amplitudes
     #===========================================================================
     @staticmethod
-    def group_amplitudes(amplitudes, criteria='madevent'):
+    def group_amplitudes(amplitudes, criteria='madevent', matrix_elements_opts={}):
         """Return a SubProcessGroupList with the amplitudes divided
         into subprocess groups"""
 
@@ -377,7 +388,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         for num in process_class_numbers:
             amp_nums = [key for (key, val) in process_classes.items() if \
                           val == num]
-            group = SubProcessGroup()
+            group = SubProcessGroup({'matrix_element_opts':matrix_elements_opts})
             group.set('amplitudes',
                       diagram_generation.AmplitudeList([amplitudes[i] for i in \
                                                         amp_nums]))

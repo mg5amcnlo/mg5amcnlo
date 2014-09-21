@@ -25,6 +25,7 @@ import re
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
+import madgraph.various.misc as misc
 from madgraph import MadGraph5Error, MG5DIR
 
 logger = logging.getLogger('madgraph.loop_base_objects')
@@ -191,26 +192,102 @@ class LoopDiagram(base_objects.Diagram):
         """ Returns a base_objects.Diagram which correspond to this loop diagram
         with the loop shrunk to a point."""
         
+        if self['type']<=0:
+            return copy.copy(self)
+
         if self['contracted_diagram']:
             return self['contracted_diagram']
-        
-        if not struct_rep:
-            raise MadGraph5Error, "Function get_contracted_loop_diagram() called"+\
-                            " for the first time without specifying struct_rep." 
-                    
+
         contracted_diagram_vertices = base_objects.VertexList()
-        contracted_vertex = base_objects.Vertex({'id':-1})
+        # We have to give this vertex an id which is not special (i.e. negative)
+        # so we pick 1 here even though it has nothing to do with interaction #1.
+        # If this id played a role, it would mean that using the contracted
+        # loop diagram is anyway not appropriate
+        contracted_vertex = base_objects.ContractedVertex({'id':1})
+        
+        # If we don't have tagging information we will have to reconstruct the
+        # contracted diagrams with the unordered vertices
+        if not struct_rep or len(self['tag'])==0:
+            
+            if len(self.get('vertices'))==0:
+                raise MadGraph5Error, "Function get_contracted_loop_diagram()"+\
+                    "called for the first time without specifying struct_rep "+\
+                                                "for a diagram already tagged."
+                                    
+            # The leg below will be the outgoing one 
+            contracted_vertex_last_loop_leg = None
+            # List here the vertices which have to appear after and before the
+            # contracted loop vertex.
+            vertices_after_contracted_vertex = []
+            vertices_before_contracted_vertex = []
+            # To know if a given vertex must be placed after or before the
+            # the contracted loop vertex, we must now the list of leg numbers
+            # which have been "generated" starting from the one outgoing leg of
+            # the contracted loop vertex.
+            contracted_vertex_leg_daughters_nb = []
+                                                
+            # We need a different treatment for the amplitude-type vertex 
+            # (the last one) for which all legs are incoming.
+            for vertex in self.get('vertices')[:-1]:
+                # If the interaction had nothing to do with a loop, just add it
+                if not any(l['loop_line'] for l in vertex.get('legs')):
+                    # before the contracted vertex if it didn't need any of 
+                    # the leg numbers it generated
+                    if any((l.get('number') in contracted_vertex_leg_daughters_nb) \
+                                              for l in vertex.get('legs')[:-1]):
+                        vertices_after_contracted_vertex.append(vertex)
+                        contracted_vertex_leg_daughters_nb.append(vertex.get('legs')[-1])
+                    else:
+                        vertices_before_contracted_vertex.append(vertex)
+                else:
+                    # Add to the mothers of the contracted vertex
+                    contracted_vertex.get('legs').extend(
+                       [l for l in vertex.get('legs')[:-1] if not l['loop_line']])
+                    # Extend the list of PDGs making up this interaction.
+                    # This is useful for the DigramChainTag.
+                    contracted_vertex.get('PDGs').extend([l.get('id') for l in
+                                      vertex.get('legs') if not l['loop_line']])
+                    # If the outgoing leg is not a loop line but the vertex still
+                    # has two loop lines as mothers, then it is the vertex that we 
+                    # must replace by the contracted loop vertex
+                    if not vertex.get('legs')[-1]['loop_line']:
+                        # The contracted vertex is not of amplitude type here
+                        contracted_vertex_last_loop_leg = vertex.get('legs')[-1]
+                        
+            # Treat the last vertex now
+            if any(l['loop_line'] for l in self.get('vertices')[-1].get('legs')):
+                # Add to the mothers of the contracted vertex
+                contracted_vertex.get('legs').extend([l for l in 
+                    self.get('vertices')[-1].get('legs') if not l['loop_line']])
+
+            else:
+                vertices_after_contracted_vertex.append(self.get('vertices')[-1])
+                
+            contracted_diagram_vertices.extend(vertices_before_contracted_vertex)
+            if not contracted_vertex_last_loop_leg is None:
+                contracted_vertex.get('legs').append(contracted_vertex_last_loop_leg)
+            contracted_diagram_vertices.append(contracted_vertex)
+            contracted_diagram_vertices.extend(vertices_after_contracted_vertex)
+
+        # In the case where the 'tag' information is available, the 
+        # construction of the contracted diagram is much simpler.
         # First scan all structures to add their vertices and at the same time
         # construct the legs of the final vertex which corresponds the the
         # shrunk loop.
-        for tagelem in self['tag']:
-            contracted_vertex.get('legs').extend([struct_rep[
+        else:
+            for tagelem in self['tag']:
+                contracted_vertex.get('legs').extend([struct_rep[
                      struct_ID].get('binding_leg') for struct_ID in tagelem[1]])
-            contracted_diagram_vertices.extend(sum([struct_rep[
+                # Extend the list of PDGs making up this interaction.
+                # This is useful for the DigramChainTag.
+                contracted_vertex.get('PDGs').extend([struct_rep[struct_ID].
+                      get('binding_leg').get('id') for struct_ID in tagelem[1]])     
+                contracted_diagram_vertices.extend(sum([struct_rep[
                     struct_ID].get('vertices') for struct_ID in tagelem[1]],[]))
         
-        # Add the shrunk vertex to the contracted diagram vertices list.
-        contracted_diagram_vertices.append(contracted_vertex)
+                # Add the shrunk vertex to the contracted diagram vertices list.
+                contracted_diagram_vertices.append(contracted_vertex)
+
         contracted_diagram = base_objects.Diagram(
            {'vertices':contracted_diagram_vertices,'orders':self.get('orders')})
         self['contracted_diagram'] = contracted_diagram

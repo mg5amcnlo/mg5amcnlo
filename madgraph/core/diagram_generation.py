@@ -62,13 +62,12 @@ class DiagramTag(object):
         """Exception for any problems in DiagramTags"""
         pass
 
-    def __init__(self, diagram, model=None, ninitial=2, struct_rep=None):
+    def __init__(self, diagram, model=None, ninitial=2):
         """Initialize with a diagram. Create DiagramTagChainLinks according to
         the diagram, and figure out if we need to shift the central vertex."""
 
         # wf_dict keeps track of the intermediate particles
         leg_dict = {}
-        
         # Create the chain which will be the diagram tag
         for vertex in diagram.get('vertices'):
             # Only add incoming legs
@@ -162,9 +161,7 @@ class DiagramTag(object):
         if not first_vertex:
             # This corresponds to a wavefunction with a resulting leg
             # Need to create the resulting leg from legs and vertex id
-            last_leg = cls.leg_from_legs(legs,
-                                         cls.id_from_vertex_id(link.vertex_id),
-                                         model)
+            last_leg = cls.leg_from_legs(legs,link.vertex_id,model)
             legs.append(last_leg)
             
         # Now create and append this vertex
@@ -179,12 +176,26 @@ class DiagramTag(object):
             # Return leg and list of vertices
             return last_leg, vertices
 
-    @staticmethod
-    def leg_from_legs(legs, vertex_id, model):
+    @classmethod
+    def legPDGs_from_vertex_id(cls, vertex_id,model):
+        """Returns the list of external PDGs of the interaction corresponding 
+        to this vertex_id."""
+        
+        # In case we have to deal with a regular vertex, we return the list
+        # external PDGs as given by the model information on that integer 
+        # vertex id.
+        if (len(vertex_id)>=3 and 'PDGs' in vertex_id[2]):
+            return vertex_id[2]['PDGs']
+        else:
+            return [part.get_pdg_code() for part in model.get_interaction(
+                             cls.id_from_vertex_id(vertex_id)).get('particles')]
+
+    @classmethod
+    def leg_from_legs(cls,legs, vertex_id, model):
         """Return a leg from a leg list and the model info"""
 
-        pdgs = [part.get_pdg_code() for part in \
-                model.get_interaction(vertex_id).get('particles')]
+        pdgs = cls.legPDGs_from_vertex_id(vertex_id, model)
+
         # Extract the resulting pdg code from the interaction pdgs
         for pdg in [leg.get('id') for leg in legs]:
             pdgs.remove(pdg)
@@ -256,9 +267,13 @@ class DiagramTag(object):
         """Returns the default vertex id: just the interaction id
            Note that in the vertex id, like the leg, only the first entry is
            taken into account in the tag comparison, while the second is for 
-           storing information that is not to be used in comparisons."""
+           storing information that is not to be used in comparisons and the 
+           third for additional info regarding the shrunk loop vertex."""
 
-        return (vertex.get('id'),)
+        if isinstance(vertex,base_objects.ContractedVertex):
+            return (vertex.get('id'),(),{'PDGs':vertex.get('PDGs')})
+        else:
+            return (vertex.get('id'),(),{})
 
     @staticmethod
     def flip_vertex(new_vertex, old_vertex, links):

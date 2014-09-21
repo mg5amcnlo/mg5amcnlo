@@ -285,13 +285,13 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             right_num = -1
             for num, link in enumerate(self.tag.links):
                 if len(link.vertex_id) == 2 and \
-                        link.vertex_id[-1][-1] == final_leg:
+                        link.vertex_id[1][-1] == final_leg:
                     right_num = num
             if right_num == -1:
                 # We need to look for leg number 1 instead
                 for num, link in enumerate(self.tag.links):
                     if len(link.vertex_id) == 2 and \
-                       link.vertex_id[-1][-1] == 1:
+                       link.vertex_id[1][-1] == 1:
                         right_num = num
             if right_num == -1:
                 # This should never happen
@@ -441,28 +441,37 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the info needed to identify configs:
-        interaction color, mass, width. Also provide propagator PDG code."""
-
-        inter = model.get_interaction(vertex.get('id'))
+        interaction color, mass, width. Also provide propagator PDG code.
+        The third element of the tuple vertex_id serves to store potential
+        necessary information regarding the shrunk loop."""
+        if isinstance(vertex,base_objects.ContractedVertex):
+            inter = None
+            loop_info = {'PDGs':vertex.get('PDGs')}
+        else:
+            # Not that it is going to be used here, but it might be eventually
+            inter = model.get_interaction(vertex.get('id'))
+            loop_info = {}
 
         if last_vertex:
             return ((0,),
                     (vertex.get('id'),
-                     min([l.get('number') for l in vertex.get('legs')])))
+                     min([l.get('number') for l in vertex.get('legs')])),
+                     loop_info)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             return ((part.get('color'),
                      part.get('mass'), part.get('width')),
                     (vertex.get('id'), 
                      vertex.get('legs')[-1].get('onshell'),
-                     vertex.get('legs')[-1].get('number')))
+                     vertex.get('legs')[-1].get('number')),
+                     loop_info)
 
     @staticmethod
     def flip_vertex(new_vertex, old_vertex, links):
         """Move the wavefunction part of propagator id appropriately"""
 
         # Find leg numbers for new vertex
-        min_number = min([l.vertex_id[-1][-1] for l in links if not l.end_link]\
+        min_number = min([l.vertex_id[1][-1] for l in links if not l.end_link]\
                          + [l.links[0][1][0] for l in links if l.end_link])
 
         if len(new_vertex[0]) == 1 and len(old_vertex[0]) > 1:
@@ -504,7 +513,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
     def id_from_vertex_id(vertex_id):
         """Return the numerical vertex id from a link.vertex_id"""
 
-        return vertex_id[-1][0]
+        return vertex_id[1][0]
 
 
 #===============================================================================
@@ -2904,7 +2913,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         max_final_leg = 2
         if reverse_t_ch:
             max_final_leg = 1
-        tag = CanonicalConfigTag(self.get_base_diagram(wf_dict), model)
+        tag = CanonicalConfigTag(self.get_base_diagram(wf_dict).
+                                           get_contracted_loop_diagram(), model)
         diagram = tag.diagram_from_tag(model)
         return tag.get_s_and_t_channels(ninitial, model, new_pdg, max_final_leg)
 

@@ -5898,15 +5898,19 @@ This implies that with decay chains:
                               isinstance(amp, \
                                          diagram_generation.DecayChainAmplitude)])
                     subproc_groups = group_subprocs.SubProcessGroupList()
+                    matrix_elements_opts = {'optimized_output':
+                                       self.options['loop_optimized_output']}
                     if non_dc_amps:
                         subproc_groups.extend(\
-                            group_subprocs.SubProcessGroup.group_amplitudes(\
-                                                non_dc_amps, self._export_format))
+                          group_subprocs.SubProcessGroup.group_amplitudes(\
+                          non_dc_amps, self._export_format, 
+                                     matrix_elements_opts=matrix_elements_opts))
 
                     if dc_amps:
                         dc_subproc_group = \
                                   group_subprocs.DecayChainSubProcessGroup.\
-                                  group_amplitudes(dc_amps, self._export_format)
+                                  group_amplitudes(dc_amps, self._export_format,
+                                      matrix_elements_opts=matrix_elements_opts)
                         subproc_groups.extend(dc_subproc_group.\
                                     generate_helas_decay_chain_subproc_groups())
 
@@ -5921,10 +5925,20 @@ This implies that with decay chains:
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
                     mode = {}
-                    if self._export_format in [ 'standalone_msP' , 'standalone_msF', 'standalone_rw']:
+                    if self._export_format in [ 'standalone_msP' , 
+                                             'standalone_msF', 'standalone_rw']:
                         mode['mode'] = 'MadSpin'
-                    self._curr_matrix_elements = \
-                       helas_objects.HelasMultiProcess(self._curr_amps, matrix_element_opts=mode)
+                    # The conditional statement tests whether we are dealing
+                    # with a loop induced process.
+                    if isinstance(self._curr_amps[0], 
+                                         loop_diagram_generation.LoopAmplitude):
+                        mode['optimized_output']=self.options['loop_optimized_output']
+                        HelasMultiProcessClass = loop_helas_objects.LoopHelasProcess
+                    else:
+                        HelasMultiProcessClass = helas_objects.HelasMultiProcess
+                    
+                    self._curr_matrix_elements = HelasMultiProcessClass(
+                                      self._curr_amps, matrix_element_opts=mode)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
@@ -5956,7 +5970,6 @@ This implies that with decay chains:
         # First treat madevent and pythia8 exports, where we need to
         # distinguish between grouped and ungrouped subprocesses
 
-        misc.sprint(type(self._curr_exporter))
         # MadEvent
         if self._export_format == 'madevent':
             if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
@@ -5971,7 +5984,6 @@ This implies that with decay chains:
                     calls = calls + \
                             self._curr_exporter.generate_subprocess_directory_v4(\
                                 me, self._curr_fortran_model, me_number)
-
 
             # Write the procdef_mg5.dat file with process info
             card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
@@ -6100,6 +6112,7 @@ This implies that with decay chains:
     def finalize(self, nojpeg, online = False):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
+        
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
                                    'standalone_msF', 'standalone_rw', 'NLO', 'madweight']:
 

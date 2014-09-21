@@ -2139,6 +2139,42 @@ class VertexList(PhysicsObjectList):
         if isinstance(orders, dict):
             self.orders = orders
 
+#===============================================================================
+# ContractedVertex
+#===============================================================================
+class ContractedVertex(Vertex):
+    """ContractedVertex: When contracting a loop to a given vertex, the created
+    vertex object is then a ContractedVertex object which has additional 
+    information with respect to a regular vertex object. For example, it contains
+    the PDG of the particles attached to it. (necessary because the contracted
+    vertex doesn't have an interaction ID which would allow to retrieve such
+    information).
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['PDGs'] = []
+        super(ContractedVertex, self).default_setup()
+
+    def filter(self, name, value):
+        """Filter for valid vertex property values."""
+
+        if name == 'PDGs':
+            if not isinstance(value, list):
+                for elem in value:
+                    if not isinstance(elem,int):
+                        raise self.PhysicsObjectError, \
+                            "%s is not a valid integer for leg PDG" % str(elem)
+        else:
+            return super(ContractedVertex, self).filter(name, value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+
+        return super(ContractedVertex, self).get_sorted_keys()+['PDGs']
 
 #===============================================================================
 # Diagram
@@ -2238,6 +2274,13 @@ class Diagram(PhysicsObject):
         except Exception:
             return 0
 
+    def get_contracted_loop_diagram(self, struct_rep=None):
+        """ Returns a Diagram which correspond to the loop diagram with the 
+        loop shrunk to a point. Of course for a instance of base_objects.Diagram
+        one must simply return self."""
+        
+        return self
+        
     def renumber_legs(self, perm_map, leg_list):
         """Renumber legs in all vertices according to perm_map"""
         vertices = VertexList()
@@ -2854,14 +2897,15 @@ class Process(PhysicsObject):
         # Remove last space
         return mystr[:-1]
 
-    def shell_string(self, schannel=True, forbid=True, main=True, pdg_order=False):
+    def shell_string(self, schannel=True, forbid=True, main=True, pdg_order=False,
+                                                                print_id = True):
         """Returns process as string with '~' -> 'x', '>' -> '_',
         '+' -> 'p' and '-' -> 'm', including process number,
         intermediate s-channels and forbidden particles,
         pdg_order allow to order to leg order by pid."""
 
         mystr = ""
-        if not self.get('is_decay_chain'):
+        if not self.get('is_decay_chain') and print_id:
             mystr += "%d_" % self['id']
         
         prevleg = None
