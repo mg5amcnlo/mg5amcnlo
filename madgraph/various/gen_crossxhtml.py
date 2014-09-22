@@ -21,6 +21,7 @@ import re
 import pickle
 import re
 import glob
+import logging
 
 try:
     import internal.files as files
@@ -34,6 +35,7 @@ except ImportError:
     import madgraph.various.misc as misc
 pjoin = os.path.join
 exists = os.path.exists
+logger = logging.getLogger('madgraph.stdout') # -> stdout
 
 
 
