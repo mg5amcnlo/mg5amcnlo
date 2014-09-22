@@ -240,7 +240,7 @@ class FKSHelasProcess(object):
             real_amps_new = []
 
             for extra_cnt in fksproc.extra_cnt_amp_list:
-                self.extra_cnt_me_list.append(helas_objects.HelasMatrixElement(extra_cnt, **opts))
+                self.extra_cnt_me_list.append(helas_objects.HelasMatrixElement(extra_cnt,gen_color=True))
 
             # combine for example u u~ > t t~ and c c~ > t t~
             for proc in fksproc.real_amps:
