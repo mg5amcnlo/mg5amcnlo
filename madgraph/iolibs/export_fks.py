@@ -1265,25 +1265,53 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         present e.g. if the process has gluon at the born
         """
 
-        iflines = ''
-        for i, cnt in enumerate(cnt_me_list):
-            mydict = {'icnt': i+1}
-            if not iflines:
-                iflines += \
-                   'if (icnt.eq.%(icnt)d) then\n call sborn_cnt%(icnt)d(p,cnts)\n' % \
-                        mydict
-            else:
-                iflines += \
-                   'else if (icnt.eq.%(icnt)d) then\n call sborn_cnt%(icnt)d(p,cnts)\n' % \
-                        mydict
+        replace_dict = {'ncnt': max(len(cnt_me_list),1)}
 
-        if iflines:
+        # this is the trivial case with no cnt.
+        # fill everything with 0s (or 1 for color)
+        if not cnt_me_list:
+            replace_dict['cnt_charge_lines'] = \
+                    "data (cnt_charge(1,i), i=1,nexternalB) / nexternalB * 0d0 /" 
+            replace_dict['cnt_color_lines'] = \
+                    "data (cnt_color(1,i), i=1,nexternalB) / nexternalB * 1 /" 
+            replace_dict['cnt_pdg_lines'] = \
+                    "data (cnt_pdg(1,i), i=1,nexternalB) / nexternalB * 0 /" 
+
+            replace_dict['iflines'] = ''
+
+        else:
+            iflines = ''
+            cnt_charge_lines = ''
+            cnt_color_lines = ''
+            cnt_pdg_lines = ''
+
+            for i, cnt in enumerate(cnt_me_list):
+                icnt = i+1
+                if not iflines:
+                    iflines = \
+                       'if (icnt.eq.%d) then\n call sborn_cnt%d(p,cnts)\n' % (icnt, icnt)
+                else:
+                    iflines += \
+                       'else if (icnt.eq.%d) then\n call sborn_cnt%d(p,cnts)\n' % (icnt, icnt)
+
+                cnt_charge_lines += 'data (cnt_charge(%d,i), i=1,nexternalB) / %s /\n' % \
+                        (icnt, ', '.join(['%19.15fd0' % l['charge'] for l in cnt['processes'][0]['legs']]))
+                cnt_color_lines += 'data (cnt_color(%d,i), i=1,nexternalB) / %s /\n' % \
+                        (icnt, ', '.join(['%d' % l['color'] for l in cnt['processes'][0]['legs']]))
+                cnt_pdg_lines += 'data (cnt_pdg(%d,i), i=1,nexternalB) / %s /\n' % \
+                        (icnt, ', '.join(['%d' % l['id'] for l in cnt['processes'][0]['legs']]))
+
             iflines += 'endif\n'
+
+            replace_dict['iflines'] = iflines
+            replace_dict['cnt_color_lines'] = cnt_color_lines
+            replace_dict['cnt_charge_lines'] = cnt_charge_lines
+            replace_dict['cnt_pdg_lines'] = cnt_pdg_lines
 
         file = open(pjoin(_file_path, \
             'iolibs/template_files/extra_cnt_wrapper_fks.inc')).read()
 
-        file = file % {'iflines': iflines}
+        file = file % replace_dict
 
         # Write the file
         writer.writelines(file)

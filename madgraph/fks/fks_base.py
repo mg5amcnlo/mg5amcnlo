@@ -601,6 +601,9 @@ class FKSProcess(object):
                         cnt_process = copy.copy(born_proc)
                         cnt_process['legs'] = copy.deepcopy(born_proc['legs'])
                         cnt_process['legs'][i]['id'] = mom
+                        cnt_process['legs'] = fks_common.to_fks_legs(
+                                cnt_process['legs'], cnt_process['model'])
+                                                                    
                         cnt_process['squared_orders'] = \
                                 copy.copy(born_proc['squared_orders'])
                         # check if we need to include the counterterm
