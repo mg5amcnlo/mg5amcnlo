@@ -4,7 +4,7 @@ C may be a dummy function, depending on the process
 implicit none
 integer icnt, i
 include 'nexternal.inc'
-double precision p(0:3, nexternal)
+double precision p(0:3, nexternal-1)
 include 'orders.inc'
 double complex cnts(2,nsplitorders)
 
