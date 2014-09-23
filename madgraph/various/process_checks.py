@@ -2886,6 +2886,14 @@ The loop direction test power P is computed as follow:
     logFile.close()
     res_str += "\n= Stability details of the run are output to the file"+\
                           " stability_%s_%s.log\n"%(mode,process.shell_string())
+                          
+    # Bypass the plotting if the madgraph logger has a FileHandler (like it is
+    # done in the check command acceptance test) because in this case it makes
+    # no sense to plot anything.
+    if any(isinstance(handler,logging.FileHandler) for handler in \
+                                        logging.getLogger('madgraph').handlers):
+        return res_str
+
     try:
         import matplotlib.pyplot as plt
         colorlist=['b','r','g','y']
