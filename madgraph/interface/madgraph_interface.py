@@ -3520,7 +3520,7 @@ This implies that with decay chains:
         # If it turns out there is no perturbation order then we will use these orders
         # for the regular orders.
         squared_order_pattern = re.compile(\
-            "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+            "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
                     "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
         squared_order_re = squared_order_pattern.match(line)
         squared_orders = {}
