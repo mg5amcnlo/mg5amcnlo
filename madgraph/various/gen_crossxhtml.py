@@ -791,6 +791,10 @@ class OneTagResults(dict):
                glob.glob(pjoin(path,"*.hep.gz")):
                 self.shower.append('hep')
 
+            if 'plot' not in self.shower and \
+                          exists(pjoin(html_path,"plots_shower_%s.html" % tag)):
+                self.shower.append('plot')                
+
             if glob.glob(pjoin(path,"*.hepmc")) + \
                glob.glob(pjoin(path,"*.hepmc.gz")):
                 self.shower.append('hepmc')
@@ -988,6 +992,8 @@ class OneTagResults(dict):
                       glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)) + \
                       glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind + '.gz')):
                         out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
+            if 'plot' in self.shower:
+                out += """ <a href="./HTML/%(run_name)s/plots_shower_%(tag)s.html">plots</a>"""
             
             return out % self
                 

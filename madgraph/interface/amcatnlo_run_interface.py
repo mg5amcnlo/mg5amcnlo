@@ -404,8 +404,6 @@ class CheckValidForCmd(object):
         """Check the argument for the plot command
         plot run_name modes"""
 
-        if options['force']:
-            self.force = True
 
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
@@ -966,7 +964,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_plot(args)
         logger.info('plot for run %s' % self.run_name)
         
-        self.ask_edit_cards([], args, plot=True)
+        if not self.force:
+            self.ask_edit_cards([], args, plot=True)
                 
         if any([arg in ['parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
@@ -1024,14 +1023,17 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 misc.gunzip(filename, keep=True, stdout=pjoin(self.me_dir, 'Events','pythia_events.hep'))
                 
                 if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
-                    files.cp(pjoin(self.me_dir, 'Cards', 'pythia_card_default.dat'),
+                    if aMCatNLO and not self.options['mg5_path']:
+                        raise "plotting NLO HEP file needs MG5 utilities"
+                    
+                    files.cp(pjoin(self.options['mg5_path'], 'Template','LO', 'Cards', 'pythia_card_default.dat'),
                              pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
                 self.run_hep2lhe()
             else:
                 filename = filenames[0]
                 misc.gunzip(filename, keep=True, stdout=pjoin(self.me_dir, 'Events','pythia_events.hep'))
 
-            self.create_plot('Pythia')
+            self.create_plot('shower')
             lhe_file_name = filename.replace('.hep.gz', '.lhe')
             shutil.move(pjoin(self.me_dir, 'Events','pythia_events.lhe'), 
                         lhe_file_name)
@@ -1125,6 +1127,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
         """Advanced commands: this is for creating the correct run_card.inc from the nlo format"""
+                #check if no 'Auto' are present in the file
+        self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -2544,6 +2548,13 @@ Integrated cross-section
             except OSError, IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
+
+            # run the plot creation in a secure way
+            try:
+                self.do_plot('%s -f' % self.run_name)
+            except Exception, error:
+                logger.info("Fail to make the plot. Continue...")
+                pass
 
         elif out_id == 'TOP':
             #copy the topdrawer file(s) back in events
