@@ -21,8 +21,8 @@
       integer nfl,nx,nq2,mem,rep
       double precision alphas
       double precision xgrid(100),logxgrid(100)
-      double precision q2grid(50),logq2grid(50)
-      double precision pdfgrid(0:100,14,100,50)
+      double precision q2grid(60),logq2grid(60)
+      double precision pdfgrid(0:100,14,100,60)
       logical hasphoton
       common /nnpdf/nfl,nx,nq2,mem,rep,hasphoton,alphas,xgrid,logxgrid,
      1     q2grid,logq2grid,pdfgrid
@@ -31,7 +31,7 @@
 *
       nfl = 13
       nx = 100
-      nq2 = 50
+      nq2 = 60
       mem = 1
       rep = 0
       alphas = 0
@@ -54,8 +54,8 @@
       integer nfl,nx,nq2,mem,rep
       double precision alphas
       double precision xgrid(100),logxgrid(100)
-      double precision q2grid(50),logq2grid(50)
-      double precision pdfgrid(0:100,14,100,50)
+      double precision q2grid(60),logq2grid(60)
+      double precision pdfgrid(0:100,14,100,60)
       logical hasphoton
       common /nnpdf/nfl,nx,nq2,mem,rep,hasphoton,alphas,xgrid,logxgrid,
      1     q2grid,logq2grid,pdfgrid
@@ -78,8 +78,8 @@
       integer nfl,nx,nq2,mem,rep
       double precision alphas
       double precision xgrid(100),logxgrid(100)
-      double precision q2grid(50),logq2grid(50)
-      double precision pdfgrid(0:100,14,100,50)
+      double precision q2grid(60),logq2grid(60)
+      double precision pdfgrid(0:100,14,100,60)
       logical hasphoton
       common /nnpdf/nfl,nx,nq2,mem,rep,hasphoton,alphas,xgrid,logxgrid,
      1     q2grid,logq2grid,pdfgrid
@@ -161,8 +161,8 @@
       integer nfl,nx,nq2,mem,rep
       double precision alphas
       double precision xgrid(100),logxgrid(100)
-      double precision q2grid(50),logq2grid(50)
-      double precision pdfgrid(0:100,14,100,50)
+      double precision q2grid(60),logq2grid(60)
+      double precision pdfgrid(0:100,14,100,60)
       logical hasphoton
       common /nnpdf/nfl,nx,nq2,mem,rep,hasphoton,alphas,xgrid,logxgrid,
      1     q2grid,logq2grid,pdfgrid
@@ -171,14 +171,14 @@
       Q2 = Q*Q
 *     check bounds
       if (x.lt.xmingrid.or.x.lt.xgrid(1).or.x.gt.xgrid(nx)) then
-         write(6,*) "Parton interpolation: x out of range -- freezed"
+c$$$         write(6,*) "Parton interpolation: x out of range -- freezed"
          if (x.lt.xgrid(1)) x = xgrid(1)
 *         if (x.lt.xmingrid) x = xmingrid
          if (x.gt.xgrid(nx))x = xgrid(nx)
       endif
       if (Q2.lt.q2grid(1).or.Q2.gt.q2grid(nq2)) then
-         write(6,*) "Parton interpolation: Q2 out of range -- freezed"
-         write(6,*) "Q2 = ",Q2, " GeV2", q2grid(1)
+c$$$         write(6,*) "Parton interpolation: Q2 out of range -- freezed"
+c$$$         write(6,*) "Q2 = ",Q2, " GeV2", q2grid(1)
          if (Q2.lt.q2grid(1)) Q2 = q2grid(1)
          if (Q2.gt.q2grid(nq2)) Q2 = q2grid(nq2)
       endif

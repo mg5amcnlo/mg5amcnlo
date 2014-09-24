@@ -64,7 +64,7 @@ if '__main__' == __name__:
 #    my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
 #    my_proc_list.append(('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
 #    my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
-    my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
+#    my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
 #    my_proc_list.append(('u d~ > h t b~',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6}))
 ## Check higgs massive tt~ processes
 #    my_proc_list.append(('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}))
@@ -96,19 +96,32 @@ if '__main__' == __name__:
     #my_proc_list = me_comparator.create_proc_list_enhanced(
     #    fermion, fermion, boson,
     #    initial=2, final_1=2, final_2 = 1)
-
+    my_proc_list.append(('g g > t t~ g',{'QCD':3,'QED':0},['QED'],{'QCD':6,'QED':2}))
     # Set the model we are working with
     #model = 'loop_sm-no_widths'
-    model = 'loop_sm-parallel_test'
+    #model = 'loop_sm-parallel_test'
+    model = 'loop_qcd_qed_sm-parallel_test'
+    # the hard-coded reference value
+    my_res_list=[]
+    my_res_list.append(((-0.3123118956235762,0.00041827020029929103,\
+                         0.022458628164095062,-2.590158624079223e-8,99),\
+                        [[500.,0.,0.,500.],\
+                         [500.,0.,0.,-500.],\
+                         [185.32118462,30.4379583327,-55.0837756531,1.66127103109],\
+                         [397.104074226,175.514562721,-296.936556388,-91.293348717],\
+                         [417.574741153,-205.952521054,352.020332042,89.6320776859]]))
     # Load a saved run
     #SavedRun = me_comparator.PickleRunner.find_comparisons(
     #                     os.path.join(pickle_path,'ml5_parallel_test.pkl'))[0]
     # Create a MERunner object for MadLoop 4
-    ML4 = loop_me_comparator.LoopMG4Runner()
-    ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
-
+    #ML4 = loop_me_comparator.LoopMG4Runner()
+    #ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
+    # Create a MERunner object from Hard-Coded Reference value
+    HCRvalue = loop_me_comparator.LoopHardCodedRefRunner()
+    HCRvalue.setup(my_proc_list,my_res_list,model)
     # Create a MERunner object for GoSam
-    # GoSam = loop_me_comparator.GoSamRunner()
+    #GoSam = loop_me_comparator.GoSamRunner()
+    # GoSam.setup('/Users/erdissshaw/Works/GoSam/gosam_dir')
     # GoSam.setup('/Users/valentin/Documents/HEP_softs/GoSam/gosam-2.0.beta')
 
     # Create a MERunner object for MadLoop 5 optimized
@@ -127,10 +140,12 @@ if '__main__' == __name__:
     my_comp = loop_me_comparator.LoopMEComparator()
     # Always put the saved run first if you use it, so that the corresponding PS
     # points will be used
-    my_comp.set_me_runners(ML5_opt,ML5_default)
+    #my_comp.set_me_runners(ML5_opt,GoSam)
+    my_comp.set_me_runners(HCRvalue,ML5_opt)
 
     # Run the actual comparison
-    energy=1000
+    # energy=1000
+    energy = HCRvalue.energy
     my_comp.run_comparison(my_proc_list,
                            model=model,
                            energy=energy)

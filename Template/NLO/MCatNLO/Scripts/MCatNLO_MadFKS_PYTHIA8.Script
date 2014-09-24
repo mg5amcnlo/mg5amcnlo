@@ -488,6 +488,34 @@ BeamRemnants:primordialKT = off    ! No primordial kT
 25:mWidth = $HGGWIDTH              ! Higgs width
 EOF
 
+if [ $ICKKW = 0 ]
+then
+cat <<EOF >> $ifile
+
+! 9) Multijet merging.
+JetMatching:doFxFx = off          ! switch off FxFx
+
+
+EOF
+elif [ $ICKKW = 3 ]
+then
+cat <<EOF >> $ifile
+
+! 9) Multijet merging.
+JetMatching:doFxFx = on           ! switch on FxFx
+JetMatching:merge = on            ! switch on MLM-merging machinery
+JetMatching:qCut = $QCUT          ! merging scale
+JetMatching:qCutME = $PTJCUT      ! minimum-jet(pT) cut
+JetMatching:coneRadius = 1.0      ! jet radius definition
+JetMatching:etaJetMax = 1000.0    ! max jet rapidity definition
+JetMatching:nJetMax = $NJMAX      ! max multiplicity
+JetMatching:scheme = 1            ! MadGraph MLM-type merging
+JetMatching:setMad = off          ! Don't read from LHE in MG5LO format
+
+
+EOF
+fi
+
 if [ $PI_STABLE_PY8 = ".TRUE." ]
 then
 cat <<EOF >> $ifile

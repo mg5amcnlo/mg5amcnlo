@@ -1,0 +1,18 @@
+HERE   = $(PWD)/qcdloop
+QLDIR  = $(HERE)/ql
+FFDIR  = $(HERE)/ff
+
+all: qldir ffdir
+
+ffdir:
+	(cd $(FFDIR); rm libff.a; make clean; make; ranlib libff.a) 
+
+qldir:
+	(cd $(QLDIR); rm libqcdloop.a; make clean; make) 
+
+clean:
+	- rm -f *.o *.s *.prj *~ core test
+	@(cd $(HERE); make clean)
+	@(cd $(QLDIR); make clean)
+	@(cd $(FFDIR); make clean)
+

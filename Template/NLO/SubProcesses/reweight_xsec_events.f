@@ -485,6 +485,10 @@ c Write the accumulated results to a file
       end
 
 
+c Dummy subroutine (normally used with vegas/mint when resuming plots)
+      subroutine resume()
+      end
+
 
       subroutine set_cms_stuff(icountevts)
       implicit none

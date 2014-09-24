@@ -31,6 +31,7 @@ import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.amcatnlo_run_interface as NLOCmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.various.misc as misc
+import tests.IOTests as IOTests
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -192,19 +193,38 @@ class TestCmdLoop(unittest.TestCase):
         try:
             cmd = os.getcwd()
             self.do('import model loop_sm')
+            if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):
+                shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
+            # Make sure it works for an initial run
             self.do('check timing -reuse e+ e- > t t~ [virt=QCD]')
             self.assertEqual(cmd, os.getcwd())
             self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
             self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
                                             'SubProcesses/P0_epem_ttx/result.dat')))
-            shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))        
             self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
             res = open('/tmp/madgraph.check_cmd.log').read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
             self.assertTrue(not 'NA' in res)
+            
+            # Now for a Reuse-run
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            self.setup_logFile_for_logger('madgraph.check_cmd')
+            self.do('check timing -reuse e+ e- > t t~ [virt=QCD]')
+            self.assertEqual(cmd, os.getcwd())
+            self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
+            self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
+                                            'SubProcesses/P0_epem_ttx/result.dat')))
+            shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
+            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue('Generation time total' in res)
+            self.assertTrue('Executable size' in res)
+            self.assertTrue(res.count('NA')<=8)
         except:
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):
+                shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
@@ -215,20 +235,66 @@ class TestCmdLoop(unittest.TestCase):
         try:
             cmd = os.getcwd()
             self.do('import model loop_sm')
+            if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):
+                shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
+            
+            # Make sure it works for an initial run
             self.do('check profile -reuse e+ e- > t t~ [virt=QCD]')
             self.assertEqual(cmd, os.getcwd())
             self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
             self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
                                             'SubProcesses/P0_epem_ttx/result.dat')))
-            shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))        
             self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
-            res = open('/tmp/madgraph.check_cmd.log').read()        
+            res = open('/tmp/madgraph.check_cmd.log').read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
-            self.assertTrue('Double precision results' in res)
-            self.assertTrue('Number of Exceptional PS points' in res)
+            self.assertTrue('Tool (DoublePrec for CT)' in res)
+            self.assertTrue('Number of Unstable PS points' in res)
             self.assertTrue(res.count('NA')<=3)
+
+            # Now for a Reuse-run
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            self.setup_logFile_for_logger('madgraph.check_cmd')
+            self.do('check profile -reuse e+ e- > t t~ [virt=QCD]')
+            self.assertEqual(cmd, os.getcwd())
+            self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
+            self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
+                                            'SubProcesses/P0_epem_ttx/result.dat')))
+            shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
+            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue('Generation time total' in res)
+            self.assertTrue('Executable size' in res)
+            self.assertTrue('Tool (DoublePrec for CT)' in res)
+            self.assertTrue('Number of Unstable PS points' in res)
+            self.assertTrue(res.count('NA')<=11)
         except:
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):
+                shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
+#===============================================================================
+# IOTestMadLoopOutputFromInterface
+#===============================================================================
+class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
+    """Test MadLoop outputs when generated directly from the interface."""
+
+    @IOTests.createIOTest(groupName='MadLoop_output_from_the_interface')
+    def testIO_TIR_output(self):
+        """ target: [ggttx_IOTest/SubProcesses/(.*)\.f]
+        """
+        interface = MGCmd.MasterCmd()
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+
+        # Make sure the potential TIR are set uniformly across users
+        if interface.options['golem'] in [None,'auto']:
+            interface.run_cmd('install Golem95')
+        interface.options['pjfry']=None
+        
+        run_cmd('generate g g > t t~ [virt=QCD]')
+        interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))

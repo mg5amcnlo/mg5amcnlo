@@ -1,0 +1,35 @@
+ ====================================================
+   FF 2.0, a package to evaluate one-loop integrals
+ written by G. J. van Oldenborgh, NIKHEF-H, Amsterdam
+ ====================================================
+ for the algorithms used see preprint NIKHEF-H 89/17,
+ 'New Algorithms for One-loop Integrals', by G.J. van
+ Oldenborgh and J.A.M. Vermaseren, published in 
+ Zeitschrift fuer Physik C46(1990)425.
+ ====================================================
+ ffini: precx =   4.44089209E-16
+ ffini: precc =   4.44089209E-16
+ ffini: xalogm =   4.94065645E-324
+ ffini: xclogm =   4.94065645E-324
+   .0000000000000E+00  .9156199386460E+06
+ NPOIN: warning: D4 is not yet supported
+ NPOIN: warning: B1' seems also not yet supported
+  -.3100623399361E+02 -.2054369006935E+03 -.5269961187649E-14 -.1218492318111E-08
+   .0000000000000E+00  .1997630170032+305 -.1033542556010E+02 -.6793071440282E+02
+   .0000000000000E+00  .1739461728624E-08  .0000000000000E+00 -.1286491875423E-08
+   .0000000000000E+00  .4952559280190E-18  .0000000000000E+00 -.4571732002955E-18
+ ALIJ: error: not implemented
+   .0000000000000E+00
+ 
+total number of errors and warnings
+===================================
+fferr: no errors
+ffwarn:        1 times  18: ffxb0p: warning: cancellations in equal masses, complex roots, can be avoided.  
+     (lost at most a factor     8.20    )
+ffwarn:        1 times 129: zxfflg: warning: taking log of number close to 1, must be cured.                
+     (lost at most a factor     9.75    )
+ffwarn:       10 times 163: ffxc1:  warning: cancellations in cc1.                                          
+     (lost at most a factor     244.    )
+ffwarn:        1 times 164: ffxd1:  warning: cancellations in cd1.                                          
+     (lost at most a factor     8.33    )
+ 

@@ -284,9 +284,9 @@ def ij_final(pair):
     if len(pair) == 2:
         for i in range(len(pair)):
             set = 0
-            if (pair[i]['massless'] and pair[i]['spin'] %2 == 1) or \
-               (pair[i]['color'] == -3 and pair[1-i]['color'] == 3) and \
-               not set:
+            if (pair[i]['massless'] and pair[i]['self_antipart']) or \
+             (not pair[i]['is_part'] and pair[1-i]['is_part'] and\
+              (pair[i]['spin']+pair[1-i]['spin'])%2==0) and not set:
                 pair[i]['fks'] = 'i'
                 pair[1-i]['fks'] = 'j'
                 #check that first j then i
@@ -294,12 +294,17 @@ def ij_final(pair):
                     pair.reverse()
                 set = 1
 
-def insert_legs(leglist_orig, leg, split):
+def insert_legs(leglist_orig, leg, split,pert='QCD'):
     """Returns a new leglist with leg splitted into split.
     The convention is to remove leg ij, replace it with leg j, and put
-    i at the end of the group of massless legs with the same color 
-    representation
+    i at the end of the group of legs with the same color(charge) representation
     """
+    if pert =='QCD':
+        color = 'color'
+    elif pert == 'QED':
+        color = 'charge'
+    else:
+        raise FKSProcessError, "Only QCD or QED is allowed not  %s" % pert
     # the deepcopy statement is crucial
     leglist = FKSLegList(copy.deepcopy(leglist_orig))         
     #find the position of the first final state leg
@@ -311,25 +316,31 @@ def insert_legs(leglist_orig, leg, split):
     # and find where to insert i  (split[1])
     col_maxindex = {}
     mass_col_maxindex = {}
-    for col in set([l['color'] for l in leglist[firstfinal:] if l['massless']]):
-        col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if l['color'] == col and l['massless']])
-    for col in set([abs(l['color']) for l in leglist[firstfinal:] if not l['massless']]):
-        mass_col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if abs(l['color']) == col and not l['massless']])
-    #no need to keep info on massless particles with color > i
-    for col in copy.copy(col_maxindex.keys()):
-        if abs(col) > abs(split[1]['color']):
-            del col_maxindex[col]
-###    for col in copy.copy(mass_col_maxindex.keys()):
-###        if abs(col) > abs(split[1]['color']):
-###            del mass_col_maxindex[col]
-    #also remove antiquarks if i is a quark
-    if split[1]['color'] > 0:
+    for col in set([l[color] for l in leglist[firstfinal:] if l['massless']]):
+        col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:]\
+                                        if l[color] == col and l['massless']])
+    for col in set([abs(l[color]) for l in leglist[firstfinal:] if not l['massless']]):
+        mass_col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:]\
+                                             if abs(l[color]) == col and not l['massless']])
+    #no need to keep info on particles with color > i
+    if pert == 'QCD':
+        for col in copy.copy(col_maxindex.keys()):
+            if abs(col) > abs(split[1][color]):
+                del col_maxindex[col]
+###        for col in copy.copy(mass_col_maxindex.keys()):
+###            if abs(col) > abs(split[1][color]):
+###                del mass_col_maxindex[col]
+    #also remove antiquarks if i is a quark or a fermion
+    if split[1]['is_part'] and not split[1]['self_antipart']:
+    # In old MADFKS5, the line below was used instead. It is however equivalent in principle.
+    # We can remove this comment and the line below altogether after validation and complete
+    # merge of the EW branch in aMC@NLO trunk.
+    #if split[1][color] > 0:
         try:
-            del col_maxindex[-split[1]['color']]
+            del col_maxindex[-split[1][color]]
         except KeyError:
             pass
     #so now the maximum of the max_col entries should be the position to insert leg i
-
     leglist.insert(max(col_maxindex.values() + mass_col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
 ###    leglist.insert(max(col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
 #    for sleg in split:            
@@ -357,7 +368,7 @@ def combine_ij( i, j, model, dict, pert='QCD'): #test written
     ij = []
     num = copy.copy(min(i.get('number'), j.get('number')))
     
-    # we do not want j being a massiless vector unless also i is or j is initial
+    # we do not want j being a massless vector unless also i is or j is initial
     not_double_counting = (j.get('spin') == 3 and j.get('massless') and 
                            i.get('spin') == 3 and i.get('massless')) or \
                            j.get('spin') != 3 or not j.get('massless') or \
@@ -409,8 +420,9 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     --pert_particles : pdgs of particles taking part to interactions
     --soft_particles : pdgs of massless particles in pert_particles
     """
-    ghost_list = [82, -82]
-    ghost_list += [ p['get_pdg_code'] for p in model.get('particles') if p.get('spin') < 0]
+    #ghost_list = [82, -82] # make sure ghost_list is non-empty
+    ghost_list = []
+    ghost_list += [ p.get_pdg_code() for p in model.get('particles') if p.get('ghost')]
     qcd_inter = MG.InteractionList()
     pert_parts = []
     soft_parts = []
@@ -428,7 +440,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
             except ValueError:
                 continue
             if len(set(masslist)) == 1 and not \
-                    any( [ p['pdg_code'] in ghost_list for p in ii['particles']]) :
+                    any( [ p.get_pdg_code() in ghost_list for p in ii['particles']]) :
                 qcd_inter.append(ii)
                 for pp in ii['particles']:
                     pert_parts.append(pp.get_pdg_code())
@@ -464,26 +476,26 @@ def insert_color_links(col_basis, col_obj, links): #test written
             
         this_col_obj = []
         for old_dict in col_obj:
-            dict = copy.copy(old_dict)
-            for k, string in dict.items():
-                dict[k] = string.create_copy()
-                for col in dict[k]:
+            new_dict = dict(old_dict)
+            for k, string in new_dict.items():
+                new_dict[k] = string.create_copy()
+                for col in new_dict[k]:
                     for ind in col:
                         for pair in link['replacements']:
                             if ind == pair[0]:
                                 col[col.index(ind)] = pair[1]
-                dict[k].product(link['string'])
-            this_col_obj.append(dict)
+                new_dict[k].product(link['string'])
+            this_col_obj.append(new_dict)
         basis_link = color_amp.ColorBasis()
-        for ind, dict in enumerate(this_col_obj):
-            basis_link.update_color_basis(dict, ind)
+        for ind, new_dict in enumerate(this_col_obj):
+            basis_link.update_color_basis(new_dict, ind)
    
         this['link_basis'] = basis_link
         this['link_matrix'] = color_amp.ColorMatrix(col_basis,basis_link)               
         result.append(this)
     basis_orig = color_amp.ColorBasis()
-    for ind, dict in enumerate(col_obj):
-            basis_orig.update_color_basis(dict, ind)
+    for ind, new_dict in enumerate(col_obj):
+            basis_orig.update_color_basis(new_dict, ind)
     
     for link in result:
         link['orig_basis'] = basis_orig
@@ -491,21 +503,28 @@ def insert_color_links(col_basis, col_obj, links): #test written
 
 
 
-def find_color_links(leglist, symm = False): #test written
-    """Finds all the possible color links between any 
+def find_color_links(leglist, symm = False,pert = 'QCD'): #test written
+    """Finds all the possible color(charge) links between any 
     two legs of the born.
     If symm is true, only half of the color links are generated, those
     for which leg1['number'] <= leg2['number']
     """
-
+    if pert == 'QCD':
+        color = 'color'
+        zero = 1
+    elif pert == 'QED':
+        color = 'charge'
+        zero = 0.
+    else:
+        raise FKSProcessError,"Only QCD or QED is allowed not %s" % pert
     color_links = []
     for leg1 in leglist:
         for leg2 in leglist:
-            #legs must be colored and different, unless massive
-                if (leg1.get('color') != 1 and leg2.get('color') != 1) \
+            #legs must be colored(charged) and different, unless massive
+                if (leg1.get(color) != zero and leg2.get(color) != zero) \
                   and (leg1 != leg2 or not leg1.get('massless')):
                     if not symm or leg1['number'] <= leg2['number']:
-                        col_dict = legs_to_color_link_string(leg1,leg2)
+                        col_dict = legs_to_color_link_string(leg1,leg2,pert = pert)
                         color_links.append({
                             'legs': [leg1, leg2],
                             'string': col_dict['string'],
@@ -514,7 +533,7 @@ def find_color_links(leglist, symm = False): #test written
     return color_links
              
 
-def legs_to_color_link_string(leg1, leg2): #test written, all cases
+def legs_to_color_link_string(leg1, leg2, pert = 'QCD'): #test written, all cases
     """given two FKSlegs, returns a dictionary containing:
     --string: the color link between the two particles, to be appended to
         the old color string
@@ -531,62 +550,72 @@ def legs_to_color_link_string(leg1, leg2): #test written, all cases
     iglu = min_index*2
     string = color_algebra.ColorString()
     replacements = []
-    if leg1 != leg2:
-        for leg in legs:
-            min_index -= 1
-            num = leg.get('number')
-            replacements.append([num, min_index])
-            icol = 1
-            if not leg.get('state'):
-                icol = - 1
-            if leg.get('color') * icol == 3:
-                string.product(color_algebra.ColorString([
+    if pert == 'QCD':
+        if leg1 != leg2:
+            for leg in legs:
+                min_index -= 1
+                num = leg.get('number')
+                replacements.append([num, min_index])
+                icol = 1
+                if not leg.get('state'):
+                    icol = - 1
+                if leg.get('color') * icol == 3:
+                    string.product(color_algebra.ColorString([
                                color_algebra.T(iglu, num, min_index)]))
-                string.coeff = string.coeff * (-1)
-            elif leg.get('color') * icol == - 3:
-                string.product(color_algebra.ColorString([
+                    string.coeff = string.coeff * (-1)
+                elif leg.get('color') * icol == - 3:
+                    string.product(color_algebra.ColorString([
                                color_algebra.T(iglu, min_index, num)]))
-            elif leg.get('color') == 8:
+                elif leg.get('color') == 8:
+                    string.product(color_algebra.ColorString(init_list = [
+                               color_algebra.f(min_index,iglu,num)], 
+                               is_imaginary =True))
+
+        else:
+            icol = 1
+            if not leg1.get('state'):
+                icol = - 1
+            num = leg1.get('number')
+            replacements.append([num, min_index -1])
+            if leg1.get('color') * icol == 3:
+                string = color_algebra.ColorString(
+                     [color_algebra.T(iglu, iglu, num, min_index -1)])
+            elif leg1.get('color') * icol == - 3:
+                string = color_algebra.ColorString(
+                     [color_algebra.T(iglu, iglu, min_index-1, num)])
+            elif leg1.get('color') == 8:
+                string = color_algebra.ColorString(init_list = [
+                               color_algebra.f(min_index-1,iglu,min_index)], 
+                               is_imaginary =True)
                 string.product(color_algebra.ColorString(init_list = [
                                color_algebra.f(min_index,iglu,num)], 
                                is_imaginary =True))
+            string.coeff = string.coeff * fractions.Fraction(1, 2)
 
+    elif pert == 'QED':
+        for leg in legs:
+            # make it a fraction
+            string.coeff = string.coeff * fractions.Fraction(leg['charge']*3.)*\
+            fractions.Fraction(1,3)            
     else:
-        icol = 1
-        if not leg1.get('state'):
-            icol = - 1
-        num = leg1.get('number')
-        replacements.append([num, min_index -1])
-        if leg1.get('color') * icol == 3:
-            string = color_algebra.ColorString(
-                     [color_algebra.T(iglu, iglu, num, min_index -1)])
-        elif leg1.get('color') * icol == - 3:
-            string = color_algebra.ColorString(
-                     [color_algebra.T(iglu, iglu, min_index-1, num)])
-        elif leg1.get('color') == 8:
-            string = color_algebra.ColorString(init_list = [
-                               color_algebra.f(min_index-1,iglu,min_index)], 
-                               is_imaginary =True)
-            string.product(color_algebra.ColorString(init_list = [
-                               color_algebra.f(min_index,iglu,num)], 
-                               is_imaginary =True))
-
-        string.coeff = string.coeff * fractions.Fraction(1, 2) 
+        raise FKSProcessError,"Only QCD or QED is allowed not %s"% pert
+    
     dict['replacements'] = replacements
-    dict['string'] = string
-      
+    dict['string'] = string  
     return dict
 
 
-def sort_proc(process):
+def sort_proc(process,pert = 'QCD'):
     """Given a process, this function returns the same process 
     but with sorted FKSLegs.
     """
     leglist = to_fks_legs(process.get('legs'), process.get('model'))
-    leglist.sort()
+    leglist.sort(pert = pert)
     for n, leg in enumerate(leglist):
         leg['number'] = n + 1
     process['legs'] = leglist
+    # add this line to pass ./test_managers.py -p A test_check_ppzjj
+    process['legs_with_decays']=MG.LegList()
 
     return process
 
@@ -618,8 +647,11 @@ def to_fks_leg(leg, model): #test written
     fksleg = FKSLeg(leg)
     part = model.get('particle_dict')[leg['id']]
     fksleg['color'] = part.get_color()
+    fksleg['charge'] = part.get_charge()
     fksleg['massless'] = part['mass'].lower() == 'zero'
-    fksleg['spin'] = part.get('spin')      
+    fksleg['spin'] = part.get('spin')
+    fksleg['is_part'] = part.get('is_part')
+    fksleg['self_antipart'] = part.get('self_antipart')      
     return fksleg
 
     
@@ -640,7 +672,7 @@ class FKSLegList(MG.LegList):
         """Test if object obj is a valid FKSLeg for the list."""
         return isinstance(obj, FKSLeg)
 
-    def sort(self):
+    def sort(self,pert='QCD'):
         """Sorting routine, sorting chosen to be optimal for madfks"""
         sorted_leglist = FKSLegList()
         #find initial state legs
@@ -656,18 +688,26 @@ class FKSLegList(MG.LegList):
         else: 
             raise FKSProcessError('Too many initial legs')
         #find color representations
-        colors = sorted(set([abs(l['color']) for l in final_legs]))
+        if pert == 'QCD':
+            color = 'color'
+            zero = 1
+        elif pert == 'QED':
+            color = 'charge'
+            zero = 0.
+        else:
+            raise FKSProcessError,"Only QCD and QED is allowed not %s"% pert
+        colors = sorted(set([abs(l[color]) for l in final_legs]))
         # first put massless particles, without any rearrangment
-        if 1 in colors:
+        if zero in colors:
             sorted_leglist.extend(sorted(\
-                    [l for l in final_legs if l['color'] == 1], key = itemgetter('number')))
-            colors.remove(1)
+                    [l for l in final_legs if l[color] == zero], key = itemgetter('number')))
+            colors.remove(zero)
 
         #now go for colored legs, put first all massive legs, then all massless legs
         massless_dict = {}
         massive_dict = {}
         for col in colors:
-            col_legs = FKSLegList([l for l in final_legs if abs(l['color']) == col])
+            col_legs = FKSLegList([l for l in final_legs if abs(l[color]) == col])
             #find massive and massless legs in this color repr
             massive_dict[col] = [l for l in col_legs if not l['massless']]
             massless_dict[col] = [l for l in col_legs if l['massless']]
@@ -676,7 +716,7 @@ class FKSLegList(MG.LegList):
             for col in colors:
                 # sorting may be different for massive and massless particles
                 # for color singlets, do not change order
-                if col == 1:
+                if col == zero:
                     keys = [itemgetter('number'), itemgetter('number')]
                     reversing = False
                 else:
@@ -714,8 +754,11 @@ class FKSLeg(MG.Leg):
     extra keys in the dictionary: 
     -'fks', whose value can be 'i', 'j' or 'n' (for "normal" particles) 
     -'color', which gives the color of the leg
+    -'charge', which gives the charge of the leg
     -'massless', boolean, true if leg is massless
     -'spin' which gives the spin of leg
+    -'is_part', boolean, true if leg is an particle
+    -'self_antipart', boolean, true if leg is an self-conjugated particle
     """
 
     def default_setup(self):
@@ -724,13 +767,16 @@ class FKSLeg(MG.Leg):
 
         self['fks'] = 'n'
         self['color'] = 0
+        self['charge'] = 0.
         self['massless'] = True
         self['spin'] = 0
+        self['is_part'] = True
+        self['self_antipart'] = False
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSLeg, self).get_sorted_keys()
-        keys += ['fks', 'color', 'massless', 'spin']
+        keys += ['fks', 'color','charge', 'massless', 'spin','is_part','self_antipart']
         return keys
 
     
@@ -745,13 +791,19 @@ class FKSLeg(MG.Leg):
         if name in ['color', 'spin']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid leg color " % \
-                                                 str(value)
-        if name == 'massless':
+                        "%s is not a valid leg %s flag" % \
+                                                 str(value),name
+                                                 
+        if name in ['massless','self_antipart','is_part']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid boolean for leg flag massless" % \
-                                                                    str(value)                                                           
+                        "%s is not a valid boolean for leg flag %s" % \
+                                                                    str(value),name
+        if name is 'charge':
+            if not isinstance(value, float):
+                raise self.PhysicsObjectError, \
+                    "%s is not a valid float for leg flag charge" \
+                    % str(value)                                                           
         return super(FKSLeg,self).filter(name, value)
     
      

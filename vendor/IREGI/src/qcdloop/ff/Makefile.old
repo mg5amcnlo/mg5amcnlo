@@ -1,0 +1,95 @@
+FFLAGS = 
+
+LFLAGS = $(FFLAGS)
+
+LINKER = f77
+
+OBJS = 	\
+	ff2dl2.o \
+	ffca0.o \
+	ffcb0.o \
+	ffcdb0.o \
+	ffcb1.o \
+	ffcc0.o \
+	ffcc0a.o \
+	ffcc0p.o \
+	ffcc1.o \
+	ffcel2.o \
+	ffcel3.o \
+	ffcel4.o \
+	ffcel5.o \
+	ffcrr.o \
+	ffcli2.o \
+	ffcxr.o \
+	ffxli2.o \
+	ffcxs3.o \
+	ffcxs4.o \
+	ffdcc0.o \
+	ffdcxs.o \
+	ffdel2.o \
+	ffdel3.o \
+	ffdel4.o \
+	ffdxc0.o \
+	ffinit.o \
+	fftran.o \
+	ffabcd.o \
+	ffxb0.o \
+	ffxb1.o \
+	ffxb2p.o \
+	ffxdb0.o \
+	ffxc0.o \
+	ffxc0i.o \
+	ffxc0p.o \
+	ffxc1.o \
+	ffxd0.o \
+	ffxd0h.o \
+	ffxd0i.o \
+	ffxd0p.o \
+	ffxdbd.o \
+	ffxdi.o \
+	ffxdpv.o \
+	ffdl2i.o \
+	ffxd1.o \
+	ffxxyz.o \
+	ffcxyz.o \
+	ffxe0.o \
+	ffxe1.o \
+	ffxf0.o \
+	ffxf0h.o \
+	ffdel6.o \
+	ffdl5p.o \
+	ffdel5.o
+
+AAOBJS = \
+	aaxbx.o \
+	aaxcx.o \
+	aaxdx.o \
+	aaxex.o \
+	aaxinv.o
+
+all:	ff.a aa.a
+
+only:	$(OBJS) $(AAOBJS)
+
+.PRECIOUS:	ff.a aa.a
+
+install:	$(FFLIB)
+
+npointes: npointes.o npoin.o $(OBJS) $(AAOBJS)
+	$(LINKER) $(LFLAGS) -o npointes npointes.o npoin.o $(OBJS) $(AAOBJS)
+
+clean:
+	rm -f $(OBJS) $(AAOBJS) npoin.o npointes.o ff.a aa.a npointes
+
+install:	ff.a aa.a
+	cp ff.a aa.a /user/local/lib
+	
+ff.a:	$(OBJS) Makefile
+	ar ruv ff.a $(OBJS)
+	ranlib ff.a
+
+aa.a:	$(AAOBJS) Makefile
+	ar ruv aa.a $(AAOBJS)
+	ranlib aa.a
+
+

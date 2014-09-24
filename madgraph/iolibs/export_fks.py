@@ -15,7 +15,6 @@
 """Methods and classes to export matrix elements to fks format."""
 
 from distutils import dir_util
-import fractions
 import glob
 import logging
 import os
@@ -53,8 +52,6 @@ pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
-
-
 
 #=================================================================================
 # Class for used of the (non-optimized) Loop process
@@ -117,7 +114,19 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # We must link the CutTools to the Library folder of the active Template
         self.link_CutTools(dir_path)
-
+        
+        link_tir_libs=[]
+        tir_libs=[]
+        os.remove(os.path.join(self.dir_path,'SubProcesses','makefile_loop.inc'))
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        filename = pjoin(self.dir_path, 'SubProcesses','makefile_loop')
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                                        link_tir_libs,tir_libs)
+        os.remove(os.path.join(self.dir_path,'Source','make_opts.inc'))
+        filename = pjoin(self.dir_path, 'Source','make_opts')
+        calls = self.write_make_opts(writers.MakefileWriter(filename),
+                                                        link_tir_libs,tir_libs)
+        
         # Duplicate run_card and FO_analyse_card
         for card in ['run_card', 'FO_analyse_card', 'shower_card']:
             try:
@@ -145,15 +154,72 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
                                        
+        # We need minimal editing of MadLoopCommons.f
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
+        writer.close()
+                                       
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
                                            writers.FortranWriter('cts_mpc.h'))
+
+        
+        # Finally make sure to turn off MC over Hel for the default mode.
+        FKS_card_path = pjoin(self.dir_path,'Cards','FKS_params.dat')
+        FKS_card_file = open(FKS_card_path,'r')
+        FKS_card = FKS_card_file.read()
+        FKS_card_file.close()
+        FKS_card = re.sub(r"#NHelForMCoverHels\n-?\d+",
+                                             "#NHelForMCoverHels\n-1", FKS_card)
+        FKS_card_file = open(FKS_card_path,'w')
+        FKS_card_file.write(FKS_card)
+        FKS_card_file.close()
 
         # Return to original PWD
         os.chdir(cwd)
         # Copy the different python files in the Template
         self.copy_python_files()
 
+    # I put it here not in optimized one, because I want to use the same makefile_loop.inc
+    # Also, we overload this function (i.e. it is already defined in 
+    # LoopProcessExporterFortranSA) because the path of the template makefile
+    # is different.
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,tir_include=[]):
+        """ Create the file makefile_loop which links to the TIR libraries."""
+            
+        file = open(os.path.join(self.mgme_dir,'Template','NLO',
+                                 'SubProcesses','makefile_loop.inc')).read()  
+        replace_dict={}
+        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        replace_dict['tir_libs']=' '.join(tir_libs)
+        replace_dict['dotf']='%.f'
+        replace_dict['doto']='%.o'
+        replace_dict['tir_include']=' '.join(tir_include)
+        file=file%replace_dict
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
+        
+    # I put it here not in optimized one, because I want to use the same make_opts.inc
+    def write_make_opts(self, writer, link_tir_libs,tir_libs):
+        """ Create the file make_opts which links to the TIR libraries."""
+        file = open(os.path.join(self.mgme_dir,'Template','NLO',
+                                 'Source','make_opts.inc')).read()  
+        replace_dict={}
+        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        replace_dict['tir_libs']=' '.join(tir_libs)
+        replace_dict['dotf']='%.f'
+        replace_dict['doto']='%.o'
+        file=file%replace_dict
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
 
     #===========================================================================
     # copy_python_files 
@@ -186,6 +252,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
+        cp(_file_path+'/various/lhe_parser.py', 
+                                       self.dir_path+'/bin/internal/lhe_parser.py') 
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
         cp(_file_path+'/interface/coloring_logging.py', 
@@ -313,6 +381,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ff.write(text)
         ff.close()
 
+    def get_ME_identifier(self, matrix_element):
+        """ A function returning a string uniquely identifying the matrix 
+        element given in argument so that it can be used as a prefix to all
+        MadLoop5 subroutines and common blocks related to it. This allows
+        to compile several processes into one library as requested by the 
+        BLHA (Binoth LesHouches Accord) guidelines. The MadFKS design
+        necessitates that there is no process prefix."""
+        
+        return ''
 
     #===============================================================================
     # write_coef_specs
@@ -452,13 +529,20 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'coupl.inc',
                      'cuts.f',
                      'FKS_params.dat',
+                     'initial_states_map.dat',
                      'OLE_order.olc',
                      'FKSParams.inc',
                      'FKSParamReader.f',
                      'cuts.inc',
+                     'unlops.inc',
+                     'pythia_unlops.f',
                      'driver_mintMC.f',
                      'driver_mintFO.f',
                      'driver_vegas.f',
+                     'appl_interface.cc',
+                     'appl_interface_dummy.f',
+                     'appl_common.inc',
+                     'reweight_appl.inc',
                      'driver_reweight.f',
                      'fastjetfortran_madfks_core.cc',
                      'fastjetfortran_madfks_full.cc',
@@ -484,6 +568,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'mint.inc',
                      'montecarlocounter.f',
                      'q_es.inc',
+                     'recluster.cc',
+                     'Boosts.h',
                      'reweight.inc',
                      'reweight0.inc',
                      'reweight1.inc',
@@ -519,8 +605,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         for file in linkfiles:
             ln('../' + file , '.')
-
-
         os.system("ln -s ../../Cards/param_card.dat .")
 
         #copy the makefile 
@@ -579,10 +663,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
         self.write_maxparticles_file(writers.FortranWriter(filename),
                                      matrix_elements['real_matrix_elements'])
-        
+
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
-
+        
         # Check for compiler
         fcompiler_chosen = self.set_fortran_compiler(compiler_dict['fortran'])
         ccompiler_chosen = self.set_cpp_compiler(compiler_dict['cpp'])
@@ -903,7 +987,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         firstlines = ['integer maxproc_used, maxflow_used',
                       'parameter (maxproc_used = %d)' % maxproc,
                       'parameter (maxflow_used = %d)' % maxflow ]
-
         writer.writelines(firstlines + lines)
 
 
@@ -1002,7 +1085,7 @@ end
                                             fortran_model)
 
     def write_pdf_calls(self, matrix_element, fortran_model):
-        """writes the matrix_i.f files which contain the real matrix elements""" 
+        """writes the parton_lum_i.f files which contain the real matrix elements""" 
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'parton_lum_%d.f' % (n + 1)
             self.write_pdf_file(writers.FortranWriter(filename),
@@ -1011,7 +1094,7 @@ end
 
 
     def generate_born_fks_files(self, matrix_element, fortran_model, me_number, path):
-        """generates the files needed for the born applitude in the P* directory, which will
+        """generates the files needed for the born amplitude in the P* directory, which will
         be needed by the P* directories"""
         pathdir = os.getcwd()
 
@@ -1246,6 +1329,13 @@ end
 
         matrix_element = loop_matrix_element
 
+        # Create the MadLoop5_resources directory if not already existing
+        dirpath = os.path.join(dir_name, 'MadLoop5_resources')
+        try:
+            os.mkdir(dirpath)
+        except os.error as error:
+            logger.warning(error.strerror + " " + dirpath)
+
         # Create the directory PN_xx_xxxxx in the specified path
         name = "V%s" % matrix_element.get('processes')[0].shell_string()
         dirpath = os.path.join(dir_name, name)
@@ -1287,41 +1377,35 @@ end
                            len(matrix_element.get_all_amplitudes()))
 
         filename = "loop_matrix.ps"
-        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
               matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
               filename,
               model=matrix_element.get('processes')[0].get('model'),
               amplitude='')
         logger.info("Drawing loop Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string(print_weighted=False))
+            matrix_element.get('processes')[0].nice_string(print_weighted=False))
         plot.draw()
 
         filename = "born_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-                                             get('born_diagrams'),
-                                          filename,
-                                          model=matrix_element.get('processes')[0].\
-                                             get('model'),
-                                          amplitude='')
+            get('born_diagrams'),filename,model=matrix_element.get('processes')[0].\
+                                                      get('model'),amplitude='')
         logger.info("Generating born Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string(print_weighted=False))
+            matrix_element.get('processes')[0].nice_string(print_weighted=False))
         plot.draw()
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.inc']
+                     'MadLoopCommons.f','MadLoopParams.inc']
 
-        os.system("ln -s "+name+"/MadLoopParams.dat ../")
-        os.system("ln -s "+name+"/ColorDenomFactors.dat ../")
-        os.system("ln -s "+name+"/HelConfigs.dat ../")
-        os.system("ln -s "+name+"/ColorNumFactors.dat ../")
-        os.system('ln -s ../../../Cards/MadLoopParams.dat . ')
+        # We should move to MadLoop5_resources directory from the SubProcesses
+
+        ln(pjoin('../../..','Cards','MadLoopParams.dat'),
+                                              pjoin('..','MadLoop5_resources'))
 
         for file in linkfiles:
             ln('../../%s' % file)
 
-        os.system("ln -s ../../check_sa_loop.f check_sa.f")
         os.system("ln -s ../../makefile_loop makefile")
 
         linkfiles = ['mpmodule.mod']
@@ -1351,7 +1435,7 @@ end
     # write_lh_order
     #===============================================================================
     #test written
-    def write_lh_order(self, filename, matrix_elements, OLP):
+    def write_lh_order(self, filename, matrix_elements, OLP='MadLoop'):
         """Creates the OLE_order.lh file. This function should be edited according
         to the OLP which is used. For now it is generic."""
         
@@ -1387,7 +1471,8 @@ end
 
         replace_dict = {}
         replace_dict['mesq'] = 'CHaveraged'
-        replace_dict['corr'] = 'QCD'
+        replace_dict['corr'] = ' '.join(matrix_elements.get('processes')[0].\
+                                                  get('perturbation_couplings'))
         replace_dict['irreg'] = 'CDR'
         replace_dict['aspow'] = QCD
         replace_dict['aepow'] = QED
@@ -1828,6 +1913,7 @@ c     this subdir has no soft singularities
 
         col_lines = []
         pdg_lines = []
+        charge_lines = []
         fks_j_from_i_lines = []
         for i, info in enumerate(fks_info_list):
             col_lines.append( \
@@ -1836,10 +1922,16 @@ c     this subdir has no soft singularities
             pdg_lines.append( \
                 'DATA (PDG_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
                 % (i + 1, ', '.join('%d' % pdg for pdg in info['pdgs'])))
-            fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1], i + 1))
+            charge_lines.append(\
+                'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
+                % (i + 1, ', '.join('%19.15fd0' % charg\
+                                    for charg in fksborn.real_processes[info['n_me']-1].charges) ))
+            fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
+                                                                   i + 1))
 
         replace_dict['col_lines'] = '\n'.join(col_lines)
         replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
+        replace_dict['charge_lines'] = '\n'.join(charge_lines)
         replace_dict['fks_j_from_i_lines'] = '\n'.join(fks_j_from_i_lines)
 
         content = \
@@ -1847,7 +1939,8 @@ c     this subdir has no soft singularities
       INTEGER FKS_I_D(%(nconfs)d), FKS_J_D(%(nconfs)d)
       INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
-
+      REAL*8 PARTICLE_CHARGE_D(%(nconfs)d, NEXTERNAL)
+      
 data fks_i_D / %(fks_i_values)s /
 data fks_j_D / %(fks_j_values)s /
 
@@ -1863,8 +1956,11 @@ C     Particle type according to PDG:
 C     
 %(pdg_lines)s
 
+C
+C     Particle charge:
+C     charge is set 0. with QCD corrections, which is irrelevant
+%(charge_lines)s
 """   % replace_dict
-
         if not isinstance(writer, writers.FortranWriter):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
@@ -1958,13 +2054,13 @@ C
     
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
     
-        file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/realmatrix_fks.inc')).read()
+        realfile = open(os.path.join(_file_path, \
+                             'iolibs/template_files/realmatrix_fks.inc')).read()
 
-        file = file % replace_dict
+        realfile = realfile % replace_dict
         
         # Write the file
-        writer.writelines(file)
+        writer.writelines(realfile)
     
         return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
 
@@ -2287,7 +2383,7 @@ C
                                  (ime, i, nexternal,
                                   ",".join([ "%3r" % 0 ] * nexternal)))
                     color_flow_list = []
-                    nflows = 1
+                    nflow = 1
     
                 else:
                     # First build a color representation dictionnary
@@ -2669,7 +2765,8 @@ c           This is dummy particle used in multiparticle vertices
 #=================================================================================
 # Class for using the optimized Loop process
 #=================================================================================
-class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExporterFortranSA,ProcessExporterFortranFKS):
+class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExporterFortranSA,\
+                                         ProcessExporterFortranFKS):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
@@ -2727,6 +2824,63 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         # We must link the CutTools to the Library folder of the active Template
         self.link_CutTools(dir_path)
+        # We must link the TIR to the Library folder of the active Template
+        link_tir_libs=[]
+        tir_libs=[]
+        tir_include=[]
+        # special for PJFry++/Golem95
+        link_pjfry_lib=""
+        pjfry_lib=""
+        for tir in self.all_tir:
+            tir_dir="%s_dir"%tir
+            libpath=getattr(self,tir_dir)
+            libname="lib%s.a"%tir
+            tir_name=tir
+            libpath = self.link_TIR(os.path.join(self.dir_path, 'lib'),
+                                              libpath,libname,tir_name=tir_name)
+            setattr(self,tir_dir,libpath)
+            if libpath != "":
+                if tir in ['pjfry','golem']:
+                    # Apparently it is necessary to link against the original 
+                    # location of the pjfry/golem library, so it needs a special treatment.
+                    link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
+                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
+                    if tir=='golem':
+                        trg_path = pjoin(os.path.dirname(libpath),'include')
+                        golem_include = misc.find_includes_path(trg_path,'.mod')
+                        if golem_include is None:
+                            logger.error(
+'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
+'Generation carries on but you will need to edit the include path by hand in the makefiles.')
+                            golem_include = '<Not_found_define_it_yourself>'
+                        tir_include.append('-I %s'%golem_include)
+                else:
+                    link_tir_libs.append('-l%s'%tir)
+                    tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
+            
+        os.remove(os.path.join(self.dir_path,'SubProcesses','makefile_loop.inc'))
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'makefile_loop'
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                 link_tir_libs,tir_libs,tir_include=tir_include)
+        os.remove(os.path.join(self.dir_path,'Source','make_opts.inc'))
+        dirpath = os.path.join(self.dir_path, 'Source')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'make_opts'
+        calls = self.write_make_opts(writers.MakefileWriter(filename),
+                                                        link_tir_libs,tir_libs)
+        # Return to original PWD
+        os.chdir(cwd)
 
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
@@ -2745,6 +2899,15 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
 
+        # We need minimal editing of MadLoopCommons.f
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
+        writer.close()
+
         # link the files from the MODEL
         model_path = self.dir_path + '/Source/MODEL/'
         # Note that for the [real=] mode, these files are not present
@@ -2762,7 +2925,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         # Return to original PWD
         os.chdir(cwd)
-
+        
     def generate_virt_directory(self, loop_matrix_element, fortran_model, dir_name):
         """writes the V**** directory inside the P**** directories specified in
         dir_name"""
@@ -2770,6 +2933,13 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         cwd = os.getcwd()
 
         matrix_element = loop_matrix_element
+
+        # Create the MadLoop5_resources directory if not already existing
+        dirpath = os.path.join(dir_name, 'MadLoop5_resources')
+        try:
+            os.mkdir(dirpath)
+        except os.error as error:
+            logger.warning(error.strerror + " " + dirpath)
 
         # Create the directory PN_xx_xxxxx in the specified path
         name = "V%s" % matrix_element.get('processes')[0].shell_string()
@@ -2792,6 +2962,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        
         # The born matrix element, if needed
         filename = 'born_matrix.f'
         calls = self.write_bornmatrix(
@@ -2837,20 +3008,17 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.inc']
+                     'MadLoopParams.inc','MadLoopCommons.f']
 
-        os.system('ln -s ../../../Cards/MadLoopParams.dat . ')
         for file in linkfiles:
             ln('../../%s' % file)
 
-        os.system("ln -s "+name+"/MadLoopParams.dat ../")
-        os.system("ln -s "+name+"/ColorDenomFactors.dat ../")
-        os.system("ln -s "+name+"/HelConfigs.dat ../")
-        os.system("ln -s "+name+"/ColorNumFactors.dat ../")
 
-
-        os.system("ln -s ../../check_sa_loop.f check_sa.f")
         os.system("ln -s ../../makefile_loop makefile")
+        
+# We should move to MadLoop5_resources directory from the SubProcesses
+        ln(pjoin('../../..','Cards','MadLoopParams.dat'),
+                                              pjoin('..','MadLoop5_resources'))        
 
         linkfiles = ['mpmodule.mod']
 

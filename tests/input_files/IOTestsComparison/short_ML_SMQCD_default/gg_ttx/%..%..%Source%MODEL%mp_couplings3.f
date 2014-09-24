@@ -5,8 +5,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       SUBROUTINE MP_COUP3()
 
       IMPLICIT NONE
-      REAL*16 MP__PI
+      REAL*16 MP__PI, MP__ZERO
       PARAMETER (MP__PI=3.1415926535897932384626433832795E0_16)
+      PARAMETER (MP__ZERO=0E0_16)
       INCLUDE 'mp_input.inc'
       INCLUDE 'mp_coupl.inc'
 

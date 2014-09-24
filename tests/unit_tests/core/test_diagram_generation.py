@@ -1167,7 +1167,41 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.generate_diagrams()
             self.assertEqual(len(self.myamplitude.get('diagrams')),
-                             goal_ndiags04[ngluons])
+                             goal_ndiags04[ngluons])               
+                
+    def test_squared_orders_constraints_uux_ddxuux(self):
+        """ Tests that the various possible squared order constraints are 
+        correctly treated at LO."""
+        
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':2,'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1,'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,'state':True}))
+        myleglist.append(base_objects.Leg({'id':-2,'state':True}))
+        
+        SO_tests = [({},{},{},50),
+                    ({},{'QED':-1},{'QED':'=='},14),
+                    ({},{'QED':-2},{'QED':'=='},38),
+                    ({},{'QED':-3},{'QED':'=='},50),
+                    ({},{'QED':-4},{'QED':'=='},36),
+                    ({},{'QED':-5},{'QED':'=='},12),
+                    ({},{'QED':-6},{'QED':'=='},0),
+                    ({},{'QCD':4},{'QCD':'>'},38),
+                    ({},{'QCD':2},{'QCD':'<='},36),
+                    ({},{'QED':2,'QCD':4},{'QED':'==','QCD':'>'},38),
+                    ({'QCD':2},{'QED':4,'QCD':4},{'QED':'<=','QCD':'<='},24)]
+        
+        for orders, sq_orders, sq_orders_type, ndiagGoal in SO_tests:
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': orders,
+                                           'squared_orders': sq_orders,
+                                           'sqorders_types':sq_orders_type})
+            self.myamplitude.set('process', myproc)
+            self.myamplitude.generate_diagrams()
+            self.assertEqual(len(self.myamplitude.get('diagrams')),ndiagGoal) 
 
     def test_forbidden_particles_uux_uuxng(self):
         """Test the number of diagrams uu~>uu~+g with different 

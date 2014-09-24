@@ -89,6 +89,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         else:
             sorted_tags = sorted([cls(d, model, ninitial) for d in \
                                       amplitude.get('diagrams')])
+
         # Do not use this for loop diagrams as for now the HelasMultiProcess
         # always contain only exactly one loop amplitude.
         if sorted_tags and not isinstance(amplitude, \
@@ -898,12 +899,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         part = self.get('particle')
         self.set('particle', self.get('antiparticle'))
         self.set('antiparticle', part)
-
+    
     def is_anticommutating_ghost(self):
-        """ Return True if the particle of this wavefunction is a ghost charged
-        under SU(3)"""
-        return self.get('particle').get('ghost') and self.get('color')!=1
-
+        """ Return True if the particle of this wavefunction is a ghost"""
+        return self.get('particle').get('ghost')
+    
     def is_fermion(self):
         return self.get('spin') % 2 == 0
 
@@ -1006,9 +1006,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         array_rep.append(self['color_key'])
         # Also need to specify if it is a loop wf
         array_rep.append(int(self['is_loop']))
+        
         # Finally, the mother numbers
         array_rep.extend([mother['number'] for \
                           mother in self['mothers']])
+        
         return array_rep
 
     def get_pdg_code(self):
@@ -1039,9 +1041,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if particles[1].get_pdg_code() != particles[2].get_pdg_code() \
                    and self.get('pdg_code') == \
                    particles[1].get_anti_pdg_code()\
-                   and self.get('coupling')[0] != '-':
+                   and not self.get('coupling')[0].startswith('-'):
                 # We need a minus sign in front of the coupling
-                self.set('coupling', ['-' + c for c in self.get('coupling')])
+                self.set('coupling', ['-%s'%c for c in self.get('coupling')])
 
     def set_octet_majorana_coupling_sign(self):
         """For octet Majorana fermions, need an extra minus sign in
@@ -1052,12 +1054,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.get('color') == 8 and \
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
-               [m.get('color') for m in self.get('mothers')] == [8, 8]:
-            if hasattr(self, 'octet_majorana_flip'):
-                return
-            self.octet_majorana_flip = True
-            self.set('coupling', ['-%s' % c 
-                                              for c in self.get('coupling')])
+               [m.get('color') for m in self.get('mothers')] == [8, 8] and \
+               not self.get('coupling')[0].startswith('-'):
+            self.set('coupling', ['-%s' % c for c in self.get('coupling')])
         
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
@@ -1260,11 +1259,36 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                 diagram_wavefunctions.insert(i, new_wf)
                                 break
                         else:
-                            diagram_wavefunctions.append(new_wf)
+                            # For loop processes, care is needed since
+                            # some loop wavefunctions in the diag_wfs might have
+                            # the new_wf in their mother, so we want to place 
+                            # new_wf as early as possible in the list.
+                            # We first look if any mother of the wavefunction
+                            # we want to add appears in the diagram_wavefunctions
+                            # list. If it doesn't, max_mother_index is -1.
+                            # If it does, then max_mother_index is the maximum
+                            # index in diagram_wavefunctions of those of the 
+                            # mothers present in this list.
+                            max_mother_index = max([-1]+
+                                [diagram_wavefunctions.index(wf) for wf in 
+                                        mothers if wf in diagram_wavefunctions])
+                            
+                            # We want to insert this new_wf as early as 
+                            # possible in the diagram_wavefunctions list so that
+                            # we are guaranteed that it will be placed *before*
+                            # wavefunctions that have new_wf as a mother.
+                            # We therefore place it at max_mother_index+1.
+                            if max_mother_index<len(diagram_wavefunctions)-1:
+                                new_wf.set('number',diagram_wavefunctions[
+                                              max_mother_index+1].get('number'))
+                            for wf in diagram_wavefunctions[max_mother_index+1:]:
+                                wf.set('number',wf.get('number')+1)
+                            diagram_wavefunctions.insert(max_mother_index+1,
+                                                                         new_wf)
 
             # Set new mothers
             new_wf.set('mothers', mothers)
-
+                    
             # Now flip flow or sign
             if flip_flow:
                 # Flip fermion flow
@@ -1283,7 +1307,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 new_wf_number = new_wf.get('number')
                 new_wf = wavefunctions[wavefunctions.index(new_wf)]
                 diagram_wf_numbers = [w.get('number') for w in \
-                                      diagram_wavefunctions]
+                                                          diagram_wavefunctions]
                 index = diagram_wf_numbers.index(new_wf_number)
                 diagram_wavefunctions.pop(index)
                 # We need to decrease the wf number for later
@@ -1293,13 +1317,27 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         wf.set('number', wf.get('number') - 1)
                 # Since we reuse the old wavefunction, reset wf_number
                 wf_number = wf_number - 1
+
                 # Need to replace wavefunction in number_to_wavefunctions
-                # (in case this wavefunction is in another of the dicts)
+                # (in case this wavefunction is in another of the dicts) 
                 for n_to_wf_dict in number_to_wavefunctions:
                     if new_wf in n_to_wf_dict.values():
                         for key in n_to_wf_dict.keys():
                             if n_to_wf_dict[key] == new_wf:
-                                n_to_wf_dict[key] = new_wf
+                                n_to_wf_dict[key] = new_wf          
+ 
+                if self.get('is_loop'):
+                    # fix a bug for the g g > go go g [virt=QCD]
+                    # when there is a wf which is replaced, we need to propagate
+                    # the change in all wavefunction of that diagrams which could
+                    # have this replaced wavefunction in their mothers. This
+                    # plays the role of the 'number_to_wavefunction' dictionary
+                    # used for tree level.
+                    for wf in diagram_wavefunctions:
+                        for i,mother_wf in enumerate(wf.get('mothers')):
+                            if mother_wf.get('number')==new_wf_number:
+                                wf.get('mothers')[i]=new_wf
+
             except ValueError:
                 pass
 
@@ -1464,7 +1502,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     
         #fixed argument
         for i, coup in enumerate(self.get_with_flow('coupling')):
-            output['coup%d'%i] = coup
+            # We do not include the - sign in front of the coupling of loop
+            # wavefunctions (only the loop ones, the tree ones are treated normally)
+            # in the non optimized output because this sign was already applied to
+            # the coupling passed in argument when calling the loop amplitude.
+            if not OptimizedOutput and self.get('is_loop'):
+                output['coup%d'%i] = coup[1:] if coup.startswith('-') else coup  
+            else:
+                output['coup%d'%i] = coup
+              
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
         output['W'] = self.get('width')
@@ -1543,10 +1589,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # Sort according to spin and flow direction
         res.sort()
-#        if not self['is_loop']:
         res.append(self.get_spin_state_number())
         res.append(self.find_outgoing_number())
-#        else:
+
         if self['is_loop']:
             res.append(self.get_loop_index())
             if not self.get('mothers'):
@@ -2075,6 +2120,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                    wf_number,
                                    force_flip_flow=False,
                                    number_to_wavefunctions=[]):
+
         """Check for clashing fermion flow (N(incoming) !=
         N(outgoing)). If found, we need to trace back through the
         mother structure (only looking at fermions), until we find a
@@ -2267,6 +2313,76 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         return conjugates
 
+    
+    def check_wavefunction_numbers_order(self, applyChanges=False, raiseError=True):
+        """ This function only serves as an internal consistency check to 
+        make sure that when setting the 'wavefunctions' attribute of the
+        diagram, their order is consistent, in the sense that all mothers 
+        of any given wavefunction appear before that wavefunction.
+        This function returns True if there was no change and the original 
+        wavefunction list was consistent and False otherwise.
+        The option 'applyChanges' controls whether the function should substitute
+        the original list (self) with the new corrected one. For now, this function
+        is only used for self-consistency checks and the changes are not applied."""
+    
+        if len(self)<2:
+            return True
+    
+        def RaiseError():
+            raise self.PhysicsObjectError, \
+      "This wavefunction list does not have a consistent wavefunction ordering."+\
+      "\n  Wf numbers: %s"%str([wf['number'] for wf in diag_wavefunctions])+\
+      "\n  Wf mothers: %s"%str([[mother['number'] for mother in wf['mothers']] \
+                                                  for wf in diag_wavefunctions])
+    
+        # We want to work on a local copy of the wavefunction list attribute
+        diag_wfs = copy.copy(self)
+        
+        # We want to keep the original wf numbering (but beware that this
+        # implies changing the 'number' attribute of some wf if this function
+        # was used for actual reordering and not just self-consistency check)
+        wfNumbers = [wf['number'] for wf in self]
+        
+        exitLoop=False
+        while not exitLoop:
+            for i, wf in enumerate(diag_wfs):
+                if i==len(diag_wfs)-1:
+                    exitLoop=True
+                    break
+                found=False
+                # Look at all subsequent wfs in the list placed after wf at 
+                # index i. None of them should have wf as its mother
+                for w in diag_wfs[i+1:]:
+                    if w in wf.get('mothers'):
+                        # There is an inconsisent order so we must move this
+                        # mother w *before* wf which is placed at i.
+                        diag_wfs.remove(w)
+                        diag_wfs.insert(i,w)
+                        found=True
+                        if raiseError: RaiseError()
+                        if not applyChanges:
+                            return False
+                        break
+                if found:
+                    break
+    
+        if diag_wfs!=self:
+            # After this, diag_wfs is the properly re-ordered and
+            # consistent list that should be used, where each mother appear
+            # before its daughter
+            for i,wf in enumerate(diag_wfs):
+                wf.set('number', wfNumbers[i])
+            
+            # Replace this wavefunction list by corrected one
+            del self[:]
+            self.extend(diag_wfs)
+            
+            # The original list was inconsistent, so it returns False.
+            return False
+        
+        # The original list was consistent, so it returns True
+        return True
+    
     @staticmethod
     def extract_wavefunctions(mothers):
         """Recursively extract the wavefunctions from mothers of mothers"""
@@ -2599,25 +2715,100 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # If there are fermion line pairs, append them as
         # [NI,NO,n1,n2,...]
         fermion_numbers = [f.get_fermion_order() for f in fermions]
-        for iferm in range(0, len(fermion_numbers), 2):
-            fermion_number_list.append(fermion_numbers[iferm][0])
-            fermion_number_list.append(fermion_numbers[iferm+1][0])
-            fermion_number_list.extend(fermion_numbers[iferm][1])
-            fermion_number_list.extend(fermion_numbers[iferm+1][1])
 
+        # Apply the right sign correction for anti-commutating ghost loops
+        if self.get('type')=='loop':
+            # Fetch the second l-cut wavefunctions
+            lcuf_wf_2=[m for m in self.get('mothers') if m['is_loop'] and \
+                                                    len(m.get('mothers'))==0][0]
+            ghost_factor = -1 if lcuf_wf_2.is_anticommutating_ghost() else 1
+        else:
+            # no ghost at tree level
+            ghost_factor = 1
+
+        fermion_loop_factor = 1
+
+        # Now put together the fermion line merging in this amplitude
+        if self.get('type')=='loop' and len(fermion_numbers)>0:
+            # Remember that the amplitude closing the loop is always a 2-point
+            # "fake interaction" attached on the second l-cut wavefunction.
+            # So len(fermion_numbers) is either be 0 or 2.
+            lcut_wf2_number = lcuf_wf_2.get('number_external')
+            assert len(fermion_numbers)==2, "Incorrect number of fermions"+\
+                " (%d) for the amp. closing the loop."%len(fermion_numbers)
+            # Fetch the first l-cut wavefunctions
+            lcuf_wf_1=[m for m in self.get('mothers') if m['is_loop'] and \
+                                                     len(m.get('mothers'))>0][0]
+            while len(lcuf_wf_1.get('mothers'))>0:
+                lcuf_wf_1 = lcuf_wf_1.get_loop_mother()
+            lcut_wf1_number = lcuf_wf_1.get('number_external')
+            
+            # We must now close the loop fermion flow, if there is any.
+            # This means merging the two lists representing the fermion flow of
+            # each of the two l-cut fermions into one. Example for the process
+            # g g > go go [virt=QCD] in the MSSM.
+            # Loop diagram 21 has the fermion_number_list
+            # [[3, [5, 4]], [6, []]]
+            # and 22 has 
+            # [[6, []], [4, [3, 5]]]
+            # Which should be merged into [3,4] both times
+            
+            # Here, iferm_to_replace is the position of the fermion line 
+            # pairing which is *not* [6,[]] in the above example.
+            iferm_to_replace = (fermion_numbers.index([lcut_wf2_number,[]])+1)%2
+        
+            if fermion_numbers[iferm_to_replace][0]==lcut_wf1_number:
+                # We have a closed loop fermion flow here, so we must simply 
+                # add a minus sign (irrespectively of whether the closed loop 
+                # fermion flow goes clockwise or counter-clockwise) and not
+                # consider the fermion loop line in the fermion connection list.
+                fermion_number_list.extend(fermion_numbers[iferm_to_replace][1])
+                fermion_loop_factor = -1
+            else:
+                # The fermion flow escape the loop in this case.
+                fermion_number_list = \
+                                 copy.copy(fermion_numbers[iferm_to_replace][1])
+                # We must find to which external fermion the lcut_wf1 is 
+                # connected (i.e. 5 being connected to 3(resp. 4) in the example 
+                # of diagram 22 (resp. 21) above)
+                i_connected_fermion = fermion_number_list.index(lcut_wf1_number)
+                fermion_number_list[i_connected_fermion] = \
+                                            fermion_numbers[iferm_to_replace][0]
+        else:
+            for iferm in range(0, len(fermion_numbers), 2):
+                fermion_number_list.append(fermion_numbers[iferm][0])
+                fermion_number_list.append(fermion_numbers[iferm+1][0])
+                fermion_number_list.extend(fermion_numbers[iferm][1])
+                fermion_number_list.extend(fermion_numbers[iferm+1][1])
+                
+                
+        # Bosons are treated in the same way for a bosonic loop than for tree
+        # level kind of amplitudes.
         for boson in bosons:
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
 
+#         if not hasattr(HelasAmplitude,"counter"):
+#             HelasAmplitude.counter=1
+#             print "MMMMME"
+#         save1 = copy.deepcopy(fermion_number_list)
+#         save2 = copy.deepcopy(fermion_number_list2)
+#         save3 = copy.deepcopy(fermion_number_list)
+#         save4 = copy.deepcopy(fermion_number_list2)
+#         if HelasAmplitude.counter<500000 and self.get('type')=='loop' and \
+#           HelasAmplitude.sign_flips_to_order(save1)*HelasAmplitude.sign_flips_to_order(save2)==-1:
+#             print "Before %i=%s"%(HelasAmplitude.counter,str(fermion_numbers_save))
+#             print "FOOOOR %i=%s"%(HelasAmplitude.counter,str(fermion_number_list))
+#             print "NEW %i=%s"%(HelasAmplitude.counter,str(fermion_number_list2))
+#             print "Relative sign =%d"%(HelasAmplitude.sign_flips_to_order(save3)*HelasAmplitude.sign_flips_to_order(save4))
+#         HelasAmplitude.counter=self.counter+1
+
+        #fermion_number_list = fermion_number_list2
+
         fermion_factor = HelasAmplitude.sign_flips_to_order(fermion_number_list)
-        # Apply the right sign correction for anti-commutating ghost loops
-        if self.get('type')=='loop':
-            lcuf_wf_2=[m for m in self.get('mothers') if m['is_loop'] and \
-                                                        not m.get('mothers')][0]
-            self['fermionfactor'] = -fermion_factor if \
-                        lcuf_wf_2.is_anticommutating_ghost() else fermion_factor
-        else:
-            self['fermionfactor'] = fermion_factor
+
+        self['fermionfactor'] = fermion_factor*ghost_factor*fermion_loop_factor
+#        print "foooor %i ="%HelasAmplitude.counter, fermion_factor, self.get('type')
 
     @staticmethod
     def sign_flips_to_order(fermions):
@@ -2819,7 +3010,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                          mothers.sort_by_pdg_codes(self.get('pdg_codes'))
                 break
 
-        if mothers != self.get('mothers'):
+        if mothers != self.get('mothers') and \
+                                       not self.get('coupling').startswith('-'):
             # We have mismatch between fermion order for color and lorentz
             self.set('coupling', '-'+self.get('coupling'))
 
@@ -2892,6 +3084,7 @@ class HelasDiagram(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasWavefunctionList object" % \
                         str(value)
+      
         if name == 'amplitudes':
             if not isinstance(value, HelasAmplitudeList):
                 raise self.PhysicsObjectError, \
@@ -2899,7 +3092,7 @@ class HelasDiagram(base_objects.PhysicsObject):
                         str(value)
 
         return True
-
+                
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
@@ -3103,8 +3296,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         self.set('color_matrix',
           color_amp.ColorMatrix(self.get('color_basis')))
         
-    def generate_helas_diagrams(self, amplitude, optimization=1,
-                                decay_ids=[]):
+    def generate_helas_diagrams(self, amplitude, optimization=1,decay_ids=[]):
         """Starting from a list of Diagrams from the diagram
         generation, generate the corresponding HelasDiagrams, i.e.,
         the wave functions and amplitudes. Choose between default
@@ -3447,6 +3639,19 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for diag in helas_diagrams:
             for wf in diag['wavefunctions']:
                 wf.set('me_id', replace[wf.get('number')])
+        
+        return helas_diagrams
+
+    def restore_original_wavefunctions(self):
+        """This restore the original memory print and revert
+           change the wavefunctions id used in the writer to minimize the 
+           memory used by the wavefunctions."""
+        
+        helas_diagrams = self.get('diagrams')
+        
+        for diag in helas_diagrams:
+            for wf in diag['wavefunctions']:
+                wf.set('me_id',wf.get('number'))
         
         return helas_diagrams
 
@@ -4144,7 +4349,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def calculate_fermionfactors(self):
         """Generate the fermion factors for all diagrams in the matrix element
         """
-
         for diagram in self.get('diagrams'):
             for amplitude in diagram.get('amplitudes'):
                 amplitude.get('fermionfactor')
@@ -4270,9 +4474,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Gives (number or external particles, number of
         incoming particles)"""
 
-        external_wfs = filter(lambda wf: wf.get('leg_state') != \
-                              'intermediate',
-                              self.get_all_wavefunctions())
+        external_wfs = filter(lambda wf: not wf.get('mothers'),
+                                                   self.get_all_wavefunctions())
 
         return (len(set([wf.get('number_external') for wf in \
                          external_wfs])),
@@ -4414,6 +4617,112 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         return self.generate_color_amplitudes(self['color_basis'],self['diagrams'])
 
+    def sort_split_orders(self, split_orders):
+        """ Sort the 'split_orders' list given in argument so that the orders of
+        smaller weights appear first. Do nothing if not all split orders have
+        a hierarchy defined."""
+        order_hierarchy=\
+                    self.get('processes')[0].get('model').get('order_hierarchy')
+        if set(order_hierarchy.keys()).union(set(split_orders))==\
+                                                    set(order_hierarchy.keys()):
+            split_orders.sort(key=lambda order: order_hierarchy[order])
+
+    def get_split_orders_mapping_for_diagram_list(self, diag_list, split_orders,
+            get_amp_number_function = lambda amp: amp.get('number'),
+            get_amplitudes_function = lambda diag: diag.get('amplitudes')):
+        """ This a helper function for get_split_orders_mapping to return, for 
+        the HelasDiagram list given in argument, the list amp_orders detailed in
+        the description of the 'get_split_orders_mapping' function.
+        """
+
+        order_hierarchy=\
+                    self.get('processes')[0].get('model').get('order_hierarchy')
+        # Find the list of amplitude numbers and what amplitude order they
+        # correspond to. For its construction, amp_orders is a dictionary with
+        # is then translated into an ordered list of tuples before being returned.
+        amp_orders={}
+        for diag in diag_list:
+            diag_orders=diag.calculate_orders()
+            # Add the WEIGHTED order information
+            diag_orders['WEIGHTED']=sum(order_hierarchy[order]*value for \
+                                           order, value in  diag_orders.items())
+            # Complement the missing split_orders with 0
+            for order in split_orders:
+                if not order in diag_orders.keys():
+                    diag_orders[order]=0
+            key = tuple([diag_orders[order] for order in split_orders])
+            try:
+                amp_orders[key].extend([get_amp_number_function(amp) for amp in \
+                                                 get_amplitudes_function(diag)])
+            except KeyError:
+                amp_orders[key] = [get_amp_number_function(amp) for amp in \
+                                                  get_amplitudes_function(diag)]
+        amp_orders=[(order[0],tuple(order[1])) for order in amp_orders.items()]
+        # Again make sure a proper hierarchy is defined and order the list
+        # according to it if possible
+        if set(order_hierarchy.keys()).union(set(split_orders))==\
+                                                    set(order_hierarchy.keys()):
+            # Order the contribution starting from the minimum WEIGHTED one
+            amp_orders.sort(key= lambda elem: 
+                         sum([order_hierarchy[split_orders[i]]*order_power for \
+                                         i, order_power in enumerate(elem[0])]))
+        
+        return amp_orders
+
+    def get_split_orders_mapping(self):
+        """This function returns two lists, squared_orders, amp_orders.
+        If process['split_orders'] is empty, the function returns two empty lists.
+        
+        squared_orders : All possible contributing squared orders among those
+            specified in the process['split_orders'] argument. The elements of
+            the list are tuples of the format format (OrderValue1,OrderValue2,...) 
+            with OrderValue<i> correspond to the value of the <i>th order in
+            process['split_orders'] (the others are summed over and therefore 
+            left unspecified).
+            Ex for dijet with process['split_orders']=['QCD','QED']: 
+                => [(4,0),(2,2),(0,4)]
+        
+        amp_orders : Exactly as for squared order except that this list specifies
+            the contributing order values for the amplitude (i.e. not 'squared').
+            Also, the tuple describing the amplitude order is nested with a 
+            second one listing all amplitude numbers contributing to this order.
+            Ex for dijet with process['split_orders']=['QCD','QED']: 
+                => [((2, 0), (2,)), ((0, 2), (1, 3, 4))]
+
+        Keep in mind that the orders of the element of the list is important as
+        it dicatates the order of the corresponding "order indices" in the
+        code output by the exporters.
+        """
+        
+        split_orders=self.get('processes')[0].get('split_orders')
+        # If no split_orders are defined, then return the obvious
+        if len(split_orders)==0:
+            return (),()
+        
+        # First make sure that the 'split_orders' are ordered according to their
+        # weight.
+        self.sort_split_orders(split_orders)
+            
+        amp_orders = self.get_split_orders_mapping_for_diagram_list(\
+                                              self.get('diagrams'),split_orders)
+            
+        # Now we construct the interference splitting order matrix for 
+        # convenience
+        squared_orders = []
+        for i, amp_order in enumerate(amp_orders):
+            for j in range(0,i+1):
+                key = tuple([ord1 + ord2 for ord1,ord2 in \
+                                            zip(amp_order[0],amp_orders[j][0])])
+                # We don't use the set structure here since keeping the
+                # construction order guarantees us that the squared_orders will
+                # also be ordered according to the WEIGHT.
+                if not key in squared_orders:
+                    squared_orders.append(key)
+
+        return squared_orders, amp_orders
+            
+            
+
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate_tag, outgoing) with
         all lorentz structures used by this HelasMatrixElement."""
@@ -4488,7 +4797,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # identity factors, number of diagrams, number of wavefunctions
         # initial leg, final state legs
         if len(decay1.get('processes')[0].get("legs")) != \
-           len(decay1.get('processes')[0].get("legs")) or \
+           len(decay2.get('processes')[0].get("legs")) or \
            len(decay1.get('diagrams')) != len(decay2.get('diagrams')) or \
            decay1.get('identical_particle_factor') != \
            decay2.get('identical_particle_factor') or \
@@ -5059,6 +5368,9 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         
         colorize_obj = col_basis.create_color_dict_list(\
                          matrix_element.get('base_amplitude'))
+        #list_colorize = []
+        #list_color_basis = []
+        #list_color_matrices = []
         
         try:
             # If the color configuration of the ME has
