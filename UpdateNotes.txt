@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.2.1(25/09/14) OM: Fix a bug preventing the generation of events at LO due to a wrong treatment of 
+                      the color-flow.
+
 2.2.0(24/09/14) VH: General mixed order corrections in MadLoop (only), including QCD/EW/QED and 
                     the UFO@NLO model 'loop_qcd_qed_sm'.
                 VH: Re-design of both the tree and MadLoop matrix elements output to compute

@@ -91,6 +91,12 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 
       npart = nexternal
       buff = ' '
+
+      do i=-nexternal+2,nexternal
+         icolalt(1,i)=0
+         icolalt(2,i)=0
+      enddo
+
 c   
 c   Choose the config (diagram) which was actually used to produce the event
 c   
