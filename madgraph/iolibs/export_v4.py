@@ -5240,6 +5240,33 @@ class UFO_model_to_mg4(object):
             input = pjoin(model_path,'Fortran','functions.f')
             file.writelines(fsock, open(input).read())
             fsock.write_comment_line(' END USER DEFINE FUNCTIONS ')
+            
+        # check for functions define in the UFO model
+        ufo_fct = self.model.get('functions')
+        if ufo_fct:
+            fsock.write_comment_line(' START UFO DEFINE FUNCTIONS ')
+            for fct in ufo_fct:
+                # already handle by default
+                if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc"]:
+                    ufo_fct_template = """
+          double complex function %(name)s(%(args)s)
+          implicit none
+          double complex %(args)s
+          %(name)s = %(fct)s
+
+          return
+          end
+          """
+                    text = ufo_fct_template % {
+                                'name': fct.name,
+                                'args': ",".join(fct.arguments),                
+                                'fct': self.p_to_f.parse(fct.expr)
+                                 }
+                    fsock.writelines(text)
+                    
+            fsock.write_comment_line(' STOP UFO DEFINE FUNCTIONS ')                    
+
+        
 
     def create_makeinc(self):
         """create makeinc.inc containing the file to compile """
