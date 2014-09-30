@@ -30,12 +30,18 @@ C LOCAL VARIABLES
 C  
 	INTEGER I
 	INTEGER ML_ANS_DIMENSION
+
+	REAL*8 XTOT
 C  
 C GLOBAL VARIABLES
 C  
-    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-    COMMON/TO_AMPS/  AMP2,       JAMP2
-    
+ 
+    %(complex_dp_format)s JAMP2(%(nLoopFlows)d)
+	common/%(ml_prefix)sJAMP2/JAMP2
+
+    %(real_dp_format)s AMP2(%(nloopamps)d)
+	common/%(ml_prefix)sAMP2/AMP2
+
     CHARACTER*101         HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
     

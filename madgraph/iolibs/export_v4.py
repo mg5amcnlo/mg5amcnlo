@@ -319,14 +319,26 @@ class ProcessExporterFortran(object):
         pass
 
     #===========================================================================
+    # get_source_libraries_list
+    #===========================================================================
+    def get_source_libraries_list(self):
+        """ Returns the list of libraries to be compiling when compiling the
+        SOURCE directory. It is different for loop_induced processes and 
+        also depends on the value of the 'output_dependencies' option"""
+        
+        return ['$(LIBDIR)libdhelas.$(libext)',
+                '$(LIBDIR)libpdf.$(libext)',
+                '$(LIBDIR)libmodel.$(libext)',
+                '$(LIBDIR)libcernlib.$(libext)']
+
+    #===========================================================================
     # write_source_makefile
     #===========================================================================
     def write_source_makefile(self, writer):
         """Write the nexternal.inc file for MG4"""
 
-
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
-        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)'
+        set_of_lib = ' '.join(['$(LIBRARIES)']+self.get_source_libraries_list())
         if self.opt['model'] == 'mssm' or self.opt['model'].startswith('mssm-'):
             model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make
 MODEL/MG5_param.dat: ../Cards/param_card.dat\n\t../bin/madevent treatcards param
@@ -1605,7 +1617,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #=========================================================================== 
     def export_model_files(self, model_path):
         """export the model dependent files for V4 model"""
-        
+
         super(ProcessExporterFortranSA,self).export_model_files(model_path)
         # Add the routine update_as_param in v4 model 
         # This is a function created in the UFO 
@@ -1774,7 +1786,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #===========================================================================
     def write_source_makefile(self, writer):
         """Write the nexternal.inc file for MG4"""
-
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
@@ -2174,7 +2185,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
                               online = False, compiler='g77'):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
-        
+
         # Write maxparticles.inc based on max of ME's/subprocess groups
         filename = pjoin(self.dir_path,'Source','maxparticles.inc')
         self.write_maxparticles_file(writers.FortranWriter(filename),
@@ -2814,7 +2825,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     #=========================================================================== 
     def export_model_files(self, model_path):
         """export the model dependent files"""
-        
+
         super(ProcessExporterFortranME,self).export_model_files(model_path)
         
         # Add the routine update_as_param in v4 model 
@@ -3050,7 +3061,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                               online = False, compiler='gfortran'):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
-      
+
         modelname = self.opt['model']
         if modelname == 'mssm' or modelname.startswith('mssm-'):
             param_card = pjoin(self.dir_path, 'Cards','param_card.dat')
@@ -5408,8 +5419,9 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
       'golem_dir':cmd.options["golem"],
       'fortran_compiler':cmd.options['fortran_compiler'],
       'output_dependencies':cmd.options['output_dependencies'],
-      'SubProc_prefix':'P'}
-        
+      'SubProc_prefix':'P',
+      'compute_color_flows':cmd.options['loop_color_flows']}
+
     if output_type=='madloop':
         import madgraph.loop.loop_exporters as loop_exporters
         if os.path.isdir(os.path.join(cmd._mgme_dir, 'Template/loop_material')):
@@ -5468,6 +5480,9 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
         loop_induced_opt = MadLoop_SA_options
         loop_induced_opt['export_format'] = 'madloop_optimized'
         loop_induced_opt['SubProc_prefix'] = 'PV'
+        # For loop_induced output with MadEvent, we must have access to the 
+        # color flows.
+        loop_induced_opt['compute_color_flows'] = True
         for key in opt:
             if key not in loop_induced_opt:
                 loop_induced_opt[key] = opt[key]

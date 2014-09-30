@@ -44,7 +44,7 @@ C
 
        %(complex_dp_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3)
        %(complex_dp_format)s PJCOEFS(0:LOOPMAXCOEFS-1,3)
-## if(LoopInduced){
+## if(TIRCaching){
        %(complex_dp_format)s TIRCOEFS_CACHING(3,0:LOOPMAXCOEFS-1,NLOOPGROUPS)
        SAVE TIRCOEFS_CACHING
 ## }
@@ -66,7 +66,7 @@ C
        %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
 ## }
        COMMON/%(proc_prefix)sLCOEFS/LOOPCOEFS
-## if(LoopInduced){
+## if(TIRCaching){
 	   LOGICAL TIR_DONE(NLOOPGROUPS)
 	   COMMON/%(proc_prefix)sTIRCACHING/TIR_DONE
 ## }
@@ -130,7 +130,7 @@ C NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       DO I=0,RANK
          NLOOPCOEFS=NLOOPCOEFS+(3+I)*(2+I)*(1+I)/6
       ENDDO
-## if(LoopInduced){
+## if(TIRCaching){
 	  IF(.NOT.TIR_DONE(I_LOOPGROUP))THEN
 ## } 
       SELECT CASE(MLReductionLib(I_LIB))
@@ -141,7 +141,7 @@ C     PJFry++
 C     IREGI
 %(iregi_calling)s
       END SELECT
-## if(LoopInduced){
+## if(TIRCaching){
 	  DO I=1,3
 	  	DO J=0,NLOOPCOEFS-1
 	     TIRCOEFS_CACHING(I,J,I_LOOPGROUP)=TIRCOEFS(J,I)

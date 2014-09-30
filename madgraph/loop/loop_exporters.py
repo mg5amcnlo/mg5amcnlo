@@ -85,13 +85,15 @@ class LoopExporterFortran(object):
                         'loop_dir':'', 'cuttools_dir':'', 
                         'fortran_compiler':'gfortran',
                         'output_dependencies':'external',
-                        'SubProc_prefix':'P'}
+                        'SubProc_prefix':'P',
+                        'compute_color_flows':False}
 
         self.SubProc_prefix = self.opt['SubProc_prefix']
         self.loop_dir = self.opt['loop_dir']
         self.cuttools_dir = self.opt['cuttools_dir']
         self.fortran_compiler = self.opt['fortran_compiler']
         self.dependencies = self.opt['output_dependencies']
+        self.compute_color_flows = self.opt['compute_color_flows']
 
         super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)        
 
@@ -194,6 +196,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
        Fortran format."""
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
+    madloop_makefile_name = 'makefile'
 
     def copy_v4template(self, modelname = ''):
         """Additional actions needed to setup the Template.
@@ -202,36 +205,35 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         self.loop_additional_template_setup()
     
-    def loop_additional_template_setup(self):
+    def loop_additional_template_setup(self, copy_Source_makefile = True):
         """ Perform additional actions specific for this class when setting
         up the template with the copy_v4template function."""
 
         # We must change some files to their version for NLO computations
-        cpfiles= ["Source/makefile",\
-                  "SubProcesses/MadLoopCommons.f",
+        cpfiles= ["SubProcesses/MadLoopCommons.f",
                   "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParamReader.f",
                   "SubProcesses/MadLoopParams.inc"]
-        # first write SubProcesses/makefile from SubProcesses/makefile.inc
-        # dummy variables
-        link_tir_libs=[]
-        tir_libs=[]
-        cwd = os.getcwd()
-        dirpath = os.path.join(self.dir_path, 'SubProcesses')
-        try:
-            os.chdir(dirpath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % dirpath)
-            return 0
-        filename = 'makefile'
-        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                                         link_tir_libs,tir_libs)
-        # Return to original PWD
-        os.chdir(cwd)
+        if copy_Source_makefile:
+            cpfiles.append("Source/makefile")
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+
+        # We might need to give a different name to the MadLoop makefile\
+        shutil.copy(pjoin(self.loop_dir,'StandAlone','SubProcesses','makefile'),
+                pjoin(self.dir_path, 'SubProcesses',self.madloop_makefile_name))
+
+        # Write SubProcesses/MadLoop_makefile_definitions with dummy variables
+        # for the non-optimized output
+        link_tir_libs=[]
+        tir_libs=[]
+
+        filePath = pjoin(self.dir_path, 'SubProcesses',
+                                                 'MadLoop_makefile_definitions')
+        calls = self.write_loop_makefile_definitions(
+                        writers.MakefileWriter(filePath),link_tir_libs,tir_libs)
 
         # Copy the whole MadLoop5_resources directory (empty at this stage)
         if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
@@ -272,15 +274,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
     # This function is placed here and not in optimized exporterd,
     # because the same makefile.inc should be used in all cases.
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,tir_include=[]):
+    def write_loop_makefile_definitions(self, writer, link_tir_libs,
+                                                       tir_libs,tir_include=[]):
         """ Create the file makefile which links to the TIR libraries."""
             
         file = open(os.path.join(self.loop_dir,'StandAlone',
-                                 'SubProcesses','makefile.inc')).read()  
+                      'SubProcesses','MadLoop_makefile_definitions.inc')).read()  
         replace_dict={}
         replace_dict['link_tir_libs']=' '.join(link_tir_libs)
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
+        replace_dict['prefix']= self.SubProc_prefix
         replace_dict['doto']='%.o'
         replace_dict['tir_include']=' '.join(tir_include)
         file=file%replace_dict
@@ -565,10 +569,33 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
     def get_context(self,matrix_element):
         """ Returns the contextual variables which need to be set when
-        preprocessing the template files."""
+        pre-processing the template files."""
 
-        return {'LoopInduced':
-                         not matrix_element.get('processes')[0].get('has_born')}
+        # The nSquaredSO entry of the general replace dictionary should have
+        # been set in write_loopmatrix prior to the first call to this function
+        # However, for cases where the TIRCaching contextual variable is 
+        # irrelevant (like in the default output), this might not be the case
+        # so we set it to 1. 
+        try:
+            n_squared_split_orders = self.general_replace_dict['nSquaredSO']
+        except KeyError:
+            n_squared_split_orders = 1
+
+        LoopInduced = not matrix_element.get('processes')[0].get('has_born')
+        ComputeColorFlows = self.compute_color_flows
+        # The variable AmplitudeReduction is just to make the contextual
+        # conditions more readable in the include files.
+        AmplitudeReduction = LoopInduced or ComputeColorFlows
+        # Even when not reducing at the amplitude level, the TIR caching
+        # is useful when there is more than one squared split order config.
+        TIRCaching = AmplitudeReduction or n_squared_split_orders>1
+        MadEventOutput = False
+
+        return {'LoopInduced': LoopInduced,
+                'ComputeColorFlows': ComputeColorFlows,
+                'AmplitudeReduction': AmplitudeReduction,
+                'TIRCaching': TIRCaching,
+                'MadEventOutput': MadEventOutput}
 
     def get_SubProc_folder_name(self, process, 
                                  group_number = None, group_elem_number = None):
@@ -577,8 +604,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         integration with MadEvent."""
         
         if not group_number or not group_elem_number:
-            return "%s%s" %(self.SubProc_prefix, 
-                              matrix_element.get('processes')[0].shell_string())
+            return "%s%s" %(self.SubProc_prefix,process.shell_string())
         else:
             return "%s%d_%s_%s_%s"%(self.SubProc_prefix, process.get('id'), 
                                                 group_number, group_elem_number, 
@@ -632,10 +658,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 matrix_element,
                 fortran_model)
 
-        filename = 'nexternal.inc'
-        self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
-
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
                          matrix_element)
@@ -688,7 +710,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         """ To link required files from the Subprocesses directory to the
         different P* ones"""
         
-        linkfiles = ['coupl.inc', 'makefile',
+        linkfiles = ['coupl.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
                      'mp_coupl_same_name.inc',
                      'MadLoopParamReader.f','MadLoopCommons.f',
@@ -696,6 +718,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         
         for file in linkfiles:
             ln('../%s' % file)
+        
+        ln('../%s'%self.madloop_makefile_name, name='makefile')
 
         # The mp module
         ln('../../lib/mpmodule.mod')
@@ -728,7 +752,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         dict['process_lines'] = process_lines
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-        dict['nexternal'] = nexternal-2
+        dict['nexternal'] = nexternal
+        dict['nincoming'] = ninitial
         # Extract ncomb
         ncomb = matrix_element.get_helicity_combinations()
         dict['ncomb'] = ncomb
@@ -841,37 +866,36 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         if writer:
             raise MadGraph5Error, 'Matrix output mode no longer supported.'
         
-        else:
-            filename = 'loop_matrix.f'
-            calls = self.write_loopmatrix(writers.FortranWriter(filename),
-                                          matrix_element,
-                                          LoopFortranModel)
+        filename = 'loop_matrix.f'
+        calls = self.write_loopmatrix(writers.FortranWriter(filename),
+                                      matrix_element,
+                                      LoopFortranModel)       
 
-            # Write out the proc_prefix in a file, this is quite handy
-            proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
-            proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
-            proc_prefix_writer.close()
-                        
-            filename = 'check_sa.f'
-            self.write_check_sa(writers.FortranWriter(filename),matrix_element)
-            
-            filename = 'CT_interface.f'
-            self.write_CT_interface(writers.FortranWriter(filename),\
-                                    matrix_element)
-            
-            filename = 'improve_ps.f'
-            calls = self.write_improve_ps(writers.FortranWriter(filename),
-                                                                 matrix_element)
-            
-            filename = 'loop_num.f'
-            self.write_loop_num(writers.FortranWriter(filename),\
-                                    matrix_element,LoopFortranModel)
-            
-            filename = 'mp_born_amps_and_wfs.f'
-            self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
-                                         matrix_element,LoopFortranModel)
+        # Write out the proc_prefix in a file, this is quite handy
+        proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
+        proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
+        proc_prefix_writer.close()
+                    
+        filename = 'check_sa.f'
+        self.write_check_sa(writers.FortranWriter(filename),matrix_element)
+        
+        filename = 'CT_interface.f'
+        self.write_CT_interface(writers.FortranWriter(filename),\
+                                matrix_element)
+        
+        filename = 'improve_ps.f'
+        calls = self.write_improve_ps(writers.FortranWriter(filename),
+                                                             matrix_element)
+        
+        filename = 'loop_num.f'
+        self.write_loop_num(writers.FortranWriter(filename),\
+                                matrix_element,LoopFortranModel)
+        
+        filename = 'mp_born_amps_and_wfs.f'
+        self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
+                                     matrix_element,LoopFortranModel)
 
-            return calls
+        return calls
 
     def generate_subprocess_directory_v4(self, matrix_element, fortran_model):
         """ To overload the default name for this function such that the correct
@@ -1398,7 +1422,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop_optimized')
     # The option below controls wether one wants to group together in one single
     # CutTools/TIR call the loops with same denominator structure
-    group_loops=True
+    forbid_loop_grouping = False
     
     # List of potential TIR library one wants to link to
     all_tir=['pjfry','iregi','golem']
@@ -1469,21 +1493,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     link_tir_libs.append('-l%s'%tir)
                     tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
 
-        os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
-        cwd = os.getcwd()
-        dirpath = os.path.join(self.dir_path, 'SubProcesses')
-        try:
-            os.chdir(dirpath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % dirpath)
-            return 0
-        filename = 'makefile'
-        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                                     link_tir_libs,tir_libs,
-                                                     tir_include=tir_include)
-        # Return to original PWD
-        os.chdir(cwd)
-                     
+        MadLoop_makefile_definitions = pjoin(self.dir_path,'SubProcesses',
+                                                 'MadLoop_makefile_definitions')
+        if os.path.isfile(MadLoop_makefile_definitions):
+            os.remove(MadLoop_makefile_definitions)
+
+        calls = self.write_loop_makefile_definitions(
+                        writers.MakefileWriter(MadLoop_makefile_definitions),
+                                link_tir_libs,tir_libs, tir_include=tir_include)
 
     def link_files_from_Subprocesses(self,proc_name):
         """ Does the same as the mother routine except that it also links
@@ -1635,6 +1652,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         matrix_element.compute_all_analytic_information(
           self.get_aloha_model(matrix_element.get('processes')[0].get('model')))
 
+        # Decide if loops sharing same denominator structures have to be grouped
+        # together or not.
+        if self.forbid_loop_grouping:
+            self.group_loops = False
+        else:
+            self.group_loops = (not self.compute_color_flows) and \
+                              matrix_element.get('processes')[0].get('has_born')
+
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.
         self.general_replace_dict=LoopProcessExporterFortranSA.\
@@ -1654,7 +1679,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         filename = 'loop_matrix.f'
         calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                       matrix_element,
-                                      OptimizedFortranModel)
+                                      OptimizedFortranModel)    
         
         filename = 'check_sa.f'
         self.write_check_sa(writers.FortranWriter(filename),matrix_element)
@@ -1688,6 +1713,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         filename = 'mp_compute_loop_coefs.f'
         self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
                                      matrix_element,OptimizedFortranModel)
+
+        if self.compute_color_flows:
+            filename = 'compute_color_flows.f'
+            self.write_compute_color_flows(writers.FortranWriter(filename),
+                                                                 matrix_element)
 
         return calls
 
@@ -1790,8 +1820,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict['nloops']=len(\
                         [1 for ldiag in matrix_element.get_loop_diagrams() for \
                                            lamp in ldiag.get_loop_amplitudes()])
-        if self.group_loops and \
-                             matrix_element.get('processes')[0].get('has_born'):
+        if self.group_loops:
             self.general_replace_dict['nloop_groups']=\
                                           len(matrix_element.get('loop_groups'))
         else:
@@ -2036,6 +2065,104 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Write the file
         writer.writelines(file,context=context)
 
+    def write_color_matrix_data_file(self, writer, col_matrix):
+        """Writes out the files (Loop|Born)ColorFlowMatrix.dat corresponding
+        to the color coefficients for JAMP(L|B)*JAMP(L|B)."""
+        
+        res = []
+        for line in range(len(col_matrix._col_basis1)):
+            numerators = []
+            denominators = []
+            for row in range(len(col_matrix._col_basis2)):
+                coeff = col_matrix.col_matrix_fixed_Nc[(line,row)]
+                numerators.append('%6r'%coeff[0].numerator)
+                denominators.append('%6r'%(
+                                  coeff[0].denominator*(-1 if coeff[1] else 1)))
+            res.append(' '.join(numerators))
+            res.append(' '.join(denominators))            
+        
+        res.append('EOF')
+        
+        writer.writelines('\n'.join(res))
+    
+    def write_color_flow_coefs_data_file(self, writer, color_amplitudes, 
+                                                                   color_basis):
+        """ Writes the file '(Loop|Born)ColorFlowCoefs.dat using the coefficients
+        list of the color_amplitudes in the argument of this function."""
+
+        my_cs = color.ColorString()        
+        
+        res = []
+
+        for jamp_number, coeff_list in enumerate(color_amplitudes):
+            my_cs.from_immutable(sorted(color_basis.keys())[jamp_number])            
+            res.append('%d # Coefficient for flow number %d with expr. %s'\
+                                 %(len(coeff_list), jamp_number+1, repr(my_cs)))
+            # A line element is a tuple (numerator, denominator, amplitude_id)
+            line_element = []
+
+            for (coefficient, amp_number) in coeff_list:
+                coef = self.cat_coeff(\
+                    coefficient[0],coefficient[1],coefficient[2],coefficient[3])
+                line_element.append((coef[0].numerator,
+                         coef[0].denominator*(-1 if coef[1] else 1),amp_number))
+            # Sort them by growing amplitude number
+            line_element.sort(key=lambda el:el[2])
+
+            for i in range(3):
+                res.append(' '.join('%6r'%elem[i] for elem in line_element))
+        
+        res.append('EOF')
+        writer.writelines('\n'.join(res))
+    
+    def write_compute_color_flows(self, writer, matrix_element):
+        """Writes the file compute_color_flows.f which uses the AMPL results
+        from a common block to project them onto the color flow space so as 
+        to compute the JAMP quantities. For loop induced processes, this file
+        will also contain a subroutine computing AMPL**2 for madevent
+        multichanneling."""
+        
+        loop_col_amps = matrix_element.get_loop_color_amplitudes()
+        self.general_replace_dict['nLoopFlows'] = len(loop_col_amps)
+        
+        dat_writer = open(pjoin('..','MadLoop5_resources',
+                                     '%(proc_prefix)sLoopColorFlowCoefs.dat'
+                                                %self.general_replace_dict),'w')
+        self.write_color_flow_coefs_data_file(dat_writer,
+                        loop_col_amps, matrix_element.get('loop_color_basis'))
+        dat_writer.close()
+
+        dat_writer = open(pjoin('..','MadLoop5_resources',
+                                     '%(proc_prefix)sLoopColorFlowMatrix.dat'
+                                                %self.general_replace_dict),'w')
+        self.write_color_matrix_data_file(dat_writer,
+                                             matrix_element.get('color_matrix'))
+        dat_writer.close() 
+
+        if matrix_element.get('processes')[0].get('has_born'):
+            born_col_amps = matrix_element.get_born_color_amplitudes()
+            self.general_replace_dict['nBornFlows'] = born_col_amps
+            dat_writer = open(pjoin('..','MadLoop5_resources',
+                                      '%(proc_prefix)sBornColorFlowCoefs.dat'
+                                                %self.general_replace_dict),'w')
+            self.write_color_flow_coefs_data_file(dat_writer,
+                          born_col_amps, matrix_element.get('loop_color_basis'))
+            dat_writer.close()
+            
+            dat_writer = open(pjoin('..','MadLoop5_resources',
+                                     '%(proc_prefix)sBornColorFlowMatrix.dat'
+                                                %self.general_replace_dict),'w')
+            self.write_color_matrix_data_file(dat_writer,
+                            color_amp.ColorMatrix(self.get('born_color_basis')))
+            dat_writer.close()
+        else:
+            self.general_replace_dict['nBornFlows'] = 0
+
+        file = open(os.path.join(self.template_dir,\
+                    'compute_color_flows.inc')).read()%self.general_replace_dict
+
+        writer.writelines(file,context=self.get_context(matrix_element))
+    
     def fix_coef_specs(self, overall_max_lwf_size, overall_max_loop_vert_rank):
         """ If processes with different maximum loop wavefunction size or
         different maximum loop vertex rank have to be output together, then
@@ -2340,12 +2467,39 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     and LoopInducedExporterMENoGroup (but not relevant for the original
     Madevent exporters)"""
 
+    madloop_makefile_name = 'makefile_MadLoop'
+    
+    def get_context(self,*args,**opts):
+        """ Make sure that the contextual variable MadEventOutput is set to
+        True for this exporter"""
+        
+        context = super(LoopInducedExporterME,self).get_context(*args,**opts)
+        context['MadEventOutput'] = True
+        return context
+        
+    
+    def get_source_libraries_list(self):
+        """ Returns the list of libraries to be compiling when compiling the
+        SOURCE directory. It is different for loop_induced processes and 
+        also depends on the value of the 'output_dependencies' option"""
+        
+        libraries_list = super(LoopInducedExporterME,self).\
+                                                     get_source_libraries_list()
+
+        if self.dependencies=='internal':
+            libraries_list.append('$(LIBDIR)libcts.$(libext)')
+            libraries_list.append('$(LIBDIR)libiregi.$(libext)')
+
+        return libraries_list
+
     def copy_v4template(self, *args, **opts):
         """Pick the right mother functions
         """
         # Call specifically the necessary building functions for the mixed
         # template setup for both MadEvent and MadLoop standalone
-        LoopProcessExporterFortranSA.loop_additional_template_setup(self)
+        LoopProcessExporterFortranSA.loop_additional_template_setup(self,
+                                                     copy_Source_makefile=False)
+        
         LoopProcessOptimizedExporterFortranSA.\
                                   loop_optimized_additional_template_setup(self)
 
@@ -2363,7 +2517,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
         
-        replace_dict = {}
+        replace_dict = copy.copy(self.general_replace_dict)
         
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
@@ -2432,6 +2586,19 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
     
     matrix_file = "matrix_loop_induced_madevent_group.inc"
 
+    def make_source_links(self,*args, **opts):
+        """ In the loop-induced output with MadEvent, we need the files from the 
+        Source folder """
+        export_v4.ProcessExporterFortranMEGroup.make_source_links(
+                                                            self, *args, **opts)
+
+    def write_source_makefile(self, *args, **opts):
+        """Pick the correct write_source_makefile function from 
+        ProcessExporterFortranMEGroup"""
+        
+        export_v4.ProcessExporterFortranMEGroup.write_source_makefile(self,
+                                                                  *args, **opts)
+
     def copy_v4template(self, *args, **opts):
         """Pick the right mother functions
         """
@@ -2443,7 +2610,6 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
 
         # Then the MadLoop-standalone related one
         LoopInducedExporterME.copy_v4template(self, *args, **opts)
-        
 
     def finalize_v4_directory(self, *args, **opts):
         """Pick the right mother functions
@@ -2458,17 +2624,17 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
-        
-        # First generate the MadEvent files
-        export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory_v4(
-                                 self, subproc_group,fortran_model,group_number)
-    
+            
         # Then generate the MadLoop files
         calls = 0
         matrix_elements = subproc_group.get('matrix_elements')
         for ime, matrix_element in enumerate(matrix_elements):
             calls += self.generate_loop_subprocess(matrix_element,fortran_model,
           group_number = str(subproc_group.get('number')), proc_id = str(ime+1))
+        
+        # First generate the MadEvent files
+        export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory_v4(
+                                 self, subproc_group,fortran_model,group_number)
         
         return calls
     
@@ -2481,6 +2647,19 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
     elements"""
 
     matrix_file = "matrix_loop_induced_madevent.inc"
+
+    def make_source_links(self,*args, **opts):
+        """ In the loop-induced output with MadEvent, we need the files from the 
+        Source folder """
+        super(export_v4.ProcessExporterFortranME,self).\
+                                                make_source_links(*args, **opts)
+
+    def write_source_makefile(self, *args, **opts):
+        """Pick the correct write_source_makefile function from 
+        ProcessExporterFortran"""
+        
+        super(export_v4.ProcessExporterFortranME,self).\
+                                            write_source_makefile(*args, **opts)
 
     def copy_v4template(self, *args, **opts):
         """Pick the right mother functions

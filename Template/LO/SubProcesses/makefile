@@ -7,9 +7,19 @@ LIBDIR = ../../lib/
 BINDIR = ../../bin/
 PROG   = madevent
 
-LINKLIBS =  -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf)
+ifneq ("$(wildcard ../MadLoop_makefile_definitions)","")
+    include ../MadLoop_makefile_definitions
+else
+    LINK_LOOP_LIBS =
+    LOOP_LIBS =
+    LOOP_INCLUDE =
+    LINK_MADLOOP_LIB =
+    MADLOOP_LIB =
+endif
 
-LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)
+LINKLIBS =  -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf) $(LINK_MADLOOP_LIB) $(LINK_LOOP_LIBS)
+
+LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(MADLOOP_LIB) $(LOOP_LIBS)
 
 # Source files
 

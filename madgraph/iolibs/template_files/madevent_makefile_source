@@ -3,6 +3,8 @@
 LIBDIR= ../lib/
 BINDIR= ../bin/internal/
 PDFDIR= ./PDF/
+CUTTOOLSDIR= ./CutTools/
+IREGIDIR= ./IREGI/src/
 
 include make_opts
 
@@ -44,7 +46,8 @@ $(LIBDIR)libpdf.$(libext): PDF
 	cd PDF; make	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make	
-%(model)s
+$(LIBDIR)libmodel.$(libext): MODEL param_card.inc
+	cd MODEL; make
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 
 	$(FC) $(FFLAGS) -o $@ $^
@@ -68,9 +71,31 @@ rw_events.o: rw_events.f run_config.inc
 run_card.inc: ../Cards/run_card.dat
 	../bin/madevent treatcards run
 
+param_card.inc: ../Cards/param_card.dat
+	../bin/madevent treatcards param
+
 clean_lhapdf:
 	rm -f $(LIBDIR)libgeneric.$(libext)
 	cd PDF; make clean_lhapdf
+
+cleanCT:
+	cd $(CUTTOOLSDIR); make clean; cd ..
+
+cleanIR:
+	cd $(IREGIDIR); make clean; cd ..
+
+IREGI: $(LIBDIR)libiregi.a
+
+CutTools: $(LIBDIR)libcts.a
+
+$(LIBDIR)libcts.a: $(CUTTOOLSDIR)
+	cd $(CUTTOOLSDIR); make
+	ln -sf ../Source/$(CUTTOOLSDIR)includects/libcts.a $(LIBDIR)libcts.a
+	ln -sf ../Source/$(CUTTOOLSDIR)includects/mpmodule.mod $(LIBDIR)mpmodule.mod
+
+$(LIBDIR)libiregi.a: $(IREGIDIR)
+	cd $(IREGIDIR); make
+	ln -sf ../Source/$(IREGIDIR)libiregi.a $(LIBDIR)libiregi.a
 
 clean:
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
@@ -78,3 +103,5 @@ clean:
 	cd DHELAS; make clean; cd ..
 	cd CERNLIB; make clean; cd ..
 	cd MODEL; make clean; cd ..
+	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
+	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi

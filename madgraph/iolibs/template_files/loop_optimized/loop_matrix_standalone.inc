@@ -75,6 +75,14 @@ C     This parameter is designed for the check timing command of MG5
 	  INTEGER MAXSTABILITYLENGTH
 	  DATA MAXSTABILITYLENGTH/20/
 	  common/%(proc_prefix)sstability_tests/maxstabilitylength
+
+##if(ComputeColorFlows) {
+      LOGICAL DOUBLECHECK_JAMP
+      PARAMETER (DOUBLECHECK_JAMP=.FALSE.)
+      %(real_dp_format)s JAMP_DOUBLECHECK_THRES
+      PARAMETER (JAMP_DOUBLECHECK_THRES=1.0d-9)            
+## }
+
 C  
 C ARGUMENTS 
 C  
@@ -95,7 +103,7 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H,DUMMY,I_QP_LIB
+      INTEGER I,J,K,H,HEL_MULT,I_QP_LIB,DUMMY
 
       CHARACTER*512 ParamFN,HelConfigFN,LoopFilterFN,ColorNumFN,ColorDenomFN,HelFilterFN
 	  CHARACTER*512 TMP
@@ -132,7 +140,11 @@ C This is used for loop-induced where the reference scale for comparisons is inf
       INTEGER NPSPOINTS
       DATA NPSPOINTS/0/      
 ## }
-  
+
+## if(ComputeColorFlows) {
+     %(real_dp_format)s RES_FROM_JAMP(0:3,0:NSQUAREDSO)
+## }
+
 	  %(real_dp_format)s ACC(0:NSQUAREDSO)
 	  %(real_dp_format)s DP_RES(3,0:NSQUAREDSO,MAXSTABILITYLENGTH)
 C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
@@ -144,7 +156,7 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  %(real_dp_format)s HELSAVED(3,NCOMB)
 	  INTEGER ITEMP
 	  LOGICAL LTEMP
-	  %(real_dp_format)s BORNBUFF(0:NSQSO_BORN)
+	  %(real_dp_format)s BORNBUFF(0:NSQSO_BORN),TMPR
 	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO)
 ## if(not LoopInduced){
 	  %(real_dp_format)s TEMP2
@@ -298,12 +310,12 @@ C TILL NOW, ONLY CUTTOOLS PROVIDE QP
 ## }
 	  common/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
-## if(LoopInduced){
+## if(TIRCaching){
 	  LOGICAL TIR_DONE(NLOOPGROUPS)
 	  COMMON/%(proc_prefix)sTIRCACHING/TIR_DONE
 ## }
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
       %(complex_dp_format)s AMPL(3,NCTAMPS)
 ## } else {
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
@@ -660,9 +672,24 @@ DO K=1, 3
     AMPL(K,I)=(0.0d0,0.0d0)
   ENDDO
 ENDDO
-C     USE THE FIRST LOOP REDUCTION LIBRARY AND THE FIRST QP LOOP REDUCTION LIBRARY
+
+## if(ComputeColorFlows) {
+##if(MadEventOutput) {
+CALL %(proc_prefix)sREINITIALIZE_JAMP2()
+## }
+IF (DOUBLECHECK_JAMP) THEN
+  DO I=0,NSQUAREDSO
+    DO K=0,3
+      RES_FROM_JAMP(K,I)=0.0d0
+    ENDDO
+  ENDDO
+ENDIF
+## }
+
+C Start by using the first available loop reduction library and qp library.
 I_LIB=1
 I_QP_LIB=1
+
 200 CONTINUE
 
 ## if(LoopInduced){
@@ -670,7 +697,26 @@ C     Free cache when using IREGI
 %(iregi_free_ps)s
 
 300 CONTINUE
+## }
 
+## if(ComputeColorFlows) {
+C We don't want to re-initialized the following quantities when checking the helcity filter.
+C This is why we check that HELPICKED is equal to -1.
+IF(HELPICKED.EQ.-1) THEN
+##if(MadEventOutput) {
+CALL %(proc_prefix)sREINITIALIZE_JAMP2()
+## }
+IF (DOUBLECHECK_JAMP) THEN
+  DO I=0,NSQUAREDSO
+    DO K=0,3
+      RES_FROM_JAMP(K,I)=0.0d0
+    ENDDO
+  ENDDO
+ENDIF
+ENDIF
+## }
+
+## if(TIRCaching){
 DO I=1,NLOOPGROUPS
   TIR_DONE(I)=.FALSE.
 ENDDO
@@ -771,9 +817,9 @@ c FeynRules, there are none of these type of counterterms.
   UVCT_REQ_SO_DONE=.TRUE.
 
   IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
-    DUMMY=GOODHEL(H)
+    HEL_MULT=GOODHEL(H)
   ELSE
-    DUMMY=1
+    HEL_MULT=1
   ENDIF
 ## if(not LoopInduced) {
   DO I=1,NCTAMPS
@@ -783,7 +829,7 @@ c FeynRules, there are none of these type of counterterms.
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
 	  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
         DO K=1,3
-          TEMP2 = 2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))
+          TEMP2 = 2.0d0*HEL_MULT*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))
           ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
           ANS(K,0)=ANS(K,0)+TEMP2
         ENDDO
@@ -816,11 +862,11 @@ C We need the dummy argument I_SO for the squared order index to conform to the 
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
-      TEMP2(1) = DUMMY*DBLE(CFTOT*(AMPL(1,I)*DCONJG(AMPL(1,J))))
+      TEMP2(1) = HEL_MULT*DBLE(CFTOT*(AMPL(1,I)*DCONJG(AMPL(1,J))))
 C Computing the quantities below is not strictly necessary since the result should be finite
 C It is however a good cross-check.
-      TEMP2(2) = DUMMY*DBLE(CFTOT*(AMPL(2,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(2,J))))
-      TEMP2(3) = DUMMY*DBLE(CFTOT*(AMPL(3,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(3,J))+AMPL(2,I)*DCONJG(AMPL(2,J))))
+      TEMP2(2) = HEL_MULT*DBLE(CFTOT*(AMPL(2,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(2,J))))
+      TEMP2(3) = HEL_MULT*DBLE(CFTOT*(AMPL(3,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(3,J))+AMPL(2,I)*DCONJG(AMPL(2,J))))
 C To mimick the structure of the non loop-induced processes, we add here the
 C squared counterterm contribution directly the result ANS() and put the 
 C loop contributions in the LOOPRES array which will be added to ANS later
@@ -842,6 +888,26 @@ C we now copy over this flag to the relevant contributing Squared orders.
     ENDDO
   ENDDO
 ## }
+
+## if(ComputeColorFlows){
+## if(MadEventOutput) {
+C Always compute the JAMPs since it is used for the JAMP2 and AMP2 computation necessary for MadEvent
+IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
+## } else {
+C Compute the JAMPs for this Helicity only if the user asked for one specific Helicity (For now, there is no helicity-cumulative quantity built out of JAMPL).
+IF (H.EQ.USERHEL.OR.(DOUBLECHECK_JAMP.AND.USERHEL.EQ.-1)) THE
+## }
+  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS()
+##if(MadEventOutput) {
+  CALL %(proc_prefix)sCOMPUTE_AMPL2(HEL_MULT)
+  CALL %(proc_prefix)sCOMPUTE_JAMP2(HEL_MULT)  
+## }
+  IF(DOUBLECHECK_JAMP) THEN
+    CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(RES_FROM_JAMP,HEL_MULT)
+  ENDIF
+ENDIF
+## }
+
 
   ENDIF
 ENDDO
@@ -1070,7 +1136,7 @@ c    ENDDO
 ## if(LoopInduced){
 C We add one here to the number of PS points used for building the reference scale for comparison (used only for loop-induced processes).
     NPSPOINTS = NPSPOINTS+1
-## }   
+## }
 	IF(NTRY.EQ.0) THEN
 	  NATTEMPTS=NATTEMPTS+1
 	  IF(NATTEMPTS.EQ.MAXATTEMPTS) THEN
@@ -1090,6 +1156,50 @@ DO K=1,3
     ENDIF
   ENDDO
 ENDDO
+
+## if (ComputeColorFlows) {
+IF(DOUBLECHECK_JAMP) THEN
+  WRITE(*,*) ' ================================= '
+  WRITE(*,*) ' === JAMP double-checking test === '
+  WRITE(*,*) ' ================================= '
+  CALL %(proc_prefix)sWRITE_MOM(P)
+  DO J=1,NSQUAREDSO+1
+C We should finish by the summed orders
+    I = MOD(J,NSQUAREDSO+1)
+    IF (I.EQ.0) THEN
+      WRITE(*,*) ' > Checking the sum of all chosen squared split orders'    
+    ELSE
+      WRITE(*,*) ' > Checking squared split order #',I
+    ENDIF
+## if (LoopInduced) {
+    DO K=1,1
+## } else {
+    DO K=0,3
+## }
+      RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)/DBLE(IDEN)
+      IF (USERHEL.NE.-1) THEN
+        RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)*HELAVGFACTOR
+      ENDIF
+      IF (K.eq.0) WRITE(*,*) ' || Born :' 
+      IF (K.eq.1) WRITE(*,*) ' || Finite part :' 
+      IF (K.eq.2) WRITE(*,*) ' || Single pole residue :' 
+      IF (K.eq.3) WRITE(*,*) ' || Double pole residue :' 
+      WRITE(*,*) ' --> Direct result        =',ANS(K,I)
+      WRITE(*,*) ' --> Computed from JAMPS  =',RES_FROM_JAMP(K,I)
+      IF((RES_FROM_JAMP(K,I)+ANS(K,I)).EQ.0.0d0) THEN
+        TMPR = ABS(RES_FROM_JAMP(K,I)-ANS(K,I))      
+      ELSE
+        TMPR = ABS((ANS(K,I)-RES_FROM_JAMP(K,I))/((ANS(K,I)+RES_FROM_JAMP(K,I))/2.0d0))
+      ENDIF
+      WRITE(*,*) ' --> Relative diff.       =',TMPR
+      IF(TMPR.GT.JAMP_DOUBLECHECK_THRES) THEN
+         STOP 'Consistency cross-check of JAMPS failed.'
+      ENDIF
+    ENDDO
+  ENDDO
+  WRITE(*,*) ' ================================= '
+ENDIF
+## }
 
 IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
   STAB_INDEX=STAB_INDEX+1  
@@ -1964,5 +2074,14 @@ C Reset it to default value not to affect next runs
 	  ENDDO
 	  RET_CODE=100*H+10*T+U
 
+	  END
+	  
+C The subroutine below perform clean-up duties for MadLoop like de-allocating
+c arrays
+	  SUBROUTINE %(proc_prefix)sEXIT_MADLOOP()
+## if(ComputeColorFlows) {
+	    CALL %(proc_prefix)sDEALLOCATE_COLOR_FLOWS()
+## }
+        CONTINUE
 	  END
 

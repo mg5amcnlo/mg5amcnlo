@@ -1708,8 +1708,9 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # As a final step, we compute the analytic information for the loop
         # wavefunctions and amplitudes building this loop matrix element.
         # Because we want to have the same AlohaModel used for various
-        # HelasMatrix elements, we perform the computation belows in the
+        # HelasMatrix elements, we instead perform the call below in the
         # export which will use its AlohaModel for several HelasME's.
+        # Hence we comment it here.
         # self.compute_all_analytic_information()
     
     def get_split_orders_mapping(self):
@@ -2134,6 +2135,20 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     # 'loop_wavefunctions' attribute of the loop diagrams
                     [lwf for ldiag in self.get_loop_diagrams() for lwf in
                      ldiag.get('loop_wavefunctions')])
+
+    def get_nexternal_ninitial(self):
+        """Gives (number or external particles, number of
+        incoming particles)"""
+
+        external_wfs = filter(lambda wf: 
+                    not wf.get('mothers') and not wf.get('is_loop'),
+                                                   self.get_all_wavefunctions())
+
+        return (len(set([wf.get('number_external') for wf in \
+                         external_wfs])),
+                len(set([wf.get('number_external') for wf in \
+                         filter(lambda wf: wf.get('leg_state') == False,
+                                external_wfs)])))
 
     def get_number_of_amplitudes(self):
         """Gives the total number of amplitudes for this ME, including the loop

@@ -669,6 +669,14 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   improvement.")
         logger.info(" > CP relations among helicites are detected and the helicity")
         logger.info("   filter has more potential.")
+        logger.info("loop_color_flows True|False",'$MG:color:BLACK')
+        logger.info(" > Only relevant for the loop optimized output.")
+        logger.info(" > Reduces the loop diagrams at the amplitude level")
+        logger.info("   rendering possible the computation of the loop amplitude")
+        logger.info("   for a fixed color flow or color configuration.")
+        logger.info(" > This option can considerably slow down the loop ME")
+        logger.info("   computation time, especially when summing over all color")
+        logger.info("   and helicity configuration, hence turned off by default.")        
         logger.info("gauge unitary|Feynman",'$MG:color:BLACK')
         logger.info(" > (default unitary) choose the gauge of the non QCD part.")
         logger.info(" > For loop processes, only Feynman gauge is employable.")
@@ -2151,7 +2159,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
-                           'loop_optimized_output']:
+                           'loop_optimized_output', 'loop_color_flows']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
@@ -2450,7 +2458,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
                           'stdout_level':None,
-                          'loop_optimized_output':True
+                          'loop_optimized_output':True,
+                          'loop_color_flows':False
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -5603,6 +5612,11 @@ This implies that with decay chains:
         elif args[0] == 'loop_optimized_output':
             if log:
                     logger.info('set loop optimized output to %s' % args[1])
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self.options[args[0]] = eval(args[1])
+        elif args[0] == 'loop_color_flows':
+            if log:
+                    logger.info('set loop color flows to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self.options[args[0]] = eval(args[1])
 
