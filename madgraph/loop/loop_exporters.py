@@ -2492,6 +2492,13 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
 
         return libraries_list
 
+    def link_files_in_SubProcess(self, Ppath):
+        """ Add the loop-induced related links to the P* directory Ppath"""
+        
+        super(LoopInducedExporterME,self).link_files_in_SubProcess(Ppath)
+        
+        ln(pjoin('../MadLoop5_resources') , cwd=Ppath)
+
     def copy_v4template(self, *args, **opts):
         """Pick the right mother functions
         """
@@ -2499,7 +2506,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         # template setup for both MadEvent and MadLoop standalone
         LoopProcessExporterFortranSA.loop_additional_template_setup(self,
                                                      copy_Source_makefile=False)
-        
+
         LoopProcessOptimizedExporterFortranSA.\
                                   loop_optimized_additional_template_setup(self)
 

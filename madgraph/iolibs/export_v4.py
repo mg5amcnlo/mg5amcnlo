@@ -3001,9 +3001,40 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
+        self.link_files_in_SubProcess(Ppath)
+
+        #import nexternal/leshouche in Source
+        ln(pjoin(Ppath,'nexternal.inc'), pjoin(self.dir_path,'Source'), log=False)
+        ln(pjoin(Ppath,'leshouche.inc'),  pjoin(self.dir_path,'Source'), log=False)
+        ln(pjoin(Ppath,'maxamps.inc'),  pjoin(self.dir_path,'Source'), log=False)
+        # Return to SubProcesses dir
+        #os.chdir(os.path.pardir)
+
+        # Add subprocess to subproc.mg
+        filename = pjoin(path, 'subproc.mg')
+        files.append_to_file(filename,
+                             self.write_subproc,
+                             subprocdir)
+
+        # Return to original dir
+        #os.chdir(cwd)
+
+        # Generate info page
+        gen_infohtml.make_info_html(self.dir_path)
+
+
+        if not calls:
+            calls = 0
+        return calls
+
+    def link_files_in_SubProcess(self, Ppath):
+        """ Create the necessary links in the P* directory path Ppath"""
+        
         #import genps.inc and maxconfigs.inc into Subprocesses
-        ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
-        ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/genps.inc', 
+                                     self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/maxconfigs.inc',
+                                     self.dir_path + '/SubProcesses', log=False)
 
         linkfiles = ['addmothers.f',
                      'cluster.f',
@@ -3031,31 +3062,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'unwgt.f']
 
         for file in linkfiles:
-            ln('../' + file , cwd=Ppath)
-
-        #import nexternal/leshouche in Source
-        ln(pjoin(Ppath,'nexternal.inc'), pjoin(self.dir_path,'Source'), log=False)
-        ln(pjoin(Ppath,'leshouche.inc'),  pjoin(self.dir_path,'Source'), log=False)
-        ln(pjoin(Ppath,'maxamps.inc'),  pjoin(self.dir_path,'Source'), log=False)
-        # Return to SubProcesses dir
-        #os.chdir(os.path.pardir)
-
-        # Add subprocess to subproc.mg
-        filename = pjoin(path, 'subproc.mg')
-        files.append_to_file(filename,
-                             self.write_subproc,
-                             subprocdir)
-
-        # Return to original dir
-        #os.chdir(cwd)
-
-        # Generate info page
-        gen_infohtml.make_info_html(self.dir_path)
-
-
-        if not calls:
-            calls = 0
-        return calls
+            ln('../' + file , cwd=Ppath)    
 
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
                               online = False, compiler='gfortran'):
@@ -4170,37 +4177,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         # Generate jpgs -> pass in make_html
         #os.system(pjoin('..', '..', 'bin', 'gen_jpeg-pl'))
 
-        #import genps.inc and maxconfigs.inc into
-        ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
-        ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
-
-        linkfiles = ['addmothers.f',
-                     'cluster.f',
-                     'cluster.inc',
-                     'coupl.inc',
-                     'cuts.f',
-                     'cuts.inc',
-                     'driver.f',
-                     'genps.f',
-                     'genps.inc',
-                     'idenparts.f',
-                     'initcluster.f',
-                     'makefile',
-                     'message.inc',
-                     'myamp.f',
-                     'reweight.f',
-                     'run.inc',
-                     'maxconfigs.inc',
-                     'maxparticles.inc',
-                     'run_config.inc',
-                     'setcuts.f',
-                     'setscales.f',
-                     'sudakov.inc',
-                     'symmetry.f',
-                     'unwgt.f']
-
-        for file in linkfiles:
-            ln('../' + file , '.')
+        self.link_files_in_SubProcess(pjoin(pathdir,subprocdir))
 
         #import nexternal/leshouch in Source
         ln('nexternal.inc', '../../Source', log=False)

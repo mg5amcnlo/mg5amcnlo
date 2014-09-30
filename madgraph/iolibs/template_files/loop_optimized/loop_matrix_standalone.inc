@@ -674,9 +674,7 @@ DO K=1, 3
 ENDDO
 
 ## if(ComputeColorFlows) {
-##if(MadEventOutput) {
-CALL %(proc_prefix)sREINITIALIZE_JAMP2()
-## }
+CALL %(proc_prefix)sREINITIALIZE_CUMULATIVE_ARRAYS()
 IF (DOUBLECHECK_JAMP) THEN
   DO I=0,NSQUAREDSO
     DO K=0,3
@@ -703,9 +701,7 @@ C     Free cache when using IREGI
 C We don't want to re-initialized the following quantities when checking the helcity filter.
 C This is why we check that HELPICKED is equal to -1.
 IF(HELPICKED.EQ.-1) THEN
-##if(MadEventOutput) {
-CALL %(proc_prefix)sREINITIALIZE_JAMP2()
-## }
+CALL %(proc_prefix)sREINITIALIZE_CUMULATIVE_ARRAYS()
 IF (DOUBLECHECK_JAMP) THEN
   DO I=0,NSQUAREDSO
     DO K=0,3
@@ -890,18 +886,8 @@ C we now copy over this flag to the relevant contributing Squared orders.
 ## }
 
 ## if(ComputeColorFlows){
-## if(MadEventOutput) {
-C Always compute the JAMPs since it is used for the JAMP2 and AMP2 computation necessary for MadEvent
 IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-## } else {
-C Compute the JAMPs for this Helicity only if the user asked for one specific Helicity (For now, there is no helicity-cumulative quantity built out of JAMPL).
-IF (H.EQ.USERHEL.OR.(DOUBLECHECK_JAMP.AND.USERHEL.EQ.-1)) THE
-## }
   CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS()
-##if(MadEventOutput) {
-  CALL %(proc_prefix)sCOMPUTE_AMPL2(HEL_MULT)
-  CALL %(proc_prefix)sCOMPUTE_JAMP2(HEL_MULT)  
-## }
   IF(DOUBLECHECK_JAMP) THEN
     CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(RES_FROM_JAMP,HEL_MULT)
   ENDIF

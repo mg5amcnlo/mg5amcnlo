@@ -3,6 +3,15 @@ C Set of subroutines to project the Feynman diagrama amplitudes AMPL onto the co
       SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS()
         CALL %(proc_prefix)sREINITIALIZE_JAMPS()
         CALL %(proc_prefix)sDO_COMPUTE_COLOR_FLOWS(.FALSE.)
+        CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES()
+      END SUBROUTINE
+
+      SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES()      
+##if(MadEventOutput) {
+ 	    CALL %(proc_prefix)sCOMPUTE_AMPL2(HEL_MULT)
+        CALL %(proc_prefix)sCOMPUTE_JAMP2(HEL_MULT)  
+## }
+        CONTINUE
       END SUBROUTINE
       
       SUBROUTINE %(proc_prefix)sDEALLOCATE_COLOR_FLOWS()
@@ -620,9 +629,10 @@ ENDDO
 
 END SUBROUTINE
 
-## if(LoopInduced and MadEventOutput){
-C This subroutine resets the common arrays JAMP2, AMP2
-SUBROUTINE %(proc_prefix)sREINITIALIZE_JAMP2()
+C This subroutine resets all cumulative (for each helicity) arrays in common block and deriving from the color flow computation.
+C This subroutine is called by loop_matrix.f at appropriate time when these arrays must be reset.
+C An example of this is the JAMP2 which must be cumulatively computed as loop_matrix.f loops over helicity configs but must be resets when loop_matrix.f starts over with helicity one (for the stability test for example).
+SUBROUTINE %(proc_prefix)sREINITIALIZE_CUMULATIVE_ARRAYS()
 implicit none
 C  
 C CONSTANTS 
@@ -643,22 +653,26 @@ C
 C
 C GLOBAL VARIABLES
 C
+## if(LoopInduced and MadEventOutput){
       %(real_dp_format)s AMP2(NLOOPAMPS)
 	  common/%(proc_prefix)sAMP2/AMP2
       %(real_dp_format)s JAMP2(NLOOPFLOWS)
 	  common/%(proc_prefix)sJAMP2/JAMP2
+## }
 
 C ----------
 C BEGIN CODE
 C ----------
 
+## if(LoopInduced and MadEventOutput){
   DO I=1,NLOOPAMPS
     AMP2(I)=ZERO
   ENDDO
   DO I=1,NLOOPFLOWS
     JAMP2(I)=ZERO
   ENDDO
+## }
+
+CONTINUE
 
 END SUBROUTINE
-
-## }
