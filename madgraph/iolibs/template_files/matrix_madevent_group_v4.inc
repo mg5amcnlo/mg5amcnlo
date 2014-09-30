@@ -49,8 +49,6 @@ C
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
     
-    CHARACTER*101         HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
     
     INTEGER IMIRROR
     COMMON/TO_MIRROR/ IMIRROR
@@ -88,7 +86,6 @@ C ----------
         ENDDO
     ENDIF
     ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
@@ -139,7 +136,6 @@ C ----------
             TS(I)=T*HWGT
         ENDDO
         IF (ISHEL(IMIRROR) .EQ. 1) THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
 c         Set right sign for ANS, based on sign of chosen helicity
           ANS=DSIGN(ANS,TS(I))
         ENDIF
@@ -150,7 +146,6 @@ c         Set right sign for ANS, based on sign of chosen helicity
     DO I=1,NCOMB
        SUMHEL=SUMHEL+DABS(TS(I))/ANS
        IF(R.LT.SUMHEL)THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
 c         Set right sign for ANS, based on sign of chosen helicity
           ANS=DSIGN(ANS,TS(I))
           GOTO 10

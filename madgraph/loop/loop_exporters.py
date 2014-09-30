@@ -2537,6 +2537,13 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         # Set proc_id
         replace_dict['proc_id'] = proc_id
         
+        #set the average over the number of initial helicities
+        replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
+        
+        # Extract helicity lines
+        helicity_lines = self.get_helicity_lines(matrix_element)
+        replace_dict['helicity_lines'] = helicity_lines
+        
         # Extract ndiags
         ndiags = len(matrix_element.get('diagrams'))
         replace_dict['ndiags'] = ndiags
