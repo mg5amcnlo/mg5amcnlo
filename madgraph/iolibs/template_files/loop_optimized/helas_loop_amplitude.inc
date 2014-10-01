@@ -3,7 +3,7 @@
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NLOOPLINE
       PARAMETER (NLOOPLINE=%(nloopline)d)
-## if(LoopInduced){
+## if(AmplitudeReduction){
       INTEGER    NLOOPAMPS
       PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NCTAMPS
@@ -25,7 +25,7 @@ C
       %(mass_dp_format)s %(margsdecl)s
       %(pairingdecl)s
       INTEGER RANK, LSYMFACT
-## if(LoopInduced){
+## if(AmplitudeReduction){
 C In this case of a loop-induced process, the SQUAREDSOINDEX argument is dummy
 ## }
 	  INTEGER LOOPNUM, SQUAREDSOINDEX
@@ -37,14 +37,14 @@ C
       INTEGER PAIRING(NLOOPLINE),WE(%(nwfsargs)d)
       INTEGER I, J, K, TEMP,I_LIB
       LOGICAL complex_mass,doing_qp
-## if(LoopInduced){
+## if(AmplitudeReduction){
       LOGICAL AMP_CONTRIBUTES
 ## }
 C
 C GLOBAL VARIABLES
 C
       INCLUDE 'MadLoopParams.inc'
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
       INTEGER ID,SQSOINDEX,R
       common/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
 ## }else{
@@ -64,7 +64,7 @@ C
 	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
 	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
 
-## if(LoopInduced){
+## if(AmplitudeReduction){
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  common/%(proc_prefix)sAMPL/AMPL
 ## }
@@ -81,7 +81,7 @@ C ----------
 C BEGIN CODE
 C ----------
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 	  IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
 ## }else{
 C For loop-induced processes, we must reduce this loop amplitude if it contributes to any squared split order contribution.
@@ -96,7 +96,7 @@ C For loop-induced processes, we must reduce this loop amplitude if it contribut
       %(pairingset)s
 	  R=RANK
       ID=LOOPNUM
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 	  SQSOINDEX=SQUAREDSOINDEX
 ## }
       DO I=0,3
@@ -127,7 +127,7 @@ C Choose the correct loop library
       CALL %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,doing_qp,I_LIB)
       IF(MLReductionLib(I_LIB).EQ.1)THEN
 C USE CUTTOOLS
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 	CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
       ELSE
 C USE TIR
@@ -140,7 +140,7 @@ C USE TIR
 ## }
       ENDIF
 	  ELSE
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 	    LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0d0,0.0d0)
 	    LOOPRES(2,SQUAREDSOINDEX,LOOPNUM)=(0.0d0,0.0d0)
 	    LOOPRES(3,SQUAREDSOINDEX,LOOPNUM)=(0.0d0,0.0d0)

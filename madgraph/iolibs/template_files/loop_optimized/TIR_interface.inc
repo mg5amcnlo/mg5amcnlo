@@ -60,7 +60,7 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
        %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 ## }else{
        %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
@@ -160,7 +160,7 @@ C     IREGI
       DO I=1,3
 	     RES(I)=(0.0d0,0.0d0)
       	 DO J=0,NLOOPCOEFS-1
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 	       RES(I)=RES(I)+LOOPCOEFS(J,I_SQSO,I_LOOPGROUP)*TIRCOEFS(J,I)
 ## }else{
 	       RES(I)=RES(I)+LOOPCOEFS(J,I_LOOPGROUP)*TIRCOEFS(J,I)

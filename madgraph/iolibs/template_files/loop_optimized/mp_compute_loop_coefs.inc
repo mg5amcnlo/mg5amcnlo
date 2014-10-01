@@ -98,21 +98,21 @@ C
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sMP_WL/WL,PL
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 ## } else {
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
 ## }
 	  common/%(proc_prefix)sMP_LCOEFS/LOOPCOEFS
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
       %(complex_mp_format)s AMPL(3,NCTAMPS)
 ## } else {
       %(complex_mp_format)s AMPL(3,NLOOPAMPS)
 ## } 
 	  common/%(proc_prefix)sMP_AMPL/AMPL
 
-## if(LoopInduced){
+## if(AmplitudeReduction){
       %(complex_dp_format)s DP_AMPL(3,NLOOPAMPS)
 	  common/%(proc_prefix)sAMPL/DP_AMPL
 
@@ -168,7 +168,7 @@ DO I=1,MAXLWFSIZE
 ENDDO
 
 DO K=1, 3
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
   DO I=1,NCTAMPS
 ## }else{
   DO I=1,NLOOPAMPS
@@ -177,7 +177,7 @@ DO K=1, 3
   ENDDO
 ENDDO
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
     DO K=1,NSQUAREDSO  
@@ -205,7 +205,7 @@ DO H=1,NCOMB
   MP_CT_REQ_SO_DONE=.FALSE.
   MP_LOOP_REQ_SO_DONE=.FALSE.  
 
-## if(LoopInduced){
+## if(AmplitudeReduction){
   CTCALL_REQ_SO_DONE=.FALSE.
   
   DO I=1,NLOOPGROUPS
@@ -235,7 +235,7 @@ ENDDO
     DUMMY=1
   ENDIF
   
-## if(not LoopInduced) { 
+## if(not AmplitudeReduction) { 
   DO I=1,NCTAMPS
     DO J=1,NBORNAMPS
 	  CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16),0.0e0_16,KIND=16)
@@ -267,7 +267,7 @@ C This needs to be done once since only the momenta of these WF matters.
     DPW_COPIED=.True.
   ENDIF
 
-## if(LoopInduced) {
+## if(AmplitudeReduction) {
   DO I=1,NSQUAREDSO
     DO J=1,NLOOPGROUPS
       S(I,J)=.TRUE.
@@ -290,15 +290,26 @@ C precision variable) to the AMPL multiple precision array.
   ENDDO
   
   DO I=1,NLOOPAMPS
+## if(not LoopInduced) {
+    DO J=1,NBORNAMPS
+## } else {
     DO J=1,NLOOPAMPS
+## }
 	  CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16),0.0e0_16,KIND=16)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
+## if(not LoopInduced) {
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
+      DO K=1,3
+        TEMP2(K) = 2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16))
+      ENDDO
+## } else {
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
       TEMP2(1) = DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J)),KIND=16)
 C Computing the quantities below is not strictly necessary since the result should be finite
 C It is however a good cross-check.
       TEMP2(2) = DUMMY*REAL(CFTOT*(AMPL(2,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(2,J))),KIND=16)
       TEMP2(3) = DUMMY*REAL(CFTOT*(AMPL(3,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(3,J))+AMPL(2,I)*CONJG(AMPL(2,J))),KIND=16)
+## }
 C To mimic the structure of the non loop-induced processes, we add here the
 C squared counterterm contribution directly the result ANS() and put the 
 C loop contributions in the LOOPRES array which will be added to ANS later
@@ -333,7 +344,7 @@ DO I=1,3
   ENDDO
 ENDDO
 
-## if(not LoopInduced) {
+## if(not AmplitudeReduction) {
 %(mp_coef_merging)s
 ## }
 

@@ -1,4 +1,4 @@
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 C THE SUBROUTINE TO CREATE THE COEFFICIENTS FROM LAST LOOP WF AND 
 C MULTIPLY BY THE BORN
 

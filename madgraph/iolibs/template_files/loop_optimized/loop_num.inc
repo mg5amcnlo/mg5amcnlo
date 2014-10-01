@@ -19,7 +19,7 @@ C
 C
 C GLOBAL VARIABLES
 C
-## if(not LoopInduced) {
+## if(not AmplitudeReduction) {
       INTEGER ID,SQSOINDEX,RANK
 	  common/%(proc_prefix)sLOOP/ID,SQSOINDEX,RANK
 ## }else{
@@ -27,7 +27,7 @@ C
 	  common/%(proc_prefix)sLOOP/ID,RANK
 ## }
 
-## if(not LoopInduced) {
+## if(not AmplitudeReduction) {
 	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 ## }else{
 	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
@@ -36,7 +36,7 @@ C
 
 	  RES=(0.0d0,0.0d0)
 
-## if(not LoopInduced) {
+## if(not AmplitudeReduction) {
 	  CALL %(proc_prefix)sEVAL_POLY(LOOPCOEFS(0,SQSOINDEX,ID),RANK,-Q,RES)
 ## }else{
 	  CALL %(proc_prefix)sEVAL_POLY(LOOPCOEFS(0,ID),RANK,-Q,RES)
@@ -79,7 +79,7 @@ C
 	  LOGICAL MP_DONE
 	  common/%(proc_prefix)sMP_DONE/MP_DONE
 
-## if(not LoopInduced) {
+## if(not AmplitudeReduction) {
       INTEGER ID,SQSOINDEX,RANK
 	  common/%(proc_prefix)sLOOP/ID,SQSOINDEX,RANK
 ## }else{
@@ -87,7 +87,7 @@ C
 	  common/%(proc_prefix)sLOOP/ID,RANK
 ## }
 
-## if(not LoopInduced) {
+## if(not AmplitudeReduction) {
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 ## }else{
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
@@ -106,7 +106,7 @@ C ----------
       ENDDO
 	  QRES=(0.0e0_16,0.0e0_16)
 
-## if(not LoopInduced) {
+## if(not AmplitudeReduction) {
       IF (.NOT.MP_DONE) THEN
 	    CALL %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(MP_P,DUMMY)
 	    MP_DONE=.TRUE.

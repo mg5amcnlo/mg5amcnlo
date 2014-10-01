@@ -60,7 +60,7 @@ C
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sMP_WL/WL,PL
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
       %(complex_mp_format)s AMPL(3,NCTAMPS)
 ## } else {
       %(complex_mp_format)s AMPL(3,NLOOPAMPS)

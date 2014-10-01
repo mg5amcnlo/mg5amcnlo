@@ -158,7 +158,7 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  LOGICAL LTEMP
 	  %(real_dp_format)s BORNBUFF(0:NSQSO_BORN),TMPR
 	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO)
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 	  %(real_dp_format)s TEMP2
 ## }else{
 	  %(real_dp_format)s TEMP2(3)
@@ -303,7 +303,7 @@ C TILL NOW, ONLY CUTTOOLS PROVIDE QP
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/WL,PL
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 ## } else {
 	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
@@ -664,7 +664,7 @@ DO K=1, 3
   DO I=0,NSQUAREDSO
     BUFFR(K,I)=0.0d0
   ENDDO
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
   DO I=1,NCTAMPS
 ## }else{
   DO I=1,NLOOPAMPS
@@ -690,7 +690,7 @@ I_QP_LIB=1
 
 200 CONTINUE
 
-## if(LoopInduced){
+## if(AmplitudeReduction){
 C     Free cache when using IREGI
 %(iregi_free_ps)s
 
@@ -728,7 +728,7 @@ LSCALE=DSQRT(ABS((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1
 CTCALL_REQ_SO_DONE=.FALSE.
 FILTER_SO = (.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.(SQSO_TARGET.ne.-1)
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
     DO K=1,NSQUAREDSO
@@ -754,7 +754,7 @@ ENDDO
 
 C Check if we directly go to multiple precision
 IF (CTMODE.GE.4) THEN
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
   IF (.NOT.MP_DONE) THEN
     CALL %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
 C   It should be safe to directly set MP_DONE to true already here. But maybe I overlooked something.
@@ -781,7 +781,7 @@ DO H=1,NCOMB
   CT_REQ_SO_DONE=.FALSE.
   LOOP_REQ_SO_DONE=.FALSE.
  
-## if(LoopInduced){
+## if(AmplitudeReduction){
   CTCALL_REQ_SO_DONE=.FALSE.
   
   DO I=1,NLOOPGROUPS
@@ -817,7 +817,7 @@ c FeynRules, there are none of these type of counterterms.
   ELSE
     HEL_MULT=1
   ENDIF
-## if(not LoopInduced) {
+## if(not AmplitudeReduction) {
   DO I=1,NCTAMPS
     DO J=1,NCTAMPS
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
@@ -838,7 +838,7 @@ c FeynRules, there are none of these type of counterterms.
 4000 CONTINUE
   LOOP_REQ_SO_DONE=.TRUE.
 
-## if(LoopInduced) {
+## if(AmplitudeReduction) {
   IF(SKIPLOOPEVAL) THEN
     GOTO 5000
   ENDIF
@@ -854,17 +854,28 @@ C We need the dummy argument I_SO for the squared order index to conform to the 
   CTCALL_REQ_SO_DONE=.TRUE.
 
   DO I=1,NLOOPAMPS
+## if(not LoopInduced) {
+    DO J=1,NBORNAMPS
+## } else {
     DO J=1,NLOOPAMPS
+## }
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
+## if(not LoopInduced) {
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
+      DO K=1,3
+        TEMP2(K) = 2.0d0*HEL_MULT*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))
+      ENDDO
+## } else {
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
       TEMP2(1) = HEL_MULT*DBLE(CFTOT*(AMPL(1,I)*DCONJG(AMPL(1,J))))
 C Computing the quantities below is not strictly necessary since the result should be finite
 C It is however a good cross-check.
       TEMP2(2) = HEL_MULT*DBLE(CFTOT*(AMPL(2,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(2,J))))
       TEMP2(3) = HEL_MULT*DBLE(CFTOT*(AMPL(3,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(3,J))+AMPL(2,I)*DCONJG(AMPL(2,J))))
-C To mimick the structure of the non loop-induced processes, we add here the
-C squared counterterm contribution directly the result ANS() and put the 
+## }
+C To mimick the structure of the squared amplitude reduction, we add here the
+C squared counterterm contribution directly to the result ANS() and put the 
 C loop contributions in the LOOPRES array which will be added to ANS later
       IF (I.LE.NCTAMPS) THEN
         IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
@@ -898,7 +909,7 @@ ENDIF
   ENDIF
 ENDDO
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 %(coef_merging)s
 ## }
 
@@ -908,7 +919,7 @@ DO I=0,NSQUAREDSO
   ENDDO
 ENDDO
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 300 CONTINUE
 
 C     Free cache when using IREGI
@@ -927,7 +938,7 @@ IF(SKIPLOOPEVAL) THEN
   GOTO 1226
 ENDIF
 
-## if(not LoopInduced){
+## if(not AmplitudeReduction){
 DO I_SO=1,NSQUAREDSO
   DO J=1,NLOOPGROUPS
     S(I_SO,J)=.TRUE.
