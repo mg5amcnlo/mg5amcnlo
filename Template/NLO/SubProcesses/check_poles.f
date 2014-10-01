@@ -55,6 +55,8 @@ cc
       integer nfail
       logical first_time
       data first_time/.TRUE./
+      double precision tiny
+      parameter (tiny = 1d-12)
       integer getordpowfromindex_ml5
       logical, allocatable, save :: keep_order(:)
       include 'orders.inc'
@@ -218,7 +220,7 @@ C         Otherwise, perform the check
           if ( tolerance.lt.0.0d0 ) then
                 write(*,*) 'PASSED', tolerance
           else
-          if ( double.ne.0d0 ) then
+          if ( dabs(double).gt.dabs(single)*tiny ) then
              if ((dabs((double-fks_double)/double).gt.tolerance).or. 
      1            (dabs((single-fks_single)/single).gt.tolerance)) then
                 nfail = nfail + 1
