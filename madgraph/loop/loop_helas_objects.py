@@ -2492,12 +2492,15 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
     matrix_element_class = LoopHelasMatrixElement
     
     def __init__(self, argument=None, combine_matrix_elements=True,
-                                                       optimized_output = True):
+                               optimized_output = True, matrix_element_opts={}):
         """ Allow for the initialization of the HelasMultiProcess with the
         right argument 'optimized_output' for the helas_matrix_element options."""
         
+        matrix_element_opts = dict(matrix_element_opts)
+        matrix_element_opts.update({'optimized_output' : optimized_output})
+        
         super(LoopHelasProcess, self).__init__(argument, combine_matrix_elements,
-                  matrix_element_opts = {'optimized_output' : optimized_output})
+                  matrix_element_opts = matrix_element_opts)
         
     @classmethod
     def process_color(cls,matrix_element,color_information):

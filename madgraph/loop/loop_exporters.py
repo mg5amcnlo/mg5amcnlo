@@ -2544,9 +2544,6 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         helicity_lines = self.get_helicity_lines(matrix_element)
         replace_dict['helicity_lines'] = helicity_lines
         
-        # Extract ndiags
-        ndiags = len(matrix_element.get('diagrams'))
-        replace_dict['ndiags'] = ndiags
         
         # Extract ndiags
         ndiags = len(matrix_element.get('diagrams'))
@@ -2696,10 +2693,18 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         export_v4.ProcessExporterFortranME.finalize_v4_directory(
                                                               self,*args,**opts)
 
-    def generate_subprocess_directory_v4(self, subproc_group,
-                                         fortran_model,
-                                         group_number):
+    def generate_subprocess_directory_v4(self, matrix_element, fortran_model, me_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
-        pass
+    
+        # Then generate the MadLoop files
+        calls = self.generate_loop_subprocess(matrix_element,fortran_model,                           
+          group_number = me_number, proc_id = me_number)
+        
+        
+        # First generate the MadEvent files
+        calls += export_v4.ProcessExporterFortranME.generate_subprocess_directory_v4(
+                                 self, matrix_element, fortran_model, me_number)
+        return calls
+        

@@ -20,16 +20,23 @@ C
     Include 'maxamps.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
-    INTEGER    NGRAPHS
-    PARAMETER (NGRAPHS=%(ngraphs)d) 
     INTEGER    NDIAGS
     PARAMETER (NDIAGS=%(ndiags)d) 
+    INTEGER    NLOOPAMPS
+    PARAMETER (NLOOPAMPS=%(nloopamps)d) 
+    INTEGER    NLOOPFLOWS
+    PARAMETER (NLoopFlows=%(nLoopFlows)d) 
     INTEGER    THEL
     PARAMETER (THEL=NCOMB)
+    INTEGER NCTAMPS 
+    PARAMETER (NCTAMPS=%(nctamps)d) 
+    INTEGER Hel_Average_Factor
+    PARAMETER (Hel_Average_Factor=%(hel_avg_factor)d)
 C  
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+	REAL*8 , ALLOCATABLE :: ANS_ML(:,:)
 C  
 C LOCAL VARIABLES 
 C  
@@ -38,19 +45,30 @@ C
     REAL*8 R,SUMHEL,TS(NCOMB)
     INTEGER I,IDEN
     INTEGER IPROC,JC(NEXTERNAL),II
+    INTEGER ML_ANS_DIMENSION
     LOGICAL GOODHEL(NCOMB)
+    DATA GOODHEL/THEL*.FALSE./
     REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
     INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
     REAL     XRAN1
     EXTERNAL XRAN1
+
+    DATA NTRY,IDUM /0,-1/
+    DATA XTRY, XREJ, NGOOD /0,0,0/
 C  
 C GLOBAL VARIABLES
 C  
+    LOGICAL FORCE_ML_HELICITY_SUM 
+    common/to_ML_control/FORCE_ML_HELICITY_SUM 
+
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
     
-    CHARACTER*101        HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
+    %(complex_dp_format)s ML_JAMP2(nLoopFlows)
+	common/%(ml_prefix)sJAMP2/ML_JAMP2
+
+    %(real_dp_format)s ML_AMP2(nloopamps)
+	common/%(ml_prefix)sAMP2/ML_AMP2
     
     REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
@@ -59,12 +77,11 @@ C
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 %(define_iconfigs_lines)s
-    DATA NTRY,IDUM /0,-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
     SAVE YFRAC, IGOOD, JHEL
-    DATA GOODHEL/THEL*.FALSE./
+
 %(helicity_lines)s
-%(den_factor_line)s
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -83,73 +100,96 @@ C ----------
         ENDDO
     ENDIF
     ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
+    
+    CALL %(ml_prefix)sGET_ANSWER_DIMENSION(ML_ANS_DIMENSION)
+    ALLOCATE(ANS_ML(0:3,0:ML_ANS_DIMENSION))
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
-    IF (ISUM_HEL .EQ. 0 .OR. NTRY .LE. MAXTRIES) THEN
-        DO I=1,NCOMB
-           IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES) THEN
-               T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
-             DO JJ=1,nincoming
-               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                 T=T*ABS(POL(JJ))
-               ELSE IF(POL(JJ).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(JJ)))
-               ENDIF
-             ENDDO
-             ANS=ANS+T
-             TS(I)=T
-           ENDIF
-        ENDDO
-        JHEL = 1
-        IF(NTRY.LE.MAXTRIES)THEN
-         DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
-               GOODHEL(I)=.TRUE.
-               NGOOD = NGOOD +1
-               IGOOD(NGOOD) = I        
-               print *,'Adding good helicity ',I,TS(I)/ANS
-            ENDIF
-         ENDDO
-        ENDIF
-        IF(NTRY.EQ.MAXTRIES)THEN
-           ISUM_HEL=MIN(ISUM_HEL,NGOOD)
-        ENDIF
-    ELSE              !RANDOM HELICITY
-        DO J=1,ISUM_HEL
-            JHEL=JHEL+1
-            IF (JHEL .GT. NGOOD) JHEL=1
-            HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
-            I = IGOOD(JHEL)
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
-            DO JJ=1,nincoming
-              IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                T=T*ABS(POL(JJ))
-              ELSE IF(POL(JJ).NE.1d0)THEN
-                T=T*(2d0-ABS(POL(JJ)))
+
+    FORCE_ML_Helicity_Sum = ISUM_HEL.eq.0
+    if (FORCE_ML_Helicity_Sum)then
+        do JJ=1,NINCOMING
+	   if (POL(JJ).NE.1d0) FORCE_ML_Helicity_Sum = .false.
+	enddo	       
+    endif	       
+
+
+    IF(Force_ML_Helicity_Sum )THEN
+        CALL %(ml_prefix)sSLOOPMATRIX(P,ANS_ML)
+	ANS = ANS_ML(1,0)
+    ELSE
+	IF (ISUM_HEL .EQ. 0 .OR. NTRY .LE. MAXTRIES) THEN
+           DO I=1,NCOMB
+              IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES) THEN
+	          CALL %(ml_prefix)sSLOOPMATRIXHEL(P,I,ANS_ML)
+	    	  T = ANS_ML(1,0)              	 
+		  DO JJ=1,nincoming
+               	     IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
+                         T=T*ABS(POL(JJ))
+                     ELSE IF(POL(JJ).NE.1d0)THEN
+                         T=T*(2d0-ABS(POL(JJ)))
+                     ENDIF
+                  ENDDO
+                  ANS=ANS+DABS(T)
+                  TS(I)=T
               ENDIF
-            ENDDO
-            ANS=ANS+T*HWGT
-            TS(I)=T*HWGT
-        ENDDO
-        IF (ISUM_HEL .EQ. 1) THEN
-            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-        ENDIF
-    ENDIF
-    IF (ISUM_HEL .NE. 1) THEN
-    R=XRAN1(IDUM)*ANS
-    SUMHEL=0d0
-    DO I=1,NCOMB
-       SUMHEL=SUMHEL+TS(I)
-       IF(R.LT.SUMHEL)THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-          GOTO 10
+           ENDDO
+           IF(NTRY.LE.MAXTRIES)THEN
+             DO I=1,NCOMB
+                IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
+                   GOODHEL(I)=.TRUE.
+                   NGOOD = NGOOD +1
+                   IGOOD(NGOOD) = I        
+                   print *,'Adding good helicity ',I,TS(I)/ANS
+                ENDIF
+             ENDDO
+          ENDIF
+          IF(NTRY.EQ.MAXTRIES)THEN
+              ISUM_HEL=MIN(ISUM_HEL,NGOOD)
+          ENDIF
+       ELSE              !RANDOM HELICITY
+          DO J=1,ISUM_HEL
+             HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
+             I = IGOOD(J)
+             CALL %(ml_prefix)sSLOOPMATRIXHEL(P,I,ANS_ML)
+	     T = ANS_ML(1,0)
+             DO JJ=1,nincoming
+                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
+                  T=T*ABS(POL(JJ))
+                ELSE IF(POL(JJ).NE.1d0)THEN
+                  T=T*(2d0-ABS(POL(JJ)))
+                ENDIF
+             ENDDO
+             ANS=ANS+DABS(T)*HWGT
+             TS(I)=T*HWGT
+          ENDDO
+          IF (ISUM_HEL .EQ. 1) THEN
+             ANS=DSIGN(ANS,TS(I))
+          ENDIF
        ENDIF
-    ENDDO
- 10 CONTINUE   
+       IF (ISUM_HEL .NE. 1) THEN
+          R=XRAN1(IDUM)*ANS
+          SUMHEL=0d0
+          DO I=1,NCOMB
+            SUMHEL=SUMHEL+DABS(TS(I))
+            IF(R.LT.SUMHEL)THEN
+      	       ANS=DSIGN(ANS,TS(i))
+              GOTO 10
+            ENDIF
+          ENDDO
+ 10       CONTINUE   
+       ENDIF
     ENDIF
-    IF (MULTI_CHANNEL) THEN
+    
+    DO I=1,JAMP2(0)
+       JAMP2(I) = JAMP2(i) + ML_JAMP2(I)
+    ENDDO
+    DO I=1,NDIAGS
+       AMP2(i) = AMP2(i)+ ML_AMP2(I+NCTAMPS)
+    ENDDO
+
+   IF (.false..and.MULTI_CHANNEL) THEN
         XTOT=0D0
         DO I=1,NDIAGS
             XTOT=XTOT+AMP2(I)
@@ -160,99 +200,13 @@ C ----------
             ANS=0D0
         ENDIF
     ENDIF
-    ANS=ANS/DBLE(IDEN)
+    IF(.not.Force_ML_Helicity_Sum )THEN
+      ANS = ANS/ Hel_Average_Factor    			
+    ENDIF
+
+    DEALLOCATE(ANS_ML)
+C Amplitude(s) for diagram number %(n_tot_diags)d
+C This last line is a tag do not remove it. 
     END
  
  
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC)
-C  
-%(info_lines)s
-C
-C Returns amplitude squared summed/avg over colors
-c for the point with external lines W(0:6,NEXTERNAL)
-C  
-%(process_lines)s
-C  
-    IMPLICIT NONE
-C  
-C CONSTANTS
-C  
-    INTEGER    NGRAPHS
-    PARAMETER (NGRAPHS=%(ngraphs)d) 
-    include 'genps.inc'
-    include 'nexternal.inc'
-    include 'maxamps.inc'
-    INTEGER    NWAVEFUNCS,     NCOLOR
-    PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
-    REAL*8     ZERO
-    PARAMETER (ZERO=0D0)
-    COMPLEX*16 IMAG1
-    PARAMETER (IMAG1=(0D0,1D0))
-    INTEGER NAMPSO, NSQAMPSO
-    PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
-	LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
-	DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
-	SAVE CHOSEN_SO_CONFIGS
-C  
-C ARGUMENTS 
-C  
-    REAL*8 P(0:3,NEXTERNAL)
-    INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
-    INTEGER I,J,M,N
-    COMPLEX*16 ZTEMP
-    REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-    COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
-    COMPLEX*16 W(18,NWAVEFUNCS)
-C   Needed for v4 models
-    COMPLEX*16 DUM0,DUM1
-    DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
-C
-C FUNCTION
-C
-      INTEGER SQSOINDEX%(proc_id)s
-C  
-C GLOBAL VARIABLES
-C  
-    Double Precision amp2(maxamps), jamp2(0:maxflow)
-    common/to_amps/  amp2,       jamp2
-    include 'coupl.inc'
-C  
-C COLOR DATA
-C  
-%(color_data_lines)s
-C ----------
-C BEGIN CODE
-C ----------
-%(helas_calls)s
-%(jamp_lines)s
-
-    MATRIX%(proc_id)s = 0.D0 
-	DO M = 1, NAMPSO
-      DO I = 1, NCOLOR
-        ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
-        ENDDO
-		DO N = 1, NAMPSO
-          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
-		  ENDIF
-		ENDDO
-      ENDDO
-	ENDDO
-
-%(amp2_lines)s
-    Do I = 1, NCOLOR
-	  DO M = 1, NAMPSO	
-		DO N = 1, NAMPSO
-          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN		
-            Jamp2(i)=Jamp2(i)+Jamp(i,m)*dconjg(Jamp(i,n))
-		  ENDIF
-		enddo
-	  enddo
-    Enddo
-
-    END

@@ -63,7 +63,6 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
-import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
@@ -78,6 +77,9 @@ import madgraph.interface.tutorial_text_madloop as tutorial_text_madloop
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.madevent_interface as madevent_interface
 import madgraph.interface.amcatnlo_run_interface as amcatnlo_run
+
+import madgraph.loop.loop_exporters as loop_exporters
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_module

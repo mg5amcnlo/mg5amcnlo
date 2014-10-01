@@ -64,13 +64,11 @@ C
     COMMON/TO_AMPS/  AMP2,       JAMP2
 
     %(complex_dp_format)s ML_JAMP2(nLoopFlows)
-	common/%(ml_prefix)sJAMP2/ML_JAMP2
+    common/%(ml_prefix)sJAMP2/ML_JAMP2
 
     %(real_dp_format)s ML_AMP2(nloopamps)
-	common/%(ml_prefix)sAMP2/ML_AMP2
+    common/%(ml_prefix)sAMP2/ML_AMP2
 
-    CHARACTER*101         HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
     
     INTEGER IMIRROR
     COMMON/TO_MIRROR/ IMIRROR
@@ -101,15 +99,20 @@ C ----------
 
 
     ANS = 0D0
+
     CALL %(ml_prefix)sGET_ANSWER_DIMENSION(ML_ANS_DIMENSION)
     ALLOCATE(ANS_ML(0:3,0:ML_ANS_DIMENSION))
-    
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
 
-C   Temporary need to be set in the driver! following the run_card input.
-    FORCE_ML_Helicity_Sum = .true.
+    FORCE_ML_Helicity_Sum = ISUM_HEL.eq.0
+    if (FORCE_ML_Helicity_Sum)then
+        do JJ=1,NINCOMING
+	   if (POL(JJ).NE.1d0) FORCE_ML_Helicity_Sum = .false.
+	enddo	       
+    endif	       
+
 
     IF(Force_ML_Helicity_Sum )THEN
         CALL %(ml_prefix)sSLOOPMATRIX(P,ANS_ML)
@@ -131,7 +134,6 @@ C   Temporary need to be set in the driver! following the run_card input.
             TS(I)=T
          ENDIF
         ENDDO
-C      JHEL(IMIRROR) = 1
         IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
          DO I=1,NCOMB
             IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
@@ -147,8 +149,6 @@ C      JHEL(IMIRROR) = 1
         ENDIF
       ELSE !LOOP OVER GOOD HELICITIES
         DO J=1,ISHEL(IMIRROR)
-c            JHEL(IMIRROR)=JHEL(IMIRROR)+1
-c            IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
             HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
             I = IGOOD(J,IMIRROR)
 	    CALL %(ml_prefix)sSLOOPMATRIXHEL(P,I,ANS_ML)
@@ -191,7 +191,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     ENDDO
 
 
-    IF (MULTI_CHANNEL) THEN
+    IF (.false..and.MULTI_CHANNEL) THEN
         XTOT=0D0
         DO I=1,NDIAGS
             XTOT=XTOT+AMP2(I)
@@ -202,7 +202,6 @@ c         Set right sign for ANS, based on sign of chosen helicity
             ANS=0D0
         ENDIF
     ENDIF
-    ANS=ANS
     IF(.not.Force_ML_Helicity_Sum )THEN
       ANS = ANS/ Hel_Average_Factor    			
     ENDIF
