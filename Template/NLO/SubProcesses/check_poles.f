@@ -29,7 +29,7 @@ C
       double precision fks_double, fks_single
       double precision, allocatable :: virt_wgts(:,:)
       double precision double, single, finite
-      double complex born(2)
+      double precision born
       logical calculatedborn
       common/ccalculatedborn/calculatedborn
       logical fksprefact
@@ -245,7 +245,7 @@ C         Otherwise, perform the check
           endif
           write(*,*) 'MU_R    = ', ren_scale
           write(*,*) 'ALPHA_S = ', G**2/4d0/pi
-          write(*,*) 'BORN                 ', real(born(1))
+          write(*,*) 'BORN                 ', born
           write(*,*) 'SINGLE POLE (MadFKS) ', fks_single 
           write(*,*) 'DOUBLE POLE (MadFKS) ', fks_double 
           write(*,*) 'SINGLE POLE (MadLoop)', single 
