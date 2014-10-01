@@ -4,11 +4,6 @@ else
     ROOT = ../..
 endif
 
-
-if [ -a ../../Source/make_opts]; then ROOT = ../..; fi;
-
-if [ -a ../Source/make_opts]; then ROOT = ../; fi;
-
 include $(ROOT)/Source/make_opts
 LIBDIR = $(ROOT)/lib/
 
