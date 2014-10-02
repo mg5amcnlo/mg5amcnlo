@@ -2283,6 +2283,7 @@ class Diagram(PhysicsObject):
         
     def renumber_legs(self, perm_map, leg_list):
         """Renumber legs in all vertices according to perm_map"""
+
         vertices = VertexList()
         min_dict = copy.copy(perm_map)
         # Dictionary from leg number to state
@@ -2292,6 +2293,10 @@ class Diagram(PhysicsObject):
             vertex = copy.copy(vertex)
             leg_list = LegList([copy.copy(l) for l in vertex.get('legs')])
             for leg in leg_list[:-1]:
+                if leg.get('number') not in min_dict:
+                    # This can happen for loop-induce for the cutted particle
+                    #no need for any replacement for those
+                    continue
                 leg.set('number', min_dict[leg.get('number')])
                 leg.set('state', state_dict[leg.get('number')])
             min_number = min([leg.get('number') for leg in leg_list[:-1]])
@@ -2309,6 +2314,10 @@ class Diagram(PhysicsObject):
         vertex = copy.copy(self.get('vertices')[-1])
         leg_list = LegList([copy.copy(l) for l in vertex.get('legs')])
         for leg in leg_list:
+            if leg.get('number') not in min_dict:
+                # This can happen for loop-induce for the cutted particle
+                #no need for any replacement for those
+                continue
             leg.set('number', min_dict[leg.get('number')])
             leg.set('state', state_dict[leg.get('number')])
         vertex.set('legs', leg_list)

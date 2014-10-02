@@ -189,7 +189,7 @@ C ----------
        AMP2(i) = AMP2(i)+ ML_AMP2(I+NCTAMPS)
     ENDDO
 
-   IF (.false..and.MULTI_CHANNEL) THEN
+   IF (MULTI_CHANNEL) THEN
         XTOT=0D0
         DO I=1,NDIAGS
             XTOT=XTOT+AMP2(I)
