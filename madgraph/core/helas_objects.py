@@ -266,6 +266,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
        IdentifySGConfigTag in diagram_symmetry.py (apart from leg number)
        to make sure symmetry works!"""
 
+
     def get_s_and_t_channels(self, ninitial, model, new_pdg, max_final_leg = 2):
         """Get s and t channels from the tag, as two lists of vertices
         ordered from the outermost s-channel and in/down towards the highest
@@ -284,13 +285,13 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             # Identify the chain closest to final_leg
             right_num = -1
             for num, link in enumerate(self.tag.links):
-                if len(link.vertex_id) == 2 and \
+                if len(link.vertex_id) in [2,3] and \
                         link.vertex_id[1][-1] == final_leg:
                     right_num = num
             if right_num == -1:
                 # We need to look for leg number 1 instead
                 for num, link in enumerate(self.tag.links):
-                    if len(link.vertex_id) == 2 and \
+                    if len(link.vertex_id) in [2,3] and \
                        link.vertex_id[1][-1] == 1:
                         right_num = num
             if right_num == -1:

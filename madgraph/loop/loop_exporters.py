@@ -811,6 +811,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             dict['copy_mp_to_dp_born_amps'] = ''
             dict['mp_born_amps_decl'] = ''
             dict['nbornamps_decl'] = ''
+            dict['nbornamps'] = 0
             dict['nBornAmps'] = 0
         
         return dict
