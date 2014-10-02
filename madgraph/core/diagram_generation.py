@@ -161,6 +161,7 @@ class DiagramTag(object):
         if not first_vertex:
             # This corresponds to a wavefunction with a resulting leg
             # Need to create the resulting leg from legs and vertex id
+            misc.sprint()
             last_leg = cls.leg_from_legs(legs,link.vertex_id,model)
             legs.append(last_leg)
             
@@ -181,6 +182,7 @@ class DiagramTag(object):
         """Returns the list of external PDGs of the interaction corresponding 
         to this vertex_id."""
         
+        misc.sprint("pass here", vertex_id)
         # In case we have to deal with a regular vertex, we return the list
         # external PDGs as given by the model information on that integer 
         # vertex id.
@@ -196,6 +198,9 @@ class DiagramTag(object):
 
         pdgs = cls.legPDGs_from_vertex_id(vertex_id, model)
 
+        
+        misc.sprint("pdgs", pdgs)
+        misc.sprint([leg.get('id') for leg in legs])
         # Extract the resulting pdg code from the interaction pdgs
         for pdg in [leg.get('id') for leg in legs]:
             pdgs.remove(pdg)
