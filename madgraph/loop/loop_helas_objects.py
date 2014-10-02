@@ -184,7 +184,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             super(LoopHelasAmplitude, self).__init__(*arguments)
         else:
             super(LoopHelasAmplitude, self).__init__()        
-
+    
     def is_equivalent(self, other):
         """Comparison between different LoopHelasAmplitude in order to recognize
         which ones are equivalent at the level of the file output.
@@ -359,6 +359,18 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             mothersList=[wf for wf in lwf.get('mothers') if not wf['is_loop']]
             self['mothers'].extend(mothersList)
             self['pairing'].append(len(mothersList))
+
+    def get_vertex_leg_numbers(self):
+        """Get a list of the number of legs in vertices in this diagram"""
+
+        # We do not add len(self.get('mothers')) here because the contracted loop
+        # should not be considered on par with other vertices when it comes to
+        # multi-channeling
+        vertex_leg_numbers = [0]
+        for mother in self.get('mothers'):
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+
+        return vertex_leg_numbers
 
     def get_denominators(self):
         """ Returns the denominator structure as a tuple (tupleA, tupleB) whose

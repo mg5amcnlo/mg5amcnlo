@@ -34,6 +34,10 @@ C
 	  %(complex_dp_format)s IMAG1
       PARAMETER (IMAG1=(0.0d0,1.0d0))
 
+## if (not LoopInduced) {
+	  INTEGER NBORNAMPS
+      PARAMETER (NBORNAMPS=%(nbornamps)d)
+## }
       INTEGER    NLOOPAMPS
       PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NSQUAREDSO, NLOOPAMPSO
@@ -43,7 +47,6 @@ C
 ## if(not LoopInduced){
 	  INTEGER NBORNFLOWS
 	  PARAMETER (NBORNFLOWS=%(nBornFlows)d)	
-C     We use the same list of amplitude split order for Born and Loop, so that NBORNAMPSO is always equal to NLOOPAMPSO  
       INTEGER    NBORNAMPSO
 	  PARAMETER (NBORNAMPSO=NLOOPAMPSO)
 
@@ -75,6 +78,10 @@ C
 	  character(512) MLPath
       common/MLPATH/MLPath
 
+## if(not LoopInduced) {
+	  %(complex_dp_format)s AMP(NBORNAMPS)
+	  common/%(proc_prefix)sAMPS/AMP
+## }
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  common/%(proc_prefix)sAMPL/AMPL
 	  %(complex_dp_format)s JAMPL(3,NLOOPFLOWS,NLOOPAMPSO)
@@ -108,7 +115,7 @@ if (CleanUp) then
     if(ALLOCATED(LoopColorProjector(I)%%AmpID)) deallocate(LoopColorProjector(I)%%AmpID)
   ENDDO
 ## if(not LoopInduced){
-  DO I=1,NBORNPFLOWS
+  DO I=1,NBORNFLOWS
     if(ALLOCATED(BornColorProjector(I)%%Num)) deallocate(BornColorProjector(I)%%Num)
     if(ALLOCATED(BornColorProjector(I)%%Denom)) deallocate(BornColorProjector(I)%%Denom)
     if(ALLOCATED(BornColorProjector(I)%%AmpID)) deallocate(BornColorProjector(I)%%AmpID)
@@ -144,7 +151,6 @@ C Initialize the LoopColorProjector
 
 ## if (not LoopInduced) {
 C Initialize the BornColorProjector
-  allocate(BornColorProjector(NBORNFLOWS))
   OPEN(1, FILE=BornColorFlowCoefsN, err=301, status='OLD',           action='READ')
   DO I=1,NBORNFLOWS
     READ(1,*,END=998) ARRAY_SIZE
@@ -176,8 +182,7 @@ DO I=1,NBORNFLOWS
     SOINDEX = %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(BornColorProjector(I)%%AmpID(J))
 	PROJ_COEF=DCMPLX(BornColorProjector(I)%%Num(J)/DBLE(ABS(BornColorProjector(I)%%Denom(J))),0.0d0)
     IF(BornColorProjector(I)%%Denom(J).LT.0) PROJ_COEF=PROJ_COEF*IMAG1
-    JAMPB(I,SOINDEX) = JAMPB(I,SOINDEX) + PROJ_COEF*AMP(K,BornColorProjector(I)%%AmpID(J))
-    ENDDO
+    JAMPB(I,SOINDEX) = JAMPB(I,SOINDEX) + PROJ_COEF*AMP(BornColorProjector(I)%%AmpID(J))
   ENDDO
 ENDDO
 
@@ -397,8 +402,8 @@ C
 	  %(complex_dp_format)s IMAG1
       PARAMETER (IMAG1=(0.0d0,1.0d0))
 
-      INTEGER    NSQUAREDSO, NLOOPAMPSO
-	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d, NLOOPAMPSO=%(nAmpSO)d)
+      INTEGER    NSQUAREDSO, NLOOPAMPSO, NSO
+	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d, NLOOPAMPSO=%(nAmpSO)d, NSO=%(nSO)d)
 	  INTEGER NLOOPFLOWS
 	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)	  
 ## if(not LoopInduced){
@@ -418,12 +423,16 @@ C
 C LOCAL VARIABLES 
 C
 	  INTEGER I, J, M, N, K, SQSOINDEX, DOUBLEFACT
+	  INTEGER ORDERS_A(NSO), ORDERS_B(NSO)
 	  %(complex_dp_format)s COLOR_COEF
 	  %(real_dp_format)s TEMP(3)
 C  
 C FUNCTIONS
 C
+C This function belongs to the loop ME computation (loop_matrix.f) and is prefixed with ML5 
 	  INTEGER %(proc_prefix)sML5SQSOINDEX
+C This function belongs to the Born ME computation (born_matrix.f) and is not prefixed at all
+	  INTEGER %(proc_prefix)sSQSOINDEX, %(proc_prefix)sSOINDEX_FOR_AMPORDERS
 C
 C GLOBAL VARIABLES
 C
@@ -470,19 +479,26 @@ ENDIF
 
 ## if(not LoopInduced){
 c Compute the Born ME from the Born color flow amplitudes (JAMP)
-DO I=1, NBORNFLOW
-  DO J=I, NBORNFLOW
+DO I=1, NBORNFLOWS
+  DO J=I, NBORNFLOWS
 	COLOR_COEF=DCMPLX(BornColorFlowMatrix(I,J)%%Num/DBLE(ABS(BornColorFlowMatrix(I,J)%%Denom)),0.0d0)
 	IF (BornColorFlowMatrix(I,J)%%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
     DO M=1,NBORNAMPSO
+C It may be that this AmpSO index does not receive contribution by the Born amps
+      IF (JAMPB(I,M).eq.0.0d0) CYCLE
       DO N=M,NBORNAMPSO
-        SQSOINDEX = %(proc_prefix)sML5SQSOINDEX(M,N)
+      	IF (JAMPB(J,N).eq.0.0d0) CYCLE
+C First fetch what orders the split order indices M, N correspond to
+      	CALL %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(M,ORDERS_A)
+      	CALL %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(N,ORDERS_B)
+C Now figure out to which SQSOINDEX these orders together correspond to *in the Born subroutine* (Notice the absence of the ML5 prefix in the functions used then)
+        SQSOINDEX = %(proc_prefix)sSQSOINDEX(%(proc_prefix)sSOINDEX_FOR_AMPORDERS(ORDERS_A),%(proc_prefix)sSOINDEX_FOR_AMPORDERS(ORDERS_B))
         IF(M.ne.N.or.J.ne.I) THEN
           DOUBLEFACT=2 
         ELSE 
           DOUBLEFACT=1
         ENDIF
-        TEMP(1) = 2.0d0*HEL_MULT*DBLE(COLOR_COEF*JAMPL(K,I,M)*DCONJG(JAMPB(J,N)))
+        TEMP(1) = 2.0d0*HEL_MULT*DBLE(COLOR_COEF*JAMPB(I,M)*DCONJG(JAMPB(J,N)))
         RES(0,SQSOINDEX) = RES(0,SQSOINDEX) + TEMP(1)
         IF(SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
           RES(0,0) = RES(0,0) + TEMP(1)
@@ -546,6 +562,8 @@ C CONSTANTS
 C 
       INTEGER    NLOOPAMPS
       PARAMETER (NLOOPAMPS=%(nloopamps)d)
+      INTEGER    NMULTICHANNELS
+      PARAMETER (NMULTICHANNELS=%(nmultichannels)d)
 C  
 C LOCAL VARIABLES 
 C
@@ -559,16 +577,14 @@ C GLOBAL VARIABLES
 C
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  common/%(proc_prefix)sAMPL/AMPL
-      %(real_dp_format)s AMP2(NLOOPAMPS)
+      %(real_dp_format)s AMP2(NMULTICHANNELS)
 	  common/%(proc_prefix)sAMP2/AMP2
 
 C ----------
 C BEGIN CODE
 C ----------
 	  
-	  DO I=1,NLOOPAMPS
-	    AMP2(I) = AMP2(I) + HEL_MULT*DBLE(AMPL(1,I)*DCONJG(AMPL(1,I)))
-	  ENDDO
+	  %(loop_amp2)s
 
       END SUBROUTINE
 ## }
@@ -622,7 +638,7 @@ ENDDO
 ## if(not LoopInduced){
 DO I=1,NBORNAMPSO
   DO J=1,NBORNFLOWS
-    JAMPB(I,J)=CMPLXZERO
+    JAMPB(J,I)=CMPLXZERO
   ENDDO
 ENDDO
 ## }
@@ -643,7 +659,10 @@ C
       PARAMETER (ZERO=0.0d0)
       INTEGER    NLOOPAMPS
       PARAMETER (NLOOPAMPS=%(nloopamps)d)
-
+## if(LoopInduced and MadEventOutput){
+      INTEGER    NMULTICHANNELS
+      PARAMETER (NMULTICHANNELS=%(nmultichannels)d)
+## }
 	  INTEGER NLOOPFLOWS
 	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)
 C
@@ -654,7 +673,7 @@ C
 C GLOBAL VARIABLES
 C
 ## if(LoopInduced and MadEventOutput){
-      %(real_dp_format)s AMP2(NLOOPAMPS)
+      %(real_dp_format)s AMP2(NMULTICHANNELS)
 	  common/%(proc_prefix)sAMP2/AMP2
       %(real_dp_format)s JAMP2(NLOOPFLOWS)
 	  common/%(proc_prefix)sJAMP2/JAMP2
@@ -665,7 +684,7 @@ C BEGIN CODE
 C ----------
 
 ## if(LoopInduced and MadEventOutput){
-  DO I=1,NLOOPAMPS
+  DO I=1,NMULTICHANNELS
     AMP2(I)=ZERO
   ENDDO
   DO I=1,NLOOPFLOWS

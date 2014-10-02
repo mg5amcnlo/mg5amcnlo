@@ -650,7 +650,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         # Now we can generate the loop diagrams.
         totloopsuccessful=self.generate_loop_diagrams()
-        self['process']['forbidden_particles']=[]
 
         # If there is no born neither loop diagrams, return now.
         if not self['process']['has_born'] and not self['loop_diagrams']:

@@ -94,8 +94,13 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
+## if(not AmplitudeReduction) {
       INTEGER ID,SQSOINDEX,R
-      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+	  common/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+## }else{
+      INTEGER ID,R
+	  common/%(proc_prefix)sLOOP/ID,R
+## }
 
       LOGICAL CTINIT, TIRINIT, GOLEMINIT
       COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT,GOLEMINIT

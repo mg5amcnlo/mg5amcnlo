@@ -22,14 +22,10 @@ C
     PARAMETER (             NCOMB=%(ncomb)d)
     INTEGER    NDIAGS
     PARAMETER (NDIAGS=%(ndiags)d) 
-    INTEGER    NLOOPAMPS
-    PARAMETER (NLOOPAMPS=%(nloopamps)d) 
     INTEGER    NLOOPFLOWS
     PARAMETER (NLoopFlows=%(nLoopFlows)d) 
     INTEGER    THEL
     PARAMETER (THEL=NCOMB)
-    INTEGER NCTAMPS 
-    PARAMETER (NCTAMPS=%(nctamps)d) 
     INTEGER Hel_Average_Factor
     PARAMETER (Hel_Average_Factor=%(hel_avg_factor)d)
 C  
@@ -67,7 +63,7 @@ C
     %(complex_dp_format)s ML_JAMP2(nLoopFlows)
 	common/%(ml_prefix)sJAMP2/ML_JAMP2
 
-    %(real_dp_format)s ML_AMP2(nloopamps)
+    %(real_dp_format)s ML_AMP2(MAXAMPS)
 	common/%(ml_prefix)sAMP2/ML_AMP2
     
     REAL*8 POL(2)
@@ -186,10 +182,10 @@ C ----------
        JAMP2(I) = JAMP2(i) + ML_JAMP2(I)
     ENDDO
     DO I=1,NDIAGS
-       AMP2(i) = AMP2(i)+ ML_AMP2(I+NCTAMPS)
+       AMP2(i) = ML_AMP2(i)
     ENDDO
 
-   IF (.false..and.MULTI_CHANNEL) THEN
+   IF (MULTI_CHANNEL) THEN
         XTOT=0D0
         DO I=1,NDIAGS
             XTOT=XTOT+AMP2(I)

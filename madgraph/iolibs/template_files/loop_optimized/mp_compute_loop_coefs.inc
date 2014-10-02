@@ -14,7 +14,10 @@ C CONSTANTS
 C
       CHARACTER*64 paramFileName
       PARAMETER ( paramFileName='MadLoopParams.dat')
-	  %(nbornamps_decl)s
+## if (not LoopInduced) {
+	  INTEGER NBORNAMPS
+      PARAMETER (NBORNAMPS=%(nbornamps)d)
+## }
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d) 
       INTEGER    NLOOPAMPS
@@ -38,6 +41,14 @@ C
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
 	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
+
+##if(ComputeColorFlows) {
+C The variables below are just used in the context of a JAMP consistency check turned off by default.
+      LOGICAL DOUBLECHECK_JAMP
+      %(real_dp_format)s RES_FROM_JAMP(0:3,0:NSQUAREDSO)
+	  common/%(proc_prefix)sDOUBLECHECK_JAMP/RES_FROM_JAMP,DOUBLECHECK_JAMP
+## }
+	  
 C  
 C ARGUMENTS 
 C  
@@ -47,8 +58,8 @@ C
 C LOCAL VARIABLES 
 C  
       LOGICAL DPW_COPIED
-      INTEGER I,J,K,H,DUMMY,ITEMP
-## if(not LoopInduced){
+      INTEGER I,J,K,H,HEL_MULT,ITEMP
+## if(not AmplitudeReduction){
 	  %(real_mp_format)s TEMP2
 ## }else{
 	  %(real_mp_format)s TEMP2(3)
@@ -81,13 +92,19 @@ C
 	  INTEGER HELPICKED
 	  common/%(proc_prefix)sHELCHOICE/HELPICKED
 
+	  INTEGER USERHEL
+	  common/%(proc_prefix)sUSERCHOICE/USERHEL
+
 	  INTEGER SQSO_TARGET
 	  common/%(proc_prefix)sSOCHOICE/SQSO_TARGET
       
 	  LOGICAL UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 	  common/%(proc_prefix)sSO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
-	  %(mp_born_amps_decl)s	  
+## if(not LoopInduced) {
+	  %(complex_mp_format)s AMP(NBORNAMPS)
+	  common/%(proc_prefix)sMP_AMPS/AMP
+## }	  
 	  %(complex_mp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sMP_W/W  
 
@@ -230,9 +247,9 @@ ENDDO
   MP_UVCT_REQ_SO_DONE=.TRUE.
 
   IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
-    DUMMY=GOODHEL(H)
+    HEL_MULT=GOODHEL(H)
   ELSE
-    DUMMY=1
+    HEL_MULT=1
   ENDIF
   
 ## if(not AmplitudeReduction) { 
@@ -243,7 +260,7 @@ ENDDO
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
 	  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
         DO K=1,3
-          TEMP2 = DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
+          TEMP2 = HEL_MULT*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
           ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
           ANS(K,0)=ANS(K,0)+TEMP2
         ENDDO
@@ -300,15 +317,15 @@ C precision variable) to the AMPL multiple precision array.
 ## if(not LoopInduced) {
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
       DO K=1,3
-        TEMP2(K) = 2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16))
+        TEMP2(K) = 2.0d0*HEL_MULT*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
       ENDDO
 ## } else {
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
-      TEMP2(1) = DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J)),KIND=16)
+      TEMP2(1) = HEL_MULT*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J)),KIND=16)
 C Computing the quantities below is not strictly necessary since the result should be finite
 C It is however a good cross-check.
-      TEMP2(2) = DUMMY*REAL(CFTOT*(AMPL(2,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(2,J))),KIND=16)
-      TEMP2(3) = DUMMY*REAL(CFTOT*(AMPL(3,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(3,J))+AMPL(2,I)*CONJG(AMPL(2,J))),KIND=16)
+      TEMP2(2) = HEL_MULT*REAL(CFTOT*(AMPL(2,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(2,J))),KIND=16)
+      TEMP2(3) = HEL_MULT*REAL(CFTOT*(AMPL(3,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(3,J))+AMPL(2,I)*CONJG(AMPL(2,J))),KIND=16)
 ## }
 C To mimic the structure of the non loop-induced processes, we add here the
 C squared counterterm contribution directly the result ANS() and put the 
@@ -333,6 +350,15 @@ C we now copy over this flag to the relevant contributing Squared orders.
       ENDIF
     ENDDO
   ENDDO
+## }
+
+## if(ComputeColorFlows){
+IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
+  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS()
+  IF(DOUBLECHECK_JAMP) THEN
+    CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(RES_FROM_JAMP,HEL_MULT)
+  ENDIF
+ENDIF
 ## }
 
   ENDIF

@@ -27,7 +27,10 @@ C
       PARAMETER ( ColorDenomFName='ColorDenomFactors.dat')
       PARAMETER ( Proc_Prefix='%(proc_prefix)s')
 
-	  %(nbornamps_decl)s
+## if (not LoopInduced) {
+	  INTEGER NBORNAMPS
+      PARAMETER (NBORNAMPS=%(nbornamps)d)
+## }
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d)
       INTEGER    NLOOPAMPS
@@ -77,10 +80,13 @@ C     This parameter is designed for the check timing command of MG5
 	  common/%(proc_prefix)sstability_tests/maxstabilitylength
 
 ##if(ComputeColorFlows) {
-      LOGICAL DOUBLECHECK_JAMP
-      PARAMETER (DOUBLECHECK_JAMP=.FALSE.)
+C The variables below are just used in the context of a JAMP consistency check turned off by default.
       %(real_dp_format)s JAMP_DOUBLECHECK_THRES
-      PARAMETER (JAMP_DOUBLECHECK_THRES=1.0d-9)            
+      PARAMETER (JAMP_DOUBLECHECK_THRES=1.0d-9)
+      LOGICAL DOUBLECHECK_JAMP
+      DATA DOUBLECHECK_JAMP/.FALSE./
+      %(real_dp_format)s RES_FROM_JAMP(0:3,0:NSQUAREDSO)
+	  common/%(proc_prefix)sDOUBLECHECK_JAMP/RES_FROM_JAMP,DOUBLECHECK_JAMP
 ## }
 
 C  
@@ -139,10 +145,6 @@ C This is used for loop-induced where the reference scale for comparisons is inf
       DATA NEXTREF/ZERO/
       INTEGER NPSPOINTS
       DATA NPSPOINTS/0/      
-## }
-
-## if(ComputeColorFlows) {
-     %(real_dp_format)s RES_FROM_JAMP(0:3,0:NSQUAREDSO)
 ## }
 
 	  %(real_dp_format)s ACC(0:NSQUAREDSO)
@@ -220,7 +222,7 @@ C
 	  DATA MP_DONE/.FALSE./
 	  common/%(proc_prefix)sMP_DONE/MP_DONE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE AVAILABLE OR NOT
-          LOGICAL LOOPLIBS_AVAILABLE(4)
+      LOGICAL LOOPLIBS_AVAILABLE(4)
 	  %(data_looplibs_av)s
 	  common/%(proc_prefix)sLOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS AVAILABLE OR NOT IN THE LOOPLIBS
@@ -292,7 +294,10 @@ C TILL NOW, ONLY CUTTOOLS PROVIDE QP
        	  INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
        	  common/%(proc_prefix)sLOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
 
-	  %(dp_born_amps_decl)s 
+## if(not LoopInduced) {
+	  %(complex_dp_format)s AMP(NBORNAMPS)
+	  common/%(proc_prefix)sAMPS/AMP
+## }
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/W  
 
@@ -1739,6 +1744,7 @@ C
       INTEGER I,J
 	  INTEGER SQPLITORDERS(NSQSO,NSO)
 	  %(SquaredSO)s
+	  COMMON/%(proc_prefix)sML5SQPLITORDERS/SQPLITORDERS
 C
 C BEGIN CODE
 C
@@ -1821,7 +1827,6 @@ c order canonical ordering.
 C
 C CONSTANTS
 C      
-
       INTEGER    NSO, NSQUAREDSO, NAMPSO
 	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
 C
@@ -1834,6 +1839,7 @@ C
       INTEGER I, SQORDERS(NSO)
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
 	  %(ampsplitorders)s
+	  COMMON/%(proc_prefix)sML5AMPSPLITORDERS/AMPSPLITORDERS
 C
 C FUNCTION
 C
@@ -1846,6 +1852,117 @@ C
 	  ENDDO
 	  %(proc_prefix)sML5SQSOINDEX=%(proc_prefix)sML5SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
 	  END
+
+C This is the inverse subroutine of ML5SOINDEX_FOR_SQUARED_ORDERS. Not directly useful, but provided nonetheless.
+      SUBROUTINE %(proc_prefix)sML5GET_SQUARED_ORDERS_FOR_SOINDEX(SOINDEX,ORDERS)
+C
+C This functions returns the orders identified by the squared split order index in argument. Order values correspond to following list of couplings (and in this order):
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NSQSO
+	  PARAMETER (NSO=%(nSO)d, NSQSO=%(nSquaredSO)d)
+C
+C ARGUMENTS
+C
+      INTEGER SOINDEX, ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I
+	  INTEGER SQPLITORDERS(NSQSO,NSO)
+	  COMMON/%(proc_prefix)sML5SQPLITORDERS/SQPLITORDERS	  
+C
+C BEGIN CODE
+C
+      IF (SOINDEX.gt.0.and.SOINDEX.le.NSQSO) THEN
+        DO I=1,NSO
+          ORDERS(I) =  SQPLITORDERS(SOINDEX,I)
+        ENDDO
+        RETURN
+      ENDIF
+
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sML5GET_SQUARED_ORDERS_FOR_SOINDEX'
+	  WRITE(*,*) 'Could not find squared orders index ',SOINDEX
+	  STOP
+
+      END SUBROUTINE
+
+C This is the inverse subroutine of getting amplitude SO orders. Not directly useful, but provided nonetheless.
+      SUBROUTINE %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(SOINDEX,ORDERS)
+C
+C This functions returns the orders identified by the split order index in argument. Order values correspond to following list of couplings (and in this order):
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NAMPSO
+	  PARAMETER (NSO=%(nSO)d, NAMPSO=%(nAmpSO)d)
+C
+C ARGUMENTS
+C
+      INTEGER SOINDEX, ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I
+      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
+	  COMMON/%(proc_prefix)sML5AMPSPLITORDERS/AMPSPLITORDERS
+C
+C BEGIN CODE
+C
+      IF (SOINDEX.gt.0.and.SOINDEX.le.NAMPSO) THEN
+        DO I=1,NSO
+          ORDERS(I) =  AMPSPLITORDERS(SOINDEX,I)
+        ENDDO
+        RETURN
+      ENDIF
+
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX'
+	  WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
+	  STOP
+
+      END SUBROUTINE
+
+
+C This function is not directly useful, but included for completeness
+      INTEGER FUNCTION %(proc_prefix)sML5SOINDEX_FOR_AMPORDERS(ORDERS)
+C
+C This functions returns the integer index identifying the amplitude split orders passed in argument which correspond to the values of the following list of couplings (and in this order):
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NAMPSO
+	  PARAMETER (NSO=%(nSO)d, NAMPSO=%(nAmpSO)d)
+C
+C ARGUMENTS
+C
+      INTEGER ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I,J
+      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
+	  COMMON/%(proc_prefix)sML5AMPSPLITORDERS/AMPSPLITORDERS
+C
+C BEGIN CODE
+C
+      DO I=1,NAMPSO
+	    DO J=1,NSO
+		  IF (ORDERS(J).NE.AMPSPLITORDERS(I,J)) GOTO 1009
+		ENDDO
+		%(proc_prefix)sML5SOINDEX_FOR_AMPORDERS = I
+		RETURN
+1009    CONTINUE
+	  ENDDO
+
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sML5SOINDEX_FOR_AMPORDERS'
+	  WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
+	  STOP
+
+      END
 
 C --=========================================--
 C   Definition of additional access routines

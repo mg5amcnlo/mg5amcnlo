@@ -614,7 +614,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     # generate_subprocess_directory_v4
     #===========================================================================
     def generate_loop_subprocess(self, matrix_element, fortran_model,
-                                           group_number = None, proc_id = None):
+                          group_number = None, proc_id = None, config_map=None):
         """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
         including the necessary loop_matrix.f, born_matrix.f and include files.
         Notice that this is too different from generate_subprocess_directory_v4
@@ -645,7 +645,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         calls=self.write_loop_matrix_element_v4(None,matrix_element,
-                  fortran_model, group_number = group_number, proc_id = proc_id)
+                         fortran_model, group_number = group_number, 
+                                     proc_id = proc_id, config_map = config_map)
 
         # We assume here that all processes must share the same property of 
         # having a born or not, which must be true anyway since these are two
@@ -815,13 +816,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         return dict
     
     def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                                           group_number = None, proc_id = None):
+                        group_number = None, proc_id = None, config_map = None):
         """ Writes loop_matrix.f, CT_interface.f, loop_num.f and
         mp_born_amps_and_wfs.
         The arguments group_number and proc_id are just for the LoopInduced
         output with MadEvent and only used in get_ME_identifier."""
         
         # Create the necessary files for the loop matrix element subroutine
+        
+        if config_map:
+            raise MadGraph5Error, 'The default loop output cannot be used with'+\
+              'MadEvent and cannot compute the AMP2 for multi-channeling.'
 
         if not isinstance(fortran_model,\
           helas_call_writers.FortranUFOHelasCallWriter):
@@ -1626,7 +1631,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         return libpath
         
     def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                                           group_number = None, proc_id = None):
+                        group_number = None, proc_id = None, config_map = None):
         """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f,GOLEM_inteface.f 
         and loop_num.f only but with the optimized FortranModel.
         The arguments group_number and proc_id are just for the LoopInduced
@@ -1717,7 +1722,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if self.compute_color_flows:
             filename = 'compute_color_flows.f'
             self.write_compute_color_flows(writers.FortranWriter(filename),
-                                                                 matrix_element)
+                                        matrix_element, config_map = config_map)
 
         return calls
 
@@ -1826,16 +1831,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         else:
             self.general_replace_dict['nloop_groups']=\
                                               self.general_replace_dict['nloops']
-
-        # The born amp declaration suited for also outputing the loop-induced
-        # processes as well. (not used for now, but later)
-        if matrix_element.get('processes')[0].get('has_born'):
-            self.general_replace_dict['dp_born_amps_decl'] = \
-                  self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS)"+\
-                  "\n common/%sAMPS/AMP"%self.general_replace_dict['proc_prefix']
-            self.general_replace_dict['mp_born_amps_decl'] = \
-                  self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
-                  "\n common/%sMP_AMPS/AMP"%self.general_replace_dict['proc_prefix']
     
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools
@@ -1897,7 +1892,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # We finalize TIR result differently wether we used the built-in 
         # squaring against the born.
-        if matrix_element.get('processes')[0].get('has_born'):
+        if not self.get_context(matrix_element)['AmplitudeReduction']:
             replace_dict['loop_induced_sqsoindex']=',SQSOINDEX'
             replace_dict['finalize_GOLEM']='\n'.join([
         'RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%c+'+\
@@ -1954,7 +1949,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # create_loop_coefs
         replace_dict['complex_format'] = replace_dict['complex_dp_format']
         replace_dict['real_format'] = replace_dict['real_dp_format']
-        replace_dict['born_amps_decl'] = replace_dict['dp_born_amps_decl']
         replace_dict['mp_prefix'] = ''
         replace_dict['kind'] = 8
         replace_dict['zero_def'] = '0.0d0'
@@ -1963,7 +1957,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # The quadruple precision version of the basic polynomial routines
         replace_dict['complex_format'] = replace_dict['complex_mp_format']
         replace_dict['real_format'] = replace_dict['real_mp_format']
-        replace_dict['born_amps_decl'] = replace_dict['mp_born_amps_decl']
         replace_dict['mp_prefix'] = 'MP_'
         replace_dict['kind'] = 16
         replace_dict['zero_def'] = '0.0e0_16'
@@ -2115,7 +2108,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         res.append('EOF')
         writer.writelines('\n'.join(res))
     
-    def write_compute_color_flows(self, writer, matrix_element):
+    def write_compute_color_flows(self, writer, matrix_element, config_map):
         """Writes the file compute_color_flows.f which uses the AMPL results
         from a common block to project them onto the color flow space so as 
         to compute the JAMP quantities. For loop induced processes, this file
@@ -2141,7 +2134,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         if matrix_element.get('processes')[0].get('has_born'):
             born_col_amps = matrix_element.get_born_color_amplitudes()
-            self.general_replace_dict['nBornFlows'] = born_col_amps
+            self.general_replace_dict['nBornFlows'] = len(born_col_amps)
             dat_writer = open(pjoin('..','MadLoop5_resources',
                                       '%(proc_prefix)sBornColorFlowCoefs.dat'
                                                 %self.general_replace_dict),'w')
@@ -2153,13 +2146,26 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                      '%(proc_prefix)sBornColorFlowMatrix.dat'
                                                 %self.general_replace_dict),'w')
             self.write_color_matrix_data_file(dat_writer,
-                            color_amp.ColorMatrix(self.get('born_color_basis')))
+                  color_amp.ColorMatrix(matrix_element.get('born_color_basis')))
             dat_writer.close()
         else:
             self.general_replace_dict['nBornFlows'] = 0
 
+        replace_dict = copy.copy(self.general_replace_dict)
+        
+        # The following variables only have to be defined for the LoopInduced
+        # output for madevent.
+        if self.get_context(matrix_element)['MadEventOutput']:
+            nmultichannels, loop_amp2 = self.get_amp2_lines(\
+                                                      matrix_element,config_map)
+            replace_dict['loop_amp2'] = '\n'.join(loop_amp2)
+            replace_dict['nmultichannels'] = nmultichannels
+        else:
+            replace_dict['loop_amp2'] = ''
+            replace_dict['nmultichannels'] = 0
+
         file = open(os.path.join(self.template_dir,\
-                    'compute_color_flows.inc')).read()%self.general_replace_dict
+                                 'compute_color_flows.inc')).read()%replace_dict
 
         writer.writelines(file,context=self.get_context(matrix_element))
     
@@ -2448,6 +2454,7 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
         replace_dict['coef_merging']='\n'.join(coef_merging)
         replace_dict['iregi_free_ps']=self.general_replace_dict['iregi_free_ps']
         replace_dict['data_looplibs_av']=self.general_replace_dict['data_looplibs_av']
+
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
                                                                  loop_CT_calls))   
@@ -2587,6 +2594,12 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
 
         return 0, ncolor
 
+    def get_amp2_lines(self, *args, **opts):
+        """Make sure the function is implemented in the daughters"""
+
+        raise NotImplemented, 'The function get_amp2_lines must be called in '+\
+                                       ' the daugthers of LoopInducedExporterME'
+
 #===============================================================================
 # LoopInducedExporterMEGroup
 #===============================================================================
@@ -2641,13 +2654,70 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         matrix_elements = subproc_group.get('matrix_elements')
         for ime, matrix_element in enumerate(matrix_elements):
             calls += self.generate_loop_subprocess(matrix_element,fortran_model,
-          group_number = str(subproc_group.get('number')), proc_id = str(ime+1))
+          group_number = str(subproc_group.get('number')), proc_id = str(ime+1),
+          config_map = subproc_group.get('diagram_maps')[ime])
         
         # First generate the MadEvent files
         export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory_v4(
                                  self, subproc_group,fortran_model,group_number)
         
         return calls
+    
+    def get_amp2_lines(self, matrix_element, config_map):
+        """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
+
+        if not config_map:
+            raise MadGraph5Error, 'A multi-channeling configuration map is '+\
+              ' necessary for the MadEvent Loop-induced output with grouping.'
+
+        nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+        # Get minimum legs in a vertex
+        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
+                       matrix_element.get('diagrams')])
+
+        ret_lines = []
+        # In this case, we need to sum up all amplitudes that have
+        # identical topologies, as given by the config_map (which
+        # gives the topology/config for each of the diagrams
+        diagrams = matrix_element.get('diagrams')
+        # Combine the diagrams with identical topologies
+        config_to_diag_dict = {}
+        for idiag, diag in enumerate(matrix_element.get('diagrams')):
+            if config_map[idiag] == 0:
+                continue
+            try:
+                config_to_diag_dict[config_map[idiag]].append(idiag)
+            except KeyError:
+                config_to_diag_dict[config_map[idiag]] = [idiag]
+        # Write out the AMP2s summing squares of amplitudes belonging
+        # to eiher the same diagram or different diagrams with
+        # identical propagator properties.  Note that we need to use
+        # AMP2 number corresponding to the first diagram number used
+        # for that AMP2.
+        for config in sorted(config_to_diag_dict.keys()):
+            line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
+                   {"num": (config_to_diag_dict[config][0] + 1)}
+                   
+            # First add the UV and R2 counterterm amplitudes of each selected
+            # diagram for the multichannel config
+            CT_amp_list = [("AMPL(1,%(num)d)" % {"num": a.get('number')}) for a in \
+                                    sum([diagrams[idiag].get_ct_amplitudes() for \
+                                     idiag in config_to_diag_dict[config]], [])]
+
+            # Now add here the loop amplitudes.
+            Loop_amp_list = [("AMPL(1,%(num)d)" % 
+              {"num": a.get('amplitudes')[0].get('number')}) 
+                       for a in sum([diagrams[idiag].get_loop_amplitudes() for \
+                                     idiag in config_to_diag_dict[config]], [])]
+            
+            amps = '+'.join(CT_amp_list+Loop_amp_list)
+
+            # Not using \sum |M|^2 anymore since this creates troubles
+            # when ckm is not diagonal due to the JIM mechanism.
+            line += "HEL_MULT*DBLE((%s)*dconjg(%s))" % (amps, amps)
+            ret_lines.append(line)
+
+        return len(config_to_diag_dict), ret_lines
     
 #===============================================================================
 # LoopInducedExporterMENoGroup
@@ -2707,4 +2777,42 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         calls += export_v4.ProcessExporterFortranME.generate_subprocess_directory_v4(
                                  self, matrix_element, fortran_model, me_number)
         return calls
-        
+
+    def get_amp2_lines(self, matrix_element, config_map):
+        """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
+
+        if config_map:
+            raise MadGraph5Error, 'A configuration map should not be specified'+\
+                              ' for the Loop induced exporter without grouping.'
+
+        nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+        # Get minimum legs in a vertex
+        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
+                                                matrix_element.get('diagrams')])
+
+        ret_lines = []
+
+        for idiag, diag in enumerate(matrix_element.get('diagrams')):
+            # Ignore any diagrams with 4-particle vertices.
+            if max(diag.get_vertex_leg_numbers()) > minvert:
+                continue
+
+            # Now write out the expression for AMP2, meaning the sum of
+            # squared amplitudes belonging to the same diagram
+            
+            line = "AMP2(%(num)d)=AMP2(%(num)d)+" % {"num": (idiag + 1)}
+                   
+            CT_amps = ["AMPL(1,%(num)d)" % \
+                     {"num": a.get('number')} for a in diag.get_ct_amplitudes()]
+                            
+            Loop_amps = ["AMPL(1,%(num)d)" % 
+                    {"num": a.get('amplitudes')[0].get('number')}
+                                            for a in diag.get_loop_amplitudes()]
+            
+            amps = "+".join(CT_amps + Loop_amps)
+            # Not using \sum |M|^2 anymore since this creates troubles
+            # when ckm is not diagonal due to the JIM mechanism.
+            line += "HEL_MULT*DBLE((%s)*dconjg(%s))" % (amps, amps)
+            ret_lines.append(line)
+
+        return len(matrix_element.get('diagrams')), ret_lines

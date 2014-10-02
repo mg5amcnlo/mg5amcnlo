@@ -173,7 +173,7 @@ class FortranWriter(FileWriter):
 
     # Parameters defining the output of the Fortran writer
     keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
-                     '^type\s*.+\s*$': ('^endtype', 2),
+                     '^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
                      '^do(?!\s+\d+)\s+': ('^enddo\s*$', 2),
                      '^subroutine': ('^end\s*$', 0),
                      'function': ('^end\s*$', 0)}

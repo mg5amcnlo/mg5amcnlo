@@ -23,6 +23,7 @@ C
       INTEGER I, SQORDERS(NSO)
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
 	  %(ampsplitorders)s
+	  COMMON/%(proc_prefix)sAMPSPLITORDERS/AMPSPLITORDERS
 C
 C FUNCTION
 C
@@ -55,6 +56,7 @@ C
       INTEGER I,J
 	  INTEGER SQSPLITORDERS(NSQSO,NSO)
 	  %(sqsplitorders)s
+	  COMMON/%(proc_prefix)sSQPLITORDERS/SQPLITORDERS
 C
 C BEGIN CODE
 C
@@ -85,5 +87,115 @@ C
 	  INTEGER NSQSO
 
       NSQSO=NSQUAREDSO
+
+      END
+
+C This is the inverse subroutine of SOINDEX_FOR_SQUARED_ORDERS. Not directly useful, but provided nonetheless.
+      SUBROUTINE %(proc_prefix)sGET_SQUARED_ORDERS_FOR_SOINDEX(SOINDEX,ORDERS)
+C
+C This functions returns the orders identified by the squared split order index in argument. Order values correspond to following list of couplings (and in this order):
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NSQSO
+	  PARAMETER (NSO=%(nSplitOrders)d, NSQSO=%(nSqAmpSplitOrders)d)
+C
+C ARGUMENTS
+C
+      INTEGER SOINDEX, ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I
+	  INTEGER SQPLITORDERS(NSQSO,NSO)
+	  COMMON/%(proc_prefix)sSQPLITORDERS/SQPLITORDERS	  
+C
+C BEGIN CODE
+C
+      IF (SOINDEX.gt.0.and.SOINDEX.le.NSQSO) THEN
+        DO I=1,NSO
+          ORDERS(I) =  SQPLITORDERS(SOINDEX,I)
+        ENDDO
+        RETURN
+      ENDIF
+
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sGET_SQUARED_ORDERS_FOR_SOINDEX'
+	  WRITE(*,*) 'Could not find squared orders index ',SOINDEX
+	  STOP
+
+      END SUBROUTINE
+
+C This is the inverse subroutine of getting amplitude SO orders. Not directly useful, but provided nonetheless.
+      SUBROUTINE %(proc_prefix)sGET_ORDERS_FOR_AMPSOINDEX(SOINDEX,ORDERS)
+C
+C This functions returns the orders identified by the split order index in argument. Order values correspond to following list of couplings (and in this order):
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NAMPSO
+	  PARAMETER (NSO=%(nSplitOrders)d, NAMPSO=%(nAmpSplitOrders)d)
+C
+C ARGUMENTS
+C
+      INTEGER SOINDEX, ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I
+      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
+	  COMMON/%(proc_prefix)sAMPSPLITORDERS/AMPSPLITORDERS
+C
+C BEGIN CODE
+C
+      IF (SOINDEX.gt.0.and.SOINDEX.le.NAMPSO) THEN
+        DO I=1,NSO
+          ORDERS(I) =  AMPSPLITORDERS(SOINDEX,I)
+        ENDDO
+        RETURN
+      ENDIF
+
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sGET_ORDERS_FOR_AMPSOINDEX'
+	  WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
+	  STOP
+
+      END SUBROUTINE
+
+C This function is not directly useful, but included for completeness
+      INTEGER FUNCTION %(proc_prefix)sSOINDEX_FOR_AMPORDERS(ORDERS)
+C
+C This functions returns the integer index identifying the amplitude split orders passed in argument which correspond to the values of the following list of couplings (and in this order):
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NAMPSO
+	  PARAMETER (NSO=%(nSplitOrders)d, NAMPSO=%(nAmpSplitOrders)d)
+C
+C ARGUMENTS
+C
+      INTEGER ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I,J
+      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
+	  COMMON/%(proc_prefix)sAMPSPLITORDERS/AMPSPLITORDERS
+C
+C BEGIN CODE
+C
+      DO I=1,NAMPSO
+	    DO J=1,NSO
+		  IF (ORDERS(J).NE.AMPSPLITORDERS(I,J)) GOTO 1009
+		ENDDO
+		%(proc_prefix)sSOINDEX_FOR_AMPORDERS = I
+		RETURN
+1009    CONTINUE
+	  ENDDO
+
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sSOINDEX_FOR_AMPORDERS'
+	  WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
+	  STOP
 
       END

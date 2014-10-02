@@ -7,7 +7,10 @@ C MULTIPLY BY THE BORN
 C  
 C CONSTANTS 
 C 
-	  %(nbornamps_decl)s
+## if (not LoopInduced) {
+	  INTEGER NBORNAMPS
+      PARAMETER (NBORNAMPS=%(nbornamps)d)
+## }
 	  %(real_format)s ZERO,ONE
 	  PARAMETER (ZERO=%(zero_def)s,ONE=%(one_def)s)
 	  %(complex_format)s IMAG1
@@ -63,8 +66,11 @@ C
 
 	  INTEGER HELPICKED
 	  common/%(proc_prefix)sHELCHOICE/HELPICKED
-
-	  %(born_amps_decl)s
+      
+## if(not LoopInduced) {
+	  %(complex_dp_format)s AMP(NBORNAMPS)
+	  common/%(proc_prefix)s%(mp_prefix)sAMPS/AMP
+## }
       
 	  DO I=1,NAMPSO
 	    CONST(I)=CMPLX_ZERO
@@ -121,10 +127,6 @@ C LOCAL VARIABLES
 C
       %(complex_format)s CONST
       INTEGER I,J
-C  
-C FUNCTIONS
-C
-      INTEGER %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP, %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP, %(proc_prefix)sML5SQSOINDEX
 C
 C GLOBAL VARIABLES
 C
