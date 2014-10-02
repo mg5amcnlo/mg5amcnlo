@@ -285,13 +285,13 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             # Identify the chain closest to final_leg
             right_num = -1
             for num, link in enumerate(self.tag.links):
-                if len(link.vertex_id) in [2,3] and \
+                if len(link.vertex_id) == 3 and \
                         link.vertex_id[1][-1] == final_leg:
                     right_num = num
             if right_num == -1:
                 # We need to look for leg number 1 instead
                 for num, link in enumerate(self.tag.links):
-                    if len(link.vertex_id) in [2,3] and \
+                    if len(link.vertex_id) == 3 and \
                        link.vertex_id[1][-1] == 1:
                         right_num = num
             if right_num == -1:
@@ -478,10 +478,10 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         if len(new_vertex[0]) == 1 and len(old_vertex[0]) > 1:
             # We go from a last link to next-to-last link 
             return (old_vertex[0], 
-                    (new_vertex[1][0], old_vertex[1][1], min_number))
+                    (new_vertex[1][0], old_vertex[1][1], min_number), new_vertex[2])
         elif len(new_vertex[0]) > 1 and len(old_vertex[0]) == 1:
             # We go from next-to-last link to last link - remove propagator info
-            return (old_vertex[0], (new_vertex[1][0], min_number))
+            return (old_vertex[0], (new_vertex[1][0], min_number), new_vertex[2])
 
         # We should not get here
         raise diagram_generation.DiagramTag.DiagramTagError, \
@@ -2284,6 +2284,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             return mothers, my_index
 
         sorted_mothers = []
+        misc.sprint(pdg_codes)
         for i, code in enumerate(pdg_codes):
             index = mother_codes.index(code)
             mother_codes.pop(index)
