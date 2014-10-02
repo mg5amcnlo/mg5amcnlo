@@ -2789,10 +2789,6 @@ This implies that with decay chains:
         self.check_display(args)
 
         if args[0] == 'diagrams':
-            if self._curr_amps: 
-                misc.sprint("has it here")  
-            else:
-                misc.sprint("missing") 
             self.draw(' '.join(args[1:]))
 
         if args[0] == 'particles' and len(args) == 1:
@@ -3117,10 +3113,6 @@ This implies that with decay chains:
         """ draw the Feynman diagram for the given process.
         Type refers to born, real or loop"""
 
-        if self._curr_amps: 
-            misc.sprint("has it here")   
-        else:
-            misc.sprint("Missing!")
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_draw(args)
