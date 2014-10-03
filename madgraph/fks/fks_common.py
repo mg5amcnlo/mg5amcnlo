@@ -472,7 +472,8 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
             except ValueError:
                 continue
             if len(set(masslist)) == 1 and not \
-                    any( [ p.get_pdg_code() in ghost_list for p in ii['particles']]) :
+                    any( [ p.get_pdg_code() in ghost_list or \
+                           p.get_anti_pdg_code() in ghost_list for p in ii['particles']]) :
                 qcd_inter.append(ii)
                 for pp in ii['particles']:
                     pert_parts.append(pp.get_pdg_code())

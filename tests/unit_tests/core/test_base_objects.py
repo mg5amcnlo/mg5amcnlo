@@ -171,7 +171,8 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'is_part\': True,\n"
         goal = goal + "    \'self_antipart\': False,\n"        
         goal = goal + "    \'ghost\': False,\n"
-        goal = goal + "    \'counterterm\': {('QCD', ((1, 2), (3, 4))): {0: 'GC_0', -1: 'GC_1'}}\n}"
+        goal = goal + "    \'counterterm\': {('QCD', ((1, 2), (3, 4))): {0: 'GC_0', -1: 'GC_1'}},\n"
+        goal = goal + "    \'goldstone\': False\n}"
 
         self.assertEqual(goal.split('\n'), str(self.mypart).split('\n'))
 
@@ -1531,6 +1532,7 @@ class ProcessTest(unittest.TestCase):
                        'sqorders_types': {},
                        'has_born': True,
                        'overall_orders': {},
+                       'born_orders': {},
                        'NLO_mode':'tree',
                        'split_orders':[]}
 
@@ -1618,7 +1620,8 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'perturbation_couplings\': [],\n"
         goal = goal + "    \'has_born\': True,\n"
         goal = goal + "    \'NLO_mode\': 'tree',\n"
-        goal = goal + "    \'split_orders\': []\n}"
+        goal = goal + "    \'split_orders\': [],\n"
+        goal = goal + "    \'born_orders\': {}\n}"
 
         for a, b in zip(goal.split('\n'), str(self.myprocess).split('\n')):
             self.assertEqual(a,b)
@@ -1880,6 +1883,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
                        'squared_orders':{},
+                       'born_orders':{},
                        'has_born': True,
                        'overall_orders':{},
                        'sqorders_types':{},
@@ -1968,7 +1972,8 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'perturbation_couplings\': [],\n"
         goal = goal + "    \'has_born\': True,\n"
         goal = goal + "    \'NLO_mode\': 'tree',\n"
-        goal = goal + "    \'split_orders\': []\n}"                
+        goal = goal + "    \'split_orders\': [],\n"                
+        goal = goal + "    \'born_orders\': {}\n}"                
         self.assertEqual(goal, str(self.my_process_definition))
 
 #===============================================================================

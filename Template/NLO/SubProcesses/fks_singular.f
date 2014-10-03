@@ -4624,6 +4624,7 @@ C                 set colour factors
                   gamma_used = gamma(aj)
                   gammap_used = gammap(aj)
                else if (ipos_ord.eq.qed_pos) then
+                  if (particle_charge(i).eq.0d0) cycle
 C                 set charge factors
                   c_used = particle_charge(i)**2
                   gamma_used = 3d0/2d0 * particle_charge(i)**2

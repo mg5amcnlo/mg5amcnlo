@@ -427,6 +427,8 @@ c From dsample_fks
       integer mc_hel,ihel
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
 c
       if (ifl.ne.0) then
          write (*,*) 'ifl not equal to zero in sigint()',ifl
@@ -459,7 +461,7 @@ c
          foundB(2)=.false.
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (particle_type(i_fks).eq.8) then
+            if (is_aorg(i_fks)) then
                if (j_fks.le.nincoming) then
                   foundB(1)=.true.
                   nFKSprocessBorn(1)=nFKSprocess
@@ -486,7 +488,7 @@ c
          if (.not.foundB(1)) then
             write(*,*) 'Trying to generate Born momenta with '/
      &           /'initial state j_fks, but there is no '/
-     &           /'configuration with i_fks a gluon and j_fks '/
+     &           /'configuration with i_fks a gluon/photon and j_fks '/
      &           /'initial state'
             stop
          endif
@@ -495,7 +497,7 @@ c
          if (.not.foundB(2)) then
             write(*,*) 'Trying to generate Born momenta with '/
      &           /'final state j_fks, but there is no configuration'/
-     &           /' with i_fks a gluon and j_fks final state'
+     &           /' with i_fks a gluon/photon and j_fks final state'
             stop
          endif
          nFKSprocess=nFKSprocessBorn(2)
