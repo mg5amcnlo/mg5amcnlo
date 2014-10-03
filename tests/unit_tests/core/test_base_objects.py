@@ -49,7 +49,8 @@ class ParticleTest(unittest.TestCase):
                       'ghost':False,
                       'counterterm':{('QCD',((1,2),(3,4))):{0:'GC_0',-1:'GC_1'}},
                       'propagator':'',
-                      'self_antipart':False}
+                      'self_antipart':False,
+                      'goldstone': False}
 
         self.mypart = base_objects.Particle(self.mydict)
 
@@ -136,7 +137,10 @@ class ParticleTest(unittest.TestCase):
                         'wrong_list':[1, 'a', 'true', None]},
                        {'prop':'self_antipart',
                         'right_list':[True, False],
-                        'wrong_list':[1, 'a', 'true', None]}
+                        'wrong_list':[1, 'a', 'true', None]},
+                       {'prop': 'goldstone',
+                        'right_list': [True, False],
+                        'wrong_list': [1, 'a', 'true', None]}
                        ]
 
         temp_part = self.mypart

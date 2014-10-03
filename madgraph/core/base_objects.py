@@ -202,7 +202,7 @@ class Particle(PhysicsObject):
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
                    'texname', 'antitexname', 'line', 'propagating', 'propagator',
-                   'is_part', 'self_antipart', 'ghost', 'counterterm']
+                   'is_part', 'self_antipart', 'ghost', 'counterterm', 'goldstone']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -227,6 +227,7 @@ class Particle(PhysicsObject):
         # Counterterm defined as a dictionary with format:
         # ('ORDER_OF_COUNTERTERM',((Particle_list_PDG))):{laurent_order:CTCouplingName}
         self['counterterm'] = {}
+        self['goldstone'] = False
 
     def filter(self, name, value):
         """Filter for valid particle property values."""
@@ -242,7 +243,12 @@ class Particle(PhysicsObject):
             if not isinstance(value,bool):
                 raise self.PhysicsObjectError, \
                  "%s is not a valid bool for the 'ghost' attribute" % str(value)
-    
+
+        if name is 'goldstone':
+            if not isinstance(value,bool):
+                raise self.PhysicsObjectError, \
+                 "%s is not a valid bool for the 'goldstone' attribute" % str(value)
+                     
         if name is 'counterterm':
             if not isinstance(value,dict):
                 raise self.PhysicsObjectError, \

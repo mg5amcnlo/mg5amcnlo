@@ -457,8 +457,10 @@ class UFOMG5Converter(object):
                 loop_particles = value
             elif key == 'counterterm':
                 counterterms = value
-            elif key.lower() not in ('ghostnumber','selfconjugate','goldstone',
-                                             'goldstoneboson','partial_widths'):
+            elif key.lower() in ['goldstoneboson', 'goldstone']:
+                particle.set('goldstone', bool(value)) 
+                
+            elif key.lower() not in ('ghostnumber','selfconjugate','partial_widths'):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)

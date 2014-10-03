@@ -26,6 +26,7 @@ import copy
 import logging
 import array
 import fractions
+import madgraph.various.misc as misc
     
     
     
@@ -451,7 +452,9 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     """
     #ghost_list = [82, -82] # make sure ghost_list is non-empty
     ghost_list = []
-    ghost_list += [ p.get_pdg_code() for p in model.get('particles') if p.get('ghost')]
+    ghost_list += [ p.get_pdg_code() for p in model.get('particles') 
+                                            if p.get('ghost') or p.get('goldstone')]
+
     qcd_inter = MG.InteractionList()
     pert_parts = []
     soft_parts = []
