@@ -167,7 +167,15 @@ C     IREGI
 ## }
 	 ENDDO
       ENDDO
-          %(finalize_TIR)s
+## if(AmplitudeReduction){
+      RES(1)=NORMALIZATION*RES(1)
+      RES(2)=NORMALIZATION*RES(2)
+      RES(3)=NORMALIZATION*RES(3)
+## } else {
+      RES(1)=NORMALIZATION*2.0d0*DBLE(RES(1))
+      RES(2)=NORMALIZATION*2.0d0*DBLE(RES(2))
+      RES(3)=NORMALIZATION*2.0d0*DBLE(RES(3))
+## }
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
       END
 

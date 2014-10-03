@@ -484,21 +484,21 @@ DO I=1, NBORNFLOWS
 	COLOR_COEF=DCMPLX(BornColorFlowMatrix(I,J)%%Num/DBLE(ABS(BornColorFlowMatrix(I,J)%%Denom)),0.0d0)
 	IF (BornColorFlowMatrix(I,J)%%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
     DO M=1,NBORNAMPSO
-C It may be that this AmpSO index does not receive contribution by the Born amps
-      IF (JAMPB(I,M).eq.0.0d0) CYCLE
-      DO N=M,NBORNAMPSO
-      	IF (JAMPB(J,N).eq.0.0d0) CYCLE
+C It may be that this AmpSO index does not receive contribution by the Born amps (because we put the loop and Born amplitude split orders in a common list)
+      IF (ABS(JAMPB(I,M)).eq.0.0d0) CYCLE
+      DO N=1,NBORNAMPSO
+      	IF (ABS(JAMPB(J,N)).eq.0.0d0) CYCLE
 C First fetch what orders the split order indices M, N correspond to
       	CALL %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(M,ORDERS_A)
       	CALL %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(N,ORDERS_B)
 C Now figure out to which SQSOINDEX these orders together correspond to *in the Born subroutine* (Notice the absence of the ML5 prefix in the functions used then)
         SQSOINDEX = %(proc_prefix)sSQSOINDEX(%(proc_prefix)sSOINDEX_FOR_AMPORDERS(ORDERS_A),%(proc_prefix)sSOINDEX_FOR_AMPORDERS(ORDERS_B))
-        IF(M.ne.N.or.J.ne.I) THEN
+        IF(J.ne.I) THEN
           DOUBLEFACT=2 
         ELSE 
           DOUBLEFACT=1
         ENDIF
-        TEMP(1) = 2.0d0*HEL_MULT*DBLE(COLOR_COEF*JAMPB(I,M)*DCONJG(JAMPB(J,N)))
+        TEMP(1) = DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*JAMPB(I,M)*DCONJG(JAMPB(J,N)))
         RES(0,SQSOINDEX) = RES(0,SQSOINDEX) + TEMP(1)
         IF(SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
           RES(0,0) = RES(0,0) + TEMP(1)
@@ -520,13 +520,17 @@ DO I=1,NLOOPFLOWS
 	IF (LoopColorFlowMatrix(I,J)%%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
     DO M=1,NLOOPAMPSO
 ## if(not LoopInduced){
+C It may be that this AmpSO index does not receive contribution by the Loop amps (because we put the loop and Born amplitude split orders in a common list)
+      IF((ABS(JAMPL(1,I,M))+ABS(JAMPL(2,I,M))+ABS(JAMPL(3,I,M))).eq.0.0d0) CYCLE
       DO N=1,NBORNAMPSO
+C Same for contributions of split order index N by the Born amps
+      IF(ABS(JAMPB(J,N)).eq.0.0d0) CYCLE
 ## } else {
       DO N=M,NLOOPAMPSO
 ## }
         SQSOINDEX = %(proc_prefix)sML5SQSOINDEX(M,N)
 ## if(LoopInduced){
-        IF(M.ne.N.or.J.ne.I) THEN
+        IF(J.ne.I) THEN
           DOUBLEFACT=2 
         ELSE 
           DOUBLEFACT=1

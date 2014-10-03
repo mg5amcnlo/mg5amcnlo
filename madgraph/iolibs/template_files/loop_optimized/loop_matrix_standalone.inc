@@ -824,7 +824,7 @@ c FeynRules, there are none of these type of counterterms.
   ENDIF
 ## if(not AmplitudeReduction) {
   DO I=1,NCTAMPS
-    DO J=1,NCTAMPS
+    DO J=1,NBORNAMPS
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))

@@ -12,6 +12,8 @@ else
   FC=gfortran
 endif
 
+FC=/usr/local/bin/gfortran
+
 include makeinc.inc
 
 LIBDIR=../../lib/

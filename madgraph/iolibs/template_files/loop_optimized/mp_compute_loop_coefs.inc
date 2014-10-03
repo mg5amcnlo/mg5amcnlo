@@ -104,6 +104,8 @@ C
 ## if(not LoopInduced) {
 	  %(complex_mp_format)s AMP(NBORNAMPS)
 	  common/%(proc_prefix)sMP_AMPS/AMP
+	  %(complex_dp_format)s DP_AMP(NBORNAMPS)
+	  common/%(proc_prefix)sAMPS/DP_AMP
 ## }	  
 	  %(complex_mp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sMP_W/W  
@@ -194,6 +196,13 @@ DO K=1, 3
   ENDDO
 ENDDO
 
+## if(not LoopInduced) {
+DO I=1, NBORNAMPS
+  DP_AMP(I) = (0.0d0,0.0d0)
+  AMP(I) = (ZERO, ZERO)
+ENDDO
+## }
+
 ## if(not AmplitudeReduction){
 DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
@@ -245,6 +254,22 @@ ENDDO
   %(mp_uvct_helas_calls)s
 3000 CONTINUE
   MP_UVCT_REQ_SO_DONE=.TRUE.
+
+## if(AmplitudeReduction) {
+## if(not LoopInduced) {
+C Copy the multiple precision Born amplitudes computed to the AMP double precision array for its use later if necessary (i.e. color flows for example.)
+  DO I=1,NBORNAMPS
+    DP_AMP(I)=AMP(I)
+  ENDDO
+## }
+
+C Copy the multiple precision CT amplitudes computed to the AMPL double precision array for its use later if necessary (i.e. color flows for example.)
+  DO I=1,NCTAMPS
+    DO K=1,3
+      DP_AMPL(K,I)=AMPL(K,I)
+    ENDDO
+  ENDDO
+## }
 
   IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
     HEL_MULT=GOODHEL(H)
@@ -305,7 +330,7 @@ C precision variable) to the AMPL multiple precision array.
       AMPL(K,I)=DP_AMPL(K,I)
     ENDDO
   ENDDO
-  
+
   DO I=1,NLOOPAMPS
 ## if(not LoopInduced) {
     DO J=1,NBORNAMPS

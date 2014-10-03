@@ -379,8 +379,16 @@ C     Fill in the golem coefficents and compute the loop
 	   STOP
 	 END SELECT
       ENDIF
-      
-	  %(finalize_GOLEM)s
+
+## if(AmplitudeReduction) {
+        RES(1)=NORMALIZATION*(RES_GOLEM%%c+2.0*LOG(MU_R)*RES_GOLEM%%b+2.0*LOG(MU_R)**2*RES_GOLEM%%a)
+        RES(2)=NORMALIZATION*(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)
+        RES(3)=NORMALIZATION*(RES_GOLEM%%a)
+## } else {
+        RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%c+2.0*LOG(MU_R)*RES_GOLEM%%b+2.0*LOG(MU_R)**2*RES_GOLEM%%a)
+        RES(2)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)
+        RES(3)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%a)
+## }
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
 
 C     Finally free golem memory and cache

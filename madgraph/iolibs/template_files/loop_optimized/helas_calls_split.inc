@@ -3,12 +3,15 @@ C
       IMPLICIT NONE
 C  
 C CONSTANTS
-C  
-	  %(nbornamps_decl)s
+C    
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
+## if (not LoopInduced) {
+	  INTEGER NBORNAMPS
+      PARAMETER (NBORNAMPS=%(nbornamps)d)
+## }
 	  INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d)
 	  INTEGER    NLOOPAMPS
@@ -66,7 +69,10 @@ C
 	  integer I_LIB
 	  common/%(proc_prefix)sI_LIB/I_LIB
 
-      %(dp_born_amps_decl)s
+## if(not LoopInduced) {
+	  %(complex_dp_format)s AMP(NBORNAMPS)
+	  common/%(proc_prefix)sAMPS/AMP
+## }
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/W
 

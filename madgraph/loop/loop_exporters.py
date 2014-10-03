@@ -1847,7 +1847,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """ We can re-use the mother one for the loop optimized output."""
         LoopProcessExporterFortranSA.write_CT_interface(\
                             self, writer, matrix_element,optimized_output=True)
-        
+
     def write_TIR_interface(self, writer, matrix_element):
         """ Create the file TIR_interface.f which does NOT contain the subroutine
          defining the loop HELAS-like calls along with the general interfacing 
@@ -1855,15 +1855,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         # First write TIR_interface which interfaces MG5 with TIR.
         replace_dict=copy.copy(self.general_replace_dict)
-        
-        # We finalize TIR result differently wether we used the built-in 
-        # squaring against the born.
-        if matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['finalize_TIR']='\n'.join([\
-         'RES(%d)=NORMALIZATION*2.0d0*DBLE(RES(%d))'%(i,i) for i in range(1,4)])
-        else:
-            replace_dict['finalize_TIR']='\n'.join([\
-                     'RES(%d)=NORMALIZATION*RES(%d)'%(i,i) for i in range(1,4)])
             
         file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
 
@@ -1895,19 +1886,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # squaring against the born.
         if not self.get_context(matrix_element)['AmplitudeReduction']:
             replace_dict['loop_induced_sqsoindex']=',SQSOINDEX'
-            replace_dict['finalize_GOLEM']='\n'.join([
-        'RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%c+'+\
-        '2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)',\
-            'RES(2)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%b+2.0*LOG(MU_R)*RES_GOLEM%a)',\
-            'RES(3)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%a)'])
         else:
             replace_dict['loop_induced_sqsoindex']=''
-            factor='1.0D0'
-            replace_dict['finalize_GOLEM']='\n'.join([
-        'RES(1)=NORMALIZATION*(RES_GOLEM%c+'+\
-        '2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)',\
-            'RES(2)=NORMALIZATION*(RES_GOLEM%b+2.0*LOG(MU_R)*RES_GOLEM%a)',\
-            'RES(3)=NORMALIZATION*(RES_GOLEM%a)'])
             
         file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
  
