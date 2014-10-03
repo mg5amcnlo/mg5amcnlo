@@ -119,6 +119,8 @@ c helicity stuff
       common/to_matrix/isum_hel, multi_channel
       logical nbody
       common/cnbody/nbody
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
 
 c-----
 c  Begin Code
@@ -164,7 +166,7 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
 c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
-         if (particle_type(i_fks).eq.8) exit
+         if (is_aorg(i_fks)) exit
       enddo
       call leshouche_inc_chooser()
       call setrun                !Sets up run parameters
