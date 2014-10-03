@@ -304,12 +304,14 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             # Create a new link corresponding to moving one step
             new_links = list(self.tag.links[:right_num]) + \
                                            list(self.tag.links[right_num + 1:])
+ 
             new_link = diagram_generation.DiagramTagChainLink(\
                                            new_links,
                                            self.flip_vertex(\
                                              self.tag.vertex_id,
                                              right_link.vertex_id,
                                              new_links))
+
             # Create a new final vertex in the direction of the right_link
             other_links = list(right_link.links) + [new_link]
             other_link = diagram_generation.DiagramTagChainLink(\
@@ -318,6 +320,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                                                  right_link.vertex_id,
                                                  self.tag.vertex_id,
                                                  other_links))
+
             self.tag = other_link
             done = [l for l in self.tag.links if \
                     l.end_link and l.links[0][1][0] == final_leg]
@@ -417,10 +420,6 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
 
         return schannels, tchannels
 
-
-
-
-
     @staticmethod
     def link_from_leg(leg, model):
         """Returns the end link for a leg needed to identify configs: 
@@ -445,6 +444,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         interaction color, mass, width. Also provide propagator PDG code.
         The third element of the tuple vertex_id serves to store potential
         necessary information regarding the shrunk loop."""
+                
         if isinstance(vertex,base_objects.ContractedVertex):
             inter = None
             loop_info = {'PDGs':vertex.get('PDGs')}
@@ -2284,7 +2284,6 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             return mothers, my_index
 
         sorted_mothers = []
-        misc.sprint(pdg_codes)
         for i, code in enumerate(pdg_codes):
             index = mother_codes.index(code)
             mother_codes.pop(index)
@@ -2917,7 +2916,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             max_final_leg = 1
         tag = CanonicalConfigTag(self.get_base_diagram(wf_dict).
                                            get_contracted_loop_diagram(), model)
-        diagram = tag.diagram_from_tag(model)
+
         return tag.get_s_and_t_channels(ninitial, model, new_pdg, max_final_leg)
 
 

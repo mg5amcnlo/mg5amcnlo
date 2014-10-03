@@ -208,7 +208,7 @@ class LoopDiagram(base_objects.Diagram):
         # If we don't have tagging information we will have to reconstruct the
         # contracted diagrams with the unordered vertices
         if not struct_rep or len(self['tag'])==0:
-            
+
             if len(self.get('vertices'))==0:
                 raise MadGraph5Error, "Function get_contracted_loop_diagram()"+\
                     "called for the first time without specifying struct_rep "+\
@@ -263,9 +263,13 @@ class LoopDiagram(base_objects.Diagram):
             else:
                 vertices_after_contracted_vertex.append(self.get('vertices')[-1])
                 
+            
             contracted_diagram_vertices.extend(vertices_before_contracted_vertex)
             if not contracted_vertex_last_loop_leg is None:
                 contracted_vertex.get('legs').append(contracted_vertex_last_loop_leg)
+
+            if len(contracted_vertex.get('legs'))==1:
+                stop
             contracted_diagram_vertices.append(contracted_vertex)
             contracted_diagram_vertices.extend(vertices_after_contracted_vertex)
 

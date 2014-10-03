@@ -141,7 +141,7 @@ class DiagramTag(object):
     @classmethod
     def vertices_from_link(cls, link, model, first_vertex = False):
         """Recursively return the leg corresponding to this link and
-        the list of all vertices from all previous links"""
+        the list of all vertices from all previous links"""            
 
         if link.end_link:
             # This is an end link and doesn't correspond to a vertex
@@ -149,7 +149,6 @@ class DiagramTag(object):
 
         # First recursively find all daughter legs and vertices
         leg_vertices = [cls.vertices_from_link(l, model) for l in link.links]
-
         # The daughter legs are in the first entry
         legs = base_objects.LegList(sorted([l for l,v in leg_vertices],
                                            lambda l1,l2: l2.get('number') - \
@@ -161,15 +160,13 @@ class DiagramTag(object):
         if not first_vertex:
             # This corresponds to a wavefunction with a resulting leg
             # Need to create the resulting leg from legs and vertex id
-            misc.sprint()
             last_leg = cls.leg_from_legs(legs,link.vertex_id,model)
             legs.append(last_leg)
-            
+        
         # Now create and append this vertex
         vertices.append(cls.vertex_from_link(legs,
                                         link.vertex_id,
                                         model))
-
         if first_vertex:
             # Return list of vertices
             return vertices
@@ -182,7 +179,6 @@ class DiagramTag(object):
         """Returns the list of external PDGs of the interaction corresponding 
         to this vertex_id."""
         
-        misc.sprint("pass here", vertex_id)
         # In case we have to deal with a regular vertex, we return the list
         # external PDGs as given by the model information on that integer 
         # vertex id.
@@ -196,11 +192,8 @@ class DiagramTag(object):
     def leg_from_legs(cls,legs, vertex_id, model):
         """Return a leg from a leg list and the model info"""
 
-        pdgs = cls.legPDGs_from_vertex_id(vertex_id, model)
-
+        pdgs = list(cls.legPDGs_from_vertex_id(vertex_id, model))
         
-        misc.sprint("pdgs", pdgs)
-        misc.sprint([leg.get('id') for leg in legs])
         # Extract the resulting pdg code from the interaction pdgs
         for pdg in [leg.get('id') for leg in legs]:
             pdgs.remove(pdg)
