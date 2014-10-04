@@ -420,8 +420,11 @@ class UFOMG5Converter(object):
             # MG5 doesn't use goldstone boson 
             if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
                 return
+            if hasattr(particle_info, 'goldstoneboson') and particle_info.goldstoneboson:
+                return
             elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
-                return      
+                return
+                  
         # Initialize a particles
         particle = base_objects.Particle()
 
@@ -458,8 +461,10 @@ class UFOMG5Converter(object):
             elif key == 'counterterm':
                 counterterms = value
             elif key.lower() in ['goldstoneboson', 'goldstone']:
-                particle.set('goldstone', bool(value)) 
-                
+                if not particle.get('goldstone'):
+                    particle.set('goldstone', bool(value)) 
+                #Due to a bug in the UFO model the attribute goldstoneboson and GoldstonBoson
+                #can be both define (and to different value!)
             elif key.lower() not in ('ghostnumber','selfconjugate','partial_widths'):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
