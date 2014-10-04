@@ -303,7 +303,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
            wanted_lorentz = wanted_lorentz, wanted_couplings = wanted_couplings)
 
     def get_ME_identifier(self, matrix_element, 
-                                           group_number = None, proc_id = None):
+                                 group_number = None, group_elem_number = None):
         """ A function returning a string uniquely identifying the matrix 
         element given in argument so that it can be used as a prefix to all
         MadLoop5 subroutines and common blocks related to it. This allows
@@ -312,12 +312,35 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         The arguments group_number and proc_id are just for the LoopInduced
         output with MadEvent."""
 
-        # The version below is shorter
-        if group_number and proc_id:
-            return 'ML5_%d_%s_%s_'%(matrix_element.get('processes')[0].get('id'),
-                                                          group_number, proc_id)
+        # When disabling the loop grouping in the LoopInduced MadEvent output,
+        # we have only the group_number set and the proc_id set to None. In this
+        # case we don't print the proc_id.
+        if (not group_number is None) and group_elem_number is None:
+            return 'ML5_%d_%s_'%(matrix_element.get('processes')[0].get('id'),
+                                                                   group_number)            
+        elif group_number is None or group_elem_number is None:
+            return 'ML5_%d_'%matrix_element.get('processes')[0].get('id') 
         else:
-            return 'ML5_%d_'%matrix_element.get('processes')[0].get('id')   
+            return 'ML5_%d_%s_%s_'%(matrix_element.get('processes')[0].get('id'),
+                                                group_number, group_elem_number)
+
+    def get_SubProc_folder_name(self, process, 
+                                 group_number = None, group_elem_number = None):
+        """Returns the name of the SubProcess directory, which can contain
+        the process goup and group element number for the case of loop-induced
+        integration with MadEvent."""
+        
+        # When disabling the loop grouping in the LoopInduced MadEvent output,
+        # we have only the group_number set and the proc_id set to None. In this
+        # case we don't print the proc_id.
+        if not group_number is None and group_elem_number is None:
+            return "%s%d_%s_%s"%(self.SubProc_prefix, process.get('id'), 
+                              group_number,process.shell_string(print_id=False))
+        elif group_number is None or group_elem_number is None:
+            return "%s%s" %(self.SubProc_prefix,process.shell_string())
+        else:
+            return "%s%d_%s_%s_%s"%(self.SubProc_prefix, process.get('id'), 
+           group_number, group_elem_number,process.shell_string(print_id=False))
 
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
@@ -597,19 +620,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 'TIRCaching': TIRCaching,
                 'MadEventOutput': MadEventOutput}
 
-    def get_SubProc_folder_name(self, process, 
-                                 group_number = None, group_elem_number = None):
-        """Returns the name of the SubProcess directory, which can contain
-        the process goup and group element number for the case of loop-induced
-        integration with MadEvent."""
-        
-        if not group_number or not group_elem_number:
-            return "%s%s" %(self.SubProc_prefix,process.shell_string())
-        else:
-            return "%s%d_%s_%s_%s"%(self.SubProc_prefix, process.get('id'), 
-                                                group_number, group_elem_number, 
-                                           process.shell_string(print_id=False))
-
     #===========================================================================
     # generate_subprocess_directory_v4
     #===========================================================================
@@ -740,7 +750,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # together into one library, as necessary to follow BLHA guidelines.
         
         dict['proc_prefix'] = self.get_ME_identifier(matrix_element,
-                                 group_number = group_number, proc_id = proc_id)
+                       group_number = group_number, group_elem_number = proc_id)
 
         # The proc_id is used for MadEvent grouping, so none of our concern here
         # and it is simply set to an empty string.        
@@ -761,6 +771,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Extract nloopamps
         nloopamps = matrix_element.get_number_of_loop_amplitudes()
         dict['nloopamps'] = nloopamps
+        # Extract nloopdiags
+        nloopdiags = len(matrix_element.get('diagrams'))
+        dict['nloopdiags'] = nloopdiags
         # Extract nctamps
         nctamps = matrix_element.get_number_of_CT_amplitudes()
         dict['nctamps'] = nctamps
@@ -2499,7 +2512,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
                                   loop_optimized_additional_template_setup(self)
 
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                            proc_id = "", config_map = [], subproc_number = ""):
+                        proc_id = None, config_map = [], subproc_number = None):
         """ Write it the wrapper to call the ML5 subroutine in the library.""" 
         
         # Generating the MadEvent wrapping ME's routines
@@ -2523,7 +2536,13 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         replace_dict['process_lines'] = process_lines
 
         # Set proc_id
-        replace_dict['proc_id'] = proc_id
+        # It can be set to None when write_matrix_element_v4 is called without
+        # grouping. In this case the subroutine SMATRIX should take an empty
+        # suffix.
+        if proc_id is None:
+            replace_dict['proc_id'] = ''
+        else:
+            replace_dict['proc_id'] = proc_id
         
         #set the average over the number of initial helicities
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
@@ -2556,6 +2575,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
             # Set set_amp2_line
             replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT"
         
+        # If group_numer
         replace_dict['ml_prefix'] = \
                  self.get_ME_identifier(matrix_element, subproc_number, proc_id)
         
@@ -2635,7 +2655,8 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         matrix_elements = subproc_group.get('matrix_elements')
         for ime, matrix_element in enumerate(matrix_elements):
             calls += self.generate_loop_subprocess(matrix_element,fortran_model,
-          group_number = str(subproc_group.get('number')), proc_id = str(ime+1),
+          group_number = group_number, proc_id = str(ime+1),
+#          group_number = str(subproc_group.get('number')), proc_id = str(ime+1),
           config_map = subproc_group.get('diagram_maps')[ime])
         
         # First generate the MadEvent files
@@ -2751,7 +2772,7 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
     
         # Then generate the MadLoop files
         calls = self.generate_loop_subprocess(matrix_element,fortran_model,                           
-          group_number = me_number, proc_id = me_number)
+                                                       group_number = me_number)
         
         
         # First generate the MadEvent files

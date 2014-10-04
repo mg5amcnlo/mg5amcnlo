@@ -1709,6 +1709,12 @@ class MultiProcess(base_objects.PhysicsObject):
                    not process.get('is_decay_chain'):
                     try:
                         crossed_index = success_procs.index(sorted_legs)
+                        # The relabeling of legs for loop amplitudes is cumbersome
+                        # and does not save so much time. It is disable here and
+                        # we use the key 'loop_diagrams' to decide whether
+                        # it is an instance of LoopAmplitude.
+                        if 'loop_diagrams' in amplitudes[crossed_index]:
+                            raise ValueError
                     except ValueError:
                         # No crossing found, just continue
                         pass

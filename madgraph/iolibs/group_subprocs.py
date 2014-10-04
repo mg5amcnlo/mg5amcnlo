@@ -424,7 +424,6 @@ class SubProcessGroup(base_objects.PhysicsObject):
                         l.get('state')]
             fs_parts = [model.get_particle(l.get('id')) for l in \
                         process.get('legs') if l.get('state')]
-            diagrams = amplitude.get('diagrams')
 
             # This is where the requirements for which particles to
             # combine are defined. Include p.get('is_part') in
@@ -449,7 +448,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
             except ValueError:
                 proc_classes.append(proc_class)
-                amplitude_classes[iamp] = proc_classes.index(proc_class)
+                amplitude_classes[iamp] = len(proc_classes)-1
 
         return amplitude_classes
 

@@ -18,8 +18,8 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
-    INTEGER    NDIAGS
-    PARAMETER (NDIAGS=%(ndiags)d) 
+    INTEGER    NLOOPDIAGRAMS
+    PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
     INTEGER    NLOOPFLOWS
     PARAMETER (NLoopFlows=%(nLoopFlows)d) 
     INTEGER                 NCOMB         
@@ -62,7 +62,7 @@ C
     %(complex_dp_format)s ML_JAMP2(nLoopFlows)
     common/%(ml_prefix)sJAMP2/ML_JAMP2
 
-    %(real_dp_format)s ML_AMP2(MAXAMPS)
+    %(real_dp_format)s ML_AMP2(NLOOPDIAGRAMS)
     common/%(ml_prefix)sAMP2/ML_AMP2
 
     
@@ -81,10 +81,15 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+
+	IF(NLOOPDIAGRAMS.GT.MAXAMPS) THEN
+	   STOP 'MAXAMPS smaller than NLOOPDIAGRAMS in matrix.f'
+	ENDIF
+
     NTRY(IMIRROR)=NTRY(IMIRROR)+1
 
     IF (multi_channel) THEN
-        DO I=1,NDIAGS
+        DO I=1,NLOOPDIAGRAMS
             AMP2(I)=0D0
         ENDDO
         JAMP2(0)=%(ncolor)d
@@ -182,14 +187,14 @@ c         Set right sign for ANS, based on sign of chosen helicity
     DO I=1,JAMP2(0)
        JAMP2(I) = JAMP2(i) + ML_JAMP2(I)
     ENDDO
-    DO I=1,NDIAGS
+    DO I=1,NLOOPDIAGRAMS
        AMP2(i) = AMP2(i)+ ML_AMP2(I)
     ENDDO
 
 
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0
-        DO I=1,NDIAGS
+        DO I=1,NLOOPDIAGRAMS
             XTOT=XTOT+AMP2(I)
         ENDDO
         IF (XTOT.NE.0D0) THEN

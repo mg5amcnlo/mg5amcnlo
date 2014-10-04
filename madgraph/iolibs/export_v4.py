@@ -2900,8 +2900,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         filename = pjoin(Ppath, 'matrix.f')
         calls, ncolor = \
                self.write_matrix_element_v4(writers.FortranWriter(filename),
-                                                matrix_element,
-                                                fortran_model)
+                      matrix_element, fortran_model, subproc_number = me_number)
 
         filename = pjoin(Ppath, 'auto_dsig.f')
         self.write_auto_dsig_file(writers.FortranWriter(filename),
@@ -4040,7 +4039,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                             fortran_model,
                             proc_id=str(ime+1),
                             config_map=subproc_group.get('diagram_maps')[ime],
-                            subproc_number=str(subproc_group.get('number')))
+                            subproc_number=group_number)
 
             filename = 'auto_dsig%d.f' % (ime+1)
             self.write_auto_dsig_file(writers.FortranWriter(filename),

@@ -566,8 +566,8 @@ C CONSTANTS
 C 
       INTEGER    NLOOPAMPS
       PARAMETER (NLOOPAMPS=%(nloopamps)d)
-      INTEGER    NMULTICHANNELS
-      PARAMETER (NMULTICHANNELS=%(nmultichannels)d)
+      INTEGER    NLOOPDIAGRAMS
+      PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
 C  
 C LOCAL VARIABLES 
 C
@@ -581,7 +581,7 @@ C GLOBAL VARIABLES
 C
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  common/%(proc_prefix)sAMPL/AMPL
-      %(real_dp_format)s AMP2(NMULTICHANNELS)
+      %(real_dp_format)s AMP2(NLOOPDIAGRAMS)
 	  common/%(proc_prefix)sAMP2/AMP2
 
 C ----------
@@ -661,12 +661,8 @@ C
       PARAMETER (CMPLXZERO=(0.0d0,0.0d0))
 	  %(real_dp_format)s ZERO
       PARAMETER (ZERO=0.0d0)
-      INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d)
-## if(LoopInduced and MadEventOutput){
-      INTEGER    NMULTICHANNELS
-      PARAMETER (NMULTICHANNELS=%(nmultichannels)d)
-## }
+      INTEGER    NLOOPDIAGRAMS
+      PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
 	  INTEGER NLOOPFLOWS
 	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)
 C
@@ -677,7 +673,7 @@ C
 C GLOBAL VARIABLES
 C
 ## if(LoopInduced and MadEventOutput){
-      %(real_dp_format)s AMP2(NMULTICHANNELS)
+      %(real_dp_format)s AMP2(NLOOPDIAGRAMS)
 	  common/%(proc_prefix)sAMP2/AMP2
       %(real_dp_format)s JAMP2(NLOOPFLOWS)
 	  common/%(proc_prefix)sJAMP2/JAMP2
@@ -688,7 +684,7 @@ C BEGIN CODE
 C ----------
 
 ## if(LoopInduced and MadEventOutput){
-  DO I=1,NMULTICHANNELS
+  DO I=1,NLOOPDIAGRAMS
     AMP2(I)=ZERO
   ENDDO
   DO I=1,NLOOPFLOWS

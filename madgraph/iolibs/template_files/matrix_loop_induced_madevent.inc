@@ -20,8 +20,8 @@ C
     Include 'maxamps.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
-    INTEGER    NDIAGS
-    PARAMETER (NDIAGS=%(ndiags)d) 
+    INTEGER    NLOOPDIAGRAMS
+    PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
     INTEGER    NLOOPFLOWS
     PARAMETER (NLoopFlows=%(nLoopFlows)d) 
     INTEGER    THEL
@@ -63,7 +63,7 @@ C
     %(complex_dp_format)s ML_JAMP2(nLoopFlows)
 	common/%(ml_prefix)sJAMP2/ML_JAMP2
 
-    %(real_dp_format)s ML_AMP2(MAXAMPS)
+    %(real_dp_format)s ML_AMP2(NLOOPDIAGRAMS)
 	common/%(ml_prefix)sAMP2/ML_AMP2
     
     REAL*8 POL(2)
@@ -81,13 +81,18 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+
+	IF(NLOOPDIAGRAMS.GT.MAXAMPS) THEN
+	   STOP 'MAXAMPS smaller than to NLOOPDIAGRAMS in matrix.f'
+	ENDIF
+
     NTRY=NTRY+1
     DO I=1,NEXTERNAL
        JC(I) = +1
     ENDDO
      
     IF (multi_channel) THEN
-        DO I=1,NDIAGS
+        DO I=1,NLOOPDIAGRAMS
             AMP2(I)=0D0
         ENDDO
         JAMP2(0)=%(ncolor)d
@@ -181,13 +186,13 @@ C ----------
     DO I=1,JAMP2(0)
        JAMP2(I) = JAMP2(i) + ML_JAMP2(I)
     ENDDO
-    DO I=1,NDIAGS
+    DO I=1,NLOOPDIAGRAMS
        AMP2(i) = ML_AMP2(i)
     ENDDO
 
    IF (MULTI_CHANNEL) THEN
         XTOT=0D0
-        DO I=1,NDIAGS
+        DO I=1,NLOOPDIAGRAMS
             XTOT=XTOT+AMP2(I)
         ENDDO
         IF (XTOT.NE.0D0) THEN

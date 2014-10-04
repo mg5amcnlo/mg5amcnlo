@@ -2674,7 +2674,6 @@ This implies that with decay chains:
                     raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                                 amp.nice_string_processes()
 
-
             # Reset _done_export, since we have new process
             self._done_export = False
 
@@ -3876,14 +3875,12 @@ This implies that with decay chains:
                                  ignore_six_quark_processes = ignore_six_quark_processes,
                                  optimize=optimize)
 
-
         for amp in myproc.get('amplitudes'):
             if amp not in self._curr_amps:
                 self._curr_amps.append(amp)
             elif warning_duplicate:
                 raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                             amp.nice_string_processes()
-
 
         # Reset _done_export, since we have new process
         self._done_export = False

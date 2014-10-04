@@ -35,6 +35,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
+import madgraph.various.misc as misc
 
 #===============================================================================
 # 
@@ -1643,7 +1644,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             return helas_diagram, wavefunctionNumber, amplitudeNumber      
 
         # Let's first treat the born diagrams
-                
         if has_born:
             for diagram in amplitude.get('born_diagrams'):
                 helBornDiag, wf_number, amplitude_number=\
