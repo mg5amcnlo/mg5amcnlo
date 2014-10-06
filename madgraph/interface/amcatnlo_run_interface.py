@@ -1243,16 +1243,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
         randinit.write('r=%d' % iseed)
         randinit.close()
-
-
-    def get_characteristics(self, file):
-        """reads the proc_characteristics file and initialises the correspondant
-        dictionary"""
-        lines = [l for l in open(file).read().split('\n') if l and not l.startswith('#')]
-        self.proc_characteristics = {}
-        for l in lines:
-            key, value = l.split('=')
-            self.proc_characteristics[key.strip()] = value.strip()
             
         
     def run(self, mode, options):

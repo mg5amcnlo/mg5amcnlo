@@ -77,6 +77,11 @@ class ProcessExporterFortran(object):
         else:
             self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madevent', 'mp': False}
+            
+        self.proc_characteristic = {'loop_induce': False,
+                                    'has_isr':False,
+                                    'has_fsr':False} #place holder to pas information to the 
+                                      #run_interface
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -214,6 +219,26 @@ class ProcessExporterFortran(object):
         """Function to finalize v4 directory, for inheritance.
         """
         pass
+
+    #===========================================================================
+    # Create the proc_characteristic file passing information to the run_interface
+    #===========================================================================
+    def create_proc_charac(self, matrix_elements, history= "", **opts):
+        
+        
+        template ="#    Information about the process      #\n"
+        template +="#########################################\n"
+        
+        fsock = open(pjoin(self.dir_path, 'SubProcesses', 'proc_characteristics'),'w')
+        fsock.write(template)
+        
+        for key, value in self.proc_characteristic.items():
+            fsock.write(" %s = %s \n" % (key, value))
+        
+        fsock.close()
+        
+        
+    
     
     #===========================================================================
     # write_matrix_element_v4
@@ -3133,6 +3158,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if online:
             nb_channel = obj.rep_rule['nb_gen_diag']
             open(pjoin(self.dir_path, 'Online'),'w').write(str(nb_channel))
+        #add the information to proc_charac
+        self.proc_characteristic['nb_channel'] = obj.rep_rule['nb_gen_diag']
         
         # Write command history as proc_card_mg5
         if os.path.isdir(pjoin(self.dir_path,'Cards')):
@@ -3151,6 +3178,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
+
+        #crate the proc_characteristic file 
+        self.create_proc_charac(matrix_elements, history)
+
 
         #return to the initial dir
         #os.chdir(old_pos)               
@@ -3317,6 +3348,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             return 0
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+        self.proc_characteristic['ninitial'] = ninitial
+        if 'nexternal' in self.proc_characteristic:
+            self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
 
         if ninitial < 1 or ninitial > 2:
             raise writers.FortranWriter.FortranWriterError, \

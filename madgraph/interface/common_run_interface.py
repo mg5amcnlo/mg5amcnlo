@@ -419,11 +419,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.set_configuration()
         self.configure_run_mode(self.options['run_mode'])
 
-
-        # Get number of initial states
-        nexternal = open(pjoin(self.me_dir,'Source','nexternal.inc')).read()
-        found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
-        self.ninitial = int(found.group(1))
+        # Get process information
+        self.get_characteristics()
+        
+        if 'ninitial' not in  self.proc_characteristics:
+            # Get number of initial states
+            nexternal = open(pjoin(self.me_dir,'Source','nexternal.inc')).read()
+            found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
+            self.ninitial = int(found.group(1))
+        else:
+            self.ninitial = int(self.proc_characteristics['ninitial'])
 
 
     ############################################################################
@@ -1661,6 +1666,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             os.mkdir(pjoin(libdir, 'PDFsets'))
         os.environ['lhapdf'] = 'True'
         os.environ['lhapdf_config'] = self.options['lhapdf']
+
+
+    def get_characteristics(self, path=None):
+        """reads the proc_characteristics file and initialises the correspondant
+        dictionary"""
+        
+        if not path:
+            path = os.path.join(self.me_dir, 'SubProcesses', 'proc_characteristics')
+            
+        lines = [l for l in open(path).read().split('\n') if l and not l.startswith('#')]
+        self.proc_characteristics = {}
+        for l in lines:
+            key, value = l.split('=')
+            self.proc_characteristics[key.strip()] = value.strip()
 
 
     def copy_lhapdf_set(self, lhaid_list, pdfsets_dir):

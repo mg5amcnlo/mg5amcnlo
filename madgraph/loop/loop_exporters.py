@@ -749,7 +749,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # subroutines and common block so that several processes can be compiled
         # together into one library, as necessary to follow BLHA guidelines.
         
-        misc.sprint(self.get_ME_identifier)
         dict['proc_prefix'] = self.get_ME_identifier(matrix_element,
                        group_number = group_number, group_elem_number = proc_id)
 
@@ -2644,6 +2643,9 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         """
         # Call specifically what finalize_v4_directory must be used, so that the
         # MRO doesn't interfere.
+        
+        self.proc_characteristic['loop_induce'] = True
+        
         export_v4.ProcessExporterFortranMEGroup.finalize_v4_directory(
                                                               self,*args,**opts)
 
@@ -2763,6 +2765,7 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         """Pick the right mother functions
         """
         
+        self.proc_characteristic['loop_induce'] = True
         # Call specifically what finalize_v4_directory must be used, so that the
         # MRO doesn't interfere.
         export_v4.ProcessExporterFortranME.finalize_v4_directory(

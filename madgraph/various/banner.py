@@ -1352,9 +1352,15 @@ class MadLoopParam(dict):
     def write(self, outputpath, template=None,commentdefault=False):
         
         if not template:
-            template = pjoin(MG5DIR, 'Template', 'loop_material', 'StandAlone', 
+            if not MADEVENT:
+                template = pjoin(MG5DIR, 'Template', 'loop_material', 'StandAlone', 
                                                    'Cards', 'MadLoopParams.dat')
-        template = open(template, 'r')
+            else:
+                template = pjoin(MEDIR, 'SubProcesses', 'MadLoop5_resources',
+                                                           'MadLoopParams.dat' )
+        fsock = open(template, 'r')
+        template = fsock.readlines()
+        fsock.close()
         
         if isinstance(outputpath, str):
             output = open(outputpath, 'w')
