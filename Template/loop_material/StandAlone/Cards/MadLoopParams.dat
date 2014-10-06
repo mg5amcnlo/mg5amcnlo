@@ -4,7 +4,7 @@
 
 !     
 #MLReductionLib
-1|4|3|2
+!1|4|3|2
 ! Default :: 1|4|3|2
 !     The tensor integral reduction library.The current choices are:
 !     1 | CutTools
@@ -21,14 +21,14 @@
 !     =================================================================================
 
 #IREGIMODE
-2
+!2
 ! Default :: 2
 !     IMODE=0, IBP reduction
 !     IMODE=1, PaVe reduction
 !     IMODE=2, PaVe reduction with stablility improved by IBP reduction
 
 #IREGIRECY
-.TRUE.
+!.TRUE.
 ! Default :: .TRUE.
 !     Use RECYCLING OR NOT IN IREGI
 !
@@ -57,7 +57,7 @@
 !     because the two things would almost take the same time. So '-1' is always
 !     very recommended.
 #CTModeRun
--1
+!-1
 ! Default :: -1
 !     In the negative mode -1, MadLoop first evaluates each PS points in modes 1 and 2,
 !     yielding results Res1 and Res2, and then check if:
@@ -69,16 +69,16 @@
 !     not the case, MadLoop outputs a warning. 
 !     Notice that MLStabThres is used only when CTModeRun is negative.
 #MLStabThres
-1.0d-3
+!1.0d-3
 ! Default :: 1.0d-3
 !     You can add other evaluation method to check for the stability in DP and QP.
 !     Below you can chose if you want to use zero, one or two rotations of the PS point 
 !     in QP.
 #NRotations_DP
-1
+!1
 ! Default :: 1
 #NRotations_QP
-0
+!0
 ! Default :: 0
 
 !     By default, MadLoop is allowed to slightly deform the Phase-Space point in input
@@ -103,7 +103,7 @@
 !            particles have been put exactly onshell via a shift of the z component of their 
 !            momenta.
 #ImprovePSPoint
-2
+!2
 ! Default :: 2
 !     =================================================================================
 !     The parameters below set two CutTools internal parameters accessible to the user. 
@@ -115,13 +115,13 @@
 !     2 | OneLOop
 !     3 | QCDLoop
 #CTLoopLibrary
-2
+!2
 ! Default :: 2
 
 !     Choose here the stability threshold used within CutTools to decide when to go to
 !     higher precision.
 #CTStabThres
-1.0d-2
+!1.0d-2
 ! Default :: 1.0d-2
 
 !     =================================================================================
@@ -143,31 +143,31 @@
 !       6   | (mp_dir,mp_inv)-> mp_Atest -> stable                               
 !
 #CTModeInit
-1
-! Default :: 0
+!1
+! Default :: 1
 
 !     CheckCycle sets on how many PS points trials the initialization filters must be 
 !     obtained. As long as MadLoop does not find that many consecutive PS points for 
 !     which the filters are the same, it will start over but only a maximum of
 !     MaxAttempts times.
 #CheckCycle
-3
+!3
 ! Default :: 3
 #MaxAttempts
-10
+!10
 ! Default :: 10
 
 !     Setting the threshold for deciding wether a numerical contribution is analytically 
 !     zero or not.
 #ZeroThres
-1.0d-9
+!1.0d-9
 ! Default :: 1.0d-9
 
 !     Setting the on-shell threshold for deciding whether the invariant variables
 ! of external momenta are on-shell or not. It will only be used in constructing
 ! s-matrix in Golem95.
 #OSThres
-1.0d-8
+!1.0d-8
 ! Default :: 1.0d-8
 
 !     The setting below is recommended to be on as it allows to systematically used the 
@@ -175,7 +175,7 @@
 !     read from HelFilter.dat is consistent as it might be no longer up to date with
 !     certain changes of the paramaters by the user.
 #DoubleCheckHelicityFilter
-.TRUE.
+!.TRUE.
 ! Default :: .TRUE.
 
 !     This decides whether to write out the helicity and loop filters to the files 
@@ -183,26 +183,26 @@
 !     preferable but sometimes not desired because of the need of threadlocks in the
 !     context of mpi parallelization. So it can be turned off here in such cases.
 #WriteOutFilters
-.TRUE.
+!.TRUE.
 ! Default :: .TRUE.
 
 !     Some loop contributions may be zero for some helicities which are however
 !     contributing. In order to save their computing time, you can chose here to try
 !     to filter them out. The gain is typically minimal, so it is turned off by default.
 #UseLoopFilter
-.FALSE.
+!.FALSE.
 ! Default :: .FALSE.
 
 !     This decides whether consecutive consistency for the loop filtering setup is also 
 !     required.
 #LoopInitStartOver
-.FALSE.
+!.FALSE.
 ! Default :: .FALSE.
 
 !     This decides wether consecutive consistency for the helicity filtering setup is also 
 !     required. Better to set it to false as it can cause problems for unstable processes.
 #HelInitStartOver
-.FALSE.
+!.FALSE.
 ! Default :: .FALSE.
 
 /* End of param file */

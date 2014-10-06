@@ -374,7 +374,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ff.write(text)
         ff.close()
 
-    def get_ME_identifier(self, matrix_element):
+    def get_ME_identifier(self, matrix_element, *args, **opts):
         """ A function returning a string uniquely identifying the matrix 
         element given in argument so that it can be used as a prefix to all
         MadLoop5 subroutines and common blocks related to it. This allows
@@ -2939,7 +2939,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        misc.sprint(type(fortran_model), self.write_matrix_element_v4)
+        calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         
         # The born matrix element, if needed
         filename = 'born_matrix.f'

@@ -1802,13 +1802,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                                                                 proc_prefix=''):
         """Export a matrix element to a matrix.f file in MG4 standalone format"""
 
+
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
 
         if not isinstance(writer, writers.FortranWriter):
             raise writers.FortranWriter.FortranWriterError(\
-                "writer not FortranWriter")
+                "writer not FortranWriter but %s" % type(writer))
             
         if not self.opt.has_key('sa_symmetry'):
             self.opt['sa_symmetry']=False

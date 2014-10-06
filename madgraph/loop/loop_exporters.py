@@ -749,6 +749,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # subroutines and common block so that several processes can be compiled
         # together into one library, as necessary to follow BLHA guidelines.
         
+        misc.sprint(self.get_ME_identifier)
         dict['proc_prefix'] = self.get_ME_identifier(matrix_element,
                        group_number = group_number, group_elem_number = proc_id)
 
@@ -1643,7 +1644,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             
         self.tir_available_dict[tir_name]=True
         return libpath
-        
+    
+
+    
     def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
                         group_number = None, proc_id = None, config_map = None):
         """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f,GOLEM_inteface.f 

@@ -17,6 +17,7 @@
 import sys
 import re
 import os
+import numbers
 
 pjoin = os.path.join
 
@@ -1167,12 +1168,229 @@ class ProcCard(list):
                 fsock.write(line+"\n")
                 
             
-                
-            
-        
+class MadLoopParam(dict):
+    """ a class for storing/dealing with the file MadLoopParam.dat
+    contains a parser to read it, facilities to write a new file,...
+    """
     
+    def __init__(self, input=None):
+        """initialize a new instance. input can be an instance of MadLoopParam,
+        a file, a path to a file, or simply Nothing"""                
+        
+        if isinstance(input, MadLoopParam):
+            dict.__init__(self, input)
+            self.user_set = set(input.user_set)
+            return
+        
+        # Initialize it with all the default value
+        self.default_setup()
+        self.user_set = set()
+        
+        
+        # if input is define read that input
+        if isinstance(input, (file, str)):
+            self.read(input)
             
+    def default_setup(self):
+        """initialize the directory to the default value"""
+        
+        dict.__setitem__(self, "MLReductionLib", "1|4|3|2")
+        dict.__setitem__(self, "IREGIMODE", 2)
+        dict.__setitem__(self, "IREGIRECY", True)
+        dict.__setitem__(self, "CTModeRun", -1)
+        dict.__setitem__(self, "MLStabThres", 1e-3)
+        dict.__setitem__(self, "NRotations_DP", 1)
+        dict.__setitem__(self, "NRotations_QP", 0)
+        dict.__setitem__(self, "ImprovePSPoint", 2)
+        dict.__setitem__(self, "CTLoopLibrary", 2)
+        dict.__setitem__(self, "CTStabThres", 1e-2)
+        dict.__setitem__(self, "CTModeInit", 1)
+        dict.__setitem__(self, "CheckCycle", 3)
+        dict.__setitem__(self, "MaxAttempts", 10)
+        dict.__setitem__(self, "ZeroThres", 1e-9)
+        dict.__setitem__(self, "OSThres", 1.0e-8)
+        dict.__setitem__(self, "DoubleCheckHelicityFilter", True)
+        dict.__setitem__(self, "WriteOutFilters", True)
+        dict.__setitem__(self, "UseLoopFilter", False)
+        dict.__setitem__(self, "LoopInitStartOver", False)
+        dict.__setitem__(self, "HelInitStartOver", False)
+
+    def read(self, input):
+        """Read the input file, this can be a path to a file, 
+           a file object, a str with the content of the file."""
+           
+        if isinstance(input, str):
+            if "\n" in input:
+                input = input.split('\n')
+            elif os.path.isfile(input):
+                input = open(input)
+            else:
+                raise Exception, "No such file %s" % input
+        
+        previous_line= ''
+        for line in input:
+            if previous_line.startswith('#'):
+                name = previous_line[1:].split()[0]
+                value = line.strip()
+                if len(value) and value[0] not in ['#', '!']:
+                    self.__setitem__(name, value, change_userdefine=True)
+            previous_line = line
+        
             
+    def __setitem__(self, name, value, change_userdefine=False):
+        """set the attribute and set correctly the type if the value is a string"""
+        
+        # 1. Find the type of the attribute that we want
+        if name in self:
+            targettype = type(self[name])
+        else:
+            if name in [k.lower() for k in self]:
+                for case_name in self:
+                    if case_name.lower() == name:
+                        name = case_name
+                        targettype = type(self[name])
+                        break
+            else:
+                logger.debug('Trying to add argument %s in MadLoopParam. ' % name+\
+                            'This argument is not defined by default. Please consider to add it') 
+                dict.__setitem__(self, name, value)
+                if change_userdefine:
+                    self.user_set.add(name.lower())
+                return
+        
+        # 2. assign the value to the attribute for the given format
+        if not isinstance(value, str):
+            # just have to check that we have the correct format
+            if isinstance(value, targettype):
+                pass # assignement at the end
+            elif isinstance(value, numbers.Number) and isinstance(self[name],numbers.Number):
+                try:
+                    new_value = targettype(value)
+                except TypeError:
+                    if value.imag/value.real<1e-12:
+                        new_value = targettype(value.real)
+                    else:
+                        raise
+                        
+                if new_value == value:
+                    value = new_value
+                else:
+                    raise Exception, "Wrong input type for %s found %s and expecting %s for value %s" %\
+                        (name, type(value), targettype, value)
+            else:
+                raise Exception, "Wrong input type for %s found %s and expecting %s for value %s" %\
+                        (name, type(value), targettype, value)                
+        else:
+            # We have a string we have to format the attribute from the string
+            if targettype == bool:
+                if value.lower() in ['0', '.false.', 'f', 'false']:
+                    value = False
+                elif value.lower() in ['1', '.true.', 't', 'true']:
+                    value = True
+                else:
+                    raise Exception, "%s can not be mapped to True/False" % value
+            elif targettype == str:
+                value = value.strip()
+            elif targettype == int:
+                if value.isdigit():
+                    value = int(value)
+                elif value[1:].isdigit() and value[0] == '-':
+                    value = int(value)
+                else:
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        raise Exception, "%s can not be mapped to an integer" % value                    
+                    try:
+                        new_value = int(value)
+                    except ValueError:
+                        raise Exception, "%s can not be mapped to an integer" % value
+                    else:
+                        if value == new_value:
+                            value = new_value
+                        else:
+                            raise Exception, "incorect input: %s need an integer" % value
+            elif targettype == float:
+                value = value.replace('d','e') # pass from Fortran formatting
+                try:
+                    value = float(value)
+                except ValueError:
+                    raise Exception, "%s can not be mapped to a float" % value
+            else:
+                raise Exception, "type %s is not handle by MadLoopParam" % targettype
+            
+        dict.__setitem__(self, name, value)
+        if change_userdefine:
+            self.user_set.add(name.lower())  
+
+    def __getitem__(self, name):
+        
+        try:
+            return dict.__getitem__(self, name)
+        except Exception:
+            if name in [k.lower() for k in self]:
+                for case_name in self:
+                    if case_name.lower() == name:
+                        return dict.__getitem__(self, case_name)
+    
+    def set(self, name, value, ifnotdefault=True, user=False):
+        """convenient way to change attribute.
+        ifnotdefault=False means that the value is NOT change is the value is not on default.
+        user=True, means that the value will be marked as modified by the user 
+        (potentially preventing future change to the value) 
+        """
+
+        # ifnotdefault=False -> we need to check if the user force a value.
+        if not ifnotdefault:
+            if name.lower() in self.user_set:
+                #value modified by the user -> do nothing
+                return
+            
+        self.__setitem__(name, value, change_userdefine=user)
+            
+    
+    def write(self, outputpath, template=None,commentdefault=False):
+        
+        if not template:
+            template = pjoin(MG5DIR, 'Template', 'loop_material', 'StandAlone', 
+                                                   'Cards', 'MadLoopParams.dat')
+        template = open(template, 'r')
+        
+        if isinstance(outputpath, str):
+            output = open(outputpath, 'w')
+        else:
+            output = outputpath
+
+        def f77format(value):
+            if isinstance(value, bool):
+                if value:
+                    return '.true.'
+                else:
+                    return '.false.'
+            elif isinstance(value, int):
+                return value
+            elif isinstance(value, float):
+                tmp ='%e' % value
+                return tmp.replace('e','d')
+            elif isinstance(value, str):
+                return value
+            else:
+                raise Exception, "Can not format input %s" % type(value)
+            
+        name = ''
+        done = set()
+        for line in template:
+            if name:
+                done.add(name)
+                if commentdefault and name.lower() not in self.user_set :
+                    output.write('!%s\n' % f77format(self[name]))
+                else:
+                    output.write('%s\n' % f77format(self[name]))
+                name=''
+                continue
+            elif line.startswith('#'):
+                name = line[1:].split()[0]
+            output.write(line)
         
         
         

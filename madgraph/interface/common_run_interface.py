@@ -1926,6 +1926,25 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             for var in self.mw_vars:
                 if var in self.run_card:
                     self.conflict.append(var)
+                    
+        #check if MadLoopParams.dat is present:
+        self.has_ml = False
+        if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
+            self.has_ml = True
+            self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
+            self.MLcardDefault = banner_mod.MadLoopParam()
+            
+            self.ml_vars = [k.lower() for k in self.MLcard.keys()]
+            # check for conflict
+            for var in self.MLcard:
+                if var in self.run_card:
+                    self.conflict.append(var)
+                if var in self.pname2block:
+                    self.conflict.append(var)
+                if self.has_mw and var in self.mw_vars:
+                    self.conflict.append(var)
+            
+
 
     def complete_set(self, text, line, begidx, endidx):
         """ Complete the set command"""
@@ -1947,6 +1966,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if self.has_mw:
                 allowed['madweight_card'] = ''
                 allowed['mw_block'] = 'all'
+            if self.has_ml:
+                allowed['madloop_card'] = ''
         elif len(args) == 2:
             if args[1] == 'run_card':
                 allowed = {'run_card':'default'}
@@ -1958,13 +1979,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'block': 'decay'}
             elif args[1] == 'MadWeight_card':
                 allowed = {'madweight_card':'default', 'mw_block': 'all'}
+            elif args[1] == 'MadLoop_card':
+                allowed = {'madloop_card':'default'}
             elif self.has_mw and args[1] in self.mw_card.keys():
                 allowed = {'mw_block':args[1]}
             else:
                 allowed = {'value':''}
         else:
             start = 1
-            if args[1] in  ['run_card', 'param_card', 'MadWeight_card']:
+            if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'MadLoop_card']:
                 start = 2
             if args[-1] in self.pname2block.keys():
                 allowed['value'] = 'default'   
@@ -1990,6 +2013,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             categories = ['run_card', 'param_card']
             if self.has_mw:
                 categories.append('MadWeight_card')
+            if self.has_ml:
+                categories.append('MadLoop_card')            
             
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -2012,6 +2037,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if allowed['madweight_card'] == 'default':
                 opts.append('default')
             possibilities['MadWeight Card'] = self.list_completion(text, opts)            
+
+        if 'madloop_card' in allowed.keys():
+            opts = self.ml_vars
+            if allowed['madloop_card'] == 'default':
+                opts.append('default')
+
+            possibilities['Run Card'] = self.list_completion(text, opts)
                                 
         if 'value' in allowed.keys():
             opts = ['default']
@@ -2111,6 +2143,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             args[0] = 'MadWeight_card'
         
+        if args[0] == "madloop_card":
+            if not self.has_ml:
+                logger.warning('Invalid Command: No MadLoopParam card defined.')
+                return
+            args[0] = 'MadLoop_card'
+                    
+        
         if args[0] in ['run_card', 'param_card', 'MadWeight_card']:                                    
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
@@ -2120,6 +2159,21 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
                 elif args[0] == 'run_card':
                     self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+                return
+            else:
+                card = args[0]
+            start=1
+            if len(args) < 3:
+                misc.sprint('hum')
+                logger.warning('Invalid set command: %s (not enough arguments)' % line)
+                return
+            
+        elif args[0] in ['MadLoop_card']:
+            if args[1] == 'default':
+                logging.info('replace MadLoopParams.dat by the default card')
+                self.MLcard = banner_mod.MadLoopParam(self.MLcardDefault)
+                self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
+                                  commentdefault=True)
                 return
             else:
                 card = args[0]
@@ -2218,6 +2272,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         return
                     self.setP(args[start], key, value)
             else:
+                misc.sprint('ahah')
                 logger.warning('invalid set command %s' % line)
                 return
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
@@ -2276,7 +2331,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.setM(block, name, value)
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
              
-        # MadWeight_card New Block
+        # MadWeight_card New Block ---------------------------------------------
         elif self.has_mw and args[start].startswith('mw_') and len(args[start:]) == 3\
                                                     and card == 'MadWeight_card':
             block = args[start]
@@ -2284,8 +2339,31 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             value = args[start+2]
             self.setM(block, name, value)
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
+        
+        # MadLoop Parameter  ---------------------------------------------------
+        elif self.has_ml and args[start] in self.ml_vars \
+                                               and card in ['', 'MadLoop_card']:
+        
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+
+            if args[start+1] == 'default':
+                value = self.MLcardDefault[args[start]]
+                default = True
+            else:
+                value = args[start+1]
+                default = False
+            self.setML(args[start], value, default=default)
+            self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
+                              commentdefault=True)
+                
+        
         #INVALID --------------------------------------------------------------
         else:
+            misc.sprint('well...', start, args[start], card)
+            
             logger.warning('invalid set command %s ' % line)
             return            
 
@@ -2321,6 +2399,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def setR(self, name, value):
         logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
         self.run_card[name] = value
+
+    def setML(self, name, value, default=False):
+        
+        try:
+            self.MLcard.set(name, value, user=True)
+        except Exception, error:
+            logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
+            return
+        logger.info('modify parameter %s of the MadLoopParam.dat to %s' % (name, value))
+        if default and name.lower() in self.MLcard.user_set:
+            self.MLcard.user_set.remove(name.lower())
+
 
     def setP(self, block, lhaid, value):
         if isinstance(value, str):

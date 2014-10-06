@@ -907,11 +907,23 @@ def sprint(*args, **opt):
     filename, lineno = fargs[:2]
     #file = inspect.currentframe().f_back.co_filename
     #print type(file)
+    try:
+        source = inspect.getsourcelines(inspect.currentframe().f_back)
+        line = source[0][lineno-source[1]]
+        line = re.findall(r"misc\.sprint\(\s*(.*)\)\s*($|#)", line)[0][0]
+        if line.startswith("'") and line.endswith("'") and line.count(",") ==0:
+            line= ''
+    except Exception:
+        line=''
 
-
-    log.log(level, ' '.join([str(a) for a in args]) + \
-               '\nraised at %s at line %s ' % (filename, lineno))
+    if line:
+        intro = ' %s = \033[0m' % line
+    else:
+        intro = ''
     
+
+    log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
+                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
     return 
 
 ################################################################################

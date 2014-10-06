@@ -62,6 +62,9 @@ class TestEditCardCmd(unittest.TestCase):
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
         
+        #MadLoop Card
+        files.cp(pjoin(template_path, 'loop_material/StandAlone/Cards/MadLoopParams.dat'), '/tmp/edit_card/Cards')
+        
         fakemother = FakeInterface('/tmp/edit_card/')
         self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat'],
                                         mode='auto', mother_interface=fakemother)
@@ -333,6 +336,43 @@ class TestEditCardCmd(unittest.TestCase):
         self.cmd.do_set('run_card ptj default')        
         self.assertEqual(run['ptj'], ptj)
 
+    def test_modif_ML_card(self):
+
+        ML = self.cmd.MLcard 
+
+        iregimode = self.cmd.MLcard['IREGIMODE']
+        
+        #check that nothing change if type is not correct
+        self.cmd.do_set('IREGIMODE True') #should do nothrin
+        self.assertEqual(iregimode, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode' not in ML.user_set)
+        
+        #check that we change it correctly when an input is given
+        self.cmd.do_set('IREGIMODE %s' % (iregimode+1))
+        self.assertEqual(iregimode+1, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode' in ML.user_set)        
+
+        #check that we change it correctly when going back to default
+        self.cmd.do_set('IREGIMODE default')
+        self.assertEqual(iregimode, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode'  not in ML.user_set)
+        
+        # check that the full change is ok
+        self.cmd.do_set('madloop_card IREGIMODE %s' % (iregimode+1))
+        self.assertEqual(iregimode+1, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode' in ML.user_set) 
+        
+        IREGIRECY = self.cmd.MLcard['IREGIRECY'] 
+        self.cmd.do_set('madloop_card IREGIRECY F')
+        self.assertEqual(False, self.cmd.MLcard['iregirecy'])
+        self.assertTrue(self.cmd.MLcard['iregirecy'] is self.cmd.MLcard['IREGIRECY'])
+        
+        self.cmd.do_set('madloop_card default')             
+        self.assertEqual(iregimode, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode'  not in self.cmd.MLcard.user_set)                       
+        self.assertEqual(IREGIRECY, self.cmd.MLcard['IREGIRECY'])
+        self.assertTrue('iregimode'  not in self.cmd.MLcard.user_set)
+        self.assertTrue('iregirecy'  not in self.cmd.MLcard.user_set)
         
     def test_modif_madweight_card(self):
         """ """        
