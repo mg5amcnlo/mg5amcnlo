@@ -738,8 +738,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         tag_selected=[]
         loop_basis=base_objects.DiagramList()
         for diag in self['loop_diagrams']:
-            diag.tag(self['structure_repository'],len(self['process']['legs'])+1\
-                                ,len(self['process']['legs'])+2,self['process'])
+            diag.tag(self['structure_repository'],model)
             # Make sure not to consider wave-function renormalization, vanishing tadpoles, 
             # or redundant diagrams
             if not diag.is_wf_correction(self['structure_repository'], \

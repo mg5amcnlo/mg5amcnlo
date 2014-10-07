@@ -89,7 +89,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         elif process.get('NLO_mode')=='noborn':
             # For loop-induced processes, make sure to create the Tag based on
             # the contracted diagram            
-            sorted_tags = sorted([cls(d.get_contracted_loop_diagram(
+            sorted_tags = sorted([cls(d.get_contracted_loop_diagram(model,
              amplitude.get('structure_repository')), model, ninitial) for d in \
                                                      amplitude.get('diagrams')])
         else:
@@ -2914,8 +2914,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
         max_final_leg = 2
         if reverse_t_ch:
             max_final_leg = 1
+        # Note that here we do not specify a FDStructure repository, so that
+        # each loop diagram will recreate them. This is ok at this point because
+        # we do not need to have a canonical ID for the FD structures.
         tag = CanonicalConfigTag(self.get_base_diagram(wf_dict).
-                                           get_contracted_loop_diagram(), model)
+                                      get_contracted_loop_diagram(model), model)
 
         return tag.get_s_and_t_channels(ninitial, model, new_pdg, max_final_leg)
 

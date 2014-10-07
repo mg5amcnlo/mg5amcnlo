@@ -2075,7 +2075,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         Compare to usual load we glue the cutted propagator of the Loop.
         """ 
 
-        if self.diagram['tag']:
+        if self.diagram['tag'] and not self.fdstructures is None:
             for pdg, list_struct_id, vertex_id in self.diagram['tag']:
                 for structure_id in list_struct_id:
                     for vertex in self.fdstructures[structure_id]['vertices']:

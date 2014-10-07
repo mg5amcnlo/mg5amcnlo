@@ -364,10 +364,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
     def get_vertex_leg_numbers(self):
         """Get a list of the number of legs in vertices in this diagram"""
 
-        # We do not add len(self.get('mothers')) here because the contracted loop
-        # should not be considered on par with other vertices when it comes to
-        # multi-channeling
-        vertex_leg_numbers = [0]
+        vertex_leg_numbers = [len(self.get('mothers'))]
         for mother in self.get('mothers'):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
 

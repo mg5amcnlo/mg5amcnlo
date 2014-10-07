@@ -306,8 +306,13 @@ class SubProcessGroup(base_objects.PhysicsObject):
         masswidth_to_pdg = {}
 
         for ime, me in enumerate(matrix_elements):
-            diagrams = [d.get_contracted_loop_diagram() if isinstance(d, 
-                                loop_base_objects.LoopDiagram) else d for d 
+            # Define here a FDStructure repository which will be used for the 
+            # tagging all the diagrams in get_contracted_loop_diagram. Remember
+            # the the tagging of each loop updates the FDStructre repository
+            # with the new structures identified.
+            FDStructRepo = loop_base_objects.FDStructureList([])
+            diagrams = [d.get_contracted_loop_diagram(model,FDStructRepo) if  
+                       isinstance(d,loop_base_objects.LoopDiagram) else d for d 
                                     in me.get('base_amplitude').get('diagrams')]
             # Check the minimal number of legs we need to include in order
             # to make sure we'll have some valid configurations

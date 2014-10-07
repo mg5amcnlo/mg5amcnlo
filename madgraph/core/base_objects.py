@@ -2281,6 +2281,16 @@ class Diagram(PhysicsObject):
         
         return self
         
+    def get_external_legs(self):
+        """ Return the list of external legs of this diagram """
+        
+        external_legs = LegList([])
+        for leg in sum([vert.get('legs') for vert in self.get('vertices')],[]):
+            if not leg.get('number') in [l.get('number') for l in external_legs]:
+               external_legs.append(leg) 
+               
+        return external_legs
+        
     def renumber_legs(self, perm_map, leg_list):
         """Renumber legs in all vertices according to perm_map"""
 
