@@ -95,13 +95,17 @@ c For checking the consistency of the grouping and the cuts defined here
      $     ,IS_A_ONIUM_SAVE(NEXTERNAL),IS_A_NU_SAVE(NEXTERNAL)
      $     ,IS_HEAVY_SAVE(NEXTERNAL),DO_CUTS_SAVE(NEXTERNAL)
       double precision r2min_save(nexternal,nexternal)
-     $     ,s_min_save(nexternal,nexternal),s_max_save(nexternal
-     $     ,nexternal),ptll_min_save(nexternal,nexternal)
-     $     ,ptll_max_save(nexternal,nexternal)
+     $     ,r2max_save(nexternal,nexternal),s_min_save(nexternal
+     $     ,nexternal),s_max_save(nexternal,nexternal)
+     $     ,ptll_min_save(nexternal,nexternal),ptll_max_save(nexternal
+     $     ,nexternal),etmin_save(nexternal),etmax_save(nexternal)
+     $     ,emin_save(nexternal) ,emax_save(nexternal)
+     $     ,etamin_save(nexternal),etamax_save(nexternal)
       save  IS_A_J_SAVE,IS_A_L_SAVE,IS_A_B_SAVE,IS_A_A_SAVE
      $     ,IS_A_ONIUM_SAVE,IS_A_NU_SAVE,IS_HEAVY_SAVE,DO_CUTS
-     $     ,r2min_save,s_min_save,s_max_save,ptll_min_save
-     $     ,ptll_max_save
+     $     ,r2min_save,r2max_save,s_min_save,s_max_save,ptll_min_save
+     $     ,ptll_max_save,etmin_save,etmax_save,emin_save,emax_save
+     $     ,etamin_save,etamax_save
 c
 c     setup masses for the final-state particles
 c
@@ -419,14 +423,15 @@ c
             ptll_min(j,i)=0.0d0**2
             ptll_max(j,i)=-1
             if(((is_a_l(i).and.is_a_l(j)).and.
-     &      (abs(idup(i,1,iproc)).eq.abs(idup(j,1,iproc))).and.
-     &      (idup(i,1,iproc)*idup(j,1,iproc).lt.0))! Leptons from same flavor but different charge
-     &       .or.(is_a_nu(i).and.is_a_l(j))
-     &       .or.(is_a_l(i).and.is_a_nu(j))   !a lepton and a neutrino
-     &       .or.(is_a_nu(i).and.is_a_nu(j))) then ! two neutrinos 
+     &           (do_cuts(i).and.do_cuts(j)).and.
+     &           (abs(idup(i,1,iproc)).eq.abs(idup(j,1,iproc))).and.
+     &           (idup(i,1,iproc)*idup(j,1,iproc).lt.0)) ! Leptons from same flavor but different charge
+     &           .or.(is_a_nu(i).and.is_a_l(j).and.do_cuts(j))
+     &           .or.(is_a_l(i).and.do_cuts(i).and.is_a_nu(j)) !a lepton and a neutrino
+     &           .or.(is_a_nu(i).and.is_a_nu(j))) then ! two neutrinos 
                ptll_min(j,i)=ptllmin*dabs(ptllmin)
                ptll_max(j,i)=ptllmax*dabs(ptllmax)
-           endif
+            endif
          enddo
       enddo
 
@@ -506,16 +511,23 @@ c Check that results are consistent among all the grouped subprocesses
       if (iproc.eq.1) then
          do i=nincoming+1,nexternal
             do_cuts_save(i)=do_cuts(i)
-            is_a_j_save(i) = is_a_j(i)
-            is_a_l_save(i) = is_a_l(i)
-            is_a_b_save(i) = is_a_b(i)
-            is_a_a_save(i) = is_a_a(i)
-            is_a_nu_save(i) = is_a_nu(i)
-            is_heavy_save(i) = is_heavy(i)
+            is_a_j_save(i)=is_a_j(i)
+            is_a_b_save(i)=is_a_b(i)
+            is_a_l_save(i)=is_a_l(i)
+            is_a_a_save(i)=is_a_a(i)
+            is_a_nu_save(i)=is_a_nu(i)
             is_a_onium_save(i)=is_a_onium(i)
+            is_heavy_save(i)=is_heavy(i) 
+            etmin_save(i)=etmin(i)
+            etmax_save(i)=etmax(i)
+            emin_save(i)=emin(i)
+            emax_save(i)=emax(i)
+            etamin_save(i)=etamin(i)
+            etamax_save(i)=etamax(i)
             if (i.eq.nexternal) cycle
             do j=i+1,nexternal
                r2min_save(j,i) = r2min(j,i)
+               r2max_save(j,i) = r2max(j,i)
                s_min_save(j,i) = s_min(j,i)
                s_max_save(j,i) = s_max(j,i)
                ptll_min_save(j,i) = ptll_min(j,i)
@@ -526,16 +538,55 @@ c Check that results are consistent among all the grouped subprocesses
          equal=.true.
          do i=nincoming+1,nexternal
             if (do_cuts_save(i).neqv.do_cuts(i)) equal=.false.
-            if (is_a_j_save(i).neqv.is_a_j(i)) equal=.false.
-            if (is_a_l_save(i).neqv.is_a_l(i)) equal=.false.
-            if (is_a_b_save(i).neqv.is_a_b(i)) equal=.false.
-            if (is_a_a_save(i).neqv.is_a_a(i)) equal=.false.
-            if (is_a_nu_save(i).neqv.is_a_nu(i)) equal=.false.
-            if (is_heavy_save(i).neqv.is_heavy(i)) equal=.false.
-            if (is_a_onium_save(i).neqv.is_a_onium(i)) equal=.false.
+            if (is_a_j_save(i).neqv.is_a_j(i)) then
+               if (ptjmin4(1).gt.0d0 .or. ptjmax4(1).ge.0d0) equal=.false.
+               if (ptjmin4(2).gt.0d0 .or. ptjmax4(2).ge.0d0) equal=.false.
+               if (ptjmin4(3).gt.0d0 .or. ptjmax4(3).ge.0d0) equal=.false.
+               if (ptjmin4(4).gt.0d0 .or. ptjmax4(4).ge.0d0) equal=.false.
+               if (Htjmin4(2).gt.0d0 .or. Htjmax4(2).ge.0d0) equal=.false.
+               if (Htjmin4(3).gt.0d0 .or. Htjmax4(3).ge.0d0) equal=.false.
+               if (Htjmin4(4).gt.0d0 .or. Htjmax4(4).ge.0d0) equal=.false.
+               if (inclHtmin.gt.0d0 .or. inclHtmax.ge.0d0) equal=.false.
+               if (htjmin.gt.0d0 .or. htjmax.ge.0d0) equal=.false.
+               if (xptj.gt.0d0) equal=.false.
+               if (xetamin.gt.0d0 .or. deltaeta.gt.0d0) equal=.false.
+               if (ptgmin.ne.0d0) equal=.false.
+               if (kt_durham.gt.0d0) equal=.false.
+            endif
+            if (is_a_b_save(i).neqv.is_a_b(i)) then
+               if (inclHtmin.gt.0d0 .or. inclHtmax.ge.0d0) equal=.false.
+               if (xptb.gt.0d0) equal=.false.
+            endif
+            if (is_a_a_save(i).neqv.is_a_a(i)) then
+               if (xpta.gt.0d0) equal=.false.
+               if (ptgmin.ne.0d0) equal=.false.
+            endif
+            if (is_a_l_save(i).neqv.is_a_l(i)) then
+               if (ptlmin4(1).gt.0d0 .or. ptlmax4(1).ge.0d0) equal=.false.
+               if (ptlmin4(2).gt.0d0 .or. ptlmax4(2).ge.0d0) equal=.false.
+               if (ptlmin4(3).gt.0d0 .or. ptlmax4(3).ge.0d0) equal=.false.
+               if (ptlmin4(4).gt.0d0 .or. ptlmax4(4).ge.0d0) equal=.false.
+               if (mmnl.gt.0d0 .or. mmnlmax.ge.0d0) equal=.false.
+               if (xptl.gt.0d0) equal=.false.
+               if (ptgmin.ne.0d0 .and. isoEM) equal=.false.
+            endif
+            if (is_a_nu_save(i).neqv.is_a_nu(i)) then
+               if (misset.gt.0d0 .or. missetmax.ge.0d0) equal=.false.
+               if (mmnl.gt.0d0 .or. mmnlmax.ge.0d0) equal=.false.
+            endif
+            if (is_heavy_save(i).neqv.is_heavy(i)) then
+               if (ptheavy.gt.0d0) equal=.false.
+            endif
+            if (etmin_save(i).ne.etmin(i)) equal=.false.
+            if (etmax_save(i).ne.etmax(i)) equal=.false.
+            if (emin_save(i).ne.emin(i)) equal=.false.
+            if (emax_save(i).ne.emax(i)) equal=.false.
+            if (etamin_save(i).ne.etamin(i)) equal=.false.
+            if (etamax_save(i).ne.etamax(i)) equal=.false.
             if (i.eq.nexternal) cycle
             do j=i+1,nexternal
                if (r2min_save(j,i).ne.r2min(j,i)) equal=.false.
+               if (r2max_save(j,i).ne.r2max(j,i)) equal=.false.
                if (s_min_save(j,i).ne.s_min(j,i)) equal=.false.
                if (s_max_save(j,i).ne.s_max(j,i)) equal=.false.
                if (ptll_min_save(j,i).ne.ptll_min(j,i)) equal=.false.
