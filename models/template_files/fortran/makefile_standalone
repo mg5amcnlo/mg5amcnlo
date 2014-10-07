@@ -12,7 +12,7 @@ else
   FC=gfortran
 endif
 
-FC=/usr/local/bin/gfortran
+FC=gfortran
 
 include makeinc.inc
 
