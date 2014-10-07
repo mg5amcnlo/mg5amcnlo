@@ -209,7 +209,11 @@ class AddVariable(list):
                 continue
             tag = tuple(term.sort())
             if tag in items:
+                orig_prefac = items[tag].prefactor # to assume to zero 0.33333 -0.3333
                 items[tag].prefactor += term.prefactor
+                if items[tag].prefactor and \
+                    abs(items[tag].prefactor) / (abs(orig_prefac)+abs(term.prefactor)) < 1e-8:
+                    items[tag].prefactor = 0
                 del self[pos]
                 pos -=1
             else:

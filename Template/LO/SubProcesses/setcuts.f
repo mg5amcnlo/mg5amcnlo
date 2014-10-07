@@ -676,7 +676,7 @@ c    count number of leptons to see if special cuts are applicable or not
 
 c     set possible xqcut combinations (for better grid preparation)
         if(xqcut.gt.0)
-     $       call setxqcuts()
+     $       call setxqcuts(do_cuts)
 
 c      call write_cuts()
       RETURN
@@ -684,7 +684,7 @@ c      call write_cuts()
       END
 
 
-      subroutine setxqcuts()
+      subroutine setxqcuts(do_cuts)
 c**************************************************
 c     Set xqcuti and xqcutij between all particles
 c     to allow for grid preparation based on xqcut
@@ -694,6 +694,8 @@ c**************************************************
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cuts.inc'
+
+      logical  do_cuts(nexternal)
 
       double precision pmass(nexternal)
       common/to_mass/  pmass
@@ -732,13 +734,15 @@ c**************************************************
      $                 idup(iforest(2,k,j),1,1).eq.21.or.
      $                 iabs(idup(iforest(2,k,j),1,1)).le.maxjetflavor.or.
      $                 idup(iforest(2,k,j),1,1).eq.21)then
-                     xqcutij(iforest(2,k,j),iforest(1,k,j))=xqcut
-                     xqcutij(iforest(1,k,j),iforest(2,k,j))=xqcut
+                     if (do_cuts(iforest(2,k,j)).and. do_cuts(iforest(1,k,j)))then
+                        xqcutij(iforest(2,k,j),iforest(1,k,j))=xqcut
+                        xqcutij(iforest(1,k,j),iforest(2,k,j))=xqcut
+                     endif
                   endif
                endif
             enddo
             if(.not.foundpartner.and.(iabs(idup(i,1,1)).le.maxjetflavor.or.
-     $           idup(i,1,1).eq.21)) xqcuti(i)=max(0d0,sqrt(xqcut**2-pmass(i)**2))
+     $           idup(i,1,1).eq.21).and.do_cuts(i)) xqcuti(i)=max(0d0,sqrt(xqcut**2-pmass(i)**2))
          enddo
       enddo
 

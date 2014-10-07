@@ -57,7 +57,7 @@ c
       character*30 param_card_name
       common/to_param_card_name/param_card_name
 
-      character*300 buff
+      character*1000 buff
       logical u_syst, has_negative
       character*(s_bufflen) s_buff(7)
       integer nclus
@@ -119,7 +119,7 @@ c
       I4 = 4
       R8 = 8
       record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
-     &   300+7*s_bufflen+max_particles*clus_bufflen
+     &   1000+7*s_bufflen+max_particles*clus_bufflen
 C $B$ scratch_name $B$ !this is tag for automatic modification by MW
       filename='scratch'
 C $E$ scratch_name $E$ !this is tag for automatic modification by MW
@@ -625,7 +625,7 @@ c
       double precision sscale,aqcd,aqed,tmpsum
       integer ievent,jseed
       logical done,found
-      character*300 buff
+      character*1000 buff
       logical u_syst
       character*(s_bufflen) s_buff(7)
       character*300 fullname

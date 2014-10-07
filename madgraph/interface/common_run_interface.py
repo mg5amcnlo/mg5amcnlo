@@ -949,7 +949,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.cluster.launch_and_wait(self.dirbin+'/run_hep2lhe',
                                          argument= [pydir],
                                         cwd=pjoin(self.me_dir,'Events'),
-                                        stdout=open(os.devnull,'w'))
+                                        stdout=os.devnull)
 
             logger.info('Warning! Never use this lhe file for detector studies!')
             # Creating ROOT file

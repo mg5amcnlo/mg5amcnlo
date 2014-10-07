@@ -241,7 +241,7 @@ c
       integer iseed, nover, nstore
       double precision scale,aqcd,aqed
       integer ievent
-      character*300 buff
+      character*1000 buff
       logical u_syst
       character*(s_bufflen) s_buff(7)
       integer nclus
@@ -408,7 +408,7 @@ c
       real ran1
       external ran1
 
-      character*300 buff
+      character*1000 buff
       character*(s_bufflen) s_buff(7)
       integer nclus
       character*(clus_bufflen) buffclus(nexternal)
