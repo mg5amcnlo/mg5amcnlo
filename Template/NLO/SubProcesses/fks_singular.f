@@ -349,9 +349,9 @@ c FKS stuff:
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
      &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
+      integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
+     &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
@@ -1158,9 +1158,9 @@ c FKS stuff:
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
      &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
+      integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
+     &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
@@ -4548,6 +4548,16 @@ C check if any real emission need cahrge/color links
               split_type_used(i) = split_type_used(i) .or. split_type(i)
             enddo
          enddo
+         if (need_charge_links_used) then
+             write(*,*) 'Charge-linked born are used'
+         else
+             write(*,*) 'Charge-linked born are not used'
+         endif
+         if (need_color_links_used) then
+             write(*,*) 'Color-linked born are used'
+         else
+             write(*,*) 'Color-linked born are not used'
+         endif
          firsttime = .false.
          nFKSprocess = nFKSprocess_save
          call fks_inc_chooser()
@@ -4600,8 +4610,7 @@ C skip what we don't need
          if (iord.eq.2) ipos_ord = qed_pos
          if (.not.split_type_used(ipos_ord)) cycle
          do i=1 ,nexternal
-            if (i.ne.i_fks .and. 
-     #         pmass(i).eq.ZERO)then
+            if (i.ne.i_fks .and. pmass(i).eq.ZERO) then
 c set the various color factors according to the 
 c type of the leg
                if (particle_type(i).eq.8) then
@@ -4699,7 +4708,7 @@ c 1+2+3+4
                     stop
                 endif
                endif
-          endif
+            endif
          enddo
 C end of the external particle loop
          if (ipos_ord.eq.qcd_pos) bsv_wgt =
@@ -4717,25 +4726,37 @@ c     helicity contributions for the Q-terms of collinear limit.
      #    abrv.eq.'viLC') goto 548
 c
 c I(reg) terms, eq 5.5 of FKS
-      contr=0d0
-      do i=1,fks_j_from_i(i_fks,0)
-         do j=1,i
-            m=fks_j_from_i(i_fks,i)
-            n=fks_j_from_i(i_fks,j)
-            if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)).and.
+      do iord = 1, nsplitorders
+        if (iord.eq.qcd_pos) then
+            if (.not. need_color_links_used) cycle
+            need_color_links=need_color_links_used
+            need_charge_links=.false.
+        else if (iord.eq.qed_pos) then
+            if (.not. need_charge_links_used) cycle
+            need_charge_links=need_charge_links_used
+            need_color_links=.false.
+        else
+            cycle
+        endif
+        contr=0d0
+        do i=1,fks_j_from_i(i_fks,0)
+           do j=1,i
+              m=fks_j_from_i(i_fks,i)
+              n=fks_j_from_i(i_fks,j)
+              if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)).and.
      &           n.ne.i_fks.and.m.ne.i_fks) then
 c To be sure that color-correlated Borns work well, we need to have
 c *always* a call to sborn(p_born,wgt) just before. This is okay,
 c because there is a call above in this subroutine
 C wgt includes the gs/w^2 
-               call sborn_sf(p_born,m,n,wgt)
-               if (wgt.ne.0d0) then
-                  call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
-                  contr=contr+wgt*eikIreg
-               endif
-            endif
-         enddo
-      enddo
+                 call sborn_sf(p_born,m,n,wgt)
+                 if (wgt.ne.0d0) then
+                    call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
+                    contr=contr+wgt*eikIreg
+                 endif
+              endif
+           enddo
+        enddo
 
 C WARNING: THE FACTOR -2 BELOW COMPENSATES FOR THE MISSING -2 IN THE
 C COLOUR LINKED BORN -- SEE ALSO SBORNSOFT().
@@ -4743,7 +4764,10 @@ C If the colour-linked Borns were normalized as reported in the paper
 c we should set
 c   bsv_wgt=bsv_wgt+ao2pi*contr  <-- DO NOT USE THIS LINE
 c
-      bsv_wgt=bsv_wgt-2*oneo8pi2*contr
+        bsv_wgt=bsv_wgt-2*oneo8pi2*contr
+      enddo
+
+      call fks_inc_chooser()
 
  548  continue
 c Finite part of one-loop corrections
@@ -5447,13 +5471,7 @@ c QED Born terms
       contr2 = 0d0
       born=dble(ans_cnt(1,qed_pos))
       do i=1,nexternal
-        if(i.ne.i_fks .and. particle_type(i).ne.1)then
-          if (particle_type(i).eq.1.and.pmass(i).eq.0d0.and.
-     &        particle_charge(i).eq.0d0) then
-             aj=0
-          elseif(particle_charge(i).ne.0d0) then
-             aj=1
-          endif
+        if(i.ne.i_fks.and.particle_charge(i).ne.0d0)then
           if(pmass(i).eq.ZERO)then
             contr2=contr2-particle_charge(i)**2
             contr1=contr1-3d0/2d0*particle_charge(i)**2
@@ -5606,9 +5624,9 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
 
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
      &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
+      integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
+     &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
 
       include 'coupl.inc'
       include 'genps.inc'
@@ -5651,10 +5669,11 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       integer fac_i_FKS(fks_configs),fac_j_FKS(fks_configs)
      $     ,i_type_FKS(fks_configs),j_type_FKS(fks_configs)
      $     ,m_type_FKS(fks_configs),ngluons_FKS(fks_configs)
+     $     ,nphotons_FKS(fks_configs)
       double precision
      $ ch_i_FKS(fks_configs),ch_j_FKS(fks_configs),ch_m_FKS(fks_configs)
       save fac_i_FKS,fac_j_FKS,i_type_FKS,j_type_FKS,m_type_FKS
-     $     ,ngluons_FKS,ch_i_FKS,ch_j_FKS,ch_m_FKS
+     $     ,ngluons_FKS,ch_i_FKS,ch_j_FKS,ch_m_FKS,nphotons_FKS
 
       character*13 filename
 
@@ -5792,9 +5811,12 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
          endif
 
          ngluons_FKS(nFKSprocess)=0
+         nphotons_FKS(nFKSprocess)=0
          do i=nincoming+1,nexternal
             if (pdg_type(i).eq.21) ngluons_FKS(nFKSprocess)
      $           =ngluons_FKS(nFKSprocess)+1
+            if (pdg_type(i).eq.22) nphotons_FKS(nFKSprocess)
+     $           =nphotons_FKS(nFKSprocess)+1
          enddo
 
 
@@ -5826,11 +5848,16 @@ c      call set_mc_matrices
       fac_i=fac_i_FKS(nFKSprocess)
       fac_j=fac_j_FKS(nFKSprocess)
       ngluons=ngluons_FKS(nFKSprocess)
+      nphotons=nphotons_FKS(nFKSprocess)
 c Setup the FKS symmetry factors. 
       if (nbody.and.pdg_type(i_fks).eq.21) then
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
          fkssymmetryfactorBorn=dble(ngluons)
+      elseif (nbody.and.pdg_type(i_fks).eq.22) then
+         fkssymmetryfactor=dble(nphotons)
+         fkssymmetryfactorDeg=dble(nphotons)
+         fkssymmetryfactorBorn=dble(nphotons)
       else
          fkssymmetryfactor=dble(fac_i*fac_j)
          fkssymmetryfactorDeg=dble(fac_i*fac_j)

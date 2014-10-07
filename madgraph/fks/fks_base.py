@@ -279,13 +279,13 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             return
 
         # determine the orders to be used to generate the loop
-        loop_orders = {}
-        for  born in self['born_processes']:
-            for coup, val in fks_common.find_orders(born.born_amp).items():
-                try:
-                    loop_orders[coup] = max([loop_orders[coup], val])
-                except KeyError:
-                    loop_orders[coup] = val
+#MZ        loop_orders = {}
+#        for  born in self['born_processes']:
+#            for coup, val in fks_common.find_orders(born.born_amp).items():
+#                try:
+#                    loop_orders[coup] = max([loop_orders[coup], val])
+#                except KeyError:
+#                    loop_orders[coup] = val
 
         for i, born in enumerate(self['born_processes']):
             logger.info('Generating virtual matrix elements using MadLoop:')
@@ -294,7 +294,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             # i.e. allow all orders to be perturbed
             myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
             # take the orders that are actually used bu the matrix element
-            myproc['orders'] = loop_orders
+#MZ            myproc['orders'] = loop_orders
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
             logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
                     % (myproc.nice_string(print_weighted = False).replace(\

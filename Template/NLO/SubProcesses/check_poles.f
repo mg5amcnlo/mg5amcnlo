@@ -60,6 +60,8 @@ cc
       integer getordpowfromindex_ml5
       logical, allocatable, save :: keep_order(:)
       include 'orders.inc'
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
       
 C-----
 C  BEGIN CODE
@@ -98,7 +100,7 @@ c Find the nFKSprocess for which we compute the Born-like contributions,
 c ie. which is a Born+g real-emission process
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
-         if (particle_type(i_fks).eq.8) exit
+         if (is_aorg(i_fks)) exit
       enddo
       call fks_inc_chooser()
       call leshouche_inc_chooser()
