@@ -500,8 +500,7 @@ class LoopDiagram(base_objects.Diagram):
         # it is more efficient to create it here once only.
         external_legs = base_objects.LegList([l for l in 
                                 self.get_external_legs() if not l['loop_line']])
-        
-        
+
         if start_in is None or end_in is None:
             start_in = len(external_legs)+1
             end_in = len(external_legs)+2         
@@ -1533,13 +1532,6 @@ class FDStructure(base_objects.PhysicsObject):
 
         # Create a local copy of the external legs
         leglist = copy.deepcopy(external_legs)
-
-        for leg in leglist:
-            # Need to flip part-antipart for incoming particles, 
-            # so they are all outgoing
-            if leg.get('state') == False:
-                part = model.get('particle_dict')[leg.get('id')]
-                leg.set('id', part.get_anti_pdg_code())
 
         # Create a dictionary to get an easy access to a given particle number
         legDict={}

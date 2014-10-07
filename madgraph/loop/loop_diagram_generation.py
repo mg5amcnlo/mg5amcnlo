@@ -23,6 +23,7 @@ import logging
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error
 from madgraph import InvalidCmd

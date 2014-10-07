@@ -2402,7 +2402,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def do_treatcards(self, line, mode=None, opt=None):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
-
         if not mode and not opt:
             args = self.split_arg(line)
             mode,  opt  = self.check_treatcards(args)
@@ -2460,13 +2459,24 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 run_card['ebeam2'] = 0
             
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
-         
+
         if bool(self.proc_characteristics['loop_induced']) and mode in ['loop', 'all']:
-          
             self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 
                                                   'Cards', 'MadLoopParams.dat'))
-            # allow to change default to be more convenient with ML
+            # The writing out of MadLoop filter is potentially dangerous
+            # when running in multi-core with a central disk. So it is turned
+            # off here. If these filters were not initialized then they will 
+            # have to be re-computed at the beginning of each run.
             self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
+            
+            # For loop-induced Higgs production, there are some helicity
+            # configuration heavily suppressed (by 7 to 8 orders of magnitude)
+            # so that the helicity filter needs high numerical accuracy to
+            # correctly handle this spread in magnitude
+            self.MadLoopparam.set('CTModeInit',4, ifnotdefault=False)
+            # Consequently, we can allow for a finer threshold for vanishing
+            # helicity configuration
+            self.MadLoopparam.set('ZeroThres',1.0e-11, ifnotdefault=False)
             
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
