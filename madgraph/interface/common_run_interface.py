@@ -244,7 +244,7 @@ class CheckValidForCmd(object):
                         opt[key] = pjoin(self.me_dir, value)
                     else:
                         raise self.InvalidCmd('No such directory: %s' % value)
-            elif arg in ['param','run','all']:
+            elif arg in ['MadLoop','param','run','all']:
                 mode = arg
             else:
                 self.help_treatcards()
@@ -487,6 +487,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 run_card = self.run_card
 
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+
+        if mode in ['MadLoop', 'all']:
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'MadLoopParams.dat')):          
+                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 
+                                                  'Cards', 'MadLoopParams.dat'))
+                # write the output file
+                self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses",
+                                                           "MadLoopParams.dat"))
 
         if mode in ['param', 'all']:
             if os.path.exists(pjoin(self.me_dir, 'Source', 'MODEL', 'mp_coupl.inc')):
