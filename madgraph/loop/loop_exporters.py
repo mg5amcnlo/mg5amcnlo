@@ -2643,7 +2643,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         # Call specifically what finalize_v4_directory must be used, so that the
         # MRO doesn't interfere.
         
-        self.proc_characteristic['loop_induce'] = True
+        self.proc_characteristic['loop_induced'] = True
         
         export_v4.ProcessExporterFortranMEGroup.finalize_v4_directory(
                                                               self,*args,**opts)
@@ -2764,7 +2764,7 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         """Pick the right mother functions
         """
         
-        self.proc_characteristic['loop_induce'] = True
+        self.proc_characteristic['loop_induced'] = True
         # Call specifically what finalize_v4_directory must be used, so that the
         # MRO doesn't interfere.
         export_v4.ProcessExporterFortranME.finalize_v4_directory(

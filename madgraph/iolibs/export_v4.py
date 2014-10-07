@@ -78,7 +78,7 @@ class ProcessExporterFortran(object):
             self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madevent', 'mp': False}
             
-        self.proc_characteristic = {'loop_induce': False,
+        self.proc_characteristic = {'loop_induced': False,
                                     'has_isr':False,
                                     'has_fsr':False} #place holder to pas information to the 
                                       #run_interface

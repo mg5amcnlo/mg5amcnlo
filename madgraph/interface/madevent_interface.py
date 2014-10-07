@@ -2461,11 +2461,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
          
-        if bool(self.proc_characteristics['loop_induce']) and mode in ['loop', 'all']:
-            
-            self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 'Cards', 'MadLoopParams.dat'))
+        if bool(self.proc_characteristics['loop_induced']) and mode in ['loop', 'all']:
+          
+            self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 
+                                                  'Cards', 'MadLoopParams.dat'))
             # allow to change default to be more convenient with ML
-            #self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
+            self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
             
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",

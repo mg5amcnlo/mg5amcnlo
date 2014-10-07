@@ -119,7 +119,7 @@ class ML5MSSMQCDTest(unittest.TestCase):
                                model = "loop_MSSM-parallel_test_gogo",
                                pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False)
+                               loop_induced = False)
 
 #   ('u u~ > go go',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})
     def test_long_mssm_vs_stored_HCR_uux_gogo_QCD(self):
@@ -128,7 +128,7 @@ class ML5MSSMQCDTest(unittest.TestCase):
                                model = "loop_MSSM-parallel_test_gogo",
                                pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False)
+                               loop_induced = False)
 
 #   ('u u~ > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
     def test_long_mssm_vs_stored_HCR_uux_gogog_QCD(self):
@@ -137,7 +137,7 @@ class ML5MSSMQCDTest(unittest.TestCase):
                                model = "loop_MSSM-parallel_test_gogo",
                                                       pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False)
+                               loop_induced = False)
 
 #   ('g g > go go g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
     def test_long_mssm_vs_stored_HCR_gg_gogog_QCD(self):
@@ -146,7 +146,7 @@ class ML5MSSMQCDTest(unittest.TestCase):
                                model = "loop_MSSM-parallel_test_gogo",
                                                       pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False)
+                               loop_induced = False)
 
 #   test loop induced processes
 #   ('g g > n1 n1',{},['QCD'],{})
@@ -155,7 +155,7 @@ class ML5MSSMQCDTest(unittest.TestCase):
         compare_processes(self,[HCR_processes_long_dic[proc]],
                                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = True)    
+                               loop_induced = True)    
         
 
 if '__main__' == __name__:

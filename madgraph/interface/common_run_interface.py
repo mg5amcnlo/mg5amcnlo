@@ -470,7 +470,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def do_treatcards(self, line, amcatnlo=False):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
-
         keepwidth = False
         if '--keepwidth' in line:
             keepwidth = True
