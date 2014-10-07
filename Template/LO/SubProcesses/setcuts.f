@@ -423,11 +423,10 @@ c
             ptll_min(j,i)=0.0d0**2
             ptll_max(j,i)=-1
             if(((is_a_l(i).and.is_a_l(j)).and.
-     &           (do_cuts(i).and.do_cuts(j)).and.
      &           (abs(idup(i,1,iproc)).eq.abs(idup(j,1,iproc))).and.
      &           (idup(i,1,iproc)*idup(j,1,iproc).lt.0)) ! Leptons from same flavor but different charge
-     &           .or.(is_a_nu(i).and.is_a_l(j).and.do_cuts(j))
-     &           .or.(is_a_l(i).and.do_cuts(i).and.is_a_nu(j)) !a lepton and a neutrino
+     &           .or.(is_a_nu(i).and.is_a_l(j))
+     &           .or.(is_a_l(i).and.is_a_nu(j)) !a lepton and a neutrino
      &           .or.(is_a_nu(i).and.is_a_nu(j))) then ! two neutrinos 
                ptll_min(j,i)=ptllmin*dabs(ptllmin)
                ptll_max(j,i)=ptllmax*dabs(ptllmax)
