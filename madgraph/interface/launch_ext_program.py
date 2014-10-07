@@ -136,7 +136,7 @@ class MadLoopLauncher(ExtLauncher):
     def prepare_run(self):
         """ Usually the user will not want to doublecheck the helicity filter."""
         process_checks.LoopMatrixElementTimer.set_MadLoop_Params(
-                                os.path.join(self.card_dir,'MadLoopParams.dat'),
+            os.path.join(self.card_dir,os.path.pardir, 'SubProcesses','MadLoopParams.dat'),
                                         {'DoubleCheckHelicityFilter':'.FALSE.'})
 
     def treat_input_file(self, filename, default=None, msg='', dir_path=None):

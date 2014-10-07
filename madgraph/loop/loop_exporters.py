@@ -50,6 +50,8 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
 
+import madgraph.various.banner as banner_mod
+
 pjoin = os.path.join
 
 import aloha.create_aloha as create_aloha
@@ -221,6 +223,12 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
 
+        self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.loop_dir,'StandAlone',
+                                                  'Cards', 'MadLoopParams.dat'))
+        # write the output file
+        self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
+                                                           "MadLoopParams.dat"))
+
         # We might need to give a different name to the MadLoop makefile\
         shutil.copy(pjoin(self.loop_dir,'StandAlone','SubProcesses','makefile'),
                 pjoin(self.dir_path, 'SubProcesses',self.madloop_makefile_name))
@@ -242,7 +250,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                     'MadLoop5_resources'),pjoin(self.dir_path,'SubProcesses'))
 
         # Link relevant cards from Cards inside the MadLoop5_resources
-        ln(pjoin(self.dir_path,'Cards','MadLoopParams.dat'), 
+        ln(pjoin(self.dir_path,'SubProcesses','MadLoopParams.dat'), 
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
         ln(pjoin(self.dir_path,'Cards','param_card.dat'), 
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
@@ -2818,7 +2826,7 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
             
             amps = "+".join(CT_amps + Loop_amps)
             # Not using \sum |M|^2 anymore since this creates troubles
-            # when ckm is not diagonal due to the JIM mechanism.
+            # when ckm is not diagonal due to the GIM mechanism.
             line += "HEL_MULT*DBLE((%s)*dconjg(%s))" % (amps, amps)
             ret_lines.append(line)
 

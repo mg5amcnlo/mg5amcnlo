@@ -634,6 +634,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                        'complex_mass': self.cmass_scheme,
                        'export_format':'madloop', 
                        'mp':True,
+                       'SubProc_prefix':'',
+                       'compute_color_flows':False,
               'loop_dir': pjoin(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
                        'fortran_compiler': self.cmd.options['fortran_compiler'],
@@ -767,7 +769,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                                    not os.path.basename(dir_path)=='check_sa.f':
             file_path = pjoin(dir_path,'check_sa.f')
             if not os.path.isfile(file_path):
-                directories = glob.glob(pjoin(dir_path,'P0_*'))
+                directories = glob.glob(pjoin(dir_path,'P*'))
                 if len(directories)>0 and os.path.isdir(directories[0]):
                      file_path = pjoin(directories[0],'check_sa.f')
         if not os.path.isfile(file_path):
@@ -1285,6 +1287,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                        'complex_mass': self.cmass_scheme,
                        'export_format':'madloop', 
                        'mp':True,
+                       'SubProc_prefix':'',
+                       'compute_color_flows':False,
           'loop_dir': pjoin(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
                        'fortran_compiler':self.cmd.options['fortran_compiler'],
