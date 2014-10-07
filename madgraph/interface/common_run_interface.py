@@ -2190,7 +2190,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 card = args[0]
             start=1
             if len(args) < 3:
-                misc.sprint('hum')
                 logger.warning('Invalid set command: %s (not enough arguments)' % line)
                 return
             
@@ -2298,7 +2297,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         return
                     self.setP(args[start], key, value)
             else:
-                misc.sprint('ahah')
                 logger.warning('invalid set command %s' % line)
                 return
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
@@ -2387,9 +2385,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
         
         #INVALID --------------------------------------------------------------
-        else:
-            misc.sprint('well...', start, args[start], card)
-            
+        else:            
             logger.warning('invalid set command %s ' % line)
             return            
 
