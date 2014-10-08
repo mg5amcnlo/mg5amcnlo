@@ -5247,7 +5247,8 @@ class UFO_model_to_mg4(object):
             fsock.write_comment_line(' START UFO DEFINE FUNCTIONS ')
             for fct in ufo_fct:
                 # already handle by default
-                if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc"]:
+                if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
+                                    "theta_function", "cond", "reglog"]:
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -5263,6 +5264,29 @@ class UFO_model_to_mg4(object):
                                 'fct': self.p_to_f.parse(fct.expr)
                                  }
                     fsock.writelines(text)
+            if self.opt['mp']:
+                fsock.write_comment_line(' START UFO DEFINE FUNCTIONS FOR MP')
+                for fct in ufo_fct:
+                    # already handle by default
+                    if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
+                                        "theta_function", "cond", "reglog"]:
+                        ufo_fct_template = """
+          %(complex_mp_format)s function %(name)s(%(args)s)
+          implicit none
+          %(complex_mp_format)s %(args)s
+          %(name)s = %(fct)s
+
+          return
+          end
+          """
+                    text = ufo_fct_template % {
+                                'name': fct.name,
+                                'args': ",".join(fct.arguments),                
+                                'fct': self.mp_p_to_f.parse(fct.expr)
+                                 }
+                    fsock.writelines(text)
+
+
                     
             fsock.write_comment_line(' STOP UFO DEFINE FUNCTIONS ')                    
 
