@@ -28,6 +28,7 @@ import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madevent_interface as me_cmd
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
+import madgraph.various.banner as banner_mod
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 from madgraph.iolibs.files import cp
@@ -135,9 +136,12 @@ class MadLoopLauncher(ExtLauncher):
 
     def prepare_run(self):
         """ Usually the user will not want to doublecheck the helicity filter."""
-        process_checks.LoopMatrixElementTimer.set_MadLoop_Params(
-            os.path.join(self.card_dir,os.path.pardir, 'SubProcesses','MadLoopParams.dat'),
-                                        {'DoubleCheckHelicityFilter':'.FALSE.'})
+
+        MadLoopparam = banner_mod.MadLoopParam(
+                               os.path.join(self.card_dir, 'MadLoopParams.dat'))
+        MadLoopparam.set('DoubleCheckHelicityFilter', False, ifnotdefault=False)
+        MadLoopparam.write(os.path.join(self.card_dir,os.path.pardir, 
+                                           'SubProcesses', 'MadLoopParams.dat'))
 
     def treat_input_file(self, filename, default=None, msg='', dir_path=None):
         """ask to edit a file"""

@@ -304,8 +304,8 @@ class LoopDiagram(base_objects.Diagram):
             contracted_diagram_vertices.extend(sum([struct_rep[
                 struct_ID].get('vertices') for struct_ID in tagelem[1]],[]))
     
-            # Add the shrunk vertex to the contracted diagram vertices list.
-            contracted_diagram_vertices.append(contracted_vertex)
+        # Add the shrunk vertex to the contracted diagram vertices list.
+        contracted_diagram_vertices.append(contracted_vertex)
 
         contracted_diagram = base_objects.Diagram(
            {'vertices':contracted_diagram_vertices,'orders':self.get('orders')})
