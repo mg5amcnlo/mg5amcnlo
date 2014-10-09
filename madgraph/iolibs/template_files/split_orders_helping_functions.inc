@@ -69,7 +69,8 @@ C
 1009    CONTINUE
 	  ENDDO
 
-	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS%(proc_id)s'
+	  WRITE(*,*) 'ERROR:: Stopping function' 
+	  WRITE(*,*) %(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS%(proc_id)s'
 	  WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
 	  STOP
 

@@ -532,7 +532,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     start_leg=reconstructedDiags[0].get_starting_loop_line()
                     finish_leg=reconstructedDiags[0].get_finishing_loop_line()
                     reconstructedDiags[0].tag(loopAmplitude['structure_repository'],\
-                      start_leg.get('number'),finish_leg.get('number'),process['model'])
+                      process['model'],start_leg.get('number'),finish_leg.get('number'))
                     # Then make sure it leads to the same canonical tag
                     self.assertEqual(diag['canonical_tag'],\
                                  reconstructedDiags[0]['canonical_tag'])

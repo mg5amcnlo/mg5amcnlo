@@ -2069,7 +2069,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if allowed['madloop_card'] == 'default':
                 opts.append('default')
 
-            possibilities['Run Card'] = self.list_completion(text, opts)
+            possibilities['MadLoop Parameter'] = self.list_completion(text, opts)
                                 
         if 'value' in allowed.keys():
             opts = ['default']

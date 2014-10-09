@@ -1512,11 +1512,21 @@ class FDStructure(base_objects.PhysicsObject):
             return '()'    
 
 
-    def generate_vertices(self, model, external_legs):
+    def generate_vertices(self, model, external_legs=None):
         """ This functions generate the vertices building this structure, 
         starting from the outter legs going towards the binding leg. 
         It uses the interactions dictionaries from the model. """
 
+        if isinstance(model, base_objects.Process):
+            assert  external_legs is None
+            #retro-compatible way to call the function
+            external_legs= model.get('legs')
+            model = model['model']
+        assert external_legs is not None
+        assert isinstance(model, base_objects.Model)
+            
+
+        
         # First empty the existing vertices
         self.set('vertices',base_objects.VertexList())
 

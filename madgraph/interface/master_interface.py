@@ -212,6 +212,7 @@ class Switcher(object):
         try:
             return  self.cmd.do_add(self, line, *args, **opts)
         except fks_base.NoBornException:
+            logger.info("No Born found... Pass in loop induced mode", '$MG:color:BLACK')
             self.change_principal_cmd('MadGraph')
             return self.cmd.create_loop_induced(self, line, *args, **opts)
 

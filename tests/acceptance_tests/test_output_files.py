@@ -79,7 +79,6 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
 
     def load_IOTestsAcceptance(self):
         """load the models and exporters if necessary."""
-            
         if not hasattr(self, 'models') or \
            not hasattr(self, 'fortran_models') or \
            not hasattr(self, 'loop_exporters'):\
@@ -100,7 +99,9 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
                                    'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external'}),
+                                   'output_dependencies':'external',
+                                   'SubProc_prefix': '',
+                                   'compute_color_flows': False}),
                 'optimized' : loop_exporters.\
                                   LoopProcessOptimizedExporterFortranSA(\
                                   _mgme_file_path, _proc_file_path,
@@ -109,7 +110,9 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
                                    'fortran_compiler':'gfortran',
-                                    'output_dependencies':'external'})
+                                    'output_dependencies':'external',
+                                    'SubProc_prefix': '',
+                                   'compute_color_flows': False})
                                   }
 
             # d u~ > mu- vmx g

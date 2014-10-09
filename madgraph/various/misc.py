@@ -891,6 +891,10 @@ class OptionParser(optparse.OptionParser):
 
 def sprint(*args, **opt):
     """Returns the current line number in our program."""
+    
+    if not __debug__:
+        return
+    
     import inspect
     if opt.has_key('log'):
         log = opt['log']
@@ -900,8 +904,10 @@ def sprint(*args, **opt):
         level = opt['level']
     else:
         level = logging.getLogger('madgraph').level
-        if level == 20:
-            level = 10 #avoid info level
+        #print  "madgraph level",level
+        #if level == 20:
+        #    level = 10 #avoid info level
+        #print "use", level
     lineno  =  inspect.currentframe().f_back.f_lineno
     fargs =  inspect.getframeinfo(inspect.currentframe().f_back)
     filename, lineno = fargs[:2]
@@ -913,6 +919,8 @@ def sprint(*args, **opt):
         line = re.findall(r"misc\.sprint\(\s*(.*)\)\s*($|#)", line)[0][0]
         if line.startswith("'") and line.endswith("'") and line.count(",") ==0:
             line= ''
+        elif line.startswith("\"") and line.endswith("\"") and line.count(",") ==0:
+            line= ''        
     except Exception:
         line=''
 

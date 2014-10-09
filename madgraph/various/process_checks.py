@@ -57,6 +57,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.various.rambo as rambo
 import madgraph.various.misc as misc
 import madgraph.various.progressbar as pbar
+import madgraph.various.banner as bannermod
 
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
@@ -1078,17 +1079,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         The key is the name of the parameter and the value is the corresponding
         string read from the card."""
         
-        res = {}
-        # Not elegant, but the file is small anyway, so no big deal.
-        MLCard_lines = open(MLCardPath).readlines()
-        try:
-            for i, line in enumerate(MLCard_lines):
-                if line.startswith('#'):
-                    res[line.split()[0][1:]]=MLCard_lines[i+1].split()[0]
-            return res
-        except IndexError:
-            raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
-                                                           'not well formatted.'
+        return bannermod.MadLoopParam(MLCardPath)
+
 
     @classmethod
     def set_MadLoop_Params(cls,MLCardPath,params):
@@ -1097,33 +1089,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         The key is the name of the parameter and the value is the corresponding
         string to write in the card."""
         
-        # Not elegant, but the file is small anyway, so no big deal.
-        MLCard_lines = open(MLCardPath).readlines()
-        newCard_lines = []
-        modified_Params = []
-        param_to_modify=None
-        for i, line in enumerate(MLCard_lines):
-            if not param_to_modify is None:
-                modified_Params.append(param_to_modify)
-                newCard_lines.append(params[param_to_modify]+'\n')
-                param_to_modify = None
-            else:
-                if line.startswith('#') and \
-                   line.split()[0][1:] in params.keys():
-                    param_to_modify = line.split()[0][1:]
-                newCard_lines.append(line)
-        if not param_to_modify is None:
-            raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
-                                                           'not well formatted.'
-        
-        left_over = set(params.keys())-set(modified_Params)
-        if left_over != set([]):
-            raise MadGraph5Error, 'The following parameters could not be '+\
-                             'accessed in MadLoopParams.dat : %s'%str(left_over)
-
-        newCard=open(MLCardPath,'w')
-        newCard.writelines(newCard_lines)
-        newCard.close()
+        MLcard = bannermod.MadLoopParam(MLCardPath)
+        for key,value in params.items():
+            MLcard.set(key, value, ifnotdefault=False)
+        MLcard.write(MLCardPath, commentdefault=True) 
 
     @classmethod    
     def run_initialization(cls, run_dir=None, SubProc_dir=None, infos=None,\

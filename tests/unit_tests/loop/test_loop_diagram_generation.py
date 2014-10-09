@@ -1527,7 +1527,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         vx12_tag=base_objects.Vertex({'legs':base_objects.LegList([l24, l18, l12]), 'id': 1})
         closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l12, lfinal]), 'id': -1})
         goal_vertices=base_objects.VertexList([vx18_tag,vx12_tag,closing_vx])
-        myBubbleDiag.tag(myStructRep,8,9,self.myproc['model'])
+        myBubbleDiag.tag(myStructRep,self.myproc['model'],8,9)
         self.assertEqual(myBubbleDiag.get('canonical_tag'), goal_tag)
         self.assertEqual(myBubbleDiag.get('vertices'), goal_vertices)
 
@@ -1575,7 +1575,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         myStruct=loop_base_objects.FDStructure()
         
         goal_tag=[[1, [0], 3], [1, [1], 3], [1, [2], 3], [1, [3], 3], [1, [4], 3]]
-        myPentaDiag1.tag(myStructRep,7,8,self.myproc['model'])
+        myPentaDiag1.tag(myStructRep, self.myproc['model'], 7, 8)
         self.assertEqual(myPentaDiag1.get('canonical_tag'), goal_tag)
 
         vx17_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l7, l17]), 'id': 3})

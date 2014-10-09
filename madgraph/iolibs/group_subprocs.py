@@ -303,32 +303,28 @@ class SubProcessGroup(base_objects.PhysicsObject):
         # diagram maps, pointing to the mapping_diagrams (starting at
         # 1). Diagrams with multi-particle vertices will have 0.
         diagram_maps = {}
-        masswidth_to_pdg = {}
 
         for ime, me in enumerate(matrix_elements):
             # Define here a FDStructure repository which will be used for the 
             # tagging all the diagrams in get_contracted_loop_diagram. Remember
             # the the tagging of each loop updates the FDStructre repository
             # with the new structures identified.
-            FDStructRepo = loop_base_objects.FDStructureList([])
-            orig_diagrams = me.get('base_amplitude').get('diagrams')
-            diagrams = [(d.get_contracted_loop_diagram(model,FDStructRepo) if  
-               isinstance(d,loop_base_objects.LoopDiagram) else d) for d in
+                                    
+            if isinstance(me, loop_helas_objects.LoopHelasMatrixElement):
+                FDStructRepo = loop_base_objects.FDStructureList([])
+                diagrams = [(d.get_contracted_loop_diagram(model,FDStructRepo) if  
+                   isinstance(d,loop_base_objects.LoopDiagram) else d) for d in
                me.get('base_amplitude').get('loop_diagrams') if d.get('type')>0]
-
-            misc.sprint(len(me.get('base_amplitude').get('diagrams')))
-            misc.sprint([d.get('type') for d 
-                                    in me.get('base_amplitude').get('diagrams')])
+            else:
+                diagrams = me.get('base_amplitude').get('diagrams')
+    
             # Check the minimal number of legs we need to include in order
             # to make sure we'll have some valid configurations
             max_legs = min([max([len(v.get('legs')) for v in \
                                    d.get('vertices') if v.get('id') > 0]) \
                               for d in diagrams])
             diagram_maps[ime] = []
-            for i, diagram in enumerate(diagrams):
-                misc.sprint("_____+++_OPIKRWEFJKBXLKWRBAEKHDEQ")
-                misc.sprint(orig_diagrams[i].nice_string())
-                misc.sprint(diagram.nice_string())
+            for diagram in diagrams:
                 # Only use diagrams with all vertices == min_legs
                 if any([len(v.get('legs')) > max_legs \
                         for v in diagram.get('vertices') if v.get('id') > 0]):
@@ -338,7 +334,6 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 # [[((ext_number1, mass_width_id1), ..., )],
                 #  ...]                 (for each vertex)
                 equiv_diag = IdentifyConfigTag(diagram, model)
-                misc.sprint(i, equiv_diag)
                 try:
                     diagram_maps[ime].append(equiv_diagrams.index(\
                                                                 equiv_diag) + 1)
@@ -347,7 +342,6 @@ class SubProcessGroup(base_objects.PhysicsObject):
                     mapping_diagrams.append(diagram)
                     diagram_maps[ime].append(equiv_diagrams.index(\
                                                                 equiv_diag) + 1)
-        misc.sprint(diagram_maps)
         return mapping_diagrams, diagram_maps
 
     def get_subproc_diagrams_for_config(self, iconfig):

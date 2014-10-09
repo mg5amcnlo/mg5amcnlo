@@ -147,7 +147,9 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
                                    'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external'}),
+                                   'output_dependencies':'external',
+                                   'SubProc_prefix': '',
+                                   'compute_color_flows': False}),
                 'optimized' : loop_exporters.\
                                   LoopProcessOptimizedExporterFortranSA(\
                                   _mgme_file_path, _proc_file_path,
@@ -156,7 +158,9 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
                                    'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external'})
+                                   'output_dependencies':'external',
+                                   'SubProc_prefix': '',
+                                   'compute_color_flows': False})
                                   }
             
             # g g > t t~
@@ -233,7 +237,9 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
                                    'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external'})
+                                   'output_dependencies':'external',
+                                   'SubProc_prefix': '',
+                                   'compute_color_flows': False})
 
     @IOTests.createIOTest(groupName='LoopSquaredOrder_IOTest')
     def testIO_Loop_sqso_uux_ddx(self):

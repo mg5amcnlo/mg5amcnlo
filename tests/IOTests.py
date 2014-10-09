@@ -730,9 +730,19 @@ class IOTestManager(unittest.TestCase):
                                 else:
                                     pydoc.pager(text)
                                     print "Difference displayed in editor."
-                                answer = Cmd.timed_input(question=
-"""Ref. file %s differs from the new one (see diff. before), update it? [y/n] >"""%fname
+                                answer = ''
+                                while answer not in ['y', 'n']:
+                                    answer = Cmd.timed_input(question=
+"""Ref. file %s differs from the new one (see diff. before), update it? [y/n/h/r] >"""%fname
                                                                    ,default="y")
+                                    if answer not in ['y','n']:
+                                        if answer == 'r':
+                                            pydoc.pager(text)
+                                        else:
+                                            print "reference path: %s" % tmp_path
+                                            print "code returns: %s" % comparison_path
+                                
+                                
                                 os.remove(tmp_path)
                                 reviewed_file_names[path.basename(\
                                                       comparison_path)] = answer        
