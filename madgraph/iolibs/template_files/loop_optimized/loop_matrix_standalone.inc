@@ -1557,7 +1557,7 @@ C If the helicity can be constructed progressively while allowing inconsistency,
 		      GOTO 1231
 			ENDIF
 C         Be looser for helicity comparison, so bring a factor 100
-		  ELSEIF(.NOT.%(proc_prefix)sIsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref*100.0d0,-1,-1)) THEN
+		  ELSEIF(.NOT.%(proc_prefix)sIsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),(resA(J)+resB(J))/2.0d0,-1,-1)) THEN
 		    GOTO 1231		    
 		  ENDIF
 		ENDDO

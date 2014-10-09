@@ -1523,7 +1523,6 @@ C         Call UNWGT to unweight and store events
             amplitudes.append(my_amplitude)
 
         # Calculate diagrams for all processes
-
         amplitudes[1].set('has_mirror_process', True)
         subprocess_groups = group_subprocs.SubProcessGroup.\
                            group_amplitudes(amplitudes, "madevent")

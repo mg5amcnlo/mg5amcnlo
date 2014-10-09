@@ -635,7 +635,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                        'complex_mass': self.cmass_scheme,
                        'export_format':'madloop', 
                        'mp':True,
-                       'SubProc_prefix':'',
+                       'SubProc_prefix':'P',
                        'compute_color_flows':False,
               'loop_dir': pjoin(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
@@ -1149,7 +1149,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if not os.path.isfile(MLCardPath):
             raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
                                                                      %MLCardPath
-        if 'FALSE' in cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter'].upper():
+        if not cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter']:
             try:
                 my_req_files.pop(my_req_files.index('LoopFilter.dat'))
             except ValueError:
@@ -1256,7 +1256,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                        'complex_mass': self.cmass_scheme,
                        'export_format':'madloop', 
                        'mp':True,
-                       'SubProc_prefix':'',
+                       'SubProc_prefix':'P',
                        'compute_color_flows':False,
           'loop_dir': pjoin(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,

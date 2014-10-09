@@ -89,7 +89,7 @@ class LoopExporterFortran(object):
                         'output_dependencies':'external',
                         'SubProc_prefix':'P',
                         'compute_color_flows':False}
-
+        
         self.SubProc_prefix = self.opt['SubProc_prefix']
         self.loop_dir = self.opt['loop_dir']
         self.cuttools_dir = self.opt['cuttools_dir']

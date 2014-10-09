@@ -317,13 +317,14 @@ class SubProcessGroup(base_objects.PhysicsObject):
                me.get('base_amplitude').get('loop_diagrams') if d.get('type')>0]
             else:
                 diagrams = me.get('base_amplitude').get('diagrams')
-    
+            
             # Check the minimal number of legs we need to include in order
             # to make sure we'll have some valid configurations
             max_legs = min([max([len(v.get('legs')) for v in \
                                    d.get('vertices') if v.get('id') > 0]) \
                               for d in diagrams])
             diagram_maps[ime] = []
+            
             for diagram in diagrams:
                 # Only use diagrams with all vertices == min_legs
                 if any([len(v.get('legs')) > max_legs \
