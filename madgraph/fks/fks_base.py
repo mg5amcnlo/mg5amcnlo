@@ -524,7 +524,6 @@ class FKSProcess(object):
             ###self.fsr = set([leg.get(color) for leg in self.leglist if leg.get('state')]) != set([zero])
             self.isr = False
             self.fsr = False
-            print 'MZ fix isr/fsr' 
             #######
             self.nincoming = len([l for l in self.born_amp['process']['legs'] \
                                   if not l['state']])
@@ -670,8 +669,7 @@ class FKSProcess(object):
         if combine:
             self.combine_real_amplitudes()
         self.generate_real_amplitudes(pdg_list, real_amp_list)
-        print 'MZ, fix LINK'
-        #self.link_born_reals()
+        #MZself.link_born_reals()
 
 
     def link_born_reals(self):

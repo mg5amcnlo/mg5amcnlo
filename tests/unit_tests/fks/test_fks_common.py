@@ -141,6 +141,21 @@ class TestFKSCommon(unittest.TestCase):
                           'is_part':True,
                           'propagating':True,
                           'self_antipart':False}))
+
+            mypartlist.append(MG.Particle({'name':'w+',
+                          'antiname':'w-',
+                          'spin':3,
+                          'color':1,
+                          'mass':'mdl_MW',
+                          'width':'mdl_WW',
+                          'texname':'W+',
+                          'antitexname':'W-',
+                          'line':'wavy',
+                          'charge':1.,
+                          'pdg_code':24,
+                          'is_part':True,
+                          'propagating':True,
+                          'self_antipart':False}))
                             
             antiu = MG.Particle({'name':'u',
                           'antiname':'u~',
@@ -422,15 +437,19 @@ class TestFKSCommon(unittest.TestCase):
             self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
             
         # QED test
-###        input_pdgs = [ [1,1,22,1,1],[1,2,-2,1,-11],[1,2,2,6,1]]
-###        sorted_pdgs = [ [1,1,22,1,1],[1,2,1,-2,-11],[1,2,1,6,2]]
-###        for input,goal in zip(input_pdgs, sorted_pdgs):
-###            leglist = fks_common.to_fks_legs(
-###                    MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
-###                            for i, id in enumerate(input)]), self.model)
-###            leglist.sort(pert = 'QED')
-###            self.assertEqual([l['id'] for l in leglist], goal)
-###            self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
+        input_pdgs = [ [1,1,22,1,1],[1,2,-2,1,-11],[1,2,2,6,1],[21,-1,-2,24]]
+        sorted_pdgs = [ [1,1,1,1,22],[1,2,1,-2,-11],[1,2,6,1,2],[21,-1,24,-2]]
+        for input,goal in zip(input_pdgs, sorted_pdgs):
+            leglist = fks_common.to_fks_legs(
+                    MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
+                            for i, id in enumerate(input)]), self.model)
+            leglist.sort(pert = 'QED')
+            self.assertEqual([l['id'] for l in leglist], goal)
+            if len(input) == 5:
+                self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
+            elif len(input) == 4:
+                self.assertEqual([l['state'] for l in leglist], [False, False, True, True])
+
 
     
     def test_split_leg(self):
@@ -2183,7 +2202,7 @@ class TestFKSCommon(unittest.TestCase):
         self.assertEqual(dict['interactions'], res_int)
 
 
-    def test_find_pert_particles_interactionsi_mssm(self):
+    def test_find_pert_particles_interactions_mssm(self):
         """ for the mssm, the soft_particles should be the same as for the sm"""
         # QCD
         dict_mssm = fks_common.find_pert_particles_interactions(\
@@ -2214,6 +2233,18 @@ class TestFKSCommon(unittest.TestCase):
         
         for inte in dict['interactions']:
             self.assertTrue(not any([p['name'].startswith('gh') for p in inte['particles']]))
+
+
+    def test_find_particles_interactions_no_goldstones(self):
+        """tests that interactions involving goldstones are NOT returned by the
+        find_particles_interactions function when using a loop model"""
+        
+        dict = fks_common.find_pert_particles_interactions( \
+                import_ufo.import_model('loop_qcd_qed_sm'))
+
+        for inte  in dict['interactions']:
+            self.assertTrue(not 'g+' in [p['name'] for p in inte['particles']])
+            self.assertTrue(not 'g-' in [p['name'] for p in inte['particles']])
     
     
     def test_to_fks_leg_s(self):

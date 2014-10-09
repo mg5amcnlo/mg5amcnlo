@@ -705,6 +705,7 @@ class FKSLegList(MG.LegList):
         """Test if object obj is a valid FKSLeg for the list."""
         return isinstance(obj, FKSLeg)
 
+
     def sort(self,pert='QCD'):
         """Sorting routine, sorting chosen to be optimal for madfks"""
         sorted_leglist = FKSLegList()
@@ -722,45 +723,37 @@ class FKSLegList(MG.LegList):
             raise FKSProcessError('Too many initial legs')
         #find color representations
         # order according to spin and mass
-        spins = sorted(set([abs(l['spin']) for l in final_legs]))
-        for spin in spins:
-            spin_legs = FKSLegList([l for l in final_legs if abs(l['spin']) == spin])
-            #find massive and massless legs in this color repr
-            massive_legs = [l for l in spin_legs if not l['massless']]
-            massless_legs = [l for l in spin_legs if l['massless']]
-            # sorting may be different for massive and massless particles
-            # for color singlets, do not change order
-            if spin == 0:
-                keys = [itemgetter('number'), itemgetter('number')]
-                reversing = False
-            else:
-                keys = [itemgetter('id'), itemgetter('id')]
-                reversing = True
+        #find massive and massless legs 
+        massive_legs = [l for l in final_legs if not l['massless']]
+        massless_legs = [l for l in final_legs if l['massless']]
 
-            for i, llist in enumerate([massive_legs, massless_legs]):
+        for leglist in [massive_legs, massless_legs]:
+            spins = sorted(set([abs(l['spin']) for l in leglist]))
+            for spin in spins:
+                spin_legs = FKSLegList([l for l in leglist if abs(l['spin']) == spin])
+
                 init_pdg_legs = []
                 if len(initial_legs) == 2:
                 #put first legs which have the same abs(pdg) of the initial ones
-                    for i in range(len(set([ abs(l['id']) for l in initial_legs]))):
-                        pdg = abs(initial_legs[i]['id'])
-                        init_pdg_legs = [l for l in llist if abs(l['id']) == pdg]
+                    for j in range(len(set([ abs(l['id']) for l in initial_legs]))):
+                        pdg = abs(initial_legs[j]['id'])
+                        init_pdg_legs = [l for l in spin_legs if abs(l['id']) == pdg]
                         if init_pdg_legs:
                             # sort in order to put first quarks then antiparticles,
                             #  and to put fks partons as n j i
-                            init_pdg_legs.sort(key = keys[i], reverse=reversing)
+                            init_pdg_legs.sort(key = itemgetter('id'), reverse=True)
                             sorted_leglist.extend(FKSLegList(init_pdg_legs))
 
                     init_pdgs = [ abs(l['id']) for l in initial_legs]
-                    other_legs = [l for l in llist if not abs(l['id']) in init_pdgs]
-                    other_legs.sort(key = keys[i], reverse=reversing)
+                    other_legs = [l for l in spin_legs if not abs(l['id']) in init_pdgs]
+                    other_legs.sort(key = itemgetter('id'), reverse=True)
                     sorted_leglist.extend(FKSLegList(other_legs))
                 else:
-                    llist.sort(key = keys[i], reverse=reversing)
-                    sorted_leglist.extend(FKSLegList(llist))
+                    llist.sort(key = itemgetter('id'), reverse=True)
+                    sorted_leglist.extend(FKSLegList(spin_legs))
 
         for i, l in enumerate(sorted_leglist):
             self[i] = l
-
 
 
 class FKSLeg(MG.Leg):
