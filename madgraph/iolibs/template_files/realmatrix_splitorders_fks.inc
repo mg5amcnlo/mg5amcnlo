@@ -22,6 +22,8 @@ C
       include 'orders.inc'
       data keep_order / NSQAMPSO*.TRUE. /
       data firsttime / .TRUE. /
+      double precision ans_max, tiny
+      parameter (tiny = 1d-12)
 C
 C     FUNCTIONS
 C
@@ -51,9 +53,14 @@ endif
 
 CALL SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS)
 ans_summed = 0d0
+ans_max = 0d0
 do i = 1, nsqampso
+ ans_max = max(dabs(ans(i)),ans_max)
  if (keep_order(i)) ANS_SUMMED = ANS_SUMMED + ANS(I)
 enddo
+
+C avoid fake non-zeros
+if (dabs(ans_summed).lt.tiny*ans_max) ans_summed=0d0
 
 END
 
