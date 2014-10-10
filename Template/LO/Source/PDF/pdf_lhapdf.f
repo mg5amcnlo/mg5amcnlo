@@ -20,7 +20,7 @@ C
          pdf(-7)=0d0
          if(has_photon())then
              call evolvePDFphoton(x, q, f, photon)
-             pdf(7)= photon
+             pdf(7)= photon/x
          else
              pdf(7) = 0d0
              call evolvePDF(x, q, f)
@@ -30,7 +30,7 @@ C
          enddo
       else
          write (*,*) 'beam type not supported in lhadpf'
-         do i=-7,7
+         do i=-6,6
             pdf(i)=0d0
          enddo
       endif

@@ -1,13 +1,16 @@
 C THE CORE SUBROUTINE CALLED BY CUTTOOLS WHICH CONTAINS THE HELAS CALLS BUILDING THE LOOP
 
-      SUBROUTINE LOOPNUM(Q,RES)
+      SUBROUTINE %(proc_prefix)sLOOPNUM(Q,RES)
 C  
 C CONSTANTS 
 C 
-	  INTEGER    NLOOPS
-      PARAMETER (NLOOPS=%(nloops)d)
-	  INTEGER LOOPMAXCOEFS
+      INTEGER    NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
+      INTEGER LOOPMAXCOEFS
 	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+C     These are constants related to the split orders
+      INTEGER    NSQUAREDSO
+	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
 C  
 C ARGUMENTS 
 C  
@@ -16,19 +19,19 @@ C
 C
 C GLOBAL VARIABLES
 C
-      INTEGER ID,RANK
-      COMMON/LOOP/ID,RANK
+      INTEGER ID,SQSOINDEX,RANK
+      common/%(proc_prefix)sLOOP/ID,SQSOINDEX,RANK
 
-	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
-	  common/LCOEFS/LOOPCOEFS
+	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+	  common/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
 	  RES=(0.0d0,0.0d0)
 
-	  CALL EVAL_POLY(LOOPCOEFS(0,ID),RANK,-Q,RES)
+	  CALL %(proc_prefix)sEVAL_POLY(LOOPCOEFS(0,SQSOINDEX,ID),RANK,-Q,RES)
 
 	  END
 
-      SUBROUTINE MPLOOPNUM(Q,RES)
+      SUBROUTINE %(proc_prefix)sMPLOOPNUM(Q,RES)
 C
 C MODULE
 C
@@ -36,12 +39,15 @@ C
 C  
 C CONSTANTS 
 C 
-	  INTEGER    NLOOPS
-      PARAMETER (NLOOPS=%(nloops)d)
+      INTEGER    NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
 	  INTEGER LOOPMAXCOEFS
 	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+C     These are constants related to the split orders
+      INTEGER    NSQUAREDSO
+	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
 C  
 C ARGUMENTS 
 C  
@@ -51,7 +57,7 @@ C
 C LOCAL VARIABLES 
 C
       %(complex_mp_format)s QRES
-	  %(real_dp_format)s DUMMY(3)
+	  %(real_dp_format)s DUMMY(3,0:NSQUAREDSO)
       %(real_mp_format)s QPP(0:3,NEXTERNAL)
       %(complex_mp_format)s QQ(0:3)
       INTEGER I,J
@@ -59,17 +65,17 @@ C
 C GLOBAL VARIABLES
 C
 	  LOGICAL MP_DONE
-	  common/MP_DONE/MP_DONE
+	  common/%(proc_prefix)sMP_DONE/MP_DONE
 
-      INTEGER ID,RANK
-	  COMMON/LOOP/ID,RANK
+      INTEGER ID,SQSOINDEX,RANK
+	  common/%(proc_prefix)sLOOP/ID,SQSOINDEX,RANK
 
-	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
-	  common/MP_LCOEFS/LOOPCOEFS
+	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+	  common/%(proc_prefix)sMP_LCOEFS/LOOPCOEFS
 
 C     MP_PS IS THE FIXED (POSSIBLY IMPROVED) MP PS POINT AND MP_P IS THE ONE WHICH CAN BE MODIFIED (I.E. ROTATED ETC.) FOR STABILITY PURPOSE
 	  %(real_mp_format)s MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
-	  common/MP_PSPOINT/MP_PS,MP_P
+	  common/%(proc_prefix)sMP_PSPOINT/MP_PS,MP_P
 
 C ----------
 C BEGIN CODE
@@ -80,17 +86,17 @@ C ----------
 	  QRES=(0.0e0_16,0.0e0_16)
 
       IF (.NOT.MP_DONE) THEN
-	    CALL MP_COMPUTE_LOOP_COEFS(MP_P,DUMMY)
+	    CALL %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(MP_P,DUMMY)
 	    MP_DONE=.TRUE.
 	  ENDIF
 
-	  CALL MP_EVAL_POLY(LOOPCOEFS(0,ID),RANK,-QQ,QRES)
+	  CALL MP_%(proc_prefix)sEVAL_POLY(LOOPCOEFS(0,SQSOINDEX,ID),RANK,-QQ,QRES)
 
 	  RES=QRES
 
 	  END
 
-      SUBROUTINE MPLOOPNUM_DUMMY(Q,RES)
+      SUBROUTINE %(proc_prefix)sMPLOOPNUM_DUMMY(Q,RES)
 C
 C MODULE
 C
@@ -113,7 +119,7 @@ C ----------
         DQ(I) = Q(I)
       ENDDO
 
-      CALL LOOPNUM(DQ,DRES)
+      CALL %(proc_prefix)sLOOPNUM(DQ,DRES)
       RES=DRES
 
       END

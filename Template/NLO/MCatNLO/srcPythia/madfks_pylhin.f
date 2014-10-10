@@ -156,13 +156,13 @@ c 2 = (muR0,muF0),    3 = (muR0,muFup),     4 = (muR0,muFdown)
 c 5 = (muRup,muF0),   6 = (muRup,muFup),    7 = (muRup,muFdown)
 c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
                 iww=iww+1
-                ww(iww)=wgtxsecmu(i,j)/MQQ
+                ww(iww)=wgtxsecmu(i,j)
              enddo
           enddo
           do i=1,2*numPDFpairs
              call read_rwgt_line(iunit,idwgt,wgtxsecPDF(i))
              iww=iww+1
-             ww(iww)=wgtxsecPDF(i)/MQQ
+             ww(iww)=wgtxsecPDF(i)
           enddo
           if (numscales.eq.0) then
              wgtxsecmu(1,1)=wgtref
@@ -228,8 +228,6 @@ c Hard event file (to be entered in Herwig driver)
       COMMON/VVJIN/QQIN
       CHARACTER*80 STRING
       common/pypars/mstp(200),parp(200),msti(200),pari(200)
-      double precision xsecup2
-      common/cxsecup/xsecup2
       include 'reweight0.inc'
       integer nwgt,max_weight
       common/cnwgt/nwgt
@@ -237,7 +235,7 @@ c Hard event file (to be entered in Herwig driver)
       character*15 weights_info(max_weight)
       common/cwgtsinfo/weights_info
       double precision xmuR,xmuF
-      integer iPDF
+      integer iPDF,i
 C
       numscales=0
       numPDFpairs=0
@@ -298,8 +296,9 @@ C--Read up to </init> in the event file
       read(61,*,err=998)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
      #            PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #            IDWTUP,NPRUP
-      read(61,*,err=998)XSECUP(1),XERRUP(1),XMAXUP(1),LPRUP(1)
-      xsecup2=XSECUP(1)
+      do i=1,NPRUP
+         read(61,*,err=998)XSECUP(i),XERRUP(i),XMAXUP(i),LPRUP(i)
+      enddo
  111  format(a4,f3.1,x,a4,f3.1)
  112  format(a4,i8,a3)
       return

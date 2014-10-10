@@ -1,0 +1,41 @@
+ ====================================================
+   This is QCDLoop - version 1.95                    
+   Authors: Keith Ellis and Giulia Zanderighi        
+   (ellis@fnal.gov, g.zanderighi1@physics.ox.ac.uk)  
+   For details see FERMILAB-PUB-07-633-T,OUTP-07/16P 
+   arXiv:0712.1851 [hep-ph], published in            
+   JHEP 0802:002,2008.                               
+ ====================================================
+ ====================================================
+   FF 2.0, a package to evaluate one-loop integrals
+ written by G. J. van Oldenborgh, NIKHEF-H, Amsterdam
+ ====================================================
+ for the algorithms used see preprint NIKHEF-H 89/17,
+ 'New Algorithms for One-loop Integrals', by G.J. van
+ Oldenborgh and J.A.M. Vermaseren, published in 
+ Zeitschrift fuer Physik C46(1990)425.
+ ====================================================
+ ffini: precx =    4.4408920985006262E-016
+ ffini: precc =    4.4408920985006262E-016
+ ffini: xalogm =    4.9406564584124654E-324
+ ffini: xclogm =    4.9406564584124654E-324
+ ep,qlI1(m1sq,musq,ep)          -2 (  0.0000000000000000     ,  0.0000000000000000     )
+ ep,qlI1(m1sq,musq,ep)          -1 (  3.0000000000000000     ,  0.0000000000000000     )
+ ep,qlI1(m1sq,musq,ep)           0 ( -9.9063265913543752E-003,  0.0000000000000000     )
+
+ ep,qlI2(p1sq,m1sq,m2sq,musq,ep)          -2 (  0.0000000000000000     ,  0.0000000000000000     )
+ ep,qlI2(p1sq,m1sq,m2sq,musq,ep)          -1 (  1.0000000000000000     ,  0.0000000000000000     )
+ ep,qlI2(p1sq,m1sq,m2sq,musq,ep)           0 ( -1.2145144739434521     ,  0.0000000000000000     )
+
+ ep,qlI3(p1sq,p2sq,p3sq,m1sq,m2sq,m3sq,musq,ep)          -2 (  0.0000000000000000     ,  0.0000000000000000     )
+ ep,qlI3(p1sq,p2sq,p3sq,m1sq,m2sq,m3sq,musq,ep)          -1 (  0.0000000000000000     ,  0.0000000000000000     )
+ ep,qlI3(p1sq,p2sq,p3sq,m1sq,m2sq,m3sq,musq,ep)           0 ( -9.7009439963345157E-002,  0.0000000000000000     )
+
+ ep,qlI4(p1sq,p2sq,p3sq,p4sq,s12,s23,m1sq,m2sq,m3sq,m4sq,musq,ep)          -2 (  0.0000000000000000     ,  0.0000000000000000     )
+ ep,qlI4(p1sq,p2sq,p3sq,p4sq,s12,s23,m1sq,m2sq,m3sq,m4sq,musq,ep)          -1 (  0.0000000000000000     ,  0.0000000000000000     )
+ ep,qlI4(p1sq,p2sq,p3sq,p4sq,s12,s23,m1sq,m2sq,m3sq,m4sq,musq,ep)           0 (  4.0425852861903453E-003,  1.7691548125043970E-002)
+
+ test of divergent boxes
+ ep,qlI4(0d0,0d0,p3sq,p4sq,s12,s23,0d0,0d0,0d0,m4sq,musq,ep)          -2 ( -1.5898251192368840E-003,  0.0000000000000000     )
+ ep,qlI4(0d0,0d0,p3sq,p4sq,s12,s23,0d0,0d0,0d0,m4sq,musq,ep)          -1 (  1.3850605392220345E-002,  4.9945829150871068E-003)
+ ep,qlI4(0d0,0d0,p3sq,p4sq,s12,s23,0d0,0d0,0d0,m4sq,musq,ep)           0 ( -4.3279837986082592E-002,  2.7025837645845270E-002)

@@ -153,6 +153,11 @@ C
       include 'PDF/pdf.inc'
 C      
       double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L
+
+c---------
+      double precision xpdf_nnpdf(-6:6)
+c---------
+
       integer mode,Irt
 
       ipart=ipdg
@@ -228,6 +233,20 @@ C
      $      ipart=sign(3-iabs(ipart),ipart)
 
          pdg2pdf=Ctq6Pdf(ipart,x,xmu)
+
+c----------------------------------------------
+c     NNPDF ----------------------------------
+
+      else if (pdlabel(1:7) .eq. 'nnpdf23') then
+         call NNevolvePDF(x,mu,xpdf_nnpdf)
+!     NNPDFevol retruns an array -6:6 as LHAPDF call
+         pdg2pdf = xpdf_nnpdf(ipart) / x ! NNevolvePDF Returns xfx
+
+         write(6,*)" in is-sud.f"
+         write(6,*) " pdg2pdf = ", pdg2pdf
+
+c----------------------------------------------
+c---------------------------------------------
 
       endif      
 

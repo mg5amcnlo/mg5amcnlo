@@ -1,4 +1,4 @@
-      SUBROUTINE %(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
+      SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
 C  
       IMPLICIT NONE
 C  
@@ -21,6 +21,9 @@ C
       PARAMETER (ZERO=0D0)
 	  %(real_mp_format)s     MP__ZERO
       PARAMETER (MP__ZERO=0.0e0_16)
+C     These are constants related to the split orders
+      INTEGER    NSO, NSQUAREDSO, NAMPSO
+	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
 C  
 C ARGUMENTS
 C
@@ -32,6 +35,9 @@ C LOCAL VARIABLES
 C
       INTEGER I,J,K
 	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+
+	  LOGICAL DUMMYFALSE
+	  DATA DUMMYFALSE/.FALSE./
 C  
 C GLOBAL VARIABLES
 C  
@@ -40,31 +46,55 @@ C
 
 	  INTEGER HELOFFSET	  
 	  INTEGER GOODHEL(NCOMB)
-	  LOGICAL GOODAMP(NLOOPGROUPS)
-	  common/Filters/GOODAMP,GOODHEL,HELOFFSET
+	  LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
+	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL,HELOFFSET
+
+	  LOGICAL CHECKPHASE
+	  LOGICAL HELDOUBLECHECKED
+      common/%(proc_prefix)sINIT/CHECKPHASE, HELDOUBLECHECKED
+
+	  INTEGER SQSO_TARGET
+	  common/%(proc_prefix)sSOCHOICE/SQSO_TARGET
+      
+	  LOGICAL UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+	  common/%(proc_prefix)sSO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+
+	  integer I_SO
+	  common/%(proc_prefix)sI_SO/I_SO
+	  integer I_LIB
+	  common/%(proc_prefix)sI_LIB/I_LIB
 
       %(dp_born_amps_decl)s
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
-	  common/W/W
+	  common/%(proc_prefix)sW/W
 
 	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
-	  common/WL/WL,PL
+	  common/%(proc_prefix)sWL/WL,PL
 
-	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
-	  common/LCOEFS/LOOPCOEFS
+	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+	  common/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
       %(complex_dp_format)s AMPL(3,NCTAMPS)
-	  common/AMPL/AMPL
+	  common/%(proc_prefix)sAMPL/AMPL
 
-      %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
-	  LOGICAL S(NLOOPGROUPS)
-	  common/LOOPRES/LOOPRES,S
+      %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
+	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
+	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
 C
 C ----------
 C BEGIN CODE
 C ----------
 
+C     The target squared split order contribution is already reached if true.
+      IF (FILTER_SO.AND.%(required_so_broadcaster)s) THEN
+	    GOTO 1001
+	  ENDIF
+
 %(helas_calls)s
 
+      GOTO 1001
+%(continue_label)d CONTINUE
+      %(required_so_broadcaster)s=.TRUE.
+1001  CONTINUE
       END

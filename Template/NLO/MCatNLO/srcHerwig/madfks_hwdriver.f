@@ -14,7 +14,7 @@ C QQIN IS THE EVENT FILE
       CHARACTER *7 NORM_EVENT
       INTEGER MQQ
       COMMON/cMQQ/MQQ
-      REAL*8 TMPLAM,GAMT0,ERR_FR,MME,MMM,MMT
+      REAL*8 TMPLAM,GAMT0,ERR_FR
       INTEGER IPDF
       CHARACTER * 70 LHAPDF
       LOGICAL LHACRTL,OLDFORM,PI_STABLE,WP_STABLE,WM_STABLE,Z_STABLE,
@@ -56,6 +56,9 @@ C---USER CAN RESET PARAMETERS AT
 C   THIS POINT, OTHERWISE DEFAULT
 C   VALUES IN HWIGIN WILL BE USED.
 C
+C PTVETO MUST BE TRUE IN ORDER FOR SCALUP TO BE USED ALSO
+C IN CASE OF RADIATION OFF RESONANCES
+      PTVETO=.TRUE. 
 C************************************************************************
 C---UNCOMMENT THE ASSIGNMENT PRESPL=.FALSE. WHEN USING HERWIG VERSION 6.52 
 C---OR HIGHER (SEE MC@NLO MANUAL, APPENDIX A.8, PAGE 25)
@@ -68,9 +71,6 @@ C UNDERLYING EVENT
       IF(LHSOFT)WRITE(*,*)'Underlying event WILL be generated'
       IF(.NOT.LHSOFT)WRITE(*,*)'Underlying event WILL NOT be generated'
       WRITE(*,*)
-C
-      WRITE(*,*)'Enter decay modes for gauge bosons'
-      READ(*,*)MODBOS(1),MODBOS(2)
 C
       IF(LHSOFT.AND.IPDF.NE.1)THEN
          WRITE(*,*)' '
@@ -131,22 +131,14 @@ C
       WRITE(*,*)'Enter Higgs (SM) boson mass, width'
       READ(*,*)RMASS(201),GAMH
       WRITE(*,*)'Enter quark (d,u,s,c,b) and gluon masses'
-      READ(*,*)RMASS(1),RMASS(2),RMASS(3),
-     #         RMASS(4),RMASS(5),RMASS(13)
+      READ(*,*)RMASS(1),RMASS(2),RMASS(3),RMASS(4),RMASS(5),RMASS(13)
+      WRITE(*,*)'Enter lepton (e,mu,tau) masses'
+      READ(*,*)RMASS(121),RMASS(123),RMASS(125)
       DO I=1,5
-         RMASS(I+6)=RMASS(I)
+         RMASS(I+6)  =RMASS(I)
+         RMASS(I+126)=RMASS(I+120)
       ENDDO
-      WRITE(*,*)'Enter lepton (e,mu,tau) masses: should be zero'
-      READ(*,*)mme,mmm,mmt
-      if(mme.ne.0d0.or.mmm.ne.0d0.or.mmt.ne.0d0)then
-         write(*,*)'nonzero lepton masses'
-         stop
-      endif
-C Set electron and muon masses equal to zero to avoid rounding problems
-      RMASS(121)=0.D0
-      RMASS(123)=0.D0
-      RMASS(127)=0.D0
-      RMASS(129)=0.D0
+
 C NO SOFT AND HARD ME CORRECTIONS (ALREADY INCLUDED IN MC@NLO)
       SOFTME=.FALSE.
       HARDME=.FALSE.
@@ -331,6 +323,7 @@ C---EVENTS ARE NORMALIZED TO SUM OR AVERAGE TO THE TOTAL CROSS SECTION
       WRITE(*,*)'How are the events normalized ("average" or "sum")?'
       READ(*,*)NORM_EVENT
       if (NORM_EVENT.eq.'average')MQQ=1
+
       MSFLAG=0
       IF (LHSOFT) THEN
 C---ATLAS JIMMY tune AUET2 (ATL-PHYS-PUB-2011-008, table 13)

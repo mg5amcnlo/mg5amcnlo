@@ -58,7 +58,7 @@ c
       common/to_param_card_name/param_card_name
 
       character*300 buff
-      logical u_syst
+      logical u_syst, has_negative
       character*(s_bufflen) s_buff(7)
       integer nclus
       character*(clus_bufflen) buffclus(max_particles)
@@ -73,6 +73,7 @@ c     Get requested number of events
 c
       include 'run_card.inc'
 
+      has_negative = .false.
       if (gridpack) then
 c        load the gridpack file
          call load_gridpack_para(npara,param,value)
@@ -102,7 +103,7 @@ c $E$ input_file $E$
       read(15,*,err=20) xsec,xerr,xdum,xdum,xdum,xdum,xdum,xdum,xdum,rxsec
       write(*,*) "Results.dat xsec = ",rxsec," abs xsec = ",xsec
  20   close(15)
- 21   if (nreq .gt. 0 .and. xsec .gt. 0) then
+ 21   if (nreq .gt. 0 .and. xsec .ne. 0) then
          goal_wgt = xsec/nreq/4d0   !Extra factor of 4 for weighted events
       else
          goal_wgt = 0d0    !Write out everything
@@ -207,6 +208,7 @@ c
      &        buff
             if (dabs(wgt) .gt. goal_wgt*xran1(jseed)) then
                keep(i) = .true.
+               if (wgt.lt.0d0) has_negative = .true.
                nunwgt=nunwgt+1
                if (dabs(wgt) .gt. goal_wgt) then
                   xtrunc=xtrunc+dabs(wgt)-goal_wgt
@@ -251,7 +253,7 @@ C $B$ output_file2 $B$ !this is tag for automatic modification by MW
 C $E$ output_file2 $E$ !this is tag for automatic modification by MW
 
       open(unit=15,file=filename,status='unknown',err=99)
-      call writebanner_u(15,nreq,rxsec,xtrunc,xsec/nreq,xerr)
+      call writebanner_u(15,nreq,rxsec,xtrunc,xsec/nreq,xerr, has_negative)
       ntry = 0
       do i=1,kevent
          if (keep(i) .and. ntry .lt. nreq) then
@@ -372,11 +374,12 @@ c     Now write out specific information on the event set
 c
 c
       write(lunw,'(a)') '<MGGenerationInfo>'
-      write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
-      write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
-      write(lunw,'(a30,e10.5)') '#  Max wgt                 :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Average wgt             :  ',wgt
+      write(lunw,'(a30,i11)')   '#  Number of Events        :  ',nevent
+      write(lunw,'(a30,e11.5)') '#  Integrated weight (pb)  :  ',sum
+      write(lunw,'(a30,e11.5)') '#  Max wgt                 :  ',maxwgt
+      write(lunw,'(a30,e11.5)') '#  Average wgt             :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
+
    
     
 
@@ -403,7 +406,7 @@ C   Write out compulsory init info
       end
 
 
-      subroutine writebanner_u(lunw,nevent,sum,maxwgt,wgt,xerr)
+      subroutine writebanner_u(lunw,nevent,sum,maxwgt,wgt,xerr,has_negative)
 c**************************************************************************************
 c     Writes out banner information at top of event file
 c**************************************************************************************
@@ -413,11 +416,13 @@ c     Arguments
 c     
       integer lunw,nevent
       double precision sum,maxwgt,wgt,xerr
+      logical has_negative
 c
 c     Local
 c
       integer i,j
       double precision tmpsum
+      integer lhastrategy
 c
 c     Les Houches init block (for the <init> info)
 c
@@ -428,6 +433,14 @@ c
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
      &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
      &     xmaxup(maxpup),lprup(maxpup)
+
+c
+c     Flag on how to write the LHE events
+c     Include <clustering> tag for Pythia 8 CKKW-L matching
+c
+      logical clusinfo
+      double precision lhe_version
+      COMMON/TO_LHEFORMAT/lhe_version,clusinfo
 c
 c     Global
 c
@@ -476,22 +489,32 @@ c     Now write out specific information on the event set
 c
 
       write(lunw,'(a)') '<MGGenerationInfo>'
-      write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
-      write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
-      write(lunw,'(a30,e10.5)') '#  Truncated wgt (pb)      :  ',maxwgt
-      write(lunw,'(a30,e10.5)') '#  Unit wgt                :  ',wgt
+      write(lunw,'(a30,i11)')   '#  Number of Events        :  ',nevent
+      write(lunw,'(a30,e11.5)') '#  Integrated weight (pb)  :  ',sum
+      write(lunw,'(a30,e11.5)') '#  Truncated wgt (pb)      :  ',maxwgt
+      write(lunw,'(a30,e11.5)') '#  Unit wgt                :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
+
+      if (has_negative) then
+        lhastrategy = -3
+      else
+        lhastrategy = 3
+      endif
 
 C   Write out compulsory init info
       write(lunw,'(a)') '</header>'
       write(lunw,'(a)') '<init>'
       write(lunw,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),(pdfgup(i),i=1,2),
-     $   (pdfsup(i),i=1,2),3,nprup
+     $   (pdfsup(i),i=1,2),lhastrategy,nprup
       do i=1,nprup
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,sum/nevent,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
+      if (lhe_version.ge.3) then
+        write(lunw,'(a)') "<generator name='MadGraph5_aMC@NLO' version='X.X.X'>           "
+        write(lunw,'(a)') "please cite 1405.0301 </generator>"
+      endif
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i8,i2,i4)
+ 90   FORMAT(2i9,2e19.11,2i2,2i8,i3,i4)
  91   FORMAT(3e19.11,i4)
 
       end

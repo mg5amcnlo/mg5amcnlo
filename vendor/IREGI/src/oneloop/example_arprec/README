@@ -1,0 +1,10 @@
+
+
+Set the correct compiler, paths and flags in the makefile here.
+MPHOME should be the fortran directory in arprec.
+FC, CXX, FCFLAGS, FCLIBS should correspond to the values presented
+to you when you built the arprec package.
+
+Then execute "make" followed by "./f_test.exe < input"
+
+

@@ -58,6 +58,10 @@ c Sort array of results: ismode>0 for real, isway=0 for ascending order
       parameter (ismode=1)
       parameter (isway=0)
       parameter (izero=0)
+c The UNLOPS cut
+      double precision p_unlops(0:3,nexternal)
+      include "run.inc" ! includes the ickkw parameter
+      logical passUNLOPScuts
 c logicals that define if particles are leptons, jets or photons. These
 c are filled from the PDG codes (iPDG array) in this function.
       logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal)
@@ -173,6 +177,24 @@ c more than the Born).
          enddo
       endif
 
+c The UNLOPS cut:
+      if (ickkw.eq.4 .and. ptj.gt.0d0) then
+c Use special pythia pt cut for minimal pT
+         do i=1,nexternal
+            do j=0,3
+               p_unlops(j,i)=p(j,i)
+            enddo
+         enddo
+         call pythia_UNLOPS(p_unlops,passUNLOPScuts)
+         if (.not. passUNLOPScuts) then
+            passcuts_user=.false.
+            return
+         endif
+c Bypass normal jet cuts
+         goto 122
+      endif
+
+
       if (ptj.gt.0d0.and.nQCD.gt.1) then
 
 c Cut some peculiar momentum configurations, i.e. two partons very soft.
@@ -212,22 +234,10 @@ c                                            particle in pQCD, which doesn't
 c                                            necessarily correspond to the particle
 c                                            label in the process
 c
-         call amcatnlo_fastjetppgenkt_timed(pQCD,nQCD,rfj,sycut,palg,
-     $        pjet,njet,jet)
+         call amcatnlo_fastjetppgenkt_etamax_timed(
+     $    pQCD,nQCD,rfj,sycut,etaj,palg,pjet,njet,jet)
 c
 c******************************************************************************
-
-c Apply the maximal pseudo-rapidity cuts on the jets:      
-         if (etaj.gt.0d0) then 
-c Count the number of jets that pass the pseud-rapidity cut
-            njet_eta=0
-            do i=1,njet
-               if (abs(eta(pjet(0,i))).lt.ETAJ) then
-                  njet_eta=njet_eta+1
-               endif
-            enddo
-            njet=njet_eta
-         endif
 
 c Apply the jet cuts
          if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
@@ -235,6 +245,7 @@ c Apply the jet cuts
             return
          endif
       endif
+ 122  continue
 c
 c PHOTON (ISOLATION) CUTS
 c
@@ -877,3 +888,45 @@ c-----
       invm2_04 = dot(ptot,ptot)
       RETURN
       END
+
+
+      subroutine get_ID_H(IDUP_tmp)
+      implicit none
+      include "genps.inc"
+      include 'nexternal.inc'
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+c      include 'leshouche.inc'
+      common /c_leshouche_inc/idup,mothup,icolup
+      integer IDUP_tmp(nexternal),i
+c
+      do i=1,nexternal
+         IDUP_tmp(i)=IDUP(i,1)
+      enddo
+c
+      return
+      end
+
+      subroutine get_ID_S(IDUP_tmp)
+      implicit none
+      include "genps.inc"
+      include 'nexternal.inc'
+      integer    maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
+      include 'born_leshouche.inc'
+      integer IDUP_tmp(nexternal),i
+c
+      do i=1,nexternal-1
+         IDUP_tmp(i)=IDUP(i,1)
+      enddo
+      IDUP_tmp(nexternal)=0
+c
+      return
+      end
+
+

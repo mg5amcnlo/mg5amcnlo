@@ -332,7 +332,7 @@ int id4Mass() const {return 4;}""")
 
 #include <complex> 
 
-#include "SigmaProcess.h"
+#include "Pythia8/SigmaProcess.h"
 #include "Parameters_sm.h"
 
 using namespace std; 
@@ -1287,7 +1287,7 @@ double Sigma_sm_qq_six::matrix_uu_six()
 
 #include <complex> 
 
-#include "SigmaProcess.h"
+#include "Pythia8/SigmaProcess.h"
 #include "Parameters_sm.h"
 
 using namespace std; 
@@ -2744,9 +2744,9 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 
 #include <complex>
 
-#include "ParticleData.h"
-#include "StandardModel.h"
-#include "SusyLesHouches.h"
+#include "Pythia8/ParticleData.h"
+#include "Pythia8/StandardModel.h"
+#include "Pythia8/SusyLesHouches.h"
 
 using namespace std;
 
@@ -2806,7 +2806,7 @@ static Parameters_sm* instance;
 
 #include <iostream>
 #include "Parameters_sm.h"
-#include "PythiaStdlib.h"
+#include "Pythia8/PythiaStdlib.h"
 
 namespace Pythia8 {
 

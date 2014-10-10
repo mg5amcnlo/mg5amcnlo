@@ -79,10 +79,10 @@ class Matrix_%(process_string)s(object):
         %(helas_calls)s
 
         jamp = [None] * ncolor
+
         %(jamp_lines)s
 
         %(amp2_lines)s
-
         matrix = 0.
         for i in range(ncolor):
             ztemp = 0
@@ -90,4 +90,5 @@ class Matrix_%(process_string)s(object):
                 ztemp = ztemp + cf[i][j]*jamp[j]
             matrix = matrix + ztemp * jamp[i].conjugate()/denom[i]   
         self.jamp.append(jamp)
+
         return matrix

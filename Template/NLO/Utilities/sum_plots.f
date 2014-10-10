@@ -5,10 +5,12 @@ C
       implicit none
       integer i
       character*200 buff
-      integer nif,idata(6)
-      character*200 filename(0:6),titleTB(6),ylimits(6),xlimits(6),
-     &     orders(6),yscale(6),title(6),history(6)
-      double precision mfactors(6),x(1000,6),y(1000,6),dy(1000,6)
+      integer nmaxfiles
+      parameter (nmaxfiles=1000)
+      integer nif,idata(nmaxfiles)
+      character*200 filename(0:nmaxfiles),titleTB(nmaxfiles),ylimits(nmaxfiles),xlimits(nmaxfiles),
+     &     orders(nmaxfiles),yscale(nmaxfiles),title(nmaxfiles),history(nmaxfiles)
+      double precision mfactors(nmaxfiles),x(1000,nmaxfiles),y(1000,nmaxfiles),dy(1000,nmaxfiles)
       common/c_all/titleTB,ylimits,xlimits,orders,yscale,title,history,
      &     mfactors,x,y,dy,nif,idata
       logical pass(8)
@@ -16,7 +18,7 @@ C
       parameter (debug=.false.)
 
       ! set every string to empty
-      do i = 1, 6
+      do i = 1, nmaxfiles
         titleTB(i) = ''
         ylimits(i) = ''
         xlimits(i) = ''
@@ -26,8 +28,12 @@ C
         history(i) = ''
       enddo
 
-      write (*,*) "Give the number of input files (max 6)"
+      write (*,*) "Give the number of input files (max ",nmaxfiles," )"
       read (*,*) nif
+      if(nif.gt.nmaxfiles)then
+         write(*,*)'Too many files!!', nif
+         stop
+      endif
 
       write (*,*) "Give their file names"
       do i=1,nif
@@ -137,14 +143,16 @@ c            exit
 
       subroutine get_other_data(ifile)
       implicit none
-      integer unit,ifile,i,iline(6),iline_last_title(6)
-      data iline /6*0/
+      integer nmaxfiles
+      parameter (nmaxfiles=1000)
+      integer unit,ifile,i,iline(nmaxfiles),iline_last_title(nmaxfiles)
+      data iline /nmaxfiles*0/
       save iline_last_title
       character*200 buff
-      integer nif,idata(6)
-      character*200 filename(0:6),titleTB(6),ylimits(6),xlimits(6),
-     &     orders(6),yscale(6),title(6),history(6)
-      double precision mfactors(6),x(1000,6),y(1000,6),dy(1000,6)
+      integer nif,idata(nmaxfiles)
+      character*200 filename(0:nmaxfiles),titleTB(nmaxfiles),ylimits(nmaxfiles),xlimits(nmaxfiles),
+     &     orders(nmaxfiles),yscale(nmaxfiles),title(nmaxfiles),history(nmaxfiles)
+      double precision mfactors(nmaxfiles),x(1000,nmaxfiles),y(1000,nmaxfiles),dy(1000,nmaxfiles)
       common/c_all/titleTB,ylimits,xlimits,orders,yscale,title,history,
      &     mfactors,x,y,dy,nif,idata
       logical pass(8)
@@ -240,12 +248,14 @@ c Rewind the file back to the last title that we found
       subroutine order_data
       implicit none
       integer i,j,k
-      double precision minx,maxx,step(6),
-     &     xt(1000,6),yt(1000,6),dyt(1000,6)
-      integer nif,idata(6)
-      character*200 filename(0:6),titleTB(6),ylimits(6),xlimits(6),
-     &     orders(6),yscale(6),title(6),history(6)
-      double precision mfactors(6),x(1000,6),y(1000,6),dy(1000,6)
+      integer nmaxfiles
+      parameter (nmaxfiles=1000)
+      double precision minx,maxx,step(nmaxfiles),
+     &     xt(1000,nmaxfiles),yt(1000,nmaxfiles),dyt(1000,nmaxfiles)
+      integer nif,idata(nmaxfiles)
+      character*200 filename(0:nmaxfiles),titleTB(nmaxfiles),ylimits(nmaxfiles),xlimits(nmaxfiles),
+     &     orders(nmaxfiles),yscale(nmaxfiles),title(nmaxfiles),history(nmaxfiles)
+      double precision mfactors(nmaxfiles),x(1000,nmaxfiles),y(1000,nmaxfiles),dy(1000,nmaxfiles)
       common/c_all/titleTB,ylimits,xlimits,orders,yscale,title,history,
      &     mfactors,x,y,dy,nif,idata
       double precision tiny
@@ -319,114 +329,15 @@ c Rewind the file back to the last title that we found
 
 
 
-      subroutine write_data
-      implicit none
-      integer i,j
-      integer nif,idata(6)
-      character*200 filename(0:6),titleTB(6),ylimits(6),xlimits(6),
-     &     orders(6),yscale(6),title(6),history(6)
-      double precision mfactors(6),x(1000,6),y(1000,6),dy(1000,6)
-      common/c_all/titleTB,ylimits,xlimits,orders,yscale,title,history,
-     &     mfactors,x,y,dy,nif,idata
-      logical firsttime
-      data firsttime/.true./
-      integer istrl
-      external istrl
-
-      if (firsttime) then
-         write (10,'(a)') 'SET DEVICE POSTSCRIPT ORIENTATION=3'
-         write (10,'(a)') 'set font duplex'
-         write (10,'(a)') ''
-         firsttime=.false.
-      endif
-
-
-      write (10,'(a)') 'NEW PLOT'
-      write (10,'(a)') 'set intensity 4'
-      write (10,'(a)') 'SET WINDOW X 2 12'
-      write (10,'(a)') 'SET WINDOW Y 4 9'
-      write (10,'(a)') 'SET LABELS BOTTOM OFF'
-      if (index(titleTB(1),' TOP ').ne.0) then
-         write (10,'(a)') titleTB(1)(1:istrl(titleTB(1)))
-      else
-         write (10,'(a)')
-     &        'TITLE TOP "'//title(1)(1:istrl(title(1)))//'"'
-      endif
-      write (10,'(a)') yscale(1)(1:istrl(yscale(1)))
-      write (10,'(a)') ylimits(1)(1:istrl(ylimits(1)))
-      write (10,'(a)') xlimits(1)(1:istrl(xlimits(1)))
-      write (10,'(a)') orders(1)(1:istrl(orders(1)))
-      write (10,'(a)') title(1)(1:istrl(title(1)))
-      write (10,'(a)') history(1)(1:istrl(history(1)))
-
-      do i=1,nif
-         do j=1,idata(i)
-            write (10,'(3(3X,e12.5))') x(j,i),y(j,i),dy(j,i)
-         enddo
-         if (i.eq.1) then
-            write (10,'(a)') '  HIST SOLID'
-         elseif (i.eq.2) then
-            write (10,'(a)') '  HIST SOLID RED'
-         elseif (i.eq.3) then
-            write (10,'(a)') '  HIST SOLID BLUE'
-         elseif (i.eq.4) then
-            write (10,'(a)') '  HIST SOLID MAGENTA'
-         elseif (i.eq.5) then
-            write (10,'(a)') '  HIST SOLID GREEN'
-         elseif (i.eq.6) then
-            write (10,'(a)') '  HIST SOLID CYAN'
-         endif
-         write (10,'(a)') ''
-      enddo
-      write (10,'(a)') 'SET WINDOW Y 1 4'
-      write (10,'(a)') 'SET LABELS BOTTOM ON'
-      if (index(titleTB(1),' BOTTOM ').ne.0) then
-         write (10,'(a)') titleTB(1)(1:istrl(titleTB(1)))
-      else
-         write (10,'(a)') 
-     &        'TITLE BOTTOM "'//title(1)(1:istrl(title(1)))//'"'
-      endif
-      write (10,'(a)') xlimits(1)(1:istrl(xlimits(1)))
-      write (10,'(a)') '  SET LIMITS Y 0.5 1.5'
-      write (10,'(a)') '  SET SCALE Y LIN'
-      do i=1,nif
-         do j=1,idata(i)
-            if (y(j,i).ne.y(j,1) .and. y(j,1).ne.0d0) then
-               write (10,'(3(3X,e12.5))') x(j,i),y(j,i)/y(j,1),0d0
-            else
-               write (10,'(3(3X,e12.5))') x(j,i),1d0,0d0
-            endif
-         enddo
-         if (i.eq.1) then
-            write (10,'(a)') '  HIST SOLID'
-         elseif (i.eq.2) then
-            write (10,'(a)') '  HIST SOLID RED'
-         elseif (i.eq.3) then
-            write (10,'(a)') '  HIST SOLID BLUE'
-         elseif (i.eq.4) then
-            write (10,'(a)') '  HIST SOLID MAGENTA'
-         elseif (i.eq.5) then
-            write (10,'(a)') '  HIST SOLID GREEN'
-         elseif (i.eq.6) then
-            write (10,'(a)') '  HIST SOLID CYAN'
-         endif
-      enddo
-
-      write (10,'(a)') ''
-      write (10,'(a)') ''
-
-      return
-      end
-
-
-
       subroutine write_data2
       implicit none
       integer i,j
-      integer nif,idata(6)
-      character*200 filename(0:6),titleTB(6),ylimits(6),xlimits(6),
-     &     orders(6),yscale(6),title(6),history(6)
-      double precision mfactors(6),x(1000,6),y(1000,6),dy(1000,6)
+      integer nmaxfiles
+      parameter (nmaxfiles=1000)
+      integer nif,idata(nmaxfiles)
+      character*200 filename(0:nmaxfiles),titleTB(nmaxfiles),ylimits(nmaxfiles),xlimits(nmaxfiles),
+     &     orders(nmaxfiles),yscale(nmaxfiles),title(nmaxfiles),history(nmaxfiles)
+      double precision mfactors(nmaxfiles),x(1000,nmaxfiles),y(1000,nmaxfiles),dy(1000,nmaxfiles)
       common/c_all/titleTB,ylimits,xlimits,orders,yscale,title,history,
      &     mfactors,x,y,dy,nif,idata
       double precision sumy(1000),sumdy(1000)

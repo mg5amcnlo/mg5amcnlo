@@ -27,6 +27,9 @@ import shutil
 import subprocess
 import sys
 import time
+import re
+import operator
+import math
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -103,8 +106,9 @@ class LoopMG5Runner(me_comparator.MG5Runner):
     name = 'ML5 opt'
     type = 'MLv5_opt'
     compilator ='gfortran'
+    mu_r_value = 0.0
 
-    def setup(self, mg5_path, optimized_output=True, temp_dir=None):
+    def setup(self, mg5_path, optimized_output=True, temp_dir=None,mu_r=0.0):
         """Initialization of the temp directory"""
 
         self.mg5_path = os.path.abspath(mg5_path)
@@ -122,7 +126,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         while os.path.exists(os.path.join(mg5_path,temp_dir)):
             i += 1
             temp_dir = base_dir + '_%d'%i
-
+        self.mu_r_value = mu_r
         self.temp_dir_name = temp_dir
 
     def run(self, proc_list, model, energy=1000, PSpoints=[]):
@@ -137,7 +141,6 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         self.non_zero = 0 
 
         dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
-
         # Create a proc_card.dat in the v5 format
         proc_card_location = os.path.join(self.mg5_path, 'proc_card_%s.dat' % \
                                           self.temp_dir_name)
@@ -171,9 +174,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             initializations = []
             for i, proc in enumerate(proc_list):
                 init = LoopMG5Runner.initialize_process(\
-                          proc,i,os.path.join(self.mg5_path,self.temp_dir_name))
+                      proc,i,os.path.join(self.mg5_path,self.temp_dir_name))
                 initializations.append(init)
-            self.fix_PSPoint_in_check(dir_name,PSpoints!=[])
             self.fix_MadLoopParamCard(dir_name)
             if PSpoints==[]:
                 self.fix_energy_in_check(dir_name, energy)          
@@ -183,7 +185,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                 if initializations[i]:
                     value = LoopMG5Runner.get_me_value(proc, i, os.path.join(\
                                               self.mg5_path,self.temp_dir_name), 
-                                          ([] if PSpoints==[] else PSpoints[i]))
+                                          ([] if PSpoints==[] else PSpoints[i]),\
+                                          mu_r=self.mu_r_value)
                     self.res_list.append(value)
                 else:
                     self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
@@ -200,6 +203,14 @@ class LoopMG5Runner(me_comparator.MG5Runner):
 
         v5_string += "import model %s\n" % os.path.join(self.model_dir, model)
         
+        # The squared order couplings can be specified via the dictionary
+        # squared_orders using either of the two syntax:
+        # {'QCD':2,'QED':4} or {'QCD^2<=':2,'QED^2<=':4}
+        # The latter syntax allowing for specifying the comparator. 
+        # The reg. exp. below makes sure one can separate the two syntaxes.       
+        sq_order_re = re.compile(
+          r"^\s*(?P<coup_name>\w*)\s*\^2\s*(?P<logical_operator>(==)|(<=)|=|>)")
+        
         for i, (proc, born_orders, perturbation_orders, squared_orders) in \
             enumerate(proc_list):      
             
@@ -207,9 +218,18 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                                    in born_orders.items()])
             perturbations = ' '.join([k for k \
                                    in perturbation_orders])
-
-            squared_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
-                                   in squared_orders.items()])      
+            
+            squared_couplings = []
+            for coup, value in squared_orders.items():
+                parsed = sq_order_re.match(coup)
+                if not parsed is None:
+                    operator = parsed.group('logical_operator')
+                    coup_name = parsed.group('coup_name')
+                else:
+                    operator = '='
+                    coup_name = coup
+                squared_couplings.append('%s^2%s%i'% (coup_name,operator,value))
+            squared_couplings = ' '.join(squared_couplings)    
             v5_string += 'add process ' + proc + ' ' + born_couplings + \
                          ' [virt=' + perturbations + '] ' + squared_couplings + \
                          (' @%i\n'%i)
@@ -234,22 +254,23 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         # If directory doesn't exist, skip and return 0
         if not shell_name:
             logging.info("Directory hasn't been created for process %s"%str(proc))
-            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+            return False 
 
         if verbose: logging.info("Initializing process %s in dir %s"%(str(proc), shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
 
         init = process_checks.LoopMatrixElementTimer.run_initialization(\
-          run_dir=dir_name, SubProc_dir=os.path.join(working_dir, 'SubProcesses'))
-        
+          run_dir=dir_name, SubProc_dir=os.path.join(working_dir, 'SubProcesses'),
+          attempts = [3,15,25])
+       
         if init is None:
             return False
         else:
             return True
 
     @staticmethod
-    def get_me_value(proc, proc_id, working_dir, PSpoint=[], verbose=True):
+    def get_me_value(proc, proc_id, working_dir, PSpoint=[], verbose=True,mu_r=0.0):
         """Compile and run ./check, then parse the output and return the result
         for process with id = proc_id and PSpoint if specified."""  
         if verbose:
@@ -270,6 +291,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         if verbose: logging.info("Working on process %s in dir %s"%(str(proc), shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+        LoopMG5Runner.fix_PSPoint_in_check(dir_name, PSpoint!=[],mu_r=mu_r)
         # Make sure the modified source file are recompiled
         if os.path.isfile(os.path.join(dir_name,'check')):
             os.remove(os.path.join(dir_name,'check'))
@@ -349,17 +371,28 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             pass
 
     @staticmethod
-    def fix_PSPoint_in_check(dir_name, read_ps = True):
+    def fix_PSPoint_in_check(check_sa_dir, read_ps = True,mu_r=0.0):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
+        
+        file_path = os.path.join(check_sa_dir,'check_sa.f')
+        if not os.path.isfile(file_path):
+            raise MadGraph5Error('Could not find check_sa.f in path %s.'%str(file_path))
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'r')
+        file = open(file_path, 'r')
         check_sa = file.read()
         file.close()
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'w')
+        file = open(file_path, 'w')
         check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
                                                       else '.FALSE.'), check_sa)
-        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = 1", check_sa)        
+        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = 1", check_sa)
+        if mu_r > 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
+                                        (("%.17e"%mu_r).replace('e','d')),\
+                                        check_sa)
+        elif mu_r < 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","",check_sa)
+                    
         file.write(check_sa)
         file.close()
         
@@ -581,7 +614,7 @@ class LoopMG4Runner(me_comparator.MERunner):
 
         return order_file%replace_dict, proc_name
 
-    def get_me_value(self, proc, proc_id, energy, PSpoint=[],):
+    def get_me_value(self, proc, proc_id, energy, PSpoint=[]):
         """Compile and run ./NLOComp_sa, then parse the output and return the
         result for process with id = proc_id and PSpoint if specified."""
 
@@ -765,7 +798,7 @@ class LoopMG4Runner(me_comparator.MERunner):
         file.close()
 
         file = open(os.path.join(dir_name,'NLOComp_sa.f'), 'w')
-        file.write(re.sub("SQRTS=1000d0", "SQRTS=%id0" % int(energy), check_sa))
+        file.write(re.sub("SQRTS=1000d0", "SQRTS=%id0" % int(energy), check_sa))        
         file.close()
 
     def change_finite_single(self,dir_name,mode):
@@ -979,7 +1012,7 @@ class GoSamRunner(me_comparator.MERunner):
             elif line.find("# out=")==0:
                 proc_card_out+="out="+','.join([particle_dictionary[p][1] for \
                                                 p in outcoming_parts])+'\n'
-            elif line.find("extensions=")==0:
+            elif line.find("# extensions=")==0:
                 if self.use_dred:
                     proc_card_out+="extensions=dred,"+line[11:]+'\n'
                 else:
@@ -993,11 +1026,11 @@ class GoSamRunner(me_comparator.MERunner):
                 # here for now.
                 proc_card_out+="model=sm\n"
             elif line.find("# abbrev.level=")==0:
-                proc_card_out+="abbrev.level = diagram\n"
+                proc_card_out+="abbrev.level=diagram\n"
             elif line.find("# abbrev.limit=")==0:
-                proc_card_out+="abbrev.limit = 500\n"
+                proc_card_out+="abbrev.limit=500\n"
             elif line.find("# group=")==0:
-                proc_card_out+="group = False\n"
+                proc_card_out+="group=false\n"
             elif line.find("# order=")==0:
                 # Please always put 'QCD' first in the list below
                 orders_considered=['QCD','QED']
@@ -1028,7 +1061,7 @@ class GoSamRunner(me_comparator.MERunner):
                     # GoSam only accepts one order specification, so we choose
                     # here QCD if defined and otherwise the first available
                     if not order_specified:
-                        if gosam_born_orders[order]!=-1:   
+                        if gosam_born_orders[order]!=-1:
                             proc_card_out+="order="+', '.join([order,\
                                             str(gosam_born_orders[order]),\
                                             str(gosam_loop_orders[order])])+'\n'
@@ -1043,6 +1076,7 @@ class GoSamRunner(me_comparator.MERunner):
                 proc_card_out+="zero=wB,wT,mU,mD,mC,mS,me,mmu,"
                 proc_card_out+="VUS,CVSU,VUB,CVBU,VCD,CVDC,"
                 proc_card_out+="VCB,CVBC,VTD,CVDT,VTS,CVST"+'\n'
+            elif line.find("# one=")==0:
                 proc_card_out+="one=VUD,CVDU,VCS,CVSC,VTB,CVBT"+'\n'               
             elif line.find("# qgraf.options=")==0:
                 proc_card_out+="qgraf.options=nosnail ,notadpole ,onshell"+'\n'
@@ -1069,6 +1103,18 @@ class GoSamRunner(me_comparator.MERunner):
                     proc_card_out+="true=chord[ghZ,ghZbar,ghWp,ghWpbar,ghWm, ghWmbar,0, 0];\\n\\\n"
                 else:
                     proc_card_out+="# No qgraf specific options\n"
+            # For custom path of the GoSam dependencies, one might want to
+            # uncomment and edit the lines below.
+#            elif line.find("# qgraf.bin=")==0:
+#                proc_card_out+="qgraf.bin=/Users/erdissshaw/Works/qgraf/run\n"
+#            elif line.find("# golem95.fcflags=")==0:
+#                proc_card_out+="golem95.fcflags=-I/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/include/gosam-contrib\n"
+#            elif line.find("# golem95.ldflags=")==0:
+#                proc_card_out+="golem95.ldflags=-L/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/lib -lgolem95\n"
+#            elif line.find("# samurai.ldflags=")==0:
+#                proc_card_out+="samurai.ldflags=-L/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/lib -lsamurai\n"
+#            elif line.find("# samurai.fcflags=")==0:
+#                proc_card_out+="samurai.fcflags=-I/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/include/gosam-contrib\n"
             else:
                 proc_card_out+=line
 
@@ -1353,6 +1399,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                 PSpoints=[]
             self.results.append(runner.run(proc_list, model[i], energy,
                                 PSpoints))
+
             if hasattr(runner, 'new_proc_list'):
                 pass_proc = runner.new_proc_list
             cpu_time2 = time.time()
@@ -1365,13 +1412,16 @@ class LoopMEComparator(me_comparator.MEComparator):
         """Output result as a nicely formated table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 
-        proc_col_size = 20
+        if any('^2' in sqso for proc in self.proc_list for sqso in proc[3].keys()):
+            proc_col_size = 42
+        else:
+            proc_col_size = 24
 
         for proc in self.proc_list:
             if len(proc) + 2 > proc_col_size:
                 proc_col_size = len(proc) + 2
         
-        col_size = 20
+        col_size = 24
 
         pass_proc = 0
         fail_proc = 0
@@ -1391,10 +1441,11 @@ class LoopMEComparator(me_comparator.MEComparator):
                                runner in self.me_runners]) + \
                       self._fixed_string_length("Relative diff.", col_size) + \
                       "Result"
-    
+            
             for i, (proc, born_orders, perturbation_orders, squared_orders) \
               in enumerate(self.proc_list):
                 list_res = [res[i][0][index] for res in self.results]
+                if index==0:maxfin=max(max(map(abs,list_res)),1e-99)
                 if max(list_res) == 0.0 and min(list_res) == 0.0:
                     diff = 0.0
                     if skip_zero:
@@ -1402,14 +1453,22 @@ class LoopMEComparator(me_comparator.MEComparator):
                 else:
                     diff = (max(list_res) - min(list_res)) / \
                            abs((max(list_res) + min(list_res)))
-    
-                res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
+
+                proc_string = ""
+                if any('^2' in key for key in squared_orders.keys()):
+                    # In this case, it is necessary to also detail the squared
+                    # order constraints
+                    proc_string = self._fixed_string_length(proc+' %s'%' '.join(
+                        '%s%i'%(key, value) for key, value in 
+                                          squared_orders.items()),proc_col_size)
+                else:
+                    proc_string = self._fixed_string_length(proc, proc_col_size)
+                res_str += '\n' + proc_string+ \
                            ''.join([self._fixed_string_length("%1.10e" % res,
-                                                   col_size) for res in list_res])
+                                                 col_size) for res in list_res])
     
                 res_str += self._fixed_string_length("%1.10e" % diff, col_size)
-    
-                if diff < tolerance:
+                if diff < tolerance or max(map(abs,list_res))/maxfin<tolerance and index>1:
                     if index==3 and proc not in failed_proc_list:
                         pass_proc += 1
                     res_str += "Pass"
@@ -1437,7 +1496,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                 file.write('\n'+str(failed_proc_list))
             file.close()
 
-    def assert_processes(self, test_object, tolerance = 1e-06):
+    def assert_processes(self, test_object, tolerance = 3e-06):
         """Run assert to check that all processes passed comparison""" 
 
         col_size = 17
@@ -1449,13 +1508,15 @@ class LoopMEComparator(me_comparator.MEComparator):
             for i, (proc, born_orders, perturbation_orders, squared_orders) \
                                                  in enumerate(self.proc_list):
                 list_res = [res[i][0][index] for res in self.results]
+                if index==0:maxfin=max(max(map(abs,list_res)),1e-99)
                 if max(list_res) == 0.0 and min(list_res) == 0.0:
                     diff = 0.0
                 else:
                     diff = (max(list_res) - min(list_res)) / \
                            abs((max(list_res) + min(list_res)))
 
-                if diff >= tolerance and proc not in failed_proc_list:
+                if diff >= tolerance and proc not in failed_proc_list and\
+                         (max(map(abs,list_res))/maxfin>=tolerance or index<=1):
                     failed_proc_list.append(proc)
                     fail_str += self._fixed_string_length(proc, col_size) + \
                                 ''.join([self._fixed_string_length("%1.10e" % res,
@@ -1464,6 +1525,34 @@ class LoopMEComparator(me_comparator.MEComparator):
                     fail_str += self._fixed_string_length("%1.10e" % diff, col_size)
 
         test_object.assertEqual(fail_str, "Failed for processes:")
+
+
+
+class LoopHardCodedRefRunnerError(Exception):
+        """class for error in LoopHardCodedRefRunner"""
+        pass
+    
+class LoopHardCodedRefRunner(me_comparator.MERunner):
+    """Runner object for hard-coded reference loop processes."""
+    name = 'Hard-Coded Ref.'
+    type = 'HCR'
+    def setup(self,proc_list,res_list,model,decay=False):
+        self.proc_list=proc_list
+        self.res_list=res_list
+        self.model=model
+        PS = res_list[0][-1]
+        if not decay:
+            PSinit = list(itertools.imap(operator.add,PS[0],PS[1]))
+        else:
+            PSinit = PS[0]
+        energy = math.sqrt(PSinit[0]**2-PSinit[1]**2-PSinit[2]**2-PSinit[3]**2)
+        self.energy = energy
+
+    def run(self,proc_list, model, energy=1000, PSpoints=[]):
+        if PSpoints!=[] and PSpoints!=self.res_list[0][-1]:
+            raise self.LoopHardCodedRefRunnerError,\
+                 "Phase space point is not provided !"
+        return self.res_list
 
 class LoopMEComparatorGauge(LoopMEComparator):
     """Base object to run comparison tests for loop processes. Take standard 

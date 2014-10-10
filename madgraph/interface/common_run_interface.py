@@ -111,6 +111,14 @@ class HelpToCmd(object):
         logger.info("     will be performed automaticaly during the event generation.")
         logger.info("   -f options: answer all question by default.")
 
+    def help_compute_widths(self):
+        logger.info("syntax: compute_widths Particle [Particles] [--precision=] [--path=Param_card] [--output=PATH]")
+        logger.info("-- Compute the widths for the particles specified.")
+        logger.info("   By default, this takes the current param_card and overwrites it.") 
+        logger.info("   Precision allows to define when to include three/four/... body decays (LO).")
+        logger.info("   If this number is an integer then all N-body decay will be included.")      
+
+
     def help_pythia(self):
         logger.info("syntax: pythia [RUN] [--run_options]")
         logger.info("-- run pythia on RUN (current one by default)")
@@ -167,6 +175,111 @@ class CheckValidForCmd(object):
         if args[0] in ['timeout']:
             if not args[1].isdigit():
                 raise self.InvalidCmd('timeout values should be a integer')
+
+    def check_compute_widths(self, args):
+        """check that the model is loadable and check that the format is of the
+        type: PART PATH --output=PATH -f --precision=N
+        return the model.
+        """
+        
+        # Check that MG5 directory is present .
+        if MADEVENT and not self.options['mg5_path']:
+            raise self.InvalidCmd, '''The automatic computations of widths requires that MG5 is installed on the system.
+            You can install it and set his path in ./Cards/me5_configuration.txt'''
+        elif MADEVENT:
+            sys.path.append(self.options['mg5_path'])
+        try:
+            import models.model_reader as model_reader
+            import models.import_ufo as import_ufo
+        except ImportError:
+            raise self.ConfigurationError, '''Can\'t load MG5.
+            The variable mg5_path should not be correctly configure.'''
+        
+        ufo_path = pjoin(self.me_dir,'bin','internal', 'ufomodel')
+        # Import model
+        if not MADEVENT:
+            modelname = self.find_model_name()
+            #restrict_file = None
+            #if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
+            #    restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            model = import_ufo.import_model(modelname, decay=True, 
+                        restrict=True)
+            if self.mother and self.mother.options['complex_mass_scheme']:
+                model.change_mass_to_complex_scheme()
+        else:
+            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
+                                        decay=True)
+            #pattern for checking complex mass scheme.
+            has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
+            if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
+                                   ).read()):
+                model.change_mass_to_complex_scheme()
+   
+            
+#        if not hasattr(model.get('particles')[0], 'partial_widths'):
+#            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
+            
+        # check if the name are passed to default MG5
+        if '-modelname' in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
+            model.pass_particles_name_in_mg_default()        
+        model = model_reader.ModelReader(model)
+        particles_name = dict([(p.get('name'), p.get('pdg_code'))
+                                               for p in model.get('particles')])
+        particles_name.update(dict([(p.get('antiname'), p.get('pdg_code'))
+                                               for p in model.get('particles')]))        
+        
+        output = {'model': model, 'force': False, 'output': None, 
+                  'path':None, 'particles': set(), 'body_decay':4.0025,
+                  'min_br':None, 'precision_channel':0.01}
+        for arg in args:
+            if arg.startswith('--output='):
+                output_path = arg.split('=',1)[1]
+                if not os.path.exists(output_path):
+                    raise self.InvalidCmd, 'Invalid Path for the output. Please retry.'
+                if not os.path.isfile(output_path):
+                    output_path = pjoin(output_path, 'param_card.dat')
+                output['output'] = output_path       
+            elif arg == '-f':
+                output['force'] = True
+            elif os.path.isfile(arg):
+                ftype = self.detect_card_type(arg)
+                if ftype != 'param_card.dat':
+                    raise self.InvalidCmd , '%s is not a valid param_card.' % arg
+                output['path'] = arg
+            elif arg.startswith('--path='):
+                arg = arg.split('=',1)[1]
+                ftype = self.detect_card_type(arg)
+                if ftype != 'param_card.dat':
+                    raise self.InvalidCmd , '%s is not a valid param_card.' % arg
+                output['path'] = arg
+            elif arg.startswith('--'):
+                name, value = arg.split('=',1)
+                try:
+                    value = float(value)
+                except Exception:
+                    raise self.InvalidCmd, '--%s requires integer or a float' % name
+                output[name[2:]] = float(value)                
+            elif arg in particles_name:
+                # should be a particles
+                output['particles'].add(particles_name[arg])
+            elif arg.isdigit() and int(arg) in particles_name.values():
+                output['particles'].add(eval(arg))
+            elif arg == 'all':
+                output['particles'] = set(['all'])
+            else:
+                self.help_compute_widths()
+                raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
+        if self.force:
+            output['force'] = True
+
+        if not output['particles']:
+            raise self.InvalidCmd, '''This routines requires at least one particle in order to compute
+            the related width'''
+            
+        if output['output'] is None:
+            output['output'] = output['path']
+
+        return output
 
     def check_open(self, args):
         """ check the validity of the line """
@@ -275,24 +388,58 @@ class CheckValidForCmd(object):
         if args[0] != self.run_name:
             self.set_run_name(args[0])
 
+        args[0] = self.get_events_path(args[0])
+
+        args += opts
+
+    def check_check_events(self,args):
+        """Check the argument for decay_events command
+        syntax: decay_events [NAME]
+        Note that other option are already remove at this point
+        """
+
+        if len(args) == 0:
+            if self.run_name:
+                args.insert(0, self.run_name)
+            elif self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently defined. Please add this information.')
+                return
+        
+        if args[0] and os.path.isfile(args[0]):
+            pass
+        else:
+            if args[0] != self.run_name:
+                self.set_run_name(args[0], allow_new_tag=False)
+    
+            args[0] = self.get_events_path(args[0])
+
+
+    def get_events_path(self, run_name):
+        """Check the argument for decay_events command
+        syntax: decay_events [NAME]
+        Note that other option are already remove at this point
+        """
+
+
         if self.mode == 'madevent':
             possible_path = [
-                pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz'),
-                pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe')]
+                pjoin(self.me_dir,'Events', run_name, 'unweighted_events.lhe.gz'),
+                pjoin(self.me_dir,'Events', run_name, 'unweighted_events.lhe')]
         else:
             possible_path = [
-                           pjoin(self.me_dir,'Events',args[0], 'events.lhe.gz'),
-                           pjoin(self.me_dir,'Events',args[0], 'events.lhe')]
+                           pjoin(self.me_dir,'Events', run_name, 'events.lhe.gz'),
+                           pjoin(self.me_dir,'Events', run_name, 'events.lhe')]
 
         for path in possible_path:
             if os.path.exists(path):
                 correct_path = path
                 break
         else:
-            raise self.InvalidCmd('No events file corresponding to %s run. ' % args[0])
-        args[0] = correct_path
+            raise self.InvalidCmd('No events file corresponding to %s run. ' % run_name)
+        return correct_path
 
-        args += opts
 
 
 class MadEventAlreadyRunning(InvalidCmd):
@@ -327,6 +474,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'cpp_compiler': None,
                        'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_status_update': (600, 30),
@@ -372,7 +520,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             fsock = open(pjoin(me_dir,'RunWeb'),'w')
             fsock.write(`pid`)
             fsock.close()
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+
+            misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
+                        cwd=me_dir)
 
         self.to_store = []
         self.run_name = None
@@ -444,23 +594,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
-
-            if amcatnlo and int(run_card['ickkw']) == 3:
-                # For FxFx merging, make sure that:
-                # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed
-                scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
-                for scale in scales:
-                    if  banner_mod.RunCard.format('bool',run_card[scale]) == '.true.':
-                        logger.info('''For consistency in the FxFx merging, \'%s\' has been set to false'''
-                                    % scale,'$MG:color:BLACK')
-                        run_card[scale]='F'
-                # 2. Use kT algorithm for jets with pseudo-code size R=1.0
-                jetparams=['jetradius','jetalgo']
-                for jetparam in jetparams:
-                    if float(run_card[jetparam]) != 1.0:
-                        logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
-                               % jetparam ,'$MG:color:BLACK')
-                        run_card[jetparam]='1.0'
 
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
 
@@ -675,10 +808,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.update_status('Create matching plots for Pythia', level='pythia')
             # recover old data if none newly created
             if not os.path.exists(pjoin(self.me_dir,'Events','events.tree')):
-                misc.call(['gunzip', '-c', pjoin(self.me_dir,'Events',
-                      self.run_name, '%s_pythia_events.tree.gz' % tag)],
-                      stdout=open(pjoin(self.me_dir,'Events','events.tree'),'w')
-                          )
+                misc.gunzip(pjoin(self.me_dir,'Events',
+                      self.run_name, '%s_pythia_events.tree.gz' % tag), keep=True,
+                           stdout=pjoin(self.me_dir,'Events','events.tree'))
                 files.mv(pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'),
                      pjoin(self.me_dir,'Events','xsecs.tree'))
 
@@ -689,10 +821,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             cwd=pjoin(self.me_dir,'Events'))
 
             #Clean output
-            misc.call(['gzip','-f','events.tree'],
-                                                cwd=pjoin(self.me_dir,'Events'))
-            files.mv(pjoin(self.me_dir,'Events','events.tree.gz'),
-                     pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
+            misc.gzip(pjoin(self.me_dir,"Events","events.tree"),
+                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
             files.mv(pjoin(self.me_dir,'Events','xsecs.tree'),
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
 
@@ -722,20 +852,28 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 event_path = pjoin(self.me_dir, 'Events', self.run_name,'%s_delphes_events.lhco' % tag)
                 output = pjoin(self.me_dir, 'HTML',self.run_name,
                               'plots_delphes_%s.html' % tag)
+            elif mode == "shower":
+                event_path = pjoin(self.me_dir, 'Events','pythia_events.lhe')
+                output = pjoin(self.me_dir, 'HTML',self.run_name,
+                              'plots_shower_%s.html' % tag)
+                if not self.options['pythia-pgs_path']:
+                    return
             else:
                 raise self.InvalidCmd, 'Invalid mode %s' % mode
         elif mode == 'reweight' and not output:
                 output = pjoin(self.me_dir, 'HTML',self.run_name,
                               'plots_%s.html' % tag)
 
-
-
         if not os.path.exists(event_path):
             if os.path.exists(event_path+'.gz'):
-                os.system('gunzip -f %s.gz ' % event_path)
+                misc.gunzip('%s.gz' % event_path)
             else:
                 raise self.InvalidCmd, 'Events file %s does not exist' % event_path
+        elif event_path.endswith(".gz"):
+             misc.gunzip(event_path)
+             event_path = event_path[:-3]
 
+             
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
 
         mode = mode.lower()
@@ -796,7 +934,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         # Creating LHE file
         if misc.is_executable(pjoin(pydir, 'hep2lhe')):
-            self.update_status('Creating Pythia LHE File', level='pythia')
+            self.update_status('Creating shower LHE File (for plot)', level='pythia')
             # Write the banner to the LHE file
             out = open(pjoin(self.me_dir,'Events','pythia_events.lhe'), 'w')
             #out.writelines('<LesHouchesEvents version=\"1.0\">\n')
@@ -810,9 +948,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             self.cluster.launch_and_wait(self.dirbin+'/run_hep2lhe',
                                          argument= [pydir],
-                                        cwd=pjoin(self.me_dir,'Events'))
+                                        cwd=pjoin(self.me_dir,'Events'),
+                                        stdout=open(os.devnull,'w'))
 
-            logger.info('Warning! Never use this pythia lhe file for detector studies!')
+            logger.info('Warning! Never use this lhe file for detector studies!')
             # Creating ROOT file
             if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
                 self.update_status('Creating Pythia LHE Root File', level='pythia')
@@ -937,10 +1076,82 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             files.mv(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'),
                     pjoin(self.me_dir, 'Events', self.run_name, '%s_pgs_events.lhco' % tag))
             self.create_plot('PGS')
-            misc.call(['gzip','-f', pjoin(self.me_dir, 'Events',
-                                                self.run_name, '%s_pgs_events.lhco' % tag)])
+            misc.gzip(pjoin(self.me_dir, 'Events', self.run_name, '%s_pgs_events.lhco' % tag))
 
         self.update_status('finish', level='pgs', makehtml=False)
+
+    ############################################################################                                                                                                           
+    def do_compute_widths(self, line):
+        """Require MG5 directory: Compute automatically the widths of a set 
+        of particles"""
+
+        args = self.split_arg(line)
+        opts = self.check_compute_widths(args)
+        
+        
+        from madgraph.interface.master_interface import MasterCmd
+        cmd = MasterCmd()
+        self.define_child_cmd_interface(cmd, interface=False)
+        cmd.exec_cmd('set automatic_html_opening False --no_save')
+        if not opts['path']:
+            opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
+            if not opts['force'] :
+                self.ask_edit_cards(['param_card'],[], plot=False)
+        
+        
+        line = 'compute_widths %s %s' % \
+                (' '.join([str(i) for i in opts['particles']]),
+                 ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
+                        if key not in ['model', 'force', 'particles'] and value))
+        
+        cmd.exec_cmd(line, model=opts['model'])
+        self.child = None
+        del cmd
+
+    ############################################################################ 
+    def do_print_results(self, line):
+        """Not in help:Print the cross-section/ number of events for a given run"""
+        
+        args = self.split_arg(line)
+        options={'path':None, 'mode':'w'}
+        for arg in list(args):
+            if arg.startswith('--') and '=' in arg:
+                name,value=arg.split('=',1)
+                name = name [2:]
+                options[name] = value
+                args.remove(arg)
+        
+        
+        if len(args) > 0:
+            run_name = args[0]
+        else:
+            if not self.results.current:
+                raise self.InvalidCmd('no run currently defined. Please specify one.')
+            else:
+                run_name = self.results.current['run_name']
+        if run_name not in self.results:
+            raise self.InvalidCmd('%s is not a valid run_name or it doesn\'t have any information' \
+                                  % run_name)
+
+            
+        if len(args) == 2:
+            tag = args[1]
+            if tag.isdigit():
+                tag = int(tag) - 1
+                if len(self.results[run_name]) < tag:
+                    raise self.InvalidCmd('Only %s different tag available' % \
+                                                    len(self.results[run_name]))
+                data = self.results[run_name][tag]
+            else:
+                data = self.results[run_name].return_tag(tag)
+        else:
+            data = self.results[run_name].return_tag(None) # return the last
+        
+        if options['path']:
+            self.print_results_in_file(data, options['path'], options['mode'])
+        else:
+            self.print_results_in_shell(data)
+
 
     ############################################################################
     def do_delphes(self, line):
@@ -1029,7 +1240,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.create_plot('Delphes')
 
         if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name,  '%s_delphes_events.lhco' % tag)):
-            misc.call(['gzip','-f', pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag)])
+            misc.gzip(pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag))
 
 
 
@@ -1145,9 +1356,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if args[1] == 'None':
                 args[1] = None
             self.options['fortran_compiler'] = args[1]
-            current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'))
+            current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'), 'fortran')
             if current != args[1] and args[1] != None:
-                misc.mod_compilator(self.me_dir, args[1], current)
+                misc.mod_compilator(self.me_dir, args[1], current, 'gfortran')
+        elif args[0] == "cpp_compiler":
+            if args[1] == 'None':
+                args[1] = None
+            self.options['cpp_compiler'] = args[1]
+            current = misc.detect_current_compiler(pjoin(self.me_dir,'Source','make_opts'), 'cpp')
+            if current != args[1] and args[1] != None:
+                misc.mod_compilator(self.me_dir, args[1], current, 'cpp')
         elif args[0] == "run_mode":
             if not args[1] in [0,1,2,'0','1','2']:
                 raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'
@@ -1241,6 +1459,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             opt = self.options
             cluster_name = opt['cluster_type']
             self.cluster = cluster.from_name[cluster_name](**opt)
+
+    def check_param_card(self, path, run=True):
+        """Check that all the width are define in the param_card.
+        If some width are set on 'Auto', call the computation tools."""
+        
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        text = open(path).read()
+        pdg = pattern.findall(text)
+        if pdg:
+            if run:
+                logger.info('Computing the width set on auto in the param_card.dat')
+                self.do_compute_widths('%s %s' % (' '.join(pdg), path))
+            else:
+                logger.info('''Some width are on Auto in the card. 
+    Those will be computed as soon as you have finish the edition of the cards.
+    If you want to force the computation right now and being able to re-edit
+    the cards afterwards, you can type \"compute_wdiths\".''')
+
 
     def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
@@ -1464,8 +1700,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """ find a valid run_name for the current job """
 
         name = 'run_%02d'
-        data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
-                        s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
+        data = [int(s[4:]) for s in os.listdir(pjoin(me_dir,'Events')) if
+                        s.startswith('run_') and len(s)>5 and s[4:].isdigit()]
         return name % (max(data+[0])+1)
 
 
@@ -1547,6 +1783,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run
+        self.banner = madspin_cmd.banner
         self.banner.add(path)
         self.banner.write(pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' %
                                 (self.run_name, self.run_tag)))
@@ -1561,6 +1798,91 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             return
 
+    def complete_print_results(self,text, line, begidx, endidx):
+        "Complete the print results command"
+        args = self.split_arg(line[0:begidx], error=False) 
+        if len(args) == 1:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            return tmp1        
+        else:
+            data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
+            data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
+            tmp1 =  self.list_completion(text, data)
+            return tmp1
+            
+    def help_print_result(self):
+        logger.info("syntax: print_result [RUN] [TAG] [options]")
+        logger.info("-- show in text format the status of the run (cross-section/nb-event/...)")
+        logger.info("--path= defines the path of the output file.")
+        logger.info("--mode=a allow to add the information at the end of the file.")
+
+
+    ############################################################################
+    def do_check_events(self, line):
+        """ Run some sanity check on the generated events."""
+                
+        # Check that MG5 directory is present .
+        if MADEVENT and not self.options['mg5_path']:
+            raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
+            You can install it and set its path in ./Cards/me5_configuration.txt'''
+        elif MADEVENT:
+            sys.path.append(self.options['mg5_path'])
+        try:
+            import madgraph.interface.reweight_interface as reweight_interface
+        except ImportError:
+            raise self.ConfigurationError, '''Can\'t load Reweight module.
+            The variable mg5_path might not be correctly configured.'''
+              
+
+        # load the name of the event file
+        args = self.split_arg(line) 
+        self.check_check_events(args) 
+        # args now alway content the path to the valid files
+        reweight_cmd = reweight_interface.ReweightInterface(args[0])
+        reweight_cmd.mother = self
+        self.update_status('Running check on events', level='check')
+        
+        reweight_cmd.check_events()
+        
+    ############################################################################
+    def complete_check_events(self, text, line, begidx, endidx):
+        args = self.split_arg(line[0:begidx], error=False)
+
+        if len(args) == 1 and os.path.sep not in text:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','*events.lhe*'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            return  self.list_completion(text, data, line)
+        else:
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+
+    def complete_compute_widths(self, text, line, begidx, endidx):
+        "Complete the compute_widths command"
+
+        args = self.split_arg(line[0:begidx])
+        
+        if args[-1] in  ['--path=', '--output=']:
+            completion = {'path': self.path_completion(text)}
+        elif line[begidx-1] == os.path.sep:
+            current_dir = pjoin(*[a for a in args if a.endswith(os.path.sep)])
+            if current_dir.startswith('--path='):
+                current_dir = current_dir[7:]
+            if current_dir.startswith('--output='):
+                current_dir = current_dir[9:]                
+            completion = {'path': self.path_completion(text, current_dir)}
+        else:
+            completion = {}            
+            completion['options'] = self.list_completion(text, 
+                            ['--path=', '--output=', '--min_br=0.\$'
+                             '--precision_channel=0.\$', '--body_decay='])            
+        
+        return self.deal_multiple_categories(completion)
+        
 
 # lhapdf-related functions
     def link_lhapdf(self, libdir, extra_dirs = []):
@@ -1573,33 +1895,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if lhapdf_version.startswith('5.'):
             pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
-                     stdout = subprocess.PIPE).stdout.read().strip()
-            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
-            # link the static library in lib
-            lhalib = 'libLHAPDF.a'
-
-        elif lhapdf_version.startswith('6.'):
-            pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
-                     stdout = subprocess.PIPE).stdout.read().strip()
-            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
-            # link the dynamic library in lib
-            if os.path.exists(pjoin(lhalibdir, 'libLHAPDF.so')):
-                lhalib = 'libLHAPDF.so'
-            elif os.path.exists(pjoin(lhalibdir, 'libLHAPDF.dylib')):
-                lhalib = 'libLHAPDF.dylib'
-            else:
-                raise MadGraph5Error('Dynamic library not found for LHAPDF6')
-
+                 stdout = subprocess.PIPE).stdout.read().strip()
         else:
-            raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
+            pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
+                 stdout = subprocess.PIPE).stdout.read().strip()
+        
+        self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
+        # link the static library in lib
+        lhalib = 'libLHAPDF.a'
 
         if os.path.exists(pjoin(libdir, lhalib)):
             files.rm(pjoin(libdir, lhalib))
         files.ln(pjoin(lhalibdir, lhalib), libdir)
-        # link the dynamic library for v6 in extra_dirs
-        if lhapdf_version.startswith('6.'):
-            for d in extra_dirs:
-                files.ln(pjoin(libdir, lhalib), pjoin(self.me_dir, d))
         # just create the PDFsets dir, the needed PDF set will be copied at run time
         if not os.path.isdir(pjoin(libdir, 'PDFsets')):
             os.mkdir(pjoin(libdir, 'PDFsets'))
@@ -1626,19 +1933,34 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         'lhaid and PDF_set_min/max in the run_card do not correspond to the' + \
                         'same PDF set. Please check the run_card.')
             except KeyError:
-                raise MadGraph5Error(\
+                if self.lhapdf_version.startswith('5'):
+                    raise MadGraph5Error(\
                         ('invalid lhaid set in th run_card: %d .\nPlease note that some sets' % lhaid) + \
-                    '(eg MSTW 90%CL error sets) \nare not available in aMC@NLO + LHAPDF 5.x.x')
+                         '(eg MSTW 90%CL error sets) \nare not available in aMC@NLO + LHAPDF 5.x.x')
+                else:
+                    logger.debug('%d not found in pdfsets.index' % lhaid)
 
 
-        # check if the file exists, otherwise install it
-        if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-            self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
-            
-        if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-            files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
-        elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
-            files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+        # check if the file exists, otherwise install it:
+        # also check that the PDFsets dir exists, otherwise create it.
+        # if fails, install the lhapdfset into lib/PDFsets
+        if not os.path.isdir(pdfsets_dir):
+            try:
+                os.mkdir(pdfsets_dir)
+            except OSError:
+                pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
+
+        #check that the pdfset is not already there
+        if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
+           not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)):
+
+            if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+                self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
+
+            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+                files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+            elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
+                files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
             
 
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
@@ -1665,13 +1987,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # check taht the file has been installed in the global dir
         if os.path.exists(pjoin(pdfsets_dir, filename)) or \
            os.path.isdir(pjoin(pdfsets_dir, filename)):
-            logger.info('%s successfully donloaded and stored in %s' \
+            logger.info('%s successfully downloaded and stored in %s' \
                     % (filename, pdfsets_dir))
-        #otherwise save it locally
-        else:
+        #otherwise (if v5) save it locally
+        elif lhapdf_version.startswith('5.'):
             logger.warning('Could not download %s into %s. Trying to save it locally' \
                     % (filename, pdfsets_dir))
             self.install_lhapdf_pdfset(pjoin(self.me_dir, 'lib', 'PDFsets'), filename)
+        else:
+            raise MadGraph5Error, \
+                'Could not download %s into %s. Please try to install it manually.' \
+                    % (filename, pdfsets_dir)
 
 
     def get_lhapdf_pdfsets_list(self, pdfsets_dir):
@@ -1723,8 +2049,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         stdout = subprocess.PIPE).stdout.read().strip()
 
         # this will be removed once some issues in lhapdf6 will be fixed
-        if self.lhapdf_version.startswith('6.'):
-            raise MadGraph5Error('LHAPDF 6 not yet supported. Please use v5.x.x')
+        if self.lhapdf_version.startswith('6.0'):
+            raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
 
         return self.lhapdf_version
 
@@ -1746,6 +2072,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the
     set command define and modifying the param_card/run_card correctly"""
 
+    special_shortcut = {'ebeam':['run_card ebeam1 %(0)s', 'run_card ebeam2 %(0)s'],
+                        'lpp': ['run_card lpp1 %(0)s', 'run_card lpp2 %(0)s' ],
+                        'lhc': ['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
+                        'lep': ['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2'],
+                        'ilc': ['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2'],
+                        'lcc':['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
+                        'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
+                        }
+    
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
         # Initiation
@@ -1879,7 +2214,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if args[-1] in ['Auto', 'default']:
             return
         if len(args) == 1:
-            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':'',}
+            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':'','shortcut':''}
             if self.has_mw:
                 allowed['madweight_card'] = ''
                 allowed['mw_block'] = 'all'
@@ -1929,6 +2264,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
+        
+        if 'shortcut' in allowed.keys():
+            possibilities['special values'] = self.list_completion(text, self.special_shortcut.keys()+['qcut', 'showerkt'])
 
         if 'run_card' in allowed.keys():
             opts = self.run_set
@@ -2021,10 +2359,38 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             arg1, arg2 = args.pop(-1).split('=')
             args += [arg1, arg2]
 
+        # special shortcut:
+        if args[0] in self.special_shortcut:
+            if len(args) == 1:
+                values = {}
+            elif len(args) == 2:  
+                try:  
+                    values = {'0': float(args[1])}
+                except ValueError as e:
+                    logger.warning("Wrong argument: The last entry should be a number.")
+                    return
+            else:
+                logger.warning("too many argument for this command")
+                return
+            
+            for arg in self.special_shortcut[args[0]]:
+                try:
+                    text = arg % values
+                except KeyError:
+                    logger.warning("This command requires one argument")
+                    return
+                except Exception as e:
+                    logger.warning(str(e))
+                    return
+                else:
+                    self.do_set(arg % values)
+            return
+
+        
         start = 0
         if len(args) < 2:
             logger.warning('Invalid set command %s (need two arguments)' % line)
-            return
+            return            
 
         # Special case for the qcut value
         if args[0].lower() == 'qcut':
@@ -2039,6 +2405,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     p_card = '%s \n QCUT= %s' % (p_card, args[1])
                 open(pythia_path, 'w').write(p_card)
                 return
+        # Special case for the showerkt value
+        if args[0].lower() == 'showerkt':
+            pythia_path = pjoin(self.me_dir, 'Cards','pythia_card.dat')
+            if os.path.exists(pythia_path):
+                logger.info('add line SHOWERKT = %s in pythia_card.dat' % args[1].upper())
+                p_card = open(pythia_path,'r').read()
+                p_card, n = re.subn('''^\s*SHOWERKT\s*=\s*[default\de\+\-\.]*\s*$''',
+                                    ''' SHOWERKT = %s ''' % args[1].upper(), \
+                                    p_card, flags=(re.M+re.I))
+                if n==0:
+                    p_card = '%s \n SHOWERKT= %s' % (p_card, args[1].upper())
+                open(pythia_path, 'w').write(p_card)
+                return
+            
 
         card = '' #store which card need to be modify (for name conflict)
         if args[0] == 'madweight_card':
@@ -2417,6 +2797,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         files.mv('%s.new' % card, card)
 
 
+
     def copy_file(self, path):
         """detect the type of the file and overwritte the current file"""
         
@@ -2486,3 +2867,22 @@ You can also copy/paste, your event file here.''')
                 self.open_file(path)
             else:
                 raise
+            
+        # reload object to have it in sync
+        if path == pjoin(self.me_dir,'Cards','param_card.dat'):
+            try:
+                self.param_card = check_param_card.ParamCard(path) 
+            except (check_param_card.InvalidParamCard, ValueError) as e:
+                logger.error('Current param_card is not valid. We are going to use the default one.')
+                logger.error('problem detected: %s' % e)
+                logger.error('Please re-open the file and fix the problem.')
+                logger.warning('using the \'set\' command without opening the file will discard all your manual change')
+        elif path == pjoin(self.me_dir,'Cards','run_card.dat'):
+            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        elif path == pjoin(self.me_dir,'Cards','MadWeight_card.dat'):
+            try:
+                import madgraph.madweight.Cards as mwcards
+            except:
+                import internal.madweight.Cards as mwcards
+            self.mw_card = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
+ 
