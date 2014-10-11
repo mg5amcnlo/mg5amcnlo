@@ -707,50 +707,31 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             stands for multiple precision and can either be a bool or an integer
             to specify the mode."""
 
+        # Instanciate a MadLoopParam card
+        file = open(pjoin(dir_name,'MadLoopParams.dat'), 'r')
+        MLCard = bannermod.MadLoopParam(file)
+
         if isinstance(mp,bool):
             mode = 4 if mp else 1
         else:
             mode = mp
-        # Read the existing option card
-        file = open(pjoin(dir_name,'MadLoopParams.dat'), 'r')
-        MLParams = file.read()
-        file.close()
-        # Additional option specifications
-        for key in MLOptions.keys():
-            if key == "ImprovePS":
-                MLParams = re.sub(r"#ImprovePS\n\S+","#ImprovePS\n%s"%(\
-                            '.TRUE.' if MLOptions[key] else '.FALSE.'),MLParams)
-            elif key == "ForceMP":
-                if MLOptions[key]:
-                    mode = 4
-            elif key == "MLReductionLib":
-                value=MLOptions[key]
+
+        for key, value in MLOptions.items():
+            if key == "MLReductionLib":
                 if isinstance(value,list):
-                    if value:
-                        mlred="|".join([str(vl) for vl in value])
+                    if len(value)==0:
+                        ml_reds = '1'
                     else:
-                        mlred="1"
-                    MLParams = re.sub(r"#MLReductionLib\n\S+","#MLReductionLib\n%s"\
-                        %(mlred),MLParams)
-                else:
-                    MLParams = re.sub(r"#MLReductionLib\n\S+","#MLReductionLib\n%d"\
-                            %(MLOptions[key] if MLOptions[key] else 1),MLParams)
+                        ml_reds="|".join([str(vl) for vl in value]) 
+                MLCard.set("MLReductionLib",ml_reds)      
             else:
-                logger.error("Key %s is not a valid MadLoop option."%key)
-
-        # Mandatory option specifications
-        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
-        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
-        MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n%s"%(\
-                               '.TRUE.' if loop_filter else '.FALSE.'),MLParams)
-        MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
-                            "#DoubleCheckHelicityFilter\n%s"%('.TRUE.' if 
-                             DoubleCheckHelicityFilter else '.FALSE.'),MLParams)
-
-        # Write out the modified MadLoop option card
-        file = open(pjoin(dir_name,'MadLoopParams.dat'), 'w')
-        file.write(MLParams)
-        file.close()
+                MLCard.set(key,value)
+                
+        MLCard.set('CTModeRun',mode)
+        MLCard.set('CTModeInit',mode)
+        MLCard.set('UseLoopFilter',loop_filter)
+        MLCard.set('DoubleCheckHelicityFilter',DoubleCheckHelicityFilter)
+        MLCard.write(pjoin(dir_name,os.pardir,'SubProcesses','MadLoopParams.dat'))
 
     @classmethod
     def fix_PSPoint_in_check(cls, dir_path, read_ps = True, npoints = 1,
@@ -1148,7 +1129,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if not os.path.isfile(MLCardPath):
             raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
                                                                      %MLCardPath
-        misc.sprint(cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter'])
         if not cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter']:
             try:
                 my_req_files.pop(my_req_files.index('LoopFilter.dat'))
@@ -1160,7 +1140,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
             proc_prefix = proc_prefix_file.read()
             proc_prefix_file.close()
-            misc.sprint([proc_prefix+fname for fname in my_req_files])
             return any([not os.path.exists(pjoin(run_dir,'MadLoop5_resources',
                             proc_prefix+fname)) for fname in my_req_files]) or \
                          not os.path.isfile(pjoin(run_dir,'check')) or \
