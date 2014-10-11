@@ -704,8 +704,8 @@ C     Free cache when using IREGI
 
 ## if(ComputeColorFlows) {
 C We don't want to re-initialized the following quantities when checking the helcity filter.
-C This is why we check that HELPICKED is equal to -1.
-IF(HELPICKED.EQ.-1) THEN
+C This is why we check that HELPICKED is equal to -1, except when the user selects a given helicity configuration.
+IF(HELPICKED.EQ.-1.OR.HELPICKED.EQ.USERHEL) THEN
 CALL %(proc_prefix)sREINITIALIZE_CUMULATIVE_ARRAYS()
 IF (DOUBLECHECK_JAMP) THEN
   DO I=0,NSQUAREDSO

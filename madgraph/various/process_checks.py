@@ -1144,11 +1144,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         my_req_files = copy.copy(req_files)
         
         # Make sure that LoopFilter really is needed.
-        MLCardPath = pjoin(SubProc_dir,os.pardir,'Cards',\
-                                                            'MadLoopParams.dat')
+        MLCardPath = pjoin(SubProc_dir,os.pardir,'Cards','MadLoopParams.dat')
         if not os.path.isfile(MLCardPath):
             raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
                                                                      %MLCardPath
+        misc.sprint(cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter'])
         if not cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter']:
             try:
                 my_req_files.pop(my_req_files.index('LoopFilter.dat'))
@@ -1160,6 +1160,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
             proc_prefix = proc_prefix_file.read()
             proc_prefix_file.close()
+            misc.sprint([proc_prefix+fname for fname in my_req_files])
             return any([not os.path.exists(pjoin(run_dir,'MadLoop5_resources',
                             proc_prefix+fname)) for fname in my_req_files]) or \
                          not os.path.isfile(pjoin(run_dir,'check')) or \
