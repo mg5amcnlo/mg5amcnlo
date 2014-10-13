@@ -490,7 +490,14 @@ c
      &           /'initial state j_fks, but there is no '/
      &           /'configuration with i_fks a gluon/photon and j_fks '/
      &           /'initial state'
-            stop
+            if (foundB(2)) then
+                write(*,*) 'Using Born with final state j_fks also '/
+     &           /'for congifurations with initial state j_fks'    
+                foundB(1) = .true.
+                nFKSprocessBorn(1)=nFKSprocessBorn(2)
+            else
+                stop
+            endif
          endif
          nFKSprocess=nFKSprocessBorn(1)
       else
@@ -498,7 +505,14 @@ c
             write(*,*) 'Trying to generate Born momenta with '/
      &           /'final state j_fks, but there is no configuration'/
      &           /' with i_fks a gluon/photon and j_fks final state'
-            stop
+            if (foundB(1)) then
+                write(*,*) 'Using Born with initial state j_fks also '/
+     &           /'for congifurations with final state j_fks'    
+                foundB(2) = .true.
+                nFKSprocessBorn(2)=nFKSprocessBorn(1)
+            else
+                stop
+            endif
          endif
          nFKSprocess=nFKSprocessBorn(2)
       endif
