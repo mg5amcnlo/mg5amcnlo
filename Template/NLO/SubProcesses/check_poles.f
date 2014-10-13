@@ -37,10 +37,10 @@ C
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
+     &     fkssymmetryfactorDeg,symfactvirt
+      integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
+     &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -105,6 +105,7 @@ c ie. which is a Born+g real-emission process
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setfksfactor(1)
+      symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
 
       nfail = 0
       npointsChecked = 0
@@ -198,9 +199,9 @@ C        look for orders which match the nlo order constraint
          enddo
          do i = 1, nsqso
            if (keep_order(i)) then
-             finite  = finite + virt_wgts(1,i)/dble(ngluons)
-             single  = single + virt_wgts(2,i)/dble(ngluons)
-             double  = double + virt_wgts(3,i)/dble(ngluons)
+             finite  = finite + virt_wgts(1,i) / symfactvirt
+             single  = single + virt_wgts(2,i) / symfactvirt
+             double  = double + virt_wgts(3,i) / symfactvirt
            endif
          enddo
 

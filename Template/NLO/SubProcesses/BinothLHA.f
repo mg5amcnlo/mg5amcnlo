@@ -10,11 +10,13 @@ C************************************************************************
 c The Born in MadFKS -- and therefore also the virtual!-- should have a
 c slightly adapted identical particle symmetry factor. The normal
 c virtual weight as coming from the OLP should be divided by the number
-c of gluons in the corresponding real-emission process (i.e.  the number
-c of gluons in the Born plus one). This factor is passed to this
-c subroutine in /numberofparticles/ common block, as "ngluons". So,
-c divided virt_wgt by dble(ngluons) to get the correct virtual to be
-c used in MadFKS. The born_wgt that is passed to this subroutine has
+c of gluons/photons in the corresponding real-emission process (i.e. the number
+c of gluons in the Born plus one). These factors are passed to this
+c subroutine in /numberofparticles/ common block, as "ngluons" and "nphotons". 
+c So, divided virt_wgt by
+C  symfactvirt = dble(max(ngluons,1) * max(nphotons,1))
+c to get the correct virtual to be used in MadFKS. 
+c The born_wgt that is passed to this subroutine has
 c already been divided by this factor.
 C************************************************************************
 c
@@ -35,10 +37,10 @@ c general MadFKS parameters
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
+     &     fkssymmetryfactorDeg,symfactvirt
+      integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
+     &                    fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       logical firsttime,firsttime_conversion
       data firsttime,firsttime_conversion /.true.,.true./
       logical firsttime_run
@@ -95,6 +97,7 @@ c Ellis-Sexton scale)
       single  = 0d0
       double  = 0d0
       prec_found = 1.0d0
+      symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
       if (firsttime_run) then
          call get_nsqso_loop(nsqso)
          call get_answer_dimension(MLResArrayDim)
@@ -132,9 +135,9 @@ C        look for orders which match the nlo order constraint
          prec_found = accuracies(0)
          do i = 1, nsqso
            if (keep_order(i)) then
-             virt_wgt= virt_wgt + virt_wgts(1,i)/dble(ngluons)
-             single  = single + virt_wgts(2,i)/dble(ngluons)
-             double  = double + virt_wgts(3,i)/dble(ngluons)
+             virt_wgt= virt_wgt + virt_wgts(1,i) / symfactvirt
+             single  = single + virt_wgts(2,i) / symfactvirt
+             double  = double + virt_wgts(3,i) / symfactvirt
            endif
          enddo
       else
@@ -147,9 +150,9 @@ c once the initial pole check is performed.
             prec_found = accuracies(0)            
             do i = 1, nsqso
               if (keep_order(i)) then
-                virt_wgt= virt_wgt + virt_wgts(1,i)/dble(ngluons)
-                single  = single + virt_wgts(2,i)/dble(ngluons)
-                double  = double + virt_wgts(3,i)/dble(ngluons)
+                virt_wgt= virt_wgt + virt_wgts(1,i) / symfactvirt
+                single  = single + virt_wgts(2,i) / symfactvirt
+                double  = double + virt_wgts(3,i) / symfactvirt
               endif
             enddo
          elseif (mc_hel.eq.1) then
@@ -189,12 +192,12 @@ c$$$            fillh=.true.
      $           ,tolerance,accuracies,ret_code)
             prec_found = accuracies(0)
             virt_wgt = virt_wgt + virt_wgts_hel(1,0)*dble(goodhel(ihel))
-     $           /volh/4d0/dble(ngluons)
+     $           /volh/4d0/symfactvirt
             single   = single   + virt_wgts_hel(2,0)*dble(goodhel(ihel))
-     $           /volh/4d0/dble(ngluons)
+     $           /volh/4d0/symfactvirt
             double   = double   + virt_wgts_hel(3,0)*dble(goodhel(ihel))
-     $           /volh/4d0/dble(ngluons)
-c Average over initial state helicities (and take the ngluon factor into
+     $           /volh/4d0/symfactvirt
+c Average over initial state helicities (and take the symfactvirt factor into
 c account)
             if (nincoming.ne.2) then
                write (*,*)
