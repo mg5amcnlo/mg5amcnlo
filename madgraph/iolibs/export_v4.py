@@ -5279,12 +5279,12 @@ class UFO_model_to_mg4(object):
           return
           end
           """
-                    text = ufo_fct_template % {
+                        text = ufo_fct_template % {
                                 'name': fct.name,
                                 'args': ",".join(fct.arguments),                
                                 'fct': self.mp_p_to_f.parse(fct.expr)
                                  }
-                    fsock.writelines(text)
+                        fsock.writelines(text)
 
 
                     
