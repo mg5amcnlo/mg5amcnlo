@@ -3168,7 +3168,7 @@ c q->q g/a splitting
      &       (dabs(ch1).eq.0d0 .and. dabs(ch2).gt.0d0)) then
 c q->g/a q splitting
          apprime(1) = - CF * z * (1d0-z)
-         apprime(2) = - ch2**2 * (1d0-z)**2
+         apprime(2) = - ch2**2 * z * (1d0-z)
       else
          write (*,*) 'Fatal error in AP_reduced_prime',col1,col2,ch1,ch2
          stop
