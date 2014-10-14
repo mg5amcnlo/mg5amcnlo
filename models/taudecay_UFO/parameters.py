@@ -38,7 +38,7 @@ F0 = Parameter(name = 'F0',
                type = 'real',
                value = 1.,
                texname = 'F_0',
-               lhablock = 'FRBlock',
+               lhablock = 'taudecay',
                lhacode = [ 1 ])
 
 F1 = Parameter(name = 'F1',
@@ -46,7 +46,7 @@ F1 = Parameter(name = 'F1',
                type = 'real',
                value = 0.13041,
                texname = 'F_1',
-               lhablock = 'FRBlock',
+               lhablock = 'taudecay',
                lhacode = [ 2 ])
 
 F2 = Parameter(name = 'F2',
@@ -54,7 +54,7 @@ F2 = Parameter(name = 'F2',
                type = 'real',
                value = 1.,
                texname = 'F_2',
-               lhablock = 'FRBlock',
+               lhablock = 'taudecay',
                lhacode = [ 3 ])
 
 F3 = Parameter(name = 'F3',
@@ -62,7 +62,7 @@ F3 = Parameter(name = 'F3',
                type = 'real',
                value = 1.,
                texname = 'F_3',
-               lhablock = 'FRBlock',
+               lhablock = 'taudecay',
                lhacode = [ 4 ])
 
 Fr1 = Parameter(name = 'Fr1',
@@ -70,7 +70,7 @@ Fr1 = Parameter(name = 'Fr1',
                 type = 'real',
                 value = 1.,
                 texname = 'F_{23}',
-                lhablock = 'FRBlock',
+                lhablock = 'taudecay',
                 lhacode = [ 5 ])
 
 Fr2 = Parameter(name = 'Fr2',
@@ -78,7 +78,7 @@ Fr2 = Parameter(name = 'Fr2',
                 type = 'real',
                 value = 1.,
                 texname = 'F_{13}',
-                lhablock = 'FRBlock',
+                lhablock = 'taudecay',
                 lhacode = [ 6 ])
 
 Gr1 = Parameter(name = 'Gr1',
@@ -86,7 +86,7 @@ Gr1 = Parameter(name = 'Gr1',
                 type = 'real',
                 value = 1.,
                 texname = 'G_{23}',
-                lhablock = 'FRBlock',
+                lhablock = 'taudecay',
                 lhacode = [ 7 ])
 
 Gr2 = Parameter(name = 'Gr2',
@@ -94,7 +94,7 @@ Gr2 = Parameter(name = 'Gr2',
                 type = 'real',
                 value = 1.,
                 texname = 'G_{13}',
-                lhablock = 'FRBlock',
+                lhablock = 'taudecay',
                 lhacode = [ 8 ])
 
 Me = Parameter(name = 'Me',
