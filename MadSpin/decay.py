@@ -3229,6 +3229,15 @@ class decay_all_events(object):
             for key, external in list(self.calculator.items()):
                 nb = self.calculator_nbcall[key]
                 if nb < cut:
+                    if key[0]=='full':
+                      path=key[1]
+                      end_signal="5 0 0 0 \n"  # before closing, write down the seed 
+                      external.stdin.write(end_signal)
+                      ranmar_state=external.stdout.readline()
+                      ranmar_file=pjoin(path,'ranmar_state.dat')
+                      ranmar=open(ranmar_file, 'w')
+                      ranmar.write(ranmar_state)
+                      ranmar.close()
                     external.stdin.close()
                     external.stdout.close()
                     external.terminate()
