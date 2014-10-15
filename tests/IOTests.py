@@ -107,7 +107,8 @@ class IOTest(object):
     # dictionaries.
     all_files = proc_files+model_files
 
-    def __init__(self, procdef=None,
+    def __init__(self, test_instance=None,
+                       procdef=None,
                        exporter=None,
                        helasModel=None,
                        testedFiles=None,
@@ -126,9 +127,10 @@ class IOTest(object):
             raise MadGraph5Error, "outputPath must be specified in IOTest."
         
         self.testedFiles = testedFiles
+        self.test_instance = test_instance
         self.procdef = procdef
         self.helasModel = helasModel
-        self.exporter = copy.deepcopy(exporter)
+        self.exporter_name = exporter
         # Security mesure
         if not str(path.dirname(_file_path)) in str(outputPath) and \
                                         not str(outputPath).startswith('/tmp/'):
@@ -144,6 +146,8 @@ class IOTest(object):
         self.clean_output()
 
         model = self.procdef.get('model')
+        self.exporter = copy.deepcopy(self.test_instance.get_exporter_withName(\
+                                                            self.exporter_name))
         myloopamp = loop_diagram_generation.LoopAmplitude(self.procdef)
         isOptimized = isinstance(self.exporter, \
                            loop_exporters.LoopProcessOptimizedExporterFortranSA) 
@@ -546,6 +550,7 @@ class IOTestManager(unittest.TestCase):
                                     filesToCheck.append(new_target)
                 else:
                     fn = fname[1:] if fname.startswith('-') else fname
+                    print "pjoin(files_path,fn)=",pjoin(files_path,fn)
                     if not path.exists(pjoin(files_path,fn)):
                         raise MadGraph5Error, \
                          'The IOTest %s does not create file %s.'%(test_name,fn)
