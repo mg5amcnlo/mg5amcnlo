@@ -4709,8 +4709,7 @@ class UFO_model_to_mg4(object):
                 common/weak/ gal
 
                 """        
-        if self.model.get('expansion_order'):
-            header=header+"""double precision MU_R
+        header=header+"""double precision MU_R
                 common/rscale/ MU_R
 
                 """
@@ -4728,8 +4727,7 @@ class UFO_model_to_mg4(object):
                     common/MP_weak/ %(mp_prefix)sgal
     
                     """        
-            if self.model.get('expansion_order'):
-                header=header+"""%(complex_mp_format)s %(mp_prefix)sMU_R
+            header=header+"""%(complex_mp_format)s %(mp_prefix)sMU_R
                     common/MP_rscale/ %(mp_prefix)sMU_R
     
                     """            

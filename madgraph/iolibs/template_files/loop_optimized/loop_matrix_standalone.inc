@@ -140,9 +140,11 @@ C IF UNSTABLE IT GOES TO THE SAME PATTERN BUT STAB_INDEX IS THEN I+20.
 	  DATA N_DP_EVAL/1/
 	  DATA N_QP_EVAL/1/
 ## if(LoopInduced){	  
-C This is used for loop-induced where the reference scale for comparisons is infered from the previous points.
-      %(real_dp_format)s NEXTREF
-      DATA NEXTREF/ZERO/
+C This is used for loop-induced where the reference scale for comparisons is inferred from the first 30 points at most
+      INTEGER MAXNREF_EVALS
+      PARAMETER (MAXNREF_EVALS=30)
+      %(real_dp_format)s REF_EVALS(MAXNREF_EVALS)
+      DATA REF_EVALS/MAXNREF_EVALS*ZERO/
       INTEGER NPSPOINTS
       DATA NPSPOINTS/0/      
 ## }
@@ -197,6 +199,9 @@ C
       INTEGER %(proc_prefix)sISSAME
       LOGICAL %(proc_prefix)sISZERO
       INTEGER SET_RET_CODE_U
+## if(LoopInduced){
+	  %(real_dp_format)s Median
+## }
 C  
 C GLOBAL VARIABLES
 C  
@@ -534,11 +539,14 @@ ENDDO
 ## if(LoopInduced){
 C For loop-induced, the reference for comparison is set later from the total contribution of the previous PS point considered.
 C But you can edit here the value to be used for the first PS points.    
-ref=1.0d-50
 IF (NPSPOINTS.EQ.0) THEN
   REF=1.0D-50
 ELSE
-  REF=NEXTREF/DBLE(NPSPOINTS)
+  IF(NPSPOINTS.GE.MAXNREF_EVALS) THEN
+    REF=Median(REF_EVALS,MAXNREF_EVALS)
+  ELSE
+    REF=Median(REF_EVALS,NPSPOINTS)
+  ENDIF
 ENDIF
 ## }else{
 C We set here the reference to the born summed over all split orders
@@ -976,10 +984,6 @@ ENDDO
 1226 CONTINUE
 
 IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
-## if(LoopInduced){
-C Update of NEXTREF, will be used for loop induced only.
-  NEXTREF = NEXTREF + ANS(1,0) + ANS(2,0) + ANS(3,0)
-## }
   IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
 C   TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING CHECK PHASE
     DO I=0,NSQUAREDSO
@@ -1136,7 +1140,9 @@ c    ENDDO
       ENDDO
 	ENDDO
 ## if(LoopInduced){
-C We add one here to the number of PS points used for building the reference scale for comparison (used only for loop-induced processes).
+C Update of REF_EVALS (only for loop-induced processes).
+    REF_EVALS(MOD(NPSPOINTS,MAXNREF_EVALS)+1) = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
+C We add one here to the number of PS points used for building the reference scale for comparisons.
     NPSPOINTS = NPSPOINTS+1
 ## }
 	IF(NTRY.EQ.0) THEN
@@ -1147,7 +1153,15 @@ C We add one here to the number of PS points used for building the reference sca
 	  ENDIF
 	ENDIF
   ENDIF
-
+## if(LoopInduced){
+ELSE
+C When not in checking mode, update the ref for the first MAXNREF_EVALS points (Not really important since the ref. scale shouldn't be used anymore at this stage).
+C Is is possible to simply remove the if statement below to have a running reference scale which always depends on the MAXNREF_EVALS *last* evaluations. 
+    if (NPSPOINTS.LE.MAXNREF_EVALS) THEN
+      REF_EVALS(MOD(NPSPOINTS,MAXNREF_EVALS)+1) = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
+      NPSPOINTS = NPSPOINTS+1
+    ENDIF
+## }
 ENDIF
 
 DO K=1,3
