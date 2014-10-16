@@ -45,9 +45,8 @@ $(LIBDIR)libdhelas.$(libext): DHELAS
 $(LIBDIR)libpdf.$(libext): PDF
 	cd PDF; make	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
-	cd CERNLIB; make	
-$(LIBDIR)libmodel.$(libext): MODEL param_card.inc
-	cd MODEL; make
+	cd CERNLIB; make
+%(model)s
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 
 	$(FC) $(FFLAGS) -o $@ $^
@@ -70,9 +69,6 @@ rw_events.o: rw_events.f run_config.inc
 
 run_card.inc: ../Cards/run_card.dat
 	../bin/madevent treatcards run
-
-param_card.inc: ../Cards/param_card.dat
-	../bin/madevent treatcards param
 
 clean_lhapdf:
 	rm -f $(LIBDIR)libgeneric.$(libext)
