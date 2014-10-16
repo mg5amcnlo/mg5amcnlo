@@ -3221,8 +3221,8 @@ class decay_all_events(object):
             helicities=[lastline[i] for i in range(len(lastline))]
             output = trials, BWvalue, weight, momenta, failed, use_mc_masses, helicities
 
-        if len(self.calculator) > 100:
-            logger.debug('more than 100 calculator. Perform cleaning')
+        if len(self.calculator) > self.options['max_running_process']:
+            logger.debug('more than %s calculators. Perform cleaning' % self.options['max_running_process'])
             nb_calls = self.calculator_nbcall.values()
             nb_calls.sort()
             cut = max([nb_calls[len(nb_calls)//2], 0.001 * nb_calls[-1]])
