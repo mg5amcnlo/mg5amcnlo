@@ -120,7 +120,8 @@ def compile_dir(arguments):
             #compile madevent_mintMC/mintFO
             misc.compile([exe], cwd=this_dir, job_specs = False)
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
-            misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
+            logger.info('Skipping reweight compilation')
+#            misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
 
         logger.info('    %s done.' % p_dir) 
         return 0
@@ -2284,6 +2285,7 @@ Integrated cross-section
         """
         scale_pdf_info={}
         if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') and int(self.run_card['ickkw']) != 4 :
+            logger.info('Skipping reweight ')
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton', update_results=True)
