@@ -20,9 +20,6 @@ c
 c
 c     Local
 c
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
       integer itree(2,-max_branch:-1)
       integer imatch
       integer i,j, k, n, nsym,l,ii,jj
@@ -149,7 +146,6 @@ c      integer icomp
 c
 c     DATA
 c
-      integer tprid(-max_branch:-1,lmaxconfigs)
       include 'born_conf.inc'
 c-----
 c  Begin Code
