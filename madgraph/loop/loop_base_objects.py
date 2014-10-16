@@ -263,6 +263,74 @@ class LoopDiagram(base_objects.Diagram):
            {'vertices':contracted_diagram_vertices,'orders':self.get('orders')})
 
         return contracted_diagram
+    
+    @staticmethod
+    def build_loop_tag_for_process_identification(canonical_tag, model, 
+                                                                   FDStrut_rep):
+        """ This function returns what will be used as the 'loop_tag' attribute
+        of the ContractedVertex instance in the function 'get_contracted_loop_diagram'.
+        It is important since it is what is used by MG5_aMC to decide
+        if two processes have *exactly* the same matrix element and can be
+        identified. 
+        There is no need to characterize the details of the FDStructures attached
+        to the loops because these are already compared using the rest of the
+        DiagramTag structure. All we need is to identify a structure by its
+        external leg numbers."""
+     
+        # First create a list of objects we want to use to identify the particles
+        # running in the loop. We use here the same strategy as in the function
+        # 'vertex_id_from_vertex' of IdentifyMETag.
+        loop_parts_tagging = [[]]*len(canonical_tag)
+        for i, tag_elem in enumerate(canonical_tag):
+            loop_part = model.get_particle(tag_elem[0])
+            loop_parts_tagging[i] = (loop_part.get('spin'), 
+                                     loop_part.get('color'),
+                                     loop_part.get('self_antipart'),
+                                     loop_part.get('mass'),
+                                     loop_part.get('width'))
+        
+        # Now create a list of objects which we want to use to uniquely
+        # identify each structure attached to the loop for the loop_tag.
+        FDStructs_tagging = [[]]*len(canonical_tag)
+        for i, tag_elem in enumerate(canonical_tag):
+            for struct_ID in tag_elem[1]:
+                # As mentioned before, the list of external leg number should be enough.
+                FDStructs_tagging[i].extend([leg.get('number') for leg in
+                        FDStrut_rep.get_struct(struct_ID).get('external_legs')])
+                # Another solution which is to use the already existing canonical 
+                # representation of each FDStructure. However, it uses the 
+                # interaction ID's so it is likely to overlook identifications.
+                # It is therefore not used (i.e. line below is commented).
+#                FDStructs_tagging[i].append(FDStrut_rep.get_struct(struct_ID).get('canonical'))
+            FDStructs_tagging[i].sort()
+            FDStructs_tagging[i] = tuple(FDStructs_tagging[i])
+        
+        
+        # We want to identify processes together if their diagrams
+        # are made of the same interactions which can however have different
+        # ID's for different process (i.e. the ID of the 'gdd~' interaction is
+        # different than the one of 'gss~'). We again use the same strategy
+        # as in the function 'vertex_id_from_vertex' of IdentifyMETag.
+        # So we create a list of objects we want to use to tag the loop interactions 
+        interactions_tagging = [[]]*len(canonical_tag)
+        for i, tag_elem in enumerate(canonical_tag):
+            inter = model.get_interaction(tag_elem[2])
+            coup_keys = sorted(inter.get('couplings').keys())
+            interactions_tagging[i]=(
+                tuple((key, inter.get('couplings')[key]) for key in coup_keys),
+                tuple(str(c) for c in inter.get('color')),
+                tuple(inter.get('lorentz')))
+
+        return tuple(
+                 # For each loop vertex, we must identify the following three things
+                 zip(
+                   # Loop particle identification
+                   loop_parts_tagging,
+                   # FDStructure identification
+                   FDStructs_tagging,
+                   # Loop interactions identification
+                   interactions_tagging
+                ))
 
     def get_contracted_loop_diagram(self, model, struct_rep=None):
         """ Returns a base_objects.Diagram which correspond to this loop diagram
@@ -297,11 +365,15 @@ class LoopDiagram(base_objects.Diagram):
                                                               synchronize=False)
 
         contracted_diagram_vertices = base_objects.VertexList()
-        # We have to give this vertex an id which is not special (i.e. negative)
-        # so we pick 1 here even though it has nothing to do with interaction #1.
-        # If this id played a role, it would mean that using the contracted
-        # loop diagram is anyway not appropriate
-        contracted_vertex = base_objects.ContractedVertex({'id':1})
+        # We give this vertex the special ID -2 so that whenever MG5_aMC tries
+        # to retrieve an information in typically gets from the model interaction
+        # it will instead get it from the 'loop_info' provided by the contracted
+        # vertex of its corresponding vertex_id in a Tag
+        contracted_vertex = base_objects.ContractedVertex({
+          'id':-2,
+          'loop_orders':self.get_loop_orders(model),
+          'loop_tag': self.build_loop_tag_for_process_identification(
+                                     self['canonical_tag'], model, struct_rep)})
 
         # Using the 'tag' information, the construction of the contracted diagram
         # quite simple. First scan all structures to add their vertices and at
@@ -1133,9 +1205,11 @@ class LoopDiagram(base_objects.Diagram):
         
         loop_orders = {}
         for vertex in self['vertices']:
-            # We do not count the identity vertex
-            if vertex['id'] not in [0,-1] and len([1 for leg in vertex['legs'] if \
-                                                          leg['loop_line']])==2:
+            # We do not count the identity vertex nor the vertices building the
+            # external FDStructures (possibly left over if not synchronized with
+            # the tag).
+            if vertex['id'] not in [0,-1] and len([1 for leg \
+                                     in vertex['legs'] if leg['loop_line']])==2:
                 vertex_orders = model.get_interaction(vertex['id'])['orders']
                 for order in vertex_orders.keys():
                     if order in loop_orders.keys():

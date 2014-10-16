@@ -2155,17 +2155,33 @@ class ContractedVertex(Vertex):
         """Default values for all properties"""
 
         self['PDGs'] = []
+        self['loop_tag'] = tuple()
+        self['loop_orders'] = {}
         super(ContractedVertex, self).default_setup()
 
     def filter(self, name, value):
         """Filter for valid vertex property values."""
 
         if name == 'PDGs':
-            if not isinstance(value, list):
+            if isinstance(value, list):
                 for elem in value:
                     if not isinstance(elem,int):
                         raise self.PhysicsObjectError, \
                             "%s is not a valid integer for leg PDG" % str(elem)
+            else:
+                raise self.PhysicsObjectError, \
+                  "%s is not a valid list for contracted vertex PDGs"%str(value)                
+        if name == 'loop_tag':
+            if isinstance(value, tuple):
+                for elem in value:
+                    if not (isinstance(elem,int) or isinstance(elem,tuple)):
+                        raise self.PhysicsObjectError, \
+                          "%s is not a valid int or tuple for loop tag element"%str(elem)
+            else:
+                raise self.PhysicsObjectError, \
+                  "%s is not a valid tuple for a contracted vertex loop_tag."%str(value)
+        if name == 'loop_orders':
+            Interaction.filter(Interaction(), 'orders', value)
         else:
             return super(ContractedVertex, self).filter(name, value)
 
@@ -2238,8 +2254,11 @@ class Diagram(PhysicsObject):
         weight = 0
         for vertex in self['vertices']:
             if vertex.get('id') in [0,-1]: continue
-            couplings = model.get('interaction_dict')[vertex.get('id')].\
-                        get('orders')
+            if vertex.get('id') == -2:
+                couplings = vertex.get('loop_orders')
+            else:
+                couplings = model.get('interaction_dict')[vertex.get('id')].\
+                                                                   get('orders')
             for coupling in couplings:
                 coupling_orders[coupling] += couplings[coupling]
             weight += sum([model.get('order_hierarchy')[c]*n for \

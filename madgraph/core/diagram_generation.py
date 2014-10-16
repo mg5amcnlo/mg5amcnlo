@@ -216,9 +216,16 @@ class DiagramTag(object):
     def vertex_from_link(cls, legs, vertex_id, model):
         """Return a vertex given a leg list and a vertex id"""
 
-        return base_objects.Vertex({'legs': legs,
-                                    'id': cls.id_from_vertex_id(vertex_id)})
-        
+        vert_ID = cls.id_from_vertex_id(vertex_id)
+        if vert_ID != -2:
+            return base_objects.Vertex({'legs': legs,
+                                        'id': vert_ID})
+        else:
+            contracted_vert = base_objects.ContractedVertex({'legs': legs,'id': -2})
+            for key, value in cls.loop_info_from_vertex_id(vertex_id):
+                if key in contracted_vert:
+                    contracted_vert.set(key,value)    
+
     @staticmethod
     def leg_from_link(link):
         """Return a leg from a link"""
@@ -236,7 +243,16 @@ class DiagramTag(object):
     @staticmethod
     def id_from_vertex_id(vertex_id):
         """Return the numerical vertex id from a link.vertex_id"""
-        return vertex_id[0]
+
+        return vertex_id[0][0]
+    
+    @staticmethod
+    def loop_info_from_vertex_id(vertex_id):
+        """Return the loop_info stored in this vertex id. Notice that the
+        IdentifyME tag does not store the loop_info, but should normally never
+        need access to it."""
+
+        return vertex_id[2]
 
     @staticmethod
     def reorder_permutation(perm, start_perm):
@@ -269,9 +285,11 @@ class DiagramTag(object):
            third for additional info regarding the shrunk loop vertex."""
 
         if isinstance(vertex,base_objects.ContractedVertex):
-            return (vertex.get('id'),(),{'PDGs':vertex.get('PDGs')})
+#            return (vertex.get('id'),(),{'PDGs':vertex.get('PDGs')})
+            return ((vertex.get('id'),vertex.get('loop_tag')),(),
+                                                    {'PDGs':vertex.get('PDGs')})
         else:
-            return (vertex.get('id'),(),{})
+            return ((vertex.get('id'),()),(),{})
 
     @staticmethod
     def flip_vertex(new_vertex, old_vertex, links):

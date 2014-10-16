@@ -321,14 +321,14 @@ class SubProcessGroup(base_objects.PhysicsObject):
             # Check the minimal number of legs we need to include in order
             # to make sure we'll have some valid configurations
             max_legs = min([max([len(v.get('legs')) for v in \
-                                   d.get('vertices') if v.get('id') > 0]) \
-                              for d in diagrams])
+                             d.get('vertices') if not v.get('id') in [0, -1]]) \
+                                                             for d in diagrams])
             diagram_maps[ime] = []
             
             for diagram in diagrams:
                 # Only use diagrams with all vertices == min_legs
-                if any([len(v.get('legs')) > max_legs \
-                        for v in diagram.get('vertices') if v.get('id') > 0]):
+                if any([len(v.get('legs')) > max_legs for v in \
+                        diagram.get('vertices') if not v.get('id') in [0, -1]]):
                     diagram_maps[ime].append(0)
                     continue
                 # Create the equivalent diagram, in the format

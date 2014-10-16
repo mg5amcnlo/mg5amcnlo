@@ -183,9 +183,12 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         if vertex.get('id') in [0,-1]:
             return ((vertex.get('id'),),)
 
-        inter = model.get_interaction(vertex.get('id'))
-        coup_keys = sorted(inter.get('couplings').keys())
-        ret_list = tuple([(key, inter.get('couplings')[key]) for key in \
+        if vertex.get('id') == -2:
+            ret_list = vertex.get('loop_tag')
+        else:
+            inter = model.get_interaction(vertex.get('id'))
+            coup_keys = sorted(inter.get('couplings').keys())
+            ret_list = tuple([(key, inter.get('couplings')[key]) for key in \
                           coup_keys] + \
                          [str(c) for c in inter.get('color')] + \
                          inter.get('lorentz'))
@@ -447,7 +450,11 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                 
         if isinstance(vertex,base_objects.ContractedVertex):
             inter = None
-            loop_info = {'PDGs':vertex.get('PDGs')}
+            # I don't add here the 'loop_tag' because it is heavy and in principle
+            # not necessary. It can however be added in the future if proven
+            # necessary.
+            loop_info = {'PDGs':vertex.get('PDGs'),
+                         'loop_orders':vertex.get('loop_orders')}
         else:
             # Not that it is going to be used here, but it might be eventually
             inter = model.get_interaction(vertex.get('id'))
@@ -501,11 +508,22 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         # This shouldn't happen
         assert False
 
-    @staticmethod
-    def vertex_from_link(legs, vertex_id, model):
+    @classmethod
+    def vertex_from_link(cls, legs, vertex_id, model):
         """Return a vertex given a leg list and a vertex id"""
-        vertex = base_objects.Vertex({'legs': legs,
-                                      'id': vertex_id[1][0]})
+        
+        vert_ID = cls.id_from_vertex_id(vertex_id)
+        if vert_ID != -2:
+            vertex = base_objects.Vertex({'legs': legs,
+                                        'id': vert_ID})
+        else:
+            vertex = base_objects.ContractedVertex({'legs': legs,'id': -2})
+            for key, value in enumerate(cls.loop_info_from_vertex_id(vertex_id)):
+                # For now all the info put in the vertex_id is also an attribute
+                # of the ContractedVertex instance, i.e. 'PDGs' and 'loop_tag'
+                if key in vertex:
+                    vertex.set(key,value) 
+
         if len(vertex_id[1]) == 3:
             vertex.get('legs')[-1].set('onshell', vertex_id[1][1])
         return vertex
