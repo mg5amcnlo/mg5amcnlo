@@ -2469,16 +2469,24 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             # have to be re-computed at the beginning of each run.
             self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
             
-            # If one encounters process giving problems with the filters, then
-            # restore the settings below for 'CTModeInit' and 'ZeroThres'.
-            # For loop-induced Higgs production, there are some helicity
-            # configuration heavily suppressed (by 7 to 8 orders of magnitude)
-            # so that the helicity filter needs high numerical accuracy to
-            # correctly handle this spread in magnitude
-            # self.MadLoopparam.set('CTModeInit',4, ifnotdefault=False)
+            # The conservative settings below for 'CTModeInit' and 'ZeroThres'
+            # help adress issues for processes like g g > h z, and g g > h g
+            # where there are some helicity configuration heavily suppressed 
+            # (by several orders of magnitude) so that the helicity filter 
+            # needs high numerical accuracy to correctly handle this spread in
+            # magnitude. Also, because one cannot use the Born as a reference
+            # scale, it is better to force quadruple precision *for the 
+            # initialization points only*. This avoids numerical accuracy issues
+            # when setting up the helicity filters and does not significantly
+            # slow down the run.
+            # In the future, we might want to offer the possibility of ignoring
+            # the helicity filter and also of automatically initilizing the 
+            # various subprocesses filters so that they can be written out 
+            # and reused. 
+            self.MadLoopparam.set('CTModeInit',4, ifnotdefault=False)
             # Consequently, we can allow for a finer threshold for vanishing
             # helicity configuration
-            # self.MadLoopparam.set('ZeroThres',1.0e-11, ifnotdefault=False)
+            self.MadLoopparam.set('ZeroThres',1.0e-11, ifnotdefault=False)
             
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
