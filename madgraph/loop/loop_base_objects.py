@@ -279,9 +279,22 @@ class LoopDiagram(base_objects.Diagram):
         # If this loop diagram hasn't been tagged yet, we must do that now.
         # (or if the structure repository is not provided
         if not self['canonical_tag'] or struct_rep is None:
-            if struct_rep is None:
+            n_external_legs = len(base_objects.LegList([l for l in 
+                               self.get_external_legs() if not l['loop_line']]))
+            
+            # use natural ordering for loop tagging
+            start_in, end_in = n_external_legs +1, n_external_legs+2
+            for l in self['vertices'][0]['legs']:
+                if l.same(start_in):
+                    break
+                elif l.same(end_in):
+                    start_in, end_in = end_in, start_in
+                    break
+                
+            if struct_rep is None:                
                 struct_rep = FDStructureList([])
-            self.tag(struct_rep, model, synchronize=False)
+            self.tag(struct_rep, model, start_in=start_in, end_in=end_in, 
+                                                              synchronize=False)
 
         contracted_diagram_vertices = base_objects.VertexList()
         # We have to give this vertex an id which is not special (i.e. negative)
@@ -503,8 +516,8 @@ class LoopDiagram(base_objects.Diagram):
 
         if start_in is None or end_in is None:
             start_in = len(external_legs)+1
-            end_in = len(external_legs)+2         
-        
+            end_in = len(external_legs)+2                     
+                
         # Notice here that start and end can be either the Legs object
         # specification of the two L-cut particles or simply their 'number'.
         if isinstance(start_in,int) and isinstance(end_in,int):
@@ -712,7 +725,8 @@ class LoopDiagram(base_objects.Diagram):
                     # process_next_loop_leg, we can now change it to the Leg 
                     # it really correspond to.
                     if isinstance(currLeg,int):
-                        currLeg=self['vertices'][i].get('legs')[j]
+                        currLeg=base_objects.Leg(self['vertices'][i].get('legs')[j])
+                        
                     # We can now process this loop interaction found...
                     for k in filter(lambda ind: not ind==j, \
                                    range(len(self['vertices'][i].get('legs')))):
@@ -762,6 +776,7 @@ class LoopDiagram(base_objects.Diagram):
             myleglist=base_objects.LegList([copy.copy(\
                         structRep[FDindex]['binding_leg']) for FDindex in \
                         FDStructureIDList])
+
                 
             # Add The original loop leg we started from. We either take it 
             # from starting leg (at the first call of process_next_loop_leg)
@@ -777,7 +792,6 @@ class LoopDiagram(base_objects.Diagram):
                 self['tag'].append([copy.copy(currLeg),\
                                      sorted(FDStructureIDList),vertFoundID])
                 myleglist.append(copy.copy(currLeg))
-            
             # Now depending we reached the last loop vertex or not, we will 
             # create a current (with ref_dict_to1) or a wavefunction plus 
             # a trivial two-point amplitude with interaction id=-1 which
@@ -791,6 +805,7 @@ class LoopDiagram(base_objects.Diagram):
             # which set the end of the tagging algorithm.
             loopVertexList.append(\
               self.generate_loop_vertex(myleglist,model,vertFoundID))
+            # check that the particle/anti-particle is set correctly
         if nextLoopLeg.same(endLeg):
             # Now we can add the corresponding 'fake' amplitude vertex
             # with flagged id = -1

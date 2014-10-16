@@ -5748,13 +5748,6 @@ This implies that with decay chains:
 
 
         ################
-        # Loop Induced #
-        ################
-        if self._export_format == 'madevent' and isinstance(
-                      self._curr_amps[0],loop_diagram_generation.LoopAmplitude):
-            loop_induced_amplitudes = self._curr_amps
-
-        ################
         # ALOHA OUTPUT #
         ################
         if self._export_format == 'aloha':
@@ -5942,8 +5935,10 @@ This implies that with decay chains:
                     else:
                         HelasMultiProcessClass = helas_objects.HelasMultiProcess
                     
+                    
                     self._curr_matrix_elements = HelasMultiProcessClass(
                                       self._curr_amps, matrix_element_opts=mode)
+                    
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
@@ -5959,6 +5954,8 @@ This implies that with decay chains:
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine
+
+
 
         ndiags, cpu_time = generate_matrix_elements(self)
 
@@ -6082,7 +6079,7 @@ This implies that with decay chains:
                 export_cpp.generate_subprocess_directory_standalone_cpp(\
                               me, self._curr_cpp_model,
                               path = path)
-
+                    
         cpu_time2 = time.time() - cpu_time1
 
         logger.info(("Generated helas calls for %d subprocesses " + \

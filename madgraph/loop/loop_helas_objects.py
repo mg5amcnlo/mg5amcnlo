@@ -343,8 +343,31 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         vertices = self['amplitudes'][0].get_base_diagram(\
                      wf_dict, vx_list, optimization)['vertices']
 
-        return loop_base_objects.LoopDiagram({'vertices': vertices,\
-                                              'type':self['type']})   
+        out = loop_base_objects.LoopDiagram({'vertices': vertices,\
+                                              'type':self['type']})  
+        
+        # The generation of Helas diagram sometimes return that the two
+        # loop external wavefunctions have the same external_id due to the 
+        # recycling of the first external wavefunctions.
+        # i. e. ((5(5*),1(21)>1(5*),id:160),(1(5*),2(21)>1(5*),id:160),(1(5*),3(37)>1(6*),id:21),(1(6*),4(-37)>1(5*),id:22),(5(-5*),1(5*),id:-1))
+        # This only problematic when creating diagram with get_base_amplitude and
+        # using them for the identifyME tagging
+        
+        starting_loop_line = out.get_starting_loop_line()
+        finishing_loop_line = out.get_finishing_loop_line()
+        if starting_loop_line['number'] == finishing_loop_line['number']:
+            # This is the problematic case.
+            # Since both particles have the same id, the routine get_external_legs
+            # is always missing a particle. So we need to add one to have the correct
+            # number of external particles (including the l-cut particle)
+            nb_external = len(out.get_external_legs()) +1
+            if nb_external == starting_loop_line['number']:
+                starting_loop_line.set('number', nb_external -1)
+            else:
+                starting_loop_line.set('number', nb_external)
+
+        
+        return out 
 
     def set_mothers_and_pairing(self):
         """ Sets the mothers of this amplitude in the same order as they will
@@ -695,6 +718,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         self.optimized_output=optimized_output
         super(LoopHelasMatrixElement, self).__init__(amplitude, optimization,\
                                                      decay_ids, gen_color)
+
 
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
@@ -1243,6 +1267,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             # First create the starting external loop leg
             external_loop_wf=helas_objects.HelasWavefunction(\
                                                 tag[0][0], 0, model, decay_ids)
+
+
             
             # When on the optimized output mode, the starting loop wavefunction
             # can be recycled if it has the same pdg because whatever its pdg 
@@ -2464,21 +2490,21 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # Store here the type of the last LoopDiagram encountered to reuse the
         # same value, but negative, for the corresponding counter-terms. 
         # It is not strictly necessary, it only has to be negative.
-        type=1
+        dtype=1
         for HelasAmpList in self.get_helas_amplitudes_loop_diagrams():
             # We use uniformly the class LoopDiagram for the diagrams stored
             # in LoopAmplitude
             if isinstance(HelasAmpList[0],LoopHelasAmplitude):
                 diagrams.append(HelasAmpList[0].get_base_diagram(\
                       wf_dict, vx_list, optimization))
-                type=diagrams[-1]['type']
+                dtype=diagrams[-1]['type']
             elif isinstance(HelasAmpList[0],LoopHelasUVCTAmplitude):
                 diagrams.append(HelasAmpList[0].\
                             get_base_diagram(wf_dict, vx_list, optimization))
             else:
                 newdiag=HelasAmpList[0].get_base_diagram(wf_dict, vx_list, optimization)
                 diagrams.append(loop_base_objects.LoopDiagram({
-                  'vertices':newdiag['vertices'],'type':-type}))
+                  'vertices':newdiag['vertices'],'type':-dtype}))
 
         
         for diag in diagrams:
