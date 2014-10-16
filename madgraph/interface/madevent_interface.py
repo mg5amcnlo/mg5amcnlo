@@ -2468,6 +2468,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             # off here. If these filters were not initialized then they will 
             # have to be re-computed at the beginning of each run.
             self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
+            self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
             
             # The conservative settings below for 'CTModeInit' and 'ZeroThres'
             # help adress issues for processes like g g > h z, and g g > h g
@@ -2487,6 +2488,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             # Consequently, we can allow for a finer threshold for vanishing
             # helicity configuration
             self.MadLoopparam.set('ZeroThres',1.0e-11, ifnotdefault=False)
+            
+            # When we will have full confidence in TIR, we can set the following
+            # options
+            # self.MadLoopparam.set('MLReductionLib','4|2|3|1', ifnotdefault=False)
             
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
