@@ -208,10 +208,12 @@ c should not be used if wgtkin(0,1,*)=-99
         wgtmuF12(k)=0.d0
         wgtmuF22(k)=0.d0
         wgtwreal(k)=0.d0
+        wgtpdf(k)=0.d0
         wgtwdeg(k)=0.d0
         wgtwdegmuf(k)=0.d0
         if(k.eq.2)then
            wgtwborn(k)=0.d0
+           wgtpdfborn=0.d0
            wgtwns(k)=0.d0
            wgtwnsmuf(k)=0.d0
            wgtwnsmur(k)=0.d0
@@ -608,6 +610,68 @@ c$$$        endif
       a=a+b
       return
       end
+
+      function compute_rwgt_wgt_NLO_pdf(kwgtinfo)
+c Recomputes the NLO cross section using the weights saved, and compares
+c with the reference weight
+      implicit none
+      include 'maxparticles.inc'
+      include 'run.inc'
+      include "reweight.inc"
+      double precision compute_rwgt_wgt_NLO_pdf
+      integer kwgtinfo
+      double precision rwgt,xsec,xlum,dlum
+      double precision xsec11,xsec12,xsec20
+      integer k,izero,mohdr
+      parameter (izero=0)
+      parameter (mohdr=-100)
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer save_nFKSprocess
+      save_nFKSprocess=nFKSprocess
+c
+      xsec=0.d0
+      xsec11=0.d0
+      xsec12=0.d0
+      xsec20=0.d0
+c
+      if (wgtpdf(1).eq.0d0) goto 541
+      call set_cms_stuff(mohdr)
+      q2fact(1)=wgtmuF12(1) * muF1_over_ref**2
+      q2fact(2)=wgtmuF22(1) * muF2_over_ref**2
+      xbk(1) = wgtxbj(1,1)
+      xbk(2) = wgtxbj(2,1)
+      nFKSprocess=nFKSprocess_used
+      xlum = dlum()
+      xsec11=xsec11+xlum*wgtpdf(1)
+c
+ 541  continue
+      if ( wgtpdf(2).eq.0d0 .and. wgtpdf(3).eq.0d0 .and.
+     $     wgtpdf(4).eq.0d0 .and. wgtpdfborn.eq.0d0) goto 542
+      call set_cms_stuff(izero)
+      q2fact(1)=wgtmuF12(2) * muF1_over_ref**2
+      q2fact(2)=wgtmuF22(2) * muF2_over_ref**2
+      do k=2,4
+         xbk(1) = wgtxbj(1,k)
+         xbk(2) = wgtxbj(2,k)
+         nFKSprocess=nFKSprocess_used
+         xlum = dlum()
+         xsec12=xsec12+xlum*wgtpdf(k)
+         if(k.eq.2)then
+            xsec20=xsec20+xlum*wgtpdfborn
+         endif
+      enddo
+c
+ 542  continue
+      nFKSprocess=save_nFKSprocess
+      wgtNLO11=xsec11
+      wgtNLO12=xsec12
+      wgtNLO20=xsec20
+      xsec=xsec11+xsec12
+      compute_rwgt_wgt_NLO_pdf=xsec
+      return
+      end
+
 
 
       function compute_rwgt_wgt_NLO(xmuR_over_ref,xmuF1_over_ref,
@@ -1632,7 +1696,7 @@ c
       include 'run.inc'
       include "reweight.inc"
       character*3 idstring
-      double precision compute_rwgt_wgt_NLO,compute_rwgt_wgt_Hev,
+      double precision compute_rwgt_wgt_NLO_pdf,compute_rwgt_wgt_Hev,
      #                 compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
       double precision wgtnew,tiny
       parameter (tiny=1.d-2)
@@ -1645,9 +1709,10 @@ c
 c
       iproc_save=iproc
       if(idstring.eq."NLO")then
-        wgtnew=compute_rwgt_wgt_NLO(muR_over_ref,muF1_over_ref,
-     #                              muF2_over_ref,QES_over_ref,
-     #                              iwgtinfo)
+c$$$        wgtnew=compute_rwgt_wgt_NLO(muR_over_ref,muF1_over_ref,
+c$$$     #                              muF2_over_ref,QES_over_ref,
+c$$$     #                              iwgtinfo)
+        wgtnew=compute_rwgt_wgt_NLO_pdf(iwgtinfo)
       elseif(idstring.eq."Hev")then
         wgtnew=compute_rwgt_wgt_Hev(muR_over_ref,muF1_over_ref,
      #                              muF2_over_ref,QES_over_ref,
@@ -1702,11 +1767,13 @@ c
       parameter (izero=0)
       integer kr,kf,n
       double precision pr_muR_over_ref,pr_muF1_over_ref,
-     # pr_muF2_over_ref,dummy,compute_rwgt_wgt_NLO
+     $     pr_muF2_over_ref,dummy,compute_rwgt_wgt_NLO
+     $     ,compute_rwgt_wgt_NLO_pdf
 c
-      dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
-     #                           ymuF2_over_ref,yQES_over_ref,
-     #                           iwgtinfo)
+c$$$      dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
+c$$$     #                           ymuF2_over_ref,yQES_over_ref,
+c$$$     #                           iwgtinfo)
+      dummy=compute_rwgt_wgt_NLO_pdf(iwgtinfo)
       wgtrefNLO11=wgtNLO11
       wgtrefNLO12=wgtNLO12
       wgtrefNLO20=wgtNLO20
@@ -1730,9 +1797,10 @@ c
       if(do_rwgt_pdf)then
         do n=0,numPDFs-1
           call InitPDF(n)
-          dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
-     #                               ymuF2_over_ref,yQES_over_ref,
-     #                               iwgtinfo)
+c$$$          dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
+c$$$     #                               ymuF2_over_ref,yQES_over_ref,
+c$$$     #                               iwgtinfo)
+          dummy=compute_rwgt_wgt_NLO_pdf(iwgtinfo)
           wgtNLOxsecPDF(1,n)=wgtNLO11
           wgtNLOxsecPDF(2,n)=wgtNLO12
           wgtNLOxsecPDF(3,n)=wgtNLO20
