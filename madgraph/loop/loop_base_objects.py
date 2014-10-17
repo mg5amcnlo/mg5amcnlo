@@ -264,7 +264,8 @@ class LoopDiagram(base_objects.Diagram):
 
         return contracted_diagram
     
-    def build_loop_tag_for_diagram_identification(self, model, FDStrut_rep):
+    def build_loop_tag_for_diagram_identification(self, model, FDStrut_rep,
+                                            use_FDStructure_ID_for_tag = False):
         """ This function returns what will be used as the 'loop_tag' attribute
         of the ContractedVertex instance in the function 'get_contracted_loop_diagram'.
         It is important since it is what is used by MG5_aMC to decide
@@ -298,13 +299,22 @@ class LoopDiagram(base_objects.Diagram):
         FDStructs_tagging = [[]]*len(canonical_tag)
         for i, tag_elem in enumerate(canonical_tag):
             for struct_ID in tag_elem[1]:
-                # As mentioned before, the list of external leg number should be enough.
-                FDStructs_tagging[i].extend([leg.get('number') for leg in
+                # As mentioned before, the list of external leg number is all 
+                # what's needed. Another solution would be to use the already
+                # existing canonical  representation of each FDStructure. 
+                # However, it uses the interaction ID's so it will overlook
+                # identifications.
+                if not use_FDStructure_ID_for_tag:
+                    FDStructs_tagging[i].extend([leg.get('number') for leg in
                         FDStrut_rep.get_struct(struct_ID).get('external_legs')])
-                # Another solution which is to use the already existing canonical 
-                # representation of each FDStructure. However, it uses the 
-                # interaction ID's so it is likely to overlook identifications.
-                # It is therefore not used (i.e. line below is commented).
+                else:
+                # For the loop diagram identifcation (withing a given process)
+                # it is best to simply used the FDStructure ID (since all 
+                # loop diagrams have been tagged with the same FDStructure
+                # repository in this case, so that the FDStructure ID is really
+                # unique)
+                    FDStructs_tagging[i].append(struct_ID)
+
 #                FDStructs_tagging[i].append(FDStrut_rep.get_struct(struct_ID).get('canonical'))
             FDStructs_tagging[i].sort()
             FDStructs_tagging[i] = tuple(FDStructs_tagging[i])
@@ -716,6 +726,7 @@ class LoopDiagram(base_objects.Diagram):
             # in vertex i.
             canonical = self.construct_FDStructure(i,pos,\
                                self['vertices'][i].get('legs')[k],FDStruct)
+
             if not canonical:
                 raise self.PhysicsObjectError, \
                       "Failed to reconstruct a FDStructure."
@@ -870,7 +881,18 @@ class LoopDiagram(base_objects.Diagram):
             else:
                 self['tag'].append([copy.copy(currLeg),\
                                      sorted(FDStructureIDList),vertFoundID])
-                myleglist.append(copy.copy(currLeg))
+                new_input_leg = copy.copy(currLeg)
+                if fromPos!=-1:
+                    # In this case the currLeg is an *output* of the current
+                    # loop vertex (the last loop vertex must have been a 2-point
+                    # dummy one otherwise loopVertexList wouldn't be empty). 
+                    # To have this leg as an *input* of the loop vertex we are
+                    # constructing with generate_loop_vertex, we must switch 
+                    # the id of the new_input_leg to its corresponding anti pdg.
+                    new_input_leg.set('id',model.get_particle(
+                                   new_input_leg.get('id')).get_anti_pdg_code())
+                myleglist.append(new_input_leg)
+                    
             # Now depending we reached the last loop vertex or not, we will 
             # create a current (with ref_dict_to1) or a wavefunction plus 
             # a trivial two-point amplitude with interaction id=-1 which
@@ -883,8 +905,9 @@ class LoopDiagram(base_objects.Diagram):
             # as we reach this number, we reached the EXTERNAL outter leg 
             # which set the end of the tagging algorithm.
             loopVertexList.append(\
-              self.generate_loop_vertex(myleglist,model,vertFoundID))
+                         self.generate_loop_vertex(myleglist,model,vertFoundID))
             # check that the particle/anti-particle is set correctly
+
         if nextLoopLeg.same(endLeg):
             # Now we can add the corresponding 'fake' amplitude vertex
             # with flagged id = -1

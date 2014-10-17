@@ -811,9 +811,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                               len(self['structure_repository']))
 #       === START === WORK IN PROGRESS
         import madgraph.core.helas_objects as helas_objects
-        diagram_tags = [helas_objects.IdentifyMETag(d.get_contracted_loop_diagram(model,
-             self.get('structure_repository')),model) for d in self.get('loop_diagrams')]
-        
+ #       diagram_tags = [helas_objects.IdentifyMETag(d.get_contracted_loop_diagram(model,
+ #            self.get('structure_repository')),model) for d in self.get('loop_diagrams') ]
+        diagram_tags = [loop_diag.build_loop_tag_for_diagram_identification(
+                                model, self.get('structure_repository'), 
+                                use_FDStructure_ID_for_tag = True)
+                                     for loop_diag in self.get('loop_diagrams')]
         non_identified_diags = []
         identified_diags = []
         for i, tag1 in enumerate(diagram_tags):
