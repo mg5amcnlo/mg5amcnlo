@@ -255,7 +255,7 @@ c     timing statistics
      #                 prefact_cnt_ssc,prefact_cnt_ssc_c,prefact_coll,
      #                 prefact_coll_c,born_wgt,prefact_deg,prefact,prefact_c,
      #                 prefact_deg_sxi,prefact_deg_slxi,deg_wgt,deg_swgt,
-     #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,
+     #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,deg_wgt_tmp,
      #                 cnt_swgt,cnt_wgt,xlum_ev,xlum_c,xlum_s,xlum_sc,xsec,
      #                 bpower,cpower
       integer i,j,iplot
@@ -587,6 +587,9 @@ com-- muR-dependent fac is reweighted here
              wgtmuF22(1)=muF22_current/muF2_over_ref**2
              call reweight_fillkin(pp,ione)
              wgtwreal(1)=xsec/g**(nint(2*wgtbpower+2.d0))
+             if (xlum_ev.ne.0d0) then
+                wgtpdf(1)=ev_wgt/xlum_ev
+             endif
            endif
         endif
       endif
@@ -668,6 +671,9 @@ com-- muR-dependent fac is reweighted here
               wgtwdegmuf(3)=wgtdegrem_muF *
      #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
      #              g**(nint(2*wgtbpower+2.d0))
+              if (xlum_c.ne.0d0) then
+                 wgtpdf(3)=(cnt_wgt_c+deg_wgt)/xlum_c
+              endif
             endif
          endif
       endif
@@ -699,9 +705,13 @@ com-- muR-dependent fac is reweighted here
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
      f             * rwgt_muR_dep_fac(scale)
 com-- muR-dependent fac is reweighted here
-              if(doreweight)
-     #          wgtwreal(2)=-xsec*(prefact+prefact_cnt_ssc)*rwgt/
+              if(doreweight) then
+                 wgtwreal(2)=-xsec*(prefact+prefact_cnt_ssc)*rwgt/
      #                      g**(nint(2*wgtbpower+2.d0))
+                 if (xlum_s.ne.0d0) then
+                    wgtpdf(2)=(cnt_wgt_s+cnt_swgt_s)/xlum_s
+                 endif
+              endif
             endif
  546        continue
             if (abrv.eq.'real' .or. .not.nbody) goto 548
@@ -742,6 +752,10 @@ com-- muR-dependent fac is reweighted here
               born_wgt_ao2pi=born_wgt_ao2pi*xnormsv
      f             * rwgt_muR_dep_fac(scale)
 com-- muR-dependent fac is reweighted here
+              if (doreweight .and. xlum_s.ne.0d0) then
+                 wgtpdf(2)=wgtpdf(2)+(bsv_wgt+virt_wgt)/xlum_s
+                 wgtpdfborn=born_wgt/xlum_s
+              endif
             endif
  548        continue
             iplot=0
@@ -777,9 +791,10 @@ com-- muR-dependent fac is reweighted here
 com-- muR-dependent fac is reweighted here
             call sreal_deg(p1_cnt(0,1,2),zero,one,
      #                     deg_xi_sc,deg_lxi_sc)
-            deg_wgt=deg_wgt-( deg_xi_sc+deg_lxi_sc*log(xi_i_fks_cnt(ione)) )*
+            deg_wgt_tmp=-( deg_xi_sc+deg_lxi_sc*log(xi_i_fks_cnt(ione)) )*
      #                     jac_cnt(2)*prefact_deg*rwgt/(shat/(32*pi**2))*
      #                     xlum_sc * rwgt_muR_dep_fac(scale)
+            deg_wgt=deg_wgt+deg_wgt_tmp
 com-- muR-dependent fac is reweighted here
             deg_swgt=deg_swgt-( deg_xi_sc*prefact_deg_sxi +
      #                     deg_lxi_sc*prefact_deg_slxi )*
@@ -802,6 +817,10 @@ com-- muR-dependent fac is reweighted here
      #          -wgtdegrem_muF*( prefact_deg+prefact_deg_sxi )*
      #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
      #              g**(nint(2*wgtbpower+2.d0))
+              if (xlum_sc.ne.0d0) then
+                 wgtpdf(4)=(cnt_wgt_sc+cnt_swgt_sc+deg_wgt_tmp+deg_swgt)
+     $                /xlum_sc
+              endif
             endif
          endif
       endif
@@ -930,13 +949,17 @@ c$$$      endif
               if (i.eq.1) then
                  wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
      $                *enhanceH/enhanceS
+                 wgtpdf(i)=wgtpdf(i) * xsec*fkssymmetryfactor
+     $                *enhanceH/enhanceS
               else
                  wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
+                 wgtpdf(i)=wgtpdf(i) * xsec*fkssymmetryfactor
               endif
              wgtwdeg(i)=wgtwdeg(i) * xsec*fkssymmetryfactorDeg
              wgtwdegmuf(i)=wgtwdegmuf(i) * xsec*fkssymmetryfactorDeg
              if(i.eq.2)then
                wgtwborn(i)=wgtwborn(i) * xsec*fkssymmetryfactorBorn
+               wgtpdfborn=wgtpdfborn * xsec*fkssymmetryfactorBorn
                wgtwns(i)=wgtwns(i) * xsec*fkssymmetryfactorBorn
                wgtwnsmuf(i)=wgtwnsmuf(i) * xsec*fkssymmetryfactorBorn
                wgtwnsmur(i)=wgtwnsmur(i) * xsec*fkssymmetryfactorBorn
@@ -3618,7 +3641,7 @@ c has to be inserted here
         collrem_lxi=oo2pi * dble(wgt1(1)) * collrem_lxi * xnorm
 
         if(doreweight)then
-          write(*,*) 'FIX REWEIGHT'
+c$$$          write(*,*) 'FIX REWEIGHT'
           wgtdegrem_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
      #               apprime(iap) - xkkern 
           wgtdegrem_xi=oo2pi * dble(wgt1(1)) * wgtdegrem_xi * xnorm
@@ -4798,6 +4821,7 @@ c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
 c eq.(MadFKS.C.13)
       if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
           write(*,*) 'FIX visA, visB'
+          stop
 C        bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(shat/QES2)*
 C     #                       ao2pi*dble(wgt1(1))
 C      elseif(abrv.eq.'novA'.or.abrv.eq.'novB')then
@@ -4814,16 +4838,23 @@ c eq.(MadFKS.C.14)
         if (dabs(log(q2fact(1)/scale**2)).gt.1d-6) then
             ! fix the next line and remove the if statement (all points)
             write(*,*) 'FIX muR!=muF'
+            stop
 C            bsv_wgt=bsv_wgt - 2*pi*beta0*wgtbpower*
 C     #                       log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
         endif
       endif
 
 
+      if (dabs(log(QES2/scale**2)).gt.1d-6) then
+         write(*,*) 'FIX muR!=QES'
+         stop
+      endif
+
+
  549  continue
 
       if(doreweight)then
-        write(*,*) 'FIX REWEIGHT!!!!!'
+c$$$        write(*,*) 'FIX REWEIGHT!!!!!'
         ! the following lines have to be uncommented and fixed
 C        wgtwnstmpmuf=0.d0
 C        if(abrv.ne.'born' .and. abrv.ne.'grid')then

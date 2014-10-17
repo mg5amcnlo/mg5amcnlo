@@ -223,7 +223,7 @@ c The weights comming from reweighting:
             ratio=0d0
          else
             if (doreweight) then
-               write (*,*) 'ERROR in madfks_plot.f', wgtden,www
+               write (*,*) 'ERROR in madfks_plot.f', wgtden,www,ibody
             else
                ratio=1d0
             endif

@@ -46,6 +46,10 @@ c   n-body NLO scale muF dependence, n-body NLO scale muR dependence
      #                 wgtwnsmuf(2:2),wgtwnsmur(2:2)
       common/cwgt6/wgtwborn,wgtwns,wgtwnsmuf,wgtwnsmur
 
+c Weights for parton level NLO (for PDF reweighting only)
+      double precision wgtpdf(4),wgtpdfborn
+      common/cwgtpdfNLO/wgtpdf,wgtpdfborn
+
 c MC stuff: MC counterterms proper, and Bjorken x's
       double precision wgtwmcxsecE(maxparticles),
      #                 wgtmcxbjE(2,maxparticles)
