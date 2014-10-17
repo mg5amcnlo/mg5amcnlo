@@ -543,7 +543,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         else:
             self['born_diagrams'] = base_objects.DiagramList()
             bornsuccessful = True
-            logger.debug("# born diagrams generation skipped by user request.")        
+            logger.debug("# born diagrams generation skipped by user request.")
 
         # Make sure that all orders specified belong to the model:
         for order in self['process']['orders'].keys()+\
@@ -654,6 +654,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         # If there is no born neither loop diagrams, return now.
         if not self['process']['has_born'] and not self['loop_diagrams']:
+            self['process']['orders'].clear()
+            self['process']['orders'].update(user_orders)
             return False
 
         # We add here the UV renormalization contribution built in
@@ -760,6 +762,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                                           ' order constraints.')
         # If there is no born neither loop diagrams after filtering, return now.
         if not self['process']['has_born'] and not self['loop_diagrams']:
+            self['process']['squared_orders'].clear()
+            self['process']['squared_orders'].update(user_squared_orders)
             return False
 
         # Set the necessary UV/R2 CounterTerms for each loop diagram generated
@@ -805,6 +809,31 @@ class LoopAmplitude(diagram_generation.Amplitude):
         ldg_debug_info("#Diags after filtering",len(self['loop_diagrams']))
         ldg_debug_info("# of different structures identified",\
                                               len(self['structure_repository']))
+#       === START === WORK IN PROGRESS
+        import madgraph.core.helas_objects as helas_objects
+        diagram_tags = [helas_objects.IdentifyMETag(d.get_contracted_loop_diagram(model,
+             self.get('structure_repository')),model) for d in self.get('loop_diagrams')]
+        
+        non_identified_diags = []
+        identified_diags = []
+        for i, tag1 in enumerate(diagram_tags):
+            if i+1 in identified_diags:
+                continue
+            else:
+                non_identified_diags.append(i+1)
+            for j, tag2 in enumerate(diagram_tags):
+                if (i != j and tag1==tag2):
+                    misc.sprint('The two diagrams %d and %d are identical!'%(i+1,j+1))
+                    identified_diags.append(j+1)
+        if len(identified_diags)>1:
+            misc.sprint('List of independent non identified diags = %s'%str(sorted(non_identified_diags)))
+            misc.sprint('List of identified diags                 = %s'%str(sorted(identified_diags)))                          
+#       DEBUG FOR process g g > g g [virt=QCD]
+#        misc.sprint(diagram_tags[133-1].tag)
+#        misc.sprint(diagram_tags[138-1].tag)
+#        misc.sprint(diagram_tags[133-1].tag==diagram_tags[138-1].tag)
+#        misc.sprint(str(diagram_tags[133-1].tag)==str(diagram_tags[138-1].tag))
+#       === END === WORK IN PROGRESS
 
         return (bornsuccessful or totloopsuccessful)
 
@@ -920,8 +949,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
         """ Generates all born diagrams relevant to this NLO Process """
 
         bornsuccessful, self['born_diagrams'] = \
-          super(LoopAmplitude, self).generate_diagrams(True)
-            
+                       diagram_generation.Amplitude.generate_diagrams(self,True)
+        
         return bornsuccessful
 
     def generate_loop_diagrams(self):

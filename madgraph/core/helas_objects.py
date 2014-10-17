@@ -88,7 +88,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
                                       amplitude.get('diagrams')])
         elif process.get('NLO_mode')=='noborn':
             # For loop-induced processes, make sure to create the Tag based on
-            # the contracted diagram            
+            # the contracted diagram
             sorted_tags = sorted([cls(d.get_contracted_loop_diagram(model,
              amplitude.get('structure_repository')), model, ninitial) for d in \
                                                      amplitude.get('diagrams')])

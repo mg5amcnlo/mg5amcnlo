@@ -541,6 +541,7 @@ class Amplitude(base_objects.PhysicsObject):
         DiagramList by the function. This is controlled by the argument
         returndiag.
         """
+
         process = self.get('process')
         model = process.get('model')
         legs = process.get('legs')
@@ -569,8 +570,7 @@ class Amplitude(base_objects.PhysicsObject):
                 self['diagrams'] = res
                 raise InvalidCmd, 'The number of fermion is odd'
             else:
-                raise InvalidCmd, 'The number of fermion is odd'
-
+                return False, res
 
         # Then check same number of incoming and outgoing fermions (if
         # no Majorana particles in model)
@@ -581,8 +581,8 @@ class Amplitude(base_objects.PhysicsObject):
                 self['diagrams'] = res
                 raise InvalidCmd, 'The number of of incoming/outcoming fermions are different'
             else:
-                raise InvalidCmd, 'The number of of incoming/outcoming fermions are different'
-        
+                return False, res
+
         # Finally check that charge (conserve by all interactions) of the process
         #is globally conserve for this process.
         for charge in model.get('conserved_charge'):

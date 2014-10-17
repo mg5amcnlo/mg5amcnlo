@@ -264,7 +264,7 @@ class LoopDiagram(base_objects.Diagram):
 
         return contracted_diagram
     
-    def build_loop_tag_for_process_identification(self, model, FDStrut_rep):
+    def build_loop_tag_for_diagram_identification(self, model, FDStrut_rep):
         """ This function returns what will be used as the 'loop_tag' attribute
         of the ContractedVertex instance in the function 'get_contracted_loop_diagram'.
         It is important since it is what is used by MG5_aMC to decide
@@ -280,6 +280,9 @@ class LoopDiagram(base_objects.Diagram):
         # First create a list of objects we want to use to identify the particles
         # running in the loop. We use here the same strategy as in the function
         # 'vertex_id_from_vertex' of IdentifyMETag.
+        # However, in addition to what one has in IdentifyMETag, we must also
+        # keep track of the attribute 'is_part' since this provides the 
+        # direction of the loop flow.
         loop_parts_tagging = [[]]*len(canonical_tag)
         for i, tag_elem in enumerate(canonical_tag):
             loop_part = model.get_particle(tag_elem[0])
@@ -287,7 +290,8 @@ class LoopDiagram(base_objects.Diagram):
                                      loop_part.get('color'),
                                      loop_part.get('self_antipart'),
                                      loop_part.get('mass'),
-                                     loop_part.get('width'))
+                                     loop_part.get('width'),
+                                     loop_part.get('is_part'))
         
         # Now create a list of objects which we want to use to uniquely
         # identify each structure attached to the loop for the loop_tag.
@@ -375,9 +379,8 @@ class LoopDiagram(base_objects.Diagram):
         contracted_vertex = base_objects.ContractedVertex({
           'id':-2,
           'loop_orders':self.get_loop_orders(model),
-          'loop_tag': self.build_loop_tag_for_process_identification(
-                                                            model, struct_rep)
-                                                           })
+          'loop_tag': self.build_loop_tag_for_diagram_identification(model, struct_rep)
+                                                          })
 
         # Using the 'tag' information, the construction of the contracted diagram
         # quite simple. First scan all structures to add their vertices and at
