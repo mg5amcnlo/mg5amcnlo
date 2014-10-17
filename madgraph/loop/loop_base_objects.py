@@ -264,9 +264,7 @@ class LoopDiagram(base_objects.Diagram):
 
         return contracted_diagram
     
-    @staticmethod
-    def build_loop_tag_for_process_identification(canonical_tag, model, 
-                                                                   FDStrut_rep):
+    def build_loop_tag_for_process_identification(self, model, FDStrut_rep):
         """ This function returns what will be used as the 'loop_tag' attribute
         of the ContractedVertex instance in the function 'get_contracted_loop_diagram'.
         It is important since it is what is used by MG5_aMC to decide
@@ -276,6 +274,8 @@ class LoopDiagram(base_objects.Diagram):
         to the loops because these are already compared using the rest of the
         DiagramTag structure. All we need is to identify a structure by its
         external leg numbers."""
+     
+        canonical_tag = self['canonical_tag']
      
         # First create a list of objects we want to use to identify the particles
         # running in the loop. We use here the same strategy as in the function
@@ -329,8 +329,11 @@ class LoopDiagram(base_objects.Diagram):
                    # FDStructure identification
                    FDStructs_tagging,
                    # Loop interactions identification
-                   interactions_tagging
-                ))
+                   interactions_tagging,
+                 )
+                 # Finally make sure that the loop orders are the same
+                 + sorted(self.get_loop_orders(model).items())
+               )
 
     def get_contracted_loop_diagram(self, model, struct_rep=None):
         """ Returns a base_objects.Diagram which correspond to this loop diagram
@@ -373,7 +376,8 @@ class LoopDiagram(base_objects.Diagram):
           'id':-2,
           'loop_orders':self.get_loop_orders(model),
           'loop_tag': self.build_loop_tag_for_process_identification(
-                                     self['canonical_tag'], model, struct_rep)})
+                                                            model, struct_rep)
+                                                           })
 
         # Using the 'tag' information, the construction of the contracted diagram
         # quite simple. First scan all structures to add their vertices and at

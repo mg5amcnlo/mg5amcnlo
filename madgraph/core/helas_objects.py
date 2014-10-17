@@ -191,7 +191,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             ret_list = tuple([(key, inter.get('couplings')[key]) for key in \
                           coup_keys] + \
                          [str(c) for c in inter.get('color')] + \
-                         inter.get('lorentz'))
+                         inter.get('lorentz')+sorted(inter.get('orders')))
                    
         if last_vertex:
             return ((ret_list,),)
