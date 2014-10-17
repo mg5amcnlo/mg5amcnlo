@@ -802,21 +802,33 @@ class LoopAmplitude(diagram_generation.Amplitude):
             nCT['UV']+=len(ldiag.get_CT(model,'UV'))
             nCT['R2']+=len(ldiag.get_CT(model,'R2'))         
 
-        logger.info("Contributing diagrams generated: "+\
-                     "%d born, %d loop, %d R2, %d UV"%\
-                     (len(self['born_diagrams']),nLoopDiag,nCT['R2'],nCT['UV']))
+        # The identification of numerically equivalent diagrams is done here.
+        # Simply comment the line above to remove it for testing purposes
+        # (i.e. to make sure it does not alter the result).
+ #       nLoopsIdentified = self.identify_loop_diagrams()
+        nLoopsIdentified = 0
+        if nLoopsIdentified > 0:
+            logger.debug("A total of %d loop diagrams were identified with"+\
+                                                            " equivalent ones.")            
+        logger.info("Contributing diagrams generated"+\
+          "%d Born, %d%s loops, %d R2, %d UV"%(len(self['born_diagrams']),
+                    len(self['loop_diagrams']),'(+%d)'%nLoopsIdentified \
+                            if nLoopsIdentified>1 else '' ,nCT['R2'],nCT['UV']))
         
         ldg_debug_info("#Diags after filtering",len(self['loop_diagrams']))
         ldg_debug_info("# of different structures identified",\
                                               len(self['structure_repository']))
+
+        return (bornsuccessful or totloopsuccessful)
+
 #       === START === WORK IN PROGRESS
         import madgraph.core.helas_objects as helas_objects
- #       diagram_tags = [helas_objects.IdentifyMETag(d.get_contracted_loop_diagram(model,
- #            self.get('structure_repository')),model) for d in self.get('loop_diagrams') ]
-        diagram_tags = [loop_diag.build_loop_tag_for_diagram_identification(
-                                model, self.get('structure_repository'), 
-                                use_FDStructure_ID_for_tag = True)
-                                     for loop_diag in self.get('loop_diagrams')]
+        diagram_tags = [helas_objects.IdentifyMETag(d.get_contracted_loop_diagram(model,
+             self.get('structure_repository')),model) for d in self.get('loop_diagrams') ]
+#        diagram_tags = [loop_diag.build_loop_tag_for_diagram_identification(
+#                                model, self.get('structure_repository'), 
+#                                use_FDStructure_ID_for_tag = True)
+#                                     for loop_diag in self.get('loop_diagrams')]
         non_identified_diags = []
         identified_diags = []
         for i, tag1 in enumerate(diagram_tags):
@@ -832,13 +844,20 @@ class LoopAmplitude(diagram_generation.Amplitude):
             misc.sprint('List of independent non identified diags = %s'%str(sorted(non_identified_diags)))
             misc.sprint('List of identified diags                 = %s'%str(sorted(identified_diags)))                          
 #       DEBUG FOR process g g > g g [virt=QCD]
-#        misc.sprint(diagram_tags[133-1].tag)
-#        misc.sprint(diagram_tags[138-1].tag)
-#        misc.sprint(diagram_tags[133-1].tag==diagram_tags[138-1].tag)
-#        misc.sprint(str(diagram_tags[133-1].tag)==str(diagram_tags[138-1].tag))
+ #       misc.sprint(diagram_tags[133-1].tag)
+ #       misc.sprint(diagram_tags[138-1].tag)
+ #       misc.sprint(diagram_tags[133-1].tag==diagram_tags[138-1].tag)
+ #       misc.sprint(str(diagram_tags[133-1].tag)==str(diagram_tags[138-1].tag))
 #       === END === WORK IN PROGRESS
 
         return (bornsuccessful or totloopsuccessful)
+
+    def identify_loop_diagrams(self):
+        """ Uses a loop_tag characterizing the loop with only physical
+        information about it (mass, coupling, width, color, etc...) so as to 
+        recognize numerically equivalent diagrams and group them together,
+        such as massless quark loops in pure QCD gluon loop amplitudes."""
+        pass
 
     def print_split_order_infos(self):
         """This function is solely for monitoring purposes. It reports what are

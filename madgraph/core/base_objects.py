@@ -2046,6 +2046,13 @@ class Vertex(PhysicsObject):
     def default_setup(self):
         """Default values for all properties"""
 
+        # The 'id' of the vertex corresponds to the interaction ID it is made of.
+        # Notice that this 'id' can take the special values :
+        #  -1 : A two-point vertex which either 'sews' the two L-cut particles
+        #       together or simply merges two wavefunctions to create an amplitude
+        #       (in the case of tree-level diagrams).
+        #  -2 : The id given to the ContractedVertices (i.e. a shrunk loop) so 
+        #       that it can be easily identified when constructing the DiagramChainLinks.
         self['id'] = 0
         self['legs'] = LegList()
 

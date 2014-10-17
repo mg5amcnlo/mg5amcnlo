@@ -69,6 +69,11 @@ class LoopDiagram(base_objects.Diagram):
         # It is the (positive) PDG of the (particle, not anti-particle) L-cut 
         # particle for a loop diagram.
         self['type'] = 0
+        # Loop diagrams can be identified to others which are numerically exactly
+        # equivalent. This is the case for example for the closed massles quark
+        # loops. In this case, only one copy of the diagram is kept and this
+        # multiplier attribute is set the to number of identified diagrams.
+        self['multiplier'] = 1
         # This stores the list of amplitudes vertices which give the R2/UV
         # counter-terms to this loop.
         self['CT_vertices'] = base_objects.VertexList()
@@ -275,7 +280,7 @@ class LoopDiagram(base_objects.Diagram):
         to the loops because these are already compared using the rest of the
         DiagramTag structure. All we need is to identify a structure by its
         external leg numbers."""
-     
+
         canonical_tag = self['canonical_tag']
      
         # First create a list of objects we want to use to identify the particles
@@ -299,26 +304,33 @@ class LoopDiagram(base_objects.Diagram):
         FDStructs_tagging = [[]]*len(canonical_tag)
         for i, tag_elem in enumerate(canonical_tag):
             for struct_ID in tag_elem[1]:
-                # As mentioned before, the list of external leg number is all 
-                # what's needed. Another solution would be to use the already
-                # existing canonical  representation of each FDStructure. 
-                # However, it uses the interaction ID's so it will overlook
-                # identifications.
                 if not use_FDStructure_ID_for_tag:
-                    FDStructs_tagging[i].extend([leg.get('number') for leg in
-                        FDStrut_rep.get_struct(struct_ID).get('external_legs')])
+                    # The FDStructures will be probed by the rest of the 
+                    # DiagramTag, it is therefore not necessary to include any
+                    # information regarding the structures in the loop_tag.
+                    # However, notice that this means that the same loop attached
+                    # to structures (1,2,3,4), in this order, and another one
+                    # attached to the same structure but in a different order,
+                    # say (1,4,3,2), will share the same DiagramTag (because the
+                    # structure are the same but in a different order) since the
+                    # loop_tag doesn't account for any information regarding the
+                    # structures. This is ok because the Diagram is only intended
+                    # for process identifications.
+                    pass
+#                    FDStructs_tagging[i].extend([leg.get('number') for leg in
+#                        FDStrut_rep.get_struct(struct_ID).get('external_legs')])
                 else:
-                # For the loop diagram identifcation (withing a given process)
-                # it is best to simply used the FDStructure ID (since all 
-                # loop diagrams have been tagged with the same FDStructure
-                # repository in this case, so that the FDStructure ID is really
-                # unique)
+                    # For the loop diagram identification (within a given process)
+                    # we must account for the FDStructure, and it is then
+                    # simplest to just use their ID (since all loop diagrams 
+                    # have been tagged with the same FDStructure repository in
+                    # this case, so that the FDStructure ID is really unique).
+                    # There is no need to use the 'canonical' attribute of the
+                    # structure ID.
                     FDStructs_tagging[i].append(struct_ID)
 
-#                FDStructs_tagging[i].append(FDStrut_rep.get_struct(struct_ID).get('canonical'))
             FDStructs_tagging[i].sort()
             FDStructs_tagging[i] = tuple(FDStructs_tagging[i])
-        
         
         # We want to identify processes together if their diagrams
         # are made of the same interactions which can however have different
