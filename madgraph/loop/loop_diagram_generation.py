@@ -29,11 +29,12 @@ from madgraph import MadGraph5Error
 from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.loop_diagram_generation')
 
-def ldg_debug_info(msg,val):
+def ldg_debug_info(msg,val, force=False):
     # This subroutine has typically quite large DEBUG info.
     # So even in debug mode, they are turned off by default.
     # Remove the line below for loop diagram generation diagnostic
-    return
+    if not force: return
+
     flag = "LoopGenInfo: "
     if len(msg)>40:
         logger.debug(flag+msg[:35]+" [...] = %s"%str(val))
@@ -805,12 +806,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # The identification of numerically equivalent diagrams is done here.
         # Simply comment the line above to remove it for testing purposes
         # (i.e. to make sure it does not alter the result).
- #       nLoopsIdentified = self.identify_loop_diagrams()
-        nLoopsIdentified = 0
+        nLoopsIdentified = self.identify_loop_diagrams()
         if nLoopsIdentified > 0:
-            logger.debug("A total of %d loop diagrams were identified with"+\
-                                                            " equivalent ones.")            
-        logger.info("Contributing diagrams generated"+\
+            logger.debug("A total of %d loop diagrams "%nLoopsIdentified+\
+                                        "were identified with equivalent ones.")            
+        logger.info("Contributing diagrams generated: "+\
           "%d Born, %d%s loops, %d R2, %d UV"%(len(self['born_diagrams']),
                     len(self['loop_diagrams']),'(+%d)'%nLoopsIdentified \
                             if nLoopsIdentified>1 else '' ,nCT['R2'],nCT['UV']))
@@ -821,43 +821,58 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         return (bornsuccessful or totloopsuccessful)
 
-#       === START === WORK IN PROGRESS
-        import madgraph.core.helas_objects as helas_objects
-        diagram_tags = [helas_objects.IdentifyMETag(d.get_contracted_loop_diagram(model,
-             self.get('structure_repository')),model) for d in self.get('loop_diagrams') ]
-#        diagram_tags = [loop_diag.build_loop_tag_for_diagram_identification(
-#                                model, self.get('structure_repository'), 
-#                                use_FDStructure_ID_for_tag = True)
-#                                     for loop_diag in self.get('loop_diagrams')]
-        non_identified_diags = []
-        identified_diags = []
-        for i, tag1 in enumerate(diagram_tags):
-            if i+1 in identified_diags:
-                continue
-            else:
-                non_identified_diags.append(i+1)
-            for j, tag2 in enumerate(diagram_tags):
-                if (i != j and tag1==tag2):
-                    misc.sprint('The two diagrams %d and %d are identical!'%(i+1,j+1))
-                    identified_diags.append(j+1)
-        if len(identified_diags)>1:
-            misc.sprint('List of independent non identified diags = %s'%str(sorted(non_identified_diags)))
-            misc.sprint('List of identified diags                 = %s'%str(sorted(identified_diags)))                          
-#       DEBUG FOR process g g > g g [virt=QCD]
- #       misc.sprint(diagram_tags[133-1].tag)
- #       misc.sprint(diagram_tags[138-1].tag)
- #       misc.sprint(diagram_tags[133-1].tag==diagram_tags[138-1].tag)
- #       misc.sprint(str(diagram_tags[133-1].tag)==str(diagram_tags[138-1].tag))
-#       === END === WORK IN PROGRESS
-
-        return (bornsuccessful or totloopsuccessful)
-
     def identify_loop_diagrams(self):
         """ Uses a loop_tag characterizing the loop with only physical
         information about it (mass, coupling, width, color, etc...) so as to 
         recognize numerically equivalent diagrams and group them together,
         such as massless quark loops in pure QCD gluon loop amplitudes."""
-        pass
+
+        # This dictionary contains key-value pairs of the form 
+        # (loop_tag, DiagramList) where the loop_tag key unambiguously 
+        # characterizes a class of equivalent diagrams and the DiagramList value
+        # lists all the diagrams belonging to this class.
+        # In the end, the first diagram of this DiagramList will be used as
+        # the reference included in the numerical code for the loop matrix 
+        # element computations and all the others will be omitted, being
+        # included via a simple multiplicative factor applied to the first one.
+        diagram_identification = {}
+        
+        for i, loop_diag in enumerate(self['loop_diagrams']):
+            loop_tag = loop_diag.build_loop_tag_for_diagram_identification(
+                     self['process']['model'], self.get('structure_repository'),
+                                              use_FDStructure_ID_for_tag = True)
+            # We store the loop diagrams in a 2-tuple that keeps track of 'i'
+            # so that we don't lose their original order. It is just for 
+            # convenience, and not strictly necessary.
+            try:
+                diagram_identification[loop_tag].append((i+1,loop_diag))
+            except KeyError:
+                diagram_identification[loop_tag] = [(i+1,loop_diag)]
+                
+        # Now sort the loop_tag keys according to their order of appearance
+        sorted_loop_tag_keys = sorted(diagram_identification.keys(),
+                                   key=lambda k:diagram_identification[k][0][0])
+        
+        new_loop_diagram_base = base_objects.DiagramList([])
+        n_loops_identified = 0
+        for loop_tag in sorted_loop_tag_keys:
+            n_diag_in_class = len(diagram_identification[loop_tag])
+            n_loops_identified += n_diag_in_class-1
+            new_loop_diagram_base.append(diagram_identification[loop_tag][0][1])
+            # We must add the counterterms of all the identified loop diagrams
+            # to the reference one.
+            new_loop_diagram_base[-1]['multiplier'] = n_diag_in_class
+            for ldiag in diagram_identification[loop_tag][1:]:
+                new_loop_diagram_base[-1].get('CT_vertices').extend(
+                                         copy.copy(ldiag[1].get('CT_vertices')))
+            if n_diag_in_class > 1:
+                ldg_debug_info("# Diagram equivalence class detected","#(%s) -> #%d"\
+                %(','.join('%d'%diag[0] for diag in diagram_identification[loop_tag][1:])+
+                (',' if n_diag_in_class==2 else ''),diagram_identification[loop_tag][0][0]))
+
+        
+        self.set('loop_diagrams',new_loop_diagram_base)
+        return n_loops_identified
 
     def print_split_order_infos(self):
         """This function is solely for monitoring purposes. It reports what are

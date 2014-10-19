@@ -1038,7 +1038,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + \
                    "%(LoopCoupling{0})s,%(MPLoopCoupling{0})s,".format(i+1)
         call = call + "%(LoopRank)d,"
-        call = call + "%(LoopSymmetryFactor)d,"
+        call = call + "%(LoopSymmetryFactor)d,%(LoopMultiplier)d,"
         call = call + "%(ampNumber)d,AMPL(1,%(ampNumber)d),S(%(ampNumber)d))"
         
         def create_loop_amp(amplitude):
@@ -1348,7 +1348,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                 create_coef=[
                      'CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
                      '%(loop_rank)d','%(lcut_size)d',
-                     '%(loop_number)d','%(LoopSymmetryFactor)d']
+                     '%(loop_number)d','%(LoopSymmetryFactor)d',
+                     '%(LoopMultiplier)d']
                 if not loop_induced:
                     create_coef.append('%(amp_number)d,H)')
                 else:
@@ -1363,7 +1364,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         # be added into the same LOOPCOEF array component.
                   'loop_number':(lamp.get('loop_group_id')+1),
                   'amp_number':lamp.get('amplitudes')[0].get('number'),
-                  'LoopSymmetryFactor':lamp.get('loopsymmetryfactor')})
+                  'LoopSymmetryFactor':lamp.get('loopsymmetryfactor'),
+                  'LoopMultiplier':lamp.get('multiplier')})
                 res.extend(self.get_sqso_target_skip_code(
                       lamp.get('amplitudes')[0].get('number'), 
                       sqso_max_lamp, 4000, split_orders, squared_orders,

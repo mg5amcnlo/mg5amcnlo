@@ -121,6 +121,11 @@ class LoopDiagram(base_objects.Diagram):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value)
 
+        if name == 'multiplier':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer" % str(value)
+
         if name == 'contracted_diagram':
             if not isinstance(value, base_objects.Diagram):
                 raise self.PhysicsObjectError, \

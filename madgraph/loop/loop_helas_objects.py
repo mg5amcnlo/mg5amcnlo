@@ -256,6 +256,12 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         self['loop_group_id']=-1
         # To store the symmetry factor of the loop
         self['loopsymmetryfactor'] = 0
+        # Loop diagrams can be identified to others which are numerically exactly
+        # equivalent. This is the case for example for the closed massless quark
+        # loops. In this case, only one copy of the diagram is kept and this
+        # multiplier attribute is set the to number of identified diagrams.
+        # At the Helas level, this multiplier is given to each LoopHelasAmplitude
+        self['multiplier'] = 1
 
     # Enhanced get function
     def get(self, name):
@@ -282,17 +288,12 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             if not isinstance(value, helas_objects.HelasAmplitudeList):
                 raise self.PhysicsObjectError, \
                   "%s is not a valid list of HelasAmplitudes" % str(value)
-        
-        elif name=='type' or name=='loop_group_id':
+
+        elif name in ['type','loop_group_id','multiplier','loopsymmetryfactor']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                   "%s is not a valid integer for the attribute '%s'" %(str(value),name)
 
-        elif name == 'loopsymmetryfactor':
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid integer for loopsymmetryfactor" % \
-                        str(value)
         else:
             return super(LoopHelasAmplitude,self).filter(name, value)
 
@@ -469,7 +470,8 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             output["LoopMass%d"%(i+1)]=mass
         for i , coupling in enumerate(self.get('coupling')):
             output["LoopCoupling%d"%(i+1)]=coupling
-        output["LoopSymmetryFactor"]=self.get('loopsymmetryfactor')
+        output["LoopSymmetryFactor"] = self.get('loopsymmetryfactor')
+        output["LoopMultiplier"] = self.get('multiplier')
         return output
 
     def get_call_key(self):
@@ -1492,6 +1494,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     loop_amp_wfs.reverse()
                     loop_amp.set('wavefunctions',loop_amp_wfs)
                     loop_amp.set('type',diagram.get('type'))
+                    loop_amp.set('multiplier',diagram.get('multiplier'))
                     # 'number' is not important as it will be redefined later.
                     loop_amp.set('number',min([amp.get('number') for amp
                                                in loop_amp.get('amplitudes')]))
