@@ -43,6 +43,7 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
+import madgraph.various.banner as banner_mod
 import madgraph.various.process_checks as process_checks
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import aloha.create_aloha as create_aloha
@@ -77,12 +78,10 @@ class ProcessExporterFortran(object):
         else:
             self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madevent', 'mp': False}
-            
-        self.proc_characteristic = {'loop_induced': False,
-                                    'has_isr':False,
-                                    'has_fsr':False} #place holder to pas information to the 
-                                      #run_interface
-
+        
+        #place holder to pass information to the run_interface
+        self.proc_characteristic = banner_mod.ProcCharacteristic()
+ 
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -224,22 +223,10 @@ class ProcessExporterFortran(object):
     # Create the proc_characteristic file passing information to the run_interface
     #===========================================================================
     def create_proc_charac(self, matrix_elements, history= "", **opts):
+                
+        self.proc_characteristic.write(pjoin(self.dir_path, 'SubProcesses', 'proc_characteristics'))
         
-        
-        template ="#    Information about the process      #\n"
-        template +="#########################################\n"
-        
-        fsock = open(pjoin(self.dir_path, 'SubProcesses', 'proc_characteristics'),'w')
-        fsock.write(template)
-        
-        for key, value in self.proc_characteristic.items():
-            fsock.write(" %s = %s \n" % (key, value))
-        
-        fsock.close()
-        
-        
-    
-    
+
     #===========================================================================
     # write_matrix_element_v4
     #===========================================================================
@@ -3094,6 +3081,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
+        # indicate that the output type is not grouped
+        misc.sprint('grouped set on False')
+        self.proc_characteristic['grouped_matrix'] = False
+
         modelname = self.opt['model']
         if modelname == 'mssm' or modelname.startswith('mssm-'):
             param_card = pjoin(self.dir_path, 'Cards','param_card.dat')
@@ -3568,8 +3559,12 @@ c           This is dummy particle used in multiparticle vertices
     def write_run_config_file(self, writer):
         """Write the run_configs.inc file for MadEvent"""
 
-        path = pjoin(_file_path,'iolibs','template_files','madevent_run_config.inc') 
-        text = open(path).read() % {'chanperjob':'5'} 
+        path = pjoin(_file_path,'iolibs','template_files','madevent_run_config.inc')
+        if self.proc_characteristic['loop_induced']:
+            job_per_chan = 1
+        else: 
+            job_per_chan = 5 
+        text = open(path).read() % {'chanperjob': job_per_chan} 
         writer.write(text)
         return True
 
@@ -4413,8 +4408,12 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     def write_run_config_file(self, writer):
         """Write the run_configs.inc file for MadEvent"""
 
-        path = pjoin(_file_path,'iolibs','template_files','madevent_run_config.inc') 
-        text = open(path).read() % {'chanperjob':'2'} 
+        path = pjoin(_file_path,'iolibs','template_files','madevent_run_config.inc')
+        if self.proc_characteristic['loop_induced']:
+            job_per_chan = 1
+        else: 
+            job_per_chan = 2
+        text = open(path).read() % {'chanperjob':job_per_chan} 
         writer.write(text)
         return True
 
@@ -4440,6 +4439,15 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 #===============================================================================
 # UFO_model_to_mg4
 #===============================================================================
+
+    def finalize_v4_directory(self,*args, **opts):
+        
+        super(ProcessExporterFortranMEGroup, self).finalize_v4_directory(*args, **opts)
+        
+        #ensure that the grouping information is on the correct value
+        misc.sprint('grouped set on True')
+        self.proc_characteristic['grouped_matrix'] = True
+
 python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 
 class UFO_model_to_mg4(object):

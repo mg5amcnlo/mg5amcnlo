@@ -122,16 +122,17 @@ class TESTMadLoopParam(unittest.TestCase):
                                  'target': [1,2,3,-1,1,2,-3,-3]
                                   },
                    "IREGIRECY": {'correct' : [True, False, 0, 1, '0', '1',
-                                                  '.true.', '.false.','T', 'F', 'true', 'false'],
+                                                '.true.', '.false.','T', 
+                                                  'F', 'true', 'false', 'True \n'],
                                  'wrong' : ['a', [], 5, 66, {}, None, -1],
                                  "target": [True, False, False, True, False, True, 
-                                            True, False,True, False,True,False]},
+                                            True, False,True, False,True,False, True]},
                    "CTStabThres": {'correct': [1.0, 1e-3, 1+0j, 1,"1d-3", "1e-3"],
                                    'wrong': [True, 'hello'],
                                    'target': [1.0,1e-3, 1.0, 1.0, 1e-3, 1e-3]}
                    }
 
-
+        import madgraph.various.misc as misc
         for name, data in to_test.items():
             for i,value in enumerate(data['correct']):
                 param1[name] = value

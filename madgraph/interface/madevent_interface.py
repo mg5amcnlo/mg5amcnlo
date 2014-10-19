@@ -2459,8 +2459,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 run_card['ebeam2'] = 0
             
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+        
 
-        if bool(self.proc_characteristics['loop_induced']) and mode in ['loop', 'all']:
+        if self.proc_characteristics['loop_induced'] and mode in ['loop', 'all']:
             self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 
                                                   'Cards', 'MadLoopParams.dat'))
             # The writing out of MadLoop filter is potentially dangerous

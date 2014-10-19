@@ -377,8 +377,8 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function'
-      WRITE(*,*) SOINDEX_FOR_SQUARED_ORDERS'
+      WRITE(*,*) 'ERROR:: Stopping in function'
+      WRITE(*,*) 'SOINDEX_FOR_SQUARED_ORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
 

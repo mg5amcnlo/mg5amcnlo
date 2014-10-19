@@ -109,13 +109,16 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                         'perturbation_couplings': perturbation_couplings,
                         'NLO_mode': NLO_mode})
         
-        # Exporter directly given
-        if not isinstance(exporters,list):
+        if isinstance(exporters, dict):
+            # Several exporters given in a dictionary
+            test_list = [('%s_%s'%(testFolder,exp),exp) for exp in exporters]            
+        elif not isinstance(exporters,list) :
+            # Exporter directly given
             test_list = [(testFolder,exporters)]
-        # Several exporters given in a dictionary
         else:
-            test_list = [('%s_%s'%(testFolder,exp),exp) for exp in exporters]
-               
+            test_list = [('%s_%s'%(testFolder,exp),exp) for exp in exporters] 
+
+        
         for (folderName, exporter) in test_list:
             if self.need(folderName,testName):
                 self.addIOTest(folderName,testName, IOTests.IOTest(\
@@ -128,6 +131,7 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
     
     def get_exporter_withName(self, exporter_name):
         """ Returns on demand the exporter of given nickname """
+
         if not exporter_name in self.loop_exporters:
             if exporter_name == 'default':
                 self.loop_exporters[exporter_name] = loop_exporters.\

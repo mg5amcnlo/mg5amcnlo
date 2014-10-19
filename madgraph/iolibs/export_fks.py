@@ -637,6 +637,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """Finalize FKS directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
+        misc.sprint('grouped_matrix set on False')
+        self.proc_characteristic['grouped_matrix'] = False
+        
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
 #            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')

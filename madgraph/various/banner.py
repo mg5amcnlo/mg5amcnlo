@@ -1166,20 +1166,19 @@ class ProcCard(list):
                 fsock.write(sub+"\n")
             else:
                 fsock.write(line+"\n")
-                
-            
-class MadLoopParam(dict):
-    """ a class for storing/dealing with the file MadLoopParam.dat
-    contains a parser to read it, facilities to write a new file,...
-    """
-    
-    def __init__(self, input=None):
+ 
+ 
+class ConfigFile(dict):
+    """ a class for storing/dealing with input file.
+    """     
+
+    def __init__(self, finput=None):
         """initialize a new instance. input can be an instance of MadLoopParam,
         a file, a path to a file, or simply Nothing"""                
         
-        if isinstance(input, MadLoopParam):
-            dict.__init__(self, input)
-            self.user_set = set(input.user_set)
+        if isinstance(finput, self.__class__):
+            dict.__init__(self, finput)
+            self.user_set = set(finput.user_set)
             return
         
         # Initialize it with all the default value
@@ -1188,55 +1187,9 @@ class MadLoopParam(dict):
         
         
         # if input is define read that input
-        if isinstance(input, (file, str)):
-            self.read(input)
-            
-    def default_setup(self):
-        """initialize the directory to the default value"""
-        
-        dict.__setitem__(self, "MLReductionLib", "1|4|3|2")
-        dict.__setitem__(self, "IREGIMODE", 2)
-        dict.__setitem__(self, "IREGIRECY", True)
-        dict.__setitem__(self, "CTModeRun", -1)
-        dict.__setitem__(self, "MLStabThres", 1e-3)
-        dict.__setitem__(self, "NRotations_DP", 1)
-        dict.__setitem__(self, "NRotations_QP", 0)
-        dict.__setitem__(self, "ImprovePSPoint", 2)
-        dict.__setitem__(self, "CTLoopLibrary", 2)
-        dict.__setitem__(self, "CTStabThres", 1e-2)
-        dict.__setitem__(self, "CTModeInit", 1)
-        dict.__setitem__(self, "CheckCycle", 3)
-        dict.__setitem__(self, "MaxAttempts", 10)
-        dict.__setitem__(self, "ZeroThres", 1e-9)
-        dict.__setitem__(self, "OSThres", 1.0e-8)
-        dict.__setitem__(self, "DoubleCheckHelicityFilter", True)
-        dict.__setitem__(self, "WriteOutFilters", True)
-        dict.__setitem__(self, "UseLoopFilter", False)
-        dict.__setitem__(self, "LoopInitStartOver", False)
-        dict.__setitem__(self, "HelInitStartOver", False)
+        if isinstance(finput, (file, str)):
+            self.read(finput)
 
-    def read(self, input):
-        """Read the input file, this can be a path to a file, 
-           a file object, a str with the content of the file."""
-           
-        if isinstance(input, str):
-            if "\n" in input:
-                input = input.split('\n')
-            elif os.path.isfile(input):
-                input = open(input)
-            else:
-                raise Exception, "No such file %s" % input
-        
-        previous_line= ''
-        for line in input:
-            if previous_line.startswith('#'):
-                name = previous_line[1:].split()[0]
-                value = line.strip()
-                if len(value) and value[0] not in ['#', '!']:
-                    self.__setitem__(name, value, change_userdefine=True)
-            previous_line = line
-        
-            
     def __setitem__(self, name, value, change_userdefine=False):
         """set the attribute and set correctly the type if the value is a string"""
         
@@ -1251,19 +1204,27 @@ class MadLoopParam(dict):
                         targettype = type(self[name])
                         break
             else:
-                logger.debug('Trying to add argument %s in MadLoopParam. ' % name+\
+                logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
                             'This argument is not defined by default. Please consider to add it') 
                 dict.__setitem__(self, name, value)
                 if change_userdefine:
                     self.user_set.add(name.lower())
                 return
+    
+        value = self.format_variable(value, targettype, name=name)
+        dict.__setitem__(self, name, value)
+        if change_userdefine:
+            self.user_set.add(name.lower())
+
+    
+    def format_variable(self, value, targettype, name="unknown"):
+        """assign the value to the attribute for the given format"""
         
-        # 2. assign the value to the attribute for the given format
         if not isinstance(value, str):
             # just have to check that we have the correct format
             if isinstance(value, targettype):
                 pass # assignement at the end
-            elif isinstance(value, numbers.Number) and isinstance(self[name],numbers.Number):
+            elif isinstance(value, numbers.Number) and issubclass(targettype, numbers.Number):
                 try:
                     new_value = targettype(value)
                 except TypeError:
@@ -1271,7 +1232,6 @@ class MadLoopParam(dict):
                         new_value = targettype(value.real)
                     else:
                         raise
-                        
                 if new_value == value:
                     value = new_value
                 else:
@@ -1283,12 +1243,13 @@ class MadLoopParam(dict):
         else:
             # We have a string we have to format the attribute from the string
             if targettype == bool:
+                value = value.strip()
                 if value.lower() in ['0', '.false.', 'f', 'false']:
                     value = False
                 elif value.lower() in ['1', '.true.', 't', 'true']:
                     value = True
                 else:
-                    raise Exception, "%s can not be mapped to True/False" % value
+                    raise Exception, "%s can not be mapped to True/False" % repr(value)
             elif targettype == str:
                 value = value.strip()
             elif targettype == int:
@@ -1319,9 +1280,9 @@ class MadLoopParam(dict):
             else:
                 raise Exception, "type %s is not handle by MadLoopParam" % targettype
             
-        dict.__setitem__(self, name, value)
-        if change_userdefine:
-            self.user_set.add(name.lower())  
+        return value
+            
+ 
 
     def __getitem__(self, name):
         
@@ -1346,8 +1307,114 @@ class MadLoopParam(dict):
                 #value modified by the user -> do nothing
                 return
             
-        self.__setitem__(name, value, change_userdefine=user)
+        self.__setitem__(name, value, change_userdefine=user) 
+ 
+
+
+class ProcCharacteristic(ConfigFile):
+    """A class to handle information which are passed from MadGraph to the madevent
+       interface.""" 
+     
+    def default_setup(self):
+        """initialize the directory to the default value"""
+        
+        dict.__setitem__(self, 'loop_induced', False)
+        dict.__setitem__(self, 'has_isr', False)
+        dict.__setitem__(self, 'has_fsr', False)
+        dict.__setitem__(self, 'nb_channel', 0)
+        dict.__setitem__(self, 'nexternal', 0)
+        dict.__setitem__(self, 'ninitial', 0)
+        dict.__setitem__(self, 'grouped_matrix', True)
+
+    def read(self, finput):
+        """Read the input file, this can be a path to a file, 
+           a file object, a str with the content of the file."""
+           
+        if isinstance(finput, str):
+            if "\n" in finput:
+                finput = finput.split('\n')
+            elif os.path.isfile(finput):
+                finput = open(finput)
+            else:
+                raise Exception, "No such file %s" % input
             
+        for line in finput:
+            if '#' in line:
+                line = line.split('#',1)[0]
+            if not line:
+                continue
+            
+            if '=' in line:
+                key, value = line.split('=',1)
+                self[key.strip()] = value
+         
+    def write(self, outputpath):
+        """write the file"""
+        
+        template ="#    Information about the process      #\n"
+        template +="#########################################\n"
+        
+        fsock = open(outputpath, 'w')
+        fsock.write(template)
+        
+        for key, value in self.items():
+            fsock.write(" %s = %s \n" % (key, value))
+        
+        fsock.close()   
+        
+            
+class MadLoopParam(ConfigFile):
+    """ a class for storing/dealing with the file MadLoopParam.dat
+    contains a parser to read it, facilities to write a new file,...
+    """
+    
+
+            
+    def default_setup(self):
+        """initialize the directory to the default value"""
+        
+        dict.__setitem__(self, "MLReductionLib", "1|4|3|2")
+        dict.__setitem__(self, "IREGIMODE", 2)
+        dict.__setitem__(self, "IREGIRECY", True)
+        dict.__setitem__(self, "CTModeRun", -1)
+        dict.__setitem__(self, "MLStabThres", 1e-3)
+        dict.__setitem__(self, "NRotations_DP", 1)
+        dict.__setitem__(self, "NRotations_QP", 0)
+        dict.__setitem__(self, "ImprovePSPoint", 2)
+        dict.__setitem__(self, "CTLoopLibrary", 2)
+        dict.__setitem__(self, "CTStabThres", 1e-2)
+        dict.__setitem__(self, "CTModeInit", 1)
+        dict.__setitem__(self, "CheckCycle", 3)
+        dict.__setitem__(self, "MaxAttempts", 10)
+        dict.__setitem__(self, "ZeroThres", 1e-9)
+        dict.__setitem__(self, "OSThres", 1.0e-8)
+        dict.__setitem__(self, "DoubleCheckHelicityFilter", True)
+        dict.__setitem__(self, "WriteOutFilters", True)
+        dict.__setitem__(self, "UseLoopFilter", False)
+        dict.__setitem__(self, "LoopInitStartOver", False)
+        dict.__setitem__(self, "HelInitStartOver", False)
+
+    def read(self, finput):
+        """Read the input file, this can be a path to a file, 
+           a file object, a str with the content of the file."""
+           
+        if isinstance(finput, str):
+            if "\n" in finput:
+                finput = finput.split('\n')
+            elif os.path.isfile(finput):
+                finput = open(finput)
+            else:
+                raise Exception, "No such file %s" % input
+        
+        previous_line= ''
+        for line in finput:
+            if previous_line.startswith('#'):
+                name = previous_line[1:].split()[0]
+                value = line.strip()
+                if len(value) and value[0] not in ['#', '!']:
+                    self.__setitem__(name, value, change_userdefine=True)
+            previous_line = line
+        
     
     def write(self, outputpath, template=None,commentdefault=False):
         
