@@ -128,7 +128,6 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
     
     def get_exporter_withName(self, exporter_name):
         """ Returns on demand the exporter of given nickname """
-        
         if not exporter_name in self.loop_exporters:
             if exporter_name == 'default':
                 self.loop_exporters[exporter_name] = loop_exporters.\

@@ -174,7 +174,12 @@ class MadLoopLauncher(ExtLauncher):
                 self.edit_file(os.path.join(dir_path,'PS.input'))
         else:
             super(MadLoopLauncher,self).treat_input_file(filename,default,msg)
-    
+            if filename == 'MadLoopParams.dat':
+                # Make sure to update the changes
+                MadLoopparam = banner_mod.MadLoopParam(
+                               os.path.join(self.card_dir, 'MadLoopParams.dat'))                
+                MadLoopparam.write(os.path.join(self.card_dir,os.path.pardir, 
+                                           'SubProcesses', 'MadLoopParams.dat'))
     def launch_program(self):
         """launch the main program"""
         evaluator = process_checks.LoopMatrixElementTimer

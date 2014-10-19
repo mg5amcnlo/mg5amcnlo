@@ -1651,7 +1651,18 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.tir_available_dict[tir_name]=True
         return libpath
     
+    def set_group_loops(self, matrix_element):
+        """ Decides whether we must group loops or not for this matrix element"""
 
+        # Decide if loops sharing same denominator structures have to be grouped
+        # together or not.
+        if self.forbid_loop_grouping:
+            self.group_loops = False
+        else:
+            self.group_loops = (not self.compute_color_flows) and \
+                              matrix_element.get('processes')[0].get('has_born')
+        
+        return self.group_loops
     
     def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
                         group_number = None, proc_id = None, config_map = None):
@@ -1680,13 +1691,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         matrix_element.compute_all_analytic_information(
           self.get_aloha_model(matrix_element.get('processes')[0].get('model')))
 
-        # Decide if loops sharing same denominator structures have to be grouped
-        # together or not.
-        if self.forbid_loop_grouping:
-            self.group_loops = False
-        else:
-            self.group_loops = (not self.compute_color_flows) and \
-                              matrix_element.get('processes')[0].get('has_born')
+        self.set_group_loops(matrix_element)
 
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.
@@ -1848,7 +1853,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict['nloops']=len(\
                         [1 for ldiag in matrix_element.get_loop_diagrams() for \
                                            lamp in ldiag.get_loop_amplitudes()])
-        if self.group_loops:
+        
+        if self.set_group_loops(matrix_element):
             self.general_replace_dict['nloop_groups']=\
                                           len(matrix_element.get('loop_groups'))
         else:

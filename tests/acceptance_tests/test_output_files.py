@@ -90,42 +90,18 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
                 'fortran_model' : helas_call_writers.FortranUFOHelasCallWriter(\
                                                          self.models['loop_sm']) 
                                   }
-            
-            self.loop_exporters = {
-                'default' : loop_exporters.LoopProcessExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external',
-                                   'SubProc_prefix': '',
-                                   'compute_color_flows': False}),
-                'optimized' : loop_exporters.\
-                                  LoopProcessOptimizedExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran',
-                                    'output_dependencies':'external',
-                                    'SubProc_prefix': '',
-                                   'compute_color_flows': False})
-                                  }
 
             # d u~ > mu- vmx g
             self.addIOTestsForProcess( testName = 'dux_mumvmxg',
                                        testFolder = 'long_ML_SMQCD',
                                        particles_ids = [1,-2,13,-14,21],
-                                       exporters = self.loop_exporters,
+                                       exporters = ['default','optimized'],
                                        orders = {'QCD': 1, 'QED': 2} )
             
             # g g > w- t b~ Single top (long but really includes everything)
             self.addIOTestsForProcess( testName = 'gg_wmtbx',
                                        testFolder = 'long_ML_SMQCD',
                                        particles_ids = [21,21,-24,6,-5],
-                                       exporters = self.loop_exporters,
+                                       exporters = ['default','optimized'],
                                        orders = {'QCD': 2, 'QED': 1} )
 
