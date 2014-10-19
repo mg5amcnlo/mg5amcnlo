@@ -2626,6 +2626,13 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
     
     matrix_file = "matrix_loop_induced_madevent_group.inc"
 
+    
+    def __init__(self, *args, **opts):
+        
+        super(LoopInducedExporterMEGroup, self).__init__(*args, **opts)
+        self.proc_characteristic['loop_induced'] = True
+
+
     def make_source_links(self,*args, **opts):
         """ In the loop-induced output with MadEvent, we need the files from the 
         Source folder """

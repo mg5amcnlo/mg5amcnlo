@@ -3082,7 +3082,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
         # indicate that the output type is not grouped
-        misc.sprint('grouped set on False')
         self.proc_characteristic['grouped_matrix'] = False
 
         modelname = self.opt['model']
@@ -3560,10 +3559,12 @@ c           This is dummy particle used in multiparticle vertices
         """Write the run_configs.inc file for MadEvent"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_run_config.inc')
+        
         if self.proc_characteristic['loop_induced']:
             job_per_chan = 1
         else: 
-            job_per_chan = 5 
+           job_per_chan = 5
+        misc.sprint("set job_per_channel to", job_per_chan, self.proc_characteristic) 
         text = open(path).read() % {'chanperjob': job_per_chan} 
         writer.write(text)
         return True
@@ -4413,6 +4414,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             job_per_chan = 1
         else: 
             job_per_chan = 2
+        misc.sprint("set job_per_channel to", job_per_chan, self.proc_characteristic) 
         text = open(path).read() % {'chanperjob':job_per_chan} 
         writer.write(text)
         return True
@@ -4445,7 +4447,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         super(ProcessExporterFortranMEGroup, self).finalize_v4_directory(*args, **opts)
         
         #ensure that the grouping information is on the correct value
-        misc.sprint('grouped set on True')
         self.proc_characteristic['grouped_matrix'] = True
 
 python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
