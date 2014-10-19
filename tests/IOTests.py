@@ -484,7 +484,7 @@ class IOTestManager(unittest.TestCase):
 
         # In update = True mode, we keep track of the modification to 
         # provide summary information
-        modifications={'updated':[],'created':[], 'removed':[]}
+        modifications={'updated':[],'created':[], 'removed':[], 'missing':[]}
         
         # List all the names of the files for which modifications have been
         # reviewed at least once.The approach taken here is different than
@@ -550,13 +550,15 @@ class IOTestManager(unittest.TestCase):
                                     filesToCheck.append(new_target)
                 else:
                     fn = fname[1:] if fname.startswith('-') else fname
-                    print "pjoin(files_path,fn)=",pjoin(files_path,fn)
-                    if not path.exists(pjoin(files_path,fn)):
-                        raise MadGraph5Error, \
-                         'The IOTest %s does not create file %s.'%(test_name,fn)
-                    elif path.islink(pjoin(files_path,fn)):
-                        raise MadGraph5Error, \
-                         'The file %s created by the IOTest %s is a symbolic link.'%(fn,test_name)
+                    if (not path.exists(pjoin(files_path,fn))) or path.islink(pjoin(files_path,fn)):
+                        if force in [0,1]:
+                            answer = Cmd.timed_input(question=
+"""The IOTest %s does not create file '%s'. Fix it! [type 'enter'] >"""\
+                                    %(test_name,fn),default="y")
+                        modifications['missing'].append(
+                        "%s/%s/%s"%(folder_name,test_name,path.basename(fname)))
+                        if verbose: print "    > [ %s ] "%(colored%(31,"MISSING"))+\
+                          "%s/%s/%s"%(folder_name,test_name,path.basename(fname))
                     else:
                         if fname.startswith('-'):
                             veto_rules.append(fn)
@@ -571,9 +573,14 @@ class IOTestManager(unittest.TestCase):
                 activeFiles = [self.toFileName(f) for f in filesToCheck]
                 for file in glob.glob(pjoin(_hc_comparison_files,folder_name,\
                                                                 test_name,'*')):
-                    # Ignore the .BackUp files and directories
-                    if path.basename(file).endswith('.BackUp') or\
-                                                               path.isdir(file):
+                    # Ignore the .BackUp files and directories. Also ignore
+                    # a file which was previously flagged missing because it
+                    # was explicitly specified in the list of files that the
+                    # test *must* provide.
+                    if path.basename(file).endswith('.BackUp') or \
+                       path.isdir(file) or \
+                       pjoin(folder_name,test_name,path.basename(file)) in \
+                                                       modifications['missing']:
                         continue
                     if path.basename(file) not in activeFiles:
                         if force==0 or (force==1 and \
