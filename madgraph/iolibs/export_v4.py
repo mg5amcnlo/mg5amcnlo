@@ -4699,13 +4699,12 @@ class UFO_model_to_mg4(object):
                  
                 double complex gal(2)
                 common/weak/ gal
-
-                """        
-        if self.model.get('expansion_order'):
-            header=header+"""double precision MU_R
+                
+                double precision MU_R
                 common/rscale/ MU_R
 
-                """
+                """        
+
         header = header+"""double precision Nf
                 parameter(Nf=%d)
                 """ % self.model.get_nflav()
@@ -4718,13 +4717,11 @@ class UFO_model_to_mg4(object):
                      
                     %(complex_mp_format)s %(mp_prefix)sgal(2)
                     common/MP_weak/ %(mp_prefix)sgal
-    
-                    """        
-            if self.model.get('expansion_order'):
-                header=header+"""%(complex_mp_format)s %(mp_prefix)sMU_R
+                    
+                    %(complex_mp_format)s %(mp_prefix)sMU_R
                     common/MP_rscale/ %(mp_prefix)sMU_R
-    
-                    """            
+                    """        
+                              
             mp_fsock.writelines(header%{'real_mp_format':self.mp_real_format,
                                   'complex_mp_format':self.mp_complex_format,
                                   'mp_prefix':self.mp_prefix})
@@ -5249,7 +5246,7 @@ class UFO_model_to_mg4(object):
             for fct in ufo_fct:
                 # already handle by default
                 if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
-                                    "theta_function", "cond", "reglog"]:
+                                    "theta_function", "cond", "reglog", "arg"]:
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -5270,7 +5267,7 @@ class UFO_model_to_mg4(object):
                 for fct in ufo_fct:
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
-                                        "theta_function", "cond", "reglog"]:
+                                        "theta_function", "cond", "reglog", "arg"]:
                         ufo_fct_template = """
           %(complex_mp_format)s function %(name)s(%(args)s)
           implicit none

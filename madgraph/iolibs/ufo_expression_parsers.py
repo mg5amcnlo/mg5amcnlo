@@ -61,7 +61,7 @@ class UFOExpressionParser(object):
     # List of tokens and literals
     tokens = (
         'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
-        'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
+        'SQRT', 'CONJ', 'RE', 'RE2', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
         'VARIABLE', 'NUMBER','COND','REGLOG', 'ARG'
         )
     literals = "=+-*/(),"
@@ -115,6 +115,10 @@ class UFOExpressionParser(object):
     def t_RE(self, t):
         r'(?<!\w)re(?=\()'
         return t
+    def t_RE2(self, t):
+        r'\.real|\.imag'
+        return t
+    
     def t_COMPLEX(self, t):
         r'(?<!\w)complex(?=\()'
         return t
@@ -125,7 +129,7 @@ class UFOExpressionParser(object):
         r'[a-zA-Z_][0-9a-zA-Z_]*'
         return t
 
-    t_NUMBER = r'([0-9]+\.[0-9]*|\.[0-9]+|[0-9]+)([eE][+-]{0,1}[0-9]+){0,1}'
+    t_NUMBER = r'([0-9]+\.[0-9]*|\.[0-9]+|[0-9]+)([eE][+-]{0,1}[0-9]+){0,1}j{0,1}'
     t_POWER  = r'\*\*'
 
     t_ignore = " \t"
@@ -154,6 +158,7 @@ class UFOExpressionParser(object):
         ('left','='),
         ('left','+','-'),
         ('left','*','/'),
+        ('left', 'RE2'),
         ('right','UMINUS'),
         ('left','POWER'),
         ('right','REGLOG'),
@@ -255,7 +260,10 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 
     def p_expression_number(self, p):
         "expression : NUMBER"
-        p[0] = ('%e' % float(p[1])).replace('e', 'd')
+        if p[1].endswith('j'):
+            p[0] = ('DCOMPLX(0d0, %e)' % float(p[1][:-1])).replace('e', 'd')
+        else:
+            p[0] = ('%e' % float(p[1])).replace('e', 'd')
 
     def p_expression_variable(self, p):
         "expression : VARIABLE"
@@ -313,6 +321,21 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'complexconjugate': p[0] = 'conjg(DCMPLX' + p[2]+')'
         elif p[1] == 'reglog': p[0] = 'reglog(DCMPLX' + p[2] +')'
 
+
+    def p_expression_real(self, p):
+        ''' expression : expression RE2 '''
+        
+        if p[2] == '.real':
+            if p[1].startswith('('):
+                p[0] = 'dble' +p[1]
+            else:
+                p[0] = 'dble(%s)' % p[1]
+        elif p[2] == '.imag':
+            if p[1].startswith('('):
+                p[0] = 'dimag' +p[1]
+            else:
+                p[0] = 'dimag(%s)' % p[1]            
+
     def p_expression_pi(self, p):
         '''expression : PI'''
         p[0] = 'pi'
@@ -328,7 +351,11 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
 
     def p_expression_number(self, p):
         "expression : NUMBER"
-        p[0] = '%e_16' % float(p[1])
+        
+        if p[1].endswith('j'):
+            p[0] = 'CMPLX(0.000000e+00_16, %e_16 ,KIND=16)' % float(p[1][:-1])
+        else:
+            p[0] = '%e_16' % float(p[1])
 
     def p_expression_variable(self, p):
         "expression : VARIABLE"
@@ -384,6 +411,21 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         elif p[1] == 'complexconjugate': p[0] = 'conjg(CMPLX(' + p[2] + ',KIND=16))'
         elif p[1] == 'reglog': p[0] = 'mp_reglog(CMPLX(' + p[2] +',KIND=16))'
 
+    def p_expression_real(self, p):
+        ''' expression : expression RE2 '''
+        
+        if p[2] == '.real':
+            if p[1].startswith('('):
+                p[0] = 'real' +p[1]
+            else:
+                p[0] = 'real(%s)' % p[1]
+        elif p[2] == '.imag':
+            if p[1].startswith('('):
+                p[0] = 'imag' +p[1]
+            else:
+                p[0] = 'imag(%s)' % p[1]  
+
+
     def p_expression_pi(self, p):
         '''expression : PI'''
         p[0] = self.mp_prefix+'pi'
@@ -406,6 +448,13 @@ class UFOExpressionParserCPP(UFOExpressionParser):
 
     def p_expression_number(self, p):
         'expression : NUMBER'
+        
+        if p[1].endswith('j'):
+            p[0] = 'std::complex<double>(0., %e)'  % float(p[1][:-1]) 
+        else:
+            p[0] = ('%e' % float(p[1])).replace('e', 'd')
+        
+        
         p[0] = p[1]
         # Check number is an integer, if so add "."
         if float(p[1]) == int(float(p[1])) and float(p[1]) < 1000:
@@ -462,6 +511,21 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conj' + p[2]
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
+
+    def p_expression_real(self, p):
+        ''' expression : expression RE2 '''
+        
+        if p[2] == '.real':
+            if p[1].startswith('('):
+                p[0] = 'real' +p[1]
+            else:
+                p[0] = 'real(%s)' % p[1]
+        elif p[2] == '.imag':
+            if p[1].startswith('('):
+                p[0] = 'imag' +p[1]
+            else:
+                p[0] = 'imag(%s)' % p[1]    
+
     
     def p_expression_pi(self, p):
         '''expression : PI'''
