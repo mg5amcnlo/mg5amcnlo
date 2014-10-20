@@ -81,6 +81,28 @@ class ProcessExporterFortran(object):
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()
+        
+        
+    #===========================================================================
+    # process exporter fortran switch between group and not grouped
+    #===========================================================================
+    def export_processes(self, matrix_elements, fortran_model):
+        """Make the switch between grouped and not grouped output"""
+        
+        calls = 0
+        if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+            for (group_number, me_group) in enumerate(matrix_elements):
+                calls = calls + self.generate_subprocess_directory_v4(\
+                                          me_group, fortran_model, group_number)
+        else:
+            for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
+                calls = calls + self.generate_subprocess_directory_v4(\
+                                        me, self._curr_fortran_model, me_number)    
+                        
+        return calls    
+        
+
+
  
     #===========================================================================
     # copy the Template in a new directory.
@@ -222,7 +244,7 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Create the proc_characteristic file passing information to the run_interface
     #===========================================================================
-    def create_proc_charac(self, matrix_elements, history= "", **opts):
+    def create_proc_charac(self, matrix_elements=None, history= "", **opts):
                 
         self.proc_characteristic.write(pjoin(self.dir_path, 'SubProcesses', 'proc_characteristics'))
         
@@ -597,6 +619,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         writer.writelines(lines)
 
         return True
+
+
+
+
 
     #===========================================================================
     # Routines to output UFO models in MG4 format
@@ -2202,6 +2228,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
                               online = False, compiler='g77'):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+
+        #proc_charac
+        self.create_proc_charac()
 
         # Write maxparticles.inc based on max of ME's/subprocess groups
         filename = pjoin(self.dir_path,'Source','maxparticles.inc')
@@ -4225,10 +4254,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         files.append_to_file(filename,
                              self.write_subproc,
                              subprocdir)
-        
-        # Generate info page
-        gen_infohtml.make_info_html(os.path.pardir)
-        
+                
         # Return to original dir
         os.chdir(cwd)
 
@@ -4440,9 +4466,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         return True
 
-#===============================================================================
-# UFO_model_to_mg4
-#===============================================================================
+
 
     def finalize_v4_directory(self,*args, **opts):
         
@@ -4450,6 +4474,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         
         #ensure that the grouping information is on the correct value
         self.proc_characteristic['grouped_matrix'] = True
+        
+#===============================================================================
+# UFO_model_to_mg4
+#===============================================================================
 
 python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 

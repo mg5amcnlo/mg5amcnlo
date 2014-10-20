@@ -5974,19 +5974,9 @@ This implies that with decay chains:
 
         # MadEvent
         if self._export_format == 'madevent':
-            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
-                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
-                    calls = calls + \
-                         self._curr_exporter.generate_subprocess_directory_v4(\
-                                me_group, self._curr_fortran_model,
-                                group_number)
-            else:
-                for me_number, me in \
-                   enumerate(self._curr_matrix_elements.get_matrix_elements()):
-                    calls = calls + \
-                            self._curr_exporter.generate_subprocess_directory_v4(\
-                                me, self._curr_fortran_model, me_number)
-
+            calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
+                                                 self._curr_fortran_model)
+            
             # Write the procdef_mg5.dat file with process info
             card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
