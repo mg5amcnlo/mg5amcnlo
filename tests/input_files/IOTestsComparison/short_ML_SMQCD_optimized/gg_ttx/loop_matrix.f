@@ -687,7 +687,7 @@ C      library.
       DO I=1,NLOOPGROUPS
         DO J=1,3
           DO K=1,NSQUAREDSO
-            LOOPRES(J,K,I)=0.0D0
+            LOOPRES(J,K,I)=(0.0D0,0.0D0)
           ENDDO
         ENDDO
       ENDDO
