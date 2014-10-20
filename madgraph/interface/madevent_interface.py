@@ -418,13 +418,6 @@ class HelpToCmd(object):
         logger.info("   asked in the run_card.")
         self.run_options_help([])
         
-    def help_compute_widths(self):
-        logger.info("syntax: compute_widths Particle [Particles] [--precision=] [--path=Param_card] [--output=PATH]")
-        logger.info("-- Compute the widths for the particles specified.")
-        logger.info("   By default, this takes the current param_card and overwrites it.") 
-        logger.info("   Precision allows to define when to include three/four/... body decays.")
-        logger.info("   If this number is an integer then all N-body decay will be included.")      
-
     def help_store_events(self):
         """ """
         logger.info("syntax: store_events [--run_options]")
@@ -867,112 +860,7 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('refine arguments are suppose to be number')
             
         return True
-    
-    def check_compute_widths(self, args):
-        """check that the model is loadable and check that the format is of the
-        type: PART PATH --output=PATH -f --precision=N
-        return the model.
-        """
         
-        # Check that MG5 directory is present .
-        if MADEVENT and not self.options['mg5_path']:
-            raise self.InvalidCmd, '''The automatic computations of widths requires that MG5 is installed on the system.
-            You can install it and set his path in ./Cards/me5_configuration.txt'''
-        elif MADEVENT:
-            sys.path.append(self.options['mg5_path'])
-        try:
-            import models.model_reader as model_reader
-            import models.import_ufo as import_ufo
-        except ImportError:
-            raise self.ConfigurationError, '''Can\'t load MG5.
-            The variable mg5_path should not be correctly configure.'''
-        
-        ufo_path = pjoin(self.me_dir,'bin','internal', 'ufomodel')
-        # Import model
-        if not MADEVENT:
-            modelname = self.find_model_name()
-            #restrict_file = None
-            #if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
-            #    restrict_file = pjoin(ufo_path, 'restrict_default.dat')
-            model = import_ufo.import_model(modelname, decay=True, 
-                        restrict=True)
-            if self.mother and self.mother.options['complex_mass_scheme']:
-                model.change_mass_to_complex_scheme()
-        else:
-            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
-                                        decay=True)
-            #pattern for checking complex mass scheme.
-            has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
-            if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
-                                   ).read()):
-                model.change_mass_to_complex_scheme()
-   
-            
-#        if not hasattr(model.get('particles')[0], 'partial_widths'):
-#            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
-            
-        # check if the name are passed to default MG5
-        if '-modelname' in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
-            model.pass_particles_name_in_mg_default()        
-        model = model_reader.ModelReader(model)
-        particles_name = dict([(p.get('name'), p.get('pdg_code'))
-                                               for p in model.get('particles')])
-        particles_name.update(dict([(p.get('antiname'), p.get('pdg_code'))
-                                               for p in model.get('particles')]))        
-        
-        output = {'model': model, 'force': False, 'output': None, 
-                  'path':None, 'particles': set(), 'body_decay':4.0025,
-                  'min_br':None, 'precision_channel':0.01}
-        for arg in args:
-            if arg.startswith('--output='):
-                output_path = arg.split('=',1)[1]
-                if not os.path.exists(output_path):
-                    raise self.InvalidCmd, 'Invalid Path for the output. Please retry.'
-                if not os.path.isfile(output_path):
-                    output_path = pjoin(output_path, 'param_card.dat')
-                output['output'] = output_path       
-            elif arg == '-f':
-                output['force'] = True
-            elif os.path.isfile(arg):
-                type = self.detect_card_type(arg)
-                if type != 'param_card.dat':
-                    raise self.InvalidCmd , '%s is not a valid param_card.' % arg
-                output['path'] = arg
-            elif arg.startswith('--path='):
-                arg = arg.split('=',1)[1]
-                type = self.detect_card_type(arg)
-                if type != 'param_card.dat':
-                    raise self.InvalidCmd , '%s is not a valid param_card.' % arg
-                output['path'] = arg
-            elif arg.startswith('--'):
-                name, value = arg.split('=',1)
-                try:
-                    value = float(value)
-                except Exception:
-                    raise self.InvalidCmd, '--%s requires integer or a float' % name
-                output[name[2:]] = float(value)                
-            elif arg in particles_name:
-                # should be a particles
-                output['particles'].add(particles_name[arg])
-            elif arg.isdigit() and int(arg) in particles_name.values():
-                output['particles'].add(eval(arg))
-            elif arg == 'all':
-                output['particles'] = set(['all'])
-            else:
-                self.help_compute_widths()
-                raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
-        if self.force:
-            output['force'] = True
-
-        if not output['particles']:
-            raise self.InvalidCmd, '''This routines requires at least one particle in order to compute
-            the related width'''
-            
-        if output['output'] is None:
-            output['output'] = output['path']
-
-        return output
-    
     def check_combine_events(self, arg):
         """ Check the argument for the combine events command """
         
@@ -1505,28 +1393,6 @@ class CompleteForCmd(CheckValidForCmd):
             return self.complete_calculate_decay_widths(*args, **opts)
         else:
             return self.complete_generate_events(*args, **opts)
-
-    def complete_compute_widths(self, text, line, begidx, endidx):
-        "Complete the compute_widths command"
-
-        args = self.split_arg(line[0:begidx])
-        
-        if args[-1] in  ['--path=', '--output=']:
-            completion = {'path': self.path_completion(text)}
-        elif line[begidx-1] == os.path.sep:
-            current_dir = pjoin(*[a for a in args if a.endswith(os.path.sep)])
-            if current_dir.startswith('--path='):
-                current_dir = current_dir[7:]
-            if current_dir.startswith('--output='):
-                current_dir = current_dir[9:]                
-            completion = {'path': self.path_completion(text, current_dir)}
-        else:
-            completion = {}            
-            completion['options'] = self.list_completion(text, 
-                            ['--path=', '--output=', '--min_br=0.\$'
-                             '--precision_channel=0.\$', '--body_decay='])            
-        
-        return self.deal_multiple_categories(completion)
 
     def complete_calculate_decay_widths(self, text, line, begidx, endidx):
         """ Complete the calculate_decay_widths command"""
@@ -2335,13 +2201,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.create_root_file('%s/unweighted_events.lhe' % self.run_name,
                                   '%s/unweighted_events.root' % self.run_name)
             
-        
-        self.create_plot('parton', '%s/%s/unweighted_events.lhe' %
-                         (pjoin(self.me_dir, 'Events'),self.run_name),
+        path = pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe")        
+        self.create_plot('parton', path,
                          pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
                          )
         
-        misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
+
+        if not os.path.exists('%s.gz' % path):        
+            misc.gzip(path)
 
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
@@ -2693,33 +2560,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 self.create_root_file(output='%s/unweighted_events.root' % \
                                                                   self.run_name)
     
-    ############################################################################                                                                                                           
-    def do_compute_widths(self, line):
-        """Require MG5 directory: Compute automatically the widths of a set 
-        of particles"""
 
-        args = self.split_arg(line)
-        opts = self.check_compute_widths(args)
-        
-        
-        from madgraph.interface.master_interface import MasterCmd
-        cmd = MasterCmd()
-        self.define_child_cmd_interface(cmd, interface=False)
-        cmd.exec_cmd('set automatic_html_opening False --no_save')
-        if not opts['path']:
-            opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
-            if not opts['force'] :
-                self.ask_edit_cards(['param_card'],[], plot=False)
-        
-        
-        line = 'compute_widths %s %s' % \
-                (' '.join([str(i) for i in opts['particles']]),
-                 ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
-                        if key not in ['model', 'force', 'particles'] and value))
-        
-        cmd.exec_cmd(line, model=opts['model'])
-        self.child = None
-        del cmd
 
 
     
@@ -4047,22 +3888,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 
   
             
-    def check_param_card(self, path, run=True):
-        """Check that all the width are define in the param_card.
-        If some width are set on 'Auto', call the computation tools."""
-        
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
-        text = open(path).read()
-        pdg = pattern.findall(text)
-        if pdg:
-            if run:
-                logger.info('Computing the width set on auto in the param_card.dat')
-                self.do_compute_widths('%s %s' % (' '.join(pdg), path))
-            else:
-                logger.info('''Some width are on Auto in the card. 
-    Those will be computed as soon as you have finish the edition of the cards.
-    If you want to force the computation right now and being able to re-edit
-    the cards afterwards, you can type \"compute_wdiths\".''')
+
+                
 #===============================================================================
 # MadEventCmd
 #===============================================================================

@@ -17,8 +17,6 @@ C
       double precision accuracy
       parameter (tolerance_default = 1d-5)
       double precision ren_scale, energy
-      parameter (ren_scale = 1d2)
-      parameter (energy = 1d3)
       include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
@@ -30,6 +28,7 @@ C
       double precision, allocatable :: virt_wgts(:,:)
       double precision double, single, finite
       double precision born
+      double precision totmass
       logical calculatedborn
       common/ccalculatedborn/calculatedborn
       logical fksprefact
@@ -80,7 +79,18 @@ C-----
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
       include 'pmass.inc'
-      
+     
+
+c     Set the energy to be characteristic of the run
+      totmass = 0.0d0
+      do i=1,nexternal
+        totmass = totmass + pmass(i)
+      enddo
+      energy = max((ebeam(1)+ebeam(2))/2.0d0,2.0d0*totmass)
+c     Set the renormalization scale to be of the order of sqrt(s) but
+c     not equal to it so as to be sensitive to all logs in the check.
+      ren_scale = energy/2.0d0
+
       write(*,*)' Insert the number of points to test'
       read(*,*) npoints
       write(*,*)'Insert the relative tolerance'

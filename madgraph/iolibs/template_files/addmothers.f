@@ -14,7 +14,7 @@
       integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip,numproc
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       double precision rscale,aqcd,aqed,targetamp(maxflow)
-      character*300 buff
+      character*1000 buff
       character*20 cform
       logical flip ! If .true., initial state is mirrored
 
@@ -91,6 +91,12 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 
       npart = nexternal
       buff = ' '
+
+      do i=-nexternal+2,nexternal
+         icolalt(1,i)=0
+         icolalt(2,i)=0
+      enddo
+
 c   
 c   Choose the config (diagram) which was actually used to produce the event
 c   

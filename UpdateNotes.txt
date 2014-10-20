@@ -1,6 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.2.0(21/07/14) VH: General mixed order corrections in MadLoop (only), including QCD/EW/QED and 
+2.2.1(25/09/14) OM: Fix a bug preventing the generation of events at LO due to a wrong treatment of 
+                      the color-flow.
+		RF: Fix bug #1377187
+
+2.2.0(24/09/14) VH: General mixed order corrections in MadLoop (only), including QCD/EW/QED and 
                     the UFO@NLO model 'loop_qcd_qed_sm'.
                 VH: Re-design of both the tree and MadLoop matrix elements output to compute
                     contributions of different coupling order combinations independently from one another.
@@ -36,10 +40,16 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                     set lhc 14    # configure for LHC 14TeV
                     set ilc 1000  # configure for ilc 1TeV
                     set fixed_scale 100 # set all scale to fixed and at 100GeV
+		    set showerkt T # set showerkt on T in the shower card
+ 		    set qcut 20    # set the qctu to 20 in the shower card 
                 OM: Fix a bug in the card edition mode which was sometimes returning to default value
                     which were edited by hand and not via the set command.
                 Seoyoung Kim (by OM): Implementation of the htcaas (super-)cluster support.
 		Juan Rojo (by RF): extended the 3 internal NNPDF sets for scales relevant for a 100TeV collider.
+                OM: Fix a problem with the creation of DJR plot with root 6
+                OM: allow the set the width to Auto in NLO computation (width computated at LO accuracy)
+                OM: Adding the possibility to have automatic plot after the parton shower for Herwig6/Pythia6.
+                    This require MadAnalysis and the pythia-pgs package. 
 
 2.1.2(03/07/14) OM: Fix a bug in ALOHA in presence of customized propagator (Thanks Saurabh)
                 OM: Fixing some compilation issue with MadWeight (Thanks A. Pin)

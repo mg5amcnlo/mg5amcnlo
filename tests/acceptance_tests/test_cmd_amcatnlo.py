@@ -439,7 +439,7 @@ class TestMECmdShell(unittest.TestCase):
         #splitting of the shower
         # 1) hep output
         shower_card = open('%s/Cards/shower_card.dat' % self.path).read()
-        shower_card = shower_card.replace('nsplit_jobs= 1', 'nsplit_jobs= 4')
+        shower_card = shower_card.replace('nsplit_jobs  = 1', 'nsplit_jobs  = 4')
         open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
         self.cmd_line.run_cmd('shower run_01 -f')
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__1.hep.gz' % self.path))
@@ -448,8 +448,8 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__4.hep.gz' % self.path))
 
         # 2) top output
-        shower_card = shower_card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   =')  
-        shower_card = shower_card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwan_pp_lvl.o mcatnlo_hbook_gfortran8.o')  
+        shower_card = shower_card.replace('EXTRALIBS    = stdhep Fmcfio', 'EXTRALIBS    =')  
+        shower_card = shower_card.replace('ANALYSE      =', 'ANALYSE      = mcatnlo_hwan_pp_lvl.o mcatnlo_hbook_gfortran8.o')  
         open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
         self.cmd_line.run_cmd('shower run_01 -f')
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.tar.gz' % self.path))

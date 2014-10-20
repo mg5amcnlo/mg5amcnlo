@@ -991,7 +991,8 @@ c Plot observables for counterevents and Born
      &              cnt_swgt*fkssymmetryfactor +
      &              (bsv_wgt-born_wgt)*fkssymmetryfactorBorn +
      &              deg_wgt*fkssymmetryfactorDeg +
-     &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt + virt_wgt
+     &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt +
+     &              virt_wgt/unwgtfun
          if(abs(plot_wgt).gt.1.d-20) then
             if(iplot.eq.-3)then
                write(*,*)'Error #1 in dsig'

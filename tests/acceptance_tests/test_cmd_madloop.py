@@ -193,19 +193,38 @@ class TestCmdLoop(unittest.TestCase):
         try:
             cmd = os.getcwd()
             self.do('import model loop_sm')
+            if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):
+                shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
+            # Make sure it works for an initial run
             self.do('check timing -reuse e+ e- > t t~ [virt=QCD]')
             self.assertEqual(cmd, os.getcwd())
             self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
             self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
                                             'SubProcesses/P0_epem_ttx/result.dat')))
-            shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))        
             self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
             res = open('/tmp/madgraph.check_cmd.log').read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
             self.assertTrue(not 'NA' in res)
+            
+            # Now for a Reuse-run
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            self.setup_logFile_for_logger('madgraph.check_cmd')
+            self.do('check timing -reuse e+ e- > t t~ [virt=QCD]')
+            self.assertEqual(cmd, os.getcwd())
+            self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
+            self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
+                                            'SubProcesses/P0_epem_ttx/result.dat')))
+            shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
+            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue('Generation time total' in res)
+            self.assertTrue('Executable size' in res)
+            self.assertTrue(res.count('NA')<=8)
         except:
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):
+                shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
@@ -216,12 +235,15 @@ class TestCmdLoop(unittest.TestCase):
         try:
             cmd = os.getcwd()
             self.do('import model loop_sm')
+            if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):
+                shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
+            
+            # Make sure it works for an initial run
             self.do('check profile -reuse e+ e- > t t~ [virt=QCD]')
             self.assertEqual(cmd, os.getcwd())
             self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
             self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
                                             'SubProcesses/P0_epem_ttx/result.dat')))
-            shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))        
             self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
             res = open('/tmp/madgraph.check_cmd.log').read()
             self.assertTrue('Generation time total' in res)
@@ -229,8 +251,27 @@ class TestCmdLoop(unittest.TestCase):
             self.assertTrue('Tool (DoublePrec for CT)' in res)
             self.assertTrue('Number of Unstable PS points' in res)
             self.assertTrue(res.count('NA')<=3)
+
+            # Now for a Reuse-run
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            self.setup_logFile_for_logger('madgraph.check_cmd')
+            self.do('check profile -reuse e+ e- > t t~ [virt=QCD]')
+            self.assertEqual(cmd, os.getcwd())
+            self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
+            self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
+                                            'SubProcesses/P0_epem_ttx/result.dat')))
+            shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
+            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue('Generation time total' in res)
+            self.assertTrue('Executable size' in res)
+            self.assertTrue('Tool (DoublePrec for CT)' in res)
+            self.assertTrue('Number of Unstable PS points' in res)
+            self.assertTrue(res.count('NA')<=11)
         except:
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):
+                shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 

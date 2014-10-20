@@ -142,6 +142,13 @@ c helicity stuff
       
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
+
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
+
 c      integer icomp
 c
 c     DATA
@@ -368,6 +375,10 @@ c configurations close to the soft-collinear limit
 
          call set_cms_stuff(0)
          calculatedBorn=.false.
+
+c Initialise shower_S_scale to a large value, not to get spurious dead zones
+         shower_S_scale=1d20
+
          if(ilim.eq.0)then
            call xmcsubt_wrap(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl)
          else

@@ -2519,6 +2519,7 @@ c Consistency check
      &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
 
       emsca=2d0*sqrt(ebeam(1)*ebeam(2))
+      scalemax=sqrt((1-xi_i_fks)*shat)
       if(dampMCsubt)then
          call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg,xm12)
          emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)

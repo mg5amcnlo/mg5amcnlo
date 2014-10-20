@@ -3520,7 +3520,7 @@ This implies that with decay chains:
         # If it turns out there is no perturbation order then we will use these orders
         # for the regular orders.
         squared_order_pattern = re.compile(\
-            "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+            "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
                     "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
         squared_order_re = squared_order_pattern.match(line)
         squared_orders = {}
@@ -3541,7 +3541,7 @@ This implies that with decay chains:
 
         # Now check for perturbation orders, specified in between squared brackets
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
+          re.compile("^(?P<proc>.+>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
                                "(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings = ""
@@ -3595,7 +3595,7 @@ This implies that with decay chains:
             # Notice that one can have a negative value of the squared order to
             # indicate that one should take the N^{n}LO contribution into account.
             order_pattern = re.compile(\
-           "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+           "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
                     "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
             order_re = order_pattern.match(line)
             while order_re:
@@ -4595,7 +4595,7 @@ This implies that with decay chains:
             out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
             out.write(data)
         if args[0] == 'Delphes3':
-            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS_PileUp.tcl'),
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))
             files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_CMS.dat'))

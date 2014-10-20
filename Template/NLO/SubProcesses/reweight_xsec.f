@@ -1894,7 +1894,7 @@ c$$$      apimuR = alphas(scale)/pi
 c$$$      apimZ  = alphas(MDL_MZ)/pi
 c$$$      CALL runalpha(apimZ,MDL_MZ,mbmb,5d0,2,0,apimb)
 c$$$      CALL runmass(mbmb,apimb,apimuR,5d0,2,mbmuR)
-c$$$      rwgt_muR_dep_fac = (mbmuR**2/mbmb**2)**wgtcpower
+c$$$      rwgt_muR_dep_fac = (mbmuR/mbmb)**wgtcpower
       ELSE
          return
       ENDIF
