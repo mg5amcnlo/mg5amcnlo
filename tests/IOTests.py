@@ -146,8 +146,8 @@ class IOTest(object):
         self.clean_output()
 
         model = self.procdef.get('model')
-        self.exporter = copy.deepcopy(self.test_instance.get_exporter_withName(\
-                                                            self.exporter_name))
+        self.exporter = self.test_instance.get_exporter_withName(\
+                                                            self.exporter_name)
         myloopamp = loop_diagram_generation.LoopAmplitude(self.procdef)
         isOptimized = isinstance(self.exporter, \
                            loop_exporters.LoopProcessOptimizedExporterFortranSA) 
@@ -751,8 +751,8 @@ class IOTestManager(unittest.TestCase):
                                         if answer == 'r':
                                             pydoc.pager(text)
                                         else:
-                                            print "reference path: %s" % tmp_path
-                                            print "code returns: %s" % comparison_path
+                                            print "reference path: %s" % comparison_path
+                                            print "code returns: %s" % tmp_path
                                 
                                 
                                 os.remove(tmp_path)

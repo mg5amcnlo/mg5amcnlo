@@ -1193,6 +1193,12 @@ class ConfigFile(dict):
     def __setitem__(self, name, value, change_userdefine=False):
         """set the attribute and set correctly the type if the value is a string"""
         
+        if  not len(self):
+            #Should never happen but when deepcopy/pickle
+            self.default_setup()
+            
+        
+        
         # 1. Find the type of the attribute that we want
         if name in self:
             targettype = type(self[name])
@@ -1205,8 +1211,10 @@ class ConfigFile(dict):
                         break
             else:
                 logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
-                            'This argument is not defined by default. Please consider to add it') 
-                dict.__setitem__(self, name, value)
+                            'This argument is not defined by default. Please consider to add it')
+                print name, value 
+                raise Exception
+                dict.__setitem__(self, name, self.format_variable(str(value), str, name))
                 if change_userdefine:
                     self.user_set.add(name.lower())
                 return
@@ -1325,6 +1333,7 @@ class ProcCharacteristic(ConfigFile):
         dict.__setitem__(self, 'nexternal', 0)
         dict.__setitem__(self, 'ninitial', 0)
         dict.__setitem__(self, 'grouped_matrix', True)
+        dict.__setitem__(self, 'has_loops', False)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1336,7 +1345,7 @@ class ProcCharacteristic(ConfigFile):
             elif os.path.isfile(finput):
                 finput = open(finput)
             else:
-                raise Exception, "No such file %s" % input
+                raise Exception, "No such file %s" % finput
             
         for line in finput:
             if '#' in line:

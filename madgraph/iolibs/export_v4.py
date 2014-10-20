@@ -3564,7 +3564,6 @@ c           This is dummy particle used in multiparticle vertices
             job_per_chan = 1
         else: 
            job_per_chan = 5
-        misc.sprint("set job_per_channel to", job_per_chan, self.proc_characteristic) 
         text = open(path).read() % {'chanperjob': job_per_chan} 
         writer.write(text)
         return True
@@ -4414,7 +4413,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             job_per_chan = 1
         else: 
             job_per_chan = 2
-        misc.sprint("set job_per_channel to", job_per_chan, self.proc_characteristic) 
         text = open(path).read() % {'chanperjob':job_per_chan} 
         writer.write(text)
         return True

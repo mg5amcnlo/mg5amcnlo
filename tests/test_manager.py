@@ -103,16 +103,19 @@ class MyTextTestRunner(unittest.TextTestRunner):
             self.stream.write("FAILED (")
             failed, errored = map(len, (result.failures, result.errors))
             if failed:
-                self.stream.write("failures=%d" % failed)
+                self.stream.writeln("failures=%d)" % failed)
+                self.stream.writeln(' '.join([str(t[0]).split()[0] for t in result.failures]))
             if errored:
-                if failed: self.stream.write(", ")
-                self.stream.write("errors=%d" % errored)
-            self.stream.writeln(")")
+                if failed: 
+                    self.stream.write("FAILED ( ")
+                self.stream.writeln(" errors=%d)" % errored)
+            self.stream.writeln(' '.join([str(t[0]).split()[0] for t in result.errors]))
         else:
             self.stream.writeln("OK")
         if self.bypassed:
             self.stream.writeln("Bypassed %s:" % len(self.bypassed))
             self.stream.writeln(" ".join(self.bypassed))
+        
         return result 
 
             

@@ -18,6 +18,11 @@ C
       INTEGER NPSPOINTS
       PARAMETER (NPSPOINTS = 4)
 
+C     integer nexternal 
+C     number particles (incoming+outgoing) in the me 
+      INTEGER NEXTERNAL, NINCOMING
+      PARAMETER (NEXTERNAL=5,NINCOMING=2)
+
       CHARACTER(512) MADLOOPRESOURCEPATH
 
 C     
@@ -26,9 +31,6 @@ C
 C     the include file with the values of the parameters and masses   
 C        
       INCLUDE 'coupl.inc'
-C     integer nexternal C number particles (incoming+outgoing) in the
-C      me 
-      INCLUDE 'nexternal.inc'
 C     particle masses
       REAL*8 PMASS(NEXTERNAL)
 C     integer    n_max_cg
@@ -419,7 +421,8 @@ C     auxiliary function to change convention between madgraph and
 C      rambo
 C     four momenta.         
       IMPLICIT NONE
-      INCLUDE 'nexternal.inc'
+      INTEGER NEXTERNAL, NINCOMING
+      PARAMETER (NEXTERNAL=5,NINCOMING=2)
 C     ARGUMENTS
       REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
 C     LOCAL
@@ -505,7 +508,8 @@ C      *
 C     *****************************************************************
 C     *****
       IMPLICIT REAL*8(A-H,O-Z)
-      INCLUDE 'nexternal.inc'
+      INTEGER NEXTERNAL, NINCOMING
+      PARAMETER (NEXTERNAL=5,NINCOMING=2)
       DIMENSION XM(NEXTERNAL-NINCOMING),P(4,NEXTERNAL-NINCOMING)
       DIMENSION Q(4,NEXTERNAL-NINCOMING),Z(NEXTERNAL-NINCOMING),R(4)
      $ ,B(3),P2(NEXTERNAL-NINCOMING),XM2(NEXTERNAL-NINCOMING)

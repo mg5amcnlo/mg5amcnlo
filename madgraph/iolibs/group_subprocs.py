@@ -680,7 +680,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
     # group_amplitudes
     #===========================================================================
     @staticmethod
-    def group_amplitudes(decay_chain_amps, criteria='madevent'):
+    def group_amplitudes(decay_chain_amps, criteria='madevent', matrix_elements_opts={}):
         """Recursive function. Starting from a DecayChainAmplitude,
         return a DecayChainSubProcessGroup with the core amplitudes
         and decay chains divided into subprocess groups"""

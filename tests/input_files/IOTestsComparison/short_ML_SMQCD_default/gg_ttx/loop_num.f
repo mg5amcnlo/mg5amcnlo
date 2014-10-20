@@ -12,7 +12,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=3)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=138)
+      PARAMETER (NLOOPAMPS=129)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    MAXLCOUPLINGS
@@ -34,8 +34,8 @@ C
 C     GLOBAL VARIABLES
 C     
       INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT, MULTIPLIER, AMPLNUM
+      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
       LOGICAL GOODHEL(NCOMB)
       LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
@@ -73,7 +73,7 @@ C
           ENDDO
         ENDIF
       ENDDO
-      RES=RES/SYMFACT
+      RES=(RES*MULTIPLIER)/SYMFACT
 
       END
 
@@ -94,7 +94,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=3)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=138)
+      PARAMETER (NLOOPAMPS=129)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     
@@ -117,8 +117,8 @@ C
       COMMON/ML5_0_DP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT,MULTIPLIER,AMPLNUM
+      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
       COMPLEX*16 AMP(NBORNAMPS,NCOMB)
       COMMON/ML5_0_AMPS/AMP
@@ -159,7 +159,7 @@ C       Loop diagram number 6 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.4) THEN
-C       Loop diagram number 20 (might be others, just an example)
+C       Loop diagram number 11 (might be others, just an example)
         DO I=1,4
           CALL LCUT_AF(Q(0),I,WL(1,2))
           CALL FFV1LP0_3(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -169,7 +169,7 @@ C       Loop diagram number 20 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.5) THEN
-C       Loop diagram number 21 (might be others, just an example)
+C       Loop diagram number 12 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1,3))
@@ -179,7 +179,7 @@ C       Loop diagram number 21 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.6) THEN
-C       Loop diagram number 22 (might be others, just an example)
+C       Loop diagram number 13 (might be others, just an example)
         DO I=1,4
           CALL LCUT_AF(Q(0),I,WL(1,2))
           CALL FFV1LP0_3(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -188,7 +188,7 @@ C       Loop diagram number 22 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.7) THEN
-C       Loop diagram number 23 (might be others, just an example)
+C       Loop diagram number 14 (might be others, just an example)
         DO I=1,4
           CALL LCUT_F(Q(0),I,WL(1,2))
           CALL FFV1L_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -198,7 +198,7 @@ C       Loop diagram number 23 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.8) THEN
-C       Loop diagram number 24 (might be others, just an example)
+C       Loop diagram number 15 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -208,7 +208,7 @@ C       Loop diagram number 24 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.9) THEN
-C       Loop diagram number 26 (might be others, just an example)
+C       Loop diagram number 17 (might be others, just an example)
         DO I=1,4
           CALL LCUT_AF(Q(0),I,WL(1,2))
           CALL FFV1L_2(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -218,7 +218,7 @@ C       Loop diagram number 26 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.10) THEN
-C       Loop diagram number 27 (might be others, just an example)
+C       Loop diagram number 18 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -228,7 +228,7 @@ C       Loop diagram number 27 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.11) THEN
-C       Loop diagram number 30 (might be others, just an example)
+C       Loop diagram number 21 (might be others, just an example)
         DO I=1,4
           CALL LCUT_AF(Q(0),I,WL(1,2))
           CALL FFV1L_2(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -239,7 +239,7 @@ C       Loop diagram number 30 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.12) THEN
-C       Loop diagram number 33 (might be others, just an example)
+C       Loop diagram number 24 (might be others, just an example)
         DO I=1,4
           CALL LCUT_F(Q(0),I,WL(1,2))
           CALL FFV1L_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -250,7 +250,7 @@ C       Loop diagram number 33 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.13) THEN
-C       Loop diagram number 34 (might be others, just an example)
+C       Loop diagram number 25 (might be others, just an example)
         DO I=1,4
           CALL LCUT_AF(Q(0),I,WL(1,2))
           CALL FFV1L_2(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -261,7 +261,7 @@ C       Loop diagram number 34 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.14) THEN
-C       Loop diagram number 37 (might be others, just an example)
+C       Loop diagram number 28 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -272,7 +272,7 @@ C       Loop diagram number 37 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.15) THEN
-C       Loop diagram number 38 (might be others, just an example)
+C       Loop diagram number 29 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1,3))
@@ -283,7 +283,7 @@ C       Loop diagram number 38 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.16) THEN
-C       Loop diagram number 38 (might be others, just an example)
+C       Loop diagram number 29 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1,3))
@@ -294,7 +294,7 @@ C       Loop diagram number 38 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.17) THEN
-C       Loop diagram number 38 (might be others, just an example)
+C       Loop diagram number 29 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1,3))
@@ -305,7 +305,7 @@ C       Loop diagram number 38 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.18) THEN
-C       Loop diagram number 39 (might be others, just an example)
+C       Loop diagram number 30 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -316,7 +316,7 @@ C       Loop diagram number 39 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.19) THEN
-C       Loop diagram number 40 (might be others, just an example)
+C       Loop diagram number 31 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -327,7 +327,7 @@ C       Loop diagram number 40 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.20) THEN
-C       Loop diagram number 41 (might be others, just an example)
+C       Loop diagram number 32 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -336,7 +336,7 @@ C       Loop diagram number 41 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.21) THEN
-C       Loop diagram number 42 (might be others, just an example)
+C       Loop diagram number 33 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -346,7 +346,7 @@ C       Loop diagram number 42 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.22) THEN
-C       Loop diagram number 43 (might be others, just an example)
+C       Loop diagram number 34 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -356,7 +356,7 @@ C       Loop diagram number 43 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.23) THEN
-C       Loop diagram number 43 (might be others, just an example)
+C       Loop diagram number 34 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -366,7 +366,7 @@ C       Loop diagram number 43 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.24) THEN
-C       Loop diagram number 43 (might be others, just an example)
+C       Loop diagram number 34 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -376,7 +376,7 @@ C       Loop diagram number 43 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.25) THEN
-C       Loop diagram number 45 (might be others, just an example)
+C       Loop diagram number 36 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVVV1LP0_1(WL(1,2),W(1,WE(1),H),W(1,WE(2),H),LC(1)
@@ -386,7 +386,7 @@ C       Loop diagram number 45 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.26) THEN
-C       Loop diagram number 45 (might be others, just an example)
+C       Loop diagram number 36 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVVV3LP0_1(WL(1,2),W(1,WE(1),H),W(1,WE(2),H),LC(1)
@@ -396,7 +396,7 @@ C       Loop diagram number 45 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.27) THEN
-C       Loop diagram number 45 (might be others, just an example)
+C       Loop diagram number 36 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVVV4LP0_1(WL(1,2),W(1,WE(1),H),W(1,WE(2),H),LC(1)
@@ -406,7 +406,7 @@ C       Loop diagram number 45 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.28) THEN
-C       Loop diagram number 46 (might be others, just an example)
+C       Loop diagram number 37 (might be others, just an example)
         DO I=1,1
           CALL LCUT_S(Q(0),I,WL(1,2))
           CALL GHGHGL_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -415,7 +415,7 @@ C       Loop diagram number 46 (might be others, just an example)
         ENDDO
         CALL CLOSE_1(BUFF(1),RES)
       ELSEIF (ID.EQ.29) THEN
-C       Loop diagram number 47 (might be others, just an example)
+C       Loop diagram number 38 (might be others, just an example)
         DO I=1,1
           CALL LCUT_AS(Q(0),I,WL(1,2))
           CALL GHGHGL_2(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -425,7 +425,7 @@ C       Loop diagram number 47 (might be others, just an example)
         ENDDO
         CALL CLOSE_1(BUFF(1),RES)
       ELSEIF (ID.EQ.30) THEN
-C       Loop diagram number 48 (might be others, just an example)
+C       Loop diagram number 39 (might be others, just an example)
         DO I=1,1
           CALL LCUT_S(Q(0),I,WL(1,2))
           CALL GHGHGL_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -451,7 +451,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=3)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=138)
+      PARAMETER (NLOOPAMPS=129)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    MAXLCOUPLINGS
@@ -488,8 +488,8 @@ C
       COMMON/ML5_0_CT/LSCALE,CTMODE
 
       INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT,MULTIPLIER,AMPLNUM
+      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
       LOGICAL GOODHEL(NCOMB)
       LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
@@ -538,7 +538,7 @@ C       This is just to compute the wfs in quad prec
           ENDDO
         ENDIF
       ENDDO
-      QPRES=QPRES/SYMFACT
+      QPRES=(QPRES*MULTIPLIER)/SYMFACT
 
       RES=QPRES
       END
@@ -560,7 +560,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=3)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=138)
+      PARAMETER (NLOOPAMPS=129)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     
@@ -583,8 +583,8 @@ C
       COMMON/ML5_0_MP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT,MULTIPLIER,AMPLNUM
+      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
       COMPLEX*32 AMP(NBORNAMPS,NCOMB)
       COMMON/ML5_0_MP_AMPS/AMP
@@ -632,7 +632,7 @@ C       Loop diagram number 6 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.4) THEN
-C       Loop diagram number 20 (might be others, just an example)
+C       Loop diagram number 11 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_AF(Q(0),I,WL(1,2))
           CALL MP_FFV1LP0_3(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -645,7 +645,7 @@ C       Loop diagram number 20 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.5) THEN
-C       Loop diagram number 21 (might be others, just an example)
+C       Loop diagram number 12 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1
@@ -658,7 +658,7 @@ C       Loop diagram number 21 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.6) THEN
-C       Loop diagram number 22 (might be others, just an example)
+C       Loop diagram number 13 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_AF(Q(0),I,WL(1,2))
           CALL MP_FFV1LP0_3(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -669,7 +669,7 @@ C       Loop diagram number 22 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.7) THEN
-C       Loop diagram number 23 (might be others, just an example)
+C       Loop diagram number 14 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_F(Q(0),I,WL(1,2))
           CALL MP_FFV1L_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -682,7 +682,7 @@ C       Loop diagram number 23 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.8) THEN
-C       Loop diagram number 24 (might be others, just an example)
+C       Loop diagram number 15 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -695,7 +695,7 @@ C       Loop diagram number 24 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.9) THEN
-C       Loop diagram number 26 (might be others, just an example)
+C       Loop diagram number 17 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_AF(Q(0),I,WL(1,2))
           CALL MP_FFV1L_2(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -708,7 +708,7 @@ C       Loop diagram number 26 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.10) THEN
-C       Loop diagram number 27 (might be others, just an example)
+C       Loop diagram number 18 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -721,7 +721,7 @@ C       Loop diagram number 27 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.11) THEN
-C       Loop diagram number 30 (might be others, just an example)
+C       Loop diagram number 21 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_AF(Q(0),I,WL(1,2))
           CALL MP_FFV1L_2(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -736,7 +736,7 @@ C       Loop diagram number 30 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.12) THEN
-C       Loop diagram number 33 (might be others, just an example)
+C       Loop diagram number 24 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_F(Q(0),I,WL(1,2))
           CALL MP_FFV1L_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -751,7 +751,7 @@ C       Loop diagram number 33 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.13) THEN
-C       Loop diagram number 34 (might be others, just an example)
+C       Loop diagram number 25 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_AF(Q(0),I,WL(1,2))
           CALL MP_FFV1L_2(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -766,7 +766,7 @@ C       Loop diagram number 34 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.14) THEN
-C       Loop diagram number 37 (might be others, just an example)
+C       Loop diagram number 28 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -781,7 +781,7 @@ C       Loop diagram number 37 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.15) THEN
-C       Loop diagram number 38 (might be others, just an example)
+C       Loop diagram number 29 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1
@@ -794,7 +794,7 @@ C       Loop diagram number 38 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.16) THEN
-C       Loop diagram number 38 (might be others, just an example)
+C       Loop diagram number 29 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1
@@ -807,7 +807,7 @@ C       Loop diagram number 38 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.17) THEN
-C       Loop diagram number 38 (might be others, just an example)
+C       Loop diagram number 29 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1
@@ -820,7 +820,7 @@ C       Loop diagram number 38 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.18) THEN
-C       Loop diagram number 39 (might be others, just an example)
+C       Loop diagram number 30 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -835,7 +835,7 @@ C       Loop diagram number 39 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.19) THEN
-C       Loop diagram number 40 (might be others, just an example)
+C       Loop diagram number 31 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -850,7 +850,7 @@ C       Loop diagram number 40 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.20) THEN
-C       Loop diagram number 41 (might be others, just an example)
+C       Loop diagram number 32 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -861,7 +861,7 @@ C       Loop diagram number 41 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.21) THEN
-C       Loop diagram number 42 (might be others, just an example)
+C       Loop diagram number 33 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -874,7 +874,7 @@ C       Loop diagram number 42 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.22) THEN
-C       Loop diagram number 43 (might be others, just an example)
+C       Loop diagram number 34 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -885,7 +885,7 @@ C       Loop diagram number 43 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.23) THEN
-C       Loop diagram number 43 (might be others, just an example)
+C       Loop diagram number 34 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -896,7 +896,7 @@ C       Loop diagram number 43 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.24) THEN
-C       Loop diagram number 43 (might be others, just an example)
+C       Loop diagram number 34 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -907,7 +907,7 @@ C       Loop diagram number 43 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.25) THEN
-C       Loop diagram number 45 (might be others, just an example)
+C       Loop diagram number 36 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVVV1LP0_1(WL(1,2),W(1,WE(1),H),W(1,WE(2),H),LC(1)
@@ -918,7 +918,7 @@ C       Loop diagram number 45 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.26) THEN
-C       Loop diagram number 45 (might be others, just an example)
+C       Loop diagram number 36 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVVV3LP0_1(WL(1,2),W(1,WE(1),H),W(1,WE(2),H),LC(1)
@@ -929,7 +929,7 @@ C       Loop diagram number 45 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.27) THEN
-C       Loop diagram number 45 (might be others, just an example)
+C       Loop diagram number 36 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVVV4LP0_1(WL(1,2),W(1,WE(1),H),W(1,WE(2),H),LC(1)
@@ -940,7 +940,7 @@ C       Loop diagram number 45 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.28) THEN
-C       Loop diagram number 46 (might be others, just an example)
+C       Loop diagram number 37 (might be others, just an example)
         DO I=1,1
           CALL MP_LCUT_S(Q(0),I,WL(1,2))
           CALL MP_GHGHGL_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -951,7 +951,7 @@ C       Loop diagram number 46 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_1(BUFF(1),RES)
       ELSEIF (ID.EQ.29) THEN
-C       Loop diagram number 47 (might be others, just an example)
+C       Loop diagram number 38 (might be others, just an example)
         DO I=1,1
           CALL MP_LCUT_AS(Q(0),I,WL(1,2))
           CALL MP_GHGHGL_2(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -964,7 +964,7 @@ C       Loop diagram number 47 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_1(BUFF(1),RES)
       ELSEIF (ID.EQ.30) THEN
-C       Loop diagram number 48 (might be others, just an example)
+C       Loop diagram number 39 (might be others, just an example)
         DO I=1,1
           CALL MP_LCUT_S(Q(0),I,WL(1,2))
           CALL MP_GHGHGL_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1

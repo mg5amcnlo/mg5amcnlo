@@ -12,7 +12,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=1)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=43)
+      PARAMETER (NLOOPAMPS=40)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=6)
       INTEGER    MAXLCOUPLINGS
@@ -34,8 +34,8 @@ C
 C     GLOBAL VARIABLES
 C     
       INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT, MULTIPLIER, AMPLNUM
+      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
       LOGICAL GOODHEL(NCOMB)
       LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
@@ -73,7 +73,7 @@ C
           ENDDO
         ENDIF
       ENDDO
-      RES=RES/SYMFACT
+      RES=(RES*MULTIPLIER)/SYMFACT
 
       END
 
@@ -94,7 +94,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=1)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=43)
+      PARAMETER (NLOOPAMPS=40)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     
@@ -117,8 +117,8 @@ C
       COMMON/ML5_0_DP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT,MULTIPLIER,AMPLNUM
+      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
       COMPLEX*16 AMP(NBORNAMPS,NCOMB)
       COMMON/ML5_0_AMPS/AMP
@@ -181,7 +181,7 @@ C       Loop diagram number 6 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.6) THEN
-C       Loop diagram number 12 (might be others, just an example)
+C       Loop diagram number 9 (might be others, just an example)
         DO I=1,4
           CALL LCUT_AF(Q(0),I,WL(1,2))
           CALL FFV1LP0_3(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -191,7 +191,7 @@ C       Loop diagram number 12 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.7) THEN
-C       Loop diagram number 13 (might be others, just an example)
+C       Loop diagram number 10 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1,3))
@@ -201,7 +201,7 @@ C       Loop diagram number 13 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.8) THEN
-C       Loop diagram number 14 (might be others, just an example)
+C       Loop diagram number 11 (might be others, just an example)
         DO I=1,4
           CALL LCUT_V(Q(0),I,WL(1,2))
           CALL VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -210,7 +210,7 @@ C       Loop diagram number 14 (might be others, just an example)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.9) THEN
-C       Loop diagram number 15 (might be others, just an example)
+C       Loop diagram number 12 (might be others, just an example)
         DO I=1,1
           CALL LCUT_S(Q(0),I,WL(1,2))
           CALL GHGHGL_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1,3))
@@ -235,7 +235,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=1)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=43)
+      PARAMETER (NLOOPAMPS=40)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=6)
       INTEGER    MAXLCOUPLINGS
@@ -272,8 +272,8 @@ C
       COMMON/ML5_0_CT/LSCALE,CTMODE
 
       INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT,MULTIPLIER,AMPLNUM
+      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
       LOGICAL GOODHEL(NCOMB)
       LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
@@ -322,7 +322,7 @@ C       This is just to compute the wfs in quad prec
           ENDDO
         ENDIF
       ENDDO
-      QPRES=QPRES/SYMFACT
+      QPRES=(QPRES*MULTIPLIER)/SYMFACT
 
       RES=QPRES
       END
@@ -344,7 +344,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=1)
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=43)
+      PARAMETER (NLOOPAMPS=40)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     
@@ -367,8 +367,8 @@ C
       COMMON/ML5_0_MP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT,MULTIPLIER,AMPLNUM
+      COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
       COMPLEX*32 AMP(NBORNAMPS,NCOMB)
       COMMON/ML5_0_MP_AMPS/AMP
@@ -446,7 +446,7 @@ C       Loop diagram number 6 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.6) THEN
-C       Loop diagram number 12 (might be others, just an example)
+C       Loop diagram number 9 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_AF(Q(0),I,WL(1,2))
           CALL MP_FFV1LP0_3(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -459,7 +459,7 @@ C       Loop diagram number 12 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.7) THEN
-C       Loop diagram number 13 (might be others, just an example)
+C       Loop diagram number 10 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_FFV1L_1(W(1,WE(1),H),WL(1,2),LC(1),ML(3),ZERO,WL(1
@@ -472,7 +472,7 @@ C       Loop diagram number 13 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.8) THEN
-C       Loop diagram number 14 (might be others, just an example)
+C       Loop diagram number 11 (might be others, just an example)
         DO I=1,4
           CALL MP_LCUT_V(Q(0),I,WL(1,2))
           CALL MP_VVV1LP0_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1
@@ -483,7 +483,7 @@ C       Loop diagram number 14 (might be others, just an example)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.9) THEN
-C       Loop diagram number 15 (might be others, just an example)
+C       Loop diagram number 12 (might be others, just an example)
         DO I=1,1
           CALL MP_LCUT_S(Q(0),I,WL(1,2))
           CALL MP_GHGHGL_1(WL(1,2),W(1,WE(1),H),LC(1),ML(3),ZERO,WL(1

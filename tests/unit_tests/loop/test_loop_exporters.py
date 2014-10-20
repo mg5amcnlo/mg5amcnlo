@@ -132,34 +132,34 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
     def get_exporter_withName(self, exporter_name):
         """ Returns on demand the exporter of given nickname """
 
-        if not exporter_name in self.loop_exporters:
-            if exporter_name == 'default':
-                self.loop_exporters[exporter_name] = loop_exporters.\
-                                  LoopProcessExporterFortranSA(
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external',
-                                   'SubProc_prefix': 'P',
-                                   'compute_color_flows': False})
-            elif exporter_name == 'optimized':
-                self.loop_exporters[exporter_name] = loop_exporters.\
-                                  LoopProcessOptimizedExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external',
-                                   'SubProc_prefix': 'P',
-                                   'compute_color_flows': False})
-            else:
-                raise MadGraph5Error, 'Exporter with nickname '+\
-                                              '%s not implemented'%exporter_name
+
+        if exporter_name == 'default':
+            self.loop_exporters[exporter_name] = loop_exporters.\
+                              LoopProcessExporterFortranSA(
+                              _mgme_file_path, _proc_file_path,
+                              {'clean':False, 'complex_mass':False, 
+                               'export_format':'madloop','mp':True,
+                               'loop_dir':_loop_file_path,
+                               'cuttools_dir':_cuttools_file_path,
+                               'fortran_compiler':'gfortran',
+                               'output_dependencies':'external',
+                               'SubProc_prefix': 'P',
+                               'compute_color_flows': False})
+        elif exporter_name == 'optimized':
+            self.loop_exporters[exporter_name] = loop_exporters.\
+                              LoopProcessOptimizedExporterFortranSA(\
+                              _mgme_file_path, _proc_file_path,
+                              {'clean':False, 'complex_mass':False, 
+                               'export_format':'madloop','mp':True,
+                               'loop_dir':_loop_file_path,
+                               'cuttools_dir':_cuttools_file_path,
+                               'fortran_compiler':'gfortran',
+                               'output_dependencies':'external',
+                               'SubProc_prefix': 'P',
+                               'compute_color_flows': False})
+        else:
+            raise MadGraph5Error, 'Exporter with nickname '+\
+                                          '%s not implemented'%exporter_name
         return self.loop_exporters[exporter_name]
 
     def load_IOTestsUnit(self):

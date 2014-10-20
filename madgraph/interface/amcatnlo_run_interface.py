@@ -1427,8 +1427,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     % (shower, ', '.join(shower_list)))
 
 # check that PYTHIA6PT is not used for processes with FSR
-            if shower == 'PYTHIA6PT' and \
-                self.proc_characteristics['has_fsr'] == 'true':
+            if shower == 'PYTHIA6PT' and self.proc_characteristics['has_fsr']:
                 raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
 
             if mode in ['aMC@NLO', 'aMC@LO']:
@@ -3492,7 +3491,7 @@ Integrated cross-section
                     " the one specified in MG5_aMC. Please recompile IREGI.")
 
         # check if MadLoop virtuals have been generated
-        if self.proc_characteristics['has_loops'].lower() == 'true' and \
+        if self.proc_characteristics['has_loops'] and \
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:

@@ -16,7 +16,8 @@ C
       INTEGER NPSPOINTS
       PARAMETER (NPSPOINTS = 4)
 
-C integer nexternal C number particles (incoming+outgoing) in the me 
+C integer nexternal 
+C number particles (incoming+outgoing) in the me 
       INTEGER NEXTERNAL, NINCOMING
 	  PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
 
