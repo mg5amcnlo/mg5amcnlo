@@ -1,6 +1,9 @@
 import collections
 import re
 import misc
+if '__main__' == __name__:
+    import sys
+    sys.path.append('../../')
 
 import logging
 logger = logging.getLogger("madgraph.lhe_parser")

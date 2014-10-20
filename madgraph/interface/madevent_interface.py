@@ -4064,11 +4064,10 @@ class GridPackCmd(MadEventCmd):
             
 
             logfile = pjoin(Pdir, 'gen_ximprove.log')
-            proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
+            misc.call([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
                                     stdout=open(logfile,'w'),
                                     cwd=Pdir)
-            proc.communicate('%s 1 F\n' % (precision))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))

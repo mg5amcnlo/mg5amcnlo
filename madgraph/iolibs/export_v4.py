@@ -4698,13 +4698,12 @@ class UFO_model_to_mg4(object):
                  
                 double complex gal(2)
                 common/weak/ gal
-
-                """        
-        if self.model.get('expansion_order'):
-            header=header+"""double precision MU_R
+                
+                double precision MU_R
                 common/rscale/ MU_R
 
-                """
+                """        
+
         header = header+"""double precision Nf
                 parameter(Nf=%d)
                 """ % self.model.get_nflav()
@@ -4717,13 +4716,11 @@ class UFO_model_to_mg4(object):
                      
                     %(complex_mp_format)s %(mp_prefix)sgal(2)
                     common/MP_weak/ %(mp_prefix)sgal
-    
-                    """        
-            if self.model.get('expansion_order'):
-                header=header+"""%(complex_mp_format)s %(mp_prefix)sMU_R
+                    
+                    %(complex_mp_format)s %(mp_prefix)sMU_R
                     common/MP_rscale/ %(mp_prefix)sMU_R
-    
-                    """            
+                    """        
+                              
             mp_fsock.writelines(header%{'real_mp_format':self.mp_real_format,
                                   'complex_mp_format':self.mp_complex_format,
                                   'mp_prefix':self.mp_prefix})
