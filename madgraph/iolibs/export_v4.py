@@ -1925,8 +1925,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             # The original driver still works and is compiled with 'make' while
             # the splitOrders one is compiled with 'make check_sa_born_splitOrders'
             check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
-            self.write_check_sa_splitOrders(\
-                                    squared_orders,split_orders,check_sa_writer)
+            self.write_check_sa_splitOrders(squared_orders,split_orders,
+              nexternal,ninitial,proc_prefix,check_sa_writer)
 
         writers.FortranWriter('nsqso_born.inc').writelines(
 """INTEGER NSQSO_BORN
@@ -1975,7 +1975,8 @@ PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
 
         return len(filter(lambda call: call.find('#') != 0, helas_calls))
 
-    def write_check_sa_splitOrders(self,squared_orders, split_orders, writer):
+    def write_check_sa_splitOrders(self,squared_orders, split_orders, nexternal,
+                                                nincoming, proc_prefix, writer):
         """ Write out a more advanced version of the check_sa drivers that
         individually returns the matrix element for each contributing squared
         order."""
@@ -1993,7 +1994,10 @@ PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
         printout_sq_orders='\n'.join(printout_sq_orders)
         writer.writelines(check_sa_content%{\
                                     'printout_sqorders':printout_sq_orders, 
-                                    'nSplitOrders':len(squared_orders)})
+                                    'nSplitOrders':len(squared_orders),
+                                    'nexternal':nexternal,
+                                    'nincoming':nincoming,
+                                    'proc_prefix':proc_prefix})
 
 #===============================================================================
 # ProcessExporterFortranMW
