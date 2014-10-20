@@ -1517,8 +1517,7 @@ class MultiProcess(base_objects.PhysicsObject):
         self['use_numerical'] = False
         
     def __init__(self, argument=None, collect_mirror_procs = False,
-                 ignore_six_quark_processes = [], generate_amps = True, 
-                 optimize=False):
+                 ignore_six_quark_processes = [], optimize=False):
         """Allow initialization with ProcessDefinition or
         ProcessDefinitionList
         optimize allows to use param_card information. (usefull for 1-.N)"""
@@ -1540,9 +1539,8 @@ class MultiProcess(base_objects.PhysicsObject):
         self['ignore_six_quark_processes'] = ignore_six_quark_processes
         self['use_numerical'] = optimize
         
-        if (isinstance(argument, base_objects.ProcessDefinition) or \
-               isinstance(argument, base_objects.ProcessDefinitionList)) and \
-               generate_amps:
+        if isinstance(argument, base_objects.ProcessDefinition) or \
+               isinstance(argument, base_objects.ProcessDefinitionList):
             # Generate the diagrams
             self.get('amplitudes')
 

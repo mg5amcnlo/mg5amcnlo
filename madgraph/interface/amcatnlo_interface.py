@@ -421,11 +421,48 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
+        # set the orders
+        # this is in case no orders have been passed
+        if not myprocdef['orders']:
+            myprocdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef))
+            #MZ at least at the beginning, warn the user
+            logger.warning('Setting the orders automatically in process definition')
+
         myprocdef['born_orders'] = copy.copy(myprocdef['orders'])
         # split all orders in the model, for the moment it's the simplest solution
         # mz02/2014
         myprocdef['split_orders'] += [o for o in myprocdef['model'].get('coupling_orders') \
                 if o not in myprocdef['split_orders']]
+
+        # now set the squared orders
+        if not myprocdef['squared_orders']:
+            for ord, val in myprocdef['orders'].items():
+                myprocdef['squared_orders'][ord] = 2 * val
+
+        # then increase the orders which are perturbed
+        for pert in myprocdef['perturbation_couplings']:
+            # if orders have been specified increase them
+            if myprocdef['orders'].keys() != ['WEIGHTED']:
+                try:
+                    myprocdef['orders'][pert] += 2
+                except KeyError:
+                    # if the order is not specified
+                    # then MG does not put any bound on it
+                    myprocdef['orders'][pert] = 99
+                try:
+                    myprocdef['squared_orders'][pert] += 2
+                except KeyError:
+                    myprocdef['squared_orders'][pert] = 200
+
+        # update also the WEIGHTED entry
+        if 'WEIGHTED' in myprocdef['orders'].keys():
+            myprocdef['orders']['WEIGHTED'] += 1 * \
+                    max([myprocdef.get('model').get('order_hierarchy')[ord] for \
+                    ord in myprocdef['perturbation_couplings']])
+
+            myprocdef['squared_orders']['WEIGHTED'] += 2 * \
+                    max([myprocdef.get('model').get('order_hierarchy')[ord] for \
+                    ord in myprocdef['perturbation_couplings']])
 
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,

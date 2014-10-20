@@ -102,48 +102,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             del options['OLP']
 
         try:
-            # Now generate the borns for the first time:
-            #---the first step just sets the internal variables according to the 
-            #process definition without generating the amplitudes
-            super(FKSMultiProcess, self).__init__(*arguments, generate_amps = False)
-
-            #---process definitions are corrected in order to be multi-perturbation
-            # compilant
-            for procdef in self['process_definitions']:
-                if not procdef['orders']:
-                    procdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(procdef))
-                    procdef.set('born_orders', copy.copy(procdef['orders']))
-
-                # set the squared orders consistently with the perturbation specified by the user
-                if not procdef['squared_orders']:
-                    for ord, val in procdef['orders'].items():
-                        procdef['squared_orders'][ord] = 2 * val
-
-                # then increase the orders which are perturbed
-                for pert in procdef['perturbation_couplings']:
-                    # if orders have been specified increase them
-                    if procdef['orders'].keys() != ['WEIGHTED']:
-                        try:
-                            procdef['orders'][pert] += 2
-                        except KeyError:
-                            procdef['orders'][pert] = 2
-                        try:
-                            procdef['squared_orders'][pert] += 2
-                        except KeyError:
-                            procdef['squared_orders'][pert] = 2
-
-                # update also the WEIGHTED entry
-                if 'WEIGHTED' in procdef['orders'].keys():
-                    procdef['orders']['WEIGHTED'] += 1 * \
-                            max([procdef.get('model').get('order_hierarchy')[ord] for \
-                            ord in procdef['perturbation_couplings']])
-
-                    procdef['squared_orders']['WEIGHTED'] += 2 * \
-                            max([procdef.get('model').get('order_hierarchy')[ord] for \
-                            ord in procdef['perturbation_couplings']])
-
-            #---now generate the amplitudes
-            self.get('amplitudes')
+            # Now generate the borns 
+            super(FKSMultiProcess, self).__init__(*arguments)
 
         except InvalidCmd as error:
             # If no born, then this process most likely does not have any.
