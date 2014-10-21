@@ -2543,7 +2543,6 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         """ Write it the wrapper to call the ML5 subroutine in the library.""" 
         
         # Generating the MadEvent wrapping ME's routines
-        
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0

@@ -97,7 +97,7 @@ class ProcessExporterFortran(object):
         else:
             for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
                 calls = calls + self.generate_subprocess_directory_v4(\
-                                        me, self._curr_fortran_model, me_number)    
+                                                   me, fortran_model, me_number)    
                         
         return calls    
         
@@ -851,21 +851,21 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                          []))
 
         # Crate dictionary between diagram number and JAMP number
-        misc.sprint(matrix_element.get('color_basis'))
         diag_jamp = {}
         for ijamp, col_basis_elem in \
                 enumerate(sorted(matrix_element.get('color_basis').keys())):
             for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
-                # Only use color flows with Nc == max_Nc
-                if diag_tuple[4] == max_Nc:
+                # Only use color flows with Nc == max_Nc for tree diagrams
+                # For squared-loop processes (possibly with a Born being
+                # excluded), we must include all of them.
+                if diag_tuple[4] == max_Nc or matrix_element.get('processes')[0]\
+                                                     .get('NLO_mode')=='noborn':
                     diag_num = diag_tuple[0] + 1
                     # Add this JAMP number to this diag_num
                     diag_jamp[diag_num] = diag_jamp.setdefault(diag_num, []) + \
                                           [ijamp+1]
 
         colamps = ijamp + 1
-        misc.sprint(mapconfigs)
-        misc.sprint(diag_jamp)
         for iconfig, num_diag in enumerate(mapconfigs):        
             if num_diag == 0:
                 continue
