@@ -336,7 +336,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             valid_diag = True
             i=i+1
             
-#            if any([abs(i)!=1000021 for i in diag.get_loop_lines_pdgs()]):
+#            if len(diag.get_loop_lines_pdgs())!=2:
 #                valid_diag=False
             
             # Ex. 0: Chose a specific diagram number, here the 8th one for ex.     
@@ -813,7 +813,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         logger.info("Contributing diagrams generated: "+\
           "%d Born, %d%s loops, %d R2, %d UV"%(len(self['born_diagrams']),
                     len(self['loop_diagrams']),'(+%d)'%nLoopsIdentified \
-                            if nLoopsIdentified>1 else '' ,nCT['R2'],nCT['UV']))
+                            if nLoopsIdentified>0 else '' ,nCT['R2'],nCT['UV']))
         
         ldg_debug_info("#Diags after filtering",len(self['loop_diagrams']))
         ldg_debug_info("# of different structures identified",\

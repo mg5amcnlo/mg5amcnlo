@@ -2903,7 +2903,8 @@ def output_timings(process, timings):
                                        %f(timings['Process_compilation'],'%.3gs')
     res_str += "|= Initialization............ %s\n"\
                                             %f(timings['Initialization'],'%.3gs')
-    res_str += "\n= Unpolarized time / PSpoint. ========== %.3gms\n"\
+
+    res_str += "\n= Helicity sum time / PSpoint ========== %.3gms\n"\
                                     %(timings['run_unpolarized_total']*1000.0)
     if loop_optimized_output:
         coef_time=timings['run_unpolarized_coefs']*1000.0
@@ -2914,8 +2915,7 @@ def output_timings(process, timings):
                                   %(coef_time,int(round(100.0*coef_time/total)))
         res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
-
-    res_str += "\n= Polarized time / PSpoint... ========== %.3gms\n"\
+    res_str += "\n= One helicity time / PSpoint ========== %.3gms\n"\
                                     %(timings['run_polarized_total']*1000.0)
     if loop_optimized_output:
         coef_time=timings['run_polarized_coefs']*1000.0

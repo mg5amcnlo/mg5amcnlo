@@ -2445,7 +2445,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             # The dictionary ctIDs has the ct interactions ID as keys
             # and a HelasAmplitudeList of the corresponding HelasAmplitude as
             # values.
-            ctIDs={}    
+            ctIDs={}
             for ctamp in diag.get_ct_amplitudes():
                 try:
                     ctIDs[ctamp.get('interaction_id')].append(ctamp)
