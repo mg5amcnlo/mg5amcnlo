@@ -68,7 +68,7 @@ C
 	  common/%(proc_prefix)sHELCHOICE/HELPICKED
       
 ## if(not LoopInduced) {
-	  %(complex_dp_format)s AMP(NBORNAMPS)
+	  %(complex_format)s AMP(NBORNAMPS)
 	  common/%(proc_prefix)s%(mp_prefix)sAMPS/AMP
 ## }
       

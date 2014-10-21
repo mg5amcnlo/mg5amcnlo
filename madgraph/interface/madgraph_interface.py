@@ -3553,11 +3553,12 @@ This implies that with decay chains:
             option=perturbation_couplings_re.group("option")
             if option:
                 if option in self._valid_nlo_modes:
+                    LoopOption=option
                     if option=='sqrvirt':
                         LoopOption='virt'
                         HasBorn=False
-                    else:
-                        LoopOption=option
+                    elif option=='noborn':
+                        HasBorn=False
                 else:
                     raise self.InvalidCmd, "NLO mode %s is not valid. "%option+\
                        "Valid modes are %s. "%str(self._valid_nlo_modes)

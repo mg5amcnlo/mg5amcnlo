@@ -280,7 +280,6 @@ class make_info_html:
                 names[main]= [sub_proccess.split(',')]
     
 
-        misc.sprint(names, proc)  
         return names
 
     def get_subprocess_info_v4(self, proc):

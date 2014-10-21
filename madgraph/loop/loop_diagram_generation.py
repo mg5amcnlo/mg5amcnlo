@@ -544,7 +544,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         else:
             self['born_diagrams'] = base_objects.DiagramList()
             bornsuccessful = True
-            logger.debug("# born diagrams generation skipped by user request.")
+            logger.debug("Born diagrams generation skipped by user request.")
 
         # Make sure that all orders specified belong to the model:
         for order in self['process']['orders'].keys()+\

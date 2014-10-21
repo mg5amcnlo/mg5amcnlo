@@ -724,9 +724,17 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     else:
                         ml_reds="|".join([str(vl) for vl in value]) 
                 MLCard.set("MLReductionLib",ml_reds)      
+            elif key == 'ImprovePS':
+                MLCard.set('ImprovePSPoint',2 if value else -1)
+            elif key == 'ForceMP':
+                mode = 4
+            elif key in MLCard:
+                MLCard.set(key,value)    
             else:
-                MLCard.set(key,value)
-                
+                raise Exception, 'The MadLoop options %s specified in function'%key+\
+                  ' fix_MadLoopParamCard does not correspond to an option defined'+\
+                  ' MadLoop nor is it specially handled in this function.'
+
         MLCard.set('CTModeRun',mode)
         MLCard.set('CTModeInit',mode)
         MLCard.set('UseLoopFilter',loop_filter)

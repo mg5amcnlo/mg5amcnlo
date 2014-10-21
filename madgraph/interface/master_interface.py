@@ -207,6 +207,9 @@ class Switcher(object):
                 elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
                     self.change_principal_cmd('MadLoop')
                 elif nlo_mode == 'noborn': 
+                    self.change_principal_cmd('MadLoop')
+                    self.cmd.validate_model(self, loop_type=nlo_mode,
+                                                            coupling_type=orders)
                     self.change_principal_cmd('MadGraph')
                     return self.cmd.create_loop_induced(self, line, *args, **opts)
         try:

@@ -921,6 +921,12 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
                                      matrix_element,LoopFortranModel)
 
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        filename = 'nexternal.inc'
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                                                            nexternal, ninitial)
+
         return calls
 
     def generate_subprocess_directory_v4(self, matrix_element, fortran_model):
@@ -1751,6 +1757,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             filename = 'compute_color_flows.f'
             self.write_compute_color_flows(writers.FortranWriter(filename),
                                         matrix_element, config_map = config_map)
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        filename = 'nexternal.inc'
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                                                            nexternal, ninitial)
 
         return calls
 

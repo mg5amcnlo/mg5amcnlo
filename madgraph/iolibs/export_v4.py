@@ -851,6 +851,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                          []))
 
         # Crate dictionary between diagram number and JAMP number
+        misc.sprint(matrix_element.get('color_basis'))
         diag_jamp = {}
         for ijamp, col_basis_elem in \
                 enumerate(sorted(matrix_element.get('color_basis').keys())):
@@ -863,14 +864,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                           [ijamp+1]
 
         colamps = ijamp + 1
-
+        misc.sprint(mapconfigs)
+        misc.sprint(diag_jamp)
         for iconfig, num_diag in enumerate(mapconfigs):        
             if num_diag == 0:
                 continue
 
             # List of True or False 
-            bool_list = [(i + 1 in diag_jamp[num_diag]) for i in \
-                              range(colamps)]
+            bool_list = [(i + 1 in diag_jamp[num_diag]) for i in range(colamps)]
             # Add line
             ret_list.append("DATA(icolamp(i,%d,%d),i=1,%d)/%s/" % \
                                 (iconfig+1, num_matrix_element, colamps,
