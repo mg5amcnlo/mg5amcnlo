@@ -911,7 +911,7 @@ C we now copy over this flag to the relevant contributing Squared orders.
 
 ## if(ComputeColorFlows){
 IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS()
+  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)
   IF(DOUBLECHECK_JAMP) THEN
     CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(RES_FROM_JAMP,HEL_MULT)
   ENDIF

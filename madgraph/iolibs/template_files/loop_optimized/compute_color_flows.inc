@@ -1,12 +1,16 @@
 C Set of subroutines to project the Feynman diagrama amplitudes AMPL onto the color flow space.
 
-      SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS()
+      SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)
+      IMPLICIT NONE
+      INTEGER HEL_MULT
         CALL %(proc_prefix)sREINITIALIZE_JAMPS()
         CALL %(proc_prefix)sDO_COMPUTE_COLOR_FLOWS(.FALSE.)
-        CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES()
+        CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
       END SUBROUTINE
 
-      SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES()      
+      SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+      IMPLICIT NONE
+      INTEGER HEL_MULT      
 ##if(MadEventOutput) {
  	    CALL %(proc_prefix)sCOMPUTE_AMPL2(HEL_MULT)
         CALL %(proc_prefix)sCOMPUTE_JAMP2(HEL_MULT)  
@@ -15,6 +19,7 @@ C Set of subroutines to project the Feynman diagrama amplitudes AMPL onto the co
       END SUBROUTINE
       
       SUBROUTINE %(proc_prefix)sDEALLOCATE_COLOR_FLOWS()
+      IMPLICIT NONE
         CALL %(proc_prefix)sDO_COMPUTE_COLOR_FLOWS(.TRUE.)
       END SUBROUTINE
             

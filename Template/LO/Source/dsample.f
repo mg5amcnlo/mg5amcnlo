@@ -201,7 +201,7 @@ c      nun = n_unwgted()
 c     JA 02/2011 Added twgt to results.dat to allow event generation in
 c     first iteration for gridpack runs
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,tsigma,0.0,
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,tsigma, 0.0,
      &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean
       else
          write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,0.0,tsigma,
@@ -657,7 +657,7 @@ c
 c     Unable to read grid, using uniform grid and equal points in
 c     each configuration
 c
-      write(*,*) 'Using Uniform Grid!'
+      write(*,*) 'Using Uniform Grid!', maxinvar
       do j = 1, maxinvar
          do i = 1, ng
             grid(2, i, j) = xgmin+ (xgmax-xgmin)*(i / dble(ng))**1
