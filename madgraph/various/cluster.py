@@ -1290,7 +1290,7 @@ class LSFCluster(Cluster):
             me_dir = 'a' + me_dir[1:]
         
         text = ""
-        command = ['bsub', '-J', me_dir]
+        command = ['bsub', '-C0', '-J', me_dir]
         if cwd is None:
             cwd = os.getcwd()
         else: 
@@ -1364,7 +1364,7 @@ class LSFCluster(Cluster):
         cmd = "bjobs " + ' '.join(self.submitted_ids) 
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
 
-        idle, run, fail = 0, 0, 0
+        jobstatus = {}
         for line in status.stdout:
             line = line.strip()
             if 'JOBID' in line:
@@ -1373,19 +1373,24 @@ class LSFCluster(Cluster):
             id = splitline[0]
             if id not in self.submitted_ids:
                 continue
-            status = splitline[2]
+            jobstatus[id] = splitline[2]
+
+        idle, run, fail = 0, 0, 0
+        for id in self.submitted_ids:
+            if id in jobstatus:
+                status = jobstatus[id]
+            else:
+                status = 'MISSING'
             if status == 'RUN':
                 run += 1
             elif status == 'PEND':
                 idle += 1
-            elif status == 'DONE':
+            else:
                 status = self.check_termination(id)
                 if status == 'wait':
                     run += 1
                 elif status == 'resubmit':
-                    idle += 1
-            else:
-                fail += 1
+                    idle += 1                
 
         return idle, run, self.submitted - (idle+run+fail), fail
 
