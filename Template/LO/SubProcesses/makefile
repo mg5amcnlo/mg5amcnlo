@@ -17,7 +17,7 @@ else
     MADLOOP_LIB =
 endif
 
-LINKLIBS =  -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf) $(LINK_MADLOOP_LIB) $(LINK_LOOP_LIBS)
+LINKLIBS =  -L../../lib/ -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf) $(LINK_MADLOOP_LIB) $(LINK_LOOP_LIBS) -L../../lib/ -ldhelas
 
 LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(MADLOOP_LIB) $(LOOP_LIBS)
 

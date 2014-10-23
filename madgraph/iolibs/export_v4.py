@@ -4703,7 +4703,6 @@ class UFO_model_to_mg4(object):
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         # In standalone and madloop we do no use the compiled param card but
         # still parse the .dat one so we must load it.
-        misc.sprint(self.opt)
         if self.opt['loop_induced']:
             #loop induced follow MadEvent way to handle the card.
             load_card = ''
