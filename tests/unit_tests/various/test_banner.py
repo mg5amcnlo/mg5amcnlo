@@ -159,6 +159,71 @@ class TESTMadLoopParam(unittest.TestCase):
         for key, value in param1.items():
             self.assertEqual(value, param2[key])
             self.assertTrue(key.lower() in param2.user_set)
+            
+    def test_sum_object(self):
+        
+        param1 = MadLoopParam(pjoin(MG5DIR,"Template", "loop_material","StandAlone",
+                                      "Cards","MadLoopParams.dat"))
+
+
+        new = {'test': 1, 'value': 'data----------------------------------'}
+
+        ########################################################################
+        # 1. simple sum all key different
+        ########################################################################        
+        param2 = param1 + new
+
+        self.assertTrue(isinstance(param2, MadLoopParam))
+        self.assertTrue(isinstance(param2, dict))
+        self.assertNotEqual(id(param1), id(param2))
+        
+        #check that they are correct
+        for key, value in param1.items():
+            self.assertEqual(value, param2[key])
+            self.assertFalse(key.lower() in param2.user_set)        
+        for key, value in new.items():
+            self.assertEqual(value, param2[key])
+            self.assertFalse(key.lower() in param2.user_set)  
+        self.assertTrue('test' not in param1)
+                   
+        
+        
+        ########################################################################
+        # 2. add same key in both term
+        ########################################################################
+        new = {'test': 1, 'value': 'data', 'CTLoopLibrary':1}
+        param2 = param1 + new
+        #check that they are correct
+        for key, value in param1.items():
+            if key != 'CTLoopLibrary':
+                self.assertEqual(value, param2[key])
+                self.assertFalse(key.lower() in param2.user_set)   
+                     
+        for key, value in new.items():
+            self.assertEqual(value, param2[key])
+            self.assertFalse(key.lower() in param2.user_set)   
+            
+            
+        ########################################################################
+        # 3. reverse order
+        ########################################################################
+        param2 = new + param1   
+        
+        #check sanity
+        self.assertFalse(isinstance(param2, MadLoopParam))
+        self.assertTrue(isinstance(param2, dict))
+        self.assertNotEqual(id(new), id(param2))
+        self.assertNotEqual(id(param1), id(param2))
+        
+        #check that value are correct
+        for key, value in param1.items():
+                self.assertEqual(value, param2[key])        
+        for key, value in new.items():
+            if key != 'CTLoopLibrary':
+                self.assertEqual(value, param2[key])
+            
+                
+        
         
         
         

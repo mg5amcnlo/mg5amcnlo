@@ -366,7 +366,7 @@ class ParamCard(dict):
         
     
             
-    def write_inc_file(self, outpath, identpath, default):
+    def write_inc_file(self, outpath, identpath, default, need_mp=False):
         """ write a fortran file which hardcode the param value"""
         
         fout = file_writers.FortranWriter(outpath)
@@ -394,7 +394,8 @@ class ParamCard(dict):
                                    (block, lhaid, value))
             value = str(value).lower()
             fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
-        
+            if need_mp:
+                fout.writelines(' mp__%s = %s_16' % (variable, value))
                 
     def append(self, obj):
         """add an object to this"""

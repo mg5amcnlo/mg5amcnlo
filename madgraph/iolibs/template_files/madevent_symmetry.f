@@ -210,6 +210,12 @@ c     Write ic with correct number of digits
       write(fname(5:(5+npos-1)),formstr) ic
       open (unit=lun, file = fname, status='unknown')
       write(lun,15) '#!/bin/bash'
+      write(lun,15) 'if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then'
+      write(lun,15) 'tar -xf MadLoop5_resources.tar'
+      write(lun,15) 'fi'
+
+
+
 c      write(lun,15) '#PBS -q ' // PBS_QUE
 c      write(lun,15) '#PBS -o PBS.log'
 c      write(lun,15) '#PBS -e PBS.err'

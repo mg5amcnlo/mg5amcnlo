@@ -34,6 +34,7 @@ import subprocess
 import sys
 import traceback
 import time
+import tarfile
 
 try:
     import readline
@@ -2444,7 +2445,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                              stdout=devnull)
                 devnull.close()
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
-            param_card.write_inc_file(outfile, ident_card, default)
+
+            need_mp = self.proc_characteristics['loop_induced']                
+            param_card.write_inc_file(outfile, ident_card, default, need_mp=need_mp)
       
       
         if mode in ['run', 'all']:
@@ -2532,6 +2535,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.pass_in_difficult_integration_mode()
           
         P_zero_result = [] # check the number of times where they are no phase-space
+
+        # File for the loop (for loop induced)
+        if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources')):
+            tf=tarfile.open(pjoin(self.me_dir, 'SubProcesses', 'MadLoop5_resources.tar'),'w',
+                                                               dereference=True)
+            tf.add(pjoin(self.me_dir,'SubProcesses','MadLoop5_resources'),arcname='MadLoop5_resources')
+            tf.close()
+
 
         nb_tot_proc = len(subproc)
         for nb_proc,subdir in enumerate(subproc):
@@ -3446,6 +3457,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             if 'ajob' in exe: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar')):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar'))
+                
                 output_files = []
                 required_output = []
                 

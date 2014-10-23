@@ -638,7 +638,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
-        model_builder = UFO_model_to_mg4(model, write_dir, self.opt)
+        model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
         model_builder.build(wanted_couplings)
 
         # Backup the loop mode, because it can be changed in what follows.
@@ -4509,7 +4509,8 @@ class UFO_model_to_mg4(object):
         if opt:
             self.opt = opt
         else:
-            self.opt = {'complex_mass': False, 'export_format': 'madevent', 'mp':True}
+            self.opt = {'complex_mass': False, 'export_format': 'madevent', 'mp':True,
+                        'loop_induced': False}
             
         self.coups_dep = []    # (name, expression, type)
         self.coups_indep = []  # (name, expression, type)
@@ -4702,7 +4703,12 @@ class UFO_model_to_mg4(object):
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         # In standalone and madloop we do no use the compiled param card but
         # still parse the .dat one so we must load it.
-        if self.opt['export_format'] in ['madloop','madloop_optimized']:
+        misc.sprint(self.opt)
+        if self.opt['loop_induced']:
+            #loop induced follow MadEvent way to handle the card.
+            load_card = ''
+            lha_read_filename='lha_read.f'            
+        elif self.opt['export_format'] in ['madloop','madloop_optimized']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
         elif self.opt['export_format'].startswith('standalone') or self.opt['export_format'] in ['madweight']:
@@ -5380,7 +5386,8 @@ class UFO_model_to_mg4(object):
     def create_param_read(self):    
         """create param_read"""
         
-        if self.opt['export_format'] in ['madevent', 'FKS5_default', 'FKS5_optimized']:
+        if self.opt['export_format'] in ['madevent', 'FKS5_default', 'FKS5_optimized'] \
+            or self.opt['loop_induced']:
             fsock = self.open('param_read.inc', format='fortran')
             fsock.writelines(' include \'../param_card.inc\'')
             return
