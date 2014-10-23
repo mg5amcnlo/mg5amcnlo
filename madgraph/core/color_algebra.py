@@ -607,12 +607,16 @@ class ColorString(list):
     coeff = fractions.Fraction(1, 1)
     is_imaginary = False
     Nc_power = 0
+    # The loop_NC_power attribute is the power of Nc that comes from the
+    # possible color trace that appear in loop diagrams. It is typically
+    # equal to 1 if the loop diagrams is a closed fermion loop and 0 otherwise.
+    loop_Nc_power = 0
     canonical = None
     immutable = None
     
     def __init__(self, init_list=[],
                  coeff=fractions.Fraction(1, 1),
-                 is_imaginary=False, Nc_power=0):
+                 is_imaginary=False, Nc_power=0, loop_Nc_power=0):
         """Overrides norm list constructor to implement easy modification
         of coeff, is_imaginary and Nc_power"""
 
@@ -623,6 +627,7 @@ class ColorString(list):
         self.coeff = coeff
         self.is_imaginary = is_imaginary
         self.Nc_power = Nc_power
+        self.loop_Nc_power = loop_Nc_power
 
     def __str__(self):
         """Returns a standard string representation based on color object
@@ -770,6 +775,7 @@ class ColorString(list):
         res.coeff = self.coeff
         res.is_imaginary = self.is_imaginary
         res.Nc_power = self.Nc_power
+        res.loop_Nc_power = self.loop_Nc_power
 
         return res
 

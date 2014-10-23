@@ -136,6 +136,7 @@ C ----------
                   TS(I)=T
               ENDIF
            ENDDO
+           JHEL = 1
            IF(NTRY.LE.MAXTRIES)THEN
              DO I=1,NCOMB
                 IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
@@ -151,8 +152,10 @@ C ----------
           ENDIF
        ELSE              !RANDOM HELICITY
           DO J=1,ISUM_HEL
+             JHEL=JHEL+1
+             IF (JHEL .GT. NGOOD) JHEL=1
              HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
-             I = IGOOD(J)
+             I = IGOOD(JHEL)
              CALL %(ml_prefix)sSLOOPMATRIXHEL(P,I,ANS_ML)
 	     T = ANS_ML(1,0)
              DO JJ=1,nincoming

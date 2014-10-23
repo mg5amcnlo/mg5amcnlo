@@ -46,9 +46,12 @@ C
         DATA GOODHEL/THEL*.FALSE./
 	REAL*8 HWGT,XTOT
         INTEGER NGOOD(2), IGOOD(NCOMB,2)         
+  		INTEGER JHEL(2)	
         DATA NTRY /0,0/
         DATA NGOOD /0,0/
         DATA ISHEL/0,0/
+
+		SAVE IGOOD, JHEL
 C  
 C GLOBAL VARIABLES
 C  
@@ -135,6 +138,7 @@ C ----------
             TS(I)=T
          ENDIF
         ENDDO
+        JHEL(IMIRROR) = 1
         IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
          DO I=1,NCOMB
             IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
@@ -150,8 +154,10 @@ C ----------
         ENDIF
       ELSE !LOOP OVER GOOD HELICITIES
         DO J=1,ISHEL(IMIRROR)
+            JHEL(IMIRROR)=JHEL(IMIRROR)+1
+            IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
             HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
-            I = IGOOD(J,IMIRROR)
+            I = IGOOD(JHEL(IMIRROR),IMIRROR)
 	    CALL %(ml_prefix)sSLOOPMATRIXHEL(P,I,ANS_ML)
 	    T = ANS_ML(1,0)
             DO JJ=1,nincoming

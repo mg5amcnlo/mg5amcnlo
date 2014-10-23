@@ -234,12 +234,11 @@ class ColorBasis(dict):
         the colorize dictionary (produced by the colorize routine)
         associated to diagram with index index. Keep track of simplification
         results for maximal optimization."""
-
+        import madgraph.various.misc as misc
         # loop over possible color chains
         for col_chain, col_str in colorize_dict.items():
             # Create a canonical immutable representation of the the string
             canonical_rep, rep_dict = col_str.to_canonical()
-
             try:
                 # If this representation has already been considered,
                 # recycle the result. 
@@ -288,7 +287,8 @@ class ColorBasis(dict):
                                 col_chain,
                                 col_str.coeff,
                                 col_str.is_imaginary,
-                                col_str.Nc_power)
+                                col_str.Nc_power,
+                                col_str.loop_Nc_power)
                 try:
                     self[immutable_col_str].append(basis_entry)
                 except KeyError:

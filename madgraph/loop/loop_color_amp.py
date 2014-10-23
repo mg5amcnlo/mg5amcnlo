@@ -21,6 +21,7 @@ import copy
 import fractions
 import operator
 import re
+import madgraph.various.misc as misc
 
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
@@ -61,11 +62,26 @@ class LoopColorBasis(color_amp.ColorBasis):
         else:
             raise color_amp.ColorBasis.ColorBasisError, \
         "L-cut particle has an unsupported color representation %s" % lcut_charge
-                
+
         # Append it to all color strings for this diagram.
         for CS in colorize_dict.values():
+            # We first compute the NcPower of this ColorString before
+            # *before* the loop color flow is sewed together.
+            max_CS_lcut_diag_Nc_power = max(cs.Nc_power \
+                      for cs in color_algebra.ColorFactor([CS]).full_simplify())
+            # We add here the closing color structure.
             CS.product(closingCS)
-        
+            # Now compute the Nc power *after* the loop color flow is sewed together
+            # and again compute the overall maximum power of Nc appearing in this
+            # simplified sewed structure.
+            max_CS_loop_diag_Nc_power = max(cs.Nc_power \
+                      for cs in color_algebra.ColorFactor([CS]).full_simplify())
+            
+            # We can now set the power of Nc brought by the potential loop
+            # color trace to the corresponding attribute of this ColorStructure
+            CS.loop_Nc_power =  max_CS_loop_diag_Nc_power - \
+                                                       max_CS_lcut_diag_Nc_power
+
     def create_loop_color_dict_list(self, amplitude):
         """Returns a list of colorize dict for all loop diagrams in amplitude.
         Also update the _list_color_dict object accordingly """

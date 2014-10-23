@@ -847,19 +847,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # Only want to include leading color flows, so find max_Nc
         color_basis = matrix_element.get('color_basis')
-        max_Nc = max(sum([[v[4] for v in val] for val in color_basis.values()],
-                         []))
+        
+        # We don't want to include the power of Nc's which come from the potential
+        # loop color trace (i.e. in the case of a closed fermion loop for example)
+        # so we subtract it here when computing max_Nc
+        max_Nc = max(sum([[(v[4]-v[5]) for v in val] for val in 
+                                                      color_basis.values()],[]))
 
         # Crate dictionary between diagram number and JAMP number
         diag_jamp = {}
         for ijamp, col_basis_elem in \
                 enumerate(sorted(matrix_element.get('color_basis').keys())):
             for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
-                # Only use color flows with Nc == max_Nc for tree diagrams
-                # For squared-loop processes (possibly with a Born being
-                # excluded), we must include all of them.
-                if diag_tuple[4] == max_Nc or matrix_element.get('processes')[0]\
-                                                     .get('NLO_mode')=='noborn':
+                # Only use color flows with Nc == max_Nc. However, notice that
+                # we don't want to include the Nc power coming from the loop
+                # in this counting.
+                if (diag_tuple[4]-diag_tuple[5]) == max_Nc:
                     diag_num = diag_tuple[0] + 1
                     # Add this JAMP number to this diag_num
                     diag_jamp[diag_num] = diag_jamp.setdefault(diag_num, []) + \

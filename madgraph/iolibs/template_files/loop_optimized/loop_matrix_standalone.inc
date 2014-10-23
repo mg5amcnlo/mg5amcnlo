@@ -372,6 +372,7 @@ C BEGIN CODE
 C ----------
 
 IF(ML_INIT) THEN
+  ML_INIT = .FALSE.
   TMP = 'auto'
   CALL setMadLoopPath(TMP)
   CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
@@ -390,10 +391,7 @@ IF(ML_INIT) THEN
     CheckCycle=5
   ENDIF
 ## }
-  ML_INIT = .FALSE.
-ENDIF
 
-IF(NTRY.EQ.0) THEN
 C  CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
   QP_TOOLS_AVAILABLE=.FALSE.
   INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
@@ -1143,7 +1141,17 @@ c    ENDDO
 C Update of REF_EVALS (only for loop-induced processes).
     REF_EVALS(MOD(NPSPOINTS,MAXNREF_EVALS)+1) = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
 C We add one here to the number of PS points used for building the reference scale for comparisons.
-    NPSPOINTS = NPSPOINTS+1
+C It might be that when asking for specific helicities, the user started with a vanishing helicity
+C not filtered yet. In this case, the new ref would remain zero. So we want to check for this
+C and wait for a point for which the evaluation won't be zero.
+    IF(NPSPOINTS.GE.MAXNREF_EVALS) THEN
+      TMPR=MEDIAN(REF_EVALS,MAXNREF_EVALS)
+    ELSE
+      TMPR=MEDIAN(REF_EVALS,NPSPOINTS+1)
+    ENDIF
+    IF (TMPR.NE.0.0d0) THEN
+      NPSPOINTS = NPSPOINTS+1
+    ENDIF
 ## }
 	IF(NTRY.EQ.0) THEN
 	  NATTEMPTS=NATTEMPTS+1
