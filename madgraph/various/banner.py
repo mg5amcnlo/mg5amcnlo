@@ -14,6 +14,7 @@
 ################################################################################
 """A File for splitting"""
 
+import copy
 import sys
 import re
 import os
@@ -1189,6 +1190,20 @@ class ConfigFile(dict):
         # if input is define read that input
         if isinstance(finput, (file, str)):
             self.read(finput)
+
+    def __add__(self, other):
+        """define the sum"""
+        assert isinstance(other, dict)
+        base = copy.copy(self)
+        base.update(other)
+        return base
+
+    def __radd__(self, other):
+        """define the sum"""
+        new = copy.copy(other)
+        new.update(self)
+        return new
+    
 
     def __setitem__(self, name, value, change_userdefine=False):
         """set the attribute and set correctly the type if the value is a string"""
