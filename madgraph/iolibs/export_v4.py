@@ -4704,10 +4704,14 @@ class UFO_model_to_mg4(object):
                 common/rscale/ MU_R
 
                 """        
-
+        # Nf is the number of light quark flavours
         header = header+"""double precision Nf
-                parameter(Nf=%d)
+                parameter(Nf=%dd0)
                 """ % self.model.get_nflav()
+        #Nl is the number of massless leptons
+        header = header+"""double precision Nl
+                parameter(Nl=%dd0)
+                """ % self.model.get_nleps()
                 
         fsock.writelines(header)
         

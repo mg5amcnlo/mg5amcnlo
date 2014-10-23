@@ -1295,6 +1295,14 @@ class Model(PhysicsObject):
                 if p['spin'] == 2 and p['is_part'] and \
                 p ['color'] != 1 and p['mass'].lower() == 'zero'])
 
+
+    def get_nleps(self):
+        """returns the number of light quark flavours in the model."""
+        return len([p for p in self.get('particles') \
+                if p['spin'] == 2 and p['is_part'] and \
+                p['color'] == 1 and \
+                p['charge'] != 0. and p['mass'].lower() == 'zero'])
+
     
     def get_particles_hierarchy(self):
         """Returns the order hierarchies of the model and the

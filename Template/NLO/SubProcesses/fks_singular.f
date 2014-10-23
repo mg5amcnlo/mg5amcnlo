@@ -3180,7 +3180,7 @@ c g->gg splitting
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
 c g/a->qqbar splitting
          apprime(1) = -2 * TR * z * (1d0-z)**2
-         apprime(2) = -2 * 3d0 * ch1**2 * z * (1d0-z)**2
+         apprime(2) = -2 * dble(abs(col1)) * ch1**2 * z * (1d0-z)**2
          
       elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
@@ -3228,7 +3228,7 @@ c g->gg splitting
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
 c g/a ->qqbar splitting
          Qterms(1) = 4d0 * TR * z*(1d0-z)**2
-         Qterms(2) = 4d0 * 3d0 * ch1**2 * z*(1d0-z)**2
+         Qterms(2) = 4d0 * dble(abs(col1)) * ch1**2 * z*(1d0-z)**2
          
       elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
@@ -4479,8 +4479,8 @@ c      include "fks.inc"
       double precision pi
       parameter (pi=3.1415926535897932385d0)
 
-      double precision c(0:1),gamma(0:1),gammap(0:1)
-      common/fks_colors/c,gamma,gammap
+      double precision c(0:1),gamma(0:1),gammap(0:1),gamma_ph,gammap_ph
+      common/fks_colors/c,gamma,gammap,gamma_ph,gammap_ph
       double precision c_used, gamma_used, gammap_used
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -5449,8 +5449,8 @@ c      include "fks.inc"
       include 'q_es.inc'
       double precision p(0:3,nexternal),xmu2,double,single
       logical fksprefact
-      double precision c(0:1),gamma(0:1),gammap(0:1)
-      common/fks_colors/c,gamma,gammap
+      double precision c(0:1),gamma(0:1),gammap(0:1),gamma_ph,gammap_ph
+      common/fks_colors/c,gamma,gammap,gamma_ph,gammap_ph
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       integer i_fks,j_fks
@@ -5503,10 +5503,14 @@ c QED Born terms
       contr2 = 0d0
       born=dble(ans_cnt(1,qed_pos))
       do i=1,nexternal
-        if(i.ne.i_fks.and.particle_charge(i).ne.0d0)then
+        if(i.ne.i_fks.and.(particle_charge(i).ne.0d0.or.pdg_type(i).eq.22))then
           if(pmass(i).eq.ZERO)then
-            contr2=contr2-particle_charge(i)**2
-            contr1=contr1-3d0/2d0*particle_charge(i)**2
+            if (pdg_type(i).ne.22) then
+              contr2=contr2-particle_charge(i)**2
+              contr1=contr1-3d0/2d0*particle_charge(i)**2
+            else
+              contr1=contr1-gamma_ph
+            endif
           else
             contr1=contr1-particle_charge(i)**2
           endif
@@ -5643,8 +5647,8 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       parameter (CA=3d0,CF=4d0/3d0)
       parameter (pi=3.1415926535897932385d0)
 
-      double precision c(0:1),gamma(0:1),gammap(0:1)
-      common/fks_colors/c,gamma,gammap
+      double precision c(0:1),gamma(0:1),gammap(0:1),gamma_ph,gammap_ph
+      common/fks_colors/c,gamma,gammap,gamma_ph,gammap_ph
 
       double precision beta0,ren_group_coeff
       common/cbeta0/beta0,ren_group_coeff
@@ -5757,6 +5761,20 @@ c parametrization allows it
       gamma(1)=CF*3d0/2d0
       gammap(0)=( 67d0/9d0 - 2d0*PI**2/3d0 )*CA - 23d0/18d0*Nf
       gammap(1)=( 13/2d0 - 2d0*PI**2/3d0 )*CF
+C photon-related factors
+      gamma_ph=0d0
+      do i = 1, nint(nf)
+        if (mod(i,2).eq.0) then
+          ! u-type massless quarks
+          gamma_ph=gamma_ph-4d0/9d0
+        else
+          ! d-type massless quarks
+          gamma_ph=gamma_ph-1d0/9d0
+        endif
+      enddo
+      ! then add the contribution from massless leptons
+      gammap_ph=(gamma_ph*3d0-Nl)*23d0/9d0
+      gamma_ph=(gamma_ph*3d0-Nl)*2d0/3d0
             
 c Beta_0 defined according to (MadFKS.C.5)
       beta0=gamma(0)/(2*pi)
