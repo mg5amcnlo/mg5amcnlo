@@ -1415,6 +1415,7 @@ class MadLoopParam(ConfigFile):
         dict.__setitem__(self, "DoubleCheckHelicityFilter", True)
         dict.__setitem__(self, "WriteOutFilters", True)
         dict.__setitem__(self, "UseLoopFilter", False)
+        dict.__setitem__(self, "HelicityFilterLevel", 2)
         dict.__setitem__(self, "LoopInitStartOver", False)
         dict.__setitem__(self, "HelInitStartOver", False)
 

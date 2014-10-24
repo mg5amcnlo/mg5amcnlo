@@ -228,12 +228,12 @@ C
 	  common/%(proc_prefix)sMP_DONE/MP_DONE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE AVAILABLE OR NOT
       LOGICAL LOOPLIBS_AVAILABLE(4)
-	  %(data_looplibs_av)s
+      DATA LOOPLIBS_AVAILABLE/%(data_looplibs_av)s/
 	  common/%(proc_prefix)sLOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS AVAILABLE OR NOT IN THE LOOPLIBS
 C     PJFry++ and Golem95 do not support direction test
-          LOGICAL LOOPLIBS_DIRECTEST(4)
-	  DATA LOOPLIBS_DIRECTEST /.TRUE.,.FALSE.,.TRUE.,.FALSE./
+      LOGICAL LOOPLIBS_DIRECTEST(4)
+	  DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE./
 
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHERE ELSE
@@ -429,35 +429,6 @@ C Setup the file paths
 
   CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)  
 
-  HELDOUBLECHECKED=.NOT.DoubleCheckHelicityFilter
-OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
-  DO J=1,NLOOPGROUPS
-    READ(1,*,END=101) (GOODAMP(I,J),I=1,NSQUAREDSO)
-  ENDDO
-  GOTO 101
-100  CONTINUE
-  FOUNDLOOPFILTER=.FALSE.
-  DO J=1,NLOOPGROUPS
-    DO I=1,NSQUAREDSO
-	  GOODAMP(I,J)=(.NOT.USELOOPFILTER)
-	ENDDO
-  ENDDO
-101  CONTINUE
-CLOSE(1)
-
-OPEN(1, FILE=HelFilterFN, err=102, status='OLD',           action='READ')
-  DO I=1,NCOMB
-    READ(1,*,END=103) GOODHEL(I)
-  ENDDO
-  GOTO 103
-102  CONTINUE
-  FOUNDHELFILTER=.FALSE.
-  DO J=1,NCOMB
-	GOODHEL(J)=1
-  ENDDO
-103  CONTINUE
-CLOSE(1)
-
 OPEN(1, FILE=ColorNumFN, err=104, status='OLD',           action='READ')
   DO I=1,NCOLORROWS
     READ(1,*,END=105) (CF_N(I,J),J=1,%(color_matrix_size)s)
@@ -506,6 +477,54 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
     WRITE(*,*) 'Stopped by user request.'
     stop
   ENDIF
+
+ENDIF
+
+IF(NTRY.EQ.0) THEN
+  HELDOUBLECHECKED=(.NOT.DoubleCheckHelicityFilter).OR.(HelicityFilterLevel.eq.0)
+OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
+  DO J=1,NLOOPGROUPS
+    READ(1,*,END=101) (GOODAMP(I,J),I=1,NSQUAREDSO)
+  ENDDO
+  GOTO 101
+100  CONTINUE
+  FOUNDLOOPFILTER=.FALSE.
+  DO J=1,NLOOPGROUPS
+    DO I=1,NSQUAREDSO
+	  GOODAMP(I,J)=(.NOT.USELOOPFILTER)
+	ENDDO
+  ENDDO
+101  CONTINUE
+CLOSE(1)
+
+IF (HelicityFilterLevel.eq.0) then
+  FOUNDHELFILTER=.TRUE.
+  DO J=1,NCOMB
+	GOODHEL(J)=1
+  ENDDO
+  GOTO 122
+ENDIF
+OPEN(1, FILE=HelFilterFN, err=102, status='OLD',           action='READ')
+  DO I=1,NCOMB
+    READ(1,*,END=103) GOODHEL(I)
+  ENDDO
+  GOTO 103
+102  CONTINUE
+  FOUNDHELFILTER=.FALSE.
+  DO J=1,NCOMB
+	GOODHEL(J)=1
+  ENDDO
+103  CONTINUE
+CLOSE(1)
+IF (HelicityFilterLevel.eq.1) then
+C We must make sure to remove the matching-helicity optimisation, as requested by the user.
+  DO J=1,NCOMB
+    IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.HELOFFSET)) THEN
+	  GOODHEL(J)=1
+	ENDIF
+  ENDDO
+ENDIF
+122  CONTINUE
 ENDIF
 
 ## if(LoopInduced){
@@ -593,8 +612,7 @@ ENDIF
 CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
 IF (WriteOutFilters) THEN
-IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
-
+IF ((HelicityFilterLevel.ne.0).AND.(.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
 OPEN(1, FILE=HelFilterFN, err=110, status='NEW',action='WRITE')
   DO I=1,NCOMB
     WRITE(1,*) GOODHEL(I)  
@@ -702,10 +720,13 @@ I_QP_LIB=1
 200 CONTINUE
 
 ## if(AmplitudeReduction){
-C     Free cache when using IREGI
-%(iregi_free_ps)s
-
 300 CONTINUE
+## if(iregi_available) {
+C     Free cache when using IREGI
+      IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3) THEN
+        CALL IREGI_FREE_PS()
+      ENDIF
+## }
 ## }
 
 ## if(ComputeColorFlows) {
@@ -932,9 +953,12 @@ ENDDO
 
 ## if(not AmplitudeReduction){
 300 CONTINUE
-
+## if(iregi_available) {
 C     Free cache when using IREGI
-%(iregi_free_ps)s
+      IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3) THEN
+        CALL IREGI_FREE_PS()
+      ENDIF
+## }
 ## }else{
 301 CONTINUE
 ## }
@@ -1007,7 +1031,7 @@ C   SET THE HELICITY FILTER
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
-		  WRITE(*,*) '##W02A WARNING Inconsistent helicity ',HELPICKED
+		  WRITE(*,*) '##W02A WARNING Inconsistent zero helicity ',HELPICKED
 		  IF(HELINITSTARTOVER) THEN
 	        WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
 	        NTRY=0
@@ -1015,7 +1039,7 @@ C   SET THE HELICITY FILTER
 		    HEL_INCONSISTENT=.TRUE.
 		  ENDIF
 		ENDIF
-      ELSE
+      ELSEIF(HelicityFilterLevel.gt.1) THEN
 	    DO H=1,HELPICKED-1
 		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C           Be looser for helicity check, bring a factor 100
@@ -1028,7 +1052,7 @@ C               Use an offset to clearly show it is linked to an other one and t
 			    GOODHEL(HELPICKED)=-H-HELOFFSET
 C             Make sure we have paired this hel config to the same one last PS point
 			  ELSEIF(GOODHEL(HELPICKED).NE.(-H-HELOFFSET)) THEN
-			    WRITE(*,*) '##W02B WARNING Inconsistent helicity ',HELPICKED
+			    WRITE(*,*) '##W02B WARNING Inconsistent matching helicity ',HELPICKED
 		        IF(HELINITSTARTOVER) THEN
 	              WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
 	              NTRY=0
@@ -1039,7 +1063,7 @@ C             Make sure we have paired this hel config to the same one last PS p
 			ENDIF
 		  ENDIF
 		ENDDO
-	  ENDIF
+      ENDIF
 	  IF(HEL_INCONSISTENT) THEN
 C This helicity has unstable filter so we will always compute it by itself.
 C We therefore also need to remove it from the multiplicative factor of the corresponding helicity.
@@ -1253,25 +1277,25 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
   IF(.NOT.EVAL_DONE(2)) THEN
 	EVAL_DONE(2)=.TRUE.
 	IF(LOOPLIBS_DIRECTEST(MLReductionLib(I_LIB)))THEN 
-	CTMODE=BASIC_CT_MODE+1
-	goto 300
-	ELSE
-C   NO DIRECTION TEST LIBRARIES: e.g. PJFry++ and Golem95
-	STAB_INDEX=STAB_INDEX+1
-	IF(DOING_QP_EVALS)THEN
-	DO I=0,NSQUAREDSO
-	DO K=1,3
-	  QP_RES(K,I,STAB_INDEX)=ANS(K,I)
-	ENDDO
-	ENDDO
-	ELSE
-	DO I=0,NSQUAREDSO
-       	DO K=1,3
-          DP_RES(K,I,STAB_INDEX)=ANS(K,I)
-       	ENDDO
-       	ENDDO
-	ENDIF
-	ENDIF
+	  CTMODE=BASIC_CT_MODE+1
+	  goto 300
+    ELSE
+C     If some TIR library would not support the loop direction test (they all do for now), then we would just copy the answer from mode 1 and carry on.
+	  STAB_INDEX=STAB_INDEX+1
+	  IF(DOING_QP_EVALS)THEN
+	    DO I=0,NSQUAREDSO
+	      DO K=1,3
+	        QP_RES(K,I,STAB_INDEX)=ANS(K,I)
+	      ENDDO
+	    ENDDO
+	  ELSE
+	    DO I=0,NSQUAREDSO
+       	  DO K=1,3
+            DP_RES(K,I,STAB_INDEX)=ANS(K,I)
+       	  ENDDO
+        ENDDO
+	  ENDIF
+    ENDIF
   ENDIF
 
   CTMODE=BASIC_CT_MODE

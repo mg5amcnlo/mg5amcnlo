@@ -193,6 +193,21 @@
 !.FALSE.
 ! Default :: .FALSE.
 
+!     The integer below set at which level the user wants to filter helicity configuration.
+!     Notice that this does not entail any approximation. It only offers the possibility of
+!     performing exact simplifications based on numerical checks. HelicityFilterLevel =
+!     0 :  No filtering at all. Not HelFilter.dat file will be written out and *all* helicity
+!          configurations will be computed.
+!     1 :  Analytically zero helicity configurations will be recognized as such by numerical
+!          comparisons (using the 'ZeroThres' param) and consistently skipped in further 
+!          computations.
+!     2 :  Filters both helicity configuration which are analytically zero *and* those 
+!          consistently identical (typically because of CP symmetry).
+!          (Will only effectively do it if process was generated in 'optimized_mode')
+#HelicityFilterLevel
+!2
+! Default :: 2
+
 !     This decides whether consecutive consistency for the loop filtering setup is also 
 !     required.
 #LoopInitStartOver

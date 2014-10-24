@@ -1486,6 +1486,21 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         self.loop_optimized_additional_template_setup()
 
+    def get_context(self,matrix_element, **opts):
+        """ Additional contextual information which needs to be created for
+        the optimized output."""
+        
+        context = LoopProcessExporterFortranSA.get_context(self, matrix_element, 
+                                                                         **opts)
+        
+        for tir in self.all_tir:
+            context['%s_available'%tir]=self.tir_available_dict[tir]
+            # safety check
+            if tir not in ['golem','pjfry','iregi']:
+                raise MadGraph5Error,"%s was not a TIR currently interfected."%tir_name
+
+        return context
+
     def loop_optimized_additional_template_setup(self):
         """ Perform additional actions specific for this class when setting
         up the template with the copy_v4template function."""
@@ -1705,8 +1720,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         generate_general_replace_dict(self, matrix_element, 
                                  group_number = group_number, proc_id = proc_id)
 
-        # Now fill in the replace dict entries specific to the TIR implementation
-        self.set_TIR_replace_dict_entries()
         # and those specific to the optimized output
         self.set_optimized_output_specific_replace_dict_entries(matrix_element)
 
@@ -1766,82 +1779,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         return calls
 
-    def set_TIR_replace_dict_entries(self):
-        """ Specify the entries of the replacement dictionary which depend on
-        the choice of Tensor Integral Reduction (TIR) libraries specified by the
-        user and their availability on the system."""
-        
-        for tir in self.all_tir:
-            if self.tir_available_dict[tir]:
-                if tir=="pjfry":
-                    self.general_replace_dict['pjfry_calling']=\
-                    ("        CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,"\
-                    +"PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)\n"\
-                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
-                    +"         CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
-                    )%self.general_replace_dict
-                elif tir=="iregi":
-                    self.general_replace_dict['iregi_calling']=\
-                    ("        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
-                    +"RANK,PDEN,M2L,MU_R,PJCOEFS,STABLE)\n"\
-                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
-                    +"        CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
-                    )%self.general_replace_dict
-                    self.general_replace_dict['iregi_free_ps']=\
-                    "IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS"
-                    self.general_replace_dict['initiregi']=\
-                    "      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)"
-                elif tir=="golem":
-                    self.general_replace_dict['golem_calling']=\
-                    ("IF(MLReductionLib(I_LIB).EQ.4)THEN\n"\
-                     +"C      Using Golem95\n"\
-                     +"        CALL %(proc_prefix)sGOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)\n"\
-                     +"        RETURN\n"\
-                     +"ENDIF")%self.general_replace_dict
-                else:
-                    raise MadGraph5Error,"%s was not a well-defined TIR."%tir_name
-            else:
-                if tir=="pjfry":
-                    self.general_replace_dict['pjfry_calling']=\
-                    "        WRITE(*,*)'PJFRY is not installed correctly !'\n"\
-                    +"        STOP"
-                elif tir=="iregi":
-                    self.general_replace_dict['iregi_calling']=\
-                    "        WRITE(*,*)'IREGI is not installed correctly !'\n"\
-                    +"        STOP"
-                    self.general_replace_dict['initiregi']=''
-                    self.general_replace_dict['iregi_free_ps']=''
-                elif tir=="golem":
-                    self.general_replace_dict['golem_calling']=''
-        # the first entry is the CutTools, we make sure it is available
-        looplibs_av=['.TRUE.']
-        # one should be careful about the order in the following
-        if "pjfry" in self.all_tir:
-            if self.tir_available_dict["pjfry"]:             
-                looplibs_av.extend(['.TRUE.'])
-            else:
-                looplibs_av.extend(['.FALSE.'])
-        else:
-            looplibs_av.extend(['.FALSE.'])
-        if "iregi" in self.all_tir:
-            if self.tir_available_dict["iregi"]:             
-                looplibs_av.extend(['.TRUE.'])
-            else:
-                looplibs_av.extend(['.FALSE.'])
-        else:
-            looplibs_av.extend(['.FALSE.'])
-            
-        if "golem" in self.all_tir:
-            if self.tir_available_dict["golem"]:
-                looplibs_av.extend(['.TRUE.'])
-            else:
-                looplibs_av.extend(['.FALSE.'])
-        else:
-            looplibs_av.extend(['.FALSE.'])
-        self.general_replace_dict['data_looplibs_av']="DATA LOOPLIBS_AVAILABLE /"\
-        +','.join(looplibs_av)+"/"
-
-
     def set_optimized_output_specific_replace_dict_entries(self, matrix_element):
         """ Specify the entries of the replacement dictionary which are specific
         to the optimized output and only relevant to it (the more general entries
@@ -1900,10 +1837,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         file = file % replace_dict
         
-        
-        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
-                                                    coef_format=replace_dict['complex_dp_format'],\
-                                                    sub_prefix=replace_dict['proc_prefix'])
+        FPR = q_polynomial.FortranPolynomialRoutines(
+        replace_dict['maxrank'],coef_format=replace_dict['complex_dp_format'],\
+                                         sub_prefix=replace_dict['proc_prefix'])
         if self.tir_available_dict['pjfry']:
             file += '\n\n'+FPR.write_pjfry_mapping()
         if self.tir_available_dict['iregi']:
@@ -2297,7 +2233,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
-        # We start off with the treatment of the split_orders since some 
+        # Starting off with the treatment of the split_orders since some 
         # of the information extracted there will come into the 
         # general_replace_dict. Split orders are abbreviated SO in all the 
         # keys of the replacement dictionaries.
@@ -2367,6 +2303,15 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
                 ampSO_list[amp_number-1]=overall_so_basis.index(SO[0])+1
         replace_dict['BornAmpSO'] = '\n'.join(self.format_integer_list(
                                                     ampSO_list,'BORNAMPORDERS'))
+
+        # We then go to the TIR setup
+        # The first entry is the CutTools, we make sure it is available
+        looplibs_av=['.TRUE.']
+        # one should be careful about the order in the following
+        for tir_lib in ['pjfry','iregi','golem']:
+            looplibs_av.append('.TRUE.' if tir_lib in self.all_tir and \
+                                self.tir_available_dict[tir_lib] else '.FALSE.')
+        replace_dict['data_looplibs_av']=','.join(looplibs_av)
 
         # Helicity offset convention
         # For a given helicity, the attached integer 'i' means
@@ -2473,8 +2418,6 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
         self.general_replace_dict['loop_CT_calls']=replace_dict['loop_CT_calls']            
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
-        replace_dict['iregi_free_ps']=self.general_replace_dict['iregi_free_ps']
-        replace_dict['data_looplibs_av']=self.general_replace_dict['data_looplibs_av']
 
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
