@@ -262,3 +262,11 @@ class TestMadWeight(unittest.TestCase):
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_W2J_prod'))
         except Exception, error:
             pass
+        
+        import glob
+        if glob.glob('/tmp/run*'):
+            self.assertFalse(True, '''Path /tmp/run???? found on filesystem. 
+            This might indicates that the cluster cleaning are commented (in submit2). 
+            Please check''')
+        
+        

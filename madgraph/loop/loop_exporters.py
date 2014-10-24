@@ -2537,6 +2537,28 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
 
         LoopProcessOptimizedExporterFortranSA.\
                                   loop_optimized_additional_template_setup(self)
+                                  
+    
+    #===========================================================================
+    # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
+    #===========================================================================
+    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, 
+                              online = False, compiler='g77'):
+        """Function to finalize v4 directory, for inheritance.
+        """
+        
+        self.proc_characteristic['loop_induced'] = True
+        super(LoopInducedExporterME, self).finalize_v4_directory(matrix_elements,
+                            history=history, makejpg=makejpg, online=online, 
+                            compiler=compiler)
+
+
+        if self.proc_characteristic['nexternal'] > 3:
+            misc.sprint("Use more splitting for gen_ximprove")
+            files.cp(pjoin(self.mgme_dir,'madgraph/iolibs/template_files/loop/gen_ximprove_loop_induced.f'),
+                     pjoin(self.dir_path, 'Source/gen_ximprove.f'))
+        else:
+            misc.sprint('Use standard splitting')
 
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                         proc_id = None, config_map = [], subproc_number = None):
@@ -2679,6 +2701,13 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         
         export_v4.ProcessExporterFortranMEGroup.finalize_v4_directory(
                                                               self,*args,**opts)
+        
+        if self.proc_characteristic['nexternal'] > 3:
+            misc.sprint("Use more splitting for gen_ximprove")
+            files.cp(pjoin(self.mgme_dir,'madgraph/iolibs/template_files/loop/gen_ximprove_loop_induced.f'),
+                     pjoin(self.dir_path, 'Source/gen_ximprove.f'))
+        else:
+            misc.sprint('Use standard splitting')
 
     def generate_subprocess_directory_v4(self, subproc_group,
                                                     fortran_model,group_number):

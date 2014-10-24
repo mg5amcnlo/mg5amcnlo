@@ -425,12 +425,11 @@ c      write(26,15) '#PBS -e /dev/null'
 c      write(26,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
 c      write(26,15) '    cd $PBS_O_WORKDIR'
 c      write(26,15) 'fi'
+      write(26,15) 'k=run1_app.log'
+      write(lun,15) 'script=' // fname
       write(26,15) 'if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then'
       write(26,15) 'tar -xf MadLoop5_resources.tar'
       write(26,15) 'fi'
-
-      write(26,15) 'k=run1_app.log'
-      write(lun,15) 'script=' // fname
 c      write(lun,15) 'rm -f wait.$script >& /dev/null'
 c      write(lun,15) 'touch run.$script'
  15   format(a)
@@ -535,6 +534,8 @@ c
       common /to_split/split_channels
 
       data cjobs/"abcdefghijklmnopqrstuvwxyz"/
+      integer splitting
+      data splitting/5/
 
 c-----
 c  Begin Code
@@ -607,7 +608,7 @@ c
          yerr = xt(np)
          npoints=0.2*jpoints(io(np))*(yerr/elimit)
          npoints = max(npoints,min_events)
-         npoints = min(npoints,max_events)
+         npoints = min(npoints,max_events) / splitting
 
          npfile=npfile+1
 c         np = nfiles*npfile+1-ifile   !Fancy order for combining channels removed 12/6/2010 by tjs
@@ -616,7 +617,8 @@ c
 c     tjs 12/5/2010
 c     Add loop to allow for multiple jobs on a single channel
 c
-         mjobs = (goal_lum*xsec(io(np))*1000 / MaxEventsPerJob + 0.9)
+c     om 10/2014: Increase mjobs for loop induced. (1.1 is a security) 
+         mjobs = (goal_lum*xsec(io(np))*1000 * 1.1 * splitting / MaxEventsPerJob + 0.9)
 c         write(*,*) "Working on Channel ",i,io(np),xt(np), goal_lum*xsec(io(np))*1000 /maxeventsperjob
          if (mjobs .gt. 130)  then
             write(*,*) 'Error in gen_ximprove.f, too many events requested ',mjobs*maxeventsperjob
@@ -646,6 +648,11 @@ c---
             endif
             fopened=.true.
             call open_bash_file(26)
+      write(26,15) 'if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then'
+      write(26,15) 'tar -xf MadLoop5_resources.tar'
+      write(26,15) 'fi'
+
+
             ifile=ifile+1
             npfile=1
 c            if (ijob .eq. 1)  np = ifile !Only increment once / source channel
@@ -700,7 +707,7 @@ c
          write(26,20) 'if [[ ! -e ftn25 ]]; then'
 
 
-         write(26,'(9x,a,3i8,a)') 'echo "',npoints,max_iter,min_iter,
+         write(26,'(9x,a,3i8,a)') 'echo "',250,6,min_iter,
      $        '" >& input_sg.txt' 
 c
 c     tjs 8/7/2007-JA 8/17/11 Allow stop when have enough luminocity
@@ -708,7 +715,7 @@ c
          write(*,*) "Cross section",i,io(np),xsec(io(np)),mfact(io(np))
          write(26,'(9x,a,e13.5,a)') 'echo "',-goal_lum*1000/mjobs,
      $        '" >> input_sg.txt'                       !Luminocity
-         write(26,'(9x,a)') 'echo "2" >> input_sg.txt'  !Grid Adjustment
+         write(26,'(9x,a)') 'echo "0" >> input_sg.txt'  !Grid Adjustment
          write(26,'(9x,a)') 'echo "1" >> input_sg.txt'  !Suppression
          write(26,'(9x,a,i4,a)') 'echo "',nhel_refine,
      &        ' " >> input_sg.txt' !Helicity 0=exact
@@ -733,7 +740,7 @@ c
 
          write(26,25) 'rm -f $k'
 
-         write(26,'(9x,a,3i8,a)') 'echo "',npoints,max_iter,min_iter,
+         write(26,'(9x,a,3i8,a)') 'echo "',250,6,min_iter,
      $        '" >& input_sg.txt' 
 c
 c tjs 8/7/2007-JA 8/17/11    Change to request luminocity not accuracy
@@ -761,7 +768,7 @@ c         write(26,20) 'qsub -N $1$j public_sg.sh >> ../../running_jobs'
          write(26,25) 'if [[ -e ftn26 ]]; then'
          write(26,25) '     cp ftn26 ftn25'
          write(26,25) 'fi'
-                  write(26,25) 'for((try=1;try<=16;try+=1)); '
+         write(26,25) 'for((try=1;try<=16;try+=1)); '
          write(26,25) 'do'
          write(26,25) '../madevent >> $k <input_sg.txt'
          write(26,25) 'if [ -s $k ]'
@@ -825,6 +832,7 @@ c
       character*72 fname
       logical fopened
       double precision rvec
+
 c-----
 c  Begin Code
 c-----
