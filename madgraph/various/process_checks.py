@@ -636,7 +636,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                        'export_format':'madloop', 
                        'mp':True,
                        'SubProc_prefix':'P',
-                       'compute_color_flows':False,
+                       'compute_color_flows': not process.get('has_born'),
               'loop_dir': pjoin(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
                        'fortran_compiler': self.cmd.options['fortran_compiler'],
@@ -1093,7 +1093,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         The list attempt gives the successive number of PS points the 
         initialization should be tried with before calling it failed.
         Returns the number of PS points which were necessary for the init.
-        Notice at least run_dir or SubProc_dir must be provided."""
+        Notice at least run_dir or SubProc_dir must be provided.
+        A negative attempt number given in input means that quadprec will be
+        forced for initialisation."""
         
         # If the user does not want detailed info, then set the dictionary
         # to a dummy one.
@@ -1154,9 +1156,32 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                          not os.access(pjoin(run_dir,'check'), os.X_OK)
     
         curr_attempt = 1
+        
+        # Check if this is a process without born by checking the presence of the
+        # file born_matrix.f
+        is_loop_induced = os.path.exists(pjoin(run_dir,'born_matrix.f'))
+        
+        # For loop induced processes, always attempt quadruple precision if
+        # double precision attempts fail and the user didn't specify himself
+        # quadruple precision initializations attempts
+        if not any(attempt<0 for attempt in to_attempt):
+            to_attempt = [-attempt for attempt in to_attempt] + to_attempt
+        
         while to_attempt!=[] and need_init():
-            curr_attempt = to_attempt.pop()+1
+            curr_attempt = to_attempt.pop()
+            # if the attempt is a negative number it means we must force 
+            # quadruple precision at initialization time
+            MLCard = bannermod.MadLoopParam(pjoin(SubProc_dir,'MadLoopParams.dat'))    
+            use_quad_prec = 1        
+            if curr_attempt < 0:
+                use_quad_prec = -1                
+                MLCard.set('CTModeInit',4)
+            else:
+                MLCard.set('CTModeInit',1)
+            MLCard.write(pjoin(SubProc_dir,'MadLoopParams.dat'))
             # Plus one because the filter are written on the next PS point after
+            curr_attempt = abs(curr_attempt+1)
+    
             # initialization is performed.
             cls.fix_PSPoint_in_check(run_dir, read_ps = False, 
                                                          npoints = curr_attempt)
@@ -1174,7 +1199,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if need_init():
             return None
         else:
-            return curr_attempt-1
+            return use_quad_prec*(curr_attempt-1)
 
     def skip_loop_evaluation_setup(self, dir_name, skip=True):
         """ Edit loop_matrix.f in order to skip the loop evaluation phase.
@@ -1245,7 +1270,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                        'export_format':'madloop', 
                        'mp':True,
                        'SubProc_prefix':'P',
-                       'compute_color_flows':False,
+        'compute_color_flows':not matrix_element['processes'][0].get('has_born'),
           'loop_dir': pjoin(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
                        'fortran_compiler':self.cmd.options['fortran_compiler'],

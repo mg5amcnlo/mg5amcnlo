@@ -252,7 +252,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Link relevant cards from Cards inside the MadLoop5_resources
         ln(pjoin(self.dir_path,'SubProcesses','MadLoopParams.dat'), 
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
-        ln(pjoin(self.dir_path,'Cards','param_card.dat'), 
+        ln(pjoin(self.dir_path,'Cards','param_card.dat'),
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
         ln(pjoin(self.dir_path,'Cards','ident_card.dat'), 
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
@@ -514,9 +514,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             # This can be pretty long for processes with many color flows.
             # So, if necessary (i.e. for more than 15s), we tell the user the
             # estimated time for the processing.
-            if i==10:
+            if i==3:
                 elapsed_time = time.time()-start
-                t = int(len(ampl_to_jampl)*(elapsed_time/10.0))
+                t = int(len(ampl_to_jampl)*(elapsed_time/3))
                 if t > 20:
                     time_info = True
                     logger.info('The color factors computation will take '+\
@@ -527,9 +527,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                         widgets = ['Color computation:', pbar.Percentage(), ' ', 
                                                 pbar.Bar(),' ', pbar.ETA(), ' ']
                         progress_bar = pbar.ProgressBar(widgets=widgets, 
-                                        maxval=len(ampl_to_jampl),fd=sys.stdout)
-            if progress_bar!=None:
-                progress_bar.update(i+1)
+                          maxval=len(ampl_to_jampl)*len(ampb_to_jampb),fd=sys.stdout)
+
             line_num=[]
             line_denom=[]
 
@@ -547,7 +546,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 ColorMatrixDenomOutput.append(line_denom)
                 continue
 
-            for jampb_list in ampb_to_jampb:
+            for j, jampb_list in enumerate(ampb_to_jampb):
+                if progress_bar!=None:
+                    progress_bar.update(i*len(ampb_to_jampb)+j)
                 real_num=0
                 imag_num=0
                 common_denom=color_amp.ColorMatrix.lcmm(*[abs(ColorMatrixDenom[jampl]*
@@ -609,11 +610,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # so we set it to 1. 
         try:
             n_squared_split_orders = self.general_replace_dict['nSquaredSO']
-        except KeyError:
+        except (KeyError, AttributeError):
             n_squared_split_orders = 1
 
         LoopInduced = not matrix_element.get('processes')[0].get('has_born')
-        ComputeColorFlows = self.compute_color_flows
+        
+        # Force the computation of loop color flows for loop_induced processes
+        ComputeColorFlows = self.compute_color_flows or LoopInduced
         # The variable AmplitudeReduction is just to make the contextual
         # conditions more readable in the include files.
         AmplitudeReduction = LoopInduced or ComputeColorFlows
@@ -1492,7 +1495,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         context = LoopProcessExporterFortranSA.get_context(self, matrix_element, 
                                                                          **opts)
-        
+
         for tir in self.all_tir:
             context['%s_available'%tir]=self.tir_available_dict[tir]
             # safety check
@@ -1680,8 +1683,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if self.forbid_loop_grouping:
             self.group_loops = False
         else:
-            self.group_loops = (not self.compute_color_flows) and \
-                              matrix_element.get('processes')[0].get('has_born')
+            self.group_loops = (not self.get_context(matrix_element)['ComputeColorFlows'])\
+                          and matrix_element.get('processes')[0].get('has_born')
         
         return self.group_loops
     
@@ -1704,6 +1707,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         OptimizedFortranModel=\
           helas_call_writers.FortranUFOHelasCallWriterOptimized(\
           fortran_model.get('model'),False)
+
+
+        if not matrix_element.get('processes')[0].get('has_born') and \
+                                                   not self.compute_color_flows:
+            logger.debug("Color flows will be employed despite the option"+\
+              " 'loop_color_flows' being set to False because it is necessary"+\
+                                                          " for optimizations.")
 
         # Compute the analytical information of the loop wavefunctions in the
         # loop helas matrix elements using the cached aloha model to reuse
@@ -1766,7 +1776,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
                                      matrix_element,OptimizedFortranModel)
 
-        if self.compute_color_flows:
+        if self.get_context(matrix_element)['ComputeColorFlows']:
             filename = 'compute_color_flows.f'
             self.write_compute_color_flows(writers.FortranWriter(filename),
                                         matrix_element, config_map = config_map)
@@ -2440,6 +2450,12 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
 
     madloop_makefile_name = 'makefile_MadLoop'
     
+    
+    def __init__(self, *args, **opts):
+        """ Initialize the process, setting the proc characteristics."""
+        super(LoopInducedExporterMEGroup, self).__init__(*args, **opts)
+        self.proc_characteristic['loop_induced'] = True
+    
     def get_context(self,*args,**opts):
         """ Make sure that the contextual variable MadEventOutput is set to
         True for this exporter"""
@@ -2601,13 +2617,6 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
     elements"""
     
     matrix_file = "matrix_loop_induced_madevent_group.inc"
-
-    
-    def __init__(self, *args, **opts):
-        
-        super(LoopInducedExporterMEGroup, self).__init__(*args, **opts)
-        self.proc_characteristic['loop_induced'] = True
-
 
     def make_source_links(self,*args, **opts):
         """ In the loop-induced output with MadEvent, we need the files from the 

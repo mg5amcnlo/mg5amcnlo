@@ -152,7 +152,8 @@ class FileWriter(file):
                 except Exception, e:
                     raise self.FilePreProcessingError, 'Could not evaluate'+\
                       "python expression '%s' given the context %s provided."%\
-                            (preproc_command.group('body'),str(context))
+                            (preproc_command.group('body'),str(context))+\
+                                           "\nLine %d of file %s."%(i,self.name)
         
         if len(if_stack)>0:
             raise self.FilePreProcessingError, 'Some conditional statements are'+\

@@ -1212,7 +1212,8 @@ This will take effect only in a NEW terminal
         """ check the validity of the line"""
 
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
-                                          'loop_optimized_output']:
+                                          'loop_optimized_output',\
+                                          'loop_color_flows']:
             args.append('True')
 
         if len(args) > 2 and '=' == args[1]:
@@ -1261,9 +1262,9 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('timeout values should be a integer')
 
-        if args[0] in ['loop_optimized_output']:
+        if args[0] in ['loop_optimized_output', 'loop_color_flows']:
             if args[1] not in ['True', 'False']:
-                raise self.InvalidCmd('loop_optimized_output needs argument True or False')
+                raise self.InvalidCmd('%s needs argument True or False'%args[0])
 
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman']:
@@ -5465,7 +5466,8 @@ This implies that with decay chains:
     def do_set(self, line, log=True):
         """Set an option, which will be default for coming generations/outputs
         """
-        # Be carefull:
+
+        # Be careful:
         # This command is associated to a post_cmd: post_set.
         args = self.split_arg(line)
 
@@ -5606,11 +5608,21 @@ This implies that with decay chains:
                     logger.info('set loop optimized output to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self.options[args[0]] = eval(args[1])
+            if not self.options['loop_optimized_output'] and \
+                                               self.options['loop_color_flows']:
+                logger.warning("Turning off option 'loop_color_flows'"+\
+                    " since it is not available for non-optimized loop output.")
+                self.do_set('loop_color_flows False',log=False)
         elif args[0] == 'loop_color_flows':
             if log:
                     logger.info('set loop color flows to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self.options[args[0]] = eval(args[1])
+            if self.options['loop_color_flows'] and \
+                                      not self.options['loop_optimized_output']:
+                logger.warning("Turning on option 'loop_optimized'"+\
+                                     " needed for loop color flow computation.")
+                self.do_set('loop_optimized_output True',False)
 
         elif args[0] == 'fastjet':
             try:

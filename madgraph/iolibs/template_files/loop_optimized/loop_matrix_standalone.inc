@@ -13,6 +13,32 @@ C
 %(process_lines)s
 C  
       IMPLICIT NONE
+C
+C USER CUSTOMIZABLE OPTIONS
+C 
+## if(ComputeColorFlows) {
+C The variables below are just used in the context of a JAMP consistency check turned off by default.
+      %(real_dp_format)s JAMP_DOUBLECHECK_THRES
+      PARAMETER (JAMP_DOUBLECHECK_THRES=1.0d-9)
+      LOGICAL DIRECT_ME_COMPUTATION, ME_COMPUTATION_FROM_JAMP
+C     Modify the logicals below to chose how the ME must be computed
+C        DIRECT_ME_COMPUTATION    = Each loop amplitude is squared individually against all amplitudes with its own color factor.
+C        ME_COMPUTATION_FROM_JAMP = Amplitudes are first projected onto color flows (many less of them) which are then squared to form the ME.
+C     When setting both computation method to .TRUE., their systematic comparisons will be printed out.
+## if(LoopInduced) {
+      DATA DIRECT_ME_COMPUTATION/.FALSE./
+      DATA ME_COMPUTATION_FROM_JAMP/.TRUE./
+## } else {
+      DATA DIRECT_ME_COMPUTATION/.TRUE./
+      DATA ME_COMPUTATION_FROM_JAMP/.FALSE./
+## }
+## }
+C     This parameter is designed for the check timing command of MG5. It skips the loop reduction.
+      LOGICAL SKIPLOOPEVAL
+      PARAMETER (SKIPLOOPEVAL=.FALSE.)
+C     For timing checks. Stops the code after having only initialized its arrays from the external data files 
+	  LOGICAL BOOTANDSTOP
+      PARAMETER (BOOTANDSTOP=.FALSE.)
 C  
 C CONSTANTS
 C
@@ -70,24 +96,9 @@ C     At present, there are only CutTools,PJFry++,IREGI,Golem95
 C     Only CutTools provides QP
       INTEGER QP_NLOOPLIB
       PARAMETER (QP_NLOOPLIB=1)
-C     This parameter is designed for the check timing command of MG5
-      LOGICAL SKIPLOOPEVAL
-      PARAMETER (SKIPLOOPEVAL=.FALSE.)
-	  LOGICAL BOOTANDSTOP
-      PARAMETER (BOOTANDSTOP=.FALSE.)
 	  INTEGER MAXSTABILITYLENGTH
 	  DATA MAXSTABILITYLENGTH/20/
 	  common/%(proc_prefix)sstability_tests/maxstabilitylength
-
-##if(ComputeColorFlows) {
-C The variables below are just used in the context of a JAMP consistency check turned off by default.
-      %(real_dp_format)s JAMP_DOUBLECHECK_THRES
-      PARAMETER (JAMP_DOUBLECHECK_THRES=1.0d-9)
-      LOGICAL DOUBLECHECK_JAMP
-      DATA DOUBLECHECK_JAMP/.FALSE./
-      %(real_dp_format)s RES_FROM_JAMP(0:3,0:NSQUAREDSO)
-	  common/%(proc_prefix)sDOUBLECHECK_JAMP/RES_FROM_JAMP,DOUBLECHECK_JAMP
-## }
 
 C  
 C ARGUMENTS 
@@ -167,7 +178,9 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 ## }else{
 	  %(real_dp_format)s TEMP2(3)
 ## }
-	  
+## if(ComputeColorFlows) {
+	  %(real_dp_format)s BUFFRES(0:3,0:NSQUAREDSO)
+## }
 	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
@@ -208,6 +221,11 @@ C
       include 'coupl.inc'
 	  include 'mp_coupl.inc'
 	  include 'MadLoopParams.inc'
+
+## if(ComputeColorFlows) {
+      %(real_dp_format)s RES_FROM_JAMP(0:3,0:NSQUAREDSO)
+	  common/%(proc_prefix)sDOUBLECHECK_JAMP/RES_FROM_JAMP,DIRECT_ME_COMPUTATION,ME_COMPUTATION_FROM_JAMP
+## }
 
       LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
 	  DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
@@ -702,22 +720,34 @@ DO K=1, 3
   ENDDO
 ENDDO
 
+C Start by using the first available loop reduction library and qp library.
+I_LIB=1
+I_QP_LIB=1
+
+200 CONTINUE
+
 ## if(ComputeColorFlows) {
+C We don't want to re-initialized the following quantities when checking the helicity filter. (which jumps to label 205 to probe each helicity).
+C We however want to re-initialize them for each new computation part of the stability check (which jumps to label 200)
+C This code is therefore placed before 205 and after 200.
 CALL %(proc_prefix)sREINITIALIZE_CUMULATIVE_ARRAYS()
-IF (DOUBLECHECK_JAMP) THEN
+IF (ME_COMPUTATION_FROM_JAMP) THEN
+C If both ME computational methods have been used, then the ME computation from color flows was stored in RES_FROM_JAMP and we must reset it here.
   DO I=0,NSQUAREDSO
     DO K=0,3
       RES_FROM_JAMP(K,I)=0.0d0
     ENDDO
   ENDDO
 ENDIF
+IF ((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP) THEN
+C When computing the ME with color flows, the Born ME will be computed as well, so we reset here the result obtained from the smatrix call above.
+DO I=0,NSQUAREDSO
+  ANS(0,I)=0.0d0
+ENDDO
+ENDIF
 ## }
 
-C Start by using the first available loop reduction library and qp library.
-I_LIB=1
-I_QP_LIB=1
-
-200 CONTINUE
+205 CONTINUE
 
 ## if(AmplitudeReduction){
 300 CONTINUE
@@ -727,21 +757,6 @@ C     Free cache when using IREGI
         CALL IREGI_FREE_PS()
       ENDIF
 ## }
-## }
-
-## if(ComputeColorFlows) {
-C We don't want to re-initialized the following quantities when checking the helcity filter.
-C This is why we check that HELPICKED is equal to -1, except when the user selects a given helicity configuration.
-IF(HELPICKED.EQ.-1.OR.HELPICKED.EQ.USERHEL) THEN
-CALL %(proc_prefix)sREINITIALIZE_CUMULATIVE_ARRAYS()
-IF (DOUBLECHECK_JAMP) THEN
-  DO I=0,NSQUAREDSO
-    DO K=0,3
-      RES_FROM_JAMP(K,I)=0.0d0
-    ENDDO
-  ENDDO
-ENDIF
-ENDIF
 ## }
 
 ## if(TIRCaching){
@@ -798,6 +813,17 @@ c computed in quadruple precision.
   goto 300
 ## }else{
   CALL %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
+## if(ComputeColorFlows) {
+    IF ((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP) THEN
+C   If the ME's are computed from the color flows only, we must update the NLO part of ANS from BUFFR_BIS and the Born part of ANS using RES_FROM_JAMP(0,*)
+      DO I=0,NSQUAREDSO
+        ANS(0,I)=RES_FROM_JAMP(0,I)
+        DO K=1,3
+          ANS(K,I)=BUFFR_BIS(K,I)
+        ENDDO
+      ENDDO
+    ENDIF
+## }
 C We must skip the double precision computation of both loop amplitudes and CT amplitudes because they will all be computed in MP_COMPUTE_LOOP_COEFS.
   goto 301
 ## }
@@ -885,6 +911,9 @@ C We need the dummy argument I_SO for the squared order index to conform to the 
 5000 CONTINUE
   CTCALL_REQ_SO_DONE=.TRUE.
 
+## if(ComputeColorFlows) {
+  IF (DIRECT_ME_COMPUTATION) THEN
+## }
   DO I=1,NLOOPAMPS
 ## if(not LoopInduced) {
     DO J=1,NBORNAMPS
@@ -906,9 +935,7 @@ C It is however a good cross-check.
       TEMP2(2) = HEL_MULT*DBLE(CFTOT*(AMPL(2,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(2,J))))
       TEMP2(3) = HEL_MULT*DBLE(CFTOT*(AMPL(3,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(3,J))+AMPL(2,I)*DCONJG(AMPL(2,J))))
 ## }
-C To mimick the structure of the squared amplitude reduction, we add here the
-C squared counterterm contribution directly to the result ANS() and put the 
-C loop contributions in the LOOPRES array which will be added to ANS later
+C To mimick the structure of the squared amplitude reduction, we add here the squared counterterm contribution directly to the result ANS() and put the loop contributions in the LOOPRES array which will be added to ANS later
       IF (I.LE.NCTAMPS) THEN
         IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
           DO K=1,3
@@ -919,24 +946,55 @@ C loop contributions in the LOOPRES array which will be added to ANS later
       ELSE
         DO K=1,3
           LOOPRES(K,ITEMP,I-NCTAMPS)=LOOPRES(K,ITEMP,I-NCTAMPS)+TEMP2(K)
-C During the evaluation of the AMPL, we had stored the stability in S(1,*) so
-C we now copy over this flag to the relevant contributing Squared orders.
+C During the evaluation of the AMPL, we had stored the stability in S(1,*) so we now copy over this flag to the relevant contributing Squared orders.
           S(ITEMP,I-NCTAMPS)=S(1,I-NCTAMPS)
         ENDDO
       ENDIF
     ENDDO
   ENDDO
 ## }
-
-## if(ComputeColorFlows){
-IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)
-  IF(DOUBLECHECK_JAMP) THEN
-    CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(RES_FROM_JAMP,HEL_MULT)
-  ENDIF
+## if(ComputeColorFlows) {
 ENDIF
 ## }
 
+## if(ComputeColorFlows){
+C We should compute the color flow either if it contributes to the final result (i.e. not used just for the filtering), or if the computation is only done from the color flows
+IF (((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP).OR.(H.EQ.USERHEL.OR.USERHEL.EQ.-1)) THEN
+C The cumulative quantities must only be computed if that helicity contributes according to user request (second argument of the subroutine below).
+  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT,(H.EQ.USERHEL.OR.USERHEL.EQ.-1))
+  IF(ME_COMPUTATION_FROM_JAMP) THEN
+    CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(BUFFRES,HEL_MULT)
+    IF(((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP)) THEN
+C     If the computation from the color flow is the only form of computation, we directly update the answer.
+      DO K=0,3
+        DO I=0,NSQUAREDSO
+          ANS(K,I)=ANS(K,I)+BUFFRES(K,I)
+        ENDDO
+      ENDDO
+C   When setting up the loop filter, it is important to set the quantitied LOOPRES.
+C   Notice that you may have a more powerful filter with the direct computation mode because it can filter vanishing loop contributions for a particular squared split order only
+C   The quantity LOOPRES defined below is not physical, but it's ok since it is only intended for the loop filtering.
+     IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
+        DO J=1,NLOOPGROUPS
+          DO I=1,NSQUAREDSO
+            DO K=1,3
+              LOOPRES(K,I,J)=LOOPRES(K,I,J)+AMPL(K,NCTAMPS+J)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDIF
+C   The if statement below is not strictly necessary but makes it clear when it is executed.
+    ELSEIF(H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
+C     If both computational method is used, then we must just update RES_FROM_JAMP
+      DO K=0,3
+        DO I=0,NSQUAREDSO
+          RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)+BUFFRES(K,I)
+        ENDDO
+      ENDDO
+    ENDIF
+  ENDIF
+ENDIF
+## }
 
   ENDIF
 ENDDO
@@ -945,11 +1003,19 @@ ENDDO
 %(coef_merging)s
 ## }
 
+## if (ComputeColorFlows) {
+IF(DIRECT_ME_COMPUTATION) THEN
+C Lines below are not necessary when computing the ME from color flows
+## }
 DO I=0,NSQUAREDSO
   DO J=1,3
     BUFFR_BIS(J,I)=ANS(J,I)
   ENDDO
 ENDDO
+## if (ComputeColorFlows) {
+ENDIF
+## }
+
 
 ## if(not AmplitudeReduction){
 300 CONTINUE
@@ -963,11 +1029,25 @@ C     Free cache when using IREGI
 301 CONTINUE
 ## }
 
+## if (ComputeColorFlows) {
+IF(DIRECT_ME_COMPUTATION) THEN
+C Lines below are not necessary when computing the ME from color flows
+## }
 DO I=0,NSQUAREDSO
   DO J=1,3
     ANS(J,I)=BUFFR_BIS(J,I)
   ENDDO
 ENDDO
+## if (ComputeColorFlows) {
+ENDIF
+## }
+
+## if (ComputeColorFlows) {
+IF ((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP) THEN
+C We can skip the update of ANS if it was computed from color flows
+  GOTO 1226
+ENDIF
+## }
 
 IF(SKIPLOOPEVAL) THEN
   GOTO 1226
@@ -1147,7 +1227,7 @@ C GOTO NEXT HELICITY OR FINISH
   IF(HELPICKED.NE.NCOMB) THEN
     HELPICKED=HELPICKED+1
 	MP_DONE=.FALSE.
-    goto 200
+    goto 205
   ELSE
 C   Useful printout
 c    do I=1,NCOMB
@@ -1196,7 +1276,17 @@ C Is is possible to simply remove the if statement below to have a running refer
 ## }
 ENDIF
 
+## if (ComputeColorFlows) {
+C When computing the ME from the color flows, we also compute the born ME from them, so we must apply the normalization factors to the born ME as well.
+IF(((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP)) THEN
+  ITEMP=0
+ELSE
+  ITEMP=1
+ENDIF
+DO K=ITEMP,3
+## } else {
 DO K=1,3
+## }
   DO I=0,NSQUAREDSO
     ANS(K,I)=ANS(K,I)/DBLE(IDEN)
     IF (USERHEL.NE.-1) THEN
@@ -1206,7 +1296,7 @@ DO K=1,3
 ENDDO
 
 ## if (ComputeColorFlows) {
-IF(DOUBLECHECK_JAMP) THEN
+IF (DIRECT_ME_COMPUTATION.AND.ME_COMPUTATION_FROM_JAMP) THEN
   WRITE(*,*) ' ================================= '
   WRITE(*,*) ' === JAMP double-checking test === '
   WRITE(*,*) ' ================================= '

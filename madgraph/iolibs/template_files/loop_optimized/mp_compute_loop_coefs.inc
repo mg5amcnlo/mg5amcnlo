@@ -44,9 +44,9 @@ C     These are constants related to the split orders
 
 ##if(ComputeColorFlows) {
 C The variables below are just used in the context of a JAMP consistency check turned off by default.
-      LOGICAL DOUBLECHECK_JAMP
+      LOGICAL DIRECT_ME_COMPUTATION, ME_COMPUTATION_FROM_JAMP
       %(real_dp_format)s RES_FROM_JAMP(0:3,0:NSQUAREDSO)
-	  common/%(proc_prefix)sDOUBLECHECK_JAMP/RES_FROM_JAMP,DOUBLECHECK_JAMP
+	  common/%(proc_prefix)sDOUBLECHECK_JAMP/RES_FROM_JAMP,DIRECT_ME_COMPUTATION,ME_COMPUTATION_FROM_JAMP
 ## }
 	  
 C  
@@ -63,11 +63,14 @@ C
 	  %(real_mp_format)s TEMP2
 ## }else{
 	  %(real_mp_format)s TEMP2(3)
-## }      
+## }
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       %(real_mp_format)s P(0:3,NEXTERNAL)
 	  DATA IC/NEXTERNAL*1/
 	  %(real_mp_format)s ANS(3,0:NSQUAREDSO)
+## if(ComputeColorFlows) {
+	  %(real_dp_format)s BUFFRES(0:3,0:NSQUAREDSO)
+## }
 	  %(complex_mp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_mp_format)s CFTOT
 C
@@ -331,6 +334,9 @@ C precision variable) to the AMPL multiple precision array.
     ENDDO
   ENDDO
 
+## if(ComputeColorFlows) {
+  IF (DIRECT_ME_COMPUTATION) THEN
+## }
   DO I=1,NLOOPAMPS
 ## if(not LoopInduced) {
     DO J=1,NBORNAMPS
@@ -352,9 +358,7 @@ C It is however a good cross-check.
       TEMP2(2) = HEL_MULT*REAL(CFTOT*(AMPL(2,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(2,J))),KIND=16)
       TEMP2(3) = HEL_MULT*REAL(CFTOT*(AMPL(3,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(3,J))+AMPL(2,I)*CONJG(AMPL(2,J))),KIND=16)
 ## }
-C To mimic the structure of the non loop-induced processes, we add here the
-C squared counterterm contribution directly the result ANS() and put the 
-C loop contributions in the LOOPRES array which will be added to ANS later
+C To mimic the structure of the non loop-induced processes, we add here the squared counterterm contribution directly the result ANS and put the loop contributions in the LOOPRES array which will be added to ANS later
       IF (I.LE.NCTAMPS) THEN
         IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
           DO K=1,3
@@ -364,24 +368,61 @@ C loop contributions in the LOOPRES array which will be added to ANS later
         ENDIF
       ELSE
         DO K=1,3
-C This LOOPRES array entries will be added to the main result ANS(*,*) later
-C in the loop_matrix.f file. It is in double precision however, so the cast of
-C the temporary variable TEMP2 is necessary.
+C This LOOPRES array entries will be added to the main result ANS(*,*) later in the loop_matrix.f file. It is in double precision however, so the cast of the temporary variable TEMP2 is necessary.
           LOOPRES(K,ITEMP,I-NCTAMPS)=LOOPRES(K,ITEMP,I-NCTAMPS)+DBLE(TEMP2(K))
-C During the evaluation of the AMPL, we had stored the stability in S(1,*) so
-C we now copy over this flag to the relevant contributing Squared orders.
+C During the evaluation of the AMPL, we had stored the stability in S(1,*) so we now copy over this flag to the relevant contributing Squared orders.
           S(ITEMP,I-NCTAMPS)=S(1,I-NCTAMPS)
         ENDDO
       ENDIF
     ENDDO
   ENDDO
+
+## if(ComputeColorFlows) {
+  ENDIF
+## }
+  
 ## }
 
+
+
 ## if(ComputeColorFlows){
-IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)
-  IF(DOUBLECHECK_JAMP) THEN
-    CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(RES_FROM_JAMP,HEL_MULT)
+C We should compute the color flow either if it contributes to the final result (i.e. not used just for the filtering), or if the computation is only done from the color flows
+IF (((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP).OR.(H.EQ.USERHEL.OR.USERHEL.EQ.-1)) THEN
+C The cumulative quantities must only be computed if that helicity contributes according to user request (second argument of the subroutine below).
+  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT,(H.EQ.USERHEL.OR.USERHEL.EQ.-1))
+  IF(ME_COMPUTATION_FROM_JAMP) THEN
+    CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(BUFFRES,HEL_MULT)
+    IF(((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP)) THEN
+C     If the computation from the color flow is the only form of computation, we directly update the answer.
+      DO K=1,3
+        DO I=0,NSQUAREDSO
+          ANS(K,I)=ANS(K,I)+REAL(BUFFRES(K,I),KIND=16)
+        ENDDO
+      ENDDO
+C     In this case, we temporarily store the compute Born ME in RES_FROM_JAMP(0,I), which will be used to set ANS(0,I) just after the call to this subroutine in loop_matrix.f
+      DO I=0,NSQUAREDSO
+        RES_FROM_JAMP(0,I)=RES_FROM_JAMP(0,I)+REAL(BUFFRES(0,I),KIND=16)
+      ENDDO
+C   When setting up the loop filter, it is important to set the quantitied LOOPRES.
+C   Notice that you may have a more powerful filter with the direct computation mode because it can filter vanishing loop contributions for a particular squared split order only
+C   The quantity LOOPRES defined below is not physical, but it's ok since it is only intended for the loop filtering.
+C   In principle it is no longer necessary to compute the quantity below once the loop filter is setup, but it takes a negligible amount of time compare to the quad prec computations. 
+      DO J=1,NLOOPGROUPS
+        DO I=1,NSQUAREDSO
+          DO K=1,3
+            LOOPRES(K,I,J)=LOOPRES(K,I,J)+DP_AMPL(K,NCTAMPS+J)
+          ENDDO
+        ENDDO
+      ENDDO
+C   The if statement below is not strictly necessary but makes it clear when it is executed.
+    ELSEIF(H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
+C     If both computational method is used, then we must just update RES_FROM_JAMP
+      DO K=0,3
+        DO I=0,NSQUAREDSO
+          RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)+BUFFRES(K,I)
+        ENDDO
+      ENDDO
+    ENDIF 
   ENDIF
 ENDIF
 ## }
