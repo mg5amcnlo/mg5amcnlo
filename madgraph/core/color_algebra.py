@@ -804,7 +804,7 @@ class ColorString(list):
         """Force a specific order for the summation indices 
            in case we have Clebsch Gordan coefficients K6's or K6Bar's
            This is necessary to correctly recognize later on the equivalent 
-           color strings (otherwise the color basis is degenerate)
+           color strings (otherwise the color basis is degenerate).
            The new ordering is as follow:
                 1. put K and KBar Clebsch Gordan coefficients at the end of the list of color factors
                    the other factors are re-arranged in the reversed order compared with immutable 

@@ -241,7 +241,7 @@ class ColorBasis(dict):
             canonical_rep, rep_dict = col_str.to_canonical()
             try:
                 # If this representation has already been considered,
-                # recycle the result. 
+                # recycle the result.                               
                 col_fact = self._canonical_dict[canonical_rep].create_copy()
             except KeyError:
                 # If the representation is really new
@@ -271,9 +271,12 @@ class ColorBasis(dict):
                 # for matching, we have to multiply col_fact by it.
                 for cs in col_fact:
                     cs.coeff = cs.coeff * col_str.coeff
-                # Must simplify once to put traces in a canonical ordering
-                col_fact = col_fact.simplify()
-
+                # Must simplify up to two times at NLO (since up to two traces
+                # can appear with a loop) to put traces in a canonical ordering.
+                # If it still causes issue, just do a full_simplify(), it would
+                # not bring any heavy additional computational load.
+                col_fact = col_fact.simplify().simplify()
+                
                 # Here we need to force a specific order for the summed indices
                 # in case we have K6 or K6bar Clebsch Gordan coefficients
                 for colstr in col_fact: colstr.order_summation()

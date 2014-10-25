@@ -3330,6 +3330,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         (without optimization then). This is called from the initialization
         and pulled out here in order to have the correct treatment in daughter
         classes."""
+        logger.debug('Computing the color basis')
         self.get('color_basis').build(self.get('base_amplitude'))
         self.set('color_matrix',
           color_amp.ColorMatrix(self.get('color_basis')))

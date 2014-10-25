@@ -2546,6 +2546,11 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
         element made of a loop diagrams. It will create a different 
         color matrix depending on wether the process has a born or not."""
         
+        if matrix_element.get('processes')[0]['has_born']:
+            logger.debug('Computing the loop and Born color basis')
+        else:
+            logger.debug('Computing the loop color basis')      
+        
         # Define the objects stored in the contained color_information
         for key in color_information:
             exec("%s=color_information['%s']"%(key,key))

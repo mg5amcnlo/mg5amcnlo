@@ -514,20 +514,25 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             # This can be pretty long for processes with many color flows.
             # So, if necessary (i.e. for more than 15s), we tell the user the
             # estimated time for the processing.
-            if i==3:
+            if i==5:
                 elapsed_time = time.time()-start
-                t = int(len(ampl_to_jampl)*(elapsed_time/3))
-                if t > 20:
+                t = len(ampl_to_jampl)*(elapsed_time/5.0)
+                if t > 10.0:
                     time_info = True
                     logger.info('The color factors computation will take '+\
-                      ' about %s to run. '%str(datetime.timedelta(seconds=t))+\
+                      ' about %s to run. '%str(datetime.timedelta(seconds=int(t)))+\
                       'Started on %s.'%datetime.datetime.now().strftime(\
                                                               "%d-%m-%Y %H:%M"))
                     if logger.getEffectiveLevel()<logging.WARNING:
                         widgets = ['Color computation:', pbar.Percentage(), ' ', 
                                                 pbar.Bar(),' ', pbar.ETA(), ' ']
                         progress_bar = pbar.ProgressBar(widgets=widgets, 
-                          maxval=len(ampl_to_jampl)*len(ampb_to_jampb),fd=sys.stdout)
+                                       maxval=len(ampl_to_jampl), fd=sys.stdout)
+            
+            if not progress_bar is None:
+                progress_bar.update(i+1)
+                # Flush to force the printout of the progress_bar to be updated
+                sys.stdout.flush()
 
             line_num=[]
             line_denom=[]
@@ -546,9 +551,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 ColorMatrixDenomOutput.append(line_denom)
                 continue
 
-            for j, jampb_list in enumerate(ampb_to_jampb):
-                if progress_bar!=None:
-                    progress_bar.update(i*len(ampb_to_jampb)+j)
+            for jampb_list in ampb_to_jampb:
                 real_num=0
                 imag_num=0
                 common_denom=color_amp.ColorMatrix.lcmm(*[abs(ColorMatrixDenom[jampl]*
@@ -2055,9 +2058,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         res = []
 
         for jamp_number, coeff_list in enumerate(color_amplitudes):
-            my_cs.from_immutable(sorted(color_basis.keys())[jamp_number])            
+            my_cs.from_immutable(sorted(color_basis.keys())[jamp_number])
+            # Order the ColorString so that its ordering is canonical.
+            ordered_cs = color.ColorFactor([my_cs]).full_simplify()[0]    
             res.append('%d # Coefficient for flow number %d with expr. %s'\
-                                 %(len(coeff_list), jamp_number+1, repr(my_cs)))
+                            %(len(coeff_list), jamp_number+1, repr(ordered_cs)))
             # A line element is a tuple (numerator, denominator, amplitude_id)
             line_element = []
 
