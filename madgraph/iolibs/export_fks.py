@@ -246,13 +246,13 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         cp(_file_path+'../models/check_param_card.py', 
                               self.dir_path+'/bin/internal/check_param_card.py')
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
-        cp(_file_path+'/various/gen_crossxhtml.py', 
+        cp(_file_path+'/madevent/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
         cp(_file_path+'/various/banner.py', 
                                    self.dir_path+'/bin/internal/banner.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
-        cp(_file_path+'/various/sum_html.py', 
+        cp(_file_path+'/madevent/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 

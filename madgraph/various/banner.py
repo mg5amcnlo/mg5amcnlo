@@ -539,6 +539,8 @@ def recover_banner(results_object, level, run=None, tag=None):
 
 
 
+
+
 class RunCard(dict):
     """A class object for the run_card"""
 
@@ -1239,8 +1241,8 @@ class ConfigFile(dict):
         if change_userdefine:
             self.user_set.add(name.lower())
 
-    
-    def format_variable(self, value, targettype, name="unknown"):
+    @staticmethod
+    def format_variable(value, targettype, name="unknown"):
         """assign the value to the attribute for the given format"""
         
         if not isinstance(value, str):
@@ -1386,7 +1388,70 @@ class ProcCharacteristic(ConfigFile):
         
         fsock.close()   
         
-            
+class GridpackCard(ConfigFile):
+    """an object for the GridpackCard"""
+    
+    
+    
+    def default_setup(self):
+        """default value for the GridpackCard"""
+    
+        dict.__setitem__(self, "GridRun", True)
+        dict.__setitem__(self, "gevents", 2500)
+        dict.__setitem__(self, "gseed", 1)
+        dict.__setitem__(self, "ngran", -1)  
+ 
+    def read(self, finput):
+        """Read the input file, this can be a path to a file, 
+           a file object, a str with the content of the file."""
+           
+        if isinstance(finput, str):
+            if "\n" in finput:
+                finput = finput.split('\n')
+            elif os.path.isfile(finput):
+                finput = open(finput)
+            else:
+                raise Exception, "No such file %s" % finput
+        
+        for line in finput:
+            line = line.split('#')[0]
+            line = line.split('!')[0]
+            line = line.split('=')
+            if len(line) != 2:
+                continue
+            self[line[1].strip()] = line[0].replace('\'','').strip()
+
+    def write(self, output_file, template=None):
+        """Write the run_card in output_file according to template 
+           (a path to a valid run_card)"""
+
+        if not template:
+            if not MADEVENT:
+                template = pjoin(MG5DIR, 'Template', 'LO', 'Cards', 
+                                                        'grid_card_default.dat')
+            else:
+                template = pjoin(MEDIR, 'Cards', 'grid_card_default.dat')
+
+        
+        text = ""
+        for line in file(template,'r'):                  
+            nline = line.split('#')[0]
+            nline = nline.split('!')[0]
+            comment = line[len(nline):]
+            nline = nline.split('=')
+            if len(nline) != 2:
+                text += line
+            elif nline[1].strip() in self:
+                text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
+            else:
+                logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
+                text += line 
+        
+        fsock = open(output_file,'w')
+        fsock.write(text)
+        fsock.close()
+    
+        
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat
     contains a parser to read it, facilities to write a new file,...

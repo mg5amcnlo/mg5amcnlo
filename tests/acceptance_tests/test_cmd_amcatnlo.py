@@ -780,7 +780,7 @@ class MECmdShell(IOTests.IOTestManager):
     def load_result(self, run_name):
         
         import madgraph.iolibs.save_load_object as save_load_object
-        import madgraph.various.gen_crossxhtml as gen_crossxhtml
+        import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
         
         result = save_load_object.load_from_file('%s/HTML/results.pkl' % self.path)
         return result[run_name]

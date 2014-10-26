@@ -23,13 +23,16 @@ import re
 import logging
 
 try:
-    import madgraph.various.sum_html as sum_html
-    import madgraph.various.misc as misc
-    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
+    import madgraph
 except ImportError:
     import internal.sum_html as sum_html
     import internal.misc as misc
-    from internal import InvalidCmd, MadGraph5Error
+    from internal import InvalidCmd, MadGraph5Error    
+else:
+    import madgraph.madevent.sum_html as sum_html
+    import madgraph.various.misc as misc
+    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
+
     
 logger = logging.getLogger('madevent.combine_run') # -> stdout
 

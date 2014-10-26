@@ -53,25 +53,12 @@ logger = logging.getLogger('madevent.stdout') # -> stdout
 logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
-    # import from madgraph directory
-    import madgraph.interface.extended_cmd as cmd
-    import madgraph.interface.common_run_interface as common_run
-    import madgraph.iolibs.files as files
-    import madgraph.iolibs.save_load_object as save_load_object
-    import madgraph.various.banner as banner_mod
-    import madgraph.various.cluster as cluster
-    import madgraph.various.gen_crossxhtml as gen_crossxhtml
-    import madgraph.various.sum_html as sum_html
-    import madgraph.various.misc as misc
-    import madgraph.various.combine_runs as combine_runs
+    import madgraph
 
-    import models.check_param_card as check_param_card    
-    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
-    MADEVENT = False
-except ImportError, error:
-    if __debug__:
-        print error
+    
+except ImportError: 
     # import from madevent directory
+    MADEVENT = True
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
     import internal.banner as banner_mod
@@ -84,7 +71,25 @@ except ImportError, error:
     import internal.check_param_card as check_param_card
     import internal.sum_html as sum_html
     import internal.combine_runs as combine_runs
-    MADEVENT = True
+else:
+    # import from madgraph directory
+    MADEVENT = False
+    import madgraph.interface.extended_cmd as cmd
+    import madgraph.interface.common_run_interface as common_run
+    import madgraph.iolibs.files as files
+    import madgraph.iolibs.save_load_object as save_load_object
+    import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
+    import madgraph.madevent.sum_html as sum_html
+    import madgraph.various.banner as banner_mod
+    import madgraph.various.cluster as cluster
+    import madgraph.various.misc as misc
+    import madgraph.various.combine_runs as combine_runs
+
+    import models.check_param_card as check_param_card    
+    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
+
+
+
 
 class MadEventError(Exception):
     pass
@@ -2672,6 +2677,18 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
+        
+        misc.sprint("test the new gen_ximprove")
+        for nb_proc,subdir in enumerate(subproc):
+            subdir = subdir.strip()
+            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
+            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
+                    os.remove(match)
+        import madgraph.madevent.gen_ximprove as gen_ximprove
+        gen_ximprove.gen_ximprove(self, {'err_goal':precision, 'max_np':max_process,
+                                   'split_channels': True})
+        
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -2679,18 +2696,20 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                            
             logger.info('    %s ' % subdir)
             # clean previous run
-            for match in glob.glob(pjoin(Pdir, '*ajob*')):
-                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
-                    os.remove(match)
-            
-            proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
-                                    stdout=devnull,
-                                    stdin=subprocess.PIPE,
-                                    cwd=Pdir)
-            proc.communicate('%s %s T\n' % (precision, max_process))
+            if False:
+                for match in glob.glob(pjoin(Pdir, '*ajob*')):
+                    if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
+                        os.remove(match)
+                
+                proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
+                                        stdout=devnull,
+                                        stdin=subprocess.PIPE,
+                                        cwd=Pdir)
+                proc.communicate('%s %s T\n' % (precision, max_process))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 self.compile(['madevent'], cwd=Pdir)
+                
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))
                 
                 #remove associated results.dat (ensure to not mix with all data)
@@ -2700,14 +2719,19 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     for Gdir in Gdirs:
                         if os.path.exists(pjoin(Pdir, Gdir, 'results.dat')):
                             os.remove(pjoin(Pdir, Gdir,'results.dat'))
+                    misc.sprint(job, Gdirs)
                 
                 nb_tot = len(alljobs)            
                 self.total_jobs += nb_tot
-                for i, job in enumerate(alljobs):
+                if True:
+                 for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
                     self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' % 
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+            else:
+                misc.sprint( 'no ajob for ', Pdir)
+
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
                      html=True)
         
