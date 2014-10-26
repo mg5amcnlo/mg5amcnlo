@@ -3897,14 +3897,7 @@ This implies that with decay chains:
         ndiags = sum([amp.get_number_of_diagrams() for \
                           amp in self._curr_amps])
         logger.info("Total: %i processes with %i diagrams" % \
-              (len(self._curr_amps), ndiags))        
-            
-
-                
-        
-
-
-
+              (len(self._curr_amps), ndiags))
 
     @staticmethod
     def split_process_line(procline):

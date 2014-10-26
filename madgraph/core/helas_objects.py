@@ -5377,9 +5377,14 @@ class HelasMultiProcess(base_objects.PhysicsObject):
     #===========================================================================
 
     @classmethod
-    def process_color(cls,matrix_element, color_information):
+    def process_color(cls,matrix_element, color_information, compute_loop_nc=None):
         """ Process the color information for a given matrix
-        element made of a tree diagram """
+        element made of a tree diagram. compute_loop_nc is dummy here for the
+        tree-level Nc and present for structural reasons only."""
+        
+        if not compute_loop_nc is None:
+            raise MadGraph5Error, "The tree-level function 'process_color' "+\
+             " of class HelasMultiProcess cannot be called with a value for compute_loop_nc"
         
         # Define the objects stored in the contained color_information
         for key in color_information:
@@ -5433,16 +5438,19 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
     @classmethod
     def generate_matrix_elements(cls, amplitudes, gen_color = True,
-                                decay_ids = [], combine_matrix_elements = True,
-                                matrix_element_opts = {}):
+        decay_ids = [], combine_matrix_elements = True, 
+        compute_loop_nc = False, matrix_element_opts = {}):
         """Generate the HelasMatrixElements for the amplitudes,
         identifying processes with identical matrix elements, as
         defined by HelasMatrixElement.__eq__. Returns a
         HelasMatrixElementList and an amplitude map (used by the
         SubprocessGroup functionality). decay_ids is a list of decayed
         particle ids, since those should not be combined even if
-        matrix element is identical. matrix_element_opts are potential
-        additional options to be passed to the HelasMatrixElements constructed."""
+        matrix element is identical. 
+        The compute_loop_nc sets wheter independent tracking of Nc power coming
+        from the color loop trace is necessary or not (it is time consuming).
+        Matrix_element_opts are potential additional options to be passed to 
+        the HelasMatrixElements constructed."""
 
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "%s is not valid AmplitudeList" % type(amplitudes)
@@ -5590,7 +5598,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 # The treatment of color is quite different for loop amplitudes
                 # than for regular tree ones. So the function below is overloaded
                 # in LoopHelasProcess
-                cls.process_color(matrix_element,color_information)                    
+                cls.process_color(matrix_element,color_information,\
+                                                compute_loop_nc=compute_loop_nc)                    
 
         if not matrix_elements:
             raise InvalidCmd, \

@@ -2458,7 +2458,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     
     def __init__(self, *args, **opts):
         """ Initialize the process, setting the proc characteristics."""
-        super(LoopInducedExporterMEGroup, self).__init__(*args, **opts)
+        super(LoopInducedExporterME, self).__init__(*args, **opts)
         self.proc_characteristic['loop_induced'] = True
     
     def get_context(self,*args,**opts):

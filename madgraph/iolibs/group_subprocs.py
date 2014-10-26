@@ -203,11 +203,14 @@ class SubProcessGroup(base_objects.PhysicsObject):
         amplitudes = copy.copy(self.get('amplitudes'))
 
         # The conditional statement tests whether we are dealing with a 
-        # loop induced process.
+        # loop induced process. We must set compute_loop_nc to True here
+        # since the knowledge of the power of Nc coming from potential 
+        # loop color trace is necessary for the loop induced output with MadEvent
         if isinstance(amplitudes[0], loop_diagram_generation.LoopAmplitude):
             self.set('matrix_elements', 
               loop_helas_objects.LoopHelasProcess.generate_matrix_elements(
-              amplitudes, matrix_element_opts = self['matrix_element_opts']))
+              amplitudes, compute_loop_nc=True,
+              matrix_element_opts = self['matrix_element_opts']))
         else:
             self.set('matrix_elements',
                  helas_objects.HelasMultiProcess.\
