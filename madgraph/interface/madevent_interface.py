@@ -66,6 +66,7 @@ except ImportError:
     from internal import InvalidCmd, MadGraph5Error, ReadWrite
     import internal.files as files
     import internal.gen_crossxhtml as gen_crossxhtml
+    import internal.gen_ximprove as gen_ximprove
     import internal.save_load_object as save_load_object
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
@@ -79,6 +80,7 @@ else:
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
+    import madgraph.madevent.gen_ximprove as gen_ximprove
     import madgraph.madevent.sum_html as sum_html
     import madgraph.various.banner as banner_mod
     import madgraph.various.cluster as cluster
@@ -2112,6 +2114,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
             self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
                           postcmd=False)
+            nb_event = self.run_card['nevents']
+            self.exec_cmd('refine %s' % nb_event, postcmd=False)
             if not float(self.results.current['cross']):
                 # Zero cross-section. Try to guess why
                 text = '''Survey return zero cross section. 
@@ -2123,8 +2127,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
    Please check/correct your param_card and/or your run_card.'''
                 logger_stderr.critical(text)
                 raise ZeroResult('See https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/FAQ-General-14')
-            nb_event = self.run_card['nevents']
-            self.exec_cmd('refine %s' % nb_event, postcmd=False)
+
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
             self.print_results_in_shell(self.results.current)
@@ -2609,9 +2612,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
-        cross, error = sum_html.make_all_html_results(self)
-        self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error) 
+        if 'survey' in self.history[-1] or self.run_card['gridpack'] in self.true:
+            #will be done during the refine (more precisely in gen_ximprove)
+            cross, error = sum_html.make_all_html_results(self)
+            self.results.add_detail('cross', cross)
+            self.results.add_detail('error', error) 
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################
@@ -2625,27 +2630,22 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.opts['iterations'] = 1 + self._survey_options['iterations'][1]
         if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
             self.opts['accuracy'] = self._survey_options['accuracy'][1]/2  
-            
+        
         # Modify run_config.inc in order to improve the refine
-        conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
-        files.cp(conf_path, conf_path + '.bk')
-
-        text = open(conf_path).read()
-        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
-        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 20000 )''', text)
-        fsock = open(conf_path, 'w')
-        fsock.write(text)
-        fsock.close()
+        #conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
+        #files.cp(conf_path, conf_path + '.bk')
+        #
+        #text = open(conf_path).read()
+        #text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
+        #text = re.sub('''\(max_events = \d+\)''', '''(max_events = 20000 )''', text)
+        #fsock = open(conf_path, 'w')
+        #fsock.write(text)
+        #fsock.close()
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
                      '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
-        
-        
-        
-        
-        
         
         
     ############################################################################      
@@ -2657,11 +2657,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # Check argument's validity
         self.check_refine(args)
         
+        refine_opt = {'err_goal': args[0], 'split_channels': True}   
         precision = args[0]
         if len(args) == 2:
-            max_process = args[1]
-        else:
-            max_process = 5
+            refine_opt['max_process']= args[1]
+
 
         # initialize / remove lhapdf mode
         self.configure_directory()
@@ -2677,35 +2677,27 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
-        
-        misc.sprint("test the new gen_ximprove")
+    
+        # cleanning the previous job
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
-            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
+            Pdir = pjoin(self.me_dir, 'SubProcesses', subdir)
             for match in glob.glob(pjoin(Pdir, '*ajob*')):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(match)
-        import madgraph.madevent.gen_ximprove as gen_ximprove
-        gen_ximprove.gen_ximprove(self, {'err_goal':precision, 'max_np':max_process,
-                                   'split_channels': True})
-        
+
+        x_improve = gen_ximprove.get_ximprove(self, refine_opt)
+        x_improve.launch() # create the ajob for the refinment.
+        if 'refine' not in self.history[-1]:
+            cross, error = x_improve.update_html() #update html results for survey
+            if  cross == 0:
+                return
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
             bindir = pjoin(os.path.relpath(self.dirbin, Pdir))
                            
             logger.info('    %s ' % subdir)
-            # clean previous run
-            if False:
-                for match in glob.glob(pjoin(Pdir, '*ajob*')):
-                    if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
-                        os.remove(match)
-                
-                proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
-                                        stdout=devnull,
-                                        stdin=subprocess.PIPE,
-                                        cwd=Pdir)
-                proc.communicate('%s %s T\n' % (precision, max_process))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 self.compile(['madevent'], cwd=Pdir)
@@ -2719,12 +2711,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     for Gdir in Gdirs:
                         if os.path.exists(pjoin(Pdir, Gdir, 'results.dat')):
                             os.remove(pjoin(Pdir, Gdir,'results.dat'))
-                    misc.sprint(job, Gdirs)
                 
                 nb_tot = len(alljobs)            
                 self.total_jobs += nb_tot
-                if True:
-                 for i, job in enumerate(alljobs):
+                for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
                     self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' % 
@@ -3539,6 +3529,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def monitor(self, run_type='monitor', mode=None, html=False):
         """ monitor the progress of running job """
         
+
         starttime = time.time()
         if mode is None:
             mode = self.cluster_mode
@@ -3547,19 +3538,25 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 update_status = lambda idle, run, finish: \
                     self.update_status((idle, run, finish, run_type), level=None,
                                        force=False, starttime=starttime)
+                update_first = lambda idle, run, finish: \
+                    self.update_status((idle, run, finish, run_type), level=None,
+                                       force=True, starttime=starttime)
             else:
                 update_status = lambda idle, run, finish: None
-            try:    
-                self.cluster.wait(self.me_dir, update_status)            
+                update_first = None
+            try:   
+                self.cluster.wait(self.me_dir, update_status, update_first=update_first)            
             except Exception, error:
                 logger.info(error)
                 if not self.force:
-                    ans = self.ask('Cluster Error detected. Do you want to clean the queue?',
-                             default = 'y', choices=['y','n'])
+                    ans = self.ask('Cluster Error detected. Do you want to clean the queue? ("c"=continue the run anyway)',
+                             default = 'y', choices=['y','n', 'c'])
                 else:
                     ans = 'y'
                 if ans == 'y':
                     self.cluster.remove()
+                elif ans == 'c':
+                    return self.monitor(run_type=run_type, mode=mode, html=html)
                 raise
             except KeyboardInterrupt, error:
                 self.cluster.remove()

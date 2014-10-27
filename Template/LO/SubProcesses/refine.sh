@@ -25,7 +25,7 @@ j=%(directory)s
          echo "1" >> input_sg.txt   # suppress amplitude
 
      else
-         echo "0" >> input_sg.txt
+         echo "%(grid_refinment)s" >> input_sg.txt
          echo "1" >> input_sg.txt
      fi
      echo "%(nhel)s" >> input_sg.txt

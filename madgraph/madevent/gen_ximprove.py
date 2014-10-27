@@ -84,7 +84,8 @@ class gen_ximprove(object):
         self.iseed = 4321
         self.ngran = 1
         
-        # parameter for 
+        # placeholder for information
+        self.results = 0 #updated in launch/update_html
 
 
         if isinstance(opt, dict):
@@ -92,9 +93,8 @@ class gen_ximprove(object):
         elif isinstance(opt, bannermod.GridpackCard):
             self.configure_gridpack(opt)
           
-        #automatically launch the code
-        self.launch()
-        
+    def __call__(self):
+        return self.launch()
         
     def launch(self):
         """running """  
@@ -126,7 +126,7 @@ class gen_ximprove(object):
         # special treatment always do outside the loop to avoid side effect
         if 'err_goal' in opt:
             if self.err_goal < 1:
-                logger.info("running for accuracy %s%" % (self.err_goal*100))
+                logger.info("running for accuracy %s%%" % (self.err_goal*100))
                 self.gen_events = False
             elif self.err_goal >= 1:
                 logger.info("Generating %s unweigthed events." % self.err_goal)
@@ -136,8 +136,8 @@ class gen_ximprove(object):
             
         
     def handle_seed(self):
-        """not sure"""
-        logger.critical("""handling of random number bypass here!""")
+        """not needed but for gridpack --which is not handle here for the moment"""
+        return
     
     def reset_multijob(self):
 
@@ -152,7 +152,14 @@ class gen_ximprove(object):
         f = open(pjoin(self.me_dir, 'SubProcesses', Channel.get('name'), 'multijob.dat'), 'w')
         f.write('%i\n' % nb_split)
         f.close()
-      
+    
+    def increase_precision(self):
+        
+        self.max_event_in_iter = 20000
+        self.min_events = 7500
+        self.gen_events_security = 1.4
+    
+        
     alphabet = "abcdefghijklmnopqrstuvwxyz"
     def get_job_for_event(self):
         """generate the script in order to generate a given number of event"""
@@ -161,12 +168,10 @@ class gen_ximprove(object):
         
         assert self.err_goal >=1
         self.err_goal = int(self.err_goal)
-        logger.info("Working on creating %s events" % int(self.err_goal))
         
         goal_lum = self.err_goal/(self.results.xsec)    #pb^-1 
         logger.info('Effective Luminosity %s pb^-1', goal_lum)
-        misc.sprint("use %s for cross-section" % self.results.xsec)
-        misc.sprint(open(pjoin(self.me_dir,'SubProcesses/results.dat')).read())
+
         
         #reset the potential multijob of previous run
         self.reset_multijob()
@@ -175,7 +180,6 @@ class gen_ximprove(object):
         all_channels.sort(cmp= lambda x,y: 1 if y.get('luminosity') - \
                                                 x.get('luminosity') > 0 else -1) 
                           
-        misc.sprint([P.get('luminosity') for P in all_channels])
         
         to_refine = []
         for C in all_channels:
@@ -243,7 +247,8 @@ class gen_ximprove(object):
                     'miniter': self.min_iter,
                     'precision': -goal_lum/nb_split,
                     'nhel': self.run_card['nhel'],
-                    'channel': C.name.replace('G','')
+                    'channel': C.name.replace('G',''),
+                    'grid_refinment' : 0    #no refinment of the grid
                     }
 
             if nb_split == 1:
@@ -314,37 +319,156 @@ class gen_ximprove(object):
                 info['script_name'] = 'ajob%i' % script_number
                 fsock.write(template_text % info)
             nb_use += nb_job 
-        
-        
-class gen_ximprove_gridpack(gen_ximprove):
-    """a special case for the gridpack"""
-    
-    def configure(self, gridpack):
-        """ """
-           
-        self.gen_events = True
-        self.split_channels = False
-        self.min_iter = 1
-        if isinstance(gridpack, bannermod.GridpackCard):
-            self.configure(gridpack)
-        else:
-            gridpack = bannermod.GridpackCard(gridpack)
-            self.configure(gridpack)
-        if self.ngran == -1:
-            self.ngran = 1
-        logger.info("Running on Grid to generate %s events with granularity %s" %(self.nreq, self.ngran))
-                
-    
+
     def get_job_for_precision(self):
-        """ Should not happen in gridpack mode"""
-        raise Exception
-    
-    def get_job_for_event(self):
-        """ see what to run for getting a given number of event """
+        """create the ajob to achieve a give precision on the total cross-section"""
+
         
-        raise NotImplemented
+        assert self.err_goal <=1
+        xtot = self.results.xsec
+        logger.info("Working on precision:  %s %%" %(100*self.err_goal))
+        all_channels = sum([list(P) for P in self.results if P.mfactor],[])
+        limit = self.err_goal * xtot / len(all_channels)
+                
+        to_refine = []
+        rerr = 0 #error of the job not directly selected
+        for C in all_channels:
+            cerr = C.mfactor*(C.xerru+C.xerrc**2)
+            if  cerr > abs(limit):
+                to_refine.append(C)
+            else:
+                rerr += cerr
+        
+        if not len(to_refine):
+            return
+        
+        # change limit since most don't contribute 
+        limit = math.sqrt((self.err_goal * xtot)**2 - rerr/math.sqrt(len(to_refine)))
+        for C in to_refine[:]:
+            cerr = C.mfactor*(C.xerru+C.xerrc**2)
+            if cerr < limit:
+                to_refine.remove(C)
+            
+        # all the channel are now selected. create the channel information
+        logger.info('need to improve %s channels' % len(to_refine))
+
+        
+        jobs = [] # list of the refine if some job are split is list of
+                  # dict with the parameter of the run.
+
+        # loop over the channel to refine
+        for C in to_refine:
+            
+            #1. Determine how many events we need in each iteration
+            yerr = C.get('xsec') + C.mfactor*(C.xerru+C.xerrc**2)
+            nevents = 0.2*C.nevents*(yerr/limit)**2
+            
+            nb_split = int((nevents*(C.nunwgt/C.nevents)/self.max_request_event/ (2**self.min_iter-1))**(2/3))
+                           # **(2/3) to slow down the increase in number of jobs            
+            if nb_split > self.max_splitting:
+                nb_split = self.max_splitting
+                
+            if nb_split >1:
+                nevents = nevents / nb_split
+                self.write_multijob(C, nb_split)
+            # forbid too low/too large value
+            nevents = min(self.min_event_in_iter, max(self.max_event_in_iter, nevents))
+            
+            
+            #create the  info dict  assume no splitting for the default
+            info = {'name': self.cmd.results.current['run_name'],
+                    'script_name': 'unknown',
+                    'directory': C.name,    # need to be change for splitted job
+                    'P_dir': C.parent_name, 
+                    'offset': 1,            # need to be change for splitted job
+                    'nevents': nevents,
+                    'maxiter': self.max_iter,
+                    'miniter': self.min_iter,
+                    'precision': max(limit/(C.get('xsec')+ yerr), 1e-4),
+                    'nhel': self.run_card['nhel'],
+                    'channel': C.name.replace('G',''),
+                    'grid_refinment' : 1
+                    }
+
+            if nb_split == 1:
+                jobs.append(info)
+            else:
+                for i in range(nb_split):
+                    new_info = dict(info)
+                    new_info['offset'] = i+1
+                    new_info['directory'] += self.alphabet[i % 26] + str((i+1)//26)
+                    jobs.append(new_info)
+            
+        self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs)            
+        
+    def update_html(self):
+        """update the html from this object since it contains all the information"""
+        
+
+        run = self.cmd.results.current['run_name']
+        if not os.path.exists(pjoin(self.cmd.me_dir, 'HTML', run)):
+            os.mkdir(pjoin(self.cmd.me_dir, 'HTML', run))
+        
+        unit = self.cmd.results.unit
+        P_text = "" 
+        if self.results:     
+            Presults = self.results 
+        else:
+            self.results = sum_html.collect_result(self.cmd, None)
+            Presults = self.results
+                
+        for P_comb in Presults:
+            P_text += P_comb.get_html(run, unit, self.cmd.me_dir) 
+        
+        Presults.write_results_dat(pjoin(self.cmd.me_dir,'SubProcesses', 'results.dat'))   
+        
+        fsock = open(pjoin(self.cmd.me_dir, 'HTML', run, 'results.html'),'w')
+        fsock.write(sum_html.results_header)
+        fsock.write('%s <dl>' % Presults.get_html(run, unit, self.cmd.me_dir))
+        fsock.write('%s </dl></body>' % P_text)         
+        
+        self.cmd.results.add_detail('cross', Presults.xsec)
+        self.cmd.results.add_detail('error', Presults.xerru) 
+        
+        return Presults.xsec, Presults.xerru          
 
 
+class gen_ximprove_loop_induced(gen_ximprove):
+    """Since loop induce is much smaller splits much more the generation."""
+    
+    
+    # some hardcoded value which impact the generation
+    gen_events_security = 1.1 # multiply the number of requested event by this number for security
+    combining_job = 0         # allow to run multiple channel in sequence
+    max_request_event = 400   # split jobs if a channel if it needs more than that 
+    max_event_in_iter = 500
+    min_event_in_iter = 250
+    max_splitting = 260       # maximum duplication of a given channel 
+    min_iter = 3    
+    max_iter = 6
 
+    def increase_parralelization(self):
+        self.max_request_event = 200
+        self.max_splitting = 300
+
+def get_ximprove(cmd, opt):
+    """Factory Determine the appropriate class and returns it"""
+    
+    if cmd.proc_characteristics['loop_induced']:
+        if cmd.proc_characteristics['nexternal'] <=2:
+            return gen_ximprove_loop_induced(cmd, opt)
+        else:
+            out = gen_ximprove_loop_induced(cmd, opt)
+            out.increase_parralelization()
+            return out
+    elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
+        raise Exception, "Not implemented"
+    else:
+        out = gen_ximprove_loop_induced(cmd, opt)
+        if cmd.opts['accuracy'] != cmd._survey_options['accuracy'][1]:
+            out.increase_precision()
+            
+        return out
+    
 
 
