@@ -2775,7 +2775,10 @@ class Process(PhysicsObject):
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
             if self['NLO_mode']!='tree':
-                mystr = mystr + self['NLO_mode'] + ' = '
+                if self['NLO_mode']=='virt' and not self['has_born']:
+                    mystr = mystr + 'sqrvirt = '
+                else:
+                    mystr = mystr + self['NLO_mode'] + ' = '
             for order in self['perturbation_couplings']:
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
@@ -3454,8 +3457,11 @@ class ProcessDefinition(Process):
         # Add perturbation_couplings
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
-            if self['NLO_mode']:
-                mystr = mystr + self['NLO_mode'] + ' = '
+            if self['NLO_mode']!='tree':
+                if self['NLO_mode']=='virt' and not self['has_born']:
+                    mystr = mystr + 'sqrvirt = '
+                else:
+                    mystr = mystr + self['NLO_mode'] + ' = '
             for order in self['perturbation_couplings']:
                 mystr = mystr + order + ' '
             mystr = mystr + '] '

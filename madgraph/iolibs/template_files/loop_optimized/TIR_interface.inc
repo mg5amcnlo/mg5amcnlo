@@ -74,8 +74,26 @@ C ----------
 C BEGIN CODE
 C ----------
 
+IF (MLReductionLib(I_LIB).EQ.4) THEN
+## if(golem_available) {
+C Using Golem95
+C PDEN is dummy for Golem95 so we just initialize it to zero here so as to use it for the function SWITCHORDER
+  DO I=0,3
+    DO J=1,NLOOPLINE-1
+      PDEN(I,J)=0.0d0
+    ENDDO
+  ENDDO
+  CALL SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+  CALL %(proc_prefix)sGOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
+  RETURN
+## } else {
+C Golem95 not available
+  WRITE(*,*) 'ERROR:: Golem95 is not interfaced.'
+  STOP
+## }
+ENDIF
+
 C INITIALIZE TIR IF NEEDED
-      %(golem_calling)s
       IF (TIRINIT) THEN
 	    TIRINIT=.FALSE.
 		CALL %(proc_prefix)sINITTIR()
@@ -136,10 +154,25 @@ C NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       SELECT CASE(MLReductionLib(I_LIB))
       CASE(2)
 C     PJFry++
-%(pjfry_calling)s
+## if(pjfry_available){
+      CALL SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)
+C     CONVERT TO MADLOOP CONVENTION
+      CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)
+## } else {
+      WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
+      STOP
+## }
       CASE(3)
 C     IREGI
-%(iregi_calling)s
+## if(iregi_available){
+      CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,RANK,PDEN,M2L,MU_R,PJCOEFS,STABLE)
+C     CONVERT TO MADLOOP CONVENTION
+      CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)  
+## } else {
+      WRITE(*,*) 'ERROR:: IREGI is not interfaced.'
+      STOP
+## }
       END SELECT
 ## if(TIRCaching){
 	  DO I=1,3
@@ -179,6 +212,60 @@ C     IREGI
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
       END
 
+      SUBROUTINE SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      IMPLICIT NONE
+
+      INTEGER CTMODE,NLOOPLINE
+
+      %(real_dp_format)s PL(0:3,NLOOPLINE)
+      %(real_dp_format)s PDEN(0:3,NLOOPLINE-1)
+      COMPLEX*16 M2L(NLOOPLINE)
+      %(real_dp_format)s NEW_PL(0:3,NLOOPLINE)
+      %(real_dp_format)s NEW_PDEN(0:3,NLOOPLINE-1)
+      %(complex_dp_format)s NEW_M2L(NLOOPLINE)
+
+      INTEGER I,J,K
+
+      IF (CTMode.ne.2.and.CTMode.ne.4) THEN
+        RETURN 
+      ENDIF
+
+      IF (NLOOPLINE.le.2) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+           NEW_PDEN(J,NLOOPLINE-I) = PDEN(J,I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+           PDEN(J,I) = NEW_PDEN(J,I)
+        ENDDO
+      ENDDO
+
+      DO I=2,NLOOPLINE
+        NEW_M2L(I)=M2L(NLOOPLINE-I+2)
+      ENDDO
+      DO I=2,NLOOPLINE
+        M2L(I)=NEW_M2L(I)
+      ENDDO
+
+
+      DO I=1,NLOOPLINE
+        DO J=0,3
+          NEW_PL(J,I) = -PL(J,NLOOPLINE+1-I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE
+        DO J=0,3
+           PL(J,I) = NEW_PL(J,I)
+        ENDDO
+      ENDDO
+
+      end
+
 	  SUBROUTINE %(proc_prefix)sINITTIR()
 C 
 C INITIALISATION OF TIR
@@ -210,7 +297,9 @@ C 1 -> LOOPTOOLS
 C 2 -> AVH
 C 3 -> QCDLOOP
       LOOPLIB=CTLOOPLIBRARY
-%(initiregi)s
+## if (iregi_available) {
+      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)
+## }
 C      The initialization below is for CT v1.9.2+
        IF (CTINIT) THEN
 	     CTINIT=.FALSE.

@@ -1,11 +1,14 @@
 C Set of subroutines to project the Feynman diagrama amplitudes AMPL onto the color flow space.
 
-      SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)
+      SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT,DO_CUMULATIVE)
       IMPLICIT NONE
+      LOGICAL DO_CUMULATIVE
       INTEGER HEL_MULT
         CALL %(proc_prefix)sREINITIALIZE_JAMPS()
         CALL %(proc_prefix)sDO_COMPUTE_COLOR_FLOWS(.FALSE.)
-        CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+        IF(DO_CUMULATIVE) THEN
+          CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+        ENDIF
       END SUBROUTINE
 
       SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
@@ -481,6 +484,12 @@ C Initialization
 if(.NOT.CMInitialized) then
   CALL %(proc_prefix)sINITIALIZE_FLOW_COLORMATRIX()
 ENDIF
+
+DO I=0,NSQUAREDSO
+  DO K=0,3
+    RES(K,I)=0.0d0
+  ENDDO
+ENDDO
 
 ## if(not LoopInduced){
 c Compute the Born ME from the Born color flow amplitudes (JAMP)

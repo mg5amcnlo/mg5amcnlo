@@ -252,7 +252,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Link relevant cards from Cards inside the MadLoop5_resources
         ln(pjoin(self.dir_path,'SubProcesses','MadLoopParams.dat'), 
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
-        ln(pjoin(self.dir_path,'Cards','param_card.dat'), 
+        ln(pjoin(self.dir_path,'Cards','param_card.dat'),
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
         ln(pjoin(self.dir_path,'Cards','ident_card.dat'), 
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
@@ -514,22 +514,26 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             # This can be pretty long for processes with many color flows.
             # So, if necessary (i.e. for more than 15s), we tell the user the
             # estimated time for the processing.
-            if i==10:
+            if i==5:
                 elapsed_time = time.time()-start
-                t = int(len(ampl_to_jampl)*(elapsed_time/10.0))
-                if t > 20:
+                t = len(ampl_to_jampl)*(elapsed_time/5.0)
+                if t > 10.0:
                     time_info = True
                     logger.info('The color factors computation will take '+\
-                      ' about %s to run. '%str(datetime.timedelta(seconds=t))+\
+                      ' about %s to run. '%str(datetime.timedelta(seconds=int(t)))+\
                       'Started on %s.'%datetime.datetime.now().strftime(\
                                                               "%d-%m-%Y %H:%M"))
                     if logger.getEffectiveLevel()<logging.WARNING:
                         widgets = ['Color computation:', pbar.Percentage(), ' ', 
                                                 pbar.Bar(),' ', pbar.ETA(), ' ']
                         progress_bar = pbar.ProgressBar(widgets=widgets, 
-                                        maxval=len(ampl_to_jampl),fd=sys.stdout)
-            if progress_bar!=None:
+                                       maxval=len(ampl_to_jampl), fd=sys.stdout)
+            
+            if not progress_bar is None:
                 progress_bar.update(i+1)
+                # Flush to force the printout of the progress_bar to be updated
+                sys.stdout.flush()
+
             line_num=[]
             line_denom=[]
 
@@ -609,11 +613,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # so we set it to 1. 
         try:
             n_squared_split_orders = self.general_replace_dict['nSquaredSO']
-        except KeyError:
+        except (KeyError, AttributeError):
             n_squared_split_orders = 1
 
         LoopInduced = not matrix_element.get('processes')[0].get('has_born')
-        ComputeColorFlows = self.compute_color_flows
+        
+        # Force the computation of loop color flows for loop_induced processes
+        ComputeColorFlows = self.compute_color_flows or LoopInduced
         # The variable AmplitudeReduction is just to make the contextual
         # conditions more readable in the include files.
         AmplitudeReduction = LoopInduced or ComputeColorFlows
@@ -1486,6 +1492,21 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         self.loop_optimized_additional_template_setup()
 
+    def get_context(self,matrix_element, **opts):
+        """ Additional contextual information which needs to be created for
+        the optimized output."""
+        
+        context = LoopProcessExporterFortranSA.get_context(self, matrix_element, 
+                                                                         **opts)
+
+        for tir in self.all_tir:
+            context['%s_available'%tir]=self.tir_available_dict[tir]
+            # safety check
+            if tir not in ['golem','pjfry','iregi']:
+                raise MadGraph5Error,"%s was not a TIR currently interfected."%tir_name
+
+        return context
+
     def loop_optimized_additional_template_setup(self):
         """ Perform additional actions specific for this class when setting
         up the template with the copy_v4template function."""
@@ -1665,8 +1686,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if self.forbid_loop_grouping:
             self.group_loops = False
         else:
-            self.group_loops = (not self.compute_color_flows) and \
-                              matrix_element.get('processes')[0].get('has_born')
+            self.group_loops = (not self.get_context(matrix_element)['ComputeColorFlows'])\
+                          and matrix_element.get('processes')[0].get('has_born')
         
         return self.group_loops
     
@@ -1690,6 +1711,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
           helas_call_writers.FortranUFOHelasCallWriterOptimized(\
           fortran_model.get('model'),False)
 
+
+        if not matrix_element.get('processes')[0].get('has_born') and \
+                                                   not self.compute_color_flows:
+            logger.debug("Color flows will be employed despite the option"+\
+              " 'loop_color_flows' being set to False because it is necessary"+\
+                                                          " for optimizations.")
+
         # Compute the analytical information of the loop wavefunctions in the
         # loop helas matrix elements using the cached aloha model to reuse
         # as much as possible the aloha computations already performed for
@@ -1705,8 +1733,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         generate_general_replace_dict(self, matrix_element, 
                                  group_number = group_number, proc_id = proc_id)
 
-        # Now fill in the replace dict entries specific to the TIR implementation
-        self.set_TIR_replace_dict_entries()
         # and those specific to the optimized output
         self.set_optimized_output_specific_replace_dict_entries(matrix_element)
 
@@ -1753,7 +1779,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
                                      matrix_element,OptimizedFortranModel)
 
-        if self.compute_color_flows:
+        if self.get_context(matrix_element)['ComputeColorFlows']:
             filename = 'compute_color_flows.f'
             self.write_compute_color_flows(writers.FortranWriter(filename),
                                         matrix_element, config_map = config_map)
@@ -1765,82 +1791,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                             nexternal, ninitial)
 
         return calls
-
-    def set_TIR_replace_dict_entries(self):
-        """ Specify the entries of the replacement dictionary which depend on
-        the choice of Tensor Integral Reduction (TIR) libraries specified by the
-        user and their availability on the system."""
-        
-        for tir in self.all_tir:
-            if self.tir_available_dict[tir]:
-                if tir=="pjfry":
-                    self.general_replace_dict['pjfry_calling']=\
-                    ("        CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,"\
-                    +"PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)\n"\
-                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
-                    +"         CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
-                    )%self.general_replace_dict
-                elif tir=="iregi":
-                    self.general_replace_dict['iregi_calling']=\
-                    ("        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
-                    +"RANK,PDEN,M2L,MU_R,PJCOEFS,STABLE)\n"\
-                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
-                    +"        CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
-                    )%self.general_replace_dict
-                    self.general_replace_dict['iregi_free_ps']=\
-                    "IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS"
-                    self.general_replace_dict['initiregi']=\
-                    "      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)"
-                elif tir=="golem":
-                    self.general_replace_dict['golem_calling']=\
-                    ("IF(MLReductionLib(I_LIB).EQ.4)THEN\n"\
-                     +"C      Using Golem95\n"\
-                     +"        CALL %(proc_prefix)sGOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)\n"\
-                     +"        RETURN\n"\
-                     +"ENDIF")%self.general_replace_dict
-                else:
-                    raise MadGraph5Error,"%s was not a well-defined TIR."%tir_name
-            else:
-                if tir=="pjfry":
-                    self.general_replace_dict['pjfry_calling']=\
-                    "        WRITE(*,*)'PJFRY is not installed correctly !'\n"\
-                    +"        STOP"
-                elif tir=="iregi":
-                    self.general_replace_dict['iregi_calling']=\
-                    "        WRITE(*,*)'IREGI is not installed correctly !'\n"\
-                    +"        STOP"
-                    self.general_replace_dict['initiregi']=''
-                    self.general_replace_dict['iregi_free_ps']=''
-                elif tir=="golem":
-                    self.general_replace_dict['golem_calling']=''
-        # the first entry is the CutTools, we make sure it is available
-        looplibs_av=['.TRUE.']
-        # one should be careful about the order in the following
-        if "pjfry" in self.all_tir:
-            if self.tir_available_dict["pjfry"]:             
-                looplibs_av.extend(['.TRUE.'])
-            else:
-                looplibs_av.extend(['.FALSE.'])
-        else:
-            looplibs_av.extend(['.FALSE.'])
-        if "iregi" in self.all_tir:
-            if self.tir_available_dict["iregi"]:             
-                looplibs_av.extend(['.TRUE.'])
-            else:
-                looplibs_av.extend(['.FALSE.'])
-        else:
-            looplibs_av.extend(['.FALSE.'])
-            
-        if "golem" in self.all_tir:
-            if self.tir_available_dict["golem"]:
-                looplibs_av.extend(['.TRUE.'])
-            else:
-                looplibs_av.extend(['.FALSE.'])
-        else:
-            looplibs_av.extend(['.FALSE.'])
-        self.general_replace_dict['data_looplibs_av']="DATA LOOPLIBS_AVAILABLE /"\
-        +','.join(looplibs_av)+"/"
-
 
     def set_optimized_output_specific_replace_dict_entries(self, matrix_element):
         """ Specify the entries of the replacement dictionary which are specific
@@ -1900,10 +1850,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         file = file % replace_dict
         
-        
-        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
-                                                    coef_format=replace_dict['complex_dp_format'],\
-                                                    sub_prefix=replace_dict['proc_prefix'])
+        FPR = q_polynomial.FortranPolynomialRoutines(
+        replace_dict['maxrank'],coef_format=replace_dict['complex_dp_format'],\
+                                         sub_prefix=replace_dict['proc_prefix'])
         if self.tir_available_dict['pjfry']:
             file += '\n\n'+FPR.write_pjfry_mapping()
         if self.tir_available_dict['iregi']:
@@ -2109,9 +2058,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         res = []
 
         for jamp_number, coeff_list in enumerate(color_amplitudes):
-            my_cs.from_immutable(sorted(color_basis.keys())[jamp_number])            
+            my_cs.from_immutable(sorted(color_basis.keys())[jamp_number])
+            # Order the ColorString so that its ordering is canonical.
+            ordered_cs = color.ColorFactor([my_cs]).full_simplify()[0]    
             res.append('%d # Coefficient for flow number %d with expr. %s'\
-                                 %(len(coeff_list), jamp_number+1, repr(my_cs)))
+                            %(len(coeff_list), jamp_number+1, repr(ordered_cs)))
             # A line element is a tuple (numerator, denominator, amplitude_id)
             line_element = []
 
@@ -2297,7 +2248,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
-        # We start off with the treatment of the split_orders since some 
+        # Starting off with the treatment of the split_orders since some 
         # of the information extracted there will come into the 
         # general_replace_dict. Split orders are abbreviated SO in all the 
         # keys of the replacement dictionaries.
@@ -2367,6 +2318,15 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
                 ampSO_list[amp_number-1]=overall_so_basis.index(SO[0])+1
         replace_dict['BornAmpSO'] = '\n'.join(self.format_integer_list(
                                                     ampSO_list,'BORNAMPORDERS'))
+
+        # We then go to the TIR setup
+        # The first entry is the CutTools, we make sure it is available
+        looplibs_av=['.TRUE.']
+        # one should be careful about the order in the following
+        for tir_lib in ['pjfry','iregi','golem']:
+            looplibs_av.append('.TRUE.' if tir_lib in self.all_tir and \
+                                self.tir_available_dict[tir_lib] else '.FALSE.')
+        replace_dict['data_looplibs_av']=','.join(looplibs_av)
 
         # Helicity offset convention
         # For a given helicity, the attached integer 'i' means
@@ -2473,8 +2433,6 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
         self.general_replace_dict['loop_CT_calls']=replace_dict['loop_CT_calls']            
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
-        replace_dict['iregi_free_ps']=self.general_replace_dict['iregi_free_ps']
-        replace_dict['data_looplibs_av']=self.general_replace_dict['data_looplibs_av']
 
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
@@ -2496,6 +2454,12 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     Madevent exporters)"""
 
     madloop_makefile_name = 'makefile_MadLoop'
+    
+    
+    def __init__(self, *args, **opts):
+        """ Initialize the process, setting the proc characteristics."""
+        super(LoopInducedExporterME, self).__init__(*args, **opts)
+        self.proc_characteristic['loop_induced'] = True
     
     def get_context(self,*args,**opts):
         """ Make sure that the contextual variable MadEventOutput is set to
@@ -2658,13 +2622,6 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
     elements"""
     
     matrix_file = "matrix_loop_induced_madevent_group.inc"
-
-    
-    def __init__(self, *args, **opts):
-        
-        super(LoopInducedExporterMEGroup, self).__init__(*args, **opts)
-        self.proc_characteristic['loop_induced'] = True
-
 
     def make_source_links(self,*args, **opts):
         """ In the loop-induced output with MadEvent, we need the files from the 
