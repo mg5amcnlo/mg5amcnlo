@@ -122,19 +122,16 @@
 !     The parameters below set the general behavior of MadLoop for the initialization
 !     =================================================================================
 
-!     Decide in which mode to set CutTools when performing MadLoop's initialization of
+!     Decide in which mode to run when performing MadLoop's initialization of
 !     the helicity (and possibly loop) filter. The possible modes are:
 !
-!     imode:|  actions performed by ctsxcut:                                     
-!           |                                                                    
-!      	0   | (dp_dir,dp_inv)-> dp_Atest -> stable -> (only if stable=.false.) ->
-!	        | (mp_dir,mp_inv)-> mp_Atest -> stable                                
-!       1   | (dp_dir)       -> dp_Ntest -> stable                               
-!       2   | (dp_inv)       -> dp_Ntest -> stable                               
-!       3   | (dp_dir,dp_inv)-> dp_Atest -> stable                               
-!       4   | (mp_dir)       -> mp_Ntest -> stable                                 
-!       5   | (mp_inv)       -> mp_Ntest -> stable                                
-!       6   | (mp_dir,mp_inv)-> mp_Atest -> stable                               
+!     Decide in which mode to run MadLoop
+!
+!     imode:|  description                                     
+!       1   |  Double precision, loops reduced with propagator in original order                               
+!       2   |  Double precision, loops reduced with propagator with reversed order                               
+!       4   |  Quadruple precision, loops reduced with propagator in original order                               
+!       5   |  Quadruple precision, loops reduced with propagator with reversed order                            
 !
 #CTModeInit
 !1

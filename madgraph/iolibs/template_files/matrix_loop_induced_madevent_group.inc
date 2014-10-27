@@ -32,26 +32,34 @@ C
 C ARGUMENTS 
 C 
     REAL*8 P(0:3,NEXTERNAL),ANS
-	REAL*8 , ALLOCATABLE :: ANS_ML(:,:)
 C  
 C LOCAL VARIABLES 
 C  
         INTEGER NHEL(NEXTERNAL,NCOMB)
-	INTEGER I, J ,JJ
-	INTEGER ML_ANS_DIMENSION
+		INTEGER I, J ,JJ
         INTEGER NTRY(2)
         INTEGER ISHEL(2)
         REAL*8 R,SUMHEL,TS(NCOMB), T
         LOGICAL GOODHEL(NCOMB,2)
         DATA GOODHEL/THEL*.FALSE./
-	REAL*8 HWGT,XTOT
+		REAL*8 HWGT,XTOT
         INTEGER NGOOD(2), IGOOD(NCOMB,2)         
   		INTEGER JHEL(2)	
         DATA NTRY /0,0/
         DATA NGOOD /0,0/
         DATA ISHEL/0,0/
 
+		REAL*8 , ALLOCATABLE :: ANS_ML(:,:)
+      	REAL*8 , ALLOCATABLE :: PREC_FOUND(:)
+		INTEGER ML_RET_CODE
+		INTEGER ML_ANS_DIMENSION
+C Prec_found ans ans_ml are saved so that they don't have to be re-allocated everytime
+		SAVE ML_ANS_DIMENSION,ANS_ML,PREC_FOUND
+
 		SAVE IGOOD, JHEL
+
+		LOGICAL INIT_MADLOOP
+		DATA INIT_MADLOOP/.FALSE./
 C  
 C GLOBAL VARIABLES
 C  
@@ -78,6 +86,7 @@ C
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+
 %(define_iconfigs_lines)s
 %(helicity_lines)s
 
@@ -88,6 +97,18 @@ C ----------
 	IF(NLOOPDIAGRAMS.GT.MAXAMPS) THEN
 	   STOP 'MAXAMPS smaller than NLOOPDIAGRAMS in matrix.f'
 	ENDIF
+
+	IF(.NOT.INIT_MADLOOP) THEN
+	  INIT_MADLOOP = .TRUE.
+C So that TIR integrals can be reused accross helicity configuration.
+C Notice that ITR integrals for rotated PS points (i.e. which is part of MadLoop's default stabiliy test procedure), will not work. This is why one should always keep the MadLoop parameter 'NRotations_DP' set to 0.
+	  CALL %(ml_prefix)sSET_AUTOMATIC_TIR_CACHE_CLEARING(.FALSE.)
+      CALL %(ml_prefix)sGET_ANSWER_DIMENSION(ML_ANS_DIMENSION)
+      ALLOCATE(ANS_ML(0:3,0:ML_ANS_DIMENSION))
+	  ALLOCATE(PREC_FOUND(0:ML_ANS_DIMENSION))
+	ENDIF
+C But then we must clear the cache by hand at the beginning of the computation of each new PS point
+	CALL %(ml_prefix)sCLEAR_TIR_CACHE()
 
     NTRY(IMIRROR)=NTRY(IMIRROR)+1
 
@@ -104,30 +125,34 @@ C ----------
 
     ANS = 0D0
 
-    CALL %(ml_prefix)sGET_ANSWER_DIMENSION(ML_ANS_DIMENSION)
-    ALLOCATE(ANS_ML(0:3,0:ML_ANS_DIMENSION))
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
 
-    FORCE_ML_Helicity_Sum = ISUM_HEL.eq.0
+C  Notice that when forcing helicity sum directly in MadLoop then one doesn't have access to the weights of individual Hel. Configs so that they cannot be specified in the event file. We turned this option off by default.
+    FORCE_ML_Helicity_Sum = (ISUM_HEL.eq.0.AND..False.)
     if (FORCE_ML_Helicity_Sum)then
-        do JJ=1,NINCOMING
-	   if (POL(JJ).NE.1d0) FORCE_ML_Helicity_Sum = .false.
-	enddo	       
+C Of course this option can also not be used for polarized beams.
+      do JJ=1,NINCOMING
+	    if (POL(JJ).NE.1d0) FORCE_ML_Helicity_Sum = .false.
+	  enddo	       
     endif	       
 
 
     IF(Force_ML_Helicity_Sum )THEN
-        CALL %(ml_prefix)sSLOOPMATRIX(P,ANS_ML)
-	ANS = ANS_ML(1,0)
+        
+	    CALL %(ml_prefix)sSLOOPMATRIX_THRES(P,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
+		ANS = ANS_ML(1,0)
+
     ELSE
 	IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
       	 DO I=1,NCOMB
          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
-	    CALL %(ml_prefix)sSLOOPMATRIXHEL(P,I,ANS_ML)
-	    T = ANS_ML(1,0)
-            DO JJ=1,nincoming
+	    	
+			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
+			T = ANS_ML(1,0)
+            
+			DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                   T=T*ABS(POL(JJ))
                ELSE IF(POL(JJ).NE.1d0)THEN
@@ -158,9 +183,11 @@ C ----------
             IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
             HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
             I = IGOOD(JHEL(IMIRROR),IMIRROR)
-	    CALL %(ml_prefix)sSLOOPMATRIXHEL(P,I,ANS_ML)
-	    T = ANS_ML(1,0)
-            DO JJ=1,nincoming
+            
+			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
+			T = ANS_ML(1,0)
+            
+			DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                 T=T*ABS(POL(JJ))
               ELSE IF(POL(JJ).NE.1d0)THEN
@@ -213,7 +240,6 @@ c         Set right sign for ANS, based on sign of chosen helicity
       ANS = ANS/ Hel_Average_Factor    			
     ENDIF
 
-	DEALLOCATE(ANS_ML)
 C Amplitude(s) for diagram number %(n_tot_diags)d
 C This last line is a tag do not remove it. 
 	END

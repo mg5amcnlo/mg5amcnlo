@@ -198,10 +198,11 @@ class MadLoopLauncher(ExtLauncher):
                 if nps == None:
                     raise MadGraph5Error,("Could not initialize the process %s"+\
                       " with %s PS points.")%(shell_name,max(attempts))
-                elif nps > min(attempts):
+                elif nps < 0 or nps > min(attempts):
                     logger.warning(("Could not initialize the process %s"+\
-                                   " with %d PS points. It needed %d.")\
-                                      %(shell_name,min(attempts),nps))
+                        " with %d PS points (double precision). It needed %d (%s).")\
+                        %(shell_name,min(attempts),abs(nps),\
+                    'in double precision' if nps>0 else 'in quadruple precision'))
                 # Ask if the user wants to edit the PS point.
                 self.treat_input_file('PS.input', default='n', 
                   msg='Phase-space point for process %s.'%shell_name,\
