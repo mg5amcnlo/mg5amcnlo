@@ -2501,7 +2501,7 @@ Beware that this can be dangerous for local multicore runs.""")
             # off this feature and keep only the check of vanishing helicity which
             # is anyway done directly by MadEvent, so that we can turn the
             # whole feature off here to avoid initialization overhead.
-            self.MadLoopparam.set('HelicityFilterLevel',1, ifnotdefault=False)            
+            self.MadLoopparam.set('HelicityFilterLevel',0, ifnotdefault=False)            
                         
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
             # processes, so that we place OPP last.
