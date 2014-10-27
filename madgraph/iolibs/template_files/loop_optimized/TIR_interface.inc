@@ -72,6 +72,10 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
+c The argument ILIB is the TIR library to be used for that specific library.
+      INTEGER LIBINDEX
+      COMMON/%(proc_prefix)sI_LIB/LIBINDEX
+
 ## if(not AmplitudeReduction){
        %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 ## }else{
@@ -89,11 +93,11 @@ C ----------
 
 C Initialize for the very first time ML is called LAST_ILIB with the first ILIB used.
 IF(LAST_LIB_USED.eq.-1) THEN
-  LAST_LIB_USED = MLREDUCTIONLIB(I_LIB)
+  LAST_LIB_USED = MLREDUCTIONLIB(LIBINDEX)
 ELSE
 C We changed the TIR library so we must refresh the cache.
-  IF(MLREDUCTIONLIB(I_LIB).NE.LAST_LIB_USED) THEN
-    LAST_LIB_USED = MLREDUCTIONLIB(I_LIB)
+  IF(MLREDUCTIONLIB(LIBINDEX).NE.LAST_LIB_USED) THEN
+    LAST_LIB_USED = MLREDUCTIONLIB(LIBINDEX)
 	CALL %(proc_prefix)sCLEAR_TIR_CACHE()
   ENDIF
 ENDIF
