@@ -355,7 +355,8 @@ class FKSRealProcess(object):
                             born_leglist.remove(j)
                             born_leglist.insert(ij.get('number') - 1, ij)
                             born_leglist.sort(pert = self.perturbation)
-                            if [leg['id'] for leg in born_leglist] in born_pdg_list:
+                            if [leg['id'] for leg in born_leglist] in born_pdg_list \
+                               and not j.get('number') in fks_j_from_i[i.get('number')]:
                                 fks_j_from_i[i.get('number')].append(\
                                                         j.get('number'))                                
 

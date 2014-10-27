@@ -4645,10 +4645,6 @@ c type of the leg
                   aj=-1
                endif
                Ej=p(0,i)
-               if (pdg_type(i).eq.22) then
-                   write(*,*) 'NOT IMPLEMENTED'
-                   stop
-               endif
 
                if (ipos_ord.eq.qcd_pos) then
 C                 set colour factors
@@ -4657,11 +4653,18 @@ C                 set colour factors
                   gamma_used = gamma(aj)
                   gammap_used = gammap(aj)
                else if (ipos_ord.eq.qed_pos) then
-                  if (particle_charge(i).eq.0d0) cycle
+C                 skip particles which are not photons or charged
+                  if (particle_charge(i).eq.0d0.and.pdg_type(i).ne.22) cycle
 C                 set charge factors
-                  c_used = particle_charge(i)**2
-                  gamma_used = 3d0/2d0 * particle_charge(i)**2
-                  gammap_used = (13d0/2d0 - 2d0 * pi**2 / 3d0) * particle_charge(i)**2
+                  if (pdg_type(i).eq.22) then
+                    c_used = 0d0
+                    gamma_used = gamma_ph
+                    gammap_used = gammap_ph
+                  else
+                    c_used = particle_charge(i)**2
+                    gamma_used = 3d0/2d0 * particle_charge(i)**2
+                    gammap_used = (13d0/2d0 - 2d0 * pi**2 / 3d0) * particle_charge(i)**2
+                  endif
                endif
 
                if (i.gt.nincoming) then 

@@ -866,6 +866,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for ordd, val in matrix_element.born_me['processes'][0]['born_orders'].items():
             # factor 2 to pass to squared orders
             born_orders[ordd] = 2 * val 
+
+        nlo_orders = {}
+        for ordd, val in matrix_element.born_me['processes'][0]['squared_orders'].items():
+            # no need to multiply by 2 here
+            nlo_orders[ordd] = val
         
         split_orders = \
                 matrix_element.born_me['processes'][0]['split_orders']
@@ -904,20 +909,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                         max_born_orders[o] = v
 
         else:
-            #if there are born_orders keep the split_orders which 
-            # statisfy the constraint
             for o in [oo for oo in split_orders if oo != 'WEIGHTED']:
                 try:
                     max_born_orders[o] = born_orders[o]
                 except KeyError:
                     # if the order is not in born_orders set it to 1000
                     max_born_orders[o] = 1000
-
-        # and update them according to the perturbation couplings
-        for o, v in max_born_orders.items():
-            max_nlo_orders[o] = v
-            if o in pert_orders:
-                max_nlo_orders[o] += 2
+                try:
+                    max_nlo_orders[o] = nlo_orders[o]
+                except KeyError:
+                    # if the order is not in born_orders set it to 1000
+                    max_nlo_orders[o] = 1000
 
         # keep track also of the position of QED, QCD in the order array
         # might be useful in the fortran code

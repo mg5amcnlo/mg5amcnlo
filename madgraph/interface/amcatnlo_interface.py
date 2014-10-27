@@ -463,6 +463,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             myprocdef['squared_orders']['WEIGHTED'] += 2 * \
                     max([myprocdef.get('model').get('order_hierarchy')[ord] for \
                     ord in myprocdef['perturbation_couplings']])
+        # finally set perturbation_couplings to **all** the coupling orders 
+        # avaliable in the model
+        myprocdef['perturbation_couplings'] = list(myprocdef['model']['coupling_orders'])
 
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
