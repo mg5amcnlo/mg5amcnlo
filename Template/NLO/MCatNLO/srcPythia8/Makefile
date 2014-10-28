@@ -63,7 +63,7 @@ endif
 %.o: %.cc
 	$(CXX) -c $< -fPIC $(INCLOPTION) -o $@
 
-Pythia81: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a \
+Pythia8: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a \
 	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8tohepmc.a
 	$(CXX) $(CXXFLAGS) -I$(PYTHIA8LOCATION)/$(INCDIR) \
 	-I$(HEPMCLOCATION)/$(INCDIR) -I$(TOPDIR)/$(INCDIR) \

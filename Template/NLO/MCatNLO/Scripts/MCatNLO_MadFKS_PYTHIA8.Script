@@ -226,11 +226,11 @@ fi
 
 if [ "$PY8UTI" != "" ]
 then
- if [ $PY8VER == "8.1" ]; then cp -rf $thisdir/srcPythia8/Pythia81.cc $thisdir/Pythia81.cc; fi
+ if [ $PY8VER == "8.1" ]; then cp -rf $thisdir/srcPythia8/Pythia8.cc $thisdir/Pythia8.cc; fi
  if [ $PY8VER == "8.2" ]; then cp -rf $thisdir/srcPythia8/Pythia82.cc $thisdir/Pythia82.cc; fi
  cp -rf $thisdir/srcPythia8/Makefile $thisdir/Makefile
 else
- if [ $PY8VER == "8.1" ]; then cp -rf $thisdir/srcPythia8/Pythia81_hep.cc $thisdir/Pythia81.cc; fi
+ if [ $PY8VER == "8.1" ]; then cp -rf $thisdir/srcPythia8/Pythia8_hep.cc $thisdir/Pythia8.cc; fi
  if [ $PY8VER == "8.2" ]; then cp -rf $thisdir/srcPythia8/Pythia82_hep.cc $thisdir/Pythia82.cc; fi
  cp -rf $thisdir/srcPythia8/Makefile_hep $thisdir/Makefile
 fi
@@ -246,11 +246,11 @@ FORFILEMAKE="FORFILE="$PY8UTI
 HEPMCMAKE="HEPMCINCLIB="$HEPMCINCLIB
 LGFORTRANMAKE="LIBGFORTRAN=-lgfortran"
 
-if [ $PY8VER == "8.1" ]; then make Pythia81 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE"; fi
+if [ $PY8VER == "8.1" ]; then make Pythia8 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE"; fi
 if [ $PY8VER == "8.2" ]; then make Pythia82 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$HEPMCMAKE"; fi
 
 cd $thisdir
-if [[ ! -f $thisdir/Pythia81.exe && ! -f $thisdir/Pythia82.exe ]]
+if [[ ! -f $thisdir/Pythia8.exe && ! -f $thisdir/Pythia82.exe ]]
 then
   echo "Pythia8 compilation did not succeed, exiting"
   exit -1
