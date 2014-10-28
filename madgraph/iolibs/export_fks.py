@@ -1471,7 +1471,7 @@ end
 
         replace_dict = {}
         replace_dict['mesq'] = 'CHaveraged'
-        replace_dict['corr'] = ' '.join(matrix_elements.get('processes')[0].\
+        replace_dict['corr'] = ' '.join(matrix_elements[0].get('processes')[0].\
                                                   get('perturbation_couplings'))
         replace_dict['irreg'] = 'CDR'
         replace_dict['aspow'] = QCD
