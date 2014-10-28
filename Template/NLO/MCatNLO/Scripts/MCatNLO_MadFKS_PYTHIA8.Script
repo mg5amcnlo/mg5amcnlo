@@ -250,7 +250,7 @@ if [ $PY8VER == "8.1" ]; then make Pythia8 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORT
 if [ $PY8VER == "8.2" ]; then make Pythia82 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$HEPMCMAKE"; fi
 
 cd $thisdir
-if [[ ! -f $thisdir/Pythia8.exe && ! -f $thisdir/Pythia82.exe ]]
+if [ ! -f $thisdir/Pythia8.exe ]
 then
   echo "Pythia8 compilation did not succeed, exiting"
   exit -1
