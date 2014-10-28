@@ -36,7 +36,7 @@ C
 C LOCAL VARIABLES 
 C  
         INTEGER NHEL(NEXTERNAL,NCOMB)
-		INTEGER I, J ,JJ
+		INTEGER I, II, J ,JJ
         INTEGER NTRY(2)
         INTEGER ISHEL(2)
         REAL*8 R,SUMHEL,TS(NCOMB), T
@@ -70,7 +70,10 @@ C
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
 
-    %(complex_dp_format)s ML_JAMP2(nLoopFlows)
+    CHARACTER*101         HEL_BUFF
+    COMMON/TO_HELICITY/  HEL_BUFF
+
+    %(real_dp_format)s ML_JAMP2(nLoopFlows)
     common/%(ml_prefix)sJAMP2/ML_JAMP2
 
     %(real_dp_format)s ML_AMP2(NLOOPDIAGRAMS)
@@ -124,6 +127,7 @@ C But then we must clear the cache by hand at the beginning of the computation o
 
 
     ANS = 0D0
+    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
 
     DO I=1,NCOMB
        TS(I)=0d0
@@ -198,6 +202,7 @@ C Of course this option can also not be used for polarized beams.
             TS(I)=T*HWGT
         ENDDO
         IF (ISHEL(IMIRROR) .EQ. 1) THEN
+          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
 c         Set right sign for ANS, based on sign of chosen helicity
           ANS=DSIGN(ANS,TS(I))
         ENDIF
@@ -208,6 +213,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
          DO I=1,NCOMB
             SUMHEL=SUMHEL+DABS(TS(I))/ANS
             IF(R.LT.SUMHEL)THEN
+          	   WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
 c         Set right sign for ANS, based on sign of chosen helicity
                ANS=DSIGN(ANS,TS(I))
                GOTO 10

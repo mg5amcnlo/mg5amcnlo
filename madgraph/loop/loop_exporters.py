@@ -2691,13 +2691,6 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         export_v4.ProcessExporterFortranMEGroup.finalize_v4_directory(
                                                               self,*args,**opts)
         
-        if self.proc_characteristic['nexternal'] > 3:
-            misc.sprint("Use more splitting for gen_ximprove")
-            files.cp(pjoin(self.mgme_dir,'madgraph/iolibs/template_files/loop/gen_ximprove_loop_induced.f'),
-                     pjoin(self.dir_path, 'Source/gen_ximprove.f'))
-        else:
-            misc.sprint('Use standard splitting')
-
     def generate_subprocess_directory_v4(self, subproc_group,
                                                     fortran_model,group_number):
         """Generate the Pn directory for a subprocess group in MadEvent,

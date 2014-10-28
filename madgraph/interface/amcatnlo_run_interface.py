@@ -54,24 +54,9 @@ logger = logging.getLogger('madgraph.stdout') # -> stdout
 logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
  
 try:
-    # import from madgraph directory
-    import madgraph.interface.extended_cmd as cmd
-    import madgraph.interface.common_run_interface as common_run
-    import madgraph.iolibs.files as files
-    import madgraph.iolibs.save_load_object as save_load_object
-    import madgraph.various.banner as banner_mod
-    import madgraph.various.cluster as cluster
-    import madgraph.various.misc as misc
-    import madgraph.various.gen_crossxhtml as gen_crossxhtml
-    import madgraph.various.sum_html as sum_html
-    import madgraph.various.shower_card as shower_card
-    import madgraph.various.FO_analyse_card as analyse_card
-
-    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
-    aMCatNLO = False
-except ImportError, error:
-    logger.debug(error)
-    # import from madevent directory
+    import madgraph
+except ImportError: 
+    aMCatNLO = True 
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
     import internal.banner as banner_mod
@@ -83,8 +68,24 @@ except ImportError, error:
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.sum_html as sum_html
     import internal.shower_card as shower_card
-    import internal.FO_analyse_card as analyse_card
-    aMCatNLO = True
+    import internal.FO_analyse_card as analyse_card 
+else:
+    # import from madgraph directory
+    aMCatNLO = False
+    import madgraph.interface.extended_cmd as cmd
+    import madgraph.interface.common_run_interface as common_run
+    import madgraph.iolibs.files as files
+    import madgraph.iolibs.save_load_object as save_load_object
+    import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
+    import madgraph.madevent.sum_html as sum_html
+    import madgraph.various.banner as banner_mod
+    import madgraph.various.cluster as cluster
+    import madgraph.various.misc as misc
+    import madgraph.various.shower_card as shower_card
+    import madgraph.various.FO_analyse_card as analyse_card
+    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
+    
+
 
 class aMCatNLOError(Exception):
     pass

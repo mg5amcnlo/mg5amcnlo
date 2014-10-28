@@ -197,12 +197,15 @@ class Cluster(object):
         raise NotImplemented, 'No implementation of how to control the job status to cluster \'%s\'' % self.name
 
     @check_interupt()
-    def wait(self, me_dir, fct, minimal_job=0):
+    def wait(self, me_dir, fct, minimal_job=0, update_first=None):
         """Wait that all job are finish.
         if minimal_job set, then return if idle + run is lower than that number"""
         
         nb_iter = 0
         change_at = 5 # number of iteration from which we wait longer between update.
+        if update_first:
+            idle, run, finish, fail = self.control(me_dir)
+            fct_first(idle, run, finish)
         while 1: 
             nb_iter += 1
             idle, run, finish, fail = self.control(me_dir)
@@ -211,6 +214,7 @@ class Cluster(object):
             if idle + run == 0:
                 #time.sleep(20) #security to ensure that the file are really written on the disk
                 logger.info('All jobs finished')
+                fct(idle, run, finish)
                 break
             if idle + run < minimal_job:
                 return
@@ -517,7 +521,7 @@ class MultiCore(Cluster):
             
           
 
-    def wait(self, me_dir, update_status):
+    def wait(self, me_dir, update_status, update_first=None):
         """Wait that all thread finish
         self.nb_used and self.done are update via each jobs (thread and local)
         self.submitted is the nb of times that submitted has been call (local)
@@ -537,6 +541,8 @@ class MultiCore(Cluster):
 
         remaining = self.submitted - self.done
 
+        if update_first:
+            update_first(len(self.waiting_submission), self.nb_used, self.done)
         while self.nb_used < self.nb_core:
             if self.waiting_submission:
                 arg = self.waiting_submission.pop(0)

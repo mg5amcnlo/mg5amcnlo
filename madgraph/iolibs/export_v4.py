@@ -2129,16 +2129,11 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
         cp(_file_path+'/various/lhe_parser.py', 
                                 self.dir_path+'/bin/internal/lhe_parser.py')         
-        #cp(_file_path+'/various/gen_crossxhtml.py', 
-        #                        self.dir_path+'/bin/internal/gen_crossxhtml.py')                
+
         cp(_file_path+'/various/banner.py', 
                                    self.dir_path+'/bin/internal/banner.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
-        #cp(_file_path+'/various/sum_html.py', 
-        #                               self.dir_path+'/bin/internal/sum_html.py') 
-        #cp(_file_path+'/various/combine_runs.py', 
-        #                               self.dir_path+'/bin/internal/combine_runs.py')
         
         # logging configuration
         cp(_file_path+'/interface/.mg5_logging.conf', 
@@ -2818,19 +2813,20 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         #model file                        
         cp(_file_path+'../models/check_param_card.py', 
                               self.dir_path+'/bin/internal/check_param_card.py')   
-                
+        
+        #copy all the file present in madevent directory
+        for name in os.listdir(pjoin(_file_path, 'madevent')):
+            if name not in ['__init__.py'] and name.endswith('.py'):
+                cp(_file_path+'/madevent/'+name, self.dir_path+'/bin/internal/')
+        
         #madevent file
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
         cp(_file_path+'/various/lhe_parser.py', 
-                                self.dir_path+'/bin/internal/lhe_parser.py')         
-        cp(_file_path+'/various/gen_crossxhtml.py', 
-                                self.dir_path+'/bin/internal/gen_crossxhtml.py')                
+                                self.dir_path+'/bin/internal/lhe_parser.py')                        
         cp(_file_path+'/various/banner.py', 
                                    self.dir_path+'/bin/internal/banner.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
-        cp(_file_path+'/various/sum_html.py', 
-                                       self.dir_path+'/bin/internal/sum_html.py') 
         cp(_file_path+'/various/combine_runs.py', 
                                        self.dir_path+'/bin/internal/combine_runs.py')
         # logging configuration
