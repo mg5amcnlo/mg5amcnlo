@@ -63,13 +63,19 @@ endif
 %.o: %.cc
 	$(CXX) -c $< -fPIC $(INCLOPTION) -o $@
 
-Pythia8: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a \
+Pythia81: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a \
 	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8tohepmc.a
 	$(CXX) $(CXXFLAGS) -I$(PYTHIA8LOCATION)/$(INCDIR) \
-        -I$(HEPMCLOCATION)/$(INCDIR) -I$(TOPDIR)/$(INCDIR) \
-        $(EXTRAPATHS) $(EXTRALIBS) $(INCLOPTION) $@.cc -o $@.exe $(FORFILE) \
+	-I$(HEPMCLOCATION)/$(INCDIR) -I$(TOPDIR)/$(INCDIR) \
+	$(EXTRAPATHS) $(EXTRALIBS) $(INCLOPTION) $@.cc -o $@.exe $(FORFILE) \
 	-L$(PYTHIA8LOCATION)/$(LIBDIRARCH) -lpythia8 $(LIBLHAPDF) $(LIBGZIP) \
 	-lpythia8tohepmc -L$(HEPMCLOCATION)/$(LIBDIR) -lHepMC -lHepMCfio $(LIBGFORTRAN) \
+
+Pythia82: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIR)/libpythia8.a
+	$(CXX) $(CXXFLAGS) -I$(PYTHIA8LOCATION)/$(INCDIR) \
+	-I$(TOPDIR)/$(INCDIR) $(EXTRAPATHS) $(EXTRALIBS) $(INCLOPTION) $@.cc -o $@.exe $(FORFILE) \
+	-L$(PYTHIA8LOCATION)/$(LIBDIR) -lpythia8 $(LIBGZIP) \
+	-lHepMCfio $(LIBGFORTRAN) \
 
 .PHONY: clean
 clean:

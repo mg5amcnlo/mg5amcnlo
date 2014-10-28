@@ -337,7 +337,7 @@ ERR_NUM_HWPP=${ERR_NUM_HWPP/.*}
 let "ERR_NUM_HWPP += 1"
 
 echo " "
-echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
+echo "*****   Now ready for showering" $NEVENTS "events with $MCMODE "
 echo " "
 runMCMadFKS
 teststatus runMC

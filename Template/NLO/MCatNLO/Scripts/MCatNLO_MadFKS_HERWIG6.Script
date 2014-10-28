@@ -295,7 +295,7 @@ then
   fi
 fi
 echo " "
-echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
+echo "*****   Now ready for showering" $NEVENTS "events with $MCMODE "
 echo " "
 runMCMadFKS
 teststatus runMC
