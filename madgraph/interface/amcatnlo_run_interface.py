@@ -3333,6 +3333,7 @@ Integrated cross-section
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
                      pjoin(cwd, 'initial_states_map.dat'),
+                     pjoin(cwd, 'configs_and_props_info.dat'),
                      pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 

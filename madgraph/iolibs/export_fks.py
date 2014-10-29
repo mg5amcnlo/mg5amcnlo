@@ -474,10 +474,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  matrix_element,
                                  fortran_model)
 
-        filename = 'configs_and_props_info.inc'
-        nconfigs=self.write_configs_and_props_info_file(
-                              writers.FortranWriter(filename), 
+        filename = 'configs_and_props_info.dat'
+        nconfigs,max_leg_number,nfksconfs=self.write_configs_and_props_info_file(
+                              filename, 
                               matrix_element,
+                              fortran_model)
+
+        filename = 'configs_and_props_decl.inc'
+        self.write_configs_and_props_declarations(
+                              writers.FortranWriter(filename), 
+                              nconfigs,max_leg_number,nfksconfs,
                               fortran_model)
         
         filename = 'real_from_born_configs.inc'
@@ -653,6 +659,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 #            check_param_card.convert_to_mg5card(param_card, mg5_param)
 #            check_param_card.check_valid_param_card(mg5_param)
 
+#        # write the model functions get_mass/width_from_id
+        filename = os.path.join(self.dir_path,'Source','MODEL','get_mass_width_fcts.f')
+        makeinc = os.path.join(self.dir_path,'Source','MODEL','makeinc.inc')
+        self.write_get_mass_width_file(writers.FortranWriter(filename), makeinc, self.model)
 
 #        # Write maxconfigs.inc based on max of ME's/subprocess groups
         filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
@@ -826,8 +836,83 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         writer.writelines(lines2+lines)
 
 
+    #===============================================================================
+    # write_get_mass_width_file
+    #===============================================================================
+    #test written
+    def write_get_mass_width_file(self, writer, makeinc, model):
+        """Write the get_mass_width_file.f file for MG4.
+        Also update the makeinc.inc file
+        """
+        mass_particles = [p for p in model['particles'] if p['mass'].lower() != 'zero'] 
+        width_particles = [p for p in model['particles'] if p['width'].lower() != 'zero'] 
+        
+        iflines_mass = ''
+        iflines_width = ''
 
-    def write_configs_and_props_info_file(self, writer, matrix_element, fortran_model):
+        for i, part in enumerate(mass_particles):
+            if i == 0:
+                ifstring = 'if'
+            else:
+                ifstring = 'else if'
+            if part['self_antipart']:
+                iflines_mass += '%s (id.eq.%d) then\n' % \
+                        (ifstring, part.get_pdg_code())
+            else:
+                iflines_mass += '%s (id.eq.%d.or.id.eq.%d) then\n' % \
+                        (ifstring, part.get_pdg_code(), part.get_anti_pdg_code())
+            iflines_mass += 'get_mass_from_id=abs(%s)\n' % part.get('mass')
+
+        for i, part in enumerate(width_particles):
+            if i == 0:
+                ifstring = 'if'
+            else:
+                ifstring = 'else if'
+            if part['self_antipart']:
+                iflines_width += '%s (id.eq.%d) then\n' % \
+                        (ifstring, part.get_pdg_code())
+            else:
+                iflines_width += '%s (id.eq.%d.or.id.eq.%d) then\n' % \
+                        (ifstring, part.get_pdg_code(), part.get_anti_pdg_code())
+            iflines_width += 'get_width_from_id=abs(%s)\n' % part.get('width')
+
+        replace_dict = {'iflines_mass' : iflines_mass,
+                        'iflines_width' : iflines_width}
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/get_mass_width_fcts.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+
+        # update the makeinc
+        makeinc_content = open(makeinc).read()
+        makeinc_content = makeinc_content.replace('MODEL = ', 'MODEL = get_mass_width_fcts.o ')
+        open(makeinc, 'w').write(makeinc_content)
+
+        return 
+
+
+    def write_configs_and_props_declarations(self, writer, max_iconfig, max_leg_number, nfksconfs, fortran_model):
+        """writes the declarations for the variables relevant for configs_and_props
+        """
+        lines = []
+        lines.append("integer ifr,lmaxconfigs_used,max_branch_used")
+        lines.append("parameter (lmaxconfigs_used=%4d)" % max_iconfig)
+        lines.append("parameter (max_branch_used =%4d)" % -max_leg_number)
+        lines.append("integer mapconfig_d(%3d,0:lmaxconfigs_used)" % nfksconfs)
+        lines.append("integer iforest_d(%3d,2,-max_branch_used:-1,lmaxconfigs_used)" % nfksconfs)
+        lines.append("integer sprop_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nfksconfs)
+        lines.append("integer tprid_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nfksconfs)
+        lines.append("double precision pmass_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nfksconfs)
+        lines.append("double precision pwidth_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nfksconfs)
+        lines.append("integer pow_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nfksconfs)
+
+        writer.writelines(lines)
+
+
+    def write_configs_and_props_info_file(self, filename, matrix_element, fortran_model):
         """writes the configs_and_props_info.inc file that cointains
         all the (real-emission) configurations (IFOREST) as well as
         the masses and widths of intermediate particles"""
@@ -835,15 +920,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         lines2 = []
         nconfs = len(matrix_element.get_fks_info_list())
         (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
-
-        lines.append("integer ifr,lmaxconfigs_used,max_branch_used")
-        lines.append("integer mapconfig_d(%3d,0:lmaxconfigs_used)" % nconfs)
-        lines.append("integer iforest_d(%3d,2,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
-        lines.append("integer sprop_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
-        lines.append("integer tprid_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
-        lines.append("double precision pmass_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
-        lines.append("double precision pwidth_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
-        lines.append("integer pow_d(%3d,-max_branch_used:-1,lmaxconfigs_used)" % nconfs)
 
         max_iconfig=0
         max_leg_number=0
@@ -872,7 +948,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 lines.append("# Diagram %d for nFKSprocess %d" % \
                                  (helas_diag.get('number'),iFKS))
                 # Correspondance between the config and the amplitudes
-                lines.append("data mapconfig_d(%3d,%4d)/%4d/" % (iFKS,iconfig,
+                lines.append("C   %4d   %4d   %4d " % (iFKS,iconfig,
                                                            helas_diag.get('number')))
     
                 # Need to reorganize the topology so that we start with all
@@ -891,15 +967,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 for vert in allchannels:
                     daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
                     last_leg = vert.get('legs')[-1]
-                    lines.append("data (iforest_d(%3d, ifr,%3d,%4d),ifr=1,%d)/%s/" % \
-                                     (iFKS,last_leg.get('number'), iconfig, len(daughters),
-                                      ",".join(["%3d" % d for d in daughters])))
+                    lines.append("F   %4d   %4d   %4d   %4d" % \
+                                     (iFKS,last_leg.get('number'), iconfig, len(daughters)))
+                    for d in daughters:
+                        lines.append("D   %4d" % d)
                     if vert in schannels:
-                        lines.append("data sprop_d(%3d,%4d,%4d)/%8d/" % \
+                        lines.append("S   %4d   %4d   %4d   %10d" % \
                                          (iFKS,last_leg.get('number'), iconfig,
                                           last_leg.get('id')))
                     elif vert in tchannels[:-1]:
-                        lines.append("data tprid_d(%3d,%4d,%4d)/%8d/" % \
+                        lines.append("T   %4d   %4d   %4d   %10d" % \
                                          (iFKS,last_leg.get('number'), iconfig,
                                           abs(last_leg.get('id'))))
 
@@ -909,7 +986,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     
             # Write out number of configs
             lines.append("# Number of configs for nFKSprocess %d" % iFKS)
-            lines.append("data mapconfig_d(%3d,0)/%4d/" % (iFKS,iconfig))
+            lines.append("C   %4d   %4d   %4d" % (iFKS,0,iconfig))
             
             # write the props.inc information
             lines2.append("# ")
@@ -921,43 +998,21 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                     leg = vertex.get('legs')[-1]
                     if leg.get('id') == 21 and 21 not in particle_dict:
                         # Fake propagator used in multiparticle vertices
-                        mass = 'zero'
-                        width = 'zero'
                         pow_part = 0
                     else:
                         particle = particle_dict[leg.get('id')]
-                    # Get mass
-                        if particle.get('mass').lower() == 'zero':
-                            mass = particle.get('mass')
-                        else:
-                            mass = "abs(%s)" % particle.get('mass')
-                    # Get width
-                        if particle.get('width').lower() == 'zero':
-                            width = particle.get('width')
-                        else:
-                            width = "abs(%s)" % particle.get('width')
     
                         pow_part = 1 + int(particle.is_boson())
     
-                    lines2.append("pmass_d (%3d,%3d,%4d) = %s " % \
-                                     (iFKS,leg.get('number'), iconf + 1, mass))
-                    lines2.append("pwidth_d(%3d,%3d,%4d) = %s " % \
-                                     (iFKS,leg.get('number'), iconf + 1, width))
-                    lines2.append("pow_d   (%3d,%3d,%4d) = %d " % \
+                    lines2.append("M   %4d   %4d   %4d   %10d " % \
+                                     (iFKS,leg.get('number'), iconf + 1, leg.get('id')))
+                    lines2.append("P   %4d   %4d   %4d   %4d " % \
                                      (iFKS,leg.get('number'), iconf + 1, pow_part))
-
-
-
     
-        lines.append("# ")
-        # insert the declaration of the sizes arrays at the beginning of the file
-        lines.insert(1,"parameter (lmaxconfigs_used=%4d)" % max_iconfig)
-        lines.insert(2,"parameter (max_branch_used =%4d)" % -max_leg_number)
-
         # Write the file
-        writer.writelines(lines+lines2)
+        open(filename,'w').write('\n'.join(lines+lines2))
 
-        return max_iconfig
+        return max_iconfig, max_leg_number, nconfs
 
 
 
