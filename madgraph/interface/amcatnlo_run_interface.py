@@ -2322,7 +2322,7 @@ Integrated cross-section
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
-        logger.info('Prepairing MCatNLO run')
+        logger.info('Preparing MCatNLO run')
         try:     
             misc.gunzip(evt_file)
         except Exception:
@@ -2464,8 +2464,11 @@ Integrated cross-section
         # special treatment for pythia8
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
-            files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
-            files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
+            if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+                files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
+                files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
+            else:
+                files.ln(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -3276,7 +3279,10 @@ Integrated cross-section
                 input_files.append(pjoin(cwd, 'Pythia8.exe'))
                 input_files.append(pjoin(cwd, 'Pythia8.cmd'))
                 input_files.append(pjoin(cwd, 'config.sh'))
-                input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
+                if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+                    input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
+                else:
+                    input_files.append(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'))
             else:
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
