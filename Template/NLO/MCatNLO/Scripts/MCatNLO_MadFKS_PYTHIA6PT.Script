@@ -92,7 +92,6 @@ FREEZE|freeze) PDFGROUP=LHAPDF ;;
 EXTRAPOLATE|extrapolate) PDFGROUP=LHAEXT ;;
 *) echo "no such option; failure in linklhapdf" ; exit 1 ;;
 esac
-source ../Source/fj_lhapdf_opts
 }    
 
 # creates the executable for NLO and MC; the entry of the function
