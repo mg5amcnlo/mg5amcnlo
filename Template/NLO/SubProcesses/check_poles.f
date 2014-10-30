@@ -78,7 +78,7 @@ c     Set the energy to be characteristic of the run
       do i=1,nexternal
         totmass = totmass + pmass(i)
       enddo
-      energy = max((ebeam(1)+ebeam(2))/2.0d0,2.0d0*totmass)
+      energy = max((ebeam(1)+ebeam(2))/20.0d0,2.0d0*totmass)
 c     Set the renormalization scale to be of the order of sqrt(s) but
 c     not equal to it so as to be sensitive to all logs in the check.
       ren_scale = energy/2.0d0
