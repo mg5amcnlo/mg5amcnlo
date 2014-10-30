@@ -2,6 +2,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.2.2(XX/XX/XX) RF: Fix bug #1377187
 		RF: For NLO running: added 'strip' to the makefiles to reduce executable sizes (removes symbol info)
+		Stefano Carrazza (by RF): fix for the photon PDF for the internal NNPDF sets
+
 
 2.2.1(25/09/14) OM: Fix a bug preventing the generation of events at LO due to a wrong treatment of 
                       the color-flow.
