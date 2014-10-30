@@ -3244,6 +3244,7 @@ Integrated cross-section
             if os.path.exists(pdfinput):
                 input_files.append(pdfinput)
             input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
+            input_files.append(pjoin(cwd, os.path.pardir, 'leshouche_info.dat'))
             input_files.append(args[0])
             output_files.append('%s.rwgt' % os.path.basename(args[0]))
             output_files.append('reweight_xsec_events.output')
