@@ -361,7 +361,9 @@ Beams:LHEF = events.lhe            ! Input LHE file
 EOF
 if [ $UsedPdfLib = "LHAPDF" ]
 then
-cat <<EOF >> $ifile
+ if [ $PY8VER == "8.1" ]
+ then
+  cat <<EOF >> $ifile
 PDF:useLHAPDF = on                 ! Use of LHAPDF
 PDF:LHAPDFSET = $PDFSETN           ! PDF set
 EOF
@@ -379,14 +381,43 @@ EOF
   echo "Unknown PDFGROUP " $PDFGROUP
   exit 1
   fi
-else
-  if [ $PY8VER == "8.1" ]
+ else
+  if [ -f $PYTHIA8LOCATION/lib/libpythia8lhapdf5.so ]
   then
   cat <<EOF >> $ifile
-PDF:useLHAPDF = off                ! Use of LHAPDF
-PDF:pSet = 7                       ! CTEQ6L
+PDF:pSet = LHAPDF5:$PDFSETN
+EOF
+   if [ $PDFGROUP = "LHAPDF" ]
+   then
+   cat <<EOF >> $ifile
+PDF:extrapolate = off        ! extrapolate PDF set outside the boundaries
+EOF
+   elif [ $PDFGROUP = "LHAEXT" ]
+   then
+   cat <<EOF >> $ifile
+PDF:extrapolate = on         ! extrapolate PDF set outside the boundaries
+EOF
+   else
+   echo "Unknown PDFGROUP " $PDFGROUP
+   exit 1
+   fi
+  elif [ -f $PYTHIA8LOCATION/lib/libpythia8lhapdf6.so ]
+  then
+  cat <<EOF >> $ifile
+PDF:pSet = LHAPDF6:$PDFSETN
 EOF
   fi
+ fi
+else
+ if [ $PY8VER == "8.1" ]
+ then
+ cat <<EOF >> $ifile
+PDF:useLHAPDF = off                ! Use of LHAPDF
+EOF
+ fi
+ cat <<EOF >> $ifile
+PDF:pSet = 7                       ! CTEQ6L
+EOF
 fi
 
 if ((`bc <<< "$LAMBDAPYTH >= 0.0"`))
