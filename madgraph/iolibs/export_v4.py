@@ -4914,7 +4914,7 @@ class UFO_model_to_mg4(object):
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
         if ('aEWM1',) in self.model['parameters']:
             if dp:
-                fsock.writelines(""" gal(1) = 3.5449077018110318 / DSQRT(aEWM1)
+                fsock.writelines(""" gal(1) = 3.5449077018110318d0 / DSQRT(aEWM1)
                                  gal(2) = 1d0
                          """)
             elif mp:
