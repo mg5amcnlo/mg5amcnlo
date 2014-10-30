@@ -57,7 +57,7 @@
 #!  Defines the path to the main pythia8 directory (i.e. that containing
 #!  the pythia8 configure script) .
 #!  If using a relative path, that starts from the mg5 directory
-pythia8_path =/Users/paolotorrielli/WORK/Research/Programs/Pythia8/Pythia-8.201
+# pythia8_path =
 
 #! Herwig++ paths
 #!  specify here the paths also to HepMC ant ThePEG
