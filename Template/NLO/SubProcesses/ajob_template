@@ -91,6 +91,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
 
     link1up FKS_params.dat
     link1up configs_and_props_info.dat
+    link1up leshouche_info.dat
 #   Not necessary anymore
 #    link1up MadLoop5_resources
     link1up OLE_order.olc

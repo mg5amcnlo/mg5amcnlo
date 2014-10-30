@@ -469,19 +469,23 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  matrix_element, 
                                  fortran_model)
 
-        filename = 'leshouche_info.inc'
-        self.write_leshouche_info_file(writers.FortranWriter(filename), 
-                                 matrix_element,
-                                 fortran_model)
+        filename = 'leshouche_info.dat'
+        nfksconfs,maxproc,maxflow,nexternal=\
+                self.write_leshouche_info_file(filename,matrix_element)
+
+        filename = 'leshouche_decl.inc'
+        self.write_leshouche_info_declarations(
+                              writers.FortranWriter(filename), 
+                              nfksconfs,maxproc,maxflow,nexternal,
+                              fortran_model)
 
         filename = 'configs_and_props_info.dat'
         nconfigs,max_leg_number,nfksconfs=self.write_configs_and_props_info_file(
                               filename, 
-                              matrix_element,
-                              fortran_model)
+                              matrix_element)
 
         filename = 'configs_and_props_decl.inc'
-        self.write_configs_and_props_declarations(
+        self.write_configs_and_props_info_declarations(
                               writers.FortranWriter(filename), 
                               nconfigs,max_leg_number,nfksconfs,
                               fortran_model)
@@ -625,7 +629,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../Source', log=False)
-        ln('leshouche_info.inc', '../../Source', log=False)
+        ln('leshouche_decl.inc', '../../Source', log=False)
 
 
         # Return to SubProcesses dir
@@ -894,7 +898,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         return 
 
 
-    def write_configs_and_props_declarations(self, writer, max_iconfig, max_leg_number, nfksconfs, fortran_model):
+    def write_configs_and_props_info_declarations(self, writer, max_iconfig, max_leg_number, nfksconfs, fortran_model):
         """writes the declarations for the variables relevant for configs_and_props
         """
         lines = []
@@ -912,11 +916,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         writer.writelines(lines)
 
 
-    def write_configs_and_props_info_file(self, filename, matrix_element, fortran_model):
+    def write_configs_and_props_info_file(self, filename, matrix_element):
         """writes the configs_and_props_info.inc file that cointains
         all the (real-emission) configurations (IFOREST) as well as
         the masses and widths of intermediate particles"""
         lines = []
+        lines.append("# C -> MAPCONFIG_D") 
+        lines.append("# F/D -> IFOREST_D") 
+        lines.append("# S -> SPROP_D") 
+        lines.append("# T -> TPRID_D") 
+        lines.append("# M -> PMASS_D/PWIDTH_D") 
+        lines.append("# P -> POW_D") 
         lines2 = []
         nconfs = len(matrix_element.get_fks_info_list())
         (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
@@ -1015,19 +1025,31 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         return max_iconfig, max_leg_number, nconfs
 
 
-
-    def write_leshouche_info_file(self, writer, matrix_element, fortran_model):
-        """writes the leshouche_info.inc file which contains the LHA informations
-        for all the real emission processes"""
+    def write_leshouche_info_declarations(self, writer, nfksconfs, 
+                                  maxproc, maxflow, nexternal, fortran_model):
+        """writes the declarations for the variables relevant for leshouche_info
+        """
         lines = []
-        nconfs = len(matrix_element.get_fks_info_list())
-        (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
+        lines.append('integer maxproc_used, maxflow_used')
+        lines.append('parameter (maxproc_used = %d)' % maxproc)
+        lines.append('parameter (maxflow_used = %d)' % maxflow)
+        lines.append('integer idup_d(%d,%d,maxproc_used)' % (nfksconfs, nexternal))
+        lines.append('integer mothup_d(%d,%d,%d,maxproc_used)' % (nfksconfs, 2, nexternal))
+        lines.append('integer icolup_d(%d,%d,%d,maxflow_used)' % (nfksconfs, 2, nexternal))
 
-        lines.append('integer idup_d(%d,%d,maxproc_used)' % (nconfs, nexternal))
-        lines.append('integer mothup_d(%d,%d,%d,maxproc_used)' % (nconfs, 2, nexternal))
-        lines.append('integer icolup_d(%d,%d,%d,maxflow_used)' % (nconfs, 2, nexternal))
-        lines.append('integer ilh')
-        lines.append('')
+        writer.writelines(lines)
+
+
+    def write_leshouche_info_file(self, filename, matrix_element):
+        """writes the leshouche_info.inc file which contains 
+        the LHA informations for all the real emission processes
+        """
+        lines = []
+        lines.append("# I -> IDUP_D")
+        lines.append("# M -> MOTHUP_D")
+        lines.append("# C -> ICOLUP_D")
+        nfksconfs = len(matrix_element.get_fks_info_list())
+        (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
 
         maxproc = 0
         maxflow = 0
@@ -1039,10 +1061,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             maxproc = max(maxproc, nprocs)
             maxflow = max(maxflow, nflows)
 
-        firstlines = ['integer maxproc_used, maxflow_used',
-                      'parameter (maxproc_used = %d)' % maxproc,
-                      'parameter (maxflow_used = %d)' % maxflow ]
-        writer.writelines(firstlines + lines)
+        # Write the file
+        open(filename,'w').write('\n'.join(lines))
+
+        return nfksconfs, maxproc, maxflow, nexternal
 
 
     def write_pdf_wrapper(self, writer, matrix_element, fortran_model):
@@ -2419,14 +2441,14 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         lines = []
         for iproc, proc in enumerate(matrix_element.get('processes')):
             legs = proc.get_legs_with_decays()
-            lines.append("DATA (IDUP_D(%d,ilh,%d),ilh=1,%d)/%s/" % \
-                         (ime, iproc + 1, nexternal,
-                          ",".join([str(l.get('id')) for l in legs])))
+            lines.append("I   %4d   %4d       %s" % \
+                         (ime, iproc + 1,
+                          " ".join([str(l.get('id')) for l in legs])))
             for i in [1, 2]:
-                lines.append("DATA (MOTHUP_D(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
-                         (ime, i, iproc + 1, nexternal,
-                          ",".join([ "%3r" % 0 ] * ninitial + \
-                                   [ "%3r" % i ] * (nexternal - ninitial))))
+                lines.append("M   %4d   %4d   %4d      %s" % \
+                         (ime, i, iproc + 1,
+                          " ".join([ "%3d" % 0 ] * ninitial + \
+                                   [ "%3d" % i ] * (nexternal - ninitial))))
     
             # Here goes the color connections corresponding to the JAMPs
             # Only one output, for the first subproc!
@@ -2434,9 +2456,9 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 # If no color basis, just output trivial color flow
                 if not matrix_element.get('color_basis'):
                     for i in [1, 2]:
-                        lines.append("DATA (ICOLUP_D(%d,%d,ilh,  1),ilh=1,%2r)/%s/" % \
-                                 (ime, i, nexternal,
-                                  ",".join([ "%3r" % 0 ] * nexternal)))
+                        lines.append("C   %4d   %4d   1      %s" % \
+                                 (ime, i, 
+                                  " ".join([ "%3d" % 0 ] * nexternal)))
                     color_flow_list = []
                     nflow = 1
     
@@ -2454,15 +2476,14 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                     # And output them properly
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
                         for i in [0, 1]:
-                            lines.append("DATA (ICOLUP_D(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
-                                 (ime, i + 1, cf_i + 1, nexternal,
-                                  ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
+                            lines.append("C   %4d   %4d   %4d      %s" % \
+                                 (ime, i + 1, cf_i + 1,
+                                  " ".join(["%3d" % color_flow_dict[l.get('number')][i] \
                                             for l in legs])))
 
                     nflow = len(color_flow_list)
 
         nproc = len(matrix_element.get('processes'))
-        lines.append('')
     
         return lines, nproc, nflow
 

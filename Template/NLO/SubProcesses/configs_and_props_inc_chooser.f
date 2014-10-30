@@ -95,12 +95,17 @@ C read the various information from the configs_and_props_info.dat file
         if (buff(:1).eq.'#') cycle
         if (buff(:1).eq.'C') then
         ! mapconfig
+        ! C  i   j   k -> MAPCONFIG_D(i,j)=k
           read(buff(2:),*) i,j,k
           mapconfig_d(i,j) = k
         else if (buff(:1).eq.'F') then
         ! iforest
         ! after the first line there are as many lines
         ! as the daughters
+        ! F  i   j   k  ndau
+        ! D dau_1
+        ! D ...
+        ! D dau_ndau        -> IFORREST_D(i,idau,i,k)=dau_idau
           read(buff(2:),*) i,j,k,ndau
           do idau=1,ndau
             read(78,'(a)') buff
@@ -114,19 +119,24 @@ C read the various information from the configs_and_props_info.dat file
           enddo
         else if (buff(:1).eq.'S') then
         ! sprop
+        ! S  i   j   k  id -> SPROP_D(i,j,k)=id
           read(buff(2:),*) i,j,k,id
           sprop_d(i,j,k) = id
-        else if (buff(:1).eq.'S') then
+        else if (buff(:1).eq.'T') then
         ! tprid
+        ! T  i   j   k  id -> TPRID_D(i,j,k)=id
           read(buff(2:),*) i,j,k,id
           tprid_d(i,j,k) = id
         else if (buff(:1).eq.'M') then
         ! pmass and pwidth
           read(buff(2:),*) i,j,k,id
+        ! M  i   j   k  id -> gives id of particle of which 
+        ! the mass/width is stored in PMASS/WIDTH_D(i,j,k)
           pmass_d(i,j,k) = get_mass_from_id(id)
           pwidth_d(i,j,k) = get_width_from_id(id)
         else if (buff(:1).eq.'P') then
         ! pow
+        ! P  i   j   k  id -> POW_D(i,j,k)=id
           read(buff(2:),*) i,j,k,id
           pow_d(i,j,k) = id
         endif
