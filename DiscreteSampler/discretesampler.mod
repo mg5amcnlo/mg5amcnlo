@@ -1,0 +1,375 @@
+GFORTRAN module version '10' created from DiscreteSampler.f
+MD5:b3b3198d4f6063f8f445fa07b9891832 -- If you edit this, you'll get what you deserve.
+
+(() () () () () () () () () () () () (2) () () () () () () () () () ()
+() () (3 4) ())
+
+()
+
+(('bin' 'discretesampler' 5) ('binid' 'discretesampler' 6) ('ds_add_bin'
+'discretesampler' 7 8 9) ('ds_add_entry' 'discretesampler' 10 11) (
+'ds_get_bin' 'discretesampler' 12 13) ('ds_print_global_info'
+'discretesampler' 14 15 16) ('ds_remove_bin' 'discretesampler' 17 18) (
+'sampleddimension' 'discretesampler' 19) ('tostr' 'stringcast' 20 21 22
+23 24))
+
+()
+
+()
+
+()
+
+(5 'Bin' 'discretesampler' '' 1 ((DERIVED UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN 0 0) (UNKNOWN 0 0 0 0 UNKNOWN ()) 0 0 () () 0 ((25
+'weight' (REAL 8 0 0 0 REAL ()) () (UNKNOWN-FL UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN UNKNOWN 0 0) UNKNOWN-ACCESS ()) (26 'n_entries' (
+INTEGER 4 0 0 0 INTEGER ()) () (UNKNOWN-FL UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN 0 0) UNKNOWN-ACCESS ()) (27 'bid' (DERIVED 6 0 0 0
+DERIVED ()) () (UNKNOWN-FL UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN 0
+0) UNKNOWN-ACCESS ())) PUBLIC (() () () ()) () 0 0 57511063)
+6 'Binid' 'discretesampler' '' 1 ((DERIVED UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN 0 0) (UNKNOWN 0 0 0 0 UNKNOWN ()) 0 0 () () 0 ((28 'id'
+(INTEGER 4 0 0 0 INTEGER ()) () (UNKNOWN-FL UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN 0 0) UNKNOWN-ACCESS ())) PUBLIC (() () () ()) () 0 0
+47921234)
+19 'Sampleddimension' 'discretesampler' '' 1 ((DERIVED UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 ALLOC_COMP) (UNKNOWN 0 0 0 0 UNKNOWN ())
+0 0 () () 0 ((29 'bins' (DERIVED 5 0 0 0 DERIVED ()) (1 0 DEFERRED () ())
+(UNKNOWN-FL UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 ALLOCATABLE
+DIMENSION) UNKNOWN-ACCESS ()) (30 'norm' (REAL 8 0 0 0 REAL ()) () (
+UNKNOWN-FL UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0)
+UNKNOWN-ACCESS ()) (31 'n_tot_entries' (INTEGER 4 0 0 0 INTEGER ()) () (
+UNKNOWN-FL UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0)
+UNKNOWN-ACCESS ()) (32 'dimension_name' (CHARACTER 1 0 0 0 CHARACTER ((
+CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '1'))) (1 0 DEFERRED () ()) (
+UNKNOWN-FL UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 ALLOCATABLE
+DIMENSION) UNKNOWN-ACCESS ())) PUBLIC (() () () ()) () 0 0 35334268)
+33 'bin' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT UNKNOWN-PROC
+DECL UNKNOWN 0 0 FUNCTION GENERIC) (REAL 4 0 0 0 REAL ()) 0 0 () () 0 ()
+() () 0 0)
+34 'binid' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+UNKNOWN-PROC DECL UNKNOWN 0 0 FUNCTION GENERIC) (REAL 4 0 0 0 REAL ()) 0
+0 () () 0 () () () 0 0)
+4 'binid_from_binid' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE ELEMENTAL PURE ALWAYS_EXPLICIT)
+(UNKNOWN 0 0 0 0 UNKNOWN ()) 35 0 (36 37) () 0 () () () 0 0)
+3 'binid_from_integer' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE ELEMENTAL PURE ALWAYS_EXPLICIT)
+(UNKNOWN 0 0 0 0 UNKNOWN ()) 38 0 (39 40) () 0 () () () 0 0)
+41 'discretesampler' 'discretesampler' '' 1 ((MODULE UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN UNKNOWN 0 0) (UNKNOWN 0 0 0 0 UNKNOWN ()) 0 0 () ()
+0 () () () 0 0)
+42 'ds_add_bin_to_bins' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE ALWAYS_EXPLICIT)
+(UNKNOWN 0 0 0 0 UNKNOWN ()) 43 0 (44 45) () 0 () () () 0 0)
+9 'ds_add_bin_with_binid' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 46 0 (47 48) () 0 () () () 0 0)
+8 'ds_add_bin_with_integerid' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 49 0 (50 51) () 0 () () () 0 0)
+7 'ds_add_bin_with_void' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 52 0 (53) () 0 () () () 0 0)
+54 'ds_add_dimension_to_grid' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE ALWAYS_EXPLICIT)
+(UNKNOWN 0 0 0 0 UNKNOWN ()) 55 0 (56 57 58) () 0 () () () 0 0)
+11 'ds_add_entry_with_binid' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 59 0 (60 61 62) () 0 () () () 0 0)
+10 'ds_add_entry_with_binintid' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 63 0 (64 65 66) () 0 () () () 0 0)
+67 'ds_bin_index' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION ALWAYS_EXPLICIT) (INTEGER 4 0 0 0
+INTEGER ()) 68 0 (69 70) () 67 () () () 0 0)
+71 'ds_binid' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION IMPLICIT_PURE) (DERIVED 6 0 0 0
+DERIVED ()) 72 0 (73) () 71 () () () 0 0)
+74 'ds_clear' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0 UNKNOWN ()) 0
+0 () () 0 () () () 0 0)
+75 'ds_dim_index' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION ALWAYS_EXPLICIT) (INTEGER 4 0 0 0
+INTEGER ()) 76 0 (77 78) () 75 () () () 0 0)
+13 'ds_get_bin_from_binid' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 FUNCTION ALWAYS_EXPLICIT) (
+DERIVED 5 0 0 0 DERIVED ()) 79 0 (80 81) () 13 () () () 0 0)
+12 'ds_get_bin_from_binid_and_dimname' 'discretesampler' '' 1 ((
+PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 FUNCTION
+ALWAYS_EXPLICIT) (DERIVED 5 0 0 0 DERIVED ()) 82 0 (83 84 85) () 12 () ()
+() 0 0)
+86 'ds_get_dimension' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION ALWAYS_EXPLICIT) (DERIVED 19 0 0 0
+DERIVED ()) 87 0 (88 89) () 86 () () () 0 0)
+90 'ds_initialize_bin' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE IMPLICIT_PURE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 91 0 (92) () 0 () () () 0 0)
+93 'ds_initialize_dimension' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 94 0 (95) () 0 () () () 0 0)
+96 'ds_logger' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0 UNKNOWN ()) 97
+0 (98) () 0 () () () 0 0)
+15 'ds_print_dim_global_info_from_index' 'discretesampler' '' 1 ((
+PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (
+UNKNOWN 0 0 0 0 UNKNOWN ()) 99 0 (100) () 0 () () () 0 0)
+16 'ds_print_dim_global_info_from_name' 'discretesampler' '' 1 ((
+PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (
+UNKNOWN 0 0 0 0 UNKNOWN ()) 101 0 (102) () 0 () () () 0 0)
+14 'ds_print_dim_global_info_from_void' 'discretesampler' '' 1 ((
+PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (
+UNKNOWN 0 0 0 0 UNKNOWN ()) 0 0 () () 0 () () () 0 0)
+103 'ds_print_dim_info' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 104 0 (105) () 0 () () () 0 0)
+106 'ds_register_dimension' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 107 0 (108 109) () 0 () () () 0 0)
+110 'ds_reinitialize_bin' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE IMPLICIT_PURE) (
+UNKNOWN 0 0 0 0 UNKNOWN ()) 111 0 (112) () 0 () () () 0 0)
+113 'ds_reinitialize_dimension' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 114 0 (115) () 0 () () () 0 0)
+116 'ds_remove_bin_from_bins' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE IMPLICIT_PURE
+ALWAYS_EXPLICIT) (UNKNOWN 0 0 0 0 UNKNOWN ()) 117 0 (118 119) () 0 () ()
+() 0 0)
+17 'ds_remove_bin_withbinid' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 120 0 (121 122) () 0 () () () 0 0)
+123 'ds_remove_bin_withindex' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 124 0 (125 126) () 0 () () () 0 0)
+18 'ds_remove_bin_withintegerid' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 127 0 (128 129) () 0 () () () 0 0)
+130 'ds_remove_dimension' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 0
+UNKNOWN ()) 131 0 (132) () 0 () () () 0 0)
+133 'ds_remove_dimension_from_grid' 'discretesampler' '' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE IMPLICIT_PURE
+ALWAYS_EXPLICIT) (UNKNOWN 0 0 0 0 UNKNOWN ()) 134 0 (135 136) () 0 () ()
+() 0 0)
+137 'ds_tostr' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION) (CHARACTER 1 0 0 0 CHARACTER ((
+CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '100'))) 138 0 (139) () 137 () ()
+() 0 0)
+140 'ds_verbose' 'discretesampler' '' 1 ((PARAMETER UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0) (LOGICAL 4 0 0 0 LOGICAL ()) 0 0
+() (CONSTANT (LOGICAL 4 0 0 0 LOGICAL ()) 0 0) () 0 () () () 0 0)
+2 'equal_binid' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION IMPLICIT_PURE) (LOGICAL 4 0 0 0
+LOGICAL ()) 141 0 (142 143) () 2 () () () 0 0)
+144 'get_width' 'stringcast' '' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL UNKNOWN 0 0 FUNCTION IMPLICIT_PURE) (CHARACTER 1 0 0 0 CHARACTER (
+(CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '300'))) 0 0 () () 144 () () ()
+0 0)
+145 'max_length' 'stringcast' '' 1 ((PARAMETER UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0) (INTEGER 4 0 0 0 INTEGER ()) 0 0
+() (CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '300') () 0 () () () 0 0)
+146 'ref_grid' 'discretesampler' '' 1 ((VARIABLE UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0 ALLOCATABLE DIMENSION) (DERIVED
+19 0 0 0 DERIVED ()) 0 0 () (1 0 DEFERRED () ()) 0 () () () 0 0)
+147 'running_grid' 'discretesampler' '' 1 ((VARIABLE UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0 ALLOCATABLE DIMENSION) (DERIVED
+19 0 0 0 DERIVED ()) 0 0 () (1 0 DEFERRED () ()) 0 () () () 0 0)
+148 'sampleddimension' 'discretesampler' '' 1 ((PROCEDURE UNKNOWN-INTENT
+UNKNOWN-PROC DECL UNKNOWN 0 0 FUNCTION GENERIC) (REAL 4 0 0 0 REAL ()) 0
+0 () () 0 () () () 0 0)
+149 'samplingbarwidth' 'discretesampler' '' 1 ((PARAMETER UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0) (INTEGER 4 0 0 0 INTEGER ()) 0 0
+() (CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '80') () 0 () () () 0 0)
+150 'stringcast' 'stringcast' '' 1 ((MODULE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN 0 0) (UNKNOWN 0 0 0 0 UNKNOWN ()) 0 0 () () 0 () () () 0
+0)
+20 'tostr_char_array' 'stringcast' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION IMPLICIT_PURE ALWAYS_EXPLICIT) (
+CHARACTER 1 0 0 0 CHARACTER ((CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0
+'300'))) 151 0 (152) () 20 () () () 0 0)
+24 'tostr_int' 'stringcast' '' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL UNKNOWN 0 0 FUNCTION) (CHARACTER 1 0 0 0 CHARACTER ((CONSTANT (
+INTEGER 4 0 0 0 INTEGER ()) 0 '300'))) 153 0 (154) () 24 () () () 0 0)
+23 'tostr_real' 'stringcast' '' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL UNKNOWN 0 0 FUNCTION) (CHARACTER 1 0 0 0 CHARACTER ((CONSTANT (
+INTEGER 4 0 0 0 INTEGER ()) 0 '300'))) 155 0 (156) () 23 () () () 0 0)
+21 'tostr_real_with_format' 'stringcast' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION) (CHARACTER 1 0 0 0 CHARACTER ((
+CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '300'))) 157 0 (158 159) () 21 ()
+() () 0 0)
+22 'tostr_real_with_ndig' 'stringcast' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION) (CHARACTER 1 0 0 0 CHARACTER ((
+CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '300'))) 160 0 (161 162) () 22 ()
+() () 0 0)
+163 'trim_ahead' 'stringcast' '' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN 0 0 FUNCTION) (CHARACTER 1 0 0 0 CHARACTER ((
+CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '300'))) 164 0 (165) () 163 () ()
+() 0 0)
+36 'binid1' '' '' 35 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+37 'binid2' '' '' 35 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+39 'binid1' '' '' 38 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+40 'binidint' '' '' 38 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+44 'bins' '' '' 43 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+ALLOCATABLE DIMENSION DUMMY) (DERIVED 5 0 0 0 DERIVED ()) 0 0 () (1 0
+DEFERRED () ()) 0 () () () 0 0)
+45 'new_bin' '' '' 43 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (DERIVED 5 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+47 'dim_name' '' '' 46 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () ()
+() 0 0)
+48 'mbinid' '' '' 46 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+50 'dim_name' '' '' 49 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () ()
+() 0 0)
+51 'intid' '' '' 49 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)
+(INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+53 'dim_name' '' '' 52 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () ()
+() 0 0)
+56 'grid' '' '' 55 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+ALLOCATABLE DIMENSION DUMMY) (DERIVED 19 0 0 0 DERIVED ()) 0 0 () (1 0
+DEFERRED () ()) 0 () () () 0 0)
+57 'dim_name' '' '' 55 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+58 'n_bins' '' '' 55 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+60 'dim_name' '' '' 59 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+61 'mbinid' '' '' 59 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+62 'weight' '' '' 59 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (REAL 8 0 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
+64 'dim_name' '' '' 63 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+65 'binintid' '' '' 63 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+66 'weight' '' '' 63 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (REAL 8 0 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
+69 'bins' '' '' 68 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DIMENSION DUMMY) (DERIVED 5 0 0 0 DERIVED ()) 0 0 () (1 0 ASSUMED_SHAPE
+(CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '1') ()) 0 () () () 0 0)
+70 'mbinid' '' '' 68 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+73 'binidint' '' '' 72 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+77 'grid' '' '' 76 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DIMENSION DUMMY) (DERIVED 19 0 0 0 DERIVED ()) 0 0 () (1 0 ASSUMED_SHAPE
+(CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '1') ()) 0 () () () 0 0)
+78 'dim_name' '' '' 76 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+80 'bins' '' '' 79 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DIMENSION DUMMY) (DERIVED 5 0 0 0 DERIVED ()) 0 0 () (1 0 ASSUMED_SHAPE
+(CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '1') ()) 0 () () () 0 0)
+81 'mbinid' '' '' 79 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+83 'grid' '' '' 82 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DIMENSION DUMMY) (DERIVED 19 0 0 0 DERIVED ()) 0 0 () (1 0 ASSUMED_SHAPE
+(CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '1') ()) 0 () () () 0 0)
+84 'dim_name' '' '' 82 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+85 'mbinid' '' '' 82 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+88 'grid' '' '' 87 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DIMENSION DUMMY) (DERIVED 19 0 0 0 DERIVED ()) 0 0 () (1 0 ASSUMED_SHAPE
+(CONSTANT (INTEGER 4 0 0 0 INTEGER ()) 0 '1') ()) 0 () () () 0 0)
+89 'dim_name' '' '' 87 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+92 'd_bin' '' '' 91 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 5 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+95 'd_dim' '' '' 94 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 19 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+98 'msg' '' '' 97 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)
+(CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+100 'd_index' '' '' 99 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+102 'd_name' '' '' 101 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+105 'd_dim' '' '' 104 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 19 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+108 'dim_name' '' '' 107 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+109 'n_bins' '' '' 107 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+112 'd_bin' '' '' 111 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 5 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+115 'd_dim' '' '' 114 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 19 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+118 'bins' '' '' 117 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+ALLOCATABLE DIMENSION DUMMY) (DERIVED 5 0 0 0 DERIVED ()) 0 0 () (1 0
+DEFERRED () ()) 0 () () () 0 0)
+119 'bin_index' '' '' 117 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+121 'dim_name' '' '' 120 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+122 'mbinid' '' '' 120 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+125 'dim_name' '' '' 124 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+126 'binindex' '' '' 124 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+128 'dim_name' '' '' 127 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+129 'mbinintid' '' '' 127 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+132 'dim_name' '' '' 131 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+135 'grid' '' '' 134 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+ALLOCATABLE DIMENSION DUMMY) (DERIVED 19 0 0 0 DERIVED ()) 0 0 () (1 0
+DEFERRED () ()) 0 () () () 0 0)
+136 'dim_index' '' '' 134 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+139 'mbinid' '' '' 138 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+142 'binid1' '' '' 141 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+143 'binid2' '' '' 141 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 6 0 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+152 'input' '' '' 151 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DIMENSION DUMMY) (CHARACTER 1 0 0 0 CHARACTER ((CONSTANT (INTEGER 4 0 0
+0 INTEGER ()) 0 '1'))) 0 0 () (1 0 ASSUMED_SHAPE (CONSTANT (INTEGER 4 0
+0 0 INTEGER ()) 0 '1') ()) 0 () () () 0 0)
+154 'input' '' '' 153 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+156 'input' '' '' 155 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (REAL 8 0 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
+158 'input' '' '' 157 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (REAL 8 0 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
+159 'chosen_format' '' '' 157 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN
+0 0 DUMMY) (CHARACTER 1 0 0 0 CHARACTER (())) 0 0 () () 0 () () () 0 0)
+161 'input' '' '' 160 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (REAL 8 0 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
+162 'n_digits' '' '' 160 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (INTEGER 4 0 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+165 'input' '' '' 164 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 DUMMY) (CHARACTER 1 0 0 0 CHARACTER ((CONSTANT (INTEGER 4 0
+0 0 INTEGER ()) 0 '300'))) 0 0 () () 0 () () () 0 0)
+)
+
+('Bin' 0 5 'Binid' 0 6 'Sampleddimension' 0 19 'bin' 0 33 'binid' 0 34
+'binid_from_binid' 0 4 'binid_from_integer' 0 3 'discretesampler' 0 41
+'ds_add_bin_to_bins' 0 42 'ds_add_bin_with_binid' 0 9
+'ds_add_bin_with_integerid' 0 8 'ds_add_bin_with_void' 0 7
+'ds_add_dimension_to_grid' 0 54 'ds_add_entry_with_binid' 0 11
+'ds_add_entry_with_binintid' 0 10 'ds_bin_index' 0 67 'ds_binid' 0 71
+'ds_clear' 0 74 'ds_dim_index' 0 75 'ds_get_bin_from_binid' 0 13
+'ds_get_bin_from_binid_and_dimname' 0 12 'ds_get_dimension' 0 86
+'ds_initialize_bin' 0 90 'ds_initialize_dimension' 0 93 'ds_logger' 0 96
+'ds_print_dim_global_info_from_index' 0 15
+'ds_print_dim_global_info_from_name' 0 16
+'ds_print_dim_global_info_from_void' 0 14 'ds_print_dim_info' 0 103
+'ds_register_dimension' 0 106 'ds_reinitialize_bin' 0 110
+'ds_reinitialize_dimension' 0 113 'ds_remove_bin_from_bins' 0 116
+'ds_remove_bin_withbinid' 0 17 'ds_remove_bin_withindex' 0 123
+'ds_remove_bin_withintegerid' 0 18 'ds_remove_dimension' 0 130
+'ds_remove_dimension_from_grid' 0 133 'ds_tostr' 0 137 'ds_verbose' 0
+140 'equal_binid' 0 2 'get_width' 0 144 'max_length' 0 145 'ref_grid' 0
+146 'running_grid' 0 147 'sampleddimension' 0 148 'samplingbarwidth' 0
+149 'stringcast' 0 150 'tostr_char_array' 0 20 'tostr_int' 0 24
+'tostr_real' 0 23 'tostr_real_with_format' 0 21 'tostr_real_with_ndig' 0
+22 'trim_ahead' 0 163)
