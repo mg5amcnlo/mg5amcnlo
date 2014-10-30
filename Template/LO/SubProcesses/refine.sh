@@ -6,10 +6,20 @@ fi
 k=%(name)s_app.log
 script=%(script_name)s                         
 
+grid_directory=%(base_directory)s
 j=%(directory)s
      if [[ ! -e $j ]]; then
           mkdir $j
+          if [[ -e $grid_directory/ftn26 ]];then
+             cp $grid_directory/ftn26 $j/ftn25
+          fi 
+          if [[ ! -e ../../SubProcesses ]];then
+          	 if [[ -e ftn26 ]]; then
+          	 	cp ./ftn26 $j/ftn25
+          	 fi
+          fi	
      fi
+     
      cd $j
      rm -f $k
      rm -f moffset.dat >& /dev/null

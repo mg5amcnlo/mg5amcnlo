@@ -23,6 +23,7 @@ import os
 import glob
 import logging
 import math
+import subprocess
 
 try:
     import madgraph
@@ -31,11 +32,13 @@ except ImportError:
     import internal.sum_html as sum_html
     import internal.banner as bannermod
     import internal.misc as misc
+    import internal.files as files
 else:
     MADEVENT= False
     import madgraph.madevent.sum_html as sum_html
     import madgraph.various.banner as bannermod
     import madgraph.various.misc as misc
+    import madgraph.iolibs.files as files
 
 logger = logging.getLogger('madgraph.madevent.gen_ximprove')
 pjoin = os.path.join
@@ -57,6 +60,7 @@ class gen_ximprove(object):
     max_splitting = 130       # maximum duplication of a given channel 
     min_iter = 3    
     max_iter = 9
+    keep_grid_for_refine = False        # only apply if needed to split the job
 
     def __init__(self, cmd, opt=None):
         
@@ -157,9 +161,8 @@ class gen_ximprove(object):
         
         self.max_event_in_iter = 20000
         self.min_events = 7500
-        self.gen_events_security = 1.4
-    
-        
+        self.gen_events_security = 1.3
+            
     alphabet = "abcdefghijklmnopqrstuvwxyz"
     def get_job_for_event(self):
         """generate the script in order to generate a given number of event"""
@@ -183,6 +186,8 @@ class gen_ximprove(object):
         
         to_refine = []
         for C in all_channels:
+            if C.get('xsec') == 0:
+                continue
             if goal_lum/C.get('luminosity') >=1:
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('xsec'), 0.01*all_channels[0].get('xsec')):
@@ -248,7 +253,8 @@ class gen_ximprove(object):
                     'precision': -goal_lum/nb_split,
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
-                    'grid_refinment' : 0    #no refinment of the grid
+                    'grid_refinment' : 0,    #no refinment of the grid
+                    'base_directory': ''   #should be change in splitted job if want to keep the grid 
                     }
 
             if nb_split == 1:
@@ -258,6 +264,8 @@ class gen_ximprove(object):
                     new_info = dict(info)
                     new_info['offset'] = i+1
                     new_info['directory'] += self.alphabet[i % 26] + str((i+1)//26)
+                    if self.keep_grid_for_refine:
+                        new_info['base_directory'] = info['directory']
                     jobs.append(new_info)
             
         self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs)    
@@ -446,6 +454,7 @@ class gen_ximprove_loop_induced(gen_ximprove):
     max_splitting = 260       # maximum duplication of a given channel 
     min_iter = 3    
     max_iter = 6
+    keep_grid_for_refine = True
 
     def increase_parralelization(self):
         self.max_request_event = 200
@@ -456,19 +465,185 @@ def get_ximprove(cmd, opt):
     
     if cmd.proc_characteristics['loop_induced']:
         if cmd.proc_characteristics['nexternal'] <=2:
+            misc.sprint("use loop induced refine")
             return gen_ximprove_loop_induced(cmd, opt)
         else:
+            misc.sprint("use loop induced refine with increased parralelization")
             out = gen_ximprove_loop_induced(cmd, opt)
             out.increase_parralelization()
             return out
     elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
         raise Exception, "Not implemented"
     else:
-        out = gen_ximprove_loop_induced(cmd, opt)
-        if cmd.opts['accuracy'] != cmd._survey_options['accuracy'][1]:
+        out = gen_ximprove(cmd, opt)
+        if cmd.opts['accuracy'] < cmd._survey_options['accuracy'][1]:
+            misc.sprint("use normal refine with increased accuracy")
             out.increase_precision()
-            
+        else:
+            misc.sprint("use normal refine")
         return out
     
 
 
+class gensym(object):
+    """a class to call the fortran gensym executable and handle it's output
+    in order to create the various job that are needed for the survey"""
+    
+    #convenient shortcut for the formatting of variable
+    @ staticmethod
+    def format_variable(*args):
+        return bannermod.ConfigFile.format_variable(*args)
+    
+    combining_job = 2 # number of channel by ajob
+    splitted_grid = False 
+    min_iterations = 3
+    
+    
+
+    def __init__(self, cmd, opt=None):
+        
+        self.cmd = cmd
+        self.run_card = cmd.run_card
+        self.me_dir = cmd.me_dir
+            
+    
+    def launch(self):
+        """ """
+        
+        job_list = {}
+        
+        self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                 'subproc.mg'))]
+        subproc = self.subproc
+        
+        P_zero_result = [] # check the number of times where they are no phase-space
+        
+        nb_tot_proc = len(subproc)
+        for nb_proc,subdir in enumerate(subproc):
+            self.cmd.update_status('Compiling for process %s/%s. <br> (previous processes already running)' % \
+                               (nb_proc+1,nb_tot_proc), level=None)
+
+            subdir = subdir.strip()
+            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
+            logger.info('    %s ' % subdir)
+            
+            # clean previous run
+            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
+                    os.remove(match)
+            for match in glob.glob(pjoin(Pdir, 'G*')):
+                if os.path.exists(pjoin(match,'results.dat')):
+                    os.remove(pjoin(match, 'results.dat')) 
+                    
+            #compile gensym
+            self.cmd.compile(['gensym'], cwd=Pdir)
+            if not os.path.exists(pjoin(Pdir, 'gensym')):
+                raise Exception, 'Error make gensym not successful'  
+            
+            # Launch gensym
+            p = misc.Popen(['./gensym'], stdout=subprocess.PIPE, 
+                                 stderr=subprocess.STDOUT, cwd=Pdir)
+            #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
+            (stdout, stderr) = p.communicate('')
+            
+            if os.path.exists(pjoin(self.me_dir,'error')):
+                files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
+                P_zero_result.append(subdir)
+                continue            
+            
+            job_list[Pdir] = stdout.split()
+            
+            misc.sprint(Pdir, stdout, job_list[Pdir])
+        
+        return job_list
+            
+            
+    def submit_to_cluster(self, job_list):
+        """ """
+        
+        if not self.splitted_grid:
+            return self.submit_to_cluster_no_splitting(job_list)
+        elif self.cmd.cluster_mode == 0:
+            return self.submit_to_cluster_no_splitting(job_list)
+        elif self.cmd.cluster_mode == 2 and self.cmd.opts['nb_core'] == 1:
+            return self.submit_to_cluster_no_splitting(job_list)
+        else:
+            return self.submit_to_cluster_no_splitted(job_list)
+        
+    
+    def submit_to_cluster_no_splitting(self, job_list):
+        """submit the survey without the parralelization.
+           This is the old mode which is still usefull in single core"""
+           
+        self.write_parameter(parralelization=False)
+        
+        #ok this is not very nice but it allows to check the code for now.
+        
+        ajob_template = """#!/bin/bash 
+        ../survey.sh %(args)s
+        """
+        
+        
+        
+        for Pdir, jobs in job_list.items():
+            
+            jobs = list(jobs)
+            
+            i=0
+            while jobs:
+                i+=1
+                to_submit = []
+                for _ in range(self.combining_job):
+                    if jobs:
+                        to_submit.append(jobs.pop(0))
+                fsock = open(pjoin(self.me_dir, Pdir, 'ajob%s' % i),'w')
+                fsock.write(ajob_template % {'args': ' '.join(to_submit)})
+                print "write in file %s" % fsock.name
+        
+        
+        
+        
+        
+        
+           
+    def submit_to_cluster_no_splitted(self, job_list):
+        """ submit the version of the survey with splitted grid creation 
+        """   
+        return self.submit_to_cluster_no_splitting(job_list)
+        self.write_parameter(parralelization=True)
+    
+    def write_parameter(self, parralelization):
+        """Write the parameter of the survey run"""
+        
+        template ="""         %(event)s         %(maxiter)s           %(miniter)s      !Number of events and max and min iterations
+  %(accuracy)s    !Accuracy
+  %(gridmode)s       !Grid Adjustment 0=none, 2=adjust
+  1       !Suppress Amplitude 1=yes
+  %(helicity)s        !Helicity Sum/event 0=exact
+        """
+        run_card = self.cmd.run_card
+        
+        options = {'event' : self.cmd.opts['points'],
+                   'maxiter': self.cmd.opts['iterations'],
+                   'miniter': self.min_iterations,
+                   'accuracy': self.cmd.opts['accuracy'],
+                   'helicity': run_card['nhel_survey'] if 'nhel_survey' in run_card \
+                                else run_card['nhel'],
+                   'gridmode': 2
+                   }
+        
+        
+        if parralelization:
+            options['gridmode'] = -2
+            options['maxiter'] = 1 #this is automatic in dsample anyway
+            options['miniter'] = 1 #this is automatic in dsample anyway
+        
+        text = template % options
+        
+        for Pdir in self.subproc:
+            open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'input_app.txt'),'w').write(text)
+        
+            
+        
+        
+            

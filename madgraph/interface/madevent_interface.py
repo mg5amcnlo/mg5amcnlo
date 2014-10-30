@@ -2542,6 +2542,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if self.cluster_mode:
             logger.info('Creating Jobs')
 
+
+        ajobcreator = gen_ximprove.gensym(self)
+        jobs = ajobcreator.launch()
+        ajobcreator.submit_to_cluster(jobs)
+
+
         logger.info('Working on SubProcesses')
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
@@ -2562,41 +2568,15 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
         nb_tot_proc = len(subproc)
         for nb_proc,subdir in enumerate(subproc):
-            self.update_status('Compiling for process %s/%s. <br> (previous processes already running)' % \
-                               (nb_proc+1,nb_tot_proc), level=None)
+            #self.update_status('Compiling for process %s/%s. <br> (previous processes already running)' % \
+            #                   (nb_proc+1,nb_tot_proc), level=None)
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
             logger.info('    %s ' % subdir)
-            # clean previous run
-            for match in glob.glob(pjoin(Pdir, '*ajob*')):
-                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
-                    os.remove(match)
-            for match in glob.glob(pjoin(Pdir, 'G*')):
-                if os.path.exists(pjoin(match,'results.dat')):
-                    os.remove(pjoin(match, 'results.dat'))
-            
-            #compile gensym
-            self.compile(['gensym'], cwd=Pdir)
-            if not os.path.exists(pjoin(Pdir, 'gensym')):
-                raise MadEventError, 'Error make gensym not successful'
 
-            # Launch gensym
-            p = misc.Popen(['./gensym'], stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE, 
-                                 stderr=subprocess.STDOUT, cwd=Pdir)
-            sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
-            (stdout, stderr) = p.communicate(sym_input)
-            if os.path.exists(pjoin(self.me_dir,'error')):
-                files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
-                P_zero_result.append(subdir)
-                continue
-            
-            if not os.path.exists(pjoin(Pdir, 'ajob1')) or p.returncode:
-                logger.critical(stdout)
+            if not os.path.exists(pjoin(Pdir, 'ajob1')):
+                #logger.critical(stdout)
                 raise MadEventError, 'Error gensym run not successful'
-
-
-            self.compile(['madevent'], cwd=Pdir)
             
             alljobs = glob.glob(pjoin(Pdir,'ajob*'))
             self.total_jobs += len(alljobs)

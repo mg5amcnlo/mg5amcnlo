@@ -228,8 +228,15 @@ c-----
       write(*,'(a)') 'Enter 0 for fixed, 2 for adjustable grid: '
       read(*,*) use_cut
       if (use_cut .lt. 0 .or. use_cut .gt. 2) then
-         write(*,*) 'Bad choice, using 2',use_cut
-         use_cut = 2
+         if (use_cut.ne.-2) then
+            write(*,*) 'Bad choice, using 2',use_cut
+            use_cut = 2
+         else if (use_cut.eq.-2)then
+            WRITE(*,*) "USE_CUT IS AT ", USE_CUT
+         itmax= 1
+         itmin=1
+         endif
+
       endif
 
       write(*,10) 'Suppress amplitude (0 no, 1 yes)? '

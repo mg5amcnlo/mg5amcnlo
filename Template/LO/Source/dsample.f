@@ -230,6 +230,7 @@ c     unweighted events.
 c
       write(*,*) "Status",accur, cur_it, itmax
       if (accur .ge. 0d0 .or. cur_it .gt. itmax+3) then
+        write(*,*) "stop here since", accur, "is greater than 0 or", cur_it, ">",itmax+3
         return
       endif
 c     Check for neventswritten and chi2 (JA 8/17/11 lumi*mean xsec)
@@ -275,6 +276,7 @@ c
       iter = 1
 c      itmax = 8
       itmax_adjust = 5
+      write(*,*) "pass grid mode to 2 .... Is this wanted??"
       use_cut = 2  !Start adjusting grid
       do while(iter .le. itmax)
          if (iter .gt. itmax_adjust .and. use_cut .ne. 0) then
@@ -524,6 +526,7 @@ c-----
 c  Begin Code
 c-----
       icor = 0
+      write(*,*) "initialize grid for mode", use_cut
       If (use_cut .eq. 0) then
          icor = 1          !Assume correlated unless grid read
          print*,'Keeping grid fixed.'
@@ -615,8 +618,8 @@ c     Try to read grid from file
 c
       flat_grid=.true.
       open(unit=25,file='ftn25',status='unknown',err=102)
-      read(25,fmt='(4f20.17)', err=101, end=101)
-     .     ((grid(2,i,j),i=1,ng),j=1,maxinvar)
+      read(25,fmt='(4f21.17)', err=101, end=101)
+     .     ((grid(2,i,j),i=1,ng),j=1,invar)
 c      write(*,*) 'Got the grid OK, now getting alpha'
 c      read(25,fmt='(4f20.17)',err=101,end=101)(alpha(i),i=1,maxconfigs)
       write(*,*) 'Grid read from file'
@@ -1511,6 +1514,17 @@ c     &           '  Fluctuation: ',sigma,
 c     &           wmax*(dble(non_zero)/dble(kn)),
 c     &           dble(non_zero)/dble(kn)*100.,'%'
 c            close(22)
+
+           if(use_cut.eq.-2)then
+                open(unit=22, file="grid_information")
+                write(22,*) non_zero, ng, invar
+                write(22,*) ((grid(1,i,j),i=1,ng),j=1,invar)
+                write(22,*) ((grid(2,i,j),i=1,ng),j=1,invar)
+                write(22,*) ((inon_zero(i,j),i=1,ng),j=1,invar)
+                write(22,*) (xmin(j), j=1,invar)
+                write(22,*) (xmax(j), j=1,invar)
+           endif
+
 c------
 c    Here we will double the number of events requested for the next run
 c-----
@@ -1531,7 +1545,7 @@ c     do so adjusting of weights according to number of events in bin
 c
             do j=1,invar
                do i = 1, ng
-                  if (use_cut .ne. 2 .and.
+                  if (abs(use_cut) .ne. 2 .and.
      &                use_cut .ne. 3 .and. use_cut .ne. 5)
      $                 inon_zero(i,j) = 0
                   if (use_cut .eq. 3) grid(1,i,j)=grid2(i,j)
@@ -1716,9 +1730,9 @@ c               if (1d0/sqrt(tsigma) .lt. accur) then
                   write(*, 80) real(tmean), real(tsigma), real(trmean), real(chi2)
                   if (use_cut .ne. 0) then
                   open(26, file='ftn26',status='unknown')
-                  write(26,fmt='(4f20.17)')
-     $                 ((grid(2,i,j),i=1,ng),j=1,maxinvar)
-                  write(26,fmt='(4f20.17)') (alpha(i),i=1,maxconfigs)
+                  write(26,fmt='(4f21.17)')
+     $                 ((grid(2,i,j),i=1,ng),j=1,invar)
+c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)
                   close(26)
                   endif
                   call sample_writehtm()
@@ -1775,9 +1789,9 @@ c     Check nun and chi2 (ja 03/11)
                   write(*, 80) real(tmean), real(tsigma), real(chi2)
                   if (use_cut .ne. 0) then
                   open(26, file='ftn26',status='unknown')
-                  write(26,fmt='(4f20.17)')
-     $                 ((grid(2,i,j),i=1,ng),j=1,maxinvar)
-                  write(26,fmt='(4f20.17)') (alpha(i),i=1,maxconfigs)
+                  write(26,fmt='(4f21.17)')
+     $                 ((grid(2,i,j),i=1,ng),j=1,invar)
+c                  write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
                   close(26)
                   endif
                   call sample_writehtm()
@@ -1806,9 +1820,9 @@ c 129              close(22)
      .              13X,21HChi**2 per DoF.     =,f12.4/1X,79(1H-))
                if (use_cut .ne. 0) then
                open(26, file='ftn26',status='unknown')
-               write(26,fmt='(4f20.17)')
-     $              ((grid(2,i,j),i=1,ng),j=1,maxinvar)
-               write(26,fmt='(4f20.17)') (alpha(i),i=1,maxconfigs)
+               write(26,fmt='(4f21.17)')
+     $              ((grid(2,i,j),i=1,ng),j=1,invar)
+c               write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
                close(26)
                endif
                call sample_writehtm()
@@ -1912,7 +1926,7 @@ c-----
 c  Begin Code
 c-----
       kmax=k
-      do i=k+1,ng-1
+      do i=k+1,ng
          if (grid(1,i,j) .gt. 0d0) kmax=i
       enddo
       xo = grid(1,k,j)
@@ -1929,7 +1943,7 @@ c      do i=k+1,ng-1                      !Original without kmax stuff
       end do
 c      grid(1, ng, j) = (xn + xo) / 2d0  !Original without kmax stuff
       grid(1, kmax, j) = (xn + xo) / 2d0
-      x(j) = x(j) + grid(1, ng, j)
+      x(j) = x(j) + grid(1, kmax, j)
       end
 
       double precision function xbin(y,j)
