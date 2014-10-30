@@ -2058,7 +2058,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_lhapdf_pdfsetsdir(self):
         lhapdf_version = self.get_lhapdf_version()
 
-        if lhapdf_version.startswith('5.'):
+        # check if the LHAPDF_DATA_PATH variable is defined
+        if 'LHAPDF_DATA_PATH' in os.environ.keys() and os.environ['LHAPDF_DATA_PATH']:
+            datadir = os.environ['LHAPDF_DATA_PATH']
+
+        elif lhapdf_version.startswith('5.'):
             datadir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
                          stdout = subprocess.PIPE).stdout.read().strip()
 
