@@ -54,12 +54,10 @@
 # timeout = 60
 
 #! Pythia8 path.
-#!  Defines the path to the pythia8 directory.
-#!  This is the directory that contains the subdirectory examples;
-#!  in particular, it is crucial that the file
-#   pythia8_path/examples/config.sh be present.
+#!  Defines the path to the main pythia8 directory (i.e. that containing
+#!  the pythia8 configure script) .
 #!  If using a relative path, that starts from the mg5 directory
-# pythia8_path = ./pythia8
+# pythia8_path =
 
 #! Herwig++ paths
 #!  specify here the paths also to HepMC ant ThePEG

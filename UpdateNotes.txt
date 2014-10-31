@@ -4,11 +4,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		RF: For NLO running: added 'strip' to the makefiles to reduce executable sizes (removes symbol info)
 		Stefano Carrazza (by RF): fix for the photon PDF for the internal NNPDF sets
 		RF: Improved the check on the consistency of the cuts and the grouping of subprocesse (LO running)
+                PT: enabled PYTHIA8.2
 
 
 2.2.1(25/09/14) OM: Fix a bug preventing the generation of events at LO due to a wrong treatment of 
                       the color-flow.
-		
 
 2.2.0(24/09/14) VH: General mixed order corrections in MadLoop (only), including QCD/EW/QED and 
                     the UFO@NLO model 'loop_qcd_qed_sm'.
