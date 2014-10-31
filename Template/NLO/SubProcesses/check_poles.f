@@ -15,7 +15,6 @@ C
       double precision tolerance, tolerance_default
       double precision, allocatable :: accuracies(:)
       double precision accuracy
-      parameter (tolerance_default = 1d-5)
       double precision ren_scale, energy
       include 'genps.inc'
       include 'nexternal.inc'
@@ -54,6 +53,7 @@ cc
       integer nfail
       logical first_time
       data first_time/.TRUE./
+      include 'FKSParams.inc'
       
 C-----
 C  BEGIN CODE
@@ -72,6 +72,8 @@ C-----
       call run_printout          !Prints out a summary of the run settings
       include 'pmass.inc'
      
+      call FKSParamReader('FKS_Params.dat',.FALSE.,.FALSE.)
+      tolerance_default = IRPoleCheckThreshold
 
 c     Set the energy to be characteristic of the run
       totmass = 0.0d0

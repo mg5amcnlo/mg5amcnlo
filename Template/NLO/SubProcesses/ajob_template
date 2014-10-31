@@ -8,7 +8,7 @@ fi
 }
 
 tarCounter=0
-while [[ (-e MadLoop5_resources.tar.gz) && (! -e MadLoop5_resources/HelConfigs.dat) && ($tarCounter < 10) ]]; do
+while [[ (-f MadLoop5_resources.tar.gz) && (! -f MadLoop5_resources/HelConfigs.dat) && ($tarCounter < 10) ]]; do
     if [[ $tarCounter > 0 ]]; then
 	sleep 2s
     fi
