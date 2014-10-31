@@ -176,7 +176,7 @@ c get info on beam and PDFs
       endif
       NPRUP=1
 
-      write(lunlhe,'(a)')'<LesHouchesEvents version="1.0">'
+      write(lunlhe,'(a)')'<LesHouchesEvents version="3.0">'
       write(lunlhe,'(a)')'  <!--'
       write(lunlhe,'(a)')'  <scalesfunctionalform>'
       write(lunlhe,'(2a)')'    muR  ',muR_id_str(1:len_trim(muR_id_str))
