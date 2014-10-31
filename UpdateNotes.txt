@@ -5,6 +5,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		Stefano Carrazza (by RF): fix for the photon PDF for the internal NNPDF sets
 		RF: Improved the check on the consistency of the cuts and the grouping of subprocesse (LO running)
                 PT: enabled PYTHIA8.2
+                MZ: some informations for aMC@NLO runs which were before passed via include files are
+                    now read at runtime. The size of executables as well as compilation time / memory usage
+                    is reduced for complicated processes
 
 
 2.2.1(25/09/14) OM: Fix a bug preventing the generation of events at LO due to a wrong treatment of 
