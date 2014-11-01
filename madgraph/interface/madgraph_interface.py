@@ -6288,6 +6288,13 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
 
         for pid in particles:
             width = param['decay'].get((pid,)).value
+            particle = self._curr_model.get_particle(pid) 
+            if particle['color'] !=1 and 0 < width.real < 0.1:
+                logger.warning("width of colored particle \"%s\" lower than QCD scale. Set width to zero "
+                               % particle.get('name'))
+                width = 0
+                
+            
             if not pid in param['decay'].decay_table:
                 continue
             if pid not in decay_info:

@@ -8,7 +8,13 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 MZ: some informations for aMC@NLO runs which were before passed via include files are
                     now read at runtime. The size of executables as well as compilation time / memory usage
                     is reduced for complicated processes
-
+                OM: restore the usage of external gzip library for file larger than 4Gb which were crashing with
+                    the python gzip library
+                OM: Fixing the default card for Delphes
+                OM: Improve support of lsf cluster (thanks Josh 
+                OM: Adding support for the UFO file functions.py (which was ignored before)
+                OM: Reduce the amount of RAM used by MadSpin in gridpack mode.
+                OM: discard in MadWidth partial width lower than \Lambda_QCD for colored particle.
 
 2.2.1(25/09/14) OM: Fix a bug preventing the generation of events at LO due to a wrong treatment of 
                       the color-flow.

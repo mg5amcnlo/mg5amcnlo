@@ -1376,7 +1376,7 @@ class LSFCluster(Cluster):
             jobstatus[id] = splitline[2]
 
         idle, run, fail = 0, 0, 0
-        for id in self.submitted_ids:
+        for id in self.submitted_ids[:]:
             if id in jobstatus:
                 status = jobstatus[id]
             else:

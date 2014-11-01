@@ -943,12 +943,32 @@ class DecayParticle(base_objects.Particle):
                     vlist_a = inter_part.get_vertexlist(vlevel, True)
                     vlist_b = inter_part.get_vertexlist(vlevel, False)
 
-
+                    minv_max = eval(self['mass']) - \
+                                    sum([eval(model.get_particle(abs(l['id']))['mass'])
+                                         for l in sub_c.get_final_legs() if l!=leg])
+                    
+                    allow_qcd=True # if two colored particle are lower than the pion. 
+                                   # those computation are meaningless.
+                    if 0 < minv_max.real < 0.100:
+                        logger.warning("WARNING: Mass gap lower than pion mass for decay of %s "
+                                                             % self['pdg_code'])
+                        logger.warning("decay into colored particle will be remove.")
+                        allow_qcd=False
+                        if model.get_particle(abs(leg['id']))['color'] != 1:
+                            continue
+                        
+                        
                     # Find appropriate vertex
                     for vert in (vlist_a + vlist_b):
                         # Connect sub_channel to the vertex
                         # the connect_channel_vertex will
                         # inherit the 'has_idpart' from sub_c
+
+                        if not allow_qcd:
+                            nb_colored = sum([1 for l in vert['legs'] if \
+                                     model.get_particle(abs(l['id']))['color'] != 1])
+                            if nb_colored >=1:
+                                continue
 
                         temp_c = self.connect_channel_vertex(sub_c, index, 
                                                              vert, model)

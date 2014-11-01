@@ -3257,20 +3257,23 @@ Integrated cross-section
             output_files.append('scale_pdf_dependence.dat')
 
             return self.cluster.submit2(exe, args, cwd=cwd, 
-                             input_files=input_files, output_files=output_files) 
+                             input_files=input_files, output_files=output_files,
+                             required_output=output_files) 
 
         elif 'ajob' in exe:
             # the 'standard' amcatnlo job
             # check if args is a list of string 
             if type(args[0]) == str:
-                input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
+                input_files, output_files, required_output, args = self.getIO_ajob(exe,cwd, args)
                 #submitting
                 self.cluster.submit2(exe, args, cwd=cwd, 
-                             input_files=input_files, output_files=output_files)
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output)
 
                 # keep track of folders and arguments for splitted evt gen
-                if len(args) == 4 and '_' in output_files[-1]:
-                    self.split_folders[pjoin(cwd,output_files[-1])] = [exe] + args
+                subfolder=output_files[-1].split('/')[0]
+                if len(args) == 4 and '_' in subfolder:
+                    self.split_folders[pjoin(cwd,subfolder)] = [exe] + args
 
         elif 'shower' in exe:
             # a shower job
@@ -3338,6 +3341,7 @@ Integrated cross-section
         
         keep_fourth_arg = False
         output_files = []
+        required_output = []
         input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
@@ -3426,6 +3430,11 @@ Integrated cross-section
                     keep_fourth_arg = True
                     # this is for the split event generation
                     output_files.append('G%s%s_%s' % (args[1], i, args[3]))
+                required_output.append('%s/log_MINT%s.txt' % (current,args[2]))
+                if args[2] in ['0','1']:
+                    required_output.append('%s/results.dat' % current)
+                if args[2] == '1':
+                    output_files.append('%s/results.dat' % current)
 
         else:
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
@@ -3438,7 +3447,7 @@ Integrated cross-section
         if len(args) == 4 and not keep_fourth_arg:
             args = args[:3]
             
-        return input_files, output_files, args
+        return input_files, output_files, required_output,  args
             
     def write_madinMMC_file(self, path, run_mode, mint_mode):
         """writes the madinMMC_?.2 file"""
