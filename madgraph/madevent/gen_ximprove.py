@@ -510,8 +510,6 @@ class gensym(object):
     def launch(self):
         """ """
         
-        job_list = {}
-        
         self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
         subproc = self.subproc
@@ -520,6 +518,7 @@ class gensym(object):
         
         nb_tot_proc = len(subproc)
         for nb_proc,subdir in enumerate(subproc):
+            job_list = {}
             self.cmd.update_status('Compiling for process %s/%s. <br> (previous processes already running)' % \
                                (nb_proc+1,nb_tot_proc), level=None)
 
@@ -544,7 +543,7 @@ class gensym(object):
             p = misc.Popen(['./gensym'], stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
-            (stdout, stderr) = p.communicate('')
+            (stdout, _) = p.communicate('')
             
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
@@ -552,65 +551,72 @@ class gensym(object):
                 continue            
             
             job_list[Pdir] = stdout.split()
-            
-            misc.sprint(Pdir, stdout, job_list[Pdir])
-        
+            self.cmd.compile(['madevent'], cwd=Pdir)
+            self.submit_to_cluster(job_list)
         return job_list
             
             
     def submit_to_cluster(self, job_list):
         """ """
-        
+
         if not self.splitted_grid:
             return self.submit_to_cluster_no_splitting(job_list)
         elif self.cmd.cluster_mode == 0:
             return self.submit_to_cluster_no_splitting(job_list)
-        elif self.cmd.cluster_mode == 2 and self.cmd.opts['nb_core'] == 1:
+        elif self.cmd.cluster_mode == 2 and self.cmd.options['nb_core'] == 1:
             return self.submit_to_cluster_no_splitting(job_list)
         else:
-            return self.submit_to_cluster_no_splitted(job_list)
+            return self.submit_to_cluster_splitted(job_list)
         
     
     def submit_to_cluster_no_splitting(self, job_list):
         """submit the survey without the parralelization.
            This is the old mode which is still usefull in single core"""
-           
+       
+        #return self.submit_to_cluster_splitted(job_list)
+        # write the template file for the parameter file   
         self.write_parameter(parralelization=False)
         
-        #ok this is not very nice but it allows to check the code for now.
         
-        ajob_template = """#!/bin/bash 
-        ../survey.sh %(args)s
-        """
-        
-        
-        
-        for Pdir, jobs in job_list.items():
-            
+        # launch the job with the appropriate grouping
+        for Pdir, jobs in job_list.items():   
             jobs = list(jobs)
-            
             i=0
             while jobs:
                 i+=1
-                to_submit = []
+                to_submit = ['0'] # the first entry is actually the offset
                 for _ in range(self.combining_job):
                     if jobs:
                         to_submit.append(jobs.pop(0))
-                fsock = open(pjoin(self.me_dir, Pdir, 'ajob%s' % i),'w')
-                fsock.write(ajob_template % {'args': ' '.join(to_submit)})
-                print "write in file %s" % fsock.name
-        
-        
-        
-        
-        
-        
-           
-    def submit_to_cluster_no_splitted(self, job_list):
+                        
+                self.cmd.launch_job(pjoin(self.me_dir, 'SubProcesses', 'survey.sh'),
+                                    argument=to_submit,
+                                    cwd=pjoin(self.me_dir,'SubProcesses' , Pdir))
+                        
+              
+    def submit_to_cluster_splitted(self, job_list):
         """ submit the version of the survey with splitted grid creation 
-        """   
-        return self.submit_to_cluster_no_splitting(job_list)
+        """ 
+        
+        
+        misc.sprint('use splitted survey')
+        self.splitted_grid = 3
+        if self.splitted_grid <= 1:
+            return self.submit_to_cluster_no_splitting(job_list)
+        
         self.write_parameter(parralelization=True)
+
+        # launch the job with the appropriate grouping
+        for Pdir, jobs in job_list.items():
+            for job in jobs:
+                packet = ((Pdir, job, 0), self.cmd.do_combine_grid, (Pdir, job, 0))
+                for i in range(self.splitted_grid):    
+                    self.cmd.launch_job(pjoin(self.me_dir, 'SubProcesses', 'survey.sh'),
+                                    argument=[i+1, job],
+                                    cwd=pjoin(self.me_dir,'SubProcesses' , Pdir),
+                                    packet_member=packet)
+
+
     
     def write_parameter(self, parralelization):
         """Write the parameter of the survey run"""

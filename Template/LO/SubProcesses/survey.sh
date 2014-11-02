@@ -4,10 +4,16 @@ tar -xf MadLoop5_resources.tar
 fi
 k=run1_app.log
 script=ajob1                         
+offset=$1
+shift
 for i in $@ ; do
      j=G$i
+     echo $offset  > moffset.dat
+     if [[ $offset -gt 0 ]]; then
+	 j=G${i}_${offset}
+     fi
      if [[ ! -e $j ]]; then
-          mkdir $j
+         mkdir $j
      fi
      cd $j
      rm -f ftn25 ftn26 ftn99

@@ -2542,19 +2542,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if self.cluster_mode:
             logger.info('Creating Jobs')
 
-
-        ajobcreator = gen_ximprove.gensym(self)
-        jobs = ajobcreator.launch()
-        ajobcreator.submit_to_cluster(jobs)
-
-
-        logger.info('Working on SubProcesses')
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
-        #check difficult PS case
-        if float(self.run_card['mmjj']) > 0.01 * (float(self.run_card['ebeam1'])+float(self.run_card['ebeam2'])):
-            self.pass_in_difficult_integration_mode()
+
           
         P_zero_result = [] # check the number of times where they are no phase-space
 
@@ -2565,30 +2556,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             tf.add(pjoin(self.me_dir,'SubProcesses','MadLoop5_resources'),arcname='MadLoop5_resources')
             tf.close()
 
+        logger.info('Working on SubProcesses')
+        ajobcreator = gen_ximprove.gensym(self)
 
-        nb_tot_proc = len(subproc)
-        for nb_proc,subdir in enumerate(subproc):
-            #self.update_status('Compiling for process %s/%s. <br> (previous processes already running)' % \
-            #                   (nb_proc+1,nb_tot_proc), level=None)
-            subdir = subdir.strip()
-            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
-            logger.info('    %s ' % subdir)
-
-            if not os.path.exists(pjoin(Pdir, 'ajob1')):
-                #logger.critical(stdout)
-                raise MadEventError, 'Error gensym run not successful'
-            
-            alljobs = glob.glob(pjoin(Pdir,'ajob*'))
-            self.total_jobs += len(alljobs)
-            for i, job in enumerate(alljobs):
-                job = os.path.basename(job)
-                self.launch_job('%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
-                                                    run_type='survey on %s (%s/%s)' % (subdir,nb_proc+1,len(subproc)))
-                if os.path.exists(pjoin(self.me_dir,'error')):
-                    self.monitor(html=False)
-                    raise MadEventError, 'Error detected Stop running: %s' % \
-                                         open(pjoin(self.me_dir,'error')).read()
-                                         
+        #check difficult PS case
+        if float(self.run_card['mmjj']) > 0.01 * (float(self.run_card['ebeam1'])+float(self.run_card['ebeam2'])):
+            self.pass_in_difficult_integration_mode()
+        
+        jobs = ajobcreator.launch()
+        #ajobcreator.submit_to_cluster(jobs)
+                                  
         # Check if all or only some fails
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
@@ -3495,10 +3472,69 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
+            elif 'survey' in exe:
+                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
+                               pjoin(self.me_dir, 'SubProcesses','randinit')]                 
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar')):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar'))
+
+                #Find the correct PDF input file
+                input_files.append(self.get_pdf_input_filename())
+                 
+                output_files = []
+                required_output = []
+                
+                #Find the correct ajob
+                output_files = ['G%s' % i for i in argument]
+                for G in output_files:
+                    required_output.append('%s/results.dat' % G)
+                                
+                #submitting
+                self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output, **opt)
+
+                
             
             else:
-                self.cluster.submit(exe, stdout=stdout, cwd=cwd)
+                self.cluster.submit(exe, stdout=stdout, cwd=cwd, **opt)
             
+
+    def do_combine_grid(self, line):
+        """Not in help: combining grid and resubmit next iteration """
+
+        if isinstance(line,str):
+            Pdir, G, step = line.split()
+        else:
+            Pdir, G, step = line
+
+        print "combine_grid", Pdir, G, step
+        import madgraph.madevent.combine_grid as combine_grid
+        grid_calculator = combine_grid.grid_information()
+        Gdirs = glob.glob(pjoin(Pdir, "G%s_*" %G))
+        for path in Gdirs:
+            fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
+            grid_calculator.add_one_grid_information(fsock)
+            
+        grid_calculator.write_associate_grid(pjoin(Gdirs[0],'ftn25'))
+        for Gdir in Gdirs[1:]:
+            files.ln(pjoin(Gdirs[0], 'ftn25'),  Gdir)
+        
+        if step <3 :
+            packet = ((Pdir, G, step+1), self.do_combine_grid, (Pdir, G, step+1))
+            nb_step = len(Gdirs) * (step+1)
+            for i in range(len(Gdirs)):
+                self.launch_job(pjoin(self.me_dir, 'SubProcesses', 'survey.sh'),
+                                    argument=[nb_step+i+1, G],
+                                    cwd=pjoin(self.me_dir,'SubProcesses' , Pdir),
+                                    packet_member=packet)
+        elif step ==3:
+            shutil.copy(Gdirs[0], pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
+        
+        time.sleep(5)
+                
+        return 0
+
             
     ############################################################################
     def find_madevent_mode(self):

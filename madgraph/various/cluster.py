@@ -99,16 +99,20 @@ class Cluster(object):
         self.cluster_retry_wait = opts['cluster_retry_wait'] if 'cluster_retry_wait' in opts else 300
         self.options = dict(opts)
         self.retry_args = {}
-
+        # controlling jobs in controlled type submision
+        self.control_packet = {}
+        self.id_to_packet = {}
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                log=None, required_output=[], nb_submit=0):
         """How to make one submission. Return status id on the cluster."""
         raise NotImplemented, 'No implementation of how to submit a job to cluster \'%s\'' % self.name
 
+
     @store_input()
     def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
-                log=None, input_files=[], output_files=[], required_output=[],nb_submit=0):
+                log=None, input_files=[], output_files=[], required_output=[],
+                nb_submit=0):
         """How to make one submission. Return status id on the cluster.
         NO SHARE DISK"""
 
@@ -171,8 +175,30 @@ class Cluster(object):
         
         return self.submit(new_prog, argument, cwd, stdout, stderr, log, 
                                required_output=required_output, nb_submit=nb_submit)
-        
 
+
+    def cluster_submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
+                log=None, input_files=[], output_files=[], required_output=[],
+                nb_submit=0, packet_member=None):
+            """This function wrap the cluster submition with cluster independant
+               method should not be overwritten (but for DAG type submission)"""
+               
+            id = self.submit2(prog, argument, cwd, stdout, stderr, log, input_files, 
+                             output_files, required_output, nb_submit)               
+               
+            
+            if not packet_member:
+                return id
+            else:
+                tag, fct, args = packet_member
+                if tag in self.control_packet:
+                    self.id_to_packet[id] = self.control_packet[tag]
+                    self.control_packet[tag][2].append(id)
+                else:
+                    self.control_packet[tag]= [fct, args, [id]]
+                    self.id_to_packet[id] = self.control_packet[tag]
+                return id
+                
     def control(self, me_dir=None):
         """Check the status of job associated to directory me_dir. return (idle, run, finish, fail)"""
         if not self.submitted_ids:
@@ -377,7 +403,259 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
         logger.warning("""This cluster didn't support job removal, 
     the jobs are still running on the cluster.""")
 
+
+class Packet(object):
+    """ an object for handling packet of job, it is designed to be thread safe
+    """
+
+    def __init__(self, name, fct, args, opts={}):
+        import Queue
+        import threading
+        self.queue = Queue.Queue()
+        self.tag = name
+        self.fct = fct
+        self.args = args
+        self.opts = opts
+        self.done = threading.Event()
+
+    def put(self, *args, **opts):
+        self.queue.put(*args, **opts)
+
+    append = put
+
+    def remove_one(self):
+        self.queue.get(True)
+        self.queue.task_done()
+        return self.queue.qsize()
+        
 class MultiCore(Cluster):
+    """class for dealing with the submission in multiple node"""
+
+    job_id = "$"
+
+    def __init__(self, *args, **opt):
+        """Init the cluster """
+        
+        
+        super(MultiCore, self).__init__(self, *args, **opt)
+        
+        import Queue
+        import threading
+        import thread
+        self.queue = Queue.Queue() # list of job to do
+        self.done = Queue.Queue()  # list of job finisned
+        self.submitted = Queue.Queue() # one entry by job submitted
+        self.stoprequest = threading.Event() #flag to ensure everything to close
+        self.demons = []
+        self.nb_done =0
+        if 'nb_core' in opt:
+            self.nb_core = opt['nb_core']
+        elif isinstance(args[0],int):
+            self.nb_core = args[0]
+        else:
+            self.nb_core = 1
+        self.update_fct = None
+        
+        self.lock = thread.allocate_lock() # allow nice lock of the main thread
+        self.pids = [] # allow to clean jobs submit via subprocess
+        self.fail_msg = None
+
+        # starting the worker node
+        for _ in range(self.nb_core):
+            self.start_demon()
+
+        
+    def start_demon(self):
+        import threading
+        t = threading.Thread(target=self.worker)
+        t.daemon = True
+        t.start()
+        self.demons.append(t)
+
+
+    def worker(self):
+        import Queue
+        import thread
+        while not self.stoprequest.isSet():
+            try:
+                args = self.queue.get()
+                tag, exe, arg, opt = args
+                try:
+                    # check for executable case
+                    if isinstance(exe,str):
+                        if os.path.exists(exe) and not exe.startswith('/'):
+                            exe = './' + exe
+                        if opt['stderr'] == None:
+                            opt['stderr'] = subprocess.STDOUT
+                        proc = misc.Popen([exe] + arg,  **opt)
+                        pid = proc.pid
+                        self.pids.append(pid)
+                        proc.wait()
+                        if proc.returncode not in [0, 143, -15]:
+                            fail_msg = 'program %s launch ends with non zero status: %s. Stop all computation' % \
+                            (' '.join([exe]+arg), proc.returncode)
+                            logger.warning(fail_msg)
+                            self.stoprequest.set()
+                            self.remove(fail_msg)
+                    # handle the case when this is a python function. Note that
+                    # this use Thread so they are NO built-in parralelization this is 
+                    # going to work on a single core! (but this is fine for IO intensive 
+                    # function. for CPU intensive fct this will slow down the computation
+                    else:
+                        pid = tag
+                        self.pids.append(pid)
+                        # the function should return 0 if everything is fine
+                        # the error message otherwise
+                        returncode = exe(arg, **opt)
+                        if returncode != 0:
+                            logger.warning(returncode)
+                            self.stoprequest.set()
+                            self.remove()
+                except Exception,error:
+                    logger.warning(str(error))
+                    raise
+                    self.stoprequest.set()
+                    self.remove(error)
+                self.queue.task_done()
+                self.done.put(tag)
+                #release the mother to print the status on the screen
+                try:
+                    self.lock.release()
+                except thread.error:
+                    continue
+            except Queue.Empty:
+                continue
+            
+            
+            
+    
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None,
+               log=None, required_output=[], nb_submit=0):
+        """submit a job on multicore machine"""
+        
+
+        tag = (prog, tuple(argument), cwd, nb_submit)
+
+        opt = {'cwd': cwd, 
+               'stdout':stdout,
+               'stderr': stderr}
+        self.queue.put((tag, prog, argument, opt))                                                                                                                                
+        self.submitted.put(1)
+        return tag
+        
+    def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
+                                stderr=None, log=None, **opts):
+        """launch one job and wait for it"""    
+        if isinstance(stdout, str):
+            stdout = open(stdout, 'w')
+        if isinstance(stderr, str):
+            stdout = open(stderr, 'w')        
+        return misc.call([prog] + argument, stdout=stdout, stderr=stderr, cwd=cwd) 
+
+    def remove(self, error=None):
+        """Ensure that all thread are killed"""
+        
+        # ensure the worker to stop
+        self.stoprequest.set()
+        if error:
+            self.fail_msg = error        
+
+        for pid in list(self.pids):
+            if isinstance(pid, tuple):
+                continue
+            out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
+                            % {'pid':pid} )
+            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )            
+            if out == 0:
+                try:
+                    self.pids.remove(pid)
+                except:
+                    pass
+            #out = os.system('kill -9 %s &> /dev/null' % pid)
+
+        time.sleep(1) # waiting if some were submitting at the time of ctrl-c
+        for pid in list(self.pids):
+            if isinstance(pid, tuple):
+                continue
+            out = os.system('CPIDS=$(pgrep -P %s); kill -15 $CPIDS > /dev/null 2>&1' % pid )
+            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} ) 
+            if out == 0:
+                try:
+                    self.pids.remove(pid)
+                except:
+                    pass
+                    
+
+    def wait(self, me_dir, update_status, update_first=None):
+        """Waiting that all the jobs are done. This function also control that
+        the submission by packet are handle correctly (i.e. submit the function)"""
+        import Queue
+        import threading
+
+        last_status = (0, 0, 0)
+        sleep_time = 1
+        while True:
+            force_one_more_loop = False # some security
+                        
+            # Loop over the job tagged as done to check if some packet of jobs
+            # are finished in case, put the associate function in the queue
+            while self.done.qsize():
+                try:
+                    tag = self.done.get(True, 1)
+                    force_one_more_loop = True
+                    if tuple(tag) in self.id_to_packet:
+                        packet = self.id_to_packet[tuple(tag)]
+                        remaining = packet.remove_one()
+                        if remaining == 0:
+                            # fully ensure that the packet is finished (thread safe)
+                            packet.queue.join()
+                            self.submit(packet.fct, packet.args)
+                    self.nb_done += 1
+                    self.done.task_done()
+                except Queue.Empty:
+                    pass            
+
+            # Get from the various queue the Idle/Done/Running information 
+            # Those variable should be thread safe but approximate.
+            Idle = self.queue.qsize()
+            Done = self.nb_done + self.done.qsize()
+            Running = max(0, self.submitted.qsize() - Idle - Done)            
+            
+            
+            
+            if Idle + Running <= 0 and not force_one_more_loop:
+                update_status(Idle, Running, Done)
+                # Going the quit since everything is done
+                # Fully Ensure that everything is indeed done.
+                self.queue.join()
+                self.stoprequest.set()
+                break
+            
+            if (Idle, Running, Done) != last_status:
+                update_status(Idle, Running, Done)
+                last_status = (Idle, Running, Done)
+                    
+            # Define how to wait for the next iteration
+            if Idle > 0:
+                # simply wait that a worker release the lock
+                self.lock.acquire()
+            else:
+                # to be sure that we will never fully lock at the end pass to 
+                # a simple time.sleep()
+                time.sleep(sleep_time)
+                sleep_time = min(sleep_time + 2, 180)
+        # reset variable for next submission
+        try:
+            self.lock.release()
+        except Exception:
+            pass
+        self.done = Queue.Queue()
+        self.nb_done = 0
+        self.submitted = Queue.Queue()
+        self.pids = []
+        self.stoprequest = threading.Event()
+            
+class MultiCoreOld(Cluster):
     """ class for dealing with the submission in multiple node"""
     
     job_id = '$'
@@ -406,6 +684,10 @@ class MultiCore(Cluster):
         self.waiting_submission = []
         self.pids = []
         self.fail_msg = None
+        self.jobdone = []
+        self.job_submit_after_wait = None
+        self.afterwait=False
+
         
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                 stderr=None, log=None, **opts):
@@ -421,12 +703,18 @@ class MultiCore(Cluster):
                log=None, required_output=[], nb_submit=0):
         """submit a job on multicore machine"""
         
+        
+        
         self.submitted +=1
         if cwd is None:
             cwd = os.getcwd()
         if isinstance(prog, str):
             if not os.path.exists(prog) and not misc.which(prog):
                 prog = os.path.join(cwd, prog)
+        
+        if self.afterwait and self.job_submit_after_wait is not None:
+            self.job_submit_after_wait += 1
+
         
         import thread
         if self.waiting_submission or self.nb_used == self.nb_core:
@@ -442,7 +730,7 @@ class MultiCore(Cluster):
         elif self.nb_used ==  self.nb_core -1:
             self.nb_used += 1 # upate the number of running thread            
             thread.start_new_thread(self.launch, (prog, argument, cwd, stdout))
-        
+        return (prog, tuple(argument), cwd) #act as the id of the job
         
     def launch(self, exe, argument, cwd, stdout):
         """ way to launch for multicore. If exe is a string then treat it as
@@ -455,7 +743,19 @@ class MultiCore(Cluster):
                 self.pids.remove(pid)
             except:
                 pass
-            
+            if (exe, tuple(argument), cwd) in self.id_to_packet:
+                key = (exe, tuple(argument), cwd)
+                self.id_to_packet[key][2].remove(key)
+                if not self.id_to_packet[key][2]:
+                    fct, args = self.id_to_packet[key][:2]
+                    self.submit(fct, args)
+        
+        start =time.time()
+        
+        if isinstance(stdout, str):
+            stdout = open(stdout,'a') 
+        
+        mode =''
         fail_msg = None
         try:  
             if isinstance(exe,str):
@@ -475,12 +775,12 @@ class MultiCore(Cluster):
                         log = open(glob.glob(pjoin(cwd,'*','log.txt'))[0]).read()
                         logger.warning('Last 15 lines of logfile %s:\n%s\n' % \
                                 (pjoin(cwd,'*','log.txt'), '\n'.join(log.split('\n')[-15:-1]) + '\n'))
-                    except IOError, AttributeError:
+                    except (IOError, AttributeError):
                         logger.warning('Please look for possible logfiles in %s' % cwd)
                         pass
                     self.remove(fail_msg)
             else:
-                pid = tuple([id(o) for o in [exe] + argument])
+                pid = tuple([id(o) for o in [exe] + list(argument)])
                 self.pids.append(pid)
                 # the function should return 0 if everything is fine
                 # the error message otherwise
@@ -489,10 +789,11 @@ class MultiCore(Cluster):
                     logger.warning(returncode)
                     self.remove()
 
+            if time.time() -start < 5:
+                time.sleep(5)
 
-            
             # release the lock for allowing to launch the next job
-            security = 0       
+            security = 0 
             # check that the status is locked to avoid coincidence unlock
             while 1:
                 while not self.lock.locked():
@@ -536,11 +837,10 @@ class MultiCore(Cluster):
         In principle, the statement related to  '#security #X' are not used.
         In practise they are times to times.
         """
-        
+        self.afterwait = True
         import thread
-
+        self.job_submit_after_wait = 0
         remaining = self.submitted - self.done
-
         if update_first:
             update_first(len(self.waiting_submission), self.nb_used, self.done)
         while self.nb_used < self.nb_core:
@@ -550,7 +850,7 @@ class MultiCore(Cluster):
                 self.nb_used += 1 # update the number of running thread
             else:
                 break
-                    
+        
         try:            
             self.need_waiting = True
             self.lock.acquire()
@@ -563,6 +863,8 @@ class MultiCore(Cluster):
                     raise Exception, msg
                 if update_status:
                     update_status(len(self.waiting_submission), self.nb_used, self.done)
+                if self.job_submit_after_wait:
+                    return self.wait(me_dir, update_status, update_first=False)
                 # security#1 that all job expected to be launched since 
                 # we enter in this function are indeed launched.
                 if len(self.waiting_submission) == 0 == remaining :
@@ -605,7 +907,8 @@ class MultiCore(Cluster):
             if self.fail_msg:
                 msg,  self.fail_msg = self.fail_msg, None
                 self.remove()
-                raise Exception, msg            
+                raise Exception, msg       
+                 
             # security #5: checked that self.nb_used is not lower than expected
             #This is the most current problem.
             no_in_queue = 0
@@ -672,6 +975,7 @@ class MultiCore(Cluster):
             
             # reset variable for next submission
             self.need_waiting = False
+            self.afterwait =False
             security = 0 
             while not self.lock.locked() and security < 10:
                 # check that the status is locked to avoid coincidence unlock
@@ -1223,17 +1527,25 @@ class SGECluster(Cluster):
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
 
+        finished = list(self.submitted_ids)
+
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
             if me_dir in line:
-                status = line.split()[4]
+                id,_,_,_,status = line.split()[:5]
                 if status in self.idle_tag:
                     idle += 1
+                    finished.remove(id)
                 elif status in self.running_tag:
                     run += 1
+                    finished.remove(id)
                 else:
                     logger.debug(line)
                     fail += 1
+                    finished.remove(id)
+
+        for id in finished:
+            self.check_termination(id)
 
         return idle, run, self.submitted - (idle+run+fail), fail
 
