@@ -3386,7 +3386,13 @@ Integrated cross-section
                 if os.path.exists(pjoin(cwd,current)):
                     input_files.append(pjoin(cwd, current))
                 output_files.append(current)
+
+                required_output.append('%s/results.dat' % current)
+                required_output.append('%s/log.txt' % current)
+                required_output.append('%s/mint_grids' % current)
+                required_output.append('%s/grid.MC_integer' % current)
                 if len(args) == 4:
+                    required_output.append('%s/scale_pdf_dependence.dat' % current)
                     args[2] = '-1'
                     # use a grid train on another part
                     base = '%s_G%s' % (args[3],i)
