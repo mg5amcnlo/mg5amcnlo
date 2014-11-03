@@ -72,7 +72,7 @@ C-----
       call run_printout          !Prints out a summary of the run settings
       include 'pmass.inc'
      
-      call FKSParamReader('FKS_Params.dat',.FALSE.,.FALSE.)
+      call FKSParamReader('FKS_params.dat',.TRUE.,.FALSE.)
       tolerance_default = IRPoleCheckThreshold
 
 c     Set the energy to be characteristic of the run
