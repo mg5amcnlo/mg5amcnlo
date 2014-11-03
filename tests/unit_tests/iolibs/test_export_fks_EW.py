@@ -67,6 +67,7 @@ class IOExportFKSEWTest(unittest.TestCase,\
     def setUp(self):
         if not hasattr(self, 'myfks_me') or \
            not hasattr(self, 'myfortranmodel') or \
+           not hasattr(self, 'myfkshelasmulti') or \
            not hasattr(self, 'myreals'):
 
             IOExportFKSEWTest.created_files = ['test']
@@ -94,6 +95,7 @@ class IOExportFKSEWTest(unittest.TestCase,\
             
 
             fkshelasmulti = fks_helas.FKSHelasMultiProcess(myfksmulti)
+            IOExportFKSEWTest.myfkshelasmulti = fkshelasmulti
             IOExportFKSEWTest.myfks_me = fkshelasmulti['matrix_elements'][0]
             IOExportFKSEWTest.myreals = fkshelasmulti['real_matrix_elements']
 
@@ -142,7 +144,7 @@ Parameters              alpha_s
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_lh_order(\
             self.give_pos(self.created_files[0]),\
-            self.myfks_me)
+            self.myfkshelasmulti['matrix_elements'])
         self.assertFileContains(self.created_files[0], goal)
         
     def test_write_coloramps_file_EW(self):
