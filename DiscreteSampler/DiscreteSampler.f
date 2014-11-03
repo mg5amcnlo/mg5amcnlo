@@ -928,7 +928,7 @@
             write(*,*) "DiscreteSampler::   -> Abs weights sampled as"//
      &                                      " (first 10 bins):"
           else
-            write(*,*) "DiscreteSampler::   -> Sampled as:"
+            write(*,*) "DiscreteSampler::   -> Abs weights Sampled as:"
           endif
           write(*,*) "DiscreteSampler::    "//trim(samplingBar1)
           if (n_bins.gt.10) then
@@ -1215,7 +1215,7 @@
           integer                               :: j, shift
           character, dimension(:), allocatable  :: dim_name
           type(BinID)                           :: mBinID
-          type(Bin)                             :: new_bin
+          type(Bin)                        :: new_bin, ref_bin, run_bin
 !
 !         Begin code
 !
@@ -1250,11 +1250,25 @@
               ref_bin_index = DS_bin_index(
      &                                ref_grid(ref_d_index)%bins,mBinID)
             endif
+            ref_bin = ref_grid(ref_d_index)%bins(ref_bin_index)
+            run_bin = run_grid(d_index)%bins(i) 
+            new_bin = ref_bin + run_bin 
 
-            new_bin = ref_grid(ref_d_index)%bins(ref_bin_index) +
-     &                                         run_grid(d_index)%bins(i)
+!           Update the grid global cumulative information first
+            ref_grid(ref_d_index)%n_tot_entries =
+     &           ref_grid(ref_d_index)%n_tot_entries + run_bin%n_entries
 
-            ref_grid(ref_d_index)%bins(ref_bin_index) = new_bin
+!           Remove the contributions from the old ref_bin
+            ref_grid(ref_d_index)%norm = 
+     &                       ref_grid(ref_d_index)%norm - ref_bin%weight
+            ref_grid(ref_d_index)%norm_sqr = 
+     &               ref_grid(ref_d_index)%norm_sqr - ref_bin%weight_sqr
+            ref_grid(ref_d_index)%abs_norm = 
+     &               ref_grid(ref_d_index)%abs_norm - ref_bin%abs_weight
+            ref_grid(ref_d_index)%variance_norm = 
+     &          ref_grid(ref_d_index)%variance_norm -
+     &                                          DS_bin_variance(ref_bin)
+!           And add back the one of the new bin 
             ref_grid(ref_d_index)%norm = 
      &                       ref_grid(ref_d_index)%norm + new_bin%weight
             ref_grid(ref_d_index)%norm_sqr = 
@@ -1262,10 +1276,12 @@
             ref_grid(ref_d_index)%abs_norm = 
      &               ref_grid(ref_d_index)%abs_norm + new_bin%abs_weight
             ref_grid(ref_d_index)%variance_norm = 
-     &              ref_grid(ref_d_index)%variance_norm +
+     &        ref_grid(ref_d_index)%variance_norm +
      &                                          DS_bin_variance(new_bin)
-            ref_grid(ref_d_index)%n_tot_entries = 
-     &           ref_grid(ref_d_index)%n_tot_entries + new_bin%n_entries
+
+!           Now update the ref grid bin
+            ref_grid(ref_d_index)%bins(ref_bin_index) = new_bin
+
           enddo
 
 !         Now filter all bins in ref_grid that have 0.0 weight and
@@ -1314,10 +1330,13 @@
             stop 1
           endif
           CombinedBin%bid = BinA%bid
-          CombinedBin%weight = BinA%weight + BinB%weight
-          CombinedBin%abs_weight = BinA%abs_weight + BinB%abs_weight
-          CombinedBin%weight_sqr = BinA%weight_sqr + BinB%weight_sqr
           CombinedBin%n_entries = BinA%n_entries + BinB%n_entries
+          CombinedBin%weight = (BinA%weight*BinA%n_entries + 
+     &                 BinB%weight*BinB%n_entries)/CombinedBin%n_entries
+          CombinedBin%abs_weight = (BinA%abs_weight*BinA%n_entries +
+     &             BinB%abs_weight*BinB%n_entries)/CombinedBin%n_entries
+          CombinedBin%weight_sqr = (BinA%weight_sqr*BinA%n_entries + 
+     &             BinB%weight_sqr*BinB%n_entries)/CombinedBin%n_entries
         end function DS_combine_two_bins
 
 !       ================================================
@@ -1390,6 +1409,13 @@
           chosen_mode = 1
         endif  
 
+        if (.not.allocated(ref_grid)) then
+          write(*,*) "DiscreteSampler:: Error, dimensions"//
+     &     " must first be registered with 'DS_register_dimension'"//
+     &     " before the module can be used to pick a point."
+          stop 1
+        endif
+
         ref_grid_index = DS_dim_index(ref_grid, dim_name)
         if (ref_grid_index.eq.-1) then
           write(*,*) "DiscreteSampler:: Error in subroutine"//
@@ -1402,18 +1428,24 @@
         do i=1,size(mGrid%bins)
           mBin = mGrid%bins(i)
           normalized_bin_bound = 0.0d0
-          if (chosen_mode.eq.1) then
-            normalized_bin_bound = 
+          if(mGrid%n_tot_entries.eq.0) then
+!           If the grid is empty, just return a uniform distribution
+            normalized_bin_bound = 1.0d0/float(size(mGrid%bins))
+          else
+            if (chosen_mode.eq.1) then
+              normalized_bin_bound = 
      &                         DS_bin_variance(mBin)/mGrid%variance_norm
      &                         
-          elseif (chosen_mode.eq.2) then
-            normalized_bin_bound = 
+            elseif (chosen_mode.eq.2) then
+              normalized_bin_bound = 
      &                           mGrid%bins(i)%abs_weight/mGrid%abs_norm
+            endif
           endif
-            running_bound = running_bound + normalized_bin_bound
+          running_bound = running_bound + normalized_bin_bound
           if (random_variable.le.running_bound) then
             mBinID = mGrid%bins(i)%bid
-            jacobian_weight = size(mGrid%bins) * normalized_bin_bound
+            jacobian_weight = (1.0d0 / size(mGrid%bins)) /
+     &                                              normalized_bin_bound
             return
           endif
         enddo
