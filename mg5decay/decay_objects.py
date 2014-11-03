@@ -1218,7 +1218,10 @@ class DecayParticle(base_objects.Particle):
         for amp in list(self.get_amplitudes(clevel)):
             approx_width = amp.get('apx_decaywidth')
             if min_br:
-                br = approx_width / total_width
+                if approx_width or total_width:
+                    br = approx_width / total_width
+                else:
+                    br = 0
                 if br.real < min_br:
                     self.decay_amplitudes[clevel].remove(amp)
                 
