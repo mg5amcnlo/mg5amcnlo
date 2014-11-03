@@ -1031,7 +1031,7 @@ C     JAMPs contributing to orders ALL_ORDERS=1
         DO M = 1, NAMPSO
           DO N = 1, NAMPSO
             IF (CHOSEN_SO_CONFIGS(SQSOINDEX(M,N))) THEN
-              JAMP2(I)=JAMP2(I)+JAMP(I,M)*DCONJG(JAMP(I,N))
+              JAMP2(I)=JAMP2(I)+DABS(DBLE(JAMP(I,M)*DCONJG(JAMP(I,N))))
             ENDIF
           ENDDO
         ENDDO
@@ -2026,7 +2026,7 @@ C     JAMPs contributing to orders ALL_ORDERS=1
         DO M = 1, NAMPSO
           DO N = 1, NAMPSO
             IF (CHOSEN_SO_CONFIGS(SQSOINDEX1(M,N))) THEN
-              JAMP2(I)=JAMP2(I)+JAMP(I,M)*DCONJG(JAMP(I,N))
+              JAMP2(I)=JAMP2(I)+DABS(DBLE(JAMP(I,M)*DCONJG(JAMP(I,N))))
             ENDIF
           ENDDO
         ENDDO
