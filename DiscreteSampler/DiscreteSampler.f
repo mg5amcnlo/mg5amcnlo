@@ -61,16 +61,21 @@
 !       :: re-initialized before this), so you have to call 
 !       :: 'DS_update_grid' if you want it pased to the ref_grid.
 !
-!       --- DONE UP TO HERE ---
-!
 !     DS_get_point(dim_name, random_variable, 
-!                       (binIDPicked|integerIDPicked), jacobian_weight)
+!       (binIDPicked|integerIDPicked), jacobian_weight, (mode|void))
 !       :: From a given random variable in [0.0,1.0] and a dimension
 !       :: name, this subroutine returns the picked bin or index and
 !       :: the Jacobian weight associated.
-!       :: Jacobian = nbins_in_dim * normalized_wgt_in_selected_bin
-!       ::          = wgt_in_selected_bin / wgt_averaged_over_all_bins
-!
+!       :: The mode is by default 'norm' but can also be 'variance'
+!       :: which means that the sampling is done either on the
+!       :: variance in each bin or the absolute value of the weights.
+!       :: mode = 'norm'
+!       :: Jacobian = nbins_in_dim * normalized_abs_wgt_in_selected_bin
+!       ::   = sum_abs_wgt_in_selected_bin / sum_abs_wgt_summed_over_all_bins
+!       :: mode = 'variance'
+!       :: Jacobian = nbins_in_dim * normalized_variance_in_selected_bin
+!       ::   = variance_in_selected_bin / variance_summed_over_all_bins
+
       module DiscreteSampler
 
       use StringCast
@@ -125,8 +130,10 @@
         real*8                                   :: norm
 !       The sum of the absolute value of the weight in each bin
         real*8                                   :: abs_norm
+!       The sum of the variance of the weight in each bin
+        real*8                                   :: variance_norm
 !       The sum of the squared weights in each bin
-        real*8                                   :: norm_sqr     
+        real*8                                   :: norm_sqr    
         integer                                  :: n_tot_entries
 !       A handy way of referring to the dimension by its name rather than
 !       an index.
@@ -195,6 +202,10 @@
         module procedure DS_bin_index_with_force
       end interface ! DS_bin_index
 
+      interface DS_get_point
+        module procedure DS_get_point_with_integerBinID
+        module procedure DS_get_point_with_BinID
+      end interface ! DS_get_point
 
       contains
 
@@ -356,6 +367,7 @@
           enddo
           trget%norm          = source%norm
           trget%abs_norm      = source%abs_norm
+          trget%variance_norm = source%variance_norm
           trget%norm_sqr      = source%norm_sqr
           trget%n_tot_entries = source%n_tot_entries 
 
@@ -441,7 +453,8 @@
             call DS_reinitialize_bin(d_dim%bins(i))
           enddo
           d_dim%norm_sqr        = 0.0d0
-          d_dim%abs_norm        = 0.0d0          
+          d_dim%abs_norm        = 0.0d0
+          d_dim%variance_norm   = 0.0d0
           d_dim%norm            = 0.0d0
           d_dim%n_tot_entries   = 0
 
@@ -652,6 +665,7 @@
 !
           integer dim_index, bin_index
           type(Bin)                     :: newBin
+          integer                       :: n_entries
 !
 !         Begin code
 !
@@ -674,26 +688,42 @@
               bin_index = DS_bin_index(run_grid(dim_index)%bins,mBinID)
           endif
 
-!         Update global cumulative information in the grid
-          run_grid(dim_index)%norm = 
-     &                   run_grid(dim_index)%norm + weight
-          run_grid(dim_index)%norm_sqr = 
-     &                      run_grid(dim_index)%norm_sqr + weight**2
-          run_grid(dim_index)%abs_norm = 
-     &                    run_grid(dim_index)%abs_norm + abs(weight)
-          run_grid(dim_index)%n_tot_entries =  
-     &                   run_grid(dim_index)%n_tot_entries + 1
+!         First remove bin from global cumulative information in the grid
+          run_grid(dim_index)%norm = run_grid(dim_index)%norm -
+     &                   run_grid(dim_index)%bins(bin_index)%weight
+          run_grid(dim_index)%norm_sqr = run_grid(dim_index)%norm_sqr -
+     &                   run_grid(dim_index)%bins(bin_index)%weight_sqr
+          run_grid(dim_index)%abs_norm = run_grid(dim_index)%abs_norm -
+     &                   run_grid(dim_index)%bins(bin_index)%abs_weight
+          run_grid(dim_index)%variance_norm = 
+     &              run_grid(dim_index)%variance_norm -
+     &              DS_bin_variance(run_grid(dim_index)%bins(bin_index))
 !         Update the information directly stored in the bin
+          n_entries = run_grid(dim_index)%bins(bin_index)%n_entries
           run_grid(dim_index)%bins(bin_index)%weight = 
-     &           run_grid(dim_index)%bins(bin_index)%weight + weight
+     &      (run_grid(dim_index)%bins(bin_index)%weight*n_entries
+     &                                           + weight)/(n_entries+1)
           run_grid(dim_index)%bins(bin_index)%weight_sqr = 
-     &       run_grid(dim_index)%bins(bin_index)%weight_sqr + 
-     &                                                       weight**2
+     &      (run_grid(dim_index)%bins(bin_index)%weight_sqr*n_entries
+     &                                        + weight**2)/(n_entries+1)
           run_grid(dim_index)%bins(bin_index)%abs_weight = 
-     &       run_grid(dim_index)%bins(bin_index)%abs_weight + 
-     &                                                       abs(weight)
-          run_grid(dim_index)%bins(bin_index)%n_entries =
-     &             run_grid(dim_index)%bins(bin_index)%n_entries + 1
+     &      (run_grid(dim_index)%bins(bin_index)%abs_weight*n_entries
+     &                                      + abs(weight))/(n_entries+1)
+          run_grid(dim_index)%bins(bin_index)%n_entries = n_entries + 1
+!         Now add the bin information back to the info in the grid
+          run_grid(dim_index)%norm = run_grid(dim_index)%norm +
+     &                   run_grid(dim_index)%bins(bin_index)%weight
+          run_grid(dim_index)%norm_sqr = run_grid(dim_index)%norm_sqr +
+     &                   run_grid(dim_index)%bins(bin_index)%weight_sqr
+          run_grid(dim_index)%abs_norm = run_grid(dim_index)%abs_norm +
+     &                   run_grid(dim_index)%bins(bin_index)%abs_weight
+          run_grid(dim_index)%variance_norm = 
+     &              run_grid(dim_index)%variance_norm +
+     &              DS_bin_variance(run_grid(dim_index)%bins(bin_index))
+!         And add one entry for this dimension
+          run_grid(dim_index)%n_tot_entries =  
+     &                             run_grid(dim_index)%n_tot_entries + 1
+
         end subroutine DS_add_entry_with_BinID
 
         subroutine DS_add_entry_with_BinIntID(dim_name, BinIntID,
@@ -788,40 +818,60 @@
 !
 !         Local variables
 !
-          integer i,j, curr_pos1, curr_pos2
+          integer i,j, curr_pos1, curr_pos2, curr_pos3
           integer n_bins, bin_width
 !         Adding the minimum size for the separators '|' and binID assumed
 !         of being of length 2 at most, so 10*2+11 and + 20 security :)
 
           character(samplingBarWidth+10*2+11+20)       :: samplingBar1
           character(samplingBarWidth+10*2+11+20)       :: samplingBar2
+          character(samplingBarWidth+10*2+11+20)       :: samplingBar3
+          real*8            :: tot_entries, tot_variance, tot_abs_weight
 !
 !         Begin code
 !
 !
 !         Setup the sampling bars
 !
+          tot_entries = 0
+          tot_variance = 0.0d0
+          tot_abs_weight = 0.0d0
+          do i=1,min(size(d_dim%bins),10)
+            tot_entries = tot_entries + d_dim%bins(i)%n_entries
+            tot_variance = tot_variance + DS_bin_variance(d_dim%bins(i))
+            tot_abs_weight = tot_abs_weight + d_dim%bins(i)%abs_weight
+          enddo
           if (d_dim%norm.eq.0.0d0) then
             samplingBar1 = "| Empty grid |"
             samplingBar2 = "| Empty grid |"
+            samplingBar3 = "| Empty grid |"            
           else
             do i=1,len(samplingBar1)
               samplingBar1(i:i)=' '
+            enddo
+            do i=1,len(samplingBar2)
               samplingBar2(i:i)=' '
             enddo
+            do i=1,len(samplingBar3)
+              samplingBar3(i:i)=' '
+            enddo
             samplingBar1(1:1) = '|'
-            samplingBar2(1:1) = '|' 
+            samplingBar2(1:1) = '|'
+            samplingBar3(1:1) = '|'             
             curr_pos1 = 2
             curr_pos2 = 2
+            curr_pos3 = 2 
             do i=1,min(10,size(d_dim%bins)) 
               samplingBar1(curr_pos1:curr_pos1+1) =
      &                             trim(DS_toStr(d_dim%bins(i)%bid))
               samplingBar2(curr_pos2:curr_pos2+1) = 
      &                             trim(DS_toStr(d_dim%bins(i)%bid))
+              samplingBar3(curr_pos3:curr_pos3+1) = 
+     &                             trim(DS_toStr(d_dim%bins(i)%bid))
               curr_pos1 = curr_pos1+2
               curr_pos2 = curr_pos2+2
-
-              bin_width = int((d_dim%bins(i)%abs_weight/d_dim%abs_norm)*
+              curr_pos3 = curr_pos3+2
+              bin_width = int((d_dim%bins(i)%abs_weight/tot_abs_weight)*
      &                                                 samplingBarWidth)
               do j=1,bin_width
                 samplingBar1(curr_pos1+j:curr_pos1+j) = ' '
@@ -831,14 +881,27 @@
               curr_pos1 = curr_pos1+1
 
               bin_width = int((float(d_dim%bins(i)%n_entries)/
-     &                            d_dim%n_tot_entries)*samplingBarWidth)
+     &                                    tot_entries)*samplingBarWidth)
               do j=1,bin_width
                 samplingBar2(curr_pos2+j:curr_pos2+j) = ' '
               enddo
               curr_pos2 = curr_pos2+bin_width+1
               samplingBar2(curr_pos2:curr_pos2) = '|'
               curr_pos2 = curr_pos2+1
+              if (tot_variance.ne.0.0d0) then
+                bin_width = int((DS_bin_variance(d_dim%bins(i))/
+     &                                   tot_variance)*samplingBarWidth)
+                do j=1,bin_width
+                  samplingBar3(curr_pos3+j:curr_pos3+j) = ' '
+                enddo
+                curr_pos3 = curr_pos3+bin_width+1
+                samplingBar3(curr_pos3:curr_pos3) = '|'
+                curr_pos3 = curr_pos3+1
+              endif
             enddo
+            if (tot_variance.eq.0.0d0) then
+              samplingBar3 = "| Not enough entries |"
+            endif
           endif
 !
 !         Write out info
@@ -855,18 +918,26 @@
           endif
           write(*,*) "DiscreteSampler::    "//trim(samplingBar2)
           write(*,*) "DiscreteSampler::   -> (norm_sqr , "//
-     &      "abs_norm , norm     ) :"
+     &      "abs_norm , norm     , variance ) :"
           write(*,*) "DiscreteSampler::      ("//
      &      trim(toStr(d_dim%norm_sqr,'Ew.3'))//", "//
      &      trim(toStr(d_dim%abs_norm,'Ew.3'))//", "//
-     &      trim(toStr(d_dim%norm,'Ew.3'))//")"
+     &      trim(toStr(d_dim%norm,'Ew.3'))//", "//
+     &      trim(toStr(d_dim%variance_norm,'Ew.3'))//")"
           if (n_bins.gt.10) then
-            write(*,*) "DiscreteSampler::   -> Sampled as"//
+            write(*,*) "DiscreteSampler::   -> Abs weights sampled as"//
      &                                      " (first 10 bins):"
           else
             write(*,*) "DiscreteSampler::   -> Sampled as:"
           endif
           write(*,*) "DiscreteSampler::    "//trim(samplingBar1)
+          if (n_bins.gt.10) then
+            write(*,*) "DiscreteSampler::   -> Variance sampled as"//
+     &                                      " (first 10 bins):"
+          else
+            write(*,*) "DiscreteSampler::   -> Variance sampled as:"
+          endif
+          write(*,*) "DiscreteSampler::    "//trim(samplingBar3)
 
         end subroutine DS_print_dim_info
 
@@ -1057,9 +1128,10 @@
      &                                   grid%bins(bin_index)%weight_sqr
           grid%abs_norm = grid%abs_norm -
      &                                   grid%bins(bin_index)%abs_weight
+          grid%variance_norm = grid%variance_norm
+     &                           - DS_bin_variance(grid%bins(bin_index))
           grid%n_tot_entries = grid%n_tot_entries
      &                                  - grid%bins(bin_index)%n_entries
-
           allocate(tmp(size(grid%bins)-1))
           do i=1,bin_index-1
             tmp(i) = grid%bins(i)
@@ -1189,6 +1261,9 @@
      &               ref_grid(ref_d_index)%norm_sqr + new_bin%weight_sqr
             ref_grid(ref_d_index)%abs_norm = 
      &               ref_grid(ref_d_index)%abs_norm + new_bin%abs_weight
+            ref_grid(ref_d_index)%variance_norm = 
+     &              ref_grid(ref_d_index)%variance_norm +
+     &                                          DS_bin_variance(new_bin)
             ref_grid(ref_d_index)%n_tot_entries = 
      &           ref_grid(ref_d_index)%n_tot_entries + new_bin%n_entries
           enddo
@@ -1245,6 +1320,122 @@
           CombinedBin%n_entries = BinA%n_entries + BinB%n_entries
         end function DS_combine_two_bins
 
+!       ================================================
+!       Main function to pick a point
+!       ================================================
+ 
+      subroutine DS_get_point_with_integerBinID(dim_name,
+     &           random_variable, integerIDPicked, jacobian_weight,mode)
+!
+!       Subroutine arguments
+!
+        character(len=*), intent(in)            ::  dim_name
+        real*8, intent(in)                      ::  random_variable
+        integer, intent(out)                    ::  integerIDPicked
+        real*8, intent(out)                     ::  jacobian_weight
+        character(len=*), intent(in), optional  ::  mode
+!
+!       Local variables
+!
+        type(BinID)                             ::  mBinID
+!
+!       Begin code
+!
+        if (present(mode)) then
+          call DS_get_point_with_BinID(dim_name,random_variable,
+     &                                      mBinID,jacobian_weight,mode)
+        else
+          call DS_get_point_with_BinID(dim_name,random_variable,
+     &                                mBinID,jacobian_weight,'variance')
+        endif
+        integerIDPicked = mBinID%id
+      end subroutine DS_get_point_with_integerBinID
+
+      subroutine DS_get_point_with_BinID(dim_name,
+     &                   random_variable, mBinID, jacobian_weight, mode)
+!
+!       Subroutine arguments
+!
+        character(len=*), intent(in)            ::  dim_name
+        real*8, intent(in)                      ::  random_variable
+        type(BinID), intent(out)                ::  mBinID
+        real*8, intent(out)                     ::  jacobian_weight
+        character(len=*), intent(in), optional  ::  mode
+!
+!       Local variables
+!
+!       chose_mode = 1 : Sampling accoridng to variance
+!       chose_mode = 2 : Sampling according to norm
+        integer                                 ::  chosen_mode
+        type(SampledDimension)                  ::  mGrid
+        type(Bin)                               ::  mBin
+        integer                                 ::  ref_grid_index
+        integer                                 ::  i
+        real*8                                  ::  running_bound
+        real*8                                  ::  normalized_bin_bound
+!
+!       Begin code
+!
+        if (present(mode)) then
+          if (mode.eq.'variance') then
+            chosen_mode = 1
+          elseif (mode.eq.'norm') then
+            chosen_mode = 2
+          else
+            write(*,*) "DiscreteSampler:: Error in subroutine"//
+     &        " DS_get_point, mode '"//mode//"' is not recognized."
+            stop 1
+          endif
+        else
+          chosen_mode = 1
+        endif  
+
+        ref_grid_index = DS_dim_index(ref_grid, dim_name)
+        if (ref_grid_index.eq.-1) then
+          write(*,*) "DiscreteSampler:: Error in subroutine"//
+     &     " DS_get_point, dimension '"//dim_name//"' not found."
+          stop 1
+        endif
+        mGrid = ref_grid(ref_grid_index) 
+        
+        running_bound = 0.0d0
+        do i=1,size(mGrid%bins)
+          mBin = mGrid%bins(i)
+          normalized_bin_bound = 0.0d0
+          if (chosen_mode.eq.1) then
+            normalized_bin_bound = 
+     &                         DS_bin_variance(mBin)/mGrid%variance_norm
+     &                         
+          elseif (chosen_mode.eq.2) then
+            normalized_bin_bound = 
+     &                           mGrid%bins(i)%abs_weight/mGrid%abs_norm
+          endif
+            running_bound = running_bound + normalized_bin_bound
+          if (random_variable.le.running_bound) then
+            mBinID = mGrid%bins(i)%bid
+            jacobian_weight = size(mGrid%bins) * normalized_bin_bound
+            return
+          endif
+        enddo
+!       If no point was picked at this stage, there was a problem
+        write(*,*) 'DiscreteSampler:: Error, no point could be '//
+     &   'picked with random variable '//trim(toStr(random_variable))//
+     &   ' using upper bound found of '//trim(toStr(running_bound))//'.'
+        stop 1
+      end subroutine DS_get_point_with_BinID
+
+      function DS_bin_variance(mBin)
+!
+!       Function arguments
+!
+        type(Bin), intent(in)       :: mBin
+        real*8                      :: DS_bin_variance
+!
+!       Begin code
+!
+        DS_bin_variance = ((mBin%weight_sqr - mBin%weight**2) *
+     &                              (mBin%n_entries))/(mBin%n_entries+1)
+      end function DS_bin_variance
 !       ================================================
 !       Grid I/O functions
 !       ================================================
@@ -1343,11 +1534,11 @@
      &      '   abs_weight'
           do i=1,size(grid%bins)
             write(streamID,*) 
-     &                 '   '//trim(DS_toStr(grid%bins(i)%bid))//
-     &                 '   '//trim(toStr(grid%bins(i)%n_entries))//
-     &                 '   '//trim(toStr(grid%bins(i)%weight))//
-     &                 '   '//trim(toStr(grid%bins(i)%weight_sqr))//
-     &                 '   '//trim(toStr(grid%bins(i)%abs_weight))
+     &          '   '//trim(DS_toStr(grid%bins(i)%bid))//
+     &          '   '//trim(toStr(grid%bins(i)%n_entries))//
+     &          '   '//trim(toStr(grid%bins(i)%weight,'ESw.15E3'))//
+     &          '   '//trim(toStr(grid%bins(i)%weight_sqr,'ESw.15E3'))//
+     &          '   '//trim(toStr(grid%bins(i)%abs_weight,'ESw.15E3'))
           enddo
           write(streamID,*) ' </DiscreteSampler_grid>'
 
@@ -1486,7 +1677,7 @@
 !         
 !         Local variables
 !
-          real*8           :: norm, abs_norm, norm_sqr
+          real*8           :: norm, abs_norm, norm_sqr, variance_norm
           integer          :: i, n_tot_entries
 !
 !         Begin Code
@@ -1494,17 +1685,21 @@
           norm              = 0.0d0
           abs_norm          = 0.0d0
           norm_sqr          = 0.0d0
+          variance_norm     = 0.0d0
           n_tot_entries     = 0
           do i=1,size(grid%bins)
             n_tot_entries   = n_tot_entries  + grid%bins(i)%n_entries
             norm_sqr        = norm_sqr       + grid%bins(i)%weight_sqr
             abs_norm        = abs_norm       + grid%bins(i)%abs_weight
             norm            = norm           + grid%bins(i)%weight
+            variance_norm   = variance_norm  + 
+     &                                     DS_bin_variance(grid%bins(i))
           enddo
           grid%n_tot_entries = n_tot_entries
           grid%norm_sqr      = norm_sqr
           grid%abs_norm      = abs_norm
           grid%norm          = norm
+          grid%variance_norm = variance_norm
         end subroutine DS_synchronize_grid_with_bins
 
 !       ================================================
