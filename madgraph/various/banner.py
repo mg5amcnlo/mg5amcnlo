@@ -943,6 +943,7 @@ class RunCardNLO(RunCard):
         #inclusive cuts
         # Jet measure cuts 
         self.add_line("jetradius", 'float', 0.7, log=10)
+        self.add_line("gamma_is_j", 'bool', False)
 
 ################################################################################
 #      Writing the lines corresponding to anything but cuts

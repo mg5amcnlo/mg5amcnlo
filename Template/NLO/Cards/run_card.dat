@@ -113,7 +113,8 @@
  15  = bwcutoff
 #***********************************************************************
 # Cuts on the jets                                                     *
-# Jet clustering is performed by FastJet.
+# Jet clustering is performed by FastJet.                              *
+# if gamma_is_j, photons are also clustered                            *
 # When matching to a parton shower, these generation cuts should be    *
 # considerably softer than the analysis cuts.                          *
 # (more specific cuts can be specified in SubProcesses/cuts.f)         *
@@ -122,6 +123,7 @@
  0.7  = jetradius ! The radius parameter for the jet algorithm
   10  = ptj       ! Min jet transverse momentum
   -1  = etaj      ! Max jet abs(pseudo-rap) (a value .lt.0 means no cut)
+  T   = gamma_is_j! Wether to cluster photons as jets or not
 #***********************************************************************
 # Cuts on the charged leptons (e+, e-, mu+, mu-, tau+ and tau-)        *
 # (more specific gen cuts can be specified in SubProcesses/cuts.f)     *
@@ -134,6 +136,7 @@
   30  = mll_sf  ! Min inv. mass of all opp. sign same-flavor lepton pairs
 #***********************************************************************
 # Photon-isolation cuts, according to hep-ph/9801442                   *
+# Not applied if gamma_is_j                                            *
 # When ptgmin=0, all the other parameters are ignored                  *
 #***********************************************************************
   20  = ptgmin    ! Min photon transverse momentum

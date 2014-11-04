@@ -125,7 +125,8 @@ c-charged-leptons
          if (idup(i,1).eq.-15) is_a_lp(i)=.true. !  ta-
 
 c-photons
-         if (idup(i,1).eq.22)  is_a_ph(i)=.true. !  photon
+         if (idup(i,1).eq.22.and..not.gamma_is_j)  is_a_ph(i)=.true. ! iso photon
+         if (idup(i,1).eq.22.and.gamma_is_j)  is_a_j(i)=.true. !  photon in jets
       enddo
 
       RETURN
