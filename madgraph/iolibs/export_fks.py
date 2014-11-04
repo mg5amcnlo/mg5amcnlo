@@ -609,6 +609,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'cluster.inc',
                      'cluster.f',
                      'reweight.f',
+                     'randinit',
                      'sudakov.inc',
                      'maxconfigs.inc',
                      'timing_variables.inc']
