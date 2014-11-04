@@ -913,6 +913,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 coeff_list=coeff_list[n:]
                 res = ((basename+"%i)=") % (i + 1)) + \
                       (((basename+"%i)") % (i + 1)) if not first and split>0 else '')
+                res2 = (("LN"+basename+"%i)=") % (i + 1)) + \
+                      ((("LN"+basename+"%i)") % (i + 1)) if not first and split>0 else '')
                 first=False
                 # Optimization: if all contributions to that color basis element have
                 # the same coefficient (up to a sign), put it in front
@@ -923,6 +925,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     common_factor = True
                     global_factor = diff_fracs[0]
                     res = res + '%s(' % self.coeff(1, global_factor, False, 0)
+                    res2 = res2 + '%s(' % self.coeff(1, global_factor, False, 0)
     
                 for (coefficient, amp_number) in coefs:
                     if common_factor:
@@ -932,18 +935,38 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                    coefficient[2],
                                                    coefficient[3]),
                                                    amp_number)
+                    
+                        if(coefficient[3]==0):
+                              res2=  (res2 + "%s" + basename2 + "%d)") % \
+                                                   (self.coeff(coefficient[0],
+                                                   coefficient[1] / abs(coefficient[1]),
+                                                   coefficient[2],
+                                                   coefficient[3]),
+                                                   amp_number)
+                        else:
+                              res2=  res2 + "+0D0" 
                     else:
                         res = (res + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
                                                    coefficient[1],
                                                    coefficient[2],
                                                    coefficient[3]),
                                                    amp_number)
+                        if(coefficient[3]==0):
+                          res2 = (res2 + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
+                                                   coefficient[1],
+                                                   coefficient[2],
+                                                   coefficient[3]),
+                                                   amp_number) 
+                        else:
+                              res2=  res2 + "+0D0" 
+
     
                 if common_factor:
                     res = res + ')'
+                    res2 = res2 + ')'
     
                 res_list.append(res)
-
+                res_list.append(res2)
         return res_list
 
     def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False):

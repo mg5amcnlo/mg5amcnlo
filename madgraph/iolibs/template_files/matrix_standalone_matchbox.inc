@@ -90,7 +90,7 @@ C
       INTEGER I,J
       COMPLEX*16 ZTEMP
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), LNJAMP(NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
@@ -163,8 +163,8 @@ C
       INTEGER I,J
       COMPLEX*16 ZTEMP
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMMON/%(proc_prefix)sJAMP/JAMP
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), LNJAMP(NCOLOR)
+      COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP
 
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
@@ -195,11 +195,24 @@ C ----------
       INTEGER     NCOLOR, NJAMP
       PARAMETER (NCOLOR=%(ncolor)d) 
       COMPLEX*16  JAMP(NCOLOR), ONEJAMP
-      COMMON/%(proc_prefix)sJAMP/JAMP
+      COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP
 	
 	ONEJAMP = JAMP(njamp+1) ! +1 since njamp start at zero (c convention)
 	END
 
+       SUBROUTINE %(proc_prefix)sGET_LNJAMP(njamp, ONEJAMP)
+
+      INTEGER     NCOLOR, NJAMP
+      PARAMETER (NCOLOR=%(ncolor)d) 
+      COMPLEX*16  JAMP(NCOLOR), LNJAMP(NCOLOR), ONEJAMP
+      COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP
+	
+	ONEJAMP = LNJAMP(njamp+1) ! +1 since njamp start at zero (c convention)
+	END
+	
+	
+	
+	
      SUBROUTINE %(proc_prefix)sGET_NCOLOR(in1, in2, out)
 
 	integer in1, in2, out

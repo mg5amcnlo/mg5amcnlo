@@ -237,7 +237,7 @@ IF(NTRY.EQ.0) THEN
   CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
   CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)  
   HELDOUBLECHECKED=.NOT.DoubleCheckHelicityFilter
-OPEN(1, FILE='%(proc_path)sLoopFilter.dat", err=100, status='OLD',           action='READ')
+OPEN(1, FILE=                                                    '%(proc_path)sLoopFilter.dat", err=100, status='OLD',           action='READ')
   DO J=1,NLOOPGROUPS
     READ(1,*,END=101) GOODAMP(J)
   ENDDO
@@ -249,7 +249,7 @@ OPEN(1, FILE='%(proc_path)sLoopFilter.dat", err=100, status='OLD',           act
   ENDDO
 101  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="%(proc_path)sHelFilter.dat", err=102, status='OLD',           action='READ')
+OPEN(1, FILE=                                                    "%(proc_path)sHelFilter.dat", err=102, status='OLD',           action='READ')
   DO I=1,NCOMB
     READ(1,*,END=103) GOODHEL(I)
   ENDDO
@@ -261,7 +261,7 @@ OPEN(1, FILE="%(proc_path)sHelFilter.dat", err=102, status='OLD',           acti
   ENDDO
 103  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="%(proc_path)sColorNumFactors.dat", err=104, status='OLD',           action='READ')
+OPEN(1, FILE=                                                    "%(proc_path)sColorNumFactors.dat", err=104, status='OLD',           action='READ')
   DO I=1,NCOLORROWS
     READ(1,*,END=105) (CF_N(I,J),J=1,%(color_matrix_size)s)
   ENDDO
@@ -270,7 +270,7 @@ OPEN(1, FILE="%(proc_path)sColorNumFactors.dat", err=104, status='OLD',         
   STOP 'Color factors could not be initialized from file ColorNumFactors.dat. File not found' 
 105  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="%(proc_path)sColorDenomFactors.dat", err=106, status='OLD',           action='READ')
+OPEN(1, FILE=                                                    "%(proc_path)sColorDenomFactors.dat", err=106, status='OLD',           action='READ')
   DO I=1,NCOLORROWS
     READ(1,*,END=107) (CF_D(I,J),J=1,%(color_matrix_size)s)
   ENDDO
@@ -279,7 +279,7 @@ OPEN(1, FILE="%(proc_path)sColorDenomFactors.dat", err=106, status='OLD',       
   STOP 'Color factors could not be initialized from file ColorDenomFactors.dat. File not found' 
 107  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="%(proc_path)sHelConfigs.dat", err=108, status='OLD',                  action='READ')
+OPEN(1, FILE=                                                    "%(proc_path)sHelConfigs.dat", err=108, status='OLD',                  action='READ')
   DO H=1,NCOMB
     READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
   ENDDO
@@ -344,7 +344,7 @@ ENDIF
 CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
-OPEN(1, FILE="%(proc_path)sHelFilter.dat", err=110, status='NEW',       action='WRITE')
+OPEN(1, FILE=                                                    "%(proc_path)sHelFilter.dat", err=110, status='NEW',       action='WRITE')
   DO I=1,NCOMB
     WRITE(1,*) GOODHEL(I)  
   ENDDO
@@ -354,7 +354,7 @@ FOUNDHELFILTER=.TRUE.
 ENDIF
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER) THEN
-OPEN(1, FILE="%(proc_path)sLoopFilter.dat", err=111, status='NEW',       action='WRITE')
+OPEN(1, FILE=                                                    "%(proc_path)sLoopFilter.dat", err=111, status='NEW',       action='WRITE')
   DO J=1,NLOOPGROUPS
     WRITE(1,*) GOODAMP(J)
   ENDDO
@@ -605,7 +605,7 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected what are the zero helicity configurations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
 	    NTRY=0
-	    OPEN(29,FILE='%(proc_path)sHelFilter.dat',err=348)
+	    OPEN(29,FILE=                                     '%(proc_path)sHelFilter.dat',err=348)
 348     CONTINUE
         CLOSE(29,STATUS='delete')
 	  ENDIF
@@ -616,7 +616,7 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
 	    NTRY=0
-	    OPEN(30,FILE='%(proc_path)sHelFilter.dat',err=349)
+	    OPEN(30,FILE=                                     '%(proc_path)sHelFilter.dat',err=349)
 349     CONTINUE
         CLOSE(30,STATUS='delete')
 	  ENDIF
