@@ -1,17 +1,20 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.2.2(XX/XX/XX) RF: Fix bug #1377187
+2.2.2(XX/XX/XX) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
+                    processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.
+                    For LHC processes no sizeable effect have been observe so far.
+                MZ: some informations for aMC@NLO runs which were before passed via include files are
+                    now read at runtime. The size of executables as well as compilation time / memory usage
+                    is reduced for complicated processes
+                RF: Fix crash #1377187 (check that cuts were consistent with the grouping was too restrictive) 
 		RF: For NLO running: added 'strip' to the makefiles to reduce executable sizes (removes symbol info)
 		Stefano Carrazza (by RF): fix for the photon PDF for the internal NNPDF sets
 		RF: Improved the check on the consistency of the cuts and the grouping of subprocesse (LO running)
                 PT: enabled PYTHIA8.2
-                MZ: some informations for aMC@NLO runs which were before passed via include files are
-                    now read at runtime. The size of executables as well as compilation time / memory usage
-                    is reduced for complicated processes
                 OM: restore the usage of external gzip library for file larger than 4Gb which were crashing with
                     the python gzip library
                 OM: Fixing the default card for Delphes
-                OM: Improve support of lsf cluster (thanks Josh 
+                OM: Improve support of lsf cluster (thanks Josh) 
                 OM: Adding support for the UFO file functions.py (which was ignored before)
                 OM: Reduce the amount of RAM used by MadSpin in gridpack mode.
                 OM: discard in MadWidth partial width lower than \Lambda_QCD for colored particle.

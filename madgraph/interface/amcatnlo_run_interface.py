@@ -2556,11 +2556,12 @@ Integrated cross-section
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
 
             # run the plot creation in a secure way
-            try:
-                self.do_plot('%s -f' % self.run_name)
-            except Exception, error:
-                logger.info("Fail to make the plot. Continue...")
-                pass
+            if hep_format == 'StdHEP':
+                try:
+                    self.do_plot('%s -f' % self.run_name)
+                except Exception, error:
+                    logger.info("Fail to make the plot. Continue...")
+                    pass
 
         elif out_id == 'TOP':
             #copy the topdrawer file(s) back in events
