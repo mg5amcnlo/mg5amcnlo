@@ -100,6 +100,10 @@ C ----------
              ENDDO
              ANS=ANS+T
              TS(I)=T
+C            Doing MC over hel, so need to update the DiscreteSampler running grid
+			 if (ISUM_HEL.eq.1) then
+			   call add_helicity_entry_to_grid(I,T)
+			 endif
            ENDIF
         ENDDO
         JHEL = 1
@@ -114,6 +118,10 @@ C ----------
          ENDDO
         ENDIF
         IF(NTRY.EQ.MAXTRIES)THEN
+C          Doing MC over hel, so need to remove empty bins 
+           IF(ISUM_HEL.eq.1) then
+		     call remove_empty_helicity_bins()
+		   ENDIF
            ISUM_HEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
     ELSE              !RANDOM HELICITY

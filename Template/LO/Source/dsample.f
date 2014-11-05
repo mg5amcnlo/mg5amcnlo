@@ -848,6 +848,40 @@ c
       endif
       end
 
+      subroutine sample_get_discrete_x(wgt,picked_bin,iconfig,dim_name)
+c************************************************************************
+c     Returns maxdim random numbers between 0 and 1, and the wgt
+c     associated with this set of points, and the iteration number
+c     This routine chooses the point within the range specified by
+c     xmin and xmax for dimension j in configuration ipole
+c************************************************************************
+      use DiscreteSampler
+
+      implicit none      
+C     Subroutine arguments
+      integer picked_bin
+      character(len=*) dim_name
+      real*8 wgt
+C     This variable iconfig is what corresponds to ipole in sample_get_x
+C     and is used for random number generation
+      integer iconfig
+C     Local variables
+      real*8 jacobian
+      real*8 rdm
+      integer dummy
+c     
+c      Begin code
+c
+C     Fetch a random number bewteen 0.0 and 1.0
+c     The fourth argument is not used and therefore a dummy
+      dummy = 0
+      call ntuple(rdm,0.0d0,1.0d0,dummy,jconfig)
+C     Pick a point using the DiscreteSampler module
+      CALL DS_get_point(dim_name, rdm, picked_bin, jacobian, 'norm')
+      wgt = wgt * jacobian
+
+      end subroutine sample_get_discrete_x
+
       subroutine sample_get_x(wgt, x, j, ipole, xmin, xmax)
 c************************************************************************
 c     Returns maxdim random numbers between 0 and 1, and the wgt

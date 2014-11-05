@@ -3,12 +3,19 @@
           use DiscreteSampler
           use StringCast
           real*8 jac, to_test
-          REAL*8 integral_target, computed_int
+          REAL*8 integral_target, computed_int, variance
           integer i,j
           integer pts_per_it(4), pts
-          data pts_per_it/4*2000000/
-          real avg_acc
-          real this_acc
+          data pts_per_it/100000,100000,10000,100000/
+          real*8 avg_acc
+          real*8 this_acc
+          real*8 mvariance
+
+
+          mvariance=0.0d0
+          do i=1,10
+            mvariance = mvariance + (1.0/12.0)*to_test(i,.True.)**2
+          enddo
 
           integral_target = 0.0d0
           do i=1,10
@@ -16,14 +23,19 @@
           enddo
           call DS_register_dimension('TestDim',10)
           avg_acc = 0.0d0
-          do j=1,3
+          call DS_set_min_points(10)
+          do i=1,10
+            call DS_add_entry('conv',i,1.0d0)
+          enddo
+          call DS_add_entry('conv',7,70.0d0,reset=.True.)
+          do j=1,100
             if(j.le.size(pts_per_it)) then
               pts = pts_per_it(j)
             else
-              pts = 1000000
+              pts = 100000
             endif
-            write(*,*) 'Grid before iteration'            
-            call DS_print_global_info()
+c            write(*,*) 'Grid before iteration'            
+c            call DS_print_global_info()
             call approx(pts,computed_int,'norm')
             write(*,*) '=== ITERATION #'//trim(toStr(j))//' with '//
      & trim(toStr(pts))//' points.'
@@ -38,10 +50,11 @@
      &       trim(toStr(avg_acc*100.0d0,'Fw.3'))
             write(*,*) 'Grid before update'            
             call DS_print_global_info()
-            call DS_update_grid()
+            call DS_update_grid('TestDim')
 c            write(*,*) 'Grid after update'            
-c            call DS_print_global_info()
+c            call DS_print_global_info('TestDim')
           enddo
+          call DS_write_grid('rrrr.dsg')
       end program tester
 
 
@@ -55,13 +68,14 @@ c            call DS_print_global_info()
           computed_int = 0.0d0
           do i=1,n_trials
             CALL RANDOM_NUMBER(r)
-            call DS_get_point('TestDim',r(1),picked,jac,mode)
-            func = to_test(picked,.False.)
+            call DS_get_point('TestDim',r(1),picked,jac,
+     &      mode,(/'conv'/))
+            func = to_test(picked,.false.)
             computed_int = (computed_int*float(i-1)
      &       + func*jac)/float(i)
             call DS_add_entry('TestDim',picked,func)
           enddo
-          res = 10.0d0*computed_int
+          res = computed_int
 
       end subroutine approx
 
@@ -70,7 +84,7 @@ c            call DS_print_global_info()
           real*8 r(1), to_test
           real*8 values(10)
           logical           exact
-          data values/1.0d0, 2.0d0, 34.0d0, 3.0d0, 4.0d0,
+          data values/1.0d0, 2.0d0, -34.0d0, 3.0d0, 4.0d0,
      &    5.0d0, 2.0d0, 3.0d0, 1.0d0, 2.5d0/
 
           ! When using the function below, one recovers exact result
@@ -80,7 +94,7 @@ c            call DS_print_global_info()
           else
             CALL RANDOM_NUMBER(r)
             ! This simulates a convergence process
-            to_test = values(sector)*(0.5d0+r(1))
+            to_test = (values(sector)*(1.0d0))*(0.5+r(1))
           endif
           return
 

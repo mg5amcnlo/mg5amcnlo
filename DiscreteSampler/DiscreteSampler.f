@@ -38,9 +38,14 @@
 !       ::  binID on the flight from an integer using the function
 !       ::  DS_binID )
 !
-!     DS_add_entry(dimension_name, (binID|integerID), weight)
+!     DS_add_entry(dimension_name, (binID|integerID), weight, (reset|void))
 !       ::  Add a new weight to a certan bin (characterized by either
-!       ::  its binID or the integer of the binID)
+!       ::  its binID or the integer of the binID). If the dimension or
+!       ::  the binID do not exist at the time of adding them, they will
+!       ::  be registered on the flight. By setting the option 'reset'
+!       ::  to '.True.' (default is '.False.'), you can chose to hardset
+!       ::  the weight of this bin (with n_entries=1 then) instead of
+!       ::  adding it.
 !
 !     DS_update_grid((dim_name|void))
 !       ::  Update the reference grid of the dimension dim_name or 
@@ -62,20 +67,36 @@
 !       :: 'DS_update_grid' if you want it pased to the ref_grid.
 !
 !     DS_get_point(dim_name, random_variable, 
-!       (binIDPicked|integerIDPicked), jacobian_weight, (mode|void))
+!       (binIDPicked|integerIDPicked), jacobian_weight, (mode|void),
+!                                        (convoluted_grid_names|void))
 !       :: From a given random variable in [0.0,1.0] and a dimension
 !       :: name, this subroutine returns the picked bin or index and
 !       :: the Jacobian weight associated.
 !       :: The mode is by default 'norm' but can also be 'variance'
 !       :: which means that the sampling is done either on the
 !       :: variance in each bin or the absolute value of the weights.
-!       :: mode = 'norm'
-!       :: Jacobian = nbins_in_dim * normalized_abs_wgt_in_selected_bin
-!       ::   = sum_abs_wgt_in_selected_bin / sum_abs_wgt_summed_over_all_bins
-!       :: mode = 'variance'
-!       :: Jacobian = nbins_in_dim * normalized_variance_in_selected_bin
-!       ::   = variance_in_selected_bin / variance_summed_over_all_bins
-
+!       :: mode == 'norm'
+!       :: Jacobian = 1.0d0 / normalized_abs_wgt_in_selected_bin
+!       :: mode == 'variance'
+!       :: Jacobian = 1.0d0 / normalized_variance_in_selected_bin
+!       :: mode == 'uniform'
+!       :: Jacobian = 1.0d0 / n_bins_in_dimension
+!       :: Setting the option 'convoluted_grid_names' to an array of
+!       :: dimension names already registered in the module will have
+!       :: the subroutine DS_get_point return a point sampled as the
+!       :: grid 'dim_name' *convoluted with all grids specified in
+!       :: convoluted_grid_names*.
+!       :: Example:
+!       ::  call DS_get_point('MyDim',0.02,out_binPicked,out_jac,mode='norm',
+!       :: & convoluted_grid_names = (/'ConvolutionDim1','ConvolutionDim2'/))
+! 
+!     DS_set_min_points(min_point, (dim_name|void))
+!       :: Sets the minimum number of points that must be used to probe
+!       :: each bin of a particular dimension (or all if not specified) 
+!       :: before DS_get_point uses a uniform sampling on the bins 
+!       :: (possibly with convolution) when the reference grid is empty. 
+!       :: By default it is 10.
+!
       module DiscreteSampler
 
       use StringCast
@@ -122,22 +143,25 @@
       end interface operator (+)
 
       type sampledDimension
-!       These are the reference weights, for the grid currently used
-!       and controlling the sampling
-        type(bin) , dimension(:), allocatable    :: bins
+!       Minimum number of points to probe each bin with when the reference
+!       grid is empty. Once each bin has been probed that many times, the
+!       subroutine DS_get_point will use a uniform distribution
+        integer                                :: min_bin_probing_points
 !       Keep track of the norm (i.e. sum of all weights) and the total
 !       number of points for ease and optimisation purpose
-        real*8                                   :: norm
+        real*8                                 :: norm
 !       The sum of the absolute value of the weight in each bin
-        real*8                                   :: abs_norm
+        real*8                                 :: abs_norm
 !       The sum of the variance of the weight in each bin
-        real*8                                   :: variance_norm
+        real*8                                 :: variance_norm
 !       The sum of the squared weights in each bin
-        real*8                                   :: norm_sqr    
-        integer                                  :: n_tot_entries
+        real*8                                 :: norm_sqr    
+        integer                                :: n_tot_entries
 !       A handy way of referring to the dimension by its name rather than
 !       an index.
-        character, dimension(:), allocatable     :: dimension_name
+        character, dimension(:), allocatable   :: dimension_name
+!       Bins of the grid
+        type(bin) , dimension(:), allocatable  :: bins
       endtype sampledDimension
 
 !     This stores the overall discrete reference grid
@@ -365,12 +389,12 @@
           do i=1, size(source%dimension_name)
             trget%dimension_name(i) = source%dimension_name(i)
           enddo
-          trget%norm          = source%norm
-          trget%abs_norm      = source%abs_norm
-          trget%variance_norm = source%variance_norm
-          trget%norm_sqr      = source%norm_sqr
-          trget%n_tot_entries = source%n_tot_entries 
-
+          trget%norm                   = source%norm
+          trget%abs_norm               = source%abs_norm
+          trget%variance_norm          = source%variance_norm
+          trget%norm_sqr               = source%norm_sqr
+          trget%n_tot_entries          = source%n_tot_entries 
+          trget%min_bin_probing_points = source%min_bin_probing_points
         end subroutine DS_copy_dimension
 
 !       ----------------------------------------------------------------------
@@ -485,6 +509,10 @@
           do i= 1, len(d_dim%dimension_name)
             d_dim%dimension_name(i:i) = ' '
           enddo
+!         By default require each bin to be probed by 10 points
+!         before a uniform distribution is used when the reference grid
+!         is empty
+          d_dim%min_bin_probing_points = 10
 !         By default give sequential ids to the bins
           do i=1, size(d_dim%bins)
             d_dim%bins(i)%bid = i
@@ -524,6 +552,43 @@
           d_bin%weight     = 0.0d0
           d_bin%n_entries  = 0
         end subroutine DS_reinitialize_bin
+
+!       ---------------------------------------------------------------
+!       Set the minimum number of point for which the bins must be
+!       probed before a uniform distribution is used when the reference
+!       grid is empty
+!       ---------------------------------------------------------------
+        subroutine DS_set_min_points(min_points, dim_name)
+        implicit none
+!         
+!         Subroutine arguments
+!
+!     
+          integer, intent(in)                      :: min_points
+          character(len=*), intent(in), optional   :: dim_name
+!
+!         Local variables
+!
+          integer i
+!
+!         Begin Code
+!
+          if(present(dim_name)) then
+            ref_grid(DS_dim_index(ref_grid,dim_name))%
+     &                               min_bin_probing_points = min_points
+            run_grid(DS_dim_index(ref_grid,dim_name))% 
+     &                               min_bin_probing_points = min_points
+          else
+            do i=1,size(ref_grid)
+              ref_grid(i)%min_bin_probing_points = min_points
+              run_grid(i)%min_bin_probing_points = min_points
+            enddo
+          endif
+        end subroutine DS_set_min_points
+
+!       ---------------------------------------------------------------
+!       Dictionary access-like subroutine to obtain a grid from its name
+!       ---------------------------------------------------------------
 
         function DS_get_dimension(grid, dim_name)
         implicit none
@@ -652,7 +717,8 @@
 !       Add a new weight to a certan bin (characterized by either its 
 !       binID or index)
 !       ---------------------------------------------------------------
-        subroutine DS_add_entry_with_BinID(dim_name, mBinID,weight)
+        subroutine DS_add_entry_with_BinID(dim_name, mBinID, weight,
+     &                                                            reset)
           implicit none
 !         
 !         Subroutine arguments
@@ -660,15 +726,23 @@
           character(len=*), intent(in)  :: dim_name
           type(BinID)                   :: mBinID
           real*8                        :: weight
+          logical, optional             :: reset
 !
 !         Local variables
 !
           integer dim_index, bin_index
           type(Bin)                     :: newBin
           integer                       :: n_entries
+          logical                       :: opt_reset          
 !
 !         Begin code
 !
+          if (present(reset)) then
+            opt_reset = reset
+          else
+            opt_reset = .False.
+          endif
+
           dim_index = DS_dim_index(run_grid, dim_name, .TRUE.)
           if (dim_index.eq.-1) then
               call DS_Logger('Dimension  '//dim_name//
@@ -698,18 +772,28 @@
           run_grid(dim_index)%variance_norm = 
      &              run_grid(dim_index)%variance_norm -
      &              DS_bin_variance(run_grid(dim_index)%bins(bin_index))
+          run_grid(dim_index)%n_tot_entries = 
+     &              run_grid(dim_index)%n_tot_entries -
+     &                     run_grid(dim_index)%bins(bin_index)%n_entries
 !         Update the information directly stored in the bin
-          n_entries = run_grid(dim_index)%bins(bin_index)%n_entries
-          run_grid(dim_index)%bins(bin_index)%weight = 
-     &      (run_grid(dim_index)%bins(bin_index)%weight*n_entries
+          if(.not.opt_reset) then
+            n_entries = run_grid(dim_index)%bins(bin_index)%n_entries
+            run_grid(dim_index)%bins(bin_index)%weight = 
+     &        (run_grid(dim_index)%bins(bin_index)%weight*n_entries
      &                                           + weight)/(n_entries+1)
-          run_grid(dim_index)%bins(bin_index)%weight_sqr = 
-     &      (run_grid(dim_index)%bins(bin_index)%weight_sqr*n_entries
+            run_grid(dim_index)%bins(bin_index)%weight_sqr = 
+     &        (run_grid(dim_index)%bins(bin_index)%weight_sqr*n_entries
      &                                        + weight**2)/(n_entries+1)
-          run_grid(dim_index)%bins(bin_index)%abs_weight = 
-     &      (run_grid(dim_index)%bins(bin_index)%abs_weight*n_entries
+            run_grid(dim_index)%bins(bin_index)%abs_weight = 
+     &        (run_grid(dim_index)%bins(bin_index)%abs_weight*n_entries
      &                                      + abs(weight))/(n_entries+1)
-          run_grid(dim_index)%bins(bin_index)%n_entries = n_entries + 1
+            run_grid(dim_index)%bins(bin_index)%n_entries = n_entries+1
+          else
+            run_grid(dim_index)%bins(bin_index)%weight = weight
+            run_grid(dim_index)%bins(bin_index)%weight_sqr = weight**2
+            run_grid(dim_index)%bins(bin_index)%abs_weight = abs(weight)
+            run_grid(dim_index)%bins(bin_index)%n_entries = 1
+          endif
 !         Now add the bin information back to the info in the grid
           run_grid(dim_index)%norm = run_grid(dim_index)%norm +
      &                   run_grid(dim_index)%bins(bin_index)%weight
@@ -720,26 +804,32 @@
           run_grid(dim_index)%variance_norm = 
      &              run_grid(dim_index)%variance_norm +
      &              DS_bin_variance(run_grid(dim_index)%bins(bin_index))
-!         And add one entry for this dimension
-          run_grid(dim_index)%n_tot_entries =  
-     &                             run_grid(dim_index)%n_tot_entries + 1
+          run_grid(dim_index)%n_tot_entries = 
+     &              run_grid(dim_index)%n_tot_entries +
+     &                     run_grid(dim_index)%bins(bin_index)%n_entries
 
         end subroutine DS_add_entry_with_BinID
 
         subroutine DS_add_entry_with_BinIntID(dim_name, BinIntID,
-     &                                                       weight)
+     &                                                weight, reset)
           implicit none
 !         
 !         Subroutine arguments
 !
           character(len=*), intent(in)  :: dim_name
           integer                       :: BinIntID
-          real*8                        :: weight 
+          real*8                        :: weight
+          logical, optional             :: reset          
 !
 !         Begin code
 !
-          call DS_add_entry_with_BinID(dim_name, DS_BinID(BinIntID),
-     &                                                          weight)
+          if (present(reset)) then
+            call DS_add_entry_with_BinID(dim_name, DS_BinID(BinIntID),
+     &                                                    weight, reset)
+          else
+            call DS_add_entry_with_BinID(dim_name, DS_BinID(BinIntID),
+     &                                                           weight)
+          endif
         end subroutine DS_add_entry_with_BinIntID
 
 !       ---------------------------------------------------------------
@@ -928,7 +1018,7 @@
             write(*,*) "DiscreteSampler::   -> Abs weights sampled as"//
      &                                      " (first 10 bins):"
           else
-            write(*,*) "DiscreteSampler::   -> Abs weights Sampled as:"
+            write(*,*) "DiscreteSampler::   -> Abs weights sampled as:"
           endif
           write(*,*) "DiscreteSampler::    "//trim(samplingBar1)
           if (n_bins.gt.10) then
@@ -973,7 +1063,7 @@
           ref_size=size(ref_grid(DS_dim_index(ref_grid,dim_name))%bins)
           run_size=size(run_grid(DS_dim_index(run_grid,dim_name))%bins)
           call DS_add_bin_with_binID(dim_name,DS_binID(
-     &                                max(ref_size, run_size)+1))
+     &                                      max(ref_size, run_size)+1))
         end subroutine DS_add_bin_with_void
 
         subroutine DS_add_bin_with_binID(dim_name,mBinID)
@@ -1216,6 +1306,7 @@
           character, dimension(:), allocatable  :: dim_name
           type(BinID)                           :: mBinID
           type(Bin)                        :: new_bin, ref_bin, run_bin
+          logical                          :: empty_ref_grid
 !
 !         Begin code
 !
@@ -1236,6 +1327,8 @@
 
           ref_d_index = DS_dim_index(ref_grid, dim_name)
 
+          empty_ref_grid = (ref_grid(ref_d_index)%n_tot_entries.eq.0)
+
           do i=1,size(run_grid(d_index)%bins)
             mBinID = run_grid(d_index)%bins(i)%bid
             ref_bin_index = DS_bin_index(
@@ -1251,7 +1344,17 @@
      &                                ref_grid(ref_d_index)%bins,mBinID)
             endif
             ref_bin = ref_grid(ref_d_index)%bins(ref_bin_index)
-            run_bin = run_grid(d_index)%bins(i) 
+            run_bin = run_grid(d_index)%bins(i)
+            if ((run_bin%n_entries.lt.ref_grid(ref_d_index)%
+     &           min_bin_probing_points).and.empty_ref_grid) then
+              write(*,*) "DiscreteSampler:: WARNING, the bin '"//
+     &        trim(DS_toStr(run_bin%bid))//"' of dimension '"//
+     &        trim(toStr(dim_name))//"' will be used for reference"//
+     &        " even though it has been probed only "//
+     &        trim(toStr(run_bin%n_entries))//" times (minimum "//
+     &        "requested is "//trim(toStr(ref_grid(ref_d_index)%
+     &        min_bin_probing_points))//" times)."
+            endif
             new_bin = ref_bin + run_bin 
 
 !           Update the grid global cumulative information first
@@ -1344,15 +1447,18 @@
 !       ================================================
  
       subroutine DS_get_point_with_integerBinID(dim_name,
-     &           random_variable, integerIDPicked, jacobian_weight,mode)
+     &           random_variable, integerIDPicked, jacobian_weight,mode,
+     &                                            convoluted_grid_names)
 !
 !       Subroutine arguments
 !
-        character(len=*), intent(in)            ::  dim_name
-        real*8, intent(in)                      ::  random_variable
-        integer, intent(out)                    ::  integerIDPicked
-        real*8, intent(out)                     ::  jacobian_weight
-        character(len=*), intent(in), optional  ::  mode
+        character(len=*), intent(in)             ::  dim_name
+        real*8, intent(in)                       ::  random_variable
+        integer, intent(out)                     ::  integerIDPicked
+        real*8, intent(out)                      ::  jacobian_weight
+        character(len=*), intent(in), optional   ::  mode
+        character(len=*), dimension(:), intent(in), optional ::
+     &                                             convoluted_grid_names
 !
 !       Local variables
 !
@@ -1361,17 +1467,30 @@
 !       Begin code
 !
         if (present(mode)) then
-          call DS_get_point_with_BinID(dim_name,random_variable,
-     &                                      mBinID,jacobian_weight,mode)
+          if (present(convoluted_grid_names)) then
+            call DS_get_point_with_BinID(dim_name,random_variable,
+     &                      mBinID,jacobian_weight,mode=mode,
+     &                      convoluted_grid_names=convoluted_grid_names)
+          else
+            call DS_get_point_with_BinID(dim_name,random_variable,
+     &                                 mBinID,jacobian_weight,mode=mode)
+          endif
         else
-          call DS_get_point_with_BinID(dim_name,random_variable,
-     &                                mBinID,jacobian_weight,'variance')
+          if (present(convoluted_grid_names)) then
+            call DS_get_point_with_BinID(dim_name,random_variable,
+     &                      mBinID,jacobian_weight,
+     &                      convoluted_grid_names=convoluted_grid_names)
+          else
+            call DS_get_point_with_BinID(dim_name,random_variable,
+     &                                           mBinID,jacobian_weight)
+          endif
         endif
         integerIDPicked = mBinID%id
       end subroutine DS_get_point_with_integerBinID
 
       subroutine DS_get_point_with_BinID(dim_name,
-     &                   random_variable, mBinID, jacobian_weight, mode)
+     &           random_variable, mBinID, jacobian_weight, mode,
+     &                                            convoluted_grid_names)
 !
 !       Subroutine arguments
 !
@@ -1380,18 +1499,27 @@
         type(BinID), intent(out)                ::  mBinID
         real*8, intent(out)                     ::  jacobian_weight
         character(len=*), intent(in), optional  ::  mode
+        character(len=*), dimension(:), intent(in), optional ::
+     &                                             convoluted_grid_names
 !
 !       Local variables
 !
 !       chose_mode = 1 : Sampling accoridng to variance
 !       chose_mode = 2 : Sampling according to norm
-        integer                                 ::  chosen_mode
-        type(SampledDimension)                  ::  mGrid
-        type(Bin)                               ::  mBin
-        integer                                 ::  ref_grid_index
-        integer                                 ::  i
-        real*8                                  ::  running_bound
-        real*8                                  ::  normalized_bin_bound
+!       chose_mode = 3 : Uniform sampling
+        integer                 ::  chosen_mode
+        type(SampledDimension)  ::  mGrid, runGrid
+        type(Bin)               ::  mBin, mRunBin
+        integer                 ::  ref_grid_index, run_grid_index
+        integer                 ::  i,j
+        real*8                  ::  running_bound
+        real*8                  ::  normalized_bin_bound
+        integer                 ::  min_points_in_bin, min_bin_index
+        real*8                  :: sampling_norm        
+!       Local variables related to convolution
+        real*8, dimension(:), allocatable :: convolution_factors
+        integer                 :: conv_bin_index
+        type(SampledDimension)  :: conv_dim
 !
 !       Begin code
 !
@@ -1400,13 +1528,15 @@
             chosen_mode = 1
           elseif (mode.eq.'norm') then
             chosen_mode = 2
+          elseif (mode.eq.'uniform') then
+            chosen_mode = 3
           else
             write(*,*) "DiscreteSampler:: Error in subroutine"//
      &        " DS_get_point, mode '"//mode//"' is not recognized."
             stop 1
           endif
         else
-          chosen_mode = 1
+          chosen_mode = 2
         endif  
 
         if (.not.allocated(ref_grid)) then
@@ -1416,36 +1546,130 @@
           stop 1
         endif
 
-        ref_grid_index = DS_dim_index(ref_grid, dim_name)
+        ref_grid_index = DS_dim_index(ref_grid, dim_name,.True.)
         if (ref_grid_index.eq.-1) then
           write(*,*) "DiscreteSampler:: Error in subroutine"//
      &     " DS_get_point, dimension '"//dim_name//"' not found."
           stop 1
         endif
-        mGrid = ref_grid(ref_grid_index) 
-        
+        mGrid = ref_grid(ref_grid_index)
+
+!       If the reference grid is empty, force the use of uniform
+!       sampling
+        if (mGrid%n_tot_entries.eq.0) then
+          chosen_mode = 3
+        endif
+
+!       If the grid is empty we must first make sure that each bin was
+!       probed with min_bin_probing_points before using a uniform grid
+        if(mGrid%n_tot_entries.eq.0) then
+          run_grid_index = DS_dim_index(run_grid, dim_name,.True.)
+          if (run_grid_index.eq.-1) then
+            write(*,*) "DiscreteSampler:: Error in subroutine"//
+     &       " DS_get_point, dimension '"//dim_name//"' not found"//
+     &       " in the running grid."
+            stop 1
+          endif
+          runGrid           = run_grid(run_grid_index)
+
+          min_points_in_bin = mGrid%min_bin_probing_points
+          min_bin_index     = 1
+          do i=1,size(mGrid%bins)
+            mRunBin = DS_get_bin(runGrid%bins,mGrid%bins(i)%bid)
+            if (mRunBin%n_entries.lt.min_points_in_bin) then
+              min_points_in_bin = mRunBin%n_entries
+              min_bin_index = i
+            endif
+          enddo
+          if(min_points_in_bin.lt.mGrid%min_bin_probing_points) then
+!           In this case, we must first fill in bins which do not have 
+!           have enough entries and return the jacobian corresponding
+!           to a uniform distributions. Possible convolutions are
+!           ignored
+            mBinID = mGrid%bins(min_bin_index)%bid
+            jacobian_weight = float(size(mGrid%bins))
+            return
+          endif
+        endif
+
+!
+!       Now appropriately set the convolution factors
+!
+        allocate(convolution_factors(size(mGrid%bins)))
+        if (present(convoluted_grid_names)) then
+!         Sanity check
+          do j=1,size(convoluted_grid_names)
+            if (DS_dim_index(run_grid,convoluted_grid_names(j),
+     &                                               .True.).eq.-1) then
+              write(*,*) "DiscreteSampler:: Error, dimension '"//
+     &         convoluted_grid_names(j)//"' for convolut"//
+     &         "ion could not be found in the running grid."
+              stop 1
+            endif
+          enddo
+          sampling_norm          = 0.0d0          
+          do i=1,size(mGrid%bins)
+            convolution_factors(i) = 1.0d0
+            do j=1,size(convoluted_grid_names)
+              conv_dim = DS_get_dimension(
+     &                                run_grid,convoluted_grid_names(j))
+              conv_bin_index = DS_bin_index(conv_dim%bins,
+     &                                         mGrid%bins(i)%bid,.True.)
+              if (conv_bin_index.eq.-1) then
+                write(*,*) "DiscreteSampler:: Error, bin '"//
+     &          trim(DS_toStr(mGrid%bins(i)%bid))//"' could not be fo"//
+     &          "und in convoluted dimension '"//
+     &                                    convoluted_grid_names(j)//"'."
+                stop 1
+              endif
+              ! Notice that for the convolution we always use the
+              ! absolute value of the weight because we assume the user
+              ! has edited this grid by himself for with a single entry.
+              convolution_factors(i) = convolution_factors(i)*
+     &                          conv_dim%bins(conv_bin_index)%abs_weight
+            enddo
+            if (chosen_mode.eq.1) then
+              sampling_norm = sampling_norm + 
+     &             convolution_factors(i)*DS_bin_variance(mGrid%bins(i))
+            elseif (chosen_mode.eq.2) then
+              sampling_norm = sampling_norm + 
+     &             convolution_factors(i)*mGrid%bins(i)%abs_weight
+            elseif (chosen_mode.eq.3) then
+              sampling_norm = sampling_norm + convolution_factors(i)
+            endif
+          enddo
+        else
+          do i=1,size(mGrid%bins)          
+            convolution_factors(i)    = 1.0d0
+          enddo
+          if (chosen_mode.eq.1) then
+            sampling_norm           = mGrid%variance_norm
+          elseif (chosen_mode.eq.2) then
+            sampling_norm           = mGrid%abs_norm
+          elseif (chosen_mode.eq.3) then
+            sampling_norm           = float(size(mGrid%bins))
+          endif
+        endif
+!
+!       Now come the usual sampling method 
+!
         running_bound = 0.0d0
         do i=1,size(mGrid%bins)
           mBin = mGrid%bins(i)
-          normalized_bin_bound = 0.0d0
-          if(mGrid%n_tot_entries.eq.0) then
-!           If the grid is empty, just return a uniform distribution
-            normalized_bin_bound = 1.0d0/float(size(mGrid%bins))
-          else
-            if (chosen_mode.eq.1) then
-              normalized_bin_bound = 
-     &                         DS_bin_variance(mBin)/mGrid%variance_norm
-     &                         
-            elseif (chosen_mode.eq.2) then
-              normalized_bin_bound = 
-     &                           mGrid%bins(i)%abs_weight/mGrid%abs_norm
-            endif
+          if (chosen_mode.eq.1) then
+            normalized_bin_bound = DS_bin_variance(mBin)
+          elseif (chosen_mode.eq.2) then
+            normalized_bin_bound = mBin%abs_weight
+          elseif (chosen_mode.eq.3) then
+            normalized_bin_bound = 1.0d0
           endif
+          normalized_bin_bound = normalized_bin_bound * 
+     &                        ( convolution_factors(i) / sampling_norm )
           running_bound = running_bound + normalized_bin_bound
           if (random_variable.le.running_bound) then
             mBinID = mGrid%bins(i)%bid
-            jacobian_weight = (1.0d0 / size(mGrid%bins)) /
-     &                                              normalized_bin_bound
+            jacobian_weight = 1.0d0 / normalized_bin_bound
+            deallocate(convolution_factors)         
             return
           endif
         enddo
