@@ -1434,12 +1434,18 @@
           endif
           CombinedBin%bid = BinA%bid
           CombinedBin%n_entries = BinA%n_entries + BinB%n_entries
-          CombinedBin%weight = (BinA%weight*BinA%n_entries + 
+          if (CombinedBin%n_entries.eq.0) then
+            CombinedBin%weight     = 0.0d0
+            CombinedBin%abs_weight = 0.0d0
+            CombinedBin%weight_sqr = 0.0d0
+          else
+            CombinedBin%weight     = (BinA%weight*BinA%n_entries + 
      &                 BinB%weight*BinB%n_entries)/CombinedBin%n_entries
-          CombinedBin%abs_weight = (BinA%abs_weight*BinA%n_entries +
+            CombinedBin%abs_weight = (BinA%abs_weight*BinA%n_entries +
      &             BinB%abs_weight*BinB%n_entries)/CombinedBin%n_entries
-          CombinedBin%weight_sqr = (BinA%weight_sqr*BinA%n_entries + 
+            CombinedBin%weight_sqr = (BinA%weight_sqr*BinA%n_entries + 
      &             BinB%weight_sqr*BinB%n_entries)/CombinedBin%n_entries
+          endif
         end function DS_combine_two_bins
 
 !       ================================================
@@ -1520,6 +1526,7 @@
         real*8, dimension(:), allocatable :: convolution_factors
         integer                 :: conv_bin_index
         type(SampledDimension)  :: conv_dim
+        logical                 :: one_norm_is_zero
 !
 !       Begin code
 !
@@ -1591,7 +1598,7 @@
             return
           endif
         endif
-
+         
 !
 !       Now appropriately set the convolution factors
 !
@@ -1650,6 +1657,54 @@
             sampling_norm           = float(size(mGrid%bins))
           endif
         endif
+
+        if (sampling_norm.eq.0d0) then
+          one_norm_is_zero = .FALSE.
+          write(*,*) 'DiscreteSampler:: Error, all bins'//
+     &     " of sampled dimension '"//dim_name//"' or of the"//
+     &     " following convoluted dimensions have zero weight:"
+          if (chosen_mode.eq.2) then
+            write(*,*) "DiscreteSampler:: Sampled dimension "//
+     & "    : '"//trim(toStr(mGrid%dimension_name))//"' with norm "//
+     &                     trim(toStr(mGrid%abs_norm,'ENw.3'))//"."
+            one_norm_is_zero = ((.not.one_norm_is_zero).and.
+     &                                          mGrid%abs_norm.eq.0.0d0)
+          elseif (chosen_mode.eq.1) then
+            write(*,*) "DiscreteSampler:: Sampled dimension "//
+     & "    : '"//trim(toStr(mGrid%dimension_name))//"' with norm "//
+     &                     trim(toStr(mGrid%variance_norm,'ENw.3'))//"."
+            one_norm_is_zero = ((.not.one_norm_is_zero).and.
+     &                                     mGrid%variance_norm.eq.0.0d0)
+          elseif (chosen_mode.eq.3) then
+            write(*,*) "DiscreteSampler:: Norm of sampled dimension '"//
+     &       trim(toStr(mGrid%dimension_name))//"' irrelevant since"//
+     &       " uniform sampling was selected."
+          endif
+          if(present(convoluted_grid_names)) then
+            do i=1,size(convoluted_grid_names)
+              conv_dim = DS_get_dimension(run_grid,
+     &                                         convoluted_grid_names(i))
+              write(*,*) "DiscreteSampler:: Convoluted dimension "//
+     &       trim(toStr(i))//": '"//convoluted_grid_names(i)//
+     &       "' with norm "//trim(toStr(conv_dim%abs_norm,'ENw.3'))//"."
+            one_norm_is_zero = ((.not.one_norm_is_zero).and.
+     &                                       conv_dim%abs_norm.eq.0.0d0)
+            enddo
+          endif
+          if(present(convoluted_grid_names).and.(.not.one_norm_is_zero))
+     &                                                              then
+            write(*,*) "DiscreteSampler:: None of the norm above"
+     &        //" is zero, this means that the convolution (product)"
+     &        //" of the grids yields zero for each bin, even though"
+     &        //" they are not zero separately."
+            write(*,*) "DiscreteSampler:: Use DS_print_global_info()"//
+     &        " to investigate further."
+          endif
+          write(*,*) "DiscreteSampler:: One norm is zero, no sampling"//
+     &     " can be done in these conditions."
+          stop 1
+        endif
+
 !
 !       Now come the usual sampling method 
 !
