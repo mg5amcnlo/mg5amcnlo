@@ -1185,7 +1185,7 @@ class AllMatrixElement(dict):
             decaying_base = [id for id in final if abs(id) in self.decay_ids]
             decaying_base.sort()
             topo['base_order'] = (initial , final)
-            topo['matrix_element'] = me
+#            topo['matrix_element'] = me
             tags = []
             topo['tag2order'] = {}
              
@@ -2662,6 +2662,8 @@ class decay_all_events(object):
         decay_text = []
         for decays in self.mscmd.list_branches.values():
             for decay in  decays:
+                if '=' not in decay:
+                    decay += ' QCD=99'
                 if ',' in decay:
                     decay_text.append('(%s)' % decay)
                 else:
@@ -2791,11 +2793,11 @@ class decay_all_events(object):
                                          'processes': matrix_element.get('processes'),
                                          'tag': me.shell_string(pdg_order=True)}
         #
-        if __debug__:
-            #check that all decay matrix element correspond to a decay only
-            for prod in self.all_ME.values():
-                for decay in prod['matrix_element']['base_amplitude']['process']['decay_chains']:
-                    assert decay.shell_string() in self.all_decay
+#        if __debug__:
+#            #check that all decay matrix element correspond to a decay only
+#            for prod in self.all_ME.values():
+#                for decay in prod['matrix_element']['base_amplitude']['process']['decay_chains']:
+#                    assert decay.shell_string() in self.all_decay
             
         
     def get_branching_ratio(self):

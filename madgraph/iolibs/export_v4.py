@@ -4698,13 +4698,12 @@ class UFO_model_to_mg4(object):
                  
                 double complex gal(2)
                 common/weak/ gal
-
-                """        
-        if self.model.get('expansion_order'):
-            header=header+"""double precision MU_R
+                
+                double precision MU_R
                 common/rscale/ MU_R
 
-                """
+                """        
+
         header = header+"""double precision Nf
                 parameter(Nf=%d)
                 """ % self.model.get_nflav()
@@ -4717,13 +4716,11 @@ class UFO_model_to_mg4(object):
                      
                     %(complex_mp_format)s %(mp_prefix)sgal(2)
                     common/MP_weak/ %(mp_prefix)sgal
-    
-                    """        
-            if self.model.get('expansion_order'):
-                header=header+"""%(complex_mp_format)s %(mp_prefix)sMU_R
+                    
+                    %(complex_mp_format)s %(mp_prefix)sMU_R
                     common/MP_rscale/ %(mp_prefix)sMU_R
-    
-                    """            
+                    """        
+                              
             mp_fsock.writelines(header%{'real_mp_format':self.mp_real_format,
                                   'complex_mp_format':self.mp_complex_format,
                                   'mp_prefix':self.mp_prefix})
@@ -5240,6 +5237,58 @@ class UFO_model_to_mg4(object):
             input = pjoin(model_path,'Fortran','functions.f')
             file.writelines(fsock, open(input).read())
             fsock.write_comment_line(' END USER DEFINE FUNCTIONS ')
+            
+        # check for functions define in the UFO model
+        ufo_fct = self.model.get('functions')
+        if ufo_fct:
+            fsock.write_comment_line(' START UFO DEFINE FUNCTIONS ')
+            for fct in ufo_fct:
+                # already handle by default
+                if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
+                                    "theta_function", "cond", "reglog", "arg"]:
+                    ufo_fct_template = """
+          double complex function %(name)s(%(args)s)
+          implicit none
+          double complex %(args)s
+          %(name)s = %(fct)s
+
+          return
+          end
+          """
+                    text = ufo_fct_template % {
+                                'name': fct.name,
+                                'args': ", ".join(fct.arguments),                
+                                'fct': self.p_to_f.parse(fct.expr)
+                                 }
+                    fsock.writelines(text)
+            if self.opt['mp']:
+                fsock.write_comment_line(' START UFO DEFINE FUNCTIONS FOR MP')
+                for fct in ufo_fct:
+                    # already handle by default
+                    if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
+                                        "theta_function", "cond", "reglog", "arg"]:
+                        ufo_fct_template = """
+          %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
+          implicit none
+          %(complex_mp_format)s mp__%(args)s
+          mp__%(name)s = %(fct)s
+
+          return
+          end
+          """
+                        text = ufo_fct_template % {
+                                'name': fct.name,
+                                'args': ", mp__".join(fct.arguments),                
+                                'fct': self.mp_p_to_f.parse(fct.expr),
+                                'complex_mp_format': self.mp_complex_format
+                                 }
+                        fsock.writelines(text)
+
+
+                    
+            fsock.write_comment_line(' STOP UFO DEFINE FUNCTIONS ')                    
+
+        
 
     def create_makeinc(self):
         """create makeinc.inc containing the file to compile """

@@ -258,7 +258,7 @@ C ----------
 	  DO M = 1, NAMPSO	
 		DO N = 1, NAMPSO
           IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-            Jamp2(i)=Jamp2(i)+Jamp(i,m)*dconjg(Jamp(i,n))
+            Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
 		  ENDIF
 		enddo
 	  enddo

@@ -3541,7 +3541,7 @@ This implies that with decay chains:
 
         # Now check for perturbation orders, specified in between squared brackets
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
+          re.compile("^(?P<proc>.+>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
                                "(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings = ""
@@ -3595,7 +3595,7 @@ This implies that with decay chains:
             # Notice that one can have a negative value of the squared order to
             # indicate that one should take the N^{n}LO contribution into account.
             order_pattern = re.compile(\
-           "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+           "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
                     "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
             order_re = order_pattern.match(line)
             while order_re:
@@ -4595,7 +4595,7 @@ This implies that with decay chains:
             out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
             out.write(data)
         if args[0] == 'Delphes3':
-            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS_PileUp.tcl'),
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))
             files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_CMS.dat'))
@@ -6288,6 +6288,13 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
 
         for pid in particles:
             width = param['decay'].get((pid,)).value
+            particle = self._curr_model.get_particle(pid) 
+            #if particle['color'] !=1 and 0 < width.real < 0.1:
+            #    logger.warning("width of colored particle \"%s(%s)\" lower than QCD scale: %s. Set width to zero "
+            #                   % (particle.get('name'), pid, width.real))
+            #    width = 0
+                
+            
             if not pid in param['decay'].decay_table:
                 continue
             if pid not in decay_info:
@@ -6295,6 +6302,12 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             for BR in param['decay'].decay_table[pid]:
                 if len(BR.lhacode) == 3 and skip_2body:
                     continue
+                if BR.value * width <0.1 and particle['color'] !=1:
+                    logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
+                                   % (particle.get('name'), BR.value * width, BR.lhacode[1:]))
+                                     
+                    continue
+                
                 decay_info[pid].append([BR.lhacode[1:], BR.value * width])
 
         madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,

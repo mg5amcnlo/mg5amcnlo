@@ -78,3 +78,47 @@ class UFOParserTest(unittest.TestCase):
         for toParse, sol in tests:
             #print toParse
             self.assertEqual(self.mp_calc.parse(toParse), sol)
+
+
+    def test_parse_fortran_fct(self):
+        """Test that we can parse a series of expression including
+        1j and .real"""
+        
+        tests = [('1j', 'DCOMPLX(0d0, 1.000000d+00)'),
+                 ('3+3j', '3.000000d+00+DCOMPLX(0d0, 3.000000d+00)'),
+                 ('re1j', 're1j'),
+                 ('re(x)', 'dble(x)'),
+                 ('x.real', 'dble(x)'),
+                 ('(cmath.log(x)/x).real', 'dble(log(x)/x)'),
+                 ('3*x.real', '3.000000d+00*dble(x)'),
+                 ('x*y.real', 'x*dble(y)'),
+                  ('(x*y.real)', '(x*dble(y))'),
+                 ('im(x)', 'dimag(x)'),
+                 ('x.imag', 'dimag(x)'),
+                 ('(cmath.log(x)/x).imag', 'dimag(log(x)/x)'),
+                 ('3*x.imag', '3.000000d+00*dimag(x)'),
+                 ('x*y.imag', 'x*dimag(y)'),
+                  ('(x*y.imag)', '(x*dimag(y))')
+                 ]
+        
+        for toParse, sol in tests:
+            self.assertEqual(self.calc.parse(toParse), sol)  
+
+    def test_parse_fortran_fct_MP(self):
+        """Test that we can parse a series of expression including
+        1j and .real"""
+        
+        tests = [('1j', 'CMPLX(0.000000e+00_16, 1.000000e+00_16 ,KIND=16)'),
+                 ('3+3j', '3.000000e+00_16+CMPLX(0.000000e+00_16, 3.000000e+00_16 ,KIND=16)'),
+                 ('re1j', 'mp__re1j'),
+                 ('re(x)', 'real(mp__x)'),
+                 ('x.real', 'real(mp__x)'),
+                 ('(cmath.log(x)/x).real', 'real(log(mp__x)/mp__x)'),
+                 ('3*x.real', '3.000000e+00_16*real(mp__x)'),
+                 ('x*y.real', 'mp__x*real(mp__y)'),
+                  ('(x*y.real)', '(mp__x*real(mp__y))'),
+
+                 ]
+        
+        for toParse, sol in tests:
+            self.assertEqual(self.mp_calc.parse(toParse), sol)  
