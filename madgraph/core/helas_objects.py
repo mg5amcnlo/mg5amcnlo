@@ -5382,7 +5382,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         element made of a tree diagram. compute_loop_nc is dummy here for the
         tree-level Nc and present for structural reasons only."""
         
-        if not compute_loop_nc is None:
+        if compute_loop_nc:
             raise MadGraph5Error, "The tree-level function 'process_color' "+\
              " of class HelasMultiProcess cannot be called with a value for compute_loop_nc"
         

@@ -1164,12 +1164,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # quadruple precision initializations attempts
         if not any(attempt<0 for attempt in to_attempt):
             to_attempt = [-attempt for attempt in to_attempt] + to_attempt
+        use_quad_prec = 1
+        curr_attempt = 1
         while to_attempt!=[] and need_init():
             curr_attempt = to_attempt.pop()
             # if the attempt is a negative number it means we must force 
             # quadruple precision at initialization time
             MLCard = bannermod.MadLoopParam(pjoin(SubProc_dir,'MadLoopParams.dat'))    
-            use_quad_prec = 1
             if curr_attempt < 0:
                 use_quad_prec = -1
                 # In quadruple precision we can lower the ZeroThres threshold

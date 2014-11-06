@@ -857,7 +857,8 @@ c     xmin and xmax for dimension j in configuration ipole
 c************************************************************************
       use DiscreteSampler
 
-      implicit none      
+      implicit none
+      include 'genps.inc'
 C     Subroutine arguments
       integer picked_bin
       character(len=*) dim_name
@@ -875,11 +876,17 @@ c
 C     Fetch a random number bewteen 0.0 and 1.0
 c     The fourth argument is not used and therefore a dummy
       dummy = 0
-      call ntuple(rdm,0.0d0,1.0d0,dummy,jconfig)
+      call ntuple(rdm,0.0d0,1.0d0,dummy,iconfig)
 C     Pick a point using the DiscreteSampler module
       CALL DS_get_point(dim_name, rdm, picked_bin, jacobian, 'norm')
+C     Already multiply the wgt by the helicity sampling jacobian here
+c     so that wgt is physically correct henceforth in the code
       wgt = wgt * jacobian
-
+C     Store the helicity sampling jacobian so that it can be divided out
+c     of wgt later when adding an entry to the DiscreteSampler helicity
+c      grid.
+      hel_jacobian = jacobian
+      
       end subroutine sample_get_discrete_x
 
       subroutine sample_get_x(wgt, x, j, ipole, xmin, xmax)
@@ -1202,6 +1209,75 @@ c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
 
       end
 
+C
+C     Subroutine to take care of the update of the discrete grids
+C     (used for helicity and the matrix<i> choice in the grouped case
+C     as implented in the DiscreteSampler module.
+C
+      subroutine add_entry_to_discrete_dimensions(wgt)
+      use DiscreteSampler
+      implicit none
+c
+c     Constants
+c
+      include 'genps.inc'
+c
+c     Arguments
+c
+      double precision wgt
+c
+c     Local
+c
+c
+c     Global
+c
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+c
+c     Begin code
+c
+c       It is important to divide the wgt stored in the grid by the 
+c       corresponding jacobian otherwise it flattens the sampled
+c       distribution.
+        if(ISUM_HEL.ne.0) then
+          call DS_add_entry('Helicity',HEL_PICKED,(wgt/hel_jacobian))
+        endif
+
+      end subroutine add_entry_to_discrete_dimensions
+
+C
+C     Subroutine to take care of the update of the discrete grids
+C     (used for helicity and the matrix<i> choice in the grouped case
+C     as implented in the DiscreteSampler module.
+C
+      subroutine updated_discrete_dimensions()
+      use DiscreteSampler
+      implicit none
+c
+c     Constants
+c
+      include 'genps.inc'
+c
+c     Arguments
+c
+c
+c     Local
+c
+c
+c     Global
+c
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+c
+c     Begin code
+c
+      if(ISUM_HEL.ne.0) then
+        call DS_update_grid('Helicity')
+      endif
+
+      end subroutine updated_discrete_dimensions
 
       subroutine sample_put_point(wgt, point, iteration,ipole)
 c**************************************************************************
@@ -1309,6 +1385,7 @@ c
 c-----
 c  Begin Code
 c-----
+
       if (first_time) then
          first_time = .false.
          twgt1 = 0d0       !
@@ -1339,6 +1416,9 @@ c-----
       endif
 
       if (iteration .eq. cur_it) then
+c        Add the current point to the DiscreteSamplerGrid
+         call add_entry_to_discrete_dimensions(wgt)
+
          kn = kn + 1
          if (.true.) then       !Average points to increase error estimate
             twgt1=twgt1+dabs(wgt)     !This doesn't change anything should remove
@@ -1560,6 +1640,12 @@ c            write(*,*) 'New number of events',events,twgt
             cur_it = cur_it + 1
             kn = 0
             wmax = -1d0
+C
+C    Now updated the discrete dimensions of the DiscreteSampler module
+C    used for sampling helicity configurations and matrix<i> config
+C    choice in the grouped case.
+C
+           call updated_discrete_dimensions() 
 c
 c     do so adjusting of weights according to number of events in bin
 c

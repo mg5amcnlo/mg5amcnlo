@@ -87,7 +87,8 @@ C ----------
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
-    IF (ISUM_HEL .EQ. 0 .OR. NTRY .LE. MAXTRIES) THEN
+
+    IF (ISUM_HEL .EQ. 0) THEN
         DO I=1,NCOMB
            IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES) THEN
                T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
@@ -100,10 +101,6 @@ C ----------
              ENDDO
              ANS=ANS+T
              TS(I)=T
-C            Doing MC over hel, so need to update the DiscreteSampler running grid
-			 if (ISUM_HEL.eq.1) then
-			   call add_helicity_entry_to_grid(I,T)
-			 endif
            ENDIF
         ENDDO
         JHEL = 1
@@ -118,19 +115,14 @@ C            Doing MC over hel, so need to update the DiscreteSampler running gr
          ENDDO
         ENDIF
         IF(NTRY.EQ.MAXTRIES)THEN
-C          Doing MC over hel, so need to remove empty bins 
-           IF(ISUM_HEL.eq.1) then
-		     call remove_empty_helicity_bins()
-		   ENDIF
            ISUM_HEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
     ELSE              !RANDOM HELICITY
-        DO J=1,ISUM_HEL
-            JHEL=JHEL+1
-            IF (JHEL .GT. NGOOD) JHEL=1
-            HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
-            I = IGOOD(JHEL)
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
+       
+C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
+            I = HEL_PICKED
+			
+			T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                 T=T*ABS(POL(JJ))
@@ -138,12 +130,8 @@ C          Doing MC over hel, so need to remove empty bins
                 T=T*(2d0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            ANS=ANS+T*HWGT
-            TS(I)=T*HWGT
-        ENDDO
-        IF (ISUM_HEL .EQ. 1) THEN
-            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-        ENDIF
+            ANS=ANS+T
+            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)  
     ENDIF
     IF (ISUM_HEL .NE. 1) THEN
     R=XRAN1(IDUM)*ANS

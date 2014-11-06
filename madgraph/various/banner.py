@@ -27,10 +27,11 @@ try:
     import madgraph.iolibs.file_writers as file_writers
     import madgraph.iolibs.files as files 
     import models.check_param_card as param_card_reader
-    from madgraph import MG5DIR
+    from madgraph import MG5DIR, MadGraph5Error
     MADEVENT = False
 except ImportError:
     MADEVENT = True
+    from internal import MadGraph5Error
     import internal.file_writers as file_writers
     import internal.files as files
     import internal.check_param_card as param_card_reader
@@ -632,6 +633,15 @@ class RunCard(dict):
 
     def write_include_file(self, output_path):
         """writing the run_card.inc file""" 
+        
+#       Make sure that nhel is only either 0 (i.e. no MC over hel) or
+#       1 (MC over hel with importance sampling). In particular, it can
+#       no longer be > 1.
+        if not 'nhel' in self:
+            raise MadGraph5Error, "Parameter nhel is not defined in the run_card."
+        if self['nhel'] not in ['1','0']:
+            raise MadGraph5Error, "Parameter nhel can only be '0' or '1', "+\
+                                                          "not %s."%self['nhel']
         
         self.fsock = file_writers.FortranWriter(output_path)    
 ################################################################################

@@ -35,5 +35,6 @@ c*************************************************************************
       PARAMETER(MAXTRIES=100)
 C     To pass the helicity configuration chosen by the DiscreteSampler to 
 C     matrix<i>.f
+      double precision hel_jacobian
 	  INTEGER HEL_PICKED
-	  COMMON/HEL_PICKED/HEL_PICKED
+	  COMMON/HEL_PICKED/HEL_PICKED,hel_jacobian

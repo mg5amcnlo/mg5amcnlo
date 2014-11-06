@@ -51,12 +51,18 @@ c
 c
 c     Global
 c
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 c-----
 c  Begin Code
 c-----
       call gen_mom(iconfig,mincfig,maxcfig,invar,wgt,x,p)
-C     Pick the helicity configuration from the DiscreteSampler
-      call sample_get_discrete_x(wgt,hel_picked,iconfig,'Helicity')
+C     Pick the helicity configuration from the DiscreteSampler if user
+C     decided to perform MC over helicity configurations.
+      if(ISUM_HEL.ne.0) then
+        call sample_get_discrete_x(wgt,hel_picked,iconfig,'Helicity')
+      endif
       end
 
       subroutine gen_mom(iconfig,mincfig,maxcfig,invar,wgt,x,p1)

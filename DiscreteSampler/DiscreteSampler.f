@@ -44,8 +44,8 @@
 !       ::  the binID do not exist at the time of adding them, they will
 !       ::  be registered on the flight. By setting the option 'reset'
 !       ::  to '.True.' (default is '.False.'), you can chose to hardset
-!       ::  the weight of this bin (with n_entries=1 then) instead of
-!       ::  adding it.
+!       ::  the weight of this bin (with n_entries=min_bin_probing_points 
+!       ::  then) instead of adding it.
 !
 !     DS_update_grid((dim_name|void))
 !       ::  Update the reference grid of the dimension dim_name or 
@@ -792,7 +792,8 @@
             run_grid(dim_index)%bins(bin_index)%weight = weight
             run_grid(dim_index)%bins(bin_index)%weight_sqr = weight**2
             run_grid(dim_index)%bins(bin_index)%abs_weight = abs(weight)
-            run_grid(dim_index)%bins(bin_index)%n_entries = 1
+            run_grid(dim_index)%bins(bin_index)%n_entries = 
+     &                       run_grid(dim_index)%min_bin_probing_points
           endif
 !         Now add the bin information back to the info in the grid
           run_grid(dim_index)%norm = run_grid(dim_index)%norm +

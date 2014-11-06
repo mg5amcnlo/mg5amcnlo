@@ -135,13 +135,8 @@ class MadLoopLauncher(ExtLauncher):
         self.cards = ['param_card.dat','MadLoopParams.dat']
 
     def prepare_run(self):
-        """ Usually the user will not want to doublecheck the helicity filter."""
-
-        MadLoopparam = banner_mod.MadLoopParam(
-                               os.path.join(self.card_dir, 'MadLoopParams.dat'))
-        MadLoopparam.set('DoubleCheckHelicityFilter', False, ifnotdefault=False)
-        MadLoopparam.write(os.path.join(self.card_dir,os.path.pardir, 
-                                           'SubProcesses', 'MadLoopParams.dat'))
+        """ Possible preparatory actions to take."""
+        pass
 
     def treat_input_file(self, filename, default=None, msg='', dir_path=None):
         """ask to edit a file"""
@@ -177,9 +172,13 @@ class MadLoopLauncher(ExtLauncher):
             if filename == 'MadLoopParams.dat':
                 # Make sure to update the changes
                 MadLoopparam = banner_mod.MadLoopParam(
-                               os.path.join(self.card_dir, 'MadLoopParams.dat'))                
+                               os.path.join(self.card_dir, 'MadLoopParams.dat'))   
+                # Unless user asked for it, don't doublecheck the helicity filter.
+                MadLoopparam.set('DoubleCheckHelicityFilter', False, 
+                                                             ifnotdefault=False)
                 MadLoopparam.write(os.path.join(self.card_dir,os.path.pardir, 
                                            'SubProcesses', 'MadLoopParams.dat'))
+
     def launch_program(self):
         """launch the main program"""
         evaluator = process_checks.LoopMatrixElementTimer
