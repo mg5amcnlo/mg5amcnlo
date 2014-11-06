@@ -191,6 +191,13 @@ class ProcessExporterFortran(object):
         # add the makefile in Source directory 
         filename = pjoin(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FileWriter(filename))
+        
+        # add the DiscreteSampler information
+        files.cp(pjoin(MG5DIR,'vendor', 'DiscreteSampler', 'DiscreteSampler.f'), 
+                 pjoin(self.dir_path, 'Source'))
+        files.cp(pjoin(MG5DIR,'vendor', 'DiscreteSampler', 'StringCast.f'), 
+                 pjoin(self.dir_path, 'Source'))
+        
             
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
