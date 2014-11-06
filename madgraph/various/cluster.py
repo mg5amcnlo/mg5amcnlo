@@ -100,7 +100,7 @@ class Cluster(object):
         self.options = dict(opts)
         self.retry_args = {}
         # controlling jobs in controlled type submision
-        self.control_packet = {}
+        self.packet = {}
         self.id_to_packet = {}
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
@@ -190,13 +190,16 @@ class Cluster(object):
             if not packet_member:
                 return id
             else:
-                tag, fct, args = packet_member
-                if tag in self.control_packet:
-                    self.id_to_packet[id] = self.control_packet[tag]
-                    self.control_packet[tag][2].append(id)
+                if isinstance(packet_member, Packet):
+                    self.id_to_packet[id] = packet_member
+                    packet_member.put(id)
+                    if packet_member.tag not in self.packet:
+                        self.packet[packet_member.tag] = packet_member
                 else:
-                    self.control_packet[tag]= [fct, args, [id]]
-                    self.id_to_packet[id] = self.control_packet[tag]
+                    if packet_member in self.packet:
+                        packet = self.packet[packet_member]
+                        packet.put(id)
+                        self.id_to_packet[id] = packet
                 return id
                 
     def control(self, me_dir=None):
@@ -456,7 +459,7 @@ class MultiCore(Cluster):
             self.nb_core = 1
         self.update_fct = None
         
-        self.lock = thread.allocate_lock() # allow nice lock of the main thread
+        self.lock = threading.Event() # allow nice lock of the main thread
         self.pids = [] # allow to clean jobs submit via subprocess
         self.fail_msg = None
 
@@ -506,21 +509,23 @@ class MultiCore(Cluster):
                         self.pids.append(pid)
                         # the function should return 0 if everything is fine
                         # the error message otherwise
-                        returncode = exe(arg, **opt)
+                        returncode = exe(*arg, **opt)
                         if returncode != 0:
-                            logger.warning(returncode)
+                            logger.warning("fct %s does not return 0", exe)
                             self.stoprequest.set()
-                            self.remove()
+                            self.remove("fct %s does not return 0" % exe)
                 except Exception,error:
                     logger.warning(str(error))
-                    raise
                     self.stoprequest.set()
                     self.remove(error)
+                    if __debug__:
+                        raise
+
                 self.queue.task_done()
                 self.done.put(tag)
                 #release the mother to print the status on the screen
                 try:
-                    self.lock.release()
+                    self.lock.set()
                 except thread.error:
                     continue
             except Queue.Empty:
@@ -533,15 +538,21 @@ class MultiCore(Cluster):
                log=None, required_output=[], nb_submit=0):
         """submit a job on multicore machine"""
         
-
         tag = (prog, tuple(argument), cwd, nb_submit)
-
-        opt = {'cwd': cwd, 
-               'stdout':stdout,
-               'stderr': stderr}
-        self.queue.put((tag, prog, argument, opt))                                                                                                                                
-        self.submitted.put(1)
-        return tag
+        if isinstance(prog, str):
+            
+    
+            opt = {'cwd': cwd, 
+                   'stdout':stdout,
+                   'stderr': stderr}
+            self.queue.put((tag, prog, argument, opt))                                                                                                                                
+            self.submitted.put(1)
+            return tag
+        else:
+            # python function
+            self.queue.put((tag, prog, argument, {}))
+            self.submitted.put(1)
+            return tag            
         
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                 stderr=None, log=None, **opts):
@@ -594,6 +605,8 @@ class MultiCore(Cluster):
 
         last_status = (0, 0, 0)
         sleep_time = 1
+        use_lock = True
+        first = True
         while True:
             force_one_more_loop = False # some security
                         
@@ -602,7 +615,6 @@ class MultiCore(Cluster):
             while self.done.qsize():
                 try:
                     tag = self.done.get(True, 1)
-                    force_one_more_loop = True
                     if tuple(tag) in self.id_to_packet:
                         packet = self.id_to_packet[tuple(tag)]
                         remaining = packet.remove_one()
@@ -610,6 +622,7 @@ class MultiCore(Cluster):
                             # fully ensure that the packet is finished (thread safe)
                             packet.queue.join()
                             self.submit(packet.fct, packet.args)
+                            force_one_more_loop = True
                     self.nb_done += 1
                     self.done.task_done()
                 except Queue.Empty:
@@ -628,32 +641,45 @@ class MultiCore(Cluster):
                 # Going the quit since everything is done
                 # Fully Ensure that everything is indeed done.
                 self.queue.join()
-                self.stoprequest.set()
                 break
             
             if (Idle, Running, Done) != last_status:
-                update_status(Idle, Running, Done)
+                if first:
+                    update_first(Idle, Running, Done)
+                    first = False
+                else:
+                    update_status(Idle, Running, Done)
                 last_status = (Idle, Running, Done)
                     
             # Define how to wait for the next iteration
-            if Idle > 0:
+            if use_lock:
                 # simply wait that a worker release the lock
-                self.lock.acquire()
+                use_lock = self.lock.wait(300)
+                self.lock.clear()
+                if not use_lock and Idle > 0:
+                    use_lock = True
             else:
                 # to be sure that we will never fully lock at the end pass to 
                 # a simple time.sleep()
                 time.sleep(sleep_time)
                 sleep_time = min(sleep_time + 2, 180)
+        update_first(Idle, Running, Done)
+        
+        if self.stoprequest.isSet():
+            if isinstance(self.fail_msg, Exception):
+                raise self.fail_msg
+            else:
+                raise Exception, self.fail_msg
         # reset variable for next submission
         try:
-            self.lock.release()
+            self.lock.clear()
         except Exception:
             pass
         self.done = Queue.Queue()
         self.nb_done = 0
         self.submitted = Queue.Queue()
         self.pids = []
-        self.stoprequest = threading.Event()
+        self.stoprequest.clear()
             
 class MultiCoreOld(Cluster):
     """ class for dealing with the submission in multiple node"""

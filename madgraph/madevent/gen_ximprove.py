@@ -24,6 +24,7 @@ import glob
 import logging
 import math
 import subprocess
+import shutil
 
 try:
     import madgraph
@@ -33,12 +34,16 @@ except ImportError:
     import internal.banner as bannermod
     import internal.misc as misc
     import internal.files as files
+    import internal.cluster as cluster
+    import internal.combine_grid as combine_grid
 else:
     MADEVENT= False
     import madgraph.madevent.sum_html as sum_html
     import madgraph.various.banner as bannermod
     import madgraph.various.misc as misc
     import madgraph.iolibs.files as files
+    import madgraph.various.cluster as cluster
+    import madgraph.madevent.combine_grid as combine_grid
 
 logger = logging.getLogger('madgraph.madevent.gen_ximprove')
 pjoin = os.path.join
@@ -90,7 +95,6 @@ class gen_ximprove(object):
         
         # placeholder for information
         self.results = 0 #updated in launch/update_html
-
 
         if isinstance(opt, dict):
             self.configure(opt)
@@ -505,7 +509,12 @@ class gensym(object):
         self.cmd = cmd
         self.run_card = cmd.run_card
         self.me_dir = cmd.me_dir
-            
+        
+        # dictionary to keep track of the precision when combining iteration
+        self.cross = collections.defaultdict(int)
+        self.abscross = collections.defaultdict(int)
+        self.sigma = collections.defaultdict(int)
+        self.chi2 = collections.defaultdict(int)
     
     def launch(self):
         """ """
@@ -573,7 +582,7 @@ class gensym(object):
         """submit the survey without the parralelization.
            This is the old mode which is still usefull in single core"""
        
-        #return self.submit_to_cluster_splitted(job_list)
+        return self.submit_to_cluster_splitted(job_list)
         # write the template file for the parameter file   
         self.write_parameter(parralelization=False)
         
@@ -598,18 +607,16 @@ class gensym(object):
         """ submit the version of the survey with splitted grid creation 
         """ 
         
-        
-        misc.sprint('use splitted survey')
         self.splitted_grid = 3
         if self.splitted_grid <= 1:
             return self.submit_to_cluster_no_splitting(job_list)
-        
+       
         self.write_parameter(parralelization=True)
 
         # launch the job with the appropriate grouping
         for Pdir, jobs in job_list.items():
             for job in jobs:
-                packet = ((Pdir, job, 0), self.cmd.do_combine_grid, (Pdir, job, 0))
+                packet = cluster.Packet((Pdir, job, 1), self.combine_grid, (Pdir, job, 1))
                 for i in range(self.splitted_grid):    
                     self.cmd.launch_job(pjoin(self.me_dir, 'SubProcesses', 'survey.sh'),
                                     argument=[i+1, job],
@@ -617,16 +624,140 @@ class gensym(object):
                                     packet_member=packet)
 
 
+    def combine_grid(self, Pdir, G, step):
+        
+        # 1. create an object to combine the grid information and fill it
+        grid_calculator = combine_grid.grid_information()
+        Gdirs = glob.glob(pjoin(Pdir, "G%s_*" %G))
+        for path in Gdirs:
+            fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
+            grid_calculator.add_one_grid_information(fsock)
+            fsock.close()
+            os.remove(pjoin(path, 'grid_information'))
+         
+        # 2. create the new grid and put it in all directory   
+        grid_calculator.write_associate_grid(pjoin(Gdirs[0],'ftn25'))
+        for Gdir in Gdirs[1:]:
+            files.ln(pjoin(Gdirs[0], 'ftn25'),  Gdir)
+
+        #3. combine the information about the total crossection for comthis channel
+        # constructing variable
+        cross, across, sigma = grid_calculator.get_cross_section()
+        self.cross[G] += cross**3/sigma
+        self.abscross[G] += cross * across**2/sigma
+        self.sigma[G] += cross**2/ sigma
+        self.chi2[G] += cross**4/sigma
+        # current status
+        cross = self.cross[G]/self.sigma[G]
+        if step > 1:
+            error = math.sqrt(abs((self.chi2[G]/cross**2 - self.sigma[G])/step-1)/self.sigma[G])
+        else:
+            error = sigma
+        
+        misc.sprint(cross,"+-", error, self.cmd.opts['accuracy'])
+
+
+        # 4. make the submission of the next iteration
+        #   Three cases - less than 3 iteration -> continue
+        #               - more than 3 and less than 5 -> check error
+        #               - more than 5 -> prepare info for refine
+        need_submit = False
+        if step < self.min_iterations:
+            need_submit = True
+        elif step >= self.cmd.opts['iterations']:
+            need_submit = False
+        elif self.cmd.opts['accuracy'] < 0:
+            #check for luminosity
+            raise Exception, "Not Implemented"
+        else:   
+            if error >  self.cmd.opts['accuracy']:
+                need_submit = True
+            else:
+                need_submit = False
+           
+        if need_submit:
+            self.resubmit_survey(Pdir,G, Gdirs, step)
+        else:
+            # prepare information for refine
+            newGpath = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
+            if not os.path.exists(newGpath):
+                os.mkdir(newGpath)
+                
+            # copy the new grid:
+            files.cp(pjoin(Gdirs[0], 'ftn25'), 
+                         pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G, 'ftn26'))
+                        
+            # copy the events
+            fsock = open(pjoin(newGpath, 'events.lhe'), 'w')
+            for Gdir in Gdirs:
+                fsock.write(open(pjoin(Gdir, 'events.lhe')).read()) 
+            
+            # copy one log
+            files.cp(pjoin(Gdirs[0], 'log.txt'), 
+                         pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
+                                    
+            # create the appropriate results.dat
+            misc.sprint("cheating on results.dat")
+            files.cp(pjoin(Gdirs[0], 'results.dat'), 
+                         pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))            
+            
+        
+        return 0
     
-    def write_parameter(self, parralelization):
-        """Write the parameter of the survey run"""
+    
+    def resubmit_survey(self, Pdir, G, Gdirs, step):
+        """submit the next iteration of the survey"""
+
+        # 1. write the new input_app.txt to double the number of points
+        run_card = self.cmd.run_card        
+        options = {'event' : 2**(step) * self.cmd.opts['points'],
+               'maxiter': 1,
+               'miniter': 1,
+               'accuracy': self.cmd.opts['accuracy'],
+               'helicity': run_card['nhel_survey'] if 'nhel_survey' in run_card \
+                            else run_card['nhel'],
+               'gridmode': -2
+               } 
+        for Gdir in Gdirs:
+            self.write_parameter_file(pjoin(Gdir, 'input_app.txt'), options)   
+        
+        #2. resubmit the new jobs
+        packet = cluster.Packet((Pdir, G, step+1), self.combine_grid, \
+                                (Pdir, G, step+1))            
+        nb_step = len(Gdirs) * (step+1)
+        for i,subdir in enumerate(Gdirs):
+            subdir = subdir.rsplit('_',1)[1]
+            subdir = int(subdir)
+            offset = nb_step+i+1
+            offset=str(offset)
+            tag = "%s.%s" % (subdir, offset)
+            
+            self.cmd.launch_job(pjoin(self.me_dir, 'SubProcesses', 'survey.sh'),
+                                argument=[tag, G],
+                                cwd=pjoin(self.me_dir,'SubProcesses' , Pdir),
+                                packet_member=packet)
+            
+
+
+    def write_parameter_file(self, path, options):
+        """ """
         
         template ="""         %(event)s         %(maxiter)s           %(miniter)s      !Number of events and max and min iterations
   %(accuracy)s    !Accuracy
   %(gridmode)s       !Grid Adjustment 0=none, 2=adjust
   1       !Suppress Amplitude 1=yes
   %(helicity)s        !Helicity Sum/event 0=exact
-        """
+        """        
+
+        open(path, 'w').write(template % options)
+        
+
+
+    
+    
+    def write_parameter(self, parralelization):
+        """Write the parameter of the survey run"""
+
         run_card = self.cmd.run_card
         
         options = {'event' : self.cmd.opts['points'],
@@ -643,11 +774,10 @@ class gensym(object):
             options['gridmode'] = -2
             options['maxiter'] = 1 #this is automatic in dsample anyway
             options['miniter'] = 1 #this is automatic in dsample anyway
-        
-        text = template % options
-        
+                
         for Pdir in self.subproc:
-            open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'input_app.txt'),'w').write(text)
+            path =pjoin(self.me_dir, 'SubProcesses', Pdir, 'input_app.txt') 
+            self.write_parameter_file(path, options)
         
             
         

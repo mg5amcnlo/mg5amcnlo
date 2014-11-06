@@ -618,7 +618,9 @@ c     Try to read grid from file
 c
       flat_grid=.true.
       open(unit=25,file='ftn25',status='unknown',err=102)
-      read(25,fmt='(4f21.17)', err=101, end=101)
+c      read(25,fmt='(4f21.17)', err=1011, end=1012)
+c     .     ((grid(2,i,j),i=1,ng),j=1,invar)
+      read(25,*, err=1011, end=1012)
      .     ((grid(2,i,j),i=1,ng),j=1,invar)
 c      write(*,*) 'Got the grid OK, now getting alpha'
 c      read(25,fmt='(4f20.17)',err=101,end=101)(alpha(i),i=1,maxconfigs)
@@ -653,6 +655,10 @@ c         enddo
          enddo
       endif
       goto 103
+ 1011  write(*,*) 'fail to open file'
+       goto 101
+ 1012  write(*,*) 'fail to read data'
+       goto 101
  101  close(25)
 c      write(*,*) 'Tried reading it',i,j
  102  write(*,*) 'Error opening grid'
@@ -977,7 +983,7 @@ c            ddum(j) = tx(2,j)                 !Use last value
          im = ng -1
          ddum(j) = ng
       endif
-      if (im.le.0) im = 1
+      if (im.lt.0) im = 0
       ip = im + 1
       ij = Minvar(j,ipole)
 c------
@@ -1397,6 +1403,20 @@ c         if (kn .eq. events) then
          endif
          if (non_zero .eq. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
+
+c          # special mode where we store information to combine them
+           if(use_cut.eq.-2)then
+                open(unit=22, file="grid_information")
+                write(22,*) non_zero, ng, invar
+                write(22,*) ((grid(1,i,j),i=1,ng),j=1,invar)
+                write(22,*) ((grid(2,i,j),i=1,ng),j=1,invar)
+                write(22,*) ((inon_zero(i,j),i=1,ng),j=1,invar)
+                write(22,*) (xmin(j), j=1,invar)
+                write(22,*) (xmax(j), j=1,invar)
+                write(22,*) mean, rmean, sigma, wmax, kn,events
+                close(22)
+           endif
+
             mean=mean*dble(events)/dble(non_zero)
             rmean=rmean*dble(events)/dble(non_zero)
             twgt1=twgt1*dble(events)/dble(non_zero)
@@ -1420,9 +1440,15 @@ c     &        (sigma/vol/vol-knt*mean*mean*navg)/dble(knt-1)/ dble(knt)
 
             if (.true.) then
 c               vol = 1d0/(knt*itm)
+                open(unit=22, file="sigma")
+                write(22,*) sigma, vol, non_zero, mean, navg,knt
+
                sigma = (sigma/vol/vol-non_zero*mean*mean*navg)  !knt replaced by non_zero
      .              / dble(knt-1) / dble(knt)
+                write(22,*) sigma
+                close(22)
             else
+
                sigma = (sigma/vol/vol - knt*mean*mean)
      .              / dble(knt-1) / dble(knt)
             endif
@@ -1516,13 +1542,15 @@ c     &           dble(non_zero)/dble(kn)*100.,'%'
 c            close(22)
 
            if(use_cut.eq.-2)then
-                open(unit=22, file="grid_information")
+                open(unit=22, file="grid_information_old")
                 write(22,*) non_zero, ng, invar
                 write(22,*) ((grid(1,i,j),i=1,ng),j=1,invar)
                 write(22,*) ((grid(2,i,j),i=1,ng),j=1,invar)
                 write(22,*) ((inon_zero(i,j),i=1,ng),j=1,invar)
                 write(22,*) (xmin(j), j=1,invar)
                 write(22,*) (xmax(j), j=1,invar)
+                write(*,*) 0,0,0,0
+                close(22)
            endif
 
 c------

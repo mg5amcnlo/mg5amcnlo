@@ -2657,6 +2657,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             cross, error = x_improve.update_html() #update html results for survey
             if  cross == 0:
                 return
+
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -3500,42 +3501,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 self.cluster.submit(exe, stdout=stdout, cwd=cwd, **opt)
             
 
-    def do_combine_grid(self, line):
-        """Not in help: combining grid and resubmit next iteration """
-
-        if isinstance(line,str):
-            Pdir, G, step = line.split()
-        else:
-            Pdir, G, step = line
-
-        print "combine_grid", Pdir, G, step
-        import madgraph.madevent.combine_grid as combine_grid
-        grid_calculator = combine_grid.grid_information()
-        Gdirs = glob.glob(pjoin(Pdir, "G%s_*" %G))
-        for path in Gdirs:
-            fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
-            grid_calculator.add_one_grid_information(fsock)
-            
-        grid_calculator.write_associate_grid(pjoin(Gdirs[0],'ftn25'))
-        for Gdir in Gdirs[1:]:
-            files.ln(pjoin(Gdirs[0], 'ftn25'),  Gdir)
-        
-        if step <3 :
-            packet = ((Pdir, G, step+1), self.do_combine_grid, (Pdir, G, step+1))
-            nb_step = len(Gdirs) * (step+1)
-            for i in range(len(Gdirs)):
-                self.launch_job(pjoin(self.me_dir, 'SubProcesses', 'survey.sh'),
-                                    argument=[nb_step+i+1, G],
-                                    cwd=pjoin(self.me_dir,'SubProcesses' , Pdir),
-                                    packet_member=packet)
-        elif step ==3:
-            shutil.copy(Gdirs[0], pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
-        
-        time.sleep(5)
-                
-        return 0
-
-            
     ############################################################################
     def find_madevent_mode(self):
         """Find if Madevent is in Group mode or not"""
