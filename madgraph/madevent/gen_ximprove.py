@@ -517,9 +517,11 @@ class gensym(object):
         self.chi2 = collections.defaultdict(int)
         
         #if self.cmd.proc_characteristic['loop_induced']:
-        #    self.splitted_grid = 8
-        misc.sprint('force splitting')
-        self.splitted_grid = 3
+        self.splitted_grid = False
+        if self.cmd.proc_characteristics['loop_induced']:
+            nexternal = self.cmd.proc_characteristics['nexternal']
+            self.splitted_grid = max(2, (nexternal-2)**3)
+
     
     def launch(self):
         """ """
@@ -587,7 +589,6 @@ class gensym(object):
         """submit the survey without the parralelization.
            This is the old mode which is still usefull in single core"""
        
-        return self.submit_to_cluster_splitted(job_list)
         # write the template file for the parameter file   
         self.write_parameter(parralelization=False)
         
@@ -638,6 +639,10 @@ class gensym(object):
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
             os.remove(pjoin(path, 'grid_information'))
+            fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
+            grid_calculator.add_results_information(fsock)
+            fsock.close()
+            
          
         # 2. create the new grid and put it in all directory   
         grid_calculator.write_associate_grid(pjoin(Gdirs[0],'ftn25'))
@@ -647,8 +652,6 @@ class gensym(object):
         #3. combine the information about the total crossection for comthis channel
         # constructing variable
         cross, across, sigma = grid_calculator.get_cross_section()
-        if cross == 0:
-            raise Exception, "computed cross-section is zero"
         self.cross[G] += cross**3/sigma
         self.abscross[G] += cross * across**2/sigma
         self.sigma[G] += cross**2/ sigma
@@ -660,7 +663,7 @@ class gensym(object):
         else:
             error = sigma
         
-        misc.sprint(cross,"+-", error, self.cmd.opts['accuracy'])
+        misc.sprint(G, step, cross,"+-", error)
 
 
         # 4. make the submission of the next iteration
@@ -703,10 +706,33 @@ class gensym(object):
                          pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
                                     
             # create the appropriate results.dat
-            misc.sprint("cheating on results.dat")
-            files.cp(pjoin(Gdirs[0], 'results.dat'), 
-                         pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))            
-            
+            #compute the value
+            grid_calculator.results.compute_values()
+            abscross = self.abscross[G]/self.sigma[G]
+            nw = grid_calculator.results.nw
+            luminosity = sum([R.luminosity for R in grid_calculator.results])
+            wgt = grid_calculator.results.wgt
+            maxit = step
+            nunwgt = grid_calculator.results.nunwgt 
+            wgt = 0
+            nevents = grid_calculator.results.nevents 
+            #format the results.dat
+            def fstr(nb):
+                data = '%E' % nb
+                nb, power = data.split('E')
+                nb = float(nb) /10
+                power = int(power) + 1
+                return '%.5fE%+03i' %(nb,power)
+            line = '%s %s %s %i %i %i %i %s %s %s\n' % \
+                (fstr(cross), fstr(error), fstr(error), 
+                 nevents, nw, maxit,nunwgt,
+                 fstr(luminosity), fstr(wgt), fstr(abscross))
+                        
+            fsock = open(pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G,
+                           'results.dat'),'w') 
+            fsock.writelines(line)
+            fsock.close()
+
         
         return 0
     

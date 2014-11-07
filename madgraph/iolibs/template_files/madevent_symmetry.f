@@ -192,9 +192,9 @@ c                    JA 4/8/11 don't treat forced BW differently
                      if(lconflict(-j)) then
 c                        write(*,*) 'Got conflict ',-nbw,j
                         iarray(nbw)=1 !Cuts on BW
-                        if (nbw .gt. imax) then
-                           write(*,*) 'Too many BW w conflicts',nbw,imax
-                        endif
+c                        if (nbw .gt. imax) then
+c                           write(*,*) 'Too many BW w conflicts',nbw,imax
+c                        endif
                      endif
                   endif
                enddo
@@ -256,8 +256,8 @@ c        Stop generation with error message
          if(.not.file_exists) filename = '../' // filename
          open(unit=26,file=filename,status='unknown')
          write(26,*)'No Phase Space. Please check particle masses.'
-         write(*,*)'Error: No valid channels found. ',
-     $        'Please check particle masses.'
+c         write(*,*)'Error: No valid channels found. ',
+c     $        'Please check particle masses.'
       endif
       end
 
@@ -346,8 +346,8 @@ c
             if (xmass(-i) .gt. prmass(-i,iconfig) .and.
      $           iden_part(-i).eq.0) then !Can't be on shell, and not radiation
                lconflict(-i)=.true.
-               write(*,*) "Found Conflict", iconfig,i,
-     $              prmass(-i,iconfig),xmass(-i)
+c               write(*,*) "Found Conflict", iconfig,i,
+c     $              prmass(-i,iconfig),xmass(-i)
             endif
          endif
          if (iden_part(-i).eq.0) then
@@ -363,14 +363,14 @@ c
          if (lconflict(-j)) then 
             lconflict(itree(1,-j)) = .true.
             lconflict(itree(2,-j)) = .true.
-            write(*,*) 'Adding conflict ',itree(1,-j),itree(2,-j)
+c            write(*,*) 'Adding conflict ',itree(1,-j),itree(2,-j)
          endif
       enddo
 c
 c     If not enough energy, mark all BWs as conflicting
 c
       if(stot.lt.mtot**2)then
-         write(*,*) 'Not enough energy, set all BWs as conflicting'
+c         write(*,*) 'Not enough energy, set all BWs as conflicting'
          do j=i,1,-1
             lconflict(-j) = .true.
          enddo
@@ -384,8 +384,8 @@ c
                lconflict(-j) = .false.
 c               write(*,*) 'No conflict BW',iconfig,j
                continue
-            else
-               write(*,*) 'Conflicting BW',iconfig,j
+c            else
+c               write(*,*) 'Conflicting BW',iconfig,j
             endif
          endif
       enddo                  

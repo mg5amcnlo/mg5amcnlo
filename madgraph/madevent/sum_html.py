@@ -21,9 +21,13 @@ logger = logging.getLogger('madevent.stdout') # -> stdout
 
 pjoin = os.path.join
 try:
-    import madgraph.various.cluster as cluster
+    import madgraph
 except ImportError:
     import internal.cluster as cluster
+    import internal.misc as misc
+else:
+    import madgraph.various.cluster as cluster
+    import madgraph.various.misc as misc
 
 class OneResult(object):
     
@@ -53,8 +57,17 @@ class OneResult(object):
     def read_results(self, filepath):
         """read results.dat and fullfill information"""
         
+        if isinstance(filepath, str):
+            finput = open(filepath)
+        elif isinstance(filepath, file):
+            finput = filepath
+        else:
+            raise Exception, "filepath should be a path or a file descriptor"
+        
+        
+        
         i=0
-        for line in open(filepath):
+        for line in finput:
             i+=1
             if i == 1:
                 def secure_float(d):

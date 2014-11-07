@@ -295,6 +295,18 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
                 logger.info('Job %s Finally found the missing output.' % (job_id))
             del self.retry_args[job_id]
             self.submitted_ids.remove(job_id)
+            # check if the job_id is in a packet
+            if job_id in self.id_to_packet:
+                nb_in_packet = self.id_to_packet[job_id].remove_one()
+                if nb_in_packet == 0:
+                    # packet done run the associate function
+                    packet = self.id_to_packet[job_id]
+                    # fully ensure that the packet is finished (thread safe)
+                    packet.queue.join()
+                    #running the function
+                    packet.fct(packet.args)                    
+                del self.id_to_packet[job_id]
+            
             return 'done'
         
         if time_check == 0:
