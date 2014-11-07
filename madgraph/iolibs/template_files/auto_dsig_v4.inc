@@ -98,7 +98,7 @@ C   Only run if IMODE is 0
             DSIG%(proc_id)s = PD(0)
             RETURN
          ENDIF
-         CALL SMATRIX%(proc_id)s(PP,DSIGUU)                                              
+         CALL SMATRIX%(proc_id)s(PP,DSIGUU)
 C     Select a flavor combination (need to do here for right sign)
          CALL RANMAR(R)
          IPSEL=0

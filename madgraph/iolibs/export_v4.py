@@ -191,6 +191,13 @@ class ProcessExporterFortran(object):
         # add the makefile in Source directory 
         filename = pjoin(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FileWriter(filename))
+        
+        # add the DiscreteSampler information
+        files.cp(pjoin(MG5DIR,'vendor', 'DiscreteSampler', 'DiscreteSampler.f'), 
+                 pjoin(self.dir_path, 'Source'))
+        files.cp(pjoin(MG5DIR,'vendor', 'DiscreteSampler', 'StringCast.f'), 
+                 pjoin(self.dir_path, 'Source'))
+        
             
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -2778,9 +2785,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the symmetry.f 
         filename = pjoin(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
-        # Add the driver.f 
-        filename = pjoin(self.dir_path,'SubProcesses','driver.f')
-        self.write_driver(writers.FortranWriter(filename))
         #
         filename = pjoin(self.dir_path,'SubProcesses','addmothers.f')
         self.write_addmothers(writers.FortranWriter(filename))
@@ -2890,10 +2894,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         filename = pjoin(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename), v5=False)
         
-        # Add the driver.f 
-        filename = pjoin(self.dir_path,'SubProcesses','driver.f')
-        self.write_driver(writers.FortranWriter(filename), v5=False)
-        
         # Modify setrun.f
         text = open(pjoin(self.dir_path,'Source','setrun.f')).read()
         text = text.replace('call setpara(param_card_name)', 'call setpara(param_card_name, .true.)')
@@ -2941,6 +2941,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+        # Add the driver.f 
+        ncomb = matrix_element.get_helicity_combinations()
+        filename = pjoin(Ppath,'driver.f')
+        self.write_driver(writers.FortranWriter(filename),ncomb)
 
         # Create the matrix.f file, auto_dsig.f file and all inc files
         filename = pjoin(Ppath, 'matrix.f')
@@ -3087,7 +3092,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'coupl.inc',
                      'cuts.f',
                      'cuts.inc',
-                     'driver.f',
                      'genps.f',
                      'genps.inc',
                      'idenparts.f',
@@ -3778,7 +3782,7 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # write_driver
     #===========================================================================
-    def write_driver(self, writer, v5=True):
+    def write_driver(self, writer, ncomb, v5=True):
         """Write the SubProcess/driver.f file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_driver.f')
@@ -3788,10 +3792,13 @@ c           This is dummy particle used in multiparticle vertices
         else:
             card = 'param_card.dat' 
         if v5:
-            text = open(path).read() % {'param_card_name':card, 'secondparam':''} 
+            text = open(path).read() % {'param_card_name':card, 
+                                        'secondparam':'',
+                                        'ncomb':ncomb} 
         else:
             text = open(path).read() % {'param_card_name':card, 
-                                        'secondparam': ',.true.'} 
+                                        'secondparam': ',.true.',
+                                        'ncomb':ncomb} 
         writer.write(text)
         
         return True
@@ -4092,6 +4099,17 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         tot_calls = 0
 
         matrix_elements = subproc_group.get('matrix_elements')
+
+        # Add the driver.f, all grouped ME's must share the same number of 
+        # helicity configuration
+        ncomb = matrix_elements[0].get_helicity_combinations()
+        for me in matrix_elements[1:]:
+            if matrix_elements!=ne.get_helicity_combinations():
+                raise MadGraph5Error, "All grouped processes must share the "+\
+                                       "same number of helicity configurations."                
+
+        filename = 'driver.f'
+        self.write_driver(writers.FortranWriter(filename),ncomb,v5=False)
 
         for ime, matrix_element in \
                 enumerate(matrix_elements):

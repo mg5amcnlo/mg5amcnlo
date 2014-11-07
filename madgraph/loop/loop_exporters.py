@@ -1790,6 +1790,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.write_nexternal_file(writers.FortranWriter(filename),
                                                             nexternal, ninitial)
 
+        if self.get_context(matrix_element)['TIRCaching']:
+            filename = 'tir_cache_size.inc'
+            self.write_tir_cache_size_include(writers.FortranWriter(filename))
+
         return calls
 
     def set_optimized_output_specific_replace_dict_entries(self, matrix_element):
@@ -2236,6 +2240,20 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                              '\nwrite (*,*) "---------------------------------"'
         self.general_replace_dict['print_so_loop_results'] += \
                              '\nwrite (*,*) "---------------------------------"'
+                             
+    def write_tir_cache_size_include(self, writer):
+        """Write the file 'tir_cache_size.inc' which sets the size of the TIR
+        cache the the user wishes to employ and the default value for it.
+        This can have an impact on MadLoop speed when using stability checks
+        but also impacts in a non-negligible way MadLoop's memory footprint.
+        It is therefore important that the user can chose its size."""
+
+        # For the standalone optimized output, a size of one is necessary.
+        # The MadLoop+MadEvent output sets it to 2 because it can gain further
+        # speed increase with a TIR cache of size 2 due to the structure of the
+        # calls to MadLoop there.
+        tir_cach_size = "parameter(TIR_CACHE_SIZE=1)"
+        writer.writelines(tir_cach_size)
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False, write_auxiliary_files=True,):
@@ -2523,6 +2541,20 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
                      pjoin(self.dir_path, 'Source/gen_ximprove.f'))
         else:
             misc.sprint('Use standard splitting')
+
+    def write_tir_cache_size_include(self, writer):
+        """Write the file 'tir_cache_size.inc' which sets the size of the TIR
+        cache the the user wishes to employ and the default value for it.
+        This can have an impact on MadLoop speed when using stability checks
+        but also impacts in a non-negligible way MadLoop's memory footprint.
+        It is therefore important that the user can chose its size."""
+
+        # In this case of MadLoop+MadEvent output, we set it to 2 because we
+        # gain further speed increase with a TIR cache of size 2 due to the 
+        # the fact that we call MadLoop once per helicity configuration in this 
+        # case.
+        tir_cach_size = "parameter(TIR_CACHE_SIZE=2)"
+        writer.writelines(tir_cach_size)
 
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                         proc_id = None, config_map = [], subproc_number = None):

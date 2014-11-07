@@ -127,6 +127,12 @@ C
 ## }
 	  common/%(proc_prefix)sMP_LCOEFS/LOOPCOEFS
 
+## if(AmplitudeReduction) {
+C This flag is used to prevent the re-computation of the OpenLoop coefficients when changing the CTMode for the stability test.
+	  LOGICAL SKIP_LOOPNUM_COEFS_CONSTRUCTION
+	  COMMON/%(proc_prefix)sSKIP_COEFS/SKIP_LOOPNUM_COEFS_CONSTRUCTION
+## }
+
 ## if(not AmplitudeReduction){
       %(complex_mp_format)s AMPL(3,NCTAMPS)
 ## } else {
@@ -177,6 +183,9 @@ ENDDO
 DO I=0,3
   PL(I,0)=(ZERO,ZERO)
 ENDDO
+## if(AmplitudeReduction){
+IF (.NOT.SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
+## }
 DO I=1,MAXLWFSIZE
   DO J=0,LOOPMAXCOEFS-1
     DO K=1,MAXLWFSIZE
@@ -198,6 +207,10 @@ DO K=1, 3
     AMPL(K,I)=(ZERO,ZERO)
   ENDDO
 ENDDO
+
+## if(AmplitudeReduction){
+ENDIF
+## }
 
 ## if(not LoopInduced) {
 DO I=1, NBORNAMPS
@@ -234,9 +247,20 @@ DO H=1,NCOMB
   MP_CT_REQ_SO_DONE=.FALSE.
   MP_LOOP_REQ_SO_DONE=.FALSE.  
 
+  IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
+    HEL_MULT=GOODHEL(H)
+  ELSE
+    HEL_MULT=1
+  ENDIF
+
 ## if(AmplitudeReduction){
   CTCALL_REQ_SO_DONE=.FALSE.
-  
+
+C The coefficient were already computed previously with another CTMode, so we can skip them
+  IF (SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
+    GOTO 4000
+  ENDIF
+
   DO I=1,NLOOPGROUPS
     DO J=0,LOOPMAXCOEFS-1
       LOOPCOEFS(J,I)=(ZERO,ZERO)
@@ -258,28 +282,6 @@ ENDDO
 3000 CONTINUE
   MP_UVCT_REQ_SO_DONE=.TRUE.
 
-## if(AmplitudeReduction) {
-## if(not LoopInduced) {
-C Copy the multiple precision Born amplitudes computed to the AMP double precision array for its use later if necessary (i.e. color flows for example.)
-  DO I=1,NBORNAMPS
-    DP_AMP(I)=AMP(I)
-  ENDDO
-## }
-
-C Copy the multiple precision CT amplitudes computed to the AMPL double precision array for its use later if necessary (i.e. color flows for example.)
-  DO I=1,NCTAMPS
-    DO K=1,3
-      DP_AMPL(K,I)=AMPL(K,I)
-    ENDDO
-  ENDDO
-## }
-
-  IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
-    HEL_MULT=GOODHEL(H)
-  ELSE
-    HEL_MULT=1
-  ENDIF
-  
 ## if(not AmplitudeReduction) { 
   DO I=1,NCTAMPS
     DO J=1,NBORNAMPS
@@ -300,6 +302,22 @@ C Copy the multiple precision CT amplitudes computed to the AMPL double precisio
   %(mp_coef_construction)s  
   4000 CONTINUE
   MP_LOOP_REQ_SO_DONE=.TRUE.
+
+## if(AmplitudeReduction) {
+## if(not LoopInduced) {
+C Copy the multiple precision Born amplitudes computed to the AMP double precision array for its use later if necessary (i.e. color flows for example.)
+  DO I=1,NBORNAMPS
+    DP_AMP(I)=AMP(I)
+  ENDDO
+## }
+
+C Copy the multiple precision CT amplitudes computed to the AMPL double precision array for its use later if necessary (i.e. color flows for example.)
+  DO I=1,NCTAMPS
+    DO K=1,3
+      DP_AMPL(K,I)=AMPL(K,I)
+    ENDDO
+  ENDDO
+## }
 
 c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
 C This needs to be done once since only the momenta of these WF matters.

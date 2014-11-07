@@ -39,6 +39,12 @@ C     This parameter is designed for the check timing command of MG5. It skips t
 C     For timing checks. Stops the code after having only initialized its arrays from the external data files 
 	  LOGICAL BOOTANDSTOP
       PARAMETER (BOOTANDSTOP=.FALSE.)
+## if(TIRCaching) {
+      INTEGER TIR_CACHE_SIZE
+C To change memory foot-print of MadLoop, you can change this parameter to be 0,1 or 2 *and recompile*.
+C Notice that this will impact MadLoop speed performances in the context of stability checks.
+      include 'tir_cache_size.inc'
+## }
 C  
 C CONSTANTS
 C
@@ -147,9 +153,7 @@ C IF UNSTABLE IT GOES TO THE SAME PATTERN BUT STAB_INDEX IS THEN I+20.
       LOGICAL EVAL_DONE(MAXSTABILITYLENGTH)
 	  LOGICAL DOING_QP_EVALS
       INTEGER STAB_INDEX,BASIC_CT_MODE
-	  INTEGER N_DP_EVAL, N_QP_EVAL
-	  DATA N_DP_EVAL/1/
-	  DATA N_QP_EVAL/1/
+
 ## if(LoopInduced){	  
 C This is used for loop-induced where the reference scale for comparisons is inferred from the first 30 points at most
       INTEGER MAXNREF_EVALS
@@ -189,6 +193,10 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
       LOGICAL LOOPFILTERBUFF(NSQUAREDSO,NLOOPGROUPS)
 	  DATA ((LOOPFILTERBUFF(J,I),J=1,NSQUAREDSO),I=1,NLOOPGROUPS)/NSQSOXNLG*.FALSE./
 
+      LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
+      DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
+      COMMON/%(proc_prefix)sRUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
+
 	  INTEGER IDEN
       %(den_factor_line)s
 	  INTEGER HELAVGFACTOR
@@ -206,6 +214,7 @@ C     Below are variables to bypass the checkphase and insure stability check to
 C
 C FUNCTIONS
 C
+	  INTEGER %(proc_prefix)sTIRCACHE_INDEX
       INTEGER %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP
 	  INTEGER %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP
 	  INTEGER %(proc_prefix)sML5SQSOINDEX
@@ -230,6 +239,11 @@ C
       LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
 	  DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
       COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
+
+	  INTEGER N_DP_EVAL, N_QP_EVAL
+	  DATA N_DP_EVAL/1/
+	  DATA N_QP_EVAL/1/
+	  COMMON/%(proc_prefix)sN_EVALS/N_DP_EVAL,N_QP_EVAL
 
 	  LOGICAL CHECKPHASE
 	  DATA CHECKPHASE/.TRUE./
@@ -338,6 +352,13 @@ C TILL NOW, ONLY CUTTOOLS PROVIDE QP
 ## }
 	  common/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
+## if(AmplitudeReduction) {
+C This flag is used to prevent the re-computation of the OpenLoop coefficients when changing the CTMode for the stability test.
+	  LOGICAL SKIP_LOOPNUM_COEFS_CONSTRUCTION
+	  DATA SKIP_LOOPNUM_COEFS_CONSTRUCTION/.FALSE./
+	  COMMON/%(proc_prefix)sSKIP_COEFS/SKIP_LOOPNUM_COEFS_CONSTRUCTION
+## }
+
 ## if(TIRCaching){
 	  LOGICAL TIR_DONE(NLOOPGROUPS)
 	  COMMON/%(proc_prefix)sTIRCACHING/TIR_DONE
@@ -410,7 +431,15 @@ IF(ML_INIT) THEN
   ENDIF
 ## }
 
-C  CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
+C Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
+  if(.NOT.AUTOMATIC_TIR_CACHE_CLEARING) THEN
+    IF(NROTATIONS_DP.NE.0.or.NROTATIONS_QP.NE.0) THEN
+      WRITE(*,*) 'INFO: AUTOMATIC_TIR_CACHE_CLEARING is disabled, so MadLoop automatically resets NROTATIONS_DP and NROTATIONS_QP to 0.'
+      NROTATIONS_QP=0
+      NROTATIONS_DP=0
+    ENDIF
+  ENDIF
+
   QP_TOOLS_AVAILABLE=.FALSE.
   INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
 C SKIP THE ONES THAT NOT AVAILABLE
@@ -696,6 +725,12 @@ DO I=1,NEXTERNAL
   ENDDO
 ENDDO
 
+## if(TIRCaching){
+IF (AUTOMATIC_TIR_CACHE_CLEARING) THEN
+  CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+ENDIF
+## }
+
 IF (ImprovePSPoint.ge.0) THEN
 C Make the input PS more precise (exact onshell and energy-momentum conservation)
   CALL %(proc_prefix)sIMPROVE_PS_POINT_PRECISION(PS)
@@ -724,8 +759,22 @@ C Start by using the first available loop reduction library and qp library.
 I_LIB=1
 I_QP_LIB=1
 
+goto 208
+C MadLoop jumps to this label during stability checks when it recomputes a rotated PS point
 200 CONTINUE
-
+C For the computation of a rotated version of this PS point we must reset the TIR cache since this changes the definition of the loop denominators.
+CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+208 CONTINUE
+## if(AmplitudeReduction) {
+SKIP_LOOPNUM_COEFS_CONSTRUCTION=.FALSE.
+GOTO 308
+C MadLoop jumps to this label during stability checks when it recomputes the same PS point with a different CTMode
+300 CONTINUE
+C Of course the trick of reusing coefficients when reducing at the amplitude level only works when computing one helicity at a time
+if (USERHEL.ne.-1) THEN
+  SKIP_LOOPNUM_COEFS_CONSTRUCTION = .TRUE.
+ENDIF
+308 CONTINUE
 ## if(ComputeColorFlows) {
 C We don't want to re-initialized the following quantities when checking the helicity filter. (which jumps to label 205 to probe each helicity).
 C We however want to re-initialize them for each new computation part of the stability check (which jumps to label 200)
@@ -747,23 +796,29 @@ ENDDO
 ENDIF
 ## }
 
-205 CONTINUE
-
-## if(AmplitudeReduction){
-300 CONTINUE
 ## if(iregi_available) {
 C     Free cache when using IREGI
       IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3) THEN
         CALL IREGI_FREE_PS()
       ENDIF
 ## }
-## }
 
 ## if(TIRCaching){
-DO I=1,NLOOPGROUPS
-  TIR_DONE(I)=.FALSE.
-ENDDO
+C Even if the user did ask to turn off the automatic TIR cache clearing, we must do it now if the CTModeIndex rolls over the size of the TIR cache employed.
+C Notice that we must do that only when processing a new CT mode as part of the stability test and not when computing a new helicity as part of the filtering process.
+C This we check that we are not in the initialization phase.
+C If we are not in CTModeRun=-1, then we never need to clear the cache since the TIR will always be used for a unique computation (not stab test).
+C Also, it is clear that if we are running OPP when reaching this line, then we shouldn't clear the TIR cache as it might still be useful later.
+C Finally, notice that the conditional statement below should never be true except you have TIR library supporting quadruple precision or when TIR_CACHE_SIZE<2.
+IF((.NOT.CHECKPHASE.AND.(HELDOUBLECHECKED)).and.CTMODERUN.eq.-1.and.MLReductionLib(I_LIB).ne.1..AND.(%(proc_prefix)sTIRCACHE_INDEX(CTMODE).eq.(TIR_CACHE_SIZE+1))) THEN
+  CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+ENDIF
 ## }
+
+## }
+
+C MadLoop jumps to this label during initialization when it goes to the computation of the next helicity.
+205 CONTINUE
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
   CALL %(proc_prefix)sSET_MP_PS(P_USER)
@@ -834,13 +889,24 @@ DO H=1,NCOMB
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
-
+  
   UVCT_REQ_SO_DONE=.FALSE.
   CT_REQ_SO_DONE=.FALSE.
   LOOP_REQ_SO_DONE=.FALSE.
  
+  IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
+    HEL_MULT=GOODHEL(H)
+  ELSE
+    HEL_MULT=1
+  ENDIF
+ 
 ## if(AmplitudeReduction){
   CTCALL_REQ_SO_DONE=.FALSE.
+  
+C The coefficient were already computed previously with another CTMode, so we can skip them
+  IF (SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
+    GOTO 4000
+  ENDIF
   
   DO I=1,NLOOPGROUPS
     DO J=0,LOOPMAXCOEFS-1
@@ -870,11 +936,6 @@ c FeynRules, there are none of these type of counterterms.
 3000 CONTINUE
   UVCT_REQ_SO_DONE=.TRUE.
 
-  IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
-    HEL_MULT=GOODHEL(H)
-  ELSE
-    HEL_MULT=1
-  ENDIF
 ## if(not AmplitudeReduction) {
   DO I=1,NCTAMPS
     DO J=1,NBORNAMPS
@@ -1018,14 +1079,30 @@ ENDIF
 
 
 ## if(not AmplitudeReduction){
+C MadLoop jumps to this label during stability checks when it recomputes the same PS point with a different CTMode
 300 CONTINUE
+
 ## if(iregi_available) {
 C     Free cache when using IREGI
       IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3) THEN
         CALL IREGI_FREE_PS()
       ENDIF
 ## }
+
+## if(TIRCaching){
+C Even if the user did ask to turn off the automatic TIR cache clearing, we must do it now if the CTModeIndex rolls over the size of the TIR cache employed.
+C Notice that we must do that only when processing a new CT mode as part of the stability test and not when computing a new helicity as part of the filtering process.
+C This we check that we are not in the initialization phase.
+C If we are not in CTModeRun=-1, then we never need to clear the cache since the TIR will always be used for a unique computation (not stab test).
+C Also, it is clear that if we are running OPP when reaching this line, then we shouldn't clear the TIR cache as it might still be useful later.
+C Finally, notice that the conditional statement below should never be true except you have TIR library supporting quadruple precision or when TIR_CACHE_SIZE<2.
+IF((.NOT.CHECKPHASE.AND.(HELDOUBLECHECKED)).AND.CTMODERUN.eq.-1.and.MLReductionLib(I_LIB).ne.1.AND.(%(proc_prefix)sTIRCACHE_INDEX(CTMODE).eq.(TIR_CACHE_SIZE+1))) THEN
+  CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+ENDIF
+## }
+
 ## }else{
+C MadLoop jumps to this label just after having called the subroutine %(proc_prefix)sMP_COMPUTE_LOOP_COEFS to compute OpenLoop coefficients in quadruple precision (and not double precision as done above)
 301 CONTINUE
 ## }
 
@@ -2117,8 +2194,42 @@ C
 
 	  ALWAYS_TEST_STABILITY = ONOFF
 
-	  END
+	  END SUBROUTINE
 
+	  SUBROUTINE %(proc_prefix)sSET_AUTOMATIC_TIR_CACHE_CLEARING(ONOFF)
+C
+C This function can be called by the MadLoop user so as to manually chose when
+C to reset the TIR cache.
+C
+	  	IMPLICIT NONE
+
+	    include 'MadLoopParams.inc'
+
+		LOGICAL ONOFF
+
+      	LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
+      	DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
+      	COMMON/%(proc_prefix)sRUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
+      	
+	    INTEGER N_DP_EVAL, N_QP_EVAL
+	    COMMON/%(proc_prefix)sN_EVALS/N_DP_EVAL,N_QP_EVAL
+
+## if(not TIRCaching){
+       WRITE(*,*) 'Warning: No TIR caching implemented. Call to SET_AUTOMATIC_TIR_CACHE_CLEARING did nothing.'
+## } else {
+
+		AUTOMATIC_TIR_CACHE_CLEARING = ONOFF
+		
+		IF (NRotations_DP.ne.0.or.NRotations_QP.ne.0) THEN
+		  WRITE(*,*) 'Warning: One cannot remove the TIR cache automatic clearing while at the same time keeping Lorentz rotations for stability tests.'
+		  WRITE(*,*) 'MadLoop will therefore automatically set NRotations_DP and NRotations_QP to 0.'
+		  NRotations_DP = 0
+		  NRotations_QP = 0
+  		  CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
+		ENDIF
+## }
+	  END SUBROUTINE
+	  
 	  SUBROUTINE %(proc_prefix)sSET_COUPLINGORDERS_TARGET(SOTARGET)
 	  IMPLICIT NONE
 C

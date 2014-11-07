@@ -185,12 +185,16 @@ c
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
+      use DiscreteSampler
+
       implicit none
 c
 c     Constants
 c
       include 'nexternal.inc'
       include 'maxparticles.inc'
+      integer NCOMB
+      parameter (NCOMB=%(ncomb)i)
 c
 c     Arguments
 c
@@ -256,7 +260,9 @@ c-----
          write(*,*) 'Explicitly summing over helicities'
       else
          isum_hel= i
-         write(*,*) 'Summing over',i,' helicities/event'
+         write(*,*) 'Monte-Carlo over helicities'
+c        initialize the discrete sampler module
+         call DS_register_dimension('Helicity',NCOMB)
       endif
 
       write(*,10) 'Enter Configuration Number: '

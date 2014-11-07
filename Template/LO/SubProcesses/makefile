@@ -49,6 +49,10 @@ $(LIBDIR)libgeneric.$(libext): ../../Cards/run_card.dat
 $(LIBDIR)libpdf.$(libext): 
 	cd ../../Source/PDF; make
 
+# Add source so that the compiler finds the DiscreteSampler module.
+%.o: %.f
+	$(FC) $(FFLAGS) -c $< -I../../Source/
+
 # Dependencies
 
 driver.f: genps.inc qmass.inc

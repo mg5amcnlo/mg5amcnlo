@@ -8,7 +8,7 @@ C
 C  
 C  
 C CONSTANTS 
-C  
+C 
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 C     These are constants related to the split orders
@@ -22,6 +22,10 @@ C     These are constants related to the split orders
       PARAMETER (checkPConservation=.TRUE.)
       %(real_dp_format)s NORMALIZATION
       PARAMETER (NORMALIZATION = 1.D0/(16.D0*3.14159265358979323846D0**2))
+## if(TIRCaching){
+      INTEGER TIR_CACHE_SIZE
+      include 'tir_cache_size.inc'
+## }
 C  
 C ARGUMENTS 
 C
@@ -42,15 +46,23 @@ C
 	  LOGICAL CTINIT, TIRINIT, GOLEMINIT
 	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT
 
+c This variable will be used to detect changes in the TIR library used so as to force the reset of the TIR filter.
+	  INTEGER LAST_LIB_USED
+	  DATA LAST_LIB_USED/-1/
+
        %(complex_dp_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3)
        %(complex_dp_format)s PJCOEFS(0:LOOPMAXCOEFS-1,3)
 ## if(TIRCaching){
-       %(complex_dp_format)s TIRCOEFS_CACHING(3,0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+       integer TIR_CACHE_INDEX 
+       %(complex_dp_format)s TIRCOEFS_CACHING(3,0:LOOPMAXCOEFS-1,NLOOPGROUPS,TIR_CACHE_SIZE)
        SAVE TIRCOEFS_CACHING
 ## }
 C
 C EXTERNAL FUNCTIONS
 C
+## if(TIRCaching){
+	integer %(proc_prefix)sTIRCACHE_INDEX
+## }
 C
 C GLOBAL VARIABLES
 C
@@ -60,6 +72,10 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
+c The argument ILIB is the TIR library to be used for that specific library.
+      INTEGER LIBINDEX
+      COMMON/%(proc_prefix)sI_LIB/LIBINDEX
+
 ## if(not AmplitudeReduction){
        %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 ## }else{
@@ -67,12 +83,24 @@ C
 ## }
        COMMON/%(proc_prefix)sLCOEFS/LOOPCOEFS
 ## if(TIRCaching){
-	   LOGICAL TIR_DONE(NLOOPGROUPS)
+C The index 0 of the second dimensions is filled with .false. as it makes the implementation simpler this way when the user sets TIR_CACHE_SIZE to be 0.
+	   LOGICAL TIR_DONE(NLOOPGROUPS,0:TIR_CACHE_SIZE)
 	   COMMON/%(proc_prefix)sTIRCACHING/TIR_DONE
 ## }
 C ----------
 C BEGIN CODE
 C ----------
+
+C Initialize for the very first time ML is called LAST_ILIB with the first ILIB used.
+IF(LAST_LIB_USED.eq.-1) THEN
+  LAST_LIB_USED = MLREDUCTIONLIB(LIBINDEX)
+ELSE
+C We changed the TIR library so we must refresh the cache.
+  IF(MLREDUCTIONLIB(LIBINDEX).NE.LAST_LIB_USED) THEN
+    LAST_LIB_USED = MLREDUCTIONLIB(LIBINDEX)
+	CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+  ENDIF
+ENDIF
 
 IF (MLReductionLib(I_LIB).EQ.4) THEN
 ## if(golem_available) {
@@ -149,7 +177,15 @@ C NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
          NLOOPCOEFS=NLOOPCOEFS+(3+I)*(2+I)*(1+I)/6
       ENDDO
 ## if(TIRCaching){
-	  IF(.NOT.TIR_DONE(I_LOOPGROUP))THEN
+      if (TIR_CACHE_SIZE.eq.0) THEN
+	    TIR_CACHE_INDEX = 0
+	  ELSE
+	    TIR_CACHE_INDEX = %(proc_prefix)sTIRCACHE_INDEX(CTMODE)
+C This way whenever the CTMode exceeds the cache size it rolls back to the beginning and MadLoop will have taken care of having re-initialized TIR_DONE between labels 200 and 205 in loop_matrix.f
+		TIR_CACHE_INDEX = MOD(TIR_CACHE_INDEX-1,TIR_CACHE_SIZE)+1 
+	  ENDIF
+
+	  IF(.NOT.TIR_DONE(I_LOOPGROUP,TIR_CACHE_INDEX))THEN
 ## } 
       SELECT CASE(MLReductionLib(I_LIB))
       CASE(2)
@@ -175,19 +211,21 @@ C     CONVERT TO MADLOOP CONVENTION
 ## }
       END SELECT
 ## if(TIRCaching){
-	  DO I=1,3
-	  	DO J=0,NLOOPCOEFS-1
-	     TIRCOEFS_CACHING(I,J,I_LOOPGROUP)=TIRCOEFS(J,I)
-	    ENDDO
-	  ENDDO
-	  TIR_DONE(I_LOOPGROUP)=.TRUE.
-	  
+C The zero index is dummy and means no caching at all since TIR_CACHE_SIZE=0.
+	    IF(TIR_CACHE_INDEX.NE.0) THEN
+	      DO I=1,3
+	  	    DO J=0,NLOOPCOEFS-1
+	         TIRCOEFS_CACHING(I,J,I_LOOPGROUP,TIR_CACHE_INDEX)=TIRCOEFS(J,I)
+	        ENDDO
+	      ENDDO
+	      TIR_DONE(I_LOOPGROUP,TIR_CACHE_INDEX)=.TRUE.
+	    ENDIF
 	  ELSE
-	  DO I=1,3
-	     DO J=0,NLOOPCOEFS-1
-	      TIRCOEFS(J,I)=TIRCOEFS_CACHING(I,J,I_LOOPGROUP)
-	     ENDDO
-	  ENDDO
+	    DO I=1,3
+	      DO J=0,NLOOPCOEFS-1
+	        TIRCOEFS(J,I)=TIRCOEFS_CACHING(I,J,I_LOOPGROUP,TIR_CACHE_INDEX)
+	      ENDDO
+	    ENDDO
 	  ENDIF
 ## }
       DO I=1,3
@@ -398,3 +436,47 @@ C  DP EVALUATION
 	    ENDIF
 	    RETURN
 	  END
+
+	  SUBROUTINE %(proc_prefix)sCLEAR_TIR_CACHE()
+## if(TIRCaching){
+	    IMPLICIT NONE
+
+		INTEGER NLOOPGROUPS
+        PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
+        INTEGER TIR_CACHE_SIZE
+        include 'tir_cache_size.inc'
+
+		INTEGER I,J
+
+	    LOGICAL TIR_DONE(NLOOPGROUPS,0:TIR_CACHE_SIZE)
+	    COMMON/%(proc_prefix)sTIRCACHING/TIR_DONE
+        
+		DO I=0,TIR_CACHE_SIZE
+		  DO J=1,NLOOPGROUPS
+            TIR_DONE(J,I)=.FALSE.
+          ENDDO
+		ENDDO
+## } else {
+C No TIR caching implemented, this is dummy. (The subroutine is kept as it might be called by the MC).
+	    CONTINUE
+## }
+	  END SUBROUTINE
+
+## if(TIRCaching){
+	  integer function %(proc_prefix)sTIRCACHE_INDEX(CTMODE)
+C Mapping function from CTMode to index and the TIR_cache
+        INTEGER TIR_CACHE_SIZE
+        include 'tir_cache_size.inc'
+
+		INTEGER CTMODE
+
+		%(proc_prefix)sTIRCACHE_INDEX=CTMODE
+		IF(%(proc_prefix)sTIRCACHE_INDEX.gt.2) THEN
+C This way, the CTMode 4 and 5 are sent to 3 and 4 respectively.
+		  %(proc_prefix)sTIRCACHE_INDEX = %(proc_prefix)sTIRCACHE_INDEX-1
+		ENDIF
+
+C In principle if we wanted to cache other modes or rotations, we could do it here
+	    RETURN 
+      END
+## }

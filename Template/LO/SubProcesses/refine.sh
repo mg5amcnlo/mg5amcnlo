@@ -8,10 +8,6 @@ script=%(script_name)s
 
 grid_directory=%(base_directory)s
 j=%(directory)s
-echo "grid directory $grid_directory"
-ls $grid_directory
-echo "new_directory $j"
-ls $j
      if [[ ! -e $j ]]; then
           mkdir $j
           if [[ -e $grid_directory/ftn26 ]];then

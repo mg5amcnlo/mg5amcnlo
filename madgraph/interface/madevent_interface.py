@@ -2479,7 +2479,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             # when running in multi-core with a central disk. So it is turned
             # off here. If these filters were not initialized then they will 
             # have to be re-computed at the beginning of each run.
+            if 'WriteOutFilters' in self.MadLoopparam.user_set and \
+                                       self.MadLoopparam.get('WriteOutFilters'):
+                logger.info(
+"""You chose to have MadLoop writing out filters. 
+Beware that this can be dangerous for local multicore runs.""")
             self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
+            self.MadLoopparam.set('DoubleCheckHelicityFilter',False,
+                                                             ifnotdefault=False)
             
             # The conservative settings below for 'CTModeInit' and 'ZeroThres'
             # help adress issues for processes like g g > h z, and g g > h g
@@ -2499,19 +2506,38 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             # The method above still significantly increases the initialization
             # time of MadLoop only because the check of "matching helicities"
             # can be unreliable in double prec. We therefore prefer here to turn
-            # off this feature and keep only the check of vanishing helicity so 
-            # that we can keep initialisation in double precision.
-            self.MadLoopparam.set('HelicityFilterLevel',1, ifnotdefault=False)            
+            # off this feature and keep only the check of vanishing helicity which
+            # is anyway done directly by MadEvent, so that we can turn the
+            # whole feature off here to avoid initialization overhead.
+            self.MadLoopparam.set('HelicityFilterLevel',0, ifnotdefault=False)            
                         
-            # When we will have full confidence in TIR, we can set the following
-            # options
-            # self.MadLoopparam.set('MLReductionLib','4|2|3|1', ifnotdefault=False)
+            # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
+            # processes, so that we place OPP last.
+            if 'MLReductionLib' in self.MadLoopparam.user_set and \
+                        self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                logger.warning(
+"""You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
+Beware that this can bring significant slowdown; the optimal choice being to first start with TIR reduction.""")
+            # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
+            self.MadLoopparam.set('MLReductionLib','2|3|1', ifnotdefault=False)
             
             # MadLoop runtime speed is important for loop-induced processes.
             # We therefore chose here to only have the minimal numerical stability
             # test which includes only two independent computations, not three.
-            self.MadLoopparam.set('NRotations_DP',0)
-            self.MadLoopparam.set('NRotations_QP',0)
+            # Also TIR cache will only work when NRotations_DP=0, so if one 
+            # doesn't keep it this way, then LoopInduced+MadEvent could be up to
+            # NHelicity slower!
+            if ('NRotations_DP' in self.MadLoopparam.user_set and \
+                                 self.MadLoopparam.get('NRotations_DP')!=0) or \
+               ('NRotations_QP' in self.MadLoopparam.user_set and \
+                                     self.MadLoopparam.get('NRotations_QP')!=0):
+                logger.warning(
+"""You chose to also use a lorentz rotation for stability tests (see parameter NRotations_[DP|QP]).
+Beware that, for optimization purposes, MadEvent uses manual TIR cache clearing which is not compatible
+with the lorentz rotation stability test. These number of these rotations to be used will be reset to 
+zeor by MadLoop.""")
+            self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
+            self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)
             
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",

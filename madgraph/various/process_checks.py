@@ -1023,7 +1023,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         retcode = subprocess.call(['make','check'],
                                    cwd=dir_name, stdout=devnull, stderr=devnull)
         compilation_time = time.time()-start
-                     
         if retcode != 0:
             logging.info("Error while executing make in %s" % dir_name)
             return None, None, None
@@ -1032,6 +1031,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             start=time.time()
             retcode = subprocess.call('./check',
                                    cwd=dir_name, stdout=devnull, stderr=devnull)
+
             run_time = time.time()-start
             ram_usage = None
         else:
@@ -1154,8 +1154,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                             proc_prefix+fname)) for fname in my_req_files]) or \
                          not os.path.isfile(pjoin(run_dir,'check')) or \
                          not os.access(pjoin(run_dir,'check'), os.X_OK)
-    
-        curr_attempt = 1
         
         # Check if this is a process without born by checking the presence of the
         # file born_matrix.f
@@ -1166,22 +1164,27 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # quadruple precision initializations attempts
         if not any(attempt<0 for attempt in to_attempt):
             to_attempt = [-attempt for attempt in to_attempt] + to_attempt
-        
+        use_quad_prec = 1
+        curr_attempt = 1
         while to_attempt!=[] and need_init():
             curr_attempt = to_attempt.pop()
             # if the attempt is a negative number it means we must force 
             # quadruple precision at initialization time
             MLCard = bannermod.MadLoopParam(pjoin(SubProc_dir,'MadLoopParams.dat'))    
-            use_quad_prec = 1        
             if curr_attempt < 0:
-                use_quad_prec = -1                
+                use_quad_prec = -1
+                # In quadruple precision we can lower the ZeroThres threshold
                 MLCard.set('CTModeInit',4)
+                MLCard.set('ZeroThres',1e-11)
             else:
+                # Restore the default double precision intialization params
                 MLCard.set('CTModeInit',1)
-            MLCard.write(pjoin(SubProc_dir,'MadLoopParams.dat'))
+                MLCard.set('ZeroThres',1e-9)
             # Plus one because the filter are written on the next PS point after
             curr_attempt = abs(curr_attempt+1)
-    
+            MLCard.set('MaxAttempts',curr_attempt) 
+            MLCard.write(pjoin(SubProc_dir,'MadLoopParams.dat'))
+
             # initialization is performed.
             cls.fix_PSPoint_in_check(run_dir, read_ps = False, 
                                                          npoints = curr_attempt)

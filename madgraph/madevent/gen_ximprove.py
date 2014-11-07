@@ -515,6 +515,11 @@ class gensym(object):
         self.abscross = collections.defaultdict(int)
         self.sigma = collections.defaultdict(int)
         self.chi2 = collections.defaultdict(int)
+        
+        #if self.cmd.proc_characteristic['loop_induced']:
+        #    self.splitted_grid = 8
+        misc.sprint('force splitting')
+        self.splitted_grid = 3
     
     def launch(self):
         """ """
@@ -607,7 +612,6 @@ class gensym(object):
         """ submit the version of the survey with splitted grid creation 
         """ 
         
-        self.splitted_grid = 3
         if self.splitted_grid <= 1:
             return self.submit_to_cluster_no_splitting(job_list)
        
@@ -643,6 +647,8 @@ class gensym(object):
         #3. combine the information about the total crossection for comthis channel
         # constructing variable
         cross, across, sigma = grid_calculator.get_cross_section()
+        if cross == 0:
+            raise Exception, "computed cross-section is zero"
         self.cross[G] += cross**3/sigma
         self.abscross[G] += cross * across**2/sigma
         self.sigma[G] += cross**2/ sigma
@@ -710,7 +716,7 @@ class gensym(object):
 
         # 1. write the new input_app.txt to double the number of points
         run_card = self.cmd.run_card        
-        options = {'event' : 2**(step) * self.cmd.opts['points'],
+        options = {'event' : 2**(step+1) * self.cmd.opts['points'] / self.splitted_grid,
                'maxiter': 1,
                'miniter': 1,
                'accuracy': self.cmd.opts['accuracy'],
@@ -748,7 +754,7 @@ class gensym(object):
   1       !Suppress Amplitude 1=yes
   %(helicity)s        !Helicity Sum/event 0=exact
         """        
-
+        options['event'] = int(options['event'])
         open(path, 'w').write(template % options)
         
 
@@ -774,6 +780,7 @@ class gensym(object):
             options['gridmode'] = -2
             options['maxiter'] = 1 #this is automatic in dsample anyway
             options['miniter'] = 1 #this is automatic in dsample anyway
+            options['event'] /= self.splitted_grid 
                 
         for Pdir in self.subproc:
             path =pjoin(self.me_dir, 'SubProcesses', Pdir, 'input_app.txt') 
