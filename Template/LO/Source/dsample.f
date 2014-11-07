@@ -105,6 +105,9 @@ c-----
       if (nsteps .lt. 1) nsteps=1
       nwrite = itmax*ncall/nsteps
 
+C     Fix for 2>1 process where ndim is 2 and not 1
+      ninvar = max(2,ninvar)
+
       call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
       call graph_init
       do i=1,itmax
