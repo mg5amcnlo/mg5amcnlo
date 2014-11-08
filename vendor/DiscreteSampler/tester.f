@@ -6,7 +6,7 @@
           REAL*8 integral_target, computed_int, variance
           integer i,j
           integer pts_per_it(4), pts
-          data pts_per_it/100000,100000,10000,100000/
+          data pts_per_it/30,100000,10000,100000/
           real*8 avg_acc
           real*8 this_acc
           real*8 mvariance
@@ -23,12 +23,12 @@
           enddo
           call DS_register_dimension('TestDim',10)
           avg_acc = 0.0d0
-          call DS_set_min_points(10)
+          call DS_set_min_points(2)
           do i=1,10
             call DS_add_entry('conv',i,1.0d0)
           enddo
           call DS_add_entry('conv',7,70.0d0,reset=.True.)
-          do j=1,100
+          do j=1,1
             if(j.le.size(pts_per_it)) then
               pts = pts_per_it(j)
             else
@@ -54,7 +54,9 @@ c            call DS_print_global_info()
 c            write(*,*) 'Grid after update'            
 c            call DS_print_global_info('TestDim')
           enddo
-          call DS_write_grid('rrrr.dsg')
+          call DS_write_grid('rrrr.dsg','TestDim')
+          call DS_load_grid('rrrr.dsg','TestDim')
+          call DS_print_global_info()
       end program tester
 
 
@@ -69,7 +71,9 @@ c            call DS_print_global_info('TestDim')
           do i=1,n_trials
             CALL RANDOM_NUMBER(r)
             call DS_get_point('TestDim',r(1),picked,jac,
-     &      mode,(/'conv'/))
+     &      mode)
+c     &      ,(/'conv'/))
+            write(*,*) 'Picked:',picked
             func = to_test(picked,.false.)
             computed_int = (computed_int*float(i-1)
      &       + func*jac)/float(i)

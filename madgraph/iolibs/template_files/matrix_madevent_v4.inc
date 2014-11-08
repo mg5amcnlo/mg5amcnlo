@@ -10,6 +10,7 @@ c for the point in phase space P(0:3,NEXTERNAL)
 C  
 %(process_lines)s
 C  
+    use DiscreteSampler
     IMPLICIT NONE
 C  
 C CONSTANTS
@@ -88,9 +89,10 @@ C ----------
        TS(I)=0d0
     ENDDO
 
-    IF (ISUM_HEL .EQ. 0) THEN
+!   If the helicity grid status is 0, this means that it is not yet initialized.
+    IF (ISUM_HEL.EQ.0.or.(DS_get_dim_status('Helicity').eq.0)) THEN
         DO I=1,NCOMB
-           IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES) THEN
+           IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0)) THEN
                T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
              DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -99,24 +101,40 @@ C ----------
                  T=T*(2d0-ABS(POL(JJ)))
                ENDIF
              ENDDO
-             ANS=ANS+T
+			 IF (ISUM_HEL.NE.0) then
+			   call DS_add_entry('Helicity',I,T)
+			 endif
+             ANS=ANS+DABS(T)
              TS(I)=T
            ENDIF
         ENDDO
-        JHEL = 1
-        IF(NTRY.LE.MAXTRIES)THEN
-         DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
-               GOODHEL(I)=.TRUE.
-               NGOOD = NGOOD +1
-               IGOOD(NGOOD) = I        
-               print *,'Adding good helicity ',I,TS(I)/ANS
-            ENDIF
-         ENDDO
-        ENDIF
-        IF(NTRY.EQ.MAXTRIES)THEN
-           ISUM_HEL=MIN(ISUM_HEL,NGOOD)
-        ENDIF
+		IF (ISUM_HEL.NE.0) then
+!         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
+		  HEL_PICKED = -1
+!         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
+		  hel_jacobian   = 1.0d0
+		  IF(DS_get_dim_status('Helicity').eq.1) then 
+!           If we finished the initialization we can update the grid so as to start sampling over it.
+!           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
+            CALL DS_UPDATE_GRID('Helicity')
+			CALL DS_SET_GRID_MODE('Helicity','init')
+          endif
+	    ELSE
+          JHEL = 1
+          IF(NTRY.LE.MAXTRIES)THEN
+           DO I=1,NCOMB
+              IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
+                 GOODHEL(I)=.TRUE.
+                 NGOOD = NGOOD +1
+                 IGOOD(NGOOD) = I        
+                 print *,'Adding good helicity ',I,TS(I)/ANS
+              ENDIF
+           ENDDO
+          ENDIF
+          IF(NTRY.EQ.MAXTRIES)THEN
+             ISUM_HEL=MIN(ISUM_HEL,NGOOD)
+          ENDIF
+		endif
     ELSE              !RANDOM HELICITY
        
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
@@ -130,16 +148,20 @@ C           The helicity configuration was chosen already by genps and put in a 
                 T=T*(2d0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            ANS=ANS+T
+c           Always one helicity at a time
+            ANS = T
+c           Include the Jacobian from helicity sampling
+            ANS = ANS * hel_jacobian
             WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)  
     ENDIF
-    IF (ISUM_HEL .NE. 1) THEN
+    IF (ISUM_HEL .NE. 1.or.(HEL_PICKED.eq.-1)) THEN
     R=XRAN1(IDUM)*ANS
     SUMHEL=0d0
     DO I=1,NCOMB
        SUMHEL=SUMHEL+TS(I)
        IF(R.LT.SUMHEL)THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+          ANS=DSIGN(ANS,TS(I))		  
           GOTO 10
        ENDIF
     ENDDO

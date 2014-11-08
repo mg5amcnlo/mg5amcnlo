@@ -5938,12 +5938,14 @@ This implies that with decay chains:
                                          loop_diagram_generation.LoopAmplitude):
                         mode['optimized_output']=self.options['loop_optimized_output']
                         HelasMultiProcessClass = loop_helas_objects.LoopHelasProcess
+                        compute_loop_nc = True
                     else:
                         HelasMultiProcessClass = helas_objects.HelasMultiProcess
-                    
+                        compute_loop_nc = False
                     
                     self._curr_matrix_elements = HelasMultiProcessClass(
-                                      self._curr_amps, matrix_element_opts=mode)
+                      self._curr_amps, compute_loop_nc=compute_loop_nc,
+                                                       matrix_element_opts=mode)
                     
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\

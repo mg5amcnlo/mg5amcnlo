@@ -878,13 +878,11 @@ c     The fourth argument is not used and therefore a dummy
       dummy = 0
       call ntuple(rdm,0.0d0,1.0d0,dummy,iconfig)
 C     Pick a point using the DiscreteSampler module
-      CALL DS_get_point(dim_name, rdm, picked_bin, jacobian, 'norm')
-C     Already multiply the wgt by the helicity sampling jacobian here
-c     so that wgt is physically correct henceforth in the code
-      wgt = wgt * jacobian
+      CALL DS_get_point(dim_name, rdm, picked_bin, jacobian, 'norm') 
 C     Store the helicity sampling jacobian so that it can be divided out
 c     of wgt later when adding an entry to the DiscreteSampler helicity
-c      grid.
+c      grid. Also we don't want to multiply wgt by it yet since this is
+c     taken care of at the level of matrix<i> already.
       hel_jacobian = jacobian
       
       end subroutine sample_get_discrete_x
@@ -1240,7 +1238,11 @@ c
 c       It is important to divide the wgt stored in the grid by the 
 c       corresponding jacobian otherwise it flattens the sampled
 c       distribution.
-        if(ISUM_HEL.ne.0) then
+C       Also, if HEL_PICKED is equal to -1, it means that MadEvent
+C       is in the initialization stage where all helicity were probed
+c       and added individually to the grid directly by matrix<i>.f so
+c       that they shouldn't be added here.
+        if(ISUM_HEL.ne.0.and.HEL_PICKED.ne.-1) then
           call DS_add_entry('Helicity',HEL_PICKED,(wgt/hel_jacobian))
         endif
 

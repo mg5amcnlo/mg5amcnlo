@@ -48,7 +48,7 @@ class LoopColorBasis(color_amp.ColorBasis):
         """ Add a color delta in the right representation (depending on the 
         color charge carried by the L-cut particle whose number are given in
         the loop_numbers argument) to close the loop color trace."""
-                
+        
         # But for T3 and T6 for example, we must make sure to add a delta with 
         # the first index in the fundamental representation.
         if lcut_charge<0:
