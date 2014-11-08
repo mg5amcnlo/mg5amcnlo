@@ -233,7 +233,6 @@ c     unweighted events.
 c
       write(*,*) "Status",accur, cur_it, itmax
       if (accur .ge. 0d0 .or. cur_it .gt. itmax+3) then
-        write(*,*) "stop here since", accur, "is greater than 0 or", cur_it, ">",itmax+3
         return
       endif
 c     Check for neventswritten and chi2 (JA 8/17/11 lumi*mean xsec)
@@ -279,7 +278,6 @@ c
       iter = 1
 c      itmax = 8
       itmax_adjust = 5
-      write(*,*) "pass grid mode to 2 .... Is this wanted??"
       use_cut = 2  !Start adjusting grid
       do while(iter .le. itmax)
          if (iter .gt. itmax_adjust .and. use_cut .ne. 0) then
@@ -529,7 +527,6 @@ c-----
 c  Begin Code
 c-----
       icor = 0
-      write(*,*) "initialize grid for mode", use_cut
       If (use_cut .eq. 0) then
          icor = 1          !Assume correlated unless grid read
          print*,'Keeping grid fixed.'
@@ -621,12 +618,8 @@ c     Try to read grid from file
 c
       flat_grid=.true.
       open(unit=25,file='ftn25',status='unknown',err=102)
-c      read(25,fmt='(4f21.17)', err=1011, end=1012)
-c     .     ((grid(2,i,j),i=1,ng),j=1,invar)
       read(25,*, err=1011, end=1012)
      .     ((grid(2,i,j),i=1,ng),j=1,invar)
-c      write(*,*) 'Got the grid OK, now getting alpha'
-c      read(25,fmt='(4f20.17)',err=101,end=101)(alpha(i),i=1,maxconfigs)
       write(*,*) 'Grid read from file'
       flat_grid=.false.
       close(25)
@@ -1557,13 +1550,8 @@ c     &        (sigma/vol/vol-knt*mean*mean*navg)/dble(knt-1)/ dble(knt)
 
             if (.true.) then
 c               vol = 1d0/(knt*itm)
-                open(unit=22, file="sigma")
-                write(22,*) sigma, vol, non_zero, mean, navg,knt
-
                sigma = (sigma/vol/vol-non_zero*mean*mean*navg)  !knt replaced by non_zero
      .              / dble(knt-1) / dble(knt)
-                write(22,*) sigma
-                close(22)
             else
 
                sigma = (sigma/vol/vol - knt*mean*mean)
@@ -1657,18 +1645,6 @@ c     &           '  Fluctuation: ',sigma,
 c     &           wmax*(dble(non_zero)/dble(kn)),
 c     &           dble(non_zero)/dble(kn)*100.,'%'
 c            close(22)
-
-           if(use_cut.eq.-2)then
-                open(unit=22, file="grid_information_old")
-                write(22,*) non_zero, ng, invar
-                write(22,*) ((grid(1,i,j),i=1,ng),j=1,invar)
-                write(22,*) ((grid(2,i,j),i=1,ng),j=1,invar)
-                write(22,*) ((inon_zero(i,j),i=1,ng),j=1,invar)
-                write(22,*) (xmin(j), j=1,invar)
-                write(22,*) (xmax(j), j=1,invar)
-                write(*,*) 0,0,0,0
-                close(22)
-           endif
 
 c------
 c    Here we will double the number of events requested for the next run

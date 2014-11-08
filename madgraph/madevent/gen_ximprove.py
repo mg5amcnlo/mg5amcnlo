@@ -469,10 +469,8 @@ def get_ximprove(cmd, opt):
     
     if cmd.proc_characteristics['loop_induced']:
         if cmd.proc_characteristics['nexternal'] <=2:
-            misc.sprint("use loop induced refine")
             return gen_ximprove_loop_induced(cmd, opt)
         else:
-            misc.sprint("use loop induced refine with increased parralelization")
             out = gen_ximprove_loop_induced(cmd, opt)
             out.increase_parralelization()
             return out
@@ -481,10 +479,8 @@ def get_ximprove(cmd, opt):
     else:
         out = gen_ximprove(cmd, opt)
         if cmd.opts['accuracy'] < cmd._survey_options['accuracy'][1]:
-            misc.sprint("use normal refine with increased accuracy")
             out.increase_precision()
-        else:
-            misc.sprint("use normal refine")
+
         return out
     
 
@@ -516,7 +512,6 @@ class gensym(object):
         self.sigma = collections.defaultdict(int)
         self.chi2 = collections.defaultdict(int)
         
-        #if self.cmd.proc_characteristic['loop_induced']:
         self.splitted_grid = False
         if self.cmd.proc_characteristics['loop_induced']:
             nexternal = self.cmd.proc_characteristics['nexternal']
@@ -569,7 +564,7 @@ class gensym(object):
             job_list[Pdir] = stdout.split()
             self.cmd.compile(['madevent'], cwd=Pdir)
             self.submit_to_cluster(job_list)
-        return job_list
+        return job_list, P_zero_result
             
             
     def submit_to_cluster(self, job_list):
@@ -633,8 +628,11 @@ class gensym(object):
         
         # 1. create an object to combine the grid information and fill it
         grid_calculator = combine_grid.grid_information()
-        Gdirs = glob.glob(pjoin(Pdir, "G%s_*" %G))
-        for path in Gdirs:
+        
+        Gdirs = [] #build the the list of directory
+        for i in range(self.splitted_grid):
+            path = pjoin(Pdir, "G%s_%s" % (G, i+1)
+            Gdirs.append(path)
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
@@ -649,23 +647,20 @@ class gensym(object):
         for Gdir in Gdirs[1:]:
             files.ln(pjoin(Gdirs[0], 'ftn25'),  Gdir)
 
-        #3. combine the information about the total crossection for comthis channel
-        # constructing variable
+        #3. combine the information about the total crossection / error
+        # start by keep the interation in memory
         cross, across, sigma = grid_calculator.get_cross_section()
         self.cross[G] += cross**3/sigma
         self.abscross[G] += cross * across**2/sigma
         self.sigma[G] += cross**2/ sigma
         self.chi2[G] += cross**4/sigma
-        # current status
+        # and use those iteration to get the current estimator
         cross = self.cross[G]/self.sigma[G]
         if step > 1:
             error = math.sqrt(abs((self.chi2[G]/cross**2 - self.sigma[G])/step-1)/self.sigma[G])
         else:
             error = sigma
         
-        misc.sprint(G, step, cross,"+-", error)
-
-
         # 4. make the submission of the next iteration
         #   Three cases - less than 3 iteration -> continue
         #               - more than 3 and less than 5 -> check error

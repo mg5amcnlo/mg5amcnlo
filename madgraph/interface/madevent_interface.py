@@ -2589,9 +2589,8 @@ zeor by MadLoop.""")
         if float(self.run_card['mmjj']) > 0.01 * (float(self.run_card['ebeam1'])+float(self.run_card['ebeam2'])):
             self.pass_in_difficult_integration_mode()
         
-        jobs = ajobcreator.launch()
-        #ajobcreator.submit_to_cluster(jobs)
-                                  
+        jobs, P_zero_result = ajobcreator.launch()
+        
         # Check if all or only some fails
         if P_zero_result:
             if len(P_zero_result) == len(subproc):

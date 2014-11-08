@@ -214,8 +214,6 @@ def ln(file_pos, starting_dir='.', name='', log=True, cwd=None, abspath=False):
         os.symlink(target, os.path.join(starting_dir, name))
     except Exception, error:
         if log:
-            print error
-            print target, os.path.exists(target)
             logger.warning('Could not link %s at position: %s' % (file_pos, \
                                                 os.path.realpath(starting_dir)))
 

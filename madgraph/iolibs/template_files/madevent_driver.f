@@ -236,9 +236,8 @@ c-----
             write(*,*) 'Bad choice, using 2',use_cut
             use_cut = 2
          else if (use_cut.eq.-2)then
-            WRITE(*,*) "USE_CUT IS AT ", USE_CUT
-         itmax= 1
-         itmin=1
+            itmax= 1
+            itmin=1
          endif
 
       endif
