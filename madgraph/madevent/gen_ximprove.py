@@ -631,7 +631,7 @@ class gensym(object):
         
         Gdirs = [] #build the the list of directory
         for i in range(self.splitted_grid):
-            path = pjoin(Pdir, "G%s_%s" % (G, i+1)
+            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
             Gdirs.append(path)
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
             grid_calculator.add_one_grid_information(fsock)
