@@ -2945,7 +2945,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the driver.f 
         ncomb = matrix_element.get_helicity_combinations()
         filename = pjoin(Ppath,'driver.f')
-        self.write_driver(writers.FortranWriter(filename),ncomb)
+        self.write_driver(writers.FortranWriter(filename),ncomb,n_grouped_proc=1)
 
         # Create the matrix.f file, auto_dsig.f file and all inc files
         filename = pjoin(Ppath, 'matrix.f')
@@ -3352,6 +3352,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
+            
         file = file % replace_dict
         
         # Add the split orders helper functions.
@@ -3782,7 +3783,7 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # write_driver
     #===========================================================================
-    def write_driver(self, writer, ncomb, v5=True):
+    def write_driver(self, writer, ncomb, n_grouped_proc, v5=True):
         """Write the SubProcess/driver.f file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_driver.f')
@@ -3790,15 +3791,19 @@ c           This is dummy particle used in multiparticle vertices
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
             card = 'Source/MODEL/MG5_param.dat'
         else:
-            card = 'param_card.dat' 
+            card = 'param_card.dat'
+        # Requiring each helicity configuration to be probed by 10 points before
+        # using the resulting grid for MC over helicity sampling seems reasonable 
         if v5:
             text = open(path).read() % {'param_card_name':card, 
                                         'secondparam':'',
-                                        'ncomb':ncomb} 
+                                        'ncomb':ncomb,
+                                        'hel_init_points':n_grouped_proc*10} 
         else:
             text = open(path).read() % {'param_card_name':card, 
                                         'secondparam': ',.true.',
-                                        'ncomb':ncomb} 
+                                        'ncomb':ncomb,
+                                        'hel_init_points':n_grouped_proc*10} 
         writer.write(text)
         
         return True
@@ -4104,12 +4109,13 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         # helicity configuration
         ncomb = matrix_elements[0].get_helicity_combinations()
         for me in matrix_elements[1:]:
-            if matrix_elements!=ne.get_helicity_combinations():
+            if ncomb!=me.get_helicity_combinations():
                 raise MadGraph5Error, "All grouped processes must share the "+\
                                        "same number of helicity configurations."                
 
         filename = 'driver.f'
-        self.write_driver(writers.FortranWriter(filename),ncomb,v5=False)
+        self.write_driver(writers.FortranWriter(filename),ncomb,
+                                  n_grouped_proc=len(matrix_elements), v5=False)
 
         for ime, matrix_element in \
                 enumerate(matrix_elements):

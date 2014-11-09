@@ -620,6 +620,7 @@ c
       open(unit=25,file='ftn25',status='unknown',err=102)
       read(25,*, err=1011, end=1012)
      .     ((grid(2,i,j),i=1,ng),j=1,invar)
+      call read_discrete_grids(25)
       write(*,*) 'Grid read from file'
       flat_grid=.false.
       close(25)
@@ -853,6 +854,30 @@ c
       endif
       end
 
+      subroutine write_discrete_grids(stream_id)
+c************************************************************************
+c     Write out the grid using the DiscreteSampler module
+c************************************************************************
+      use DiscreteSampler          
+      implicit none
+      integer, intent(in)                           :: stream_id
+      
+      call DS_write_grid(stream_id)
+
+      end subroutine write_discrete_grids
+
+      subroutine read_discrete_grids(stream_id)
+c************************************************************************
+c     Write out the grid using the DiscreteSampler module
+c************************************************************************
+      use DiscreteSampler          
+      implicit none
+      integer, intent(in)                           :: stream_id
+      
+      call DS_load_grid(stream_id)
+
+      end subroutine read_discrete_grids
+
       subroutine sample_get_discrete_x(wgt,picked_bin,iconfig,dim_name)
 c************************************************************************
 c     Returns maxdim random numbers between 0 and 1, and the wgt
@@ -883,13 +908,11 @@ c     The fourth argument is not used and therefore a dummy
       dummy = 0
       call ntuple(rdm,0.0d0,1.0d0,dummy,iconfig)
 C     Pick a point using the DiscreteSampler module
-      CALL DS_get_point(dim_name, rdm, picked_bin, jacobian, 'norm')
-C     Already multiply the wgt by the helicity sampling jacobian here
-c     so that wgt is physically correct henceforth in the code
-      wgt = wgt * jacobian
+      CALL DS_get_point(dim_name, rdm, picked_bin, jacobian, 'norm') 
 C     Store the helicity sampling jacobian so that it can be divided out
 c     of wgt later when adding an entry to the DiscreteSampler helicity
-c      grid.
+c      grid. Also we don't want to multiply wgt by it yet since this is
+c     taken care of at the level of matrix<i> already.
       hel_jacobian = jacobian
       
       end subroutine sample_get_discrete_x
@@ -1239,13 +1262,20 @@ c
       INTEGER                    ISUM_HEL
       LOGICAL                    MULTI_CHANNEL
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+      logical cutsdone, cutspassed
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 c
 c     Begin code
 c
 c       It is important to divide the wgt stored in the grid by the 
 c       corresponding jacobian otherwise it flattens the sampled
 c       distribution.
-        if(ISUM_HEL.ne.0) then
+C       Also, if HEL_PICKED is equal to -1, it means that MadEvent
+C       is in the initialization stage where all helicity were probed
+c       and added individually to the grid directly by matrix<i>.f so
+c       that they shouldn't be added here.
+        if(ISUM_HEL.ne.0.and.HEL_PICKED.ne.-1.and.
+     &                            (.NOT.CUTSDONE.or.CUTSPASSED)) then
           call DS_add_entry('Helicity',HEL_PICKED,(wgt/hel_jacobian))
         endif
 
@@ -1860,7 +1890,8 @@ c               if (1d0/sqrt(tsigma) .lt. accur) then
                   write(26,fmt='(4f21.17)')
      $                 ((grid(2,i,j),i=1,ng),j=1,invar)
 c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)
-                  close(26)
+                  call write_discrete_grids(26)
+                  close(26)                  
                   endif
                   call sample_writehtm()
 c                  open(unit=22,file=result_file,status='old',
@@ -1919,6 +1950,7 @@ c     Check nun and chi2 (ja 03/11)
                   write(26,fmt='(4f21.17)')
      $                 ((grid(2,i,j),i=1,ng),j=1,invar)
 c                  write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
+                  call write_discrete_grids(26)
                   close(26)
                   endif
                   call sample_writehtm()
@@ -1949,6 +1981,7 @@ c 129              close(22)
                open(26, file='ftn26',status='unknown')
                write(26,fmt='(4f21.17)')
      $              ((grid(2,i,j),i=1,ng),j=1,invar)
+               call write_discrete_grids(26)
 c               write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
                close(26)
                endif

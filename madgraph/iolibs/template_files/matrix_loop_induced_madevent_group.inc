@@ -9,7 +9,8 @@ c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
 C  
 %(process_lines)s
-C  
+C 
+    use DiscreteSampler
     IMPLICIT NONE
 C  
 C CONSTANTS
@@ -48,6 +49,9 @@ C
         DATA NTRY /0,0/
         DATA NGOOD /0,0/
         DATA ISHEL/0,0/
+
+C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
+	    type(SampledDimension) ref_helicity_grid
 
 		REAL*8 , ALLOCATABLE :: ANS_ML(:,:)
       	REAL*8 , ALLOCATABLE :: PREC_FOUND(:)
@@ -149,7 +153,9 @@ C Of course this option can also not be used for polarized beams.
 		ANS = ANS_ML(1,0)
 
     ELSE
-	IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
+!   If the helicity grid status is 0, this means that it is not yet initialized.
+!   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
+    IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       	 DO I=1,NCOMB
          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
 	    	
@@ -163,10 +169,27 @@ C Of course this option can also not be used for polarized beams.
                   T=T*(2d0-ABS(POL(JJ)))
                ENDIF
             ENDDO
+			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0) then
+			  call DS_add_entry('Helicity',I,T)
+			endif
             ANS=ANS+DABS(T)
             TS(I)=T
          ENDIF
         ENDDO
+      IF (ISUM_HEL.NE.0) then
+!         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
+		  HEL_PICKED = -1
+!         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
+		  hel_jacobian   = 1.0d0
+!         We don't want to re-update the helicity grid if it was already updated by another matrix<i>, so we make sure that the reference grid is empty.
+          ref_helicity_grid = DS_get_dimension(ref_grid,'Helicity')
+		  IF((DS_get_dim_status('Helicity').eq.1).and.(ref_helicity_grid%%n_tot_entries.eq.0)) then 
+!           If we finished the initialization we can update the grid so as to start sampling over it.
+!           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
+            CALL DS_UPDATE_GRID('Helicity')
+			CALL DS_SET_GRID_MODE('Helicity','init')
+          endif
+	  ELSE
         JHEL(IMIRROR) = 1
         IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
          DO I=1,NCOMB
@@ -181,12 +204,10 @@ C Of course this option can also not be used for polarized beams.
         IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
            ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
-      ELSE !LOOP OVER GOOD HELICITIES
-        DO J=1,ISHEL(IMIRROR)
-            JHEL(IMIRROR)=JHEL(IMIRROR)+1
-            IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
-            HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
-            I = IGOOD(JHEL(IMIRROR),IMIRROR)
+	  endif
+      ELSE ! random helicity
+C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
+            I = HEL_PICKED
             
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
 			T = ANS_ML(1,0)
@@ -198,16 +219,14 @@ C Of course this option can also not be used for polarized beams.
                 T=T*(2d0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            ANS=ANS+DABS(T)*HWGT
-            TS(I)=T*HWGT
-        ENDDO
-        IF (ISHEL(IMIRROR) .EQ. 1) THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-c         Set right sign for ANS, based on sign of chosen helicity
-          ANS=DSIGN(ANS,TS(I))
-        ENDIF
+c           Always one helicity at a time
+            ANS = T
+c           Include the Jacobian from helicity sampling
+            ANS = ANS * hel_jacobian
+
+			WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
       ENDIF
-      IF (ISHEL(IMIRROR) .NE. 1) THEN
+      IF (ISUM_HEL .NE. 1.or.(HEL_PICKED.eq.-1)) THEN
          CALL RANMAR(R)
          SUMHEL=0d0
          DO I=1,NCOMB

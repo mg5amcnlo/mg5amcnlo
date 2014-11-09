@@ -262,6 +262,10 @@ c-----
          write(*,*) 'Monte-Carlo over helicities'
 c        initialize the discrete sampler module
          call DS_register_dimension('Helicity',NCOMB)
+c        Also set the minimum number of points for which each helicity
+c        should be probed before the grid is used for sampling.
+C        Typically 10 * n_matrix<i>
+         call DS_set_min_points(%(hel_init_points)d,'Helicity')
       endif
 
       write(*,10) 'Enter Configuration Number: '

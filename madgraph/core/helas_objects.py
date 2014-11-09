@@ -5316,29 +5316,33 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         return ['matrix_elements']
 
     def __init__(self, argument=None, combine_matrix_elements=True,
-                 matrix_element_opts={}):
+                 matrix_element_opts={}, compute_loop_nc = False):
         """Allow initialization with AmplitudeList. Matrix_element_opts are 
         potential options to be passed to the constructor of the 
         HelasMatrixElements created. By default it is none, but when called from
         LoopHelasProcess, this options will contain 'optimized_output'."""
 
+
         if isinstance(argument, diagram_generation.AmplitudeList):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements', self.generate_matrix_elements(argument,
                             combine_matrix_elements = combine_matrix_elements,
-                            matrix_element_opts=matrix_element_opts))
+                            matrix_element_opts=matrix_element_opts,
+                            compute_loop_nc = compute_loop_nc))
         elif isinstance(argument, diagram_generation.MultiProcess):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements',
                      self.generate_matrix_elements(argument.get('amplitudes'),
                              combine_matrix_elements = combine_matrix_elements,
-                             matrix_element_opts = matrix_element_opts))
+                             matrix_element_opts = matrix_element_opts,
+                             compute_loop_nc = compute_loop_nc))
         elif isinstance(argument, diagram_generation.Amplitude):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements', self.generate_matrix_elements(\
                              diagram_generation.AmplitudeList([argument]),
                              combine_matrix_elements = combine_matrix_elements,
-                             matrix_element_opts = matrix_element_opts))
+                             matrix_element_opts = matrix_element_opts,
+                             compute_loop_nc = compute_loop_nc))
         elif argument:
             # call the mother routine
             super(HelasMultiProcess, self).__init__(argument)

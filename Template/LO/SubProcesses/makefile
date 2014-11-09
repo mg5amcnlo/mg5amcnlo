@@ -28,17 +28,16 @@ PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o get_color.o \
 	 idenparts.o \
          $(patsubst %.f,%.o,$(wildcard auto_dsig*.f)) \
          $(patsubst %.f,%.o,$(wildcard matrix*.f))
-SYMMETRY = symmetry.o setcuts.o cuts.o cluster.o myamp.o genps.o \
-	   initcluster.o setscales.o reweight.o get_color.o idenparts.o \
-           $(patsubst %.f,%.o,$(wildcard matrix*.f))
+
+SYMMETRY = symmetry.o idenparts.o 
 
 # Binaries
 
 $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 
-gensym: $(SYMMETRY) configs.inc $(LIBS)
-	$(FC) $(FFLAGS) -o gensym $(SYMMETRY) $(LINKLIBS)
+gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
+	$(FC) $(FFLAGS) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric
 
 $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
 	cd ../../Source/MODEL; make

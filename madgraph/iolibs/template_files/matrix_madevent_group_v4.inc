@@ -1,5 +1,5 @@
 SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
-C  
+C 
 %(info_lines)s
 C 
 C MadGraph5_aMC@NLO for Madevent Version
@@ -9,7 +9,8 @@ c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
 C  
 %(process_lines)s
-C  
+C 
+    use DiscreteSampler
     IMPLICIT NONE
 C  
 C CONSTANTS
@@ -43,6 +44,8 @@ C
         REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
         INTEGER NGOOD(2), IGOOD(NCOMB,2)
 	INTEGER JHEL(2), J, JJ
+C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
+	    type(SampledDimension) ref_helicity_grid
 C  
 C GLOBAL VARIABLES
 C  
@@ -92,9 +95,12 @@ C ----------
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
-    IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
+
+!   If the helicity grid status is 0, this means that it is not yet initialized.
+!   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
+    IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
-         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
+         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0)) THEN
             T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -103,31 +109,48 @@ C ----------
                   T=T*(2d0-ABS(POL(JJ)))
                ENDIF
             ENDDO
+			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0) then
+			  call DS_add_entry('Helicity',I,T)
+			endif
             ANS=ANS+DABS(T)
             TS(I)=T
          ENDIF
       ENDDO
-      JHEL(IMIRROR) = 1
-      IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
-         DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
-               GOODHEL(I,IMIRROR)=.TRUE.
-               NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
-               IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR)
-            ENDIF
-         ENDDO
-      ENDIF
+      IF (ISUM_HEL.NE.0) then
+!         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
+		  HEL_PICKED = -1
+!         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
+		  hel_jacobian   = 1.0d0
+!         We don't want to re-update the helicity grid if it was already updated by another matrix<i>, so we make sure that the reference grid is empty.
+          ref_helicity_grid = DS_get_dimension(ref_grid,'Helicity')
+		  IF((DS_get_dim_status('Helicity').eq.1).and.(ref_helicity_grid%%n_tot_entries.eq.0)) then 
+!           If we finished the initialization we can update the grid so as to start sampling over it.
+!           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
+            CALL DS_UPDATE_GRID('Helicity')
+			CALL DS_SET_GRID_MODE('Helicity','init')
+          endif
+	  ELSE
+        JHEL(IMIRROR) = 1
+        IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+           DO I=1,NCOMB
+              IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+                 GOODHEL(I,IMIRROR)=.TRUE.
+                 NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
+                 IGOOD(NGOOD(IMIRROR),IMIRROR) = I
+                 PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR)
+              ENDIF
+           ENDDO
+		endif
         IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
            ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
-    ELSE              !LOOP OVER GOOD HELICITIES
-        DO J=1,ISHEL(IMIRROR)
-            JHEL(IMIRROR)=JHEL(IMIRROR)+1
-            IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
-            HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
-            I = IGOOD(JHEL(IMIRROR),IMIRROR)
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
+      ENDIF
+    ELSE             ! random helicity 
+C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
+            I = HEL_PICKED
+
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
+
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                 T=T*ABS(POL(JJ))
@@ -135,16 +158,14 @@ C ----------
                 T=T*(2d0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            ANS=ANS+DABS(T)*HWGT
-            TS(I)=T*HWGT
-        ENDDO
-        IF (ISHEL(IMIRROR) .EQ. 1) THEN
+c           Always one helicity at a time
+            ANS = T
+c           Include the Jacobian from helicity sampling
+            ANS = ANS * hel_jacobian
+
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-c         Set right sign for ANS, based on sign of chosen helicity
-          ANS=DSIGN(ANS,TS(I))
-        ENDIF
     ENDIF
-    IF (ISHEL(IMIRROR) .NE. 1) THEN
+    IF (ISUM_HEL .NE. 1.or.(HEL_PICKED.eq.-1)) THEN
     CALL RANMAR(R)
     SUMHEL=0d0
     DO I=1,NCOMB

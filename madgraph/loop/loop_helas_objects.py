@@ -2530,7 +2530,7 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
     matrix_element_class = LoopHelasMatrixElement
     
     def __init__(self, argument=None, combine_matrix_elements=True,
-      optimized_output = True, matrix_element_opts={}):
+      optimized_output = True, compute_loop_nc = False, matrix_element_opts={}):
         """ Allow for the initialization of the HelasMultiProcess with the
         right argument 'optimized_output' for the helas_matrix_element options.
         """
@@ -2539,8 +2539,9 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
         matrix_element_opts.update({'optimized_output' : optimized_output})
         
         super(LoopHelasProcess, self).__init__(argument, combine_matrix_elements,
-                  matrix_element_opts = matrix_element_opts)
-        
+                        compute_loop_nc = compute_loop_nc, 
+                                      matrix_element_opts = matrix_element_opts)
+
     @classmethod
     def process_color(cls,matrix_element,color_information,compute_loop_nc=False):
         """ Process the color information for a given matrix
@@ -2549,7 +2550,6 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
         The compute_loop_nc sets wheter independent tracking of Nc power coming
         from the color loop trace is necessary or not (it is time consuming).
         """
-        
         if matrix_element.get('processes')[0]['has_born']:
             logger.debug('Computing the loop and Born color basis')
         else:

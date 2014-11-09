@@ -97,6 +97,27 @@
 !       :: (possibly with convolution) when the reference grid is empty. 
 !       :: By default it is 10.
 !
+!     DS_get_dim_status(dim_name)
+!       :: Return an integer that specifies the status of a given dimension
+!       :: dim_status = -1 : Dimension is not registered.
+!       :: dim_status =  0 : Dimension exists but the reference grid is
+!       ::                   empty and the running grid does not yet
+!       ::                   have all its bins filled with min_point.
+!       :: dim_status =  1 : Dimension exists with a non-empty 
+!       ::                   reference grid and a running grid with all
+!       ::                   bins filled with more than min_points entries.
+!    
+!     DS_set_grid_mode(grid_name,grid_mode)
+!       :: Sets the kind of reference grid which is currently active.
+!       :: grid_mode = 'default' : This means that the reference grid holds 
+!       ::   the same kind of weights than the running grid. When the reference
+!       ::   grid will be updated, the running grid will be *combined* with
+!       ::   the reference grid, and not overwritten by it.
+!       :: grid_mode = 'init' : This means that the reference grid is used for
+!       ::   initialisation, and its weights do not compare with those put
+!       ::   in the running grid. When updated, the reference grid will 
+!       ::   therefore be *overwritten* by the running grid.
+!
       module DiscreteSampler
 
       use StringCast
@@ -143,6 +164,16 @@
       end interface operator (+)
 
       type sampledDimension
+!       The grid_mode can take the following values
+!       grid_mode = 1 : This means that the reference grid holds the
+!         same kind of weights than the running grid. When the reference
+!         grid will be updated, the running grid will be *combined* with
+!         the reference grid, and not overwrite it.
+!       grid_mode = 2 : This means that the reference grid is used for
+!         initialisation, and its weights do not compare with those put
+!         in the running grid. When updated, the reference grid will 
+!         therefore be *overwritten* by the running grid.
+        integer                                :: grid_mode
 !       Minimum number of points to probe each bin with when the reference
 !       grid is empty. Once each bin has been probed that many times, the
 !       subroutine DS_get_point will use a uniform distribution
@@ -395,6 +426,7 @@
           trget%norm_sqr               = source%norm_sqr
           trget%n_tot_entries          = source%n_tot_entries 
           trget%min_bin_probing_points = source%min_bin_probing_points
+          trget%grid_mode              = source%grid_mode
         end subroutine DS_copy_dimension
 
 !       ----------------------------------------------------------------------
@@ -513,6 +545,7 @@
 !         before a uniform distribution is used when the reference grid
 !         is empty
           d_dim%min_bin_probing_points = 10
+          d_dim%grid_mode              = 1 
 !         By default give sequential ids to the bins
           do i=1, size(d_dim%bins)
             d_dim%bins(i)%bid = i
@@ -585,6 +618,116 @@
             enddo
           endif
         end subroutine DS_set_min_points
+
+!       ---------------------------------------------------------------
+!       Returns an integer that specifies the status of a given dimension
+!       dim_status = -1 : Dimension is not registered.
+!       dim_status =  0 : Dimension exists but the reference grid is
+!                         empty and the running grid does not yet
+!                         have all its bins filled with min_point.
+!       dim_status =  1 : Dimension exists with a non-empty 
+!                         reference grid and a running grid with all
+!                         bins filled with more than min_points entries.
+!       ---------------------------------------------------------------
+        function DS_get_dim_status(grid_name)
+        implicit none
+!         
+!         Function arguments
+!
+          character(len=*), intent(in)     :: grid_name
+          integer                          :: DS_get_dim_status
+!
+!         Local variables
+!
+          integer                           :: ref_grid_index
+          integer                           :: run_grid_index
+          integer                           :: int_grid_mode
+          type(Bin)                         :: mRunBin
+          integer                           :: i
+!         
+!         Begin code
+!
+          ref_grid_index = DS_dim_index(ref_grid, grid_name, .True.)
+          run_grid_index = DS_dim_index(run_grid, grid_name, .True.)
+          if (ref_grid_index.eq.-1.or.run_grid_index.eq.-1) then
+            DS_get_dim_status = -1
+            return
+          endif
+          if (ref_grid(ref_grid_index)%n_tot_entries.ne.0) then
+            DS_get_dim_status = 1
+            return
+          endif    
+          
+          do i=1,size(ref_grid(ref_grid_index)%bins)
+            mRunBin = DS_get_bin(run_grid(run_grid_index)%bins,
+     &                             ref_grid(ref_grid_index)%bins(i)%bid)
+            if (mRunBin%n_entries.lt.ref_grid(ref_grid_index)
+     &                                    %min_bin_probing_points) then
+              DS_get_dim_status = 0
+              return
+            endif
+          enddo
+
+          DS_get_dim_status = 1
+          return
+        end function DS_get_dim_status
+
+!       ---------------------------------------------------------------
+!       Access function to modify the mode of the reference grid:
+!       grid_mode = 'default' : This means that the reference grid holds 
+!         the same kind of weights than the running grid. When the reference
+!         grid will be updated, the running grid will be *combined* with
+!         the reference grid, and not overwritten by it.
+!       grid_mode = 'init' : This means that the reference grid is used for
+!         initialisation, and its weights do not compare with those put
+!         in the running grid. When updated, the reference grid will 
+!         therefore be *overwritten* by the running grid.
+!       ---------------------------------------------------------------
+        subroutine DS_set_grid_mode(grid_name, grid_mode)
+        implicit none
+!         
+!         Subroutine arguments
+!
+          character(len=*), intent(in)     :: grid_mode
+          character(len=*), intent(in)     :: grid_name          
+!
+!         Local variables
+!
+          integer                           :: ref_grid_index
+          integer                           :: int_grid_mode
+!         
+!         Begin code
+!
+          ref_grid_index = DS_dim_index(ref_grid, grid_name, .True.)
+          if (ref_grid_index.eq.-1) then
+            write(*,*) 'DiscreteSampler:: Error in DS_set_grid_mode, '//
+     &        "dimension '"//grid_name//"' could not be found in the "//
+     &        "reference grid."
+              stop 1
+          endif
+          if (grid_mode.eq.'init') then
+            int_grid_mode=2
+          elseif (grid_mode.eq.'default') then
+            int_grid_mode=1
+          else
+            write(*,*) 'DiscreteSampler:: Error in DS_set_grid_mode, '//
+     &        " grid_mode '"//grid_mode//"' not recognized. It must "//
+     &        " be one of the following: 'default', 'init'."
+              stop 1
+          endif
+
+!         Notice that we don't change the mode of the running_grid
+!         because in this way, after any DS_update() is done, the
+!         ref_grid will automatically turn its mode to 'default' because
+!         it inherits the attribute of the running grid. 
+!         However, if the running grid was loaded from a saved grid file
+!         then it might be that the run_grid also has the grid_mode set
+!         to 'initialization' which will then correctly be copied to the
+!         ref_grid after the DS_update() performed at the end of
+!         DS_load() which correctly reproduce the state of the
+!         DiscreteSampler module at the time it wrote the grids.
+          ref_grid(ref_grid_index)%grid_mode = int_grid_mode
+        end subroutine DS_set_grid_mode
 
 !       ---------------------------------------------------------------
 !       Dictionary access-like subroutine to obtain a grid from its name
@@ -878,8 +1021,17 @@
      &       "=========================="
           write(*,*) "DiscreteSampler:: Information for dimension '"//
      &                     d_name//"' ("//trim(toStr(n_bins))//" bins):"
+          write(*,*) "DiscreteSampler:: -> Grids status ID : "//
+     &                            trim(toStr(DS_get_dim_status(d_name)))
           if (ref_dim_index.ne.-1) then
             write(*,*) "DiscreteSampler:: || Reference grid "
+            select case(ref_grid(ref_dim_index)%grid_mode)
+              case(1)
+                write(*,*) "DiscreteSampler::   -> Grid mode : default"
+              case(2)
+                write(*,*) "DiscreteSampler::   -> Grid mode : "//
+     &            "initialization"
+            end select
             call DS_print_dim_info(ref_grid(ref_dim_index))
           else
             write(*,*) "DiscreteSampler:: || No reference grid for "//
@@ -887,6 +1039,9 @@
           endif
           if (run_dim_index.ne.-1) then
             write(*,*) "DiscreteSampler:: || Running grid "
+            write(*,*) "DiscreteSampler::   -> Initialization "//
+     &        "minimum points : "//trim(toStr(run_grid(
+     &                           run_dim_index)%min_bin_probing_points))
             call DS_print_dim_info(run_grid(run_dim_index))
           else
             write(*,*) "DiscreteSampler:: || No running grid for "//
@@ -932,10 +1087,10 @@
             tot_variance = tot_variance + DS_bin_variance(d_dim%bins(i))
             tot_abs_weight = tot_abs_weight + d_dim%bins(i)%abs_weight
           enddo
-          if (d_dim%norm.eq.0.0d0) then
+          if (d_dim%n_tot_entries.eq.0) then
             samplingBar1 = "| Empty grid |"
             samplingBar2 = "| Empty grid |"
-            samplingBar3 = "| Empty grid |"            
+            samplingBar3 = "| Empty grid |"
           else
             do i=1,len(samplingBar1)
               samplingBar1(i:i)=' '
@@ -962,23 +1117,29 @@
               curr_pos1 = curr_pos1+2
               curr_pos2 = curr_pos2+2
               curr_pos3 = curr_pos3+2
-              bin_width = int((d_dim%bins(i)%abs_weight/tot_abs_weight)*
-     &                                                 samplingBarWidth)
-              do j=1,bin_width
-                samplingBar1(curr_pos1+j:curr_pos1+j) = ' '
-              enddo
-              curr_pos1 = curr_pos1+bin_width+1
-              samplingBar1(curr_pos1:curr_pos1) = '|'
-              curr_pos1 = curr_pos1+1
 
-              bin_width = int((float(d_dim%bins(i)%n_entries)/
+              if (tot_abs_weight.ne.0.0d0) then
+                bin_width = int((d_dim%bins(i)%abs_weight/
+     &                                 tot_abs_weight)*samplingBarWidth)
+                do j=1,bin_width
+                  samplingBar1(curr_pos1+j:curr_pos1+j) = ' '
+                enddo
+                curr_pos1 = curr_pos1+bin_width+1
+                samplingBar1(curr_pos1:curr_pos1) = '|'
+                curr_pos1 = curr_pos1+1
+              endif
+
+              if (tot_entries.ne.0) then
+                bin_width = int((float(d_dim%bins(i)%n_entries)/
      &                                    tot_entries)*samplingBarWidth)
-              do j=1,bin_width
-                samplingBar2(curr_pos2+j:curr_pos2+j) = ' '
-              enddo
-              curr_pos2 = curr_pos2+bin_width+1
-              samplingBar2(curr_pos2:curr_pos2) = '|'
-              curr_pos2 = curr_pos2+1
+                do j=1,bin_width
+                  samplingBar2(curr_pos2+j:curr_pos2+j) = ' '
+                enddo
+                curr_pos2 = curr_pos2+bin_width+1
+                samplingBar2(curr_pos2:curr_pos2) = '|'
+                curr_pos2 = curr_pos2+1
+              endif
+
               if (tot_variance.ne.0.0d0) then
                 bin_width = int((DS_bin_variance(d_dim%bins(i))/
      &                                   tot_variance)*samplingBarWidth)
@@ -990,8 +1151,16 @@
                 curr_pos3 = curr_pos3+1
               endif
             enddo
+            if (tot_abs_weight.eq.0.0d0) then
+              samplingBar1 = "| All considered bins have zero weight |"
+            endif
+            if (tot_entries.eq.0) then
+              samplingBar2 = "| All considered bins have no entries |"
+            endif
             if (tot_variance.eq.0.0d0) then
-              samplingBar3 = "| Not enough entries |"
+              samplingBar3 = "| All variances are zeros in considered"//
+     &        " bins. Maybe not enough entries (need at least one bin"//
+     &        " with >=2 entries). |"
             endif
           endif
 !
@@ -1256,6 +1425,9 @@
 !
 !         Begin code
 !
+          if (.not.allocated(run_grid)) then
+            return
+          endif
           if(present(filterZeros)) then
             do_filterZeros = filterZeros
           else
@@ -1325,10 +1497,17 @@
               call DS_add_dimension_to_grid(ref_grid, 
      &                                        trim(toStr(dim_name)) , 0)
           endif
-
           ref_d_index = DS_dim_index(ref_grid, dim_name)
 
           empty_ref_grid = (ref_grid(ref_d_index)%n_tot_entries.eq.0)
+
+          if (ref_grid(ref_d_index)%grid_mode.eq.2) then
+!           This means that the reference grid is in 'initialization'
+!           mode and should be overwritten by the running grid (instead
+!           of being combined with it) when updated. We empty it now
+!           then.
+            call DS_reinitialize_dimension(ref_grid(ref_d_index))
+          endif
 
           do i=1,size(run_grid(d_index)%bins)
             mBinID = run_grid(d_index)%bins(i)%bid
@@ -1387,6 +1566,12 @@
             ref_grid(ref_d_index)%bins(ref_bin_index) = new_bin
 
           enddo
+
+!         Now we set the global attribute of the reference_grid to be
+!         the ones of the running grid.
+          ref_grid(ref_d_index)%min_bin_probing_points =
+     &       run_grid(d_index)%min_bin_probing_points
+          ref_grid(ref_d_index)%grid_mode = run_grid(d_index)%grid_mode
 
 !         Now filter all bins in ref_grid that have 0.0 weight and
 !         remove them! They will not be probed anyway.
@@ -1514,14 +1699,15 @@
 !       chose_mode = 1 : Sampling accoridng to variance
 !       chose_mode = 2 : Sampling according to norm
 !       chose_mode = 3 : Uniform sampling
-        integer                 ::  chosen_mode
-        type(SampledDimension)  ::  mGrid, runGrid
-        type(Bin)               ::  mBin, mRunBin
-        integer                 ::  ref_grid_index, run_grid_index
-        integer                 ::  i,j
-        real*8                  ::  running_bound
-        real*8                  ::  normalized_bin_bound
-        integer                 ::  min_points_in_bin, min_bin_index
+        integer                 :: chosen_mode
+        type(SampledDimension)  :: mGrid, runGrid
+        type(Bin)               :: mBin, mRunBin
+        integer                 :: ref_grid_index, run_grid_index
+        integer                 :: i,j
+        real*8                  :: running_bound
+        real*8                  :: normalized_bin_bound
+        logical, dimension(:), allocatable   :: bin_indices_to_fill
+        logical                 :: initialization_done
         real*8                  :: sampling_norm        
 !       Local variables related to convolution
         real*8, dimension(:), allocatable :: convolution_factors
@@ -1560,7 +1746,15 @@
      &     " DS_get_point, dimension '"//dim_name//"' not found."
           stop 1
         endif
-        mGrid = ref_grid(ref_grid_index)
+        mGrid   = ref_grid(ref_grid_index)
+        run_grid_index = DS_dim_index(run_grid, dim_name,.True.)
+        if (run_grid_index.eq.-1) then
+          write(*,*) "DiscreteSampler:: Error in subroutine"//
+     &     " DS_get_point, dimension '"//dim_name//"' not found"//
+     &     " in the running grid."
+          stop 1
+        endif
+        runGrid = run_grid(run_grid_index)        
 
 !       If the reference grid is empty, force the use of uniform
 !       sampling
@@ -1568,43 +1762,55 @@
           chosen_mode = 3
         endif
 
+        if (chosen_mode.eq.1) then
+          sampling_norm           = mGrid%variance_norm
+        elseif (chosen_mode.eq.2) then
+          sampling_norm           = mGrid%abs_norm
+        elseif (chosen_mode.eq.3) then
+          sampling_norm           = float(size(mGrid%bins))
+        endif
+
 !       If the grid is empty we must first make sure that each bin was
 !       probed with min_bin_probing_points before using a uniform grid
+        allocate(bin_indices_to_fill(size(mGrid%bins)))
+        initialization_done = .True.        
         if(mGrid%n_tot_entries.eq.0) then
-          run_grid_index = DS_dim_index(run_grid, dim_name,.True.)
-          if (run_grid_index.eq.-1) then
-            write(*,*) "DiscreteSampler:: Error in subroutine"//
-     &       " DS_get_point, dimension '"//dim_name//"' not found"//
-     &       " in the running grid."
-            stop 1
-          endif
-          runGrid           = run_grid(run_grid_index)
-
-          min_points_in_bin = mGrid%min_bin_probing_points
           min_bin_index     = 1
           do i=1,size(mGrid%bins)
             mRunBin = DS_get_bin(runGrid%bins,mGrid%bins(i)%bid)
-            if (mRunBin%n_entries.lt.min_points_in_bin) then
-              min_points_in_bin = mRunBin%n_entries
-              min_bin_index = i
+            if (mRunBin%n_entries.lt.mGrid%min_bin_probing_points) then
+              bin_indices_to_fill(i) = .True.
+              initialization_done    = .False.            
+            else
+              bin_indices_to_fill(i) = .False.
             endif
           enddo
-          if(min_points_in_bin.lt.mGrid%min_bin_probing_points) then
-!           In this case, we must first fill in bins which do not have 
-!           have enough entries and return the jacobian corresponding
-!           to a uniform distributions. Possible convolutions are
-!           ignored
-            mBinID = mGrid%bins(min_bin_index)%bid
-            jacobian_weight = float(size(mGrid%bins))
-            return
+          if(.not.initialization_done) then
+!           In this case, we will only fill in bins which do not have 
+!           have enough entries (and select them uniformly) and veto the 
+!           others. The jacobian returned is still the one corresponding
+!           to a uniform distributions over the whole set of bins.
+!           Possible convolutions are ignored
+            sampling_norm = 0.0d0
+            do i=1,size(bin_indices_to_fill)
+              if (bin_indices_to_fill(i)) then
+                sampling_norm = sampling_norm + 1.0d0
+              endif
+            enddo
           endif
         endif
-         
+
+        if (initialization_done) then
+          do i=1,size(mGrid%bins)
+            bin_indices_to_fill(i) = .True.
+          enddo
+        endif
+
 !
 !       Now appropriately set the convolution factors
 !
         allocate(convolution_factors(size(mGrid%bins)))
-        if (present(convoluted_grid_names)) then
+        if (present(convoluted_grid_names).and.initialization_done) then
 !         Sanity check
           do j=1,size(convoluted_grid_names)
             if (DS_dim_index(run_grid,convoluted_grid_names(j),
@@ -1647,16 +1853,9 @@
             endif
           enddo
         else
-          do i=1,size(mGrid%bins)          
+          do i=1,size(mGrid%bins)
             convolution_factors(i)    = 1.0d0
           enddo
-          if (chosen_mode.eq.1) then
-            sampling_norm           = mGrid%variance_norm
-          elseif (chosen_mode.eq.2) then
-            sampling_norm           = mGrid%abs_norm
-          elseif (chosen_mode.eq.3) then
-            sampling_norm           = float(size(mGrid%bins))
-          endif
         endif
 
         if (sampling_norm.eq.0d0) then
@@ -1681,7 +1880,7 @@
      &       trim(toStr(mGrid%dimension_name))//"' irrelevant since"//
      &       " uniform sampling was selected."
           endif
-          if(present(convoluted_grid_names)) then
+          if(present(convoluted_grid_names).and.initialization_done)then
             do i=1,size(convoluted_grid_names)
               conv_dim = DS_get_dimension(run_grid,
      &                                         convoluted_grid_names(i))
@@ -1692,8 +1891,8 @@
      &                                       conv_dim%abs_norm.eq.0.0d0)
             enddo
           endif
-          if(present(convoluted_grid_names).and.(.not.one_norm_is_zero))
-     &                                                              then
+          if(present(convoluted_grid_names).and.initialization_done
+     &                                .and.(.not.one_norm_is_zero))then
             write(*,*) "DiscreteSampler:: None of the norm above"
      &        //" is zero, this means that the convolution (product)"
      &        //" of the grids yields zero for each bin, even though"
@@ -1711,6 +1910,9 @@
 !
         running_bound = 0.0d0
         do i=1,size(mGrid%bins)
+          if (.not.bin_indices_to_fill(i)) then
+            cycle
+          endif
           mBin = mGrid%bins(i)
           if (chosen_mode.eq.1) then
             normalized_bin_bound = DS_bin_variance(mBin)
@@ -1725,7 +1927,8 @@
           if (random_variable.le.running_bound) then
             mBinID = mGrid%bins(i)%bid
             jacobian_weight = 1.0d0 / normalized_bin_bound
-            deallocate(convolution_factors)         
+            deallocate(convolution_factors)
+            deallocate(bin_indices_to_fill)
             return
           endif
         enddo
@@ -1811,6 +2014,9 @@
 !
 !         Begin code
 !
+          if (.not.allocated(ref_grid)) then
+            return
+          endif
           if (present(dim_name)) then
             grid = ref_grid(DS_dim_index(ref_grid, dim_name))
             call DS_write_grid_from_grid(grid, streamID)
@@ -1842,6 +2048,11 @@
 
           write(streamID,*) ' <DiscreteSampler_grid>'
           write(streamID,*) ' '//trim(toStr(grid%dimension_name))
+          write(streamID,*) ' '//trim(toStr(grid%min_bin_probing_points
+     &      ))//" # Attribute 'min_bin_probing_points' of the grid."
+          write(streamID,*) ' '//trim(toStr(grid%grid_mode
+     &      ))//" # Attribute 'grid_mode' of the grid. 1=='default',"
+     2      //"2=='initialization'"
           write(streamID,*) '# binID   n_entries weight   weight_sqr'//
      &      '   abs_weight'
           do i=1,size(grid%bins)
@@ -1917,14 +2128,15 @@
           integer                      :: n_entries, bid
           type(Bin)                    :: new_bin
           integer                      :: char_size
+          integer                      :: read_position
+          integer                      :: run_dim_index
 
 !
 !         Begin code
 !
-!         First reinitialize the running_grid
-          call DS_deallocate_grid(run_grid)
 !         Now start reading the file
-          startedGrid = .False.
+          startedGrid   = .False.
+          read_position = 0
           do
             read(streamID, "(A)", size=char_size, end=999, advance='no')
      &        TwoBuff
@@ -1942,7 +2154,8 @@
               if (TwoBuff(1:2).eq.'</') then
 !             Advance the stream
                 read(streamID,*,end=990) buff
-                startedGrid = .False.
+                startedGrid   = .False.
+                read_position = 0
                 cycle
               endif
               read(streamID,*,end=990) bid, n_entries, weight, 
@@ -1956,11 +2169,38 @@
      &                                                          new_bin)
             else
 !             Advance the stream
-              read(streamID,*,end=990) buff
-              if (buff(1:22).eq.'<DiscreteSampler_grid>') then
-                startedGrid = .True.
+              if (read_position.eq.0) then
                 read(streamID,*,end=990) buff
-                call DS_register_dimension(trim(buff),0,.False.)
+                if (buff(1:22).eq.'<DiscreteSampler_grid>') then
+                  read_position = read_position + 1
+                endif
+              else
+                select case(read_position)
+                  case(1)
+                    read(streamID,*,end=990) buff
+                    call DS_register_dimension(trim(buff),0,.False.)
+                    run_dim_index = DS_dim_index(run_grid,
+     &                                               trim(buff),.True.)
+                    if (run_dim_index.ne.-1) then
+                      call DS_remove_dimension_from_grid(run_grid, 
+     &                                                    run_dim_index)
+                    endif
+                  case(2)
+                    read(streamID,*,end=990) 
+     &                run_grid(size(run_grid))%min_bin_probing_points
+                  case(3)
+                    read(streamID,*,end=990) 
+     &                run_grid(size(run_grid))%grid_mode
+!                   Make sure that the last info read before reading the
+!                   bin content (here the info with read_position=3)
+!                   sets startedGrid to .True. to start the bin readout 
+                    startedGrid   = .True.
+                  case default
+                    write(*,*) 'DiscreteSampler:: Number of entries'//
+     &                ' before reaching bin lists exceeded.'
+                    goto 990 
+                end select
+                read_position = read_position + 1
               endif
             endif
           enddo
