@@ -234,7 +234,7 @@ class Cluster(object):
         change_at = 5 # number of iteration from which we wait longer between update.
         if update_first:
             idle, run, finish, fail = self.control(me_dir)
-            fct_first(idle, run, finish)
+            update_first(idle, run, finish)
         while 1: 
             nb_iter += 1
             idle, run, finish, fail = self.control(me_dir)

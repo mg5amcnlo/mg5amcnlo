@@ -35,6 +35,8 @@ class grid_information(object):
         
         #
         self.results = sum_html.Combine_results('combined')
+        self.discrete_grid = ""
+        
         
 
     def convert_to_number(self, value):
@@ -103,6 +105,10 @@ class grid_information(object):
             assert self.target_evt == data[5], "%s != %s" % (self.target_evt, data[5])
         else: 
             self.target_evt += data[5]  
+            
+        # discrete sampler information
+        if not self.discrete_grid:
+            self.discrete_grid += finput.read()
         
         
     def add_results_information(self, path):
@@ -141,6 +147,8 @@ class grid_information(object):
             fsock.write('%+.16f' % v)
         if  data:
             fsock.write('\n')
+        fsock.write('\n')
+        fsock.write(self.discrete_grid)
             
             
     def get_cross_section(self):

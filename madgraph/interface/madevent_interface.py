@@ -3511,7 +3511,10 @@ zeor by MadLoop.""")
                 required_output = []
                 
                 #Find the correct ajob
-                output_files = ['G%s' % i for i in argument]
+                suffix = "_%s" % int(float(argument[0]))
+                if suffix == '_0':
+                    suffix = ''
+                output_files = ['G%s%s' % (i, suffix) for i in argument[1:]]
                 for G in output_files:
                     required_output.append('%s/results.dat' % G)
                                 
