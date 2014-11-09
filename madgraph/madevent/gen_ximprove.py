@@ -376,7 +376,7 @@ class gen_ximprove(object):
             nevents = 0.2*C.nevents*(yerr/limit)**2
             
             nb_split = int((nevents*(C.nunwgt/C.nevents)/self.max_request_event/ (2**self.min_iter-1))**(2/3))
-                           # **(2/3) to slow down the increase in number of jobs            
+            # **(2/3) to slow down the increase in number of jobs            
             if nb_split > self.max_splitting:
                 nb_split = self.max_splitting
                 
@@ -456,7 +456,7 @@ class gen_ximprove_loop_induced(gen_ximprove):
     max_event_in_iter = 500
     min_event_in_iter = 250
     max_splitting = 260       # maximum duplication of a given channel 
-    min_iter = 3    
+    min_iter = 2    
     max_iter = 6
     keep_grid_for_refine = True
 
