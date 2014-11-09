@@ -460,9 +460,17 @@ class gen_ximprove_loop_induced(gen_ximprove):
     max_iter = 6
     keep_grid_for_refine = True
 
-    def increase_parralelization(self):
-        self.max_request_event = 200
-        self.max_splitting = 300
+    def increase_parralelization(self, nexternal):
+        
+        if nexternal == 3:
+            self.max_request_event = 200
+        elif nexternal == 4:
+            self.max_request_event = 100
+        elif nexternal == 5:
+            self.max_request_event = 50
+            self.min_event_in_iter = 125
+            self.max_iter = 5
+        self.max_splitting = 1000
 
 def get_ximprove(cmd, opt):
     """Factory Determine the appropriate class and returns it"""
@@ -472,7 +480,7 @@ def get_ximprove(cmd, opt):
             return gen_ximprove_loop_induced(cmd, opt)
         else:
             out = gen_ximprove_loop_induced(cmd, opt)
-            out.increase_parralelization()
+            out.increase_parralelization(cmd.proc_characteristics['nexternal'])
             return out
     elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
         raise Exception, "Not implemented"
