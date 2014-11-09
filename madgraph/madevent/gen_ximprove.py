@@ -753,6 +753,10 @@ class gensym(object):
                             else run_card['nhel'],
                'gridmode': -2
                } 
+        
+        if options['helicity']== 1:
+            options['event'] *= 2**(self.cmd.proc_characteristics['nexternal']//2)
+        
         for Gdir in Gdirs:
             self.write_parameter_file(pjoin(Gdir, 'input_app.txt'), options)   
         
@@ -803,6 +807,9 @@ class gensym(object):
                                 else run_card['nhel'],
                    'gridmode': 2
                    }
+        
+        if options['helicity']== 1:
+            options['event'] *= 2**(self.cmd.proc_characteristics['nexternal']//2)
         
         
         if parralelization:

@@ -96,7 +96,7 @@
 # long decay chains e.g.).
 # Use >=2 if most helicities contribute, e.g. pure QCD.
 #*************************************************************
-   0  = nhel          ! Number of helicities used per event
+   1  = nhel          ! Number of helicities used per event
 #*******************                                                 
 # Standard Cuts
 #*******************                                                 
