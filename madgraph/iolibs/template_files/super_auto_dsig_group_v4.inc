@@ -312,3 +312,44 @@ C       Flip CM_RAP (to get rapidity right)
       RETURN
       END
 
+
+C     -----------------------------------------
+C     Subroutine to map three positive integers
+C     I, J and K with upper bounds J_bound and
+C     K_bound to a one_dimensional
+C     index L
+C     -----------------------------------------
+
+      subroutine map_3_to_1(I,J,K,J_bound,K_bound,L)
+	  implicit none
+	  integer, intent(in)  :: I,J,K,J_bound,K_bound
+	  integer, intent(out) :: L
+
+	  L = I*(J_bound*(K_bound+1)+K_bound+1)+J*(K_bound+1)+K
+
+	  end subroutine map_3_to_1
+
+C     -----------------------------------------
+C     Subroutine to map back the positive 
+C     integer L to the three integers 
+C     I, J and K with upper bounds
+C     J_bound and K_bound.
+C     -----------------------------------------
+
+      subroutine map_1_to_3(L,J_bound,K_bound,I,J,K)
+	  implicit none
+	  integer, intent(out)  :: I,J,K
+	  integer, intent(in)   :: L, J_bound, K_bound
+	  integer               :: L_run
+
+      L_run = L
+	  I = MOD(L_run,(J_bound*(K_bound+1)+K_bound+1))
+	  L_run = L_run - I*((J_bound*(K_bound+1)+K_bound+1))
+	  J = MOD(L_run,(K_bound+1))
+	  L_run = L_run - J*(K_bound+1) 
+	  K  = L_run
+
+	  end subroutine map_1_to_3
+
+
+

@@ -1232,6 +1232,8 @@ c
       INTEGER                    ISUM_HEL
       LOGICAL                    MULTI_CHANNEL
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+      logical cutsdone, cutspassed
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 c
 c     Begin code
 c
@@ -1242,7 +1244,8 @@ C       Also, if HEL_PICKED is equal to -1, it means that MadEvent
 C       is in the initialization stage where all helicity were probed
 c       and added individually to the grid directly by matrix<i>.f so
 c       that they shouldn't be added here.
-        if(ISUM_HEL.ne.0.and.HEL_PICKED.ne.-1) then
+        if(ISUM_HEL.ne.0.and.HEL_PICKED.ne.-1.and.
+     &                            (.NOT.CUTSDONE.or.CUTSPASSED)) then
           call DS_add_entry('Helicity',HEL_PICKED,(wgt/hel_jacobian))
         endif
 
