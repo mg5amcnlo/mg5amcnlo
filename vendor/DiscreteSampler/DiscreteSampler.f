@@ -2138,9 +2138,10 @@
           startedGrid   = .False.
           read_position = 0
           do
-            read(streamID, "(A)", size=char_size, end=999, advance='no')
-     &        TwoBuff
+            read(streamID, "(A)", size=char_size, eor=998,
+     &                                    end=999, advance='no') TwoBuff
             if (char_size.le.1) then
+998           continue
               cycle
             endif
             if (TwoBuff(1:1).eq.'#'.or.TwoBuff(2:2).eq.'#') then
