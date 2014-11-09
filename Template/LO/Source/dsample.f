@@ -1554,6 +1554,7 @@ c          # special mode where we store information to combine them
                 write(22,*) (xmin(j), j=1,invar)
                 write(22,*) (xmax(j), j=1,invar)
                 write(22,*) mean, rmean, sigma, wmax, kn,events
+                call write_discrete_grids(22)
                 close(22)
            endif
 

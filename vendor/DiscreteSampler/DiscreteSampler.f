@@ -2179,13 +2179,13 @@
                 select case(read_position)
                   case(1)
                     read(streamID,*,end=990) buff
-                    call DS_register_dimension(trim(buff),0,.False.)
                     run_dim_index = DS_dim_index(run_grid,
      &                                               trim(buff),.True.)
                     if (run_dim_index.ne.-1) then
                       call DS_remove_dimension_from_grid(run_grid, 
      &                                                    run_dim_index)
                     endif
+                    call DS_register_dimension(trim(buff),0,.False.)
                   case(2)
                     read(streamID,*,end=990) 
      &                run_grid(size(run_grid))%min_bin_probing_points
