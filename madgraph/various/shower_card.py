@@ -93,35 +93,75 @@ class ShowerCard(dict):
             args =  l.split('#')[0].split('=')
             key = args[0].strip().lower()
             value = args[1].strip()
-            #key
-            if key in self.logical_vars:
-                if value.lower() in self.true:
-                    self[key] = True
-                elif value.lower() in self.false:
-                    self[key] = False
-                else:
-                    raise ShowerCardError('%s is not a valid value for %s' % \
-                            (value, key))
-            elif key in self.string_vars:
-                if value.lower() == 'none':
-                    self[key] = ''
-                else:
-                    self[key] = value
-            elif key in self.int_vars:
-                try:
-                    self[key] = int(value)
-                except ValueError:
-                    raise ShowerCardError('%s is not a valid value for %s. An integer number is expected' % \
-                            (key, value))
-            elif key in self.float_vars:
-                try:
-                    self[key] = float(value)
-                except ValueError:
-                    raise ShowerCardError('%s is not a valid value for %s. A floating point number is expected' % \
-                            (key, value))
+            self.set_param(key, value)
+
+        self.text=content
+
+
+    def set_param(self, key, value, write_to = ''):
+        """set the param key to value.
+        if write_to is passed then write the new shower_card:
+        if not testing write_to is an input path, if testing the text is
+        returned by the function
+        """
+        if key in self.logical_vars:
+            if value.lower() in self.true:
+                self[key] = True
+            elif value.lower() in self.false:
+                self[key] = False
             else:
-                raise ShowerCardError('Unknown entry: %s = %s' % (key, value))
-            self.keylist.append(key)
+                raise ShowerCardError('%s is not a valid value for %s' % \
+                        (value, key))
+        elif key in self.string_vars:
+            if value.lower() == 'none':
+                self[key] = ''
+            else:
+                self[key] = value
+        elif key in self.int_vars:
+            try:
+                self[key] = int(value)
+            except ValueError:
+                raise ShowerCardError('%s is not a valid value for %s. An integer number is expected' % \
+                        (key, value))
+        elif key in self.float_vars:
+            try:
+                self[key] = float(value)
+            except ValueError:
+                raise ShowerCardError('%s is not a valid value for %s. A floating point number is expected' % \
+                        (key, value))
+        else:
+            raise ShowerCardError('Unknown entry: %s = %s' % (key, value))
+        self.keylist.append(key)
+
+        #then update self.text and write the new card
+        if write_to and self.testing:
+            key_re = re.compile('^(\s*)%s\s*=\s*(.+)\s*$' % key , re.IGNORECASE)
+            newlines = []
+            for line in self.text.split('\n'):
+                key_match = key_re.match(line)
+                if key_match:
+                    try:
+                        comment = line.split('#')[1]
+                    except ValueError:
+                        comment = ''
+                    if key not in self.logical_vars:
+                        newlines.append('%s = %s #%s' % (key, value, comment))
+                    else:
+                        if key:
+                            newlines.append('%s = %s #%s' % (key, 'T', comment))
+                        else:
+                            newlines.append('%s = %s #%s' % (key, 'F', comment))
+                else: 
+                    newlines.append(line)
+            self.text = '\n'.join(newlines) + '\n'
+
+            if self.testing:
+                return self.text
+            else:
+                open(write_to, 'w').write(self.text)
+                return ''
+        else:
+            return ''
 
 
 
