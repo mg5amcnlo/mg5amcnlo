@@ -1519,7 +1519,6 @@ def asyncrone_launch(exe, cwd=None, stdout=None, argument = [], **opt):
     mc = MultiCore(1)
     mc.submit(exe, argument, cwd, stdout, **opt)
     mc.need_waiting = True
-    mc.lock.acquire()
     return mc.lock
 
 
