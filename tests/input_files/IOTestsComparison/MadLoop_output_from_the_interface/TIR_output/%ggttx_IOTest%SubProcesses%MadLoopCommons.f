@@ -1,337 +1,333 @@
-      subroutine joinPath(str1,str2,path)
+      SUBROUTINE JOINPATH(STR1,STR2,PATH)
 
-      character*(*) str1
-      character*(*) str2
-      character*(*) path
+      CHARACTER*(*) STR1
+      CHARACTER*(*) STR2
+      CHARACTER*(*) PATH
 
-      integer i,j,k
+      INTEGER I,J,K
 
-      i =1
-      do while (i.le.LEN(str1))
-      if(str1(i:i).eq.' ') goto 800     
-      path(i:i) = str1(i:i)
-      i=i+1
-      enddo
-800   continue
-      j=1
-      do while (j.le.LEN(str2))
-      if(str2(j:j).eq.' ') goto 801
-      path(i-1+j:i-1+j) = str2(j:j)
-      j=j+1
-      enddo
-801   continue
-      k=i+j-1
-      do while (k.le.LEN(path))
-      path(k:k) = ' '
-      k=k+1
-      enddo
+      I =1
+      DO WHILE (I.LE.LEN(STR1))
+        IF(STR1(I:I).EQ.' ') GOTO 800
+        PATH(I:I) = STR1(I:I)
+        I=I+1
+      ENDDO
+ 800  CONTINUE
+      J=1
+      DO WHILE (J.LE.LEN(STR2))
+        IF(STR2(J:J).EQ.' ') GOTO 801
+        PATH(I-1+J:I-1+J) = STR2(J:J)
+        J=J+1
+      ENDDO
+ 801  CONTINUE
+      K=I+J-1
+      DO WHILE (K.LE.LEN(PATH))
+        PATH(K:K) = ' '
+        K=K+1
+      ENDDO
 
-      return
+      RETURN
 
-      end
+      END
 
-      subroutine setMadLoopPath(path)
+      SUBROUTINE SETMADLOOPPATH(PATH)
 
-      character(512) path
-      character(512) dummy      
+      CHARACTER(512) PATH
+      CHARACTER(512) DUMMY
 
-      character(512) prefix,fpath
-      character(17) nameToCheck
-      parameter (nameToCheck='MadLoopParams.dat')
+      CHARACTER(512) PREFIX,FPATH
+      CHARACTER(17) NAMETOCHECK
+      PARAMETER (NAMETOCHECK='MadLoopParams.dat')
 
       LOGICAL ML_INIT
       DATA ML_INIT/.TRUE./
-      common/ML_INIT/ML_INIT
+      COMMON/ML_INIT/ML_INIT
 
       LOGICAL CTINIT,TIRINIT,GOLEMINIT
       DATA CTINIT,TIRINIT,GOLEMINIT/.TRUE.,.TRUE.,.TRUE./
       COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT
 
-      character(512) MLPath
-      data MLPath/'[[NA]]'/      
-      common/MLPATH/MLPath
+      CHARACTER(512) MLPATH
+      DATA MLPATH/'[[NA]]'/
+      COMMON/MLPATH/MLPATH
 
-      integer i
+      INTEGER I
 
 C     Just a dummy call for LD to pick up this function
 C     when creating the BLHA2 dynamic library
-      dummy = ' '
-      CALL SETPARA2(dummy)
+      DUMMY = ' '
+      CALL SETPARA2(DUMMY)
 
-      if (LEN(path).ge.4 .and. path(1:4).eq.'auto') then
-          if (MLPath(1:6).eq.'[[NA]]') then
-C     Try to automatically find the path
-          prefix='./'
-          call joinPath(prefix,nameToCheck,fpath)
-          OPEN(1, FILE=fpath, ERR=1, STATUS='OLD',      
-     $    ACTION='READ')
-          MLPath=prefix
-          goto 10
-1         continue
-          close(1)
-          prefix='./MadLoop5_resources/'
-          call joinPath(prefix,nameToCheck,fpath)
-          OPEN(1, FILE=fpath, ERR=2, STATUS='OLD',      
-     $    ACTION='READ')
-          MLPath=prefix
-          goto 10
-2         continue
-          close(1)
-          prefix='../MadLoop5_resources/'
-          call joinPath(prefix,nameToCheck,fpath)
-          OPEN(1, FILE=fpath, ERR=66, STATUS='OLD',      
-     $    ACTION='READ')
-          MLPath=prefix
-          goto 10
-66        continue
-          close(1)
-c     We could not automatically find the auxiliary files
-          write(*,*) '==='
-          write(*,*) 'ERROR: MadLoop5 could not automatically find',
-     $    ' the file MadLoopParams.dat.'
-          write(*,*) '==='
-          write(*,*) '(Try using <CALL setMadLoopPath(/my/path)>',
-     $    ' (before your first call to MadLoop) in order to',
-     $    ' set the directory where this file is located as well as',
-     $    ' other auxiliary files, such as <xxx>_ColorNumFactors.dat',
-     $    ', <xxx>_ColorDenomFactors.dat, etc..)'
-          stop
-10        continue
-          close(1)
-          return
-          endif
-      else
-C     Use the one specified by the user
-C     Make sure there is a separator added
-      i =1
-      do while (i.le.LEN(path) .and. path(i:i).ne.' ')
-      i=i+1
-      enddo
-      if (path(i-1:i-1).ne.'/') then
-          path(i:i) = '/'
-      endif
-      MLpath=path          
-      endif
+      IF (LEN(PATH).GE.4 .AND. PATH(1:4).EQ.'auto') THEN
+        IF (MLPATH(1:6).EQ.'[[NA]]') THEN
+C         Try to automatically find the path
+          PREFIX='./'
+          CALL JOINPATH(PREFIX,NAMETOCHECK,FPATH)
+          OPEN(1, FILE=FPATH, ERR=1, STATUS='OLD',ACTION='READ')
+          MLPATH=PREFIX
+          GOTO 10
+ 1        CONTINUE
+          CLOSE(1)
+          PREFIX='./MadLoop5_resources/'
+          CALL JOINPATH(PREFIX,NAMETOCHECK,FPATH)
+          OPEN(1, FILE=FPATH, ERR=2, STATUS='OLD',ACTION='READ')
+          MLPATH=PREFIX
+          GOTO 10
+ 2        CONTINUE
+          CLOSE(1)
+          PREFIX='../MadLoop5_resources/'
+          CALL JOINPATH(PREFIX,NAMETOCHECK,FPATH)
+          OPEN(1, FILE=FPATH, ERR=66, STATUS='OLD',ACTION='READ')
+          MLPATH=PREFIX
+          GOTO 10
+ 66       CONTINUE
+          CLOSE(1)
+C         We could not automatically find the auxiliary files
+          WRITE(*,*) '==='
+          WRITE(*,*) 'ERROR: MadLoop5 could not automatically find th'
+     $     //'e file MadLoopParams.dat.'
+          WRITE(*,*) '==='
+          WRITE(*,*) '(Try using <CALL setMadLoopPath(/my/pat'
+     $     //'h)> (before your first call to MadLoop) in order to se'
+     $     //'t the directory where this file is located as well as'
+     $     //'  other auxiliary files, such as <xxx>_ColorNumFactors.d'
+     $     //'at, <xxx>_ColorDenomFactors.dat, etc..)'
+          STOP
+ 10       CONTINUE
+          CLOSE(1)
+          RETURN
+        ENDIF
+      ELSE
+C       Use the one specified by the user
+C       Make sure there is a separator added
+        I =1
+        DO WHILE (I.LE.LEN(PATH) .AND. PATH(I:I).NE.' ')
+          I=I+1
+        ENDDO
+        IF (PATH(I-1:I-1).NE.'/') THEN
+          PATH(I:I) = '/'
+        ENDIF
+        MLPATH=PATH
+      ENDIF
 
 C     Check that the FilePath set is correct
-      call joinPath(MLPath,nameToCheck,fpath)
-      OPEN(1, FILE=fpath, ERR=3, STATUS='OLD',      
-     $ACTION='READ')
-      goto 11
-3     continue
-      close(1)
-      write(*,*) '==='
-      write(*,*) 'ERROR: The MadLoop5 auxiliary files could not',
-     $' be found in ',MLPath
-      write(*,*) '==='
-      stop
-11    continue
-      close(1)
+      CALL JOINPATH(MLPATH,NAMETOCHECK,FPATH)
+      OPEN(1, FILE=FPATH, ERR=3, STATUS='OLD',ACTION='READ')
+      GOTO 11
+ 3    CONTINUE
+      CLOSE(1)
+      WRITE(*,*) '==='
+      WRITE(*,*) 'ERROR: The MadLoop5 auxiliary files could not b'
+     $ //'e found in ',MLPATH
+      WRITE(*,*) '==='
+      STOP
+ 11   CONTINUE
+      CLOSE(1)
 
-      end
+      END
 
-      INTEGER FUNCTION SET_RET_CODE_U(MLRed,DOING_QP,STABLE)
-C
-C This functions returns the value of U
-C
-C
+      INTEGER FUNCTION SET_RET_CODE_U(MLRED,DOING_QP,STABLE)
+C     
+C     This functions returns the value of U
+C     
+C     
 C     U == 0
-C         Not stable.
+C     Not stable.
 C     U == 1
-C         Stable with CutTools in double precision.
+C     Stable with CutTools in double precision.
 C     U == 2
-C         Stable with PJFry++.
+C     Stable with PJFry++.
 C     U == 3
-C         Stable with IREGI.
+C     Stable with IREGI.
 C     U == 4
-C         Stable with Golem95
+C     Stable with Golem95
 C     U == 9
-C         Stable with CutTools in quadruple precision.
-C
+C     Stable with CutTools in quadruple precision.
+C     
       IMPLICIT NONE
 C     
-C CONSTANTS
-C
-C
-C ARGUMENTS
-C
-      INTEGER MLRed
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER MLRED
       LOGICAL DOING_QP,STABLE
-C
-C LOCAL VARIABLES
-C
-C
-C FUNCTION
-C
-C
-C BEGIN CODE
-C
+C     
+C     LOCAL VARIABLES
+C     
+C     
+C     FUNCTION
+C     
+C     
+C     BEGIN CODE
+C     
       IF(.NOT.STABLE)THEN
-         SET_RET_CODE_U=0
-         RETURN
+        SET_RET_CODE_U=0
+        RETURN
       ENDIF
       IF(DOING_QP)THEN
-         IF(MLRed.EQ.1)THEN
-            SET_RET_CODE_U=9
-            RETURN
-         ELSE
-            STOP 'Only CutTools can use quardruple precision'
-         ENDIF
+        IF(MLRED.EQ.1)THEN
+          SET_RET_CODE_U=9
+          RETURN
+        ELSE
+          STOP 'Only CutTools can use quardruple precision'
+        ENDIF
       ENDIF
-      IF(MLRed.GE.1.AND.MLRed.LE.4)THEN
-         SET_RET_CODE_U=MLRed
+      IF(MLRED.GE.1.AND.MLRED.LE.4)THEN
+        SET_RET_CODE_U=MLRED
       ELSE
-         STOP 'Only CutTools,PJFry++,IREGI,Golem95 are available'
+        STOP 'Only CutTools,PJFry++,IREGI,Golem95 are available'
       ENDIF
       END
 
-      SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,
-     $     LPASS)
-C
-C DETECT WHICH LOOP LIB PASSED
-C
-      IMPLICIT NONE
-C
-C CONSTANTS
-C
-C
-C ARGUMENTS
-C
-      INTEGER LIBNUM,NLOOPLINE,RANK
-      LOGICAL complex_mass,LPASS
+      SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,COMPLEX_MASS
+     $ ,LPASS)
 C     
-C LOCAL VARIABLES
-C
-C
-C GLOBAL VARIABLES
-C
-C ----------
-C BEGIN CODE
-C ----------
+C     DETECT WHICH LOOP LIB PASSED
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER LIBNUM,NLOOPLINE,RANK
+      LOGICAL COMPLEX_MASS,LPASS
+C     
+C     LOCAL VARIABLES
+C     
+C     
+C     GLOBAL VARIABLES
+C     
+C     ----------
+C     BEGIN CODE
+C     ----------
       IF(LIBNUM.EQ.1)THEN
-C CutTools
-         CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,LPASS)
+C       CutTools
+        CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
       ELSEIF(LIBNUM.EQ.2)THEN
-C PJFry++
-         CALL DETECT_PJFRY(NLOOPLINE,RANK,complex_mass,LPASS)
+C       PJFry++
+        CALL DETECT_PJFRY(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
       ELSEIF(LIBNUM.EQ.3)THEN
-C IREGI
-         CALL DETECT_IREGI(NLOOPLINE,RANK,complex_mass,LPASS)
+C       IREGI
+        CALL DETECT_IREGI(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
       ELSEIF(LIBNUM.EQ.4)THEN
-C Golem95
-         CALL DETECT_GOLEM(NLOOPLINE,RANK,complex_mass,LPASS)
+C       Golem95
+        CALL DETECT_GOLEM(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
       ELSE
-         STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 are provided'
+        STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 are provided'
       ENDIF
       RETURN
       END
 
-      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,LPASS)
-C
-C DETECT THE CUTTOOLS CAN BE USED OR NOT
-C
+      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+C     
+C     DETECT THE CUTTOOLS CAN BE USED OR NOT
+C     
       IMPLICIT NONE
-C
-C CONSTANTS
-C
-C
-C ARGUMENTS
-C
+C     
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
       INTEGER NLOOPLINE,RANK
-      LOGICAL complex_mass,LPASS
-C
-C LOCAL VARIABLES
-C
-C
-C GLOBAL VARIABLES
-C
-C ----------
-C BEGIN CODE
-C ----------
+      LOGICAL COMPLEX_MASS,LPASS
+C     
+C     LOCAL VARIABLES
+C     
+C     
+C     GLOBAL VARIABLES
+C     
+C     ----------
+C     BEGIN CODE
+C     ----------
       LPASS=.TRUE.
       IF(NLOOPLINE+1.LT.RANK)LPASS=.FALSE.
       RETURN
       END
 
-      SUBROUTINE DETECT_PJFRY(NLOOPLINE,RANK,complex_mass,LPASS)
-C
-C DETECT THE PJFRY++ CAN BE USED OR NOT
-C
+      SUBROUTINE DETECT_PJFRY(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+C     
+C     DETECT THE PJFRY++ CAN BE USED OR NOT
+C     
       IMPLICIT NONE
-C
-C CONSTANTS
-C
-C
-C ARGUMENTS
-C
+C     
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
       INTEGER NLOOPLINE,RANK
-      LOGICAL complex_mass,LPASS
-C
-C LOCAL VARIABLES
-C
-C
-C GLOBAL VARIABLES
-C
-C ----------
-C BEGIN CODE
-C ----------
+      LOGICAL COMPLEX_MASS,LPASS
+C     
+C     LOCAL VARIABLES
+C     
+C     
+C     GLOBAL VARIABLES
+C     
+C     ----------
+C     BEGIN CODE
+C     ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE.LT.RANK.OR.RANK.GT.5
-     $.OR.NLOOPLINE.GT.5.OR.complex_mass.OR.NLOOPLINE.eq.1) THEN
+      IF(NLOOPLINE.LT.RANK.OR.RANK.GT.5.OR.NLOOPLINE.GT.5.OR.COMPLEX_MA
+     $ SS.OR.NLOOPLINE.EQ.1) THEN
         LPASS=.FALSE.
       ENDIF
       RETURN
       END
 
-      SUBROUTINE DETECT_IREGI(NLOOPLINE,RANK,complex_mass,LPASS)
+      SUBROUTINE DETECT_IREGI(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
 C     
-C DETECT THE IREGI CAN BE USED OR NOT
-C
+C     DETECT THE IREGI CAN BE USED OR NOT
+C     
       IMPLICIT NONE
-C
-C CONSTANTS
-C
-C
-C ARGUMENTS
-C
-      INTEGER NLOOPLINE,RANK
-      LOGICAL complex_mass,LPASS
 C     
-C LOCAL VARIABLES
-C
-C
-C GLOBAL VARIABLES
-C
-C ----------
-C BEGIN CODE
-C ----------
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER NLOOPLINE,RANK
+      LOGICAL COMPLEX_MASS,LPASS
+C     
+C     LOCAL VARIABLES
+C     
+C     
+C     GLOBAL VARIABLES
+C     
+C     ----------
+C     BEGIN CODE
+C     ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.8.OR.RANK.GE.7)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.7.OR.RANK.GE.7)LPASS=.FALSE.
       RETURN
       END
 
-      SUBROUTINE DETECT_GOLEM(NLOOPLINE,RANK,complex_mass,LPASS)
-C
-C DETECT THE Golem95 CAN BE USED OR NOT
-C
-            IMPLICIT NONE
-C
-C CONSTANTS
-C
-C
-C ARGUMENTS
-C
-            INTEGER NLOOPLINE,RANK
-            LOGICAL complex_mass,LPASS
-C
-C LOCAL VARIABLES
-C
-C
-C GLOBAL VARIABLES
-C
-C ----------
-C BEGIN CODE
-C ----------
+      SUBROUTINE DETECT_GOLEM(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+C     
+C     DETECT THE Golem95 CAN BE USED OR NOT
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER NLOOPLINE,RANK
+      LOGICAL COMPLEX_MASS,LPASS
+C     
+C     LOCAL VARIABLES
+C     
+C     
+C     GLOBAL VARIABLES
+C     
+C     ----------
+C     BEGIN CODE
+C     ----------
 
       LPASS=.TRUE.
       IF(NLOOPLINE.GE.7.OR.RANK.GE.7.OR.NLOOPLINE.LE.1)LPASS=.FALSE.
@@ -432,4 +428,61 @@ C     arrays since these are not the most optimized sorting algorithms.
          Median = Temp(N/2+1)
       END IF
       END FUNCTION  Median
+
+      SUBROUTINE PRINT_MADLOOP_BANNER()
+
+      WRITE(*,*) ' ==================================================='
+     $ //'======================================= '
+      WRITE(*,*) '{                                                  '
+     $ //'                                        }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
+     $ //'                                                       '/
+     $ /CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
+     $ //'          ,,                                           '/
+     $ /CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'`7MMM.     ,MMF'/
+     $ /CHAR(39)//'             `7MM  `7MMF'//CHAR(39)//'            '
+     $ //'                       '//CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  MMMb    dPMM       '
+     $ //'          MM    MM                                     '/
+     $ /CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M YM   ,M MM   ,6'/
+     $ /CHAR(34)//'Yb.   ,M'//CHAR(34)//''//CHAR(34)//'bMM    MM     '
+     $ //'    ,pW'//CHAR(34)//'Wq.   ,pW'//CHAR(34)//'Wq.`7MMpdMAo. '/
+     $ /CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  Mb  M'//CHAR(39)/
+     $ /' MM  8)   MM ,AP    MM    MM        6W'//CHAR(39)//'   `W'
+     $ //'b 6W'//CHAR(39)//'   `Wb MM   `Wb '//CHAR(27)//'[0m'/
+     $ /'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  YM.P'//CHAR(39)/
+     $ /'  MM   ,pm9MM 8MI    MM    MM      , 8M     M8 8M     M8 MM '
+     $ //'   M8 '//CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  `YM'//CHAR(39)/
+     $ /'   MM  8M   MM `Mb    MM    MM     ,M YA.   ,A9 YA.  '
+     $ //' ,A9 MM   ,AP '//CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'.JML. `'//CHAR(39)/
+     $ /'  .JMML.`Moo9^Yo.`Wbmd'//CHAR(34)//'MML..JMMmmmmMMM  `Ybmd9'/
+     $ /CHAR(39)//'   `Ybmd9'//CHAR(39)//'  MMbmmd'//CHAR(39)//'  '/
+     $ /CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
+     $ //'                                              MM       '/
+     $ /CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
+     $ //'                                            .JMML.     '/
+     $ /CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//CHAR(27)//'[0m'/
+     $ /'v2.2.1 (2014-09-25), Ref: arXiv:1103.0621v2, arXiv:1405.0301'
+     $ //CHAR(27)//'[32m'//'                '//CHAR(27)//'[0m'/
+     $ /'       }'
+      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
+     $ //'                                                       '/
+     $ /CHAR(27)//'[0m'//'       }'
+      WRITE(*,*) '{                                                  '
+     $ //'                                        }'
+      WRITE(*,*) ' ==================================================='
+     $ //'======================================= '
+
+      END
+
 

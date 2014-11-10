@@ -622,6 +622,8 @@ c with the reference weight
       include 'q_es.inc'
       include 'run.inc'
       include "reweight.inc"
+      include "appl_common.inc"
+      include "nFKSconfigs.inc"
 
       double precision compute_rwgt_wgt_NLO
       double precision xmuR_over_ref,xmuF1_over_ref,
@@ -649,6 +651,17 @@ c FxFx merging
       double precision rewgt
       external setclscales,rewgt
       double precision rwgt_muR_dep_fac
+c APPLGRID
+      integer iappl
+      common /for_applgrid/ iappl
+      double precision vegas_weight
+      common/cvegas_weight/vegas_weight
+      integer flavour_map(fks_configs)
+      common/c_flavour_map/flavour_map
+      double precision final_state_rescaling
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs),
+     1        etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -838,6 +851,90 @@ c
       xsec=xsec11+xsec12
       compute_rwgt_wgt_NLO=xsec
 c
+
+************************************************************************
+*     APPLgrid (Refer to arXiv:1110.4738).
+************************************************************************
+      if(iappl.ne.0)then
+         do k=1,4
+c     Bjorken-x
+            appl_x1(k) = wgtxbj(1,k)
+            appl_x2(k) = wgtxbj(2,k)
+c     Scales
+            if(k.eq.1)then
+               appl_muF2(k) = wgtmuF12(1) * muF1_over_ref**2
+               appl_muR2(k) = wgtmuR2(1)  * muR_over_ref**2
+               appl_QES2(k) = wgtqes2(2)
+            elseif(k.ge.2.and.k.le.4)then
+               appl_muF2(k) = wgtmuF12(2) * muF1_over_ref**2
+               appl_muR2(k) = wgtmuR2(2)  * muR_over_ref**2
+               appl_QES2(k) = wgtqes2(2)
+            endif
+c     Initialize weights
+            appl_w0(k) = 0d0
+            appl_wR(k) = 0d0
+            appl_wF(k) = 0d0
+            appl_wB(k) = 0d0
+c     Fill weights (Same notation as in Eq. (2.17) of the paper above).
+c     Flavor map: integer from 1 to nproc, with nproc the number of the
+c     parton luminosities, defined at generation in
+c     initial_states_map.dat.
+            if(k.eq.1)then
+c     Events (only W0 is non-zero)
+               if(wgtwreal(k).ne.0d0)then
+c     Weights
+                  appl_w0(k) = wgtwreal(k)
+c     Flavour map
+                  appl_flavmap(k) = flavour_map(nFKSprocess_used)
+               endif
+            else
+               if ( wgtwreal(2).ne.0d0 .or. wgtwreal(3).ne.0d0 .or.
+     $              wgtwreal(4).ne.0d0 .or. wgtwdeg(2).ne.0d0 .or.
+     $              wgtwdeg(3).ne.0d0 .or. wgtwdeg(4).ne.0d0 .or.
+     $              wgtwdegmuf(2).ne.0d0 .or. wgtwdegmuf(3).ne.0d0 .or.
+     $              wgtwdegmuf(4).ne.0d0 .or. wgtwborn(2).ne.0d0 .or.
+     $              wgtwns(2).ne.0d0 .or. wgtwnsmuf(2).ne.0d0 .or.
+     $              wgtwnsmur(2).ne.0d0) then
+c     Soft events.
+c     Note that for k=2 it is the Born flavour map that is always used.
+c     So there is a unique set of weights for k=2, all of which uses
+c     flavour_map(nFKSprocess_used_Born)
+                  if(k.eq.2)then
+c     Weights
+                     appl_w0(k) = wgtwreal(k) + wgtwdeg(k) + wgtwns(k)
+                     appl_wR(k) = wgtwnsmur(k)
+                     appl_wF(k) = wgtwdegmuf(k) + wgtwnsmuf(k)
+                     appl_wB(k) = wgtwborn(k)
+c     Flavour map
+                     appl_flavmap(k)=flavour_map(nFKSprocess_used_Born)
+c     Collinear and sof-collinear events
+                  elseif(k.eq.3.or.k.eq.4)then
+c     Weights
+                     appl_w0(k) = wgtwreal(k) + wgtwdeg(k)
+                     appl_wF(k) = wgtwdegmuf(k)
+c     Flavour map
+                     appl_flavmap(k) = flavour_map(nFKSprocess_used)
+                  endif
+               endif
+            endif
+c     Multiply the weights by the number of equivalent final states that
+c     share both the same matrix element and the same initial luminosity
+            final_state_rescaling = dble(iproc_save(nFKSprocess_used))
+     1           / dble(appl_nproc(flavour_map(nFKSprocess_used)))
+c     Multiply by Vegas weight before filling the APPLgrid histograms,
+c     as done for the NLO plots in the reweighting routine, and by the
+c     final rescaling factor.
+            appl_w0(k) = appl_w0(k) * final_state_rescaling * vegas_weight 
+            appl_wR(k) = appl_wR(k) * final_state_rescaling * vegas_weight
+            appl_wF(k) = appl_wF(k) * final_state_rescaling * vegas_weight
+            appl_wB(k) = appl_wB(k) * final_state_rescaling * vegas_weight
+         enddo
+c     Save the value of the event weight (hadronic differential cross section).
+c     Computed with the reference PDF sets for checks of the amcatnlo interface.
+         appl_event_weight = compute_rwgt_wgt_NLO
+c     Save also the vegas weight
+	 appl_vegaswgt = vegas_weight
+      endif
       return
       end
 
@@ -1729,7 +1826,7 @@ c$$$      apimuR = alphas(scale)/pi
 c$$$      apimZ  = alphas(MDL_MZ)/pi
 c$$$      CALL runalpha(apimZ,MDL_MZ,mbmb,5d0,2,0,apimb)
 c$$$      CALL runmass(mbmb,apimb,apimuR,5d0,2,mbmuR)
-c$$$      rwgt_muR_dep_fac = (mbmuR**2/mbmb**2)**wgtcpower
+c$$$      rwgt_muR_dep_fac = (mbmuR/mbmb)**wgtcpower
       ELSE
          return
       ENDIF
@@ -2182,4 +2279,3 @@ C
       endif
       end
 
-C-}}}

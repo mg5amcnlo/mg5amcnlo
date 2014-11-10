@@ -23,7 +23,7 @@ for line in nevents_lines:
         nevts = int(line.split()[1])
         xsec = float(line.split()[2])
         jobs.append({'dir': dir, 'channel': chann, 'type': ev_type, \
-                'nevts': nevts, 'xsec': xsec})
+                'nevts': nevts, 'xsec': xsec, 'line' : line})
         tot_events += nevts 
         try:
             max_events[ev_type] = max(max_events[ev_type], nevts)
@@ -96,6 +96,7 @@ open('max_split.inc', 'w').write(\
 for job in jobs:
     dir = os.path.join(job['dir'], job['channel'])
     if job['nevts'] == 0:
+        splitted_lines.append(job['line'])
         continue
     job_events = 0
     for i in range(job['nsplit']):

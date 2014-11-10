@@ -368,6 +368,7 @@ C     BEGIN CODE
 C     ----------
 
       IF(ML_INIT) THEN
+        CALL PRINT_MADLOOP_BANNER()
         TMP = 'auto'
         CALL SETMADLOOPPATH(TMP)
         CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
@@ -10501,5 +10502,4 @@ C     arrays
       SUBROUTINE ML5_0_EXIT_MADLOOP()
       CONTINUE
       END
-
 

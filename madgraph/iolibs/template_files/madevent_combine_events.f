@@ -57,8 +57,8 @@ c
       character*30 param_card_name
       common/to_param_card_name/param_card_name
 
-      character*300 buff
-      logical u_syst
+      character*1000 buff
+      logical u_syst, has_negative
       character*(s_bufflen) s_buff(7)
       integer nclus
       character*(clus_bufflen) buffclus(max_particles)
@@ -73,6 +73,7 @@ c     Get requested number of events
 c
       include 'run_card.inc'
 
+      has_negative = .false.
       if (gridpack) then
 c        load the gridpack file
          call load_gridpack_para(npara,param,value)
@@ -118,7 +119,7 @@ c
       I4 = 4
       R8 = 8
       record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
-     &   300+7*s_bufflen+max_particles*clus_bufflen
+     &   1000+7*s_bufflen+max_particles*clus_bufflen
 C $B$ scratch_name $B$ !this is tag for automatic modification by MW
       filename='scratch'
 C $E$ scratch_name $E$ !this is tag for automatic modification by MW
@@ -207,6 +208,7 @@ c
      &        buff
             if (dabs(wgt) .gt. goal_wgt*xran1(jseed)) then
                keep(i) = .true.
+               if (wgt.lt.0d0) has_negative = .true.
                nunwgt=nunwgt+1
                if (dabs(wgt) .gt. goal_wgt) then
                   xtrunc=xtrunc+dabs(wgt)-goal_wgt
@@ -251,7 +253,7 @@ C $B$ output_file2 $B$ !this is tag for automatic modification by MW
 C $E$ output_file2 $E$ !this is tag for automatic modification by MW
 
       open(unit=15,file=filename,status='unknown',err=99)
-      call writebanner_u(15,nreq,rxsec,xtrunc,xsec/nreq,xerr)
+      call writebanner_u(15,nreq,rxsec,xtrunc,xsec/nreq,xerr, has_negative)
       ntry = 0
       do i=1,kevent
          if (keep(i) .and. ntry .lt. nreq) then
@@ -404,7 +406,7 @@ C   Write out compulsory init info
       end
 
 
-      subroutine writebanner_u(lunw,nevent,sum,maxwgt,wgt,xerr)
+      subroutine writebanner_u(lunw,nevent,sum,maxwgt,wgt,xerr,has_negative)
 c**************************************************************************************
 c     Writes out banner information at top of event file
 c**************************************************************************************
@@ -414,11 +416,13 @@ c     Arguments
 c     
       integer lunw,nevent
       double precision sum,maxwgt,wgt,xerr
+      logical has_negative
 c
 c     Local
 c
       integer i,j
       double precision tmpsum
+      integer lhastrategy
 c
 c     Les Houches init block (for the <init> info)
 c
@@ -491,11 +495,17 @@ c
       write(lunw,'(a30,e11.5)') '#  Unit wgt                :  ',wgt
       write(lunw,'(a)') '</MGGenerationInfo>'
 
+      if (has_negative) then
+        lhastrategy = -3
+      else
+        lhastrategy = 3
+      endif
+
 C   Write out compulsory init info
       write(lunw,'(a)') '</header>'
       write(lunw,'(a)') '<init>'
       write(lunw,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),(pdfgup(i),i=1,2),
-     $   (pdfsup(i),i=1,2),3,nprup
+     $   (pdfsup(i),i=1,2),lhastrategy,nprup
       do i=1,nprup
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,sum/nevent,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
@@ -504,7 +514,7 @@ C   Write out compulsory init info
         write(lunw,'(a)') "please cite 1405.0301 </generator>"
       endif
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i8,i2,i4)
+ 90   FORMAT(2i9,2e19.11,2i2,2i8,i3,i4)
  91   FORMAT(3e19.11,i4)
 
       end
@@ -615,7 +625,7 @@ c
       double precision sscale,aqcd,aqed,tmpsum
       integer ievent,jseed
       logical done,found
-      character*300 buff
+      character*1000 buff
       logical u_syst
       character*(s_bufflen) s_buff(7)
       character*300 fullname

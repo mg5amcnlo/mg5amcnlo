@@ -16,8 +16,7 @@ ifeq ($(origin CFLAGS),undefined)
   CFLAGS = -O 
 endif
 
-  
-
+# Increase the number of allowed charcters in a Fortran line
 FFLAGS+= -ffixed-line-length-132
 
 # Set FC unless it's defined by an environment variable
@@ -71,6 +70,15 @@ else
   alfas_functions=alfas_functions
   lhapdf=
   reweight_xsec_events_pdf_dummy=reweight_xsec_events_pdf_dummy.o
+endif
+
+# Option APPLGrid
+ifdef applgrid
+  APPLLIBS=$(shell applgrid-config --ldcflags) $(shell amcfast-config --ldflags)
+  applgrid_interface=appl_interface.o
+else
+  APPLLIBS=
+  applgrid_interface=appl_interface_dummy.o
 endif
 
 # Madloop

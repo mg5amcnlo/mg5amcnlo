@@ -42,7 +42,7 @@ C four momenta. Energy is the zeroth component.
       REAL*8 P(0:3,NEXTERNAL)
 	  INTEGER MATELEM_ARRAY_DIM
 	  REAL*8 , allocatable :: MATELEM(:,:)
-      REAL*8 SQRTS,AO2PI
+      REAL*8 SQRTS,AO2PI,TOTMASS
 C sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
@@ -131,8 +131,12 @@ C
       IF(nincoming.EQ.1) THEN
          SQRTS=PMASS(1)
       ELSE
+	     TOTMASS = 0.0d0
+	     DO I=1,NEXTERNAL
+		   TOTMASS = TOTMASS + PMASS(I)
+		 ENDDO
 C CMS energy in GEV
-         SQRTS=1000d0
+         SQRTS=max(1000d0,2.0d0*TOTMASS)
       ENDIF
 
       call printout()
@@ -344,6 +348,9 @@ C
 C      write (*,*) "-------------------------------------------------"
 C      write (*,*) "Matrix element = ", MATELEM(1), " GeV^",-(2*nexternal-8)      
 C      write (*,*) "-------------------------------------------------"
+
+      DEALLOCATE(MATELEM)
+	  DEALLOCATE(PREC_FOUND)
 
       end
       

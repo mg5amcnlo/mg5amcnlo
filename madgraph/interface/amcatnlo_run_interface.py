@@ -405,8 +405,6 @@ class CheckValidForCmd(object):
         """Check the argument for the plot command
         plot run_name modes"""
 
-        if options['force']:
-            self.force = True
 
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
@@ -967,18 +965,19 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_plot(args)
         logger.info('plot for run %s' % self.run_name)
         
-        self.ask_edit_cards([], args, plot=True)
+        if not self.force:
+            self.ask_edit_cards([], args, plot=True)
                 
         if any([arg in ['parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip(filename)
             if  os.path.exists(filename):
                 logger.info('Found events.lhe file for run %s' % self.run_name) 
                 shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
                 self.create_plot('parton')
                 shutil.move(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'), filename)
-                os.system('gzip -f %s' % filename)
+                misc.gzip(filename)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'MADatNLO.top')
@@ -1022,31 +1021,33 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                                 self.run_name)
                     return
                 filename = filenames[0]
-                os.system('gunzip -c -f %s > %s' % (filename,
-                          pjoin(self.me_dir, 'Events','pythia_events.hep')))
-
+                misc.gunzip(filename, keep=True, stdout=pjoin(self.me_dir, 'Events','pythia_events.hep'))
+                
                 if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
-                    files.cp(pjoin(self.me_dir, 'Cards', 'pythia_card_default.dat'),
+                    if aMCatNLO and not self.options['mg5_path']:
+                        raise "plotting NLO HEP file needs MG5 utilities"
+                    
+                    files.cp(pjoin(self.options['mg5_path'], 'Template','LO', 'Cards', 'pythia_card_default.dat'),
                              pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
                 self.run_hep2lhe()
             else:
                 filename = filenames[0]
-                os.system('gunzip -c -f %s > %s' % (filename,
-                          pjoin(self.me_dir, 'Events','pythia_events.lhe')))
-            self.create_plot('Pythia')
+                misc.gunzip(filename, keep=True, stdout=pjoin(self.me_dir, 'Events','pythia_events.hep'))
+
+            self.create_plot('shower')
             lhe_file_name = filename.replace('.hep.gz', '.lhe')
             shutil.move(pjoin(self.me_dir, 'Events','pythia_events.lhe'), 
                         lhe_file_name)
-            os.system('gzip -f %s' % lhe_file_name)
+            misc.gzip(lhe_file_name)
                     
         if any([arg in ['all','pgs'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 
                                             '%s_pgs_events.lhco' % self.run_tag)
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip(filename)
             if  os.path.exists(filename):
                 self.create_plot('PGS')
-                os.system('gzip -f %s' % filename)                
+                misc.gzip(filename)                
             else:
                 logger.info('No valid files for pgs plot')
                 
@@ -1054,12 +1055,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             filename = pjoin(self.me_dir, 'Events', self.run_name, 
                                         '%s_delphes_events.lhco' % self.run_tag)
             if os.path.exists(filename+'.gz'):
-                os.system('gunzip -f %s' % (filename+'.gz') )
+                misc.gunzip(filename)
             if  os.path.exists(filename):
                 #shutil.move(filename, pjoin(self.me_dir, 'Events','delphes_events.lhco'))
                 self.create_plot('Delphes')
                 #shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
-                os.system('gzip -f %s' % filename)                
+                misc.gzip(filename)                
             else:
                 logger.info('No valid files for delphes plot')
 
@@ -1123,9 +1124,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         this function just wraps the do_launch one"""
         self.do_launch(line)
 
+
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
         """Advanced commands: this is for creating the correct run_card.inc from the nlo format"""
+                #check if no 'Auto' are present in the file
+        self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -1231,6 +1235,53 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         self.update_status('', level='all', update_results=True)
 
+    def print_results_in_shell(self, data):
+        """Have a nice results prints in the shell,
+        data should be of type: gen_crossxhtml.OneTagResults"""
+        if not data:
+            return
+        logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
+        if self.ninitial == 1:
+            logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
+        else:
+            logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
+        logger.info("     Nb of events :  %s" % data['nb_event'] )
+        #if data['cross_pythia'] and data['nb_event_pythia']:
+        #    if self.ninitial == 1:
+        #        logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
+        #    else:
+        #        logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
+        #    logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
+        #    if self.run_card['use_syst'] in self.true:
+        #        logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")    
+        logger.info(" " )
+
+    def print_results_in_file(self, data, path, mode='w'):
+        """Have a nice results prints in the shell,
+        data should be of type: gen_crossxhtml.OneTagResults"""
+        if not data:
+            return
+        
+        fsock = open(path, mode)
+        
+        fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
+                    (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
+        
+        if self.ninitial == 1:
+            fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
+        else:
+            fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
+        fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
+        #if data['cross_pythia'] and data['nb_event_pythia']:
+        #    if self.ninitial == 1:
+        #        fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
+        #    else:
+        #        fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
+        #    fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
+        fsock.write(" \n" )
+
+
+
 
 
     def update_random_seed(self):
@@ -1253,8 +1304,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        self.get_characteristics(pjoin(self.me_dir, 
-                                        'SubProcesses', 'proc_characteristics'))
+        if mode in ['LO', 'NLO'] and self.run_card['iappl'] == '2' and not options['only_generation']:
+            options['only_generation'] = True
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1310,15 +1362,19 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
                 if not options['only_generation'] and not options['reweightonly']:
                     to_always_rm.extend(to_rm)
+                    if os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir,'MadLoop5_resources.tar.gz')):
+                        to_always_rm.append(pjoin(self.me_dir, 'SubProcesses', dir,'MadLoop5_resources.tar.gz'))
                 files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_always_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
+        if self.run_card['iappl']=='2':
+            self.applgrid_distribute(options,mode,p_dirs)
+
         if options['reweightonly']:
             event_norm=self.run_card['event_norm']
             nevents=int(self.run_card['nevents'])
-            self.reweight_and_collect_events(options, mode, nevents, event_norm)
-            return
+            return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
         devnull = os.open(os.devnull, os.O_RDWR) 
         if mode in ['LO', 'NLO']:
@@ -1403,7 +1459,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 
             cross, error = sum_html.make_all_html_results(self, folder_names[mode])
             self.results.add_detail('cross', cross)
-            self.results.add_detail('error', error) 
+            self.results.add_detail('error', error)
+            if self.run_card['iappl'] != '0':
+                self.applgrid_combine(cross,error)
             self.update_status('Run complete', level='parton', update_results=True)
 
             return
@@ -1521,6 +1579,74 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
 
+    def applgrid_combine(self,cross,error):
+        """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
+        logger.debug('Combining APPLgrids \n')
+        applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),'applgrid-combine')
+        with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
+            all_jobs=dirf.readlines()
+        ngrids=len(all_jobs)
+        nobs  =len([name for name in os.listdir(pjoin(self.me_dir,'SubProcesses',all_jobs[0].rstrip())) \
+                        if name.endswith("_out.root")])
+        for obs in range(0,nobs):
+            gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
+            # combine APPLgrids from different channels for observable 'obs'
+            if self.run_card["iappl"] == "1":
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
+            elif self.run_card["iappl"] == "2":
+                unc2_inv=pow(cross/error,2)
+                unc2_inv_ngrids=pow(cross/error,2)*ngrids
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
+                for job in all_jobs:
+                    os.remove(pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_in.root"))
+            else:
+                raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
+            # after combining, delete the original grids
+            for ggdir in gdir:
+                os.remove(ggdir)
+
+        
+    def applgrid_distribute(self,options,mode,p_dirs):
+        """Distributes the APPLgrids ready to be filled by a second run of the code"""
+        # if no appl_start_grid argument given, guess it from the time stamps of the starting grid files
+        if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
+            gfiles=glob.glob(pjoin(self.me_dir, 'Events','*','aMCfast_obs_0_starting_grid.root'))
+            time_stamps={}
+            for root_file in gfiles:
+                time_stamps[root_file]=os.path.getmtime(root_file)
+            options['appl_start_grid']= \
+                max(time_stamps.iterkeys(), key=(lambda key: time_stamps[key])).split('/')[-2]
+            logger.info('No --appl_start_grid option given. Guessing that start grid from run "%s" should be used.' \
+                            % options['appl_start_grid'])
+
+        if 'appl_start_grid' in options.keys() and options['appl_start_grid']:
+            self.appl_start_grid = options['appl_start_grid']
+            start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_start_grid)
+            # check that this dir exists and at least one grid file is there
+            if not os.path.exists(pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root')):
+                raise self.InvalidCmd('APPLgrid file not found: %s' % \
+                                  pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root'))
+            else:
+                all_grids=[pjoin(start_grid_dir,name) for name in os.listdir(start_grid_dir) \
+                               if name.endswith("_starting_grid.root")]
+                nobs =len(all_grids)
+                gstring=" ".join(all_grids)
+        if not hasattr(self, 'appl_start_grid') or not self.appl_start_grid:
+            raise self.InvalidCmd('No APPLgrid name currently defined. Please provide this information.')             
+        if mode == 'NLO':
+            gdir='all_G'
+        elif mode == 'LO':
+            gdir='born_G'
+        #copy the grid to all relevant directories
+        for pdir in p_dirs:
+            g_dirs = [file for file in os.listdir(pjoin(self.me_dir,"SubProcesses",pdir)) \
+                      if file.startswith(gdir) and os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
+            for g_dir in g_dirs:
+                for grid in all_grids:
+                    obs=grid.split('_')[-3]
+                    files.cp(grid,pjoin(self.me_dir,"SubProcesses",pdir,g_dir,'grid_obs_'+obs+'_in.root'))
+
+
     def collect_log_files(self, folders, istep):
         """collect the log files and put them in a single, html-friendly file inside the run_...
         directory"""
@@ -1609,11 +1735,11 @@ Integrated cross-section
         proc_card_lines = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read().split('\n')
         process = ''
         for line in proc_card_lines:
-            if line.startswith('generate'):
-                process = line.replace('generate ', '')
+            if line.startswith('generate') or line.startswith('add process'):
+                process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
         lpp = {'0':'l', '1':'p', '-1':'pbar'}
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
-        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
+        (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
         
         # Gather some basic statistics for the run and extracted from the log files.
@@ -1651,11 +1777,11 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.' and int(self.run_card['ickkw']) != 4:
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.':
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.' and int(self.run_card['ickkw']) != 4:
                    message = message + \
                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -2151,7 +2277,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
+        if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') and int(self.run_card['ickkw']) != 4 :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton', update_results=True)
@@ -2160,8 +2286,10 @@ Integrated cross-section
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
                 stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
-        if event_norm == 'sum':
+        if event_norm.lower() == 'sum':
             p.communicate(input = '1\n')
+        elif event_norm.lower() == 'unity':
+            p.communicate(input = '3\n')
         else:
             p.communicate(input = '2\n')
 
@@ -2171,24 +2299,22 @@ Integrated cross-section
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created. Check collect_events.log')
-        evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
-        files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
-        misc.call(['gzip', evt_file])
+        evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+        misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
-        logger.info('The %s.gz file has been generated.\n' \
-                % (evt_file))
+        logger.info('The %s file has been generated.\n' % (evt_file))
         self.results.add_detail('nb_event', nevents)
         self.update_status('Events generated', level='parton', update_results=True)
-        return evt_file
+        return evt_file[:-3]
 
 
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
-        logger.info('Prepairing MCatNLO run')
-        try:
-            misc.call(['gunzip', evt_file])
+        logger.info('Preparing MCatNLO run')
+        try:     
+            misc.gunzip(evt_file)
         except Exception:
             pass
 
@@ -2265,6 +2391,9 @@ Integrated cross-section
         if shower == 'HERWIGPP':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
 
+        if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+            extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
+
         if 'LD_LIBRARY_PATH' in os.environ.keys():
             ldlibrarypath = os.environ['LD_LIBRARY_PATH']
         else:
@@ -2328,8 +2457,11 @@ Integrated cross-section
         # special treatment for pythia8
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
-            files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
-            files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
+            if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+                files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
+                files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
+            else:
+                files.ln(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -2412,6 +2544,14 @@ Integrated cross-section
             except OSError, IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
+
+            # run the plot creation in a secure way
+            if hep_format == 'StdHEP':
+                try:
+                    self.do_plot('%s -f' % self.run_name)
+                except Exception, error:
+                    logger.info("Fail to make the plot. Continue...")
+                    pass
 
         elif out_id == 'TOP':
             #copy the topdrawer file(s) back in events
@@ -2541,7 +2681,7 @@ Integrated cross-section
             shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
         # end of the run, gzip files and print out the message/warning
         for f in to_gzip:
-            misc.call(['gzip', f])
+            misc.gzip(f)
         if message:
             logger.info(message)
         if warning:
@@ -2655,15 +2795,6 @@ Integrated cross-section
             return 
         
         tag = self.run_card['run_tag']
-#        if 'pythia' in self.to_store:
-#            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
-#            os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
-#                  {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),
-#                   'tag':tag})
-#            os.system('gzip -f %s/%s_pythia_events.hep' % ( 
-#                                pjoin(self.me_dir,'Events',self.run_name), tag))
-#            self.to_store.remove('pythia')
-#            self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
 
@@ -2732,7 +2863,7 @@ Integrated cross-section
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
         #content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
-        content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+        #content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
         content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
         content += 'TWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 6).value
         content += 'ZMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 23).value
@@ -2772,21 +2903,56 @@ Integrated cross-section
             content += 'TAUMASS=%s\n' % new_mcmass_dict['mcmass(15)']
 
         content += 'GMASS=%s\n' % mcmass_dict[21]
-        content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
+        content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm').lower()
         # check if need to link lhapdf
-        if pdlabel == 'lhapdf':
+        if int(self.shower_card['pdfcode']) > 1 or \
+            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1): 
+            # Use LHAPDF (should be correctly installed, because
+            # either events were already generated with them, or the
+            # user explicitly gives an LHAPDF number in the
+            # shower_card).
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
             lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                          stdout = subprocess.PIPE).stdout.read().strip()
+                                          stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+            if self.shower_card['pdfcode']==1:
+                lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+                content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+            else:
+                lhaid_list = [abs(int(self.shower_card['pdfcode']))]
+                content += 'PDFCODE=%s\n' % self.shower_card['pdfcode']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+        elif int(self.shower_card['pdfcode'])==1:
+            # Try to use LHAPDF because user wants to use the same PDF
+            # as was used for the event generation. However, for the
+            # event generation, LHAPDF was not used, so non-trivial to
+            # see if if LHAPDF is available with the corresponding PDF
+            # set. If not found, give a warning and use build-in PDF
+            # set instead.
+            try:
+                lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
+                                              stdout = subprocess.PIPE).stdout.read().strip()
+                self.link_lhapdf(pjoin(self.me_dir, 'lib'))
+                content += 'LHAPDFPATH=%s\n' % lhapdfpath
+                pdfsetsdir = self.get_lhapdf_pdfsetsdir()
+                lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+                content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
+                self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+            except Exception:
+                logger.warning('Trying to shower events using the same PDF in the shower as used in the generation'+\
+                                   ' of the events using LHAPDF. However, no valid LHAPDF installation found with the'+\
+                                   ' needed PDF set. Will use default internal PDF for the shower instead. To use the'+\
+                                   ' same set as was used in the event generation install LHAPDF and set the path using'+\
+                                   ' "set /path_to_lhapdf/bin/lhapdf-config" from the MadGraph5_aMC@NLO python shell')
+                content += 'LHAPDFPATH=\n' 
+                content += 'PDFCODE=0\n'
         else:
-            #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
 
+        content += 'ICKKW=%s\n' % self.banner.get_detail('run_card', 'ickkw')
+        content += 'PTJCUT=%s\n' % self.banner.get_detail('run_card', 'ptj')
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
@@ -3031,6 +3197,8 @@ Integrated cross-section
         # then open the nevents_unweighted_splitted file and look for the 
         # number of splittings to be done
         nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
+        # This skips the channels with zero events, because they are
+        # not of the form GFXX_YY, but simply GFXX
         pattern = re.compile(r"%s_(\d+)/events.lhe" % \
                           pjoin(pdir, 'G%s%s' % (arg,channel)))
         matches = re.findall(pattern, nevents_file)
@@ -3073,26 +3241,30 @@ Integrated cross-section
             if os.path.exists(pdfinput):
                 input_files.append(pdfinput)
             input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
+            input_files.append(pjoin(cwd, os.path.pardir, 'leshouche_info.dat'))
             input_files.append(args[0])
             output_files.append('%s.rwgt' % os.path.basename(args[0]))
             output_files.append('reweight_xsec_events.output')
             output_files.append('scale_pdf_dependence.dat')
 
             return self.cluster.submit2(exe, args, cwd=cwd, 
-                             input_files=input_files, output_files=output_files) 
+                             input_files=input_files, output_files=output_files,
+                             required_output=output_files) 
 
         elif 'ajob' in exe:
             # the 'standard' amcatnlo job
             # check if args is a list of string 
             if type(args[0]) == str:
-                input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
+                input_files, output_files, required_output, args = self.getIO_ajob(exe,cwd, args)
                 #submitting
                 self.cluster.submit2(exe, args, cwd=cwd, 
-                             input_files=input_files, output_files=output_files)
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output)
 
                 # keep track of folders and arguments for splitted evt gen
-                if len(args) == 4 and '_' in output_files[-1]:
-                    self.split_folders[pjoin(cwd,output_files[-1])] = [exe] + args
+                subfolder=output_files[-1].split('/')[0]
+                if len(args) == 4 and '_' in subfolder:
+                    self.split_folders[pjoin(cwd,subfolder)] = [exe] + args
 
         elif 'shower' in exe:
             # a shower job
@@ -3105,7 +3277,10 @@ Integrated cross-section
                 input_files.append(pjoin(cwd, 'Pythia8.exe'))
                 input_files.append(pjoin(cwd, 'Pythia8.cmd'))
                 input_files.append(pjoin(cwd, 'config.sh'))
-                input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
+                if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+                    input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
+                else:
+                    input_files.append(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'))
             else:
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
@@ -3157,10 +3332,14 @@ Integrated cross-section
         
         keep_fourth_arg = False
         output_files = []
+        required_output = []
         input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
+                     pjoin(cwd, 'initial_states_map.dat'),
+                     pjoin(cwd, 'configs_and_props_info.dat'),
+                     pjoin(cwd, 'leshouche_info.dat'),
                      pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
@@ -3170,19 +3349,14 @@ Integrated cross-section
         if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
 
-        # LHAPDF dynamic libraries (needed for lhapdf6)
-        lhalibs = ['libLHAPDF.dylib', 'libLHAPDF.so'] 
-        for lib in [pjoin(self.me_dir, 'lib', l) for l in lhalibs \
-           if os.path.exists(pjoin(self.me_dir, 'lib', l))]:
-            input_files.append(lib)
-      
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
-            tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar'),'w',
-                                                               dereference=True)
-            tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
-            tf.close()
-            input_files.append(pjoin(cwd, 'MadLoop5_resources.tar'))
+            input_files.append(pjoin(cwd, 'MadLoop5_resources.tar.gz'))
+            if not os.path.exists(pjoin(cwd,'MadLoop5_resources.tar.gz')):
+                tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar.gz'),'w:gz',
+                                                                 dereference=True)
+                tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
+                tf.close()
 
         Ire = re.compile("for i in ([\d\s]*) ; do")
         try : 
@@ -3203,7 +3377,13 @@ Integrated cross-section
                 if os.path.exists(pjoin(cwd,current)):
                     input_files.append(pjoin(cwd, current))
                 output_files.append(current)
+
+                required_output.append('%s/results.dat' % current)
+                required_output.append('%s/log.txt' % current)
+                required_output.append('%s/mint_grids' % current)
+                required_output.append('%s/grid.MC_integer' % current)
                 if len(args) == 4:
+                    required_output.append('%s/scale_pdf_dependence.dat' % current)
                     args[2] = '-1'
                     # use a grid train on another part
                     base = '%s_G%s' % (args[3],i)
@@ -3213,6 +3393,9 @@ Integrated cross-section
                         to_move = ['mint_grids', 'grid.MC_integer']
                     else: 
                         to_move  = []
+                    if self.run_card['iappl'] =='2':
+                        for grid in glob.glob(pjoin(cwd,base,'grid_obs_*_in.root')):
+                            to_move.append(grid)
                     if not os.path.exists(pjoin(cwd,current)):
                         os.mkdir(pjoin(cwd,current))
                         input_files.append(pjoin(cwd, current))
@@ -3244,6 +3427,11 @@ Integrated cross-section
                     keep_fourth_arg = True
                     # this is for the split event generation
                     output_files.append('G%s%s_%s' % (args[1], i, args[3]))
+                required_output.append('%s/log_MINT%s.txt' % (current,args[2]))
+                if args[2] in ['0','1']:
+                    required_output.append('%s/results.dat' % current)
+                if args[2] == '1':
+                    output_files.append('%s/results.dat' % current)
 
         else:
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
@@ -3256,7 +3444,7 @@ Integrated cross-section
         if len(args) == 4 and not keep_fourth_arg:
             args = args[:3]
             
-        return input_files, output_files, args
+        return input_files, output_files, required_output,  args
             
     def write_madinMMC_file(self, path, run_mode, mint_mode):
         """writes the madinMMC_?.2 file"""
@@ -3393,6 +3581,41 @@ Integrated cross-section
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
+            except KeyError:
+                pass
+
+        # read the run_card to find if applgrid is used or not
+        if self.run_card['iappl'] != '0':
+            os.environ['applgrid'] = 'True'
+            # check versions of applgrid and amcfast
+            for code in ['applgrid','amcfast']:
+                try:
+                    p = subprocess.Popen([self.options[code], '--version'], \
+                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    output, error = p.communicate()
+                    if code is 'applgrid' and output < '1.4.63':
+                        raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
+                                                +' You are using %s',output)
+                    if code is 'amcfast' and output < '1.1.1':
+                        raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
+                                                +' You are using %s',output)
+                except Exception:
+                    raise aMCatNLOError(('No valid %s installation found. \n' + \
+                          'Please set the path to %s-config by using \n' + \
+                          'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+            # set-up the Source/make_opts with the correct applgrid-config file
+            appllibs="  APPLLIBS=$(shell %s --ldcflags) $(shell %s --ldflags) \n" \
+                             % (self.options['applgrid'],self.options['amcfast'])
+            text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
+            text_out=[]
+            for line in text:
+                if line.strip().startswith('APPLLIBS=$'):
+                    line=appllibs
+                text_out.append(line)
+            open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
+        else:
+            try:
+                del os.environ['applgrid']
             except KeyError:
                 pass
 
@@ -3870,7 +4093,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
                     logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
                     raise self.InvalidCmd(error)
-                elif self.run_card['parton_shower'].upper() != 'HERWIG6':
+                elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8':
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
                     answers = ['n','y']
@@ -3935,6 +4158,8 @@ _launch_parser.add_option("-o", "--only_generation", default=False, action='stor
                             "the last available results")
 _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
+_launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
+                            help="For use with APPLgrid only: start from existing grids")
 
 
 _generate_events_usage = "generate_events [MODE] [options]\n" + \
@@ -3985,6 +4210,11 @@ _calculate_xsect_parser.add_option("-x", "--nocompile", default=False, action='s
                             help="Skip compilation. Ignored if no executable is found")
 _calculate_xsect_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
+_calculate_xsect_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
+                            help="For use with APPLgrid only: start from existing grids")
+_calculate_xsect_parser.add_option("-o", "--only_generation", default=False, action='store_true',
+                            help="Skip grid set up, just generate events starting from " + \
+                            "the last available results")
 
 _shower_usage = 'shower run_name [options]\n' + \
         '-- do shower/hadronization on parton-level file generated for run run_name\n' + \

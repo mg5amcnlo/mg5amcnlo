@@ -209,25 +209,6 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
           self.runIOTests(verbose=False)
 
 #===============================================================================
-# IOTestMadLoopOutputFromInterface
-#===============================================================================
-class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
-    """Test MadLoop outputs when generated directly from the interface."""
-
-    @IOTests.createIOTest(groupName='MadLoop_output_from_the_interface')
-    def testIO_TIR_output(self):
-        """ target: [ggttx_IOTest/SubProcesses/(.*)\.f]
-        """
-        interface = MGCmd.MasterCmd()
-
-        def run_cmd(cmd):
-            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
-                               precmd=True, postcmd=True)
-
-        run_cmd('generate g g > t t~ [virt=QCD]')
-        interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))
-
-#===============================================================================
 # IOExportMadLoopUTest
 #===============================================================================
 class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
@@ -238,7 +219,7 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
     def setUp(self):
        """Loading the different writers, exporters and model used for these
        IOTests"""
-       
+
        if not hasattr(self, 'model'):
            self.model=import_ufo.import_model('loop_qcd_qed_sm-full')
            

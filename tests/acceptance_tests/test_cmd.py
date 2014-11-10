@@ -170,7 +170,9 @@ class TestCmdShell1(unittest.TestCase):
                     'syscalc_path':'./SysCalc',
                     'hepmc_path': './hepmc',
                     'hwpp_path': './herwigPP',
-                    'thepeg_path': './thepeg'
+                    'thepeg_path': './thepeg',
+                    'amcfast': 'amcfast-config',
+                    'applgrid': 'applgrid-config'
                     }
 
         self.assertEqual(config, expected)
@@ -561,7 +563,52 @@ class TestCmdShell2(unittest.TestCase,
         self.assertAlmostEqual(float(me_groups.group('value')), 5.8183784340260782)
     
     
-     
+    def test_standalone_cpp_output_consistency(self):
+        """test that standalone cpp is working"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        #step 0 cpp output
+        self.do('generate p p > t t~, t > b mu+ vm, t~ > b~ mu- vm~')
+        self.do('output standalone_cpp %s ' % self.out_dir)
+        devnull = open(os.devnull,'w')
+    
+        directories= ['P0_Sigma_sm_gg_bmupvmbxmumvmx', 'P0_Sigma_sm_uux_bmupvmbxmumvmx']
+        def get_values():
+            values = []
+            for oneproc in directories:
+                logfile = os.path.join(self.out_dir,'SubProcesses', oneproc,
+                                       'check.log')
+                # Check that check_sa.cc compiles
+                subprocess.call(['make'],
+                                stdout=devnull, stderr=devnull, 
+                                cwd=os.path.join(self.out_dir, 'SubProcesses', oneproc))
+                
+                subprocess.call('./check', 
+                                stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                                cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                 oneproc), shell=True)
+            
+                log_output = open(logfile, 'r').read()
+                me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                                   re.IGNORECASE)
+                me_groups = me_re.search(log_output)
+                self.assertTrue(me_groups)
+                values.append(float(me_groups.group('value')))
+            return values
+        original = get_values()
+        #step 1 standalone output
+        shutil.rmtree(self.out_dir)
+        self.do('output standalone %s -f' % self.out_dir)
+        shutil.rmtree(self.out_dir)            
+        self.do('output standalone_cpp %s -f' % self.out_dir)     
+        new = get_values()
+        
+        for i,_ in enumerate(original):
+            self.assertEqual(original[i], new[i])
+
+         
         
     def test_v4_heft(self):
         """Test standalone directory for UFO HEFT model"""

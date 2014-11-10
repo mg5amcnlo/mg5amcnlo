@@ -49,6 +49,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
+from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
 
 import madgraph.various.banner as banner_mod
 
@@ -200,6 +201,12 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
     madloop_makefile_name = 'makefile'
 
+    MadLoop_banner = MadLoopBannerStyles.get_MadLoop_Banner(
+               style='classic2', color='green', 
+               top_frame_char = '=', bottom_frame_char = '=',
+               left_frame_char = '{',right_frame_char = '}',
+               print_frame=True, side_margin = 7, up_margin = 1)
+
     def copy_v4template(self, modelname = ''):
         """Additional actions needed to setup the Template.
         """
@@ -212,8 +219,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         up the template with the copy_v4template function."""
 
         # We must change some files to their version for NLO computations
-        cpfiles= ["SubProcesses/MadLoopCommons.f",
-                  "Cards/MadLoopParams.dat",
+        cpfiles= ["Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParamReader.f",
                   "SubProcesses/MadLoopParams.inc"]
         if copy_Source_makefile:
@@ -243,6 +249,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         calls = self.write_loop_makefile_definitions(
                         writers.MakefileWriter(filePath),link_tir_libs,tir_libs)
 
+            
+        # We need minimal editing of MadLoopCommons.f
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
+        writer.close()
+        
+        
         # Copy the whole MadLoop5_resources directory (empty at this stage)
         if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
                                                         'MadLoop5_resources')):
@@ -1541,7 +1558,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
                             golem_include = '<Not_found_define_it_yourself>'                
-                        tir_include.append('-I %s'%str(golem_include))                
+                        tir_include.append('-I %s'%str(golem_include))
+                        # To be able to easily compile a MadLoop library using
+                        # makefiles built outside of the MG5_aMC framework
+                        # (such as what is done with the Sherpa interface), we
+                        # place here an easy handle on the golem includes
+                        ln(golem_include, starting_dir=pjoin(self.dir_path,'lib'),
+                                            name='golem95_include',abspath=True)
+                        
                 else :
                     link_tir_libs.append('-l%s'%tir)
                     tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
@@ -1938,7 +1962,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         mp_routine = mp_routine % replace_dict
         subroutines.append(dp_routine)
         subroutines.append(mp_routine)        
-        
+
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
                                          matrix_element.get_max_loop_rank(),
@@ -2866,3 +2890,4 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
             ret_lines.append(line)
 
         return len(matrix_element.get('diagrams')), ret_lines
+

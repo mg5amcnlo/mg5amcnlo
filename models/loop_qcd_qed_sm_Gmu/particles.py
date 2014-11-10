@@ -365,7 +365,7 @@ G__minus__ = G__plus__.anti()
 b.loop_particles = [[[5,21]]]
 b.counterterm = {(1,0,0):CTParam.bWcft_UV.value}
 
-t.loop_particles = [[[6,21]],[[6,22]]]
+t.loop_particles = [[[6,21]]]
 t.counterterm = {(1,0,0):CTParam.tWcft_UV.value}
 
 G.loop_particles = [[[4]],[[6]]]
@@ -374,7 +374,7 @@ G.counterterm = {(1,0,0):CTParam.GWcft_UV_b.value,(1,0,1):CTParam.GWcft_UV_t.val
 Param.MB.loop_particles= [[[5,21]]]
 Param.MB.counterterm = {(1,0,0):CTParam.bMass_UV.value}
 
-Param.MT.loop_particles= [[[6,21]],[[6,22]]]
+Param.MT.loop_particles= [[[6,21]]]
 Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}
 
 Param.G.loop_particles = [[[1],[2],[3],[4]],[[5]],[[6]],[[21]]],

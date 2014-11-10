@@ -63,38 +63,30 @@ C     when creating the BLHA2 dynamic library
 C     Try to automatically find the path
           prefix='./'
           call joinPath(prefix,nameToCheck,fpath)
-          OPEN(1, FILE=fpath, ERR=1, STATUS='OLD',      
-     $    ACTION='READ')
+          OPEN(1, FILE=fpath, ERR=1, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
 1         continue
           close(1)
           prefix='./MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-          OPEN(1, FILE=fpath, ERR=2, STATUS='OLD',      
-     $    ACTION='READ')
+          OPEN(1, FILE=fpath, ERR=2, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
 2         continue
           close(1)
           prefix='../MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-          OPEN(1, FILE=fpath, ERR=66, STATUS='OLD',      
-     $    ACTION='READ')
+          OPEN(1, FILE=fpath, ERR=66, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
 66        continue
           close(1)
 c     We could not automatically find the auxiliary files
           write(*,*) '==='
-          write(*,*) 'ERROR: MadLoop5 could not automatically find',
-     $    ' the file MadLoopParams.dat.'
+          write(*,*) 'ERROR: MadLoop5 could not automatically find the file MadLoopParams.dat.'
           write(*,*) '==='
-          write(*,*) '(Try using <CALL setMadLoopPath(/my/path)>',
-     $    ' (before your first call to MadLoop) in order to',
-     $    ' set the directory where this file is located as well as',
-     $    ' other auxiliary files, such as <xxx>_ColorNumFactors.dat',
-     $    ', <xxx>_ColorDenomFactors.dat, etc..)'
+          write(*,*) '(Try using <CALL setMadLoopPath(/my/path)> (before your first call to MadLoop) in order to set the directory where this file is located as well as  other auxiliary files, such as <xxx>_ColorNumFactors.dat, <xxx>_ColorDenomFactors.dat, etc..)'
           stop
 10        continue
           close(1)
@@ -115,14 +107,12 @@ C     Make sure there is a separator added
 
 C     Check that the FilePath set is correct
       call joinPath(MLPath,nameToCheck,fpath)
-      OPEN(1, FILE=fpath, ERR=3, STATUS='OLD',      
-     $ACTION='READ')
+      OPEN(1, FILE=fpath, ERR=3, STATUS='OLD',ACTION='READ')
       goto 11
 3     continue
       close(1)
       write(*,*) '==='
-      write(*,*) 'ERROR: The MadLoop5 auxiliary files could not',
-     $' be found in ',MLPath
+      write(*,*) 'ERROR: The MadLoop5 auxiliary files could not be found in ',MLPath
       write(*,*) '==='
       stop
 11    continue
@@ -185,8 +175,7 @@ C
       ENDIF
       END
 
-      SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,
-     $     LPASS)
+      SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,LPASS)
 C
 C DETECT WHICH LOOP LIB PASSED
 C
@@ -276,8 +265,7 @@ C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE.LT.RANK.OR.RANK.GT.5
-     $.OR.NLOOPLINE.GT.5.OR.complex_mass.OR.NLOOPLINE.eq.1) THEN
+      IF(NLOOPLINE.LT.RANK.OR.RANK.GT.5.OR.NLOOPLINE.GT.5.OR.complex_mass.OR.NLOOPLINE.eq.1) THEN
         LPASS=.FALSE.
       ENDIF
       RETURN
@@ -306,7 +294,7 @@ C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.8.OR.RANK.GE.7)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.7.OR.RANK.GE.7)LPASS=.FALSE.
       RETURN
       END
 
@@ -432,4 +420,11 @@ C     arrays since these are not the most optimized sorting algorithms.
          Median = Temp(N/2+1)
       END IF
       END FUNCTION  Median
+
+
+      SUBROUTINE PRINT_MADLOOP_BANNER()
+
+      %(print_banner_commands)s
+
+      END
 

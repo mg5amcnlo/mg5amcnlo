@@ -2404,7 +2404,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
-                     'update', 'Delphes2', 'SysCalc']
+                     'update', 'Delphes2', 'SysCalc', 'Golem95']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
@@ -2449,6 +2449,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'pjfry':'auto',
                        'golem':'auto',
                        'lhapdf':'lhapdf-config',
+                       'applgrid':'applgrid-config',
+                       'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
@@ -3522,7 +3524,7 @@ This implies that with decay chains:
         # If it turns out there is no perturbation order then we will use these orders
         # for the regular orders.
         squared_order_pattern = re.compile(\
-            "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+            "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
                     "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
         squared_order_re = squared_order_pattern.match(line)
         squared_orders = {}
@@ -3543,7 +3545,7 @@ This implies that with decay chains:
 
         # Now check for perturbation orders, specified in between squared brackets
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
+          re.compile("^(?P<proc>.+>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
                                "(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings = ""
@@ -3598,7 +3600,7 @@ This implies that with decay chains:
             # Notice that one can have a negative value of the squared order to
             # indicate that one should take the N^{n}LO contribution into account.
             order_pattern = re.compile(\
-           "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+           "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
                     "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
             order_re = order_pattern.match(line)
             while order_re:
@@ -4510,7 +4512,7 @@ This implies that with decay chains:
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
-                'SysCalc':'SysCalc'}
+                'SysCalc':'SysCalc', 'Golem95': 'golem95'}
         name = name[args[0]]
 
 
@@ -4574,13 +4576,19 @@ This implies that with decay chains:
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
             elif args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
-
             if path:
                 text = open(path).read()
                 for base in base_compiler:
                     text = text.replace(base,'FC=%s' % compiler)
                 open(path, 'w').writelines(text)
             os.environ['FC'] = compiler
+        
+        # For Golem95, use autotools.
+        if name == 'golem95':
+            # Run the configure script
+            ld_path = misc.Popen(['./configure', 
+            '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
+            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0]
 
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
@@ -4592,7 +4600,7 @@ This implies that with decay chains:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
                 elif not os.environ['LD_LIBRARY_PATH']:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
-                elif 1:#ld_path not in os.environ['LD_LIBRARY_PATH']:
+                elif ld_path not in os.environ['LD_LIBRARY_PATH']:
                     os.environ['LD_LIBRARY_PATH'] += ';%s' % ld_path
             else:
                 raise self.InvalidCmd('lhapdf is required to compile/use SysCalc')
@@ -4606,7 +4614,11 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
+            if name == 'golem95':
+                status = misc.call(['make','install'], 
+                                               cwd = os.path.join(MG5DIR, name))
+            else:
+                status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -4615,7 +4627,11 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            if name == 'golem95':
+                status = misc.compile(['install'], mode='', 
+                                          cwd = os.path.join(MG5DIR, name))
+            else:
+                status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
 
         if not status:
             logger.info('Compilation succeeded')
@@ -4680,7 +4696,7 @@ This implies that with decay chains:
             out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
             out.write(data)
         if args[0] == 'Delphes3':
-            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS_PileUp.tcl'),
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))
             files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_CMS.dat'))
@@ -4695,11 +4711,15 @@ This implies that with decay chains:
                            'ExRootAnalysis': 'exrootanalysis_path',
                            'MadAnalysis': 'madanalysis_path',
                            'SysCalc': 'syscalc_path',
-                           'pythia-pgs':'pythia-pgs_path'}
+                           'pythia-pgs':'pythia-pgs_path',
+                           'Golem95': 'golem'}
 
         if args[0] in options_name:
             opt = options_name[args[0]]
-            if self.options[opt] != self.options_configuration[opt]:
+            if opt=='golem':
+                self.options[opt] = pjoin(MG5DIR,name,'lib') 
+                self.exec_cmd('save options')
+            elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options')
 
@@ -4838,6 +4858,12 @@ This implies that with decay chains:
             for new, old in pattern.findall(text):
                     if not os.path.exists(pjoin(MG5DIR, new)):
                         files.ln(old, os.path.dirname(new), os.path.basename(new))
+
+            # Re-compile CutTools and IREGI
+            if os.path.isfile(pjoin(MG5DIR,'vendor','CutTools','includects','libcts.a')):
+                misc.compile(cwd=pjoin(MG5DIR,'vendor','CutTools'))
+            if os.path.isfile(pjoin(MG5DIR,'vendor','IREGI','src','libiregi.a')):
+                misc.compile(cwd=pjoin(MG5DIR,'vendor','IREGI','src'))
 
             # check if it need to download binary:
             pattern = re.compile("""^Binary files old/(\S*).*and new/(\S*).*$""", re.M)
@@ -5126,7 +5152,12 @@ This implies that with decay chains:
                         logger.info('Using %s library in %s'%(key,fpath))
                         self.options[key]=fpath
                     else:
-                        self.options[key]=None
+                        # Try to look for it locally
+                        local_install = {'pjfry':'PJFRY', 'golem':'golem95'}
+                        if os.path.isdir(pjoin(MG5DIR,local_install[key])):
+                            self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
+                        else:
+                            self.options[key]=None
 
             elif key.endswith('path'):
                 pass
@@ -6385,6 +6416,13 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
 
         for pid in particles:
             width = param['decay'].get((pid,)).value
+            particle = self._curr_model.get_particle(pid) 
+            #if particle['color'] !=1 and 0 < width.real < 0.1:
+            #    logger.warning("width of colored particle \"%s(%s)\" lower than QCD scale: %s. Set width to zero "
+            #                   % (particle.get('name'), pid, width.real))
+            #    width = 0
+                
+            
             if not pid in param['decay'].decay_table:
                 continue
             if pid not in decay_info:
@@ -6392,6 +6430,12 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             for BR in param['decay'].decay_table[pid]:
                 if len(BR.lhacode) == 3 and skip_2body:
                     continue
+                if BR.value * width <0.1 and particle['color'] !=1:
+                    logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
+                                   % (particle.get('name'), BR.value * width, BR.lhacode[1:]))
+                                     
+                    continue
+                
                 decay_info[pid].append([BR.lhacode[1:], BR.value * width])
 
         madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,

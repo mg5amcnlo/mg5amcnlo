@@ -80,11 +80,11 @@ class gen_ximprove(object):
         if "nhel_refine" in run_card:
             self.nhel = run_card["nhel_refine"]
         
-        if int(self.nhel) == 1:
-            # increase min/max event for MC over helicities
-            misc.sprint("due to MC overhelicities increase event by %s" % 2**(self.cmd.proc_characteristics['nexternal']//3))
-            self.min_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//3)
-            self.max_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//2)
+        #if int(self.nhel) == 1:
+        #    # increase min/max event for MC over helicities
+        #    misc.sprint("due to MC overhelicities increase event by %s" % 2**(self.cmd.proc_characteristics['nexternal']//3))
+        #    self.min_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//3)
+        #    self.max_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//2)
             
         # Default option for the run
         self.gen_events = True

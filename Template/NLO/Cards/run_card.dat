@@ -21,7 +21,7 @@
 #***********************************************************************
   tag_1     = run_tag ! name of the run 
 #***********************************************************************
-# Number of events (and their normalization) and the required          *
+# Number of LHE events (and their normalization) and the required      *
 # (relative) accuracy on the Xsec.                                     *
 # These values are ignored for fixed order runs                        *
 #***********************************************************************
@@ -29,7 +29,11 @@
     -1 = req_acc ! Required accuracy (-1=auto determined from nevents)
     -1 = nevt_job! Max number of events per job in event generation. 
                  !  (-1= no split).
-average = event_norm ! Normalize events to sum or average to the X sect.
+#***********************************************************************
+# Normalize the weights of LHE events such that they sum or average to *
+# the total cross section                                              *
+#***********************************************************************
+ average = event_norm      ! average or sum
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
@@ -54,8 +58,8 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
- nn23nlo   = pdlabel   ! PDF set                                     
- 230000    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
+ nn23nlo   = pdlabel   ! PDF set
+ 244600    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
 # shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *
@@ -93,14 +97,14 @@ average = event_norm ! Normalize events to sum or average to the X sect.
   0.5     = rw_Fscale_down   ! lower bound for fact scale variations
   2.0     = rw_Fscale_up     ! upper bound for fact scale variations
  .false.  = reweight_PDF     ! reweight to get PDF uncertainty
- 230001   = PDF_set_min      ! First of the error PDF sets 
- 230100   = PDF_set_max      ! Last of the error PDF sets
+ 244601   = PDF_set_min      ! First of the error PDF sets 
+ 244700   = PDF_set_max      ! Last of the error PDF sets
 #***********************************************************************
 # Merging - WARNING! Applies merging only at the hard-event level.     *
 # After showering an MLM-type merging should be applied as well.       *
 # See http://amcatnlo.cern.ch/FxFx_merging.htm for more details.       *
 #***********************************************************************
- 0        = ickkw            ! 0 no merging, 3 FxFx merging
+ 0        = ickkw            ! 0 no merging, 3 FxFx merging, 4 UNLOPS
 #***********************************************************************
 #
 #***********************************************************************
@@ -143,4 +147,8 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 # At least all massless quarks of the model should be included here.   *
 #***********************************************************************
  4 = maxjetflavor
+#***********************************************************************
+# For aMCfast+APPLGRID use in PDF fitting (http://amcfast.hepforge.org)*
+#***********************************************************************
+ 0 = iappl   ! aMCfast switch (0=OFF, 1=prepare APPLgrids, 2=fill grids)
 #***********************************************************************

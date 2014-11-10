@@ -72,7 +72,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         'BW_cut':-1,
                         'nb_sigma':0,
                         'ms_dir':None,
-                        'max_running_process':100}
+                        'max_running_process':100,
+                        'onlyhelicity': False}
         
 
         
@@ -116,7 +117,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 raise self.InvalidCmd('No such file or directory : %s' % inputfile)
         
         if inputfile.endswith('.gz'):
-            misc.call(['gunzip', inputfile])
+            misc.gunzip(inputfile)
             inputfile = inputfile[:-3]
 
         # Read the banner of the inputfile
@@ -333,6 +334,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.seed = int(args[1])
         elif args[0] == 'BW_cut':
             self.options[args[0]] = float(args[1])
+        elif args[0] == 'onlyhelicity':
+            self.options['onlyhelicity'] = True
         else:
             self.options[args[0]] = int(args[1])
     
@@ -396,7 +399,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     def check_launch(self, args):
         """check the validity of the launch command"""
         
-        if not self.list_branches:
+        if not self.list_branches and not self.options['onlyhelicity']:
             raise self.InvalidCmd("Nothing to decay ... Please specify some decay")
         if not self.events_file:
             raise self.InvalidCmd("No events files defined.")
@@ -429,9 +432,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             pid = self.mg5cmd._curr_model.get('name2pdg')[part]
             if pid in self.final_state:
                 break
-        else:
-            logger.info("Nothing to decay ...")
-            return
+#        else:
+#            logger.info("Nothing to decay ...")
+#            return
         
 
         model_line = self.banner.get('proc_card', 'full_model_line')
@@ -465,10 +468,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.events_file.close()
         except:
             pass
-        misc.call(['gzip -f %s' % evt_path], shell=True)
+        misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        shutil.move(pjoin(self.options['curr_dir'],'decayed_events.lhe'), decayed_evt_file)
-        misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
+        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+                  stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
 
@@ -546,10 +549,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.events_file.close()
         except:
             pass
-        misc.call(['gzip -f %s' % evt_path], shell=True)
+        misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        shutil.move(pjoin(self.options['curr_dir'],'decayed_events.lhe'), decayed_evt_file)
-        misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
+        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+                  stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
     

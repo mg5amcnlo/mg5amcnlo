@@ -5,18 +5,12 @@ else
 endif
 
 
-if [ -a ../../Source/make_opts]; then ROOT = ../..; fi;
-
-if [ -a ../Source/make_opts]; then ROOT = ../; fi;
-
-PROG   = check
-all : $(PROG)
-
 include $(ROOT)/Source/make_opts
 include $(ROOT)/SubProcesses/MadLoop_makefile_definitions
 
 LIBDIR = $(ROOT)/lib/
 PROG   = check
+all : $(PROG)
 OLP    = OLP
 STABCHECKDRIVER = StabilityCheckDriver
 CHECK_SA_BORN_SPLITORDERS = check_sa_born_splitOrders

@@ -382,7 +382,7 @@ c      pm1=max(p1(0)**2-p1(1)**2-p1(2)**2-p1(3)**2,0d0)
       if ((lpp(1).eq.0).and.(lpp(2).eq.0)) then
 c        write(*,*) 'kin_functions.f: Error. No jet measure w.r.t. beam.'
 c        djb = 0d0
-         djb=max(p1(0),0d0)
+         djb=max(p1(0),0d0)**2
       else
         djb = (p1(0)-p1(3))*(p1(0)+p1(3)) ! p1(1)**2+p1(2)**2+pm1
 c        djb = p1(1)**2+p1(2)**2+p1(4)

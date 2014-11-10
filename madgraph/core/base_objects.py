@@ -485,9 +485,9 @@ class ParticleList(PhysicsObjectList):
         part = self.find_name(name)
         if not part:
             # Then try to look for a particle with that PDG
-            if name.isdigit():
+            try:
                 pdg = int(name)
-            else:
+            except ValueError:
                 return None
 
             for p in self:

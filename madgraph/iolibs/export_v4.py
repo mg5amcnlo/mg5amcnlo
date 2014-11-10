@@ -17,6 +17,7 @@
 import copy
 from cStringIO import StringIO
 from distutils import dir_util
+import itertools
 import fractions
 import glob
 import logging
@@ -1731,20 +1732,32 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         if self.opt['sa_symmetry']:
             # avoid symmetric output
-            for proc in matrix_element.get('processes'):
+            for i,proc in enumerate(matrix_element.get('processes')):
+                        
+                initial = []    #filled in the next line
+                final = [l.get('id') for l in proc.get('legs')\
+                      if l.get('state') or initial.append(l.get('id'))]
+                decay_finals = proc.get_final_ids_after_decay()
+                decay_finals.sort()
+                tag = (tuple(initial), tuple(decay_finals))
+                legs = proc.get('legs')[:]
                 leg0 = proc.get('legs')[0]
                 leg1 = proc.get('legs')[1]
                 if not leg1.get('state'):
                     proc.get('legs')[0] = leg1
                     proc.get('legs')[1] = leg0
-                    dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
-                           "P%s" % proc.shell_string())
-                    #restore original order
-                    proc.get('legs')[1] = leg1
-                    proc.get('legs')[0] = leg0                
-                    if os.path.exists(dirpath2):
-                        logger.info('Symmetric directory exists')
-                        return 0
+                    flegs = proc.get('legs')[2:]
+                    for perm in itertools.permutations(flegs):
+                        for i,p in enumerate(perm):
+                            proc.get('legs')[i+2] = p
+                        dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
+                               "P%s" % proc.shell_string())
+                        #restore original order
+                        proc.get('legs')[2:] = legs[2:]              
+                        if os.path.exists(dirpath2):
+                            proc.get('legs')[:] = legs
+                            return 0
+                proc.get('legs')[:] = legs
 
         try:
             os.mkdir(dirpath)
@@ -1873,6 +1886,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract version number and date from VERSION file
@@ -2468,6 +2482,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract JAMP lines
@@ -3179,9 +3194,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         #os.chdir(os.path.pardir)
 
         obj = gen_infohtml.make_info_html(self.dir_path)
-        [mv(name, './HTML/') for name in os.listdir('.') if \
-                            (name.endswith('.html') or name.endswith('.jpg')) and \
-                            name != 'index.html']               
+              
         if online:
             nb_channel = obj.rep_rule['nb_gen_diag']
             open(pjoin(self.dir_path, 'Online'),'w').write(str(nb_channel))
@@ -3239,6 +3252,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
 
@@ -4775,13 +4789,11 @@ class UFO_model_to_mg4(object):
                  
                 double complex gal(2)
                 common/weak/ gal
-
-                """        
-        header=header+"""double precision MU_R
+                
+                double precision MU_R
                 common/rscale/ MU_R
 
-                """
-        header = header+"""double precision Nf
+                double precision Nf
                 parameter(Nf=%d)
                 """ % self.model.get_nflav()
                 
@@ -4793,12 +4805,15 @@ class UFO_model_to_mg4(object):
                      
                     %(complex_mp_format)s %(mp_prefix)sgal(2)
                     common/MP_weak/ %(mp_prefix)sgal
-    
-                    """        
-            header=header+"""%(complex_mp_format)s %(mp_prefix)sMU_R
+                    
+                    %(complex_mp_format)s %(mp_prefix)sMU_R
                     common/MP_rscale/ %(mp_prefix)sMU_R
-    
-                    """            
+
+                """
+
+
+
+
             mp_fsock.writelines(header%{'real_mp_format':self.mp_real_format,
                                   'complex_mp_format':self.mp_complex_format,
                                   'mp_prefix':self.mp_prefix})
@@ -5315,6 +5330,58 @@ class UFO_model_to_mg4(object):
             input = pjoin(model_path,'Fortran','functions.f')
             file.writelines(fsock, open(input).read())
             fsock.write_comment_line(' END USER DEFINE FUNCTIONS ')
+            
+        # check for functions define in the UFO model
+        ufo_fct = self.model.get('functions')
+        if ufo_fct:
+            fsock.write_comment_line(' START UFO DEFINE FUNCTIONS ')
+            for fct in ufo_fct:
+                # already handle by default
+                if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
+                                    "theta_function", "cond", "reglog", "arg"]:
+                    ufo_fct_template = """
+          double complex function %(name)s(%(args)s)
+          implicit none
+          double complex %(args)s
+          %(name)s = %(fct)s
+
+          return
+          end
+          """
+                    text = ufo_fct_template % {
+                                'name': fct.name,
+                                'args': ", ".join(fct.arguments),                
+                                'fct': self.p_to_f.parse(fct.expr)
+                                 }
+                    fsock.writelines(text)
+            if self.opt['mp']:
+                fsock.write_comment_line(' START UFO DEFINE FUNCTIONS FOR MP')
+                for fct in ufo_fct:
+                    # already handle by default
+                    if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
+                                        "theta_function", "cond", "reglog", "arg"]:
+                        ufo_fct_template = """
+          %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
+          implicit none
+          %(complex_mp_format)s mp__%(args)s
+          mp__%(name)s = %(fct)s
+
+          return
+          end
+          """
+                        text = ufo_fct_template % {
+                                'name': fct.name,
+                                'args': ", mp__".join(fct.arguments),                
+                                'fct': self.mp_p_to_f.parse(fct.expr),
+                                'complex_mp_format': self.mp_complex_format
+                                 }
+                        fsock.writelines(text)
+
+
+                    
+            fsock.write_comment_line(' STOP UFO DEFINE FUNCTIONS ')                    
+
+        
 
     def create_makeinc(self):
         """create makeinc.inc containing the file to compile """

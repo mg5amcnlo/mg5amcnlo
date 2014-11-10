@@ -151,12 +151,18 @@ def import_full_model(model_path, decay=False, prefix=''):
         
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
-                       'particles.py', 'vertices.py']
+                       'particles.py', 'vertices.py', 'function_library.py',
+                       'propagators.py' ]
+    
+    if decay:
+        files_list_prov.append('decays.py')    
+    
     files_list = []
     for filename in files_list_prov:
         filepath = os.path.join(model_path, filename)
         if not os.path.isfile(filepath):
-            raise UFOImportError,  "%s directory is not a valid UFO model: \n %s is missing" % \
+            if filename not in ['propagators.py', 'decays.py']:
+                raise UFOImportError,  "%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename)
         files_list.append(filepath)
     
@@ -1327,7 +1333,7 @@ class RestrictModel(model_reader.ModelReader):
                 null_parameters.append(name)
             elif value == 1:
                 one_parameters.append(name)
-                
+        
         return null_parameters, one_parameters
     
     def detect_identical_parameters(self):
@@ -1572,9 +1578,9 @@ class RestrictModel(model_reader.ModelReader):
                           '|'.join(special_parameters[split:])]
             else:
                 re_str = [ re_str ]
+            used = set()
             for expr in re_str:
                 re_pat = re.compile(r'''\b(%s)\b''' % expr)
-                used = set()
                 # check in coupling
                 for name, coupling_list in self['couplings'].items():
                     for coupling in coupling_list:

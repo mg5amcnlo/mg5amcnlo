@@ -3681,7 +3681,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         return helas_diagrams
 
-    
+    def restore_original_wavefunctions(self):
+        """This restore the original memory print and revert
+           change the wavefunctions id used in the writer to minimize the 
+           memory used by the wavefunctions."""
+        
+        helas_diagrams = self.get('diagrams')
+        
+        for diag in helas_diagrams:
+            for wf in diag['wavefunctions']:
+                wf.set('me_id',wf.get('number'))
+        
+        return helas_diagrams
+
+
     def insert_decay_chains(self, decay_dict):
         """Iteratively insert decay chains decays into this matrix
         element.        

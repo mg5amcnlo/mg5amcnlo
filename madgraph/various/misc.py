@@ -26,6 +26,7 @@ import sys
 import optparse
 import time
 import shutil
+import gzip as ziplib
 
 try:
     # Use in MadGraph
@@ -166,34 +167,6 @@ def which(program):
             if is_exe(exe_file):
                 return exe_file
     return None
-#===============================================================================
-# find a library
-#===============================================================================
-def which_lib(program):
-    def is_lib(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.R_OK)
-
-    if not program:
-        return None
-
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_lib(program):
-            return program
-    else:
-        if "LD_LIBRARY_PATH" in os.environ:
-            ev_path="LD_LIBRARY_PATH"
-        elif "PATH" in os.environ:
-            ev_path="PATH"
-        else:
-            ev_path=None
-        if ev_path !=None:
-            for path in os.environ[ev_path].split(os.pathsep):
-                lib_file = os.path.join(path, program)
-                if is_lib(lib_file):
-                    return lib_file
-    return None
-
 
 #===============================================================================
 # find a library
@@ -725,7 +698,61 @@ class TMP_directory(object):
         
     def __enter__(self):
         return self.path
+#
+# GUNZIP/GZIP
+#
+def gunzip(path, keep=False, stdout=None):
+    """ a standard replacement for os.system('gunzip -f %s.gz ' % event_path)"""
 
+    if not path.endswith(".gz"):
+        if os.path.exists("%s.gz" % path):
+            path = "%s.gz" % path
+        else:
+            raise Exception, "%(path)s does not finish by .gz and the file %(path)s.gz does not exists" %\
+                              {"path": path}         
+
+    
+    #for large file (>1G) it is faster and safer to use a separate thread
+    if os.path.getsize(path) > 1e8:
+        if stdout:
+            os.system('gunzip -c %s > %s' % (path, stdout))
+        else:
+            os.system('gunzip  %s') 
+        return
+    
+    if not stdout:
+        stdout = path[:-3]        
+    open(stdout,'w').write(ziplib.open(path, "r").read())
+    if not keep:
+        os.remove(path)
+
+def gzip(path, stdout=None, error=True, forceexternal=False):
+    """ a standard replacement for os.system('gzip %s ' % path)"""
+
+
+    
+    #for large file (>1G) it is faster and safer to use a separate thread
+    if os.path.getsize(path) > 1e9:
+        call(['gzip', '-f', path])
+        if stdout:
+            shutil.move('%s.gz' % path, stdout)
+        return
+    
+    if not stdout:
+        stdout = "%s.gz" % path
+    elif not stdout.endswith(".gz"):
+        stdout = "%s.gz" % stdout
+
+    try:
+        ziplib.open(stdout,"w").write(open(path).read())
+    except OverflowError:
+        gzip(path, stdout, error=error, forceexternal=True)
+    except Exception:
+        if error:
+            raise
+    else:
+        os.remove(path)
+    
 #
 # Global function to open supported file types
 #
