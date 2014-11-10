@@ -26,6 +26,7 @@ import sys
 import optparse
 import time
 import shutil
+import gzip as ziplib
 
 try:
     # Use in MadGraph
@@ -129,11 +130,29 @@ def get_time_info():
     return time_info
 
 #===============================================================================
+# Find the subdirectory which includes the files ending with a given extension 
+#===============================================================================
+def find_includes_path(start_path, extension):
+    """Browse the subdirectories of the path 'start_path' and returns the first
+    one found which contains at least one file ending with the string extension
+    given in argument."""
+    
+    subdirs=[pjoin(start_path,dir) for dir in os.listdir(start_path)]
+    for subdir in subdirs:
+        if os.path.isfile(subdir):
+            if os.path.basename(subdir).endswith(extension):
+                return start_path
+        elif os.path.isdir(subdir):
+            return find_includes_path(subdir, extension)
+    return None
+
+#===============================================================================
 # find a executable
 #===============================================================================
 def which(program):
     def is_exe(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+        return os.path.exists(fpath) and os.access(\
+                                               os.path.realpath(fpath), os.X_OK)
 
     if not program:
         return None
@@ -289,7 +308,6 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         error_text += 'Please try to fix this compilations issue and retry.\n'
         error_text += 'Help might be found at https://answers.launchpad.net/madgraph5.\n'
         error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
-
         raise MadGraph5Error, error_text
     return p.returncode
 
@@ -680,7 +698,61 @@ class TMP_directory(object):
         
     def __enter__(self):
         return self.path
+#
+# GUNZIP/GZIP
+#
+def gunzip(path, keep=False, stdout=None):
+    """ a standard replacement for os.system('gunzip -f %s.gz ' % event_path)"""
 
+    if not path.endswith(".gz"):
+        if os.path.exists("%s.gz" % path):
+            path = "%s.gz" % path
+        else:
+            raise Exception, "%(path)s does not finish by .gz and the file %(path)s.gz does not exists" %\
+                              {"path": path}         
+
+    
+    #for large file (>1G) it is faster and safer to use a separate thread
+    if os.path.getsize(path) > 1e8:
+        if stdout:
+            os.system('gunzip -c %s > %s' % (path, stdout))
+        else:
+            os.system('gunzip  %s') 
+        return
+    
+    if not stdout:
+        stdout = path[:-3]        
+    open(stdout,'w').write(ziplib.open(path, "r").read())
+    if not keep:
+        os.remove(path)
+
+def gzip(path, stdout=None, error=True, forceexternal=False):
+    """ a standard replacement for os.system('gzip %s ' % path)"""
+
+
+    
+    #for large file (>1G) it is faster and safer to use a separate thread
+    if os.path.getsize(path) > 1e9:
+        call(['gzip', '-f', path])
+        if stdout:
+            shutil.move('%s.gz' % path, stdout)
+        return
+    
+    if not stdout:
+        stdout = "%s.gz" % path
+    elif not stdout.endswith(".gz"):
+        stdout = "%s.gz" % stdout
+
+    try:
+        ziplib.open(stdout,"w").write(open(path).read())
+    except OverflowError:
+        gzip(path, stdout, error=error, forceexternal=True)
+    except Exception:
+        if error:
+            raise
+    else:
+        os.remove(path)
+    
 #
 # Global function to open supported file types
 #
@@ -717,7 +789,7 @@ class open_file(object):
     @classmethod
     def configure(cls, configuration=None):
         """ configure the way to open the file """
-        
+         
         cls.configured = True
         
         # start like this is a configuration for mac

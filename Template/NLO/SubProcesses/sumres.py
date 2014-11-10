@@ -67,7 +67,7 @@ for line in range(0,len(lines),2):
 if dirs:
     print "%d jobs did not terminate correctly: " % len(dirs)
     print '\n'.join(dirs)
-    print "The results will probably not correct. Please check the relevant log files corresponding to the above jobs for more information."
+    print "The results are probably not correct. Please check the relevant log files corresponding to the above jobs for more information."
 
 processes.sort(key = lambda proc: -proc['errorABS'])
 

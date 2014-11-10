@@ -35,10 +35,5 @@ if ' ' in MG5DIR:
     Please consider changing the path location of the code\033[0m''' % MG5DIR)
    time.sleep(1)
 MG4DIR = MG5DIR
-ReadWrite = True
+ReadWrite = os.access(MG5DIR, os.W_OK) # W_OK is for writing
 
-try:
-    open(os.path.join(MG5DIR,'.test'),'w').write('test')
-    os.remove(os.path.join(MG5DIR,'.test'))
-except IOError:
-    ReadWrite = False

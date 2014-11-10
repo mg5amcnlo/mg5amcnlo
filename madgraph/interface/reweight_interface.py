@@ -110,7 +110,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 raise self.InvalidCmd('No such file or directory : %s' % inputfile)
         
         if inputfile.endswith('.gz'):
-            misc.call(['gunzip', inputfile])
+            misc.gunzip(inputfile)
             inputfile = inputfile[:-3]
 
         # Read the banner of the inputfile
@@ -163,7 +163,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     logger.info('Event nb %s %s' % (event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
-            #event.check() #check 4 momenta/...
+            event.check() #check 4 momenta/...
 
             sum_of_weight += event.wgt
             sum_of_abs_weight += abs(event.wgt)
@@ -206,7 +206,7 @@ class ReweightInterface(extended_cmd.Cmd):
         if len(args) < 2:
             raise self.InvalidCmd('set command requires at least two argument.')
         
-        valid = ['maz_weight','seed','curr_dir']
+        valid = ['max_weight','seed','curr_dir']
         if args[0] not in self.options and args[0] not in valid:
             raise self.InvalidCmd('Unknown options %s' % args[0])        
     
@@ -619,7 +619,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     tag = (tag[0], tuple(decay_finals))
                 Pdir = pjoin(path_me, 'rw_me', 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
-                assert os.path.exists(Pdir)
+                assert os.path.exists(Pdir), "Pdir %s do not exists" % Pdir                        
                 if tag in self.id_to_path:
                     if not Pdir == self.id_to_path[tag][1]:
                         misc.sprint(tag, Pdir, self.id_to_path[tag][1])

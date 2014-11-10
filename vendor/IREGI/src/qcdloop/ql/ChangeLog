@@ -1,0 +1,141 @@
+2008-01-12  Giulia Zanderighi  <g.zanderighi1@physics.ox.ac.uk>
+
+	* qlinit.f:
+		set version number 1.1 
+
+	* qlYcalc.f:
+		initialize Yalt to 0d0, not needed at the moment, but still
+
+	* qlLi2omx.f: 
+        * qlbox15.f:
+        * qlbox16.f:
+        * qlcLi2omx2.f:	
+        * qlcLi2omx3.f:	
+        * qltri6.f:
+	 	changing prefix in name of some functions "qlcql" -> "qlc"
+
+        * qlLi2omx.f:
+        * qlLi2omx2.f:
+        * qlcLi2omx2.f:
+        * qlcLi2omx3.f:
+		fix special cases arg=0d0 and 1d0
+
+        * qltri3.f:
+		compute fac only if necessary 
+
+2008-01-16  Keith Ellis  <ellis@fnal.gov>
+
+	* qlinit.f:
+		set version number 1.2 
+
+	*  qlI1.f:
+	*  qlI2.f:
+		corrected dependence on scale musq
+
+2008-02-20  Giulia Zanderighi <g.zanderighi1@physics.ox.ac.uk>
+
+	* qlboxdiv16.f
+		add treatment of special cases x2=x3=1 or x2=x3/=1 
+
+	* qlkfn.f --- added
+		contains modified version of ff routine ffzkfn  
+		with argument ier dropped and meaning of ieps changed
+			
+	* qlboxdiv16.f
+	* qlboxdiv15.f
+	* qlboxdiv14.f
+	* qltri6.f
+		replace call to ffzkfn with call to qlkfn 
+	        (with modified arguments)
+	
+2008-04-24  Keith Ellis  <ellis@fnal.gov>
+
+	* qlinit.f:
+		set version number 1.4 
+	* qlI1.f --- modified to remove call to ff routines
+	* qlI2.f --- modified to remove call to ff routines
+	* qlI2fin.f --- added
+		replaces call to ff routines in qlI2
+	* qlfndd.f --- added
+		auxiliary function needed in calculation of 2-point function.
+	* qlI4DNS41.f --- added
+		in order to handle the case with all internal masses=0
+	        and all external lines with non-zero virtuality 
+	        using Eq.41 of Denner,Nierste,Sharf.
+	        This case is not treated in ff.
+	* qlLi2omprod.f --- added
+		dilogarithm routine added to handle above
+	* qlI4sub0m.f --- modified
+	        to call subroutine qlI4DNS41
+
+2008-06-23  Keith Ellis  <ellis@fnal.gov>
+
+	* qlinit.f:
+		set version number 1.5 
+	* qlxpicheck.f --- Added new routine which checks 
+	                   that modified Cayleys Y(1,3) and Y(2,4) are non-zero
+	* qlI4sub0m.f --- added call to qlxpicheck
+	* qlI4sub1m.f --- added call to qlxpicheck
+	* qlI4sub2m.f --- added call to qlxpicheck
+        * qlI4sub3m.f --- added call to qlxpicheck
+	
+2008-07-24  Keith Ellis  <ellis@fnal.gov>
+
+	* qlinit.f:
+		           set version number 1.6
+	* qlI2.f:     ---- rescaled input invariants by the largest one, 
+	                   so qlzero has an absolute meaning
+	* qlI3.f:     ---- rescaled input invariants by the largest one, 
+	                   so qlzero has an absolute meaning
+                           added check that mu2 is unchanged before returning old value
+	* qlI4.f:     ---- rescaled input invariants by the largest one, 
+	                   so qlzero has an absolute meaning
+	* qlI4array.f ---- added check that mu2 is unchanged before returning old value
+	* qlbox3.f    ---- corrected if statement so expansion is performed only where appropriate
+	* qlbox5.f    ---- corrected if statement so expansion is performed only where appropriate
+	
+
+2008-08-22  Keith Ellis  <ellis@fnal.gov>
+
+	* qlinit.f:
+		           set version number 1.7
+	* qlI2.f:     ---- rescaled input invariants by the largest one including mu2 
+	                   so that correct value is returned even for p1=m1=m2=0.
+                           Routine now stops if called for mu2 .le. 0d0	
+	* qlI1.f:     ---- Routine now stops if called for mu2 .le. 0d0	
+
+2008-10-30  Keith Ellis  <ellis@fnal.gov>
+
+	* qlinit.f:
+		           set version number 1.8
+	* qlI2fin.f:  ---- dealt explicitly with special case p1sq=0,m0s=m1s, 
+	* qlbox13.f:  ---- corrected bug in implementation of p3sq-->0 limit
+
+2008-07-14  Keith Ellis  <ellis@fnal.gov>
+
+	* qlinit.f:
+		           set version number 1.9
+	* qlbox15.f:  ---- corrected bug in implementation of limit when either
+	                   p2sq=m2sq or p3sq=m4sq. Formula in paper is correct
+
+2013-02-20  Keith Ellis  <ellis@fnal.gov>
+
+	* qlinit.f:
+		           set version number 1.95
+	* qlI4DNS41.f: ---- removed bug where qlLi2omprod was called with first 
+	                    two arguments double complex instead of double precision.
+	* qlI4sub2mo.f:---- Corrected erroneous overrun beyond line 72 in print statement
+	* qltri3.f:    ---- corrected cmplx --> dcmplx
+	* qlI4.f:      ---- removed superfluous include file ff.h
+	* qlbox10.f:   ---- removed superfluous function integrand1 
+	* qlbox15.f:   ---- removed superfluous dcmplx
+	
+	
+	
+
+                           
+		
+	
+	
+
+	

@@ -85,7 +85,6 @@ class AbstractRoutine(object):
         
     def write(self, output_dir, language='Fortran', mode='self', combine=True,**opt):
         """ write the content of the object """
-
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
         text = writer.write(mode=mode, **opt)
         if combine:
@@ -94,8 +93,7 @@ class AbstractRoutine(object):
                     text = tuple([old.__add__(new)  for old, new in zip(text, 
                              writer.write_combined(grouped, mode=mode+'no_include', **opt))])
                 else:
-                    text += writer.write_combined(grouped, mode=mode+'no_include', **opt)
-                
+                    text += writer.write_combined(grouped, mode=mode+'no_include', **opt)        
         if aloha.mp_precision and 'MP' not in self.tag:
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
@@ -288,7 +286,7 @@ in presence of majorana particle/flow violation"""
             aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
         else:
             lorentz = copy.copy(self.routine_kernel)
-            aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
+            aloha_lib.KERNEL.use_tag = set(self.kernel_tag)
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
             #Check if this is the outgoing particle
@@ -298,8 +296,10 @@ in presence of majorana particle/flow violation"""
                 propa = [t[1:] for t in self.tag if t.startswith('P')]
                 if propa == ['0']: 
                     massless = True
+                    self.denominator = None
                 elif propa == []:
                     massless = False
+                    self.denominator = None
                 else:
                     lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
                     continue
@@ -468,7 +468,9 @@ in presence of majorana particle/flow violation"""
         numerator = self.parse_expression(numerator, needPflipping)
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)
-            self.denominator = eval(self.denominator).simplify().expand().simplify().get((0,))
+            self.denominator = eval(self.denominator)
+            if not isinstance(self.denominator, numbers.Number):
+                self.denominator = self.denominator.simplify().expand().simplify().get((0,))
 
         return eval(numerator)
     
@@ -477,8 +479,11 @@ in presence of majorana particle/flow violation"""
     
     def compute_loop_coefficient(self, lorentz, outgoing):
         
-                    
-        l_in = [int(tag[1:]) for tag in self.tag][0]
+
+        l_in = [int(tag[1:]) for tag in self.tag if tag.startswith('L')][0]
+        if (l_in + 1) // 2 in self.conjg:
+            #flip the outgoing tag if in conjugate                                                                                                                                         
+            l_in = l_in + l_in % 2 - (l_in +1) % 2                    
         assert l_in != outgoing, 'incoming Open Loop can not be the outcoming one'
         
         # modify the expression for the momenta
@@ -819,11 +824,9 @@ class AbstractALOHAModel(dict):
                                     self[(realname, outgoing)].add_combine(m)
                                 except Exception,error:
                                     self[(realname, self.symmetries[lorentz.name][outgoing])].add_combine(m)          
-                    
-                    
+                       
         if save:
             self.save()
-    
     
     def add_Lorentz_object(self, lorentzlist):
         """add a series of Lorentz structure created dynamically"""
@@ -843,12 +846,15 @@ class AbstractALOHAModel(dict):
         self.look_for_symmetries()
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
+        aloha.loop_mode = False
+	    # self.explicit_combine = False
         request = {}
 
         for list_l_name, tag, outgoing in data:
             #allow tag to have integer for retro-compatibility
             all_tag = tag[:]
             conjugate = [i for i in tag if isinstance(i, int)]
+            
             tag =  [i for i in tag if isinstance(i, str) and not i.startswith('P')]
             tag = tag + ['C%s'%i for i in conjugate]             
             tag = tag + [i for i in all_tag if isinstance(i, str) and  i.startswith('P')] 
@@ -858,7 +864,7 @@ class AbstractALOHAModel(dict):
             if loop:
                 aloha.loop_mode = True
                 self.explicit_combine = True
-
+                       
             for l_name in list_l_name:
                 try:
                     request[l_name][conjugate].append((outgoing,tag))
@@ -867,7 +873,7 @@ class AbstractALOHAModel(dict):
                         request[l_name][conjugate] = [(outgoing,tag)]
                     except Exception:
                         request[l_name] = {conjugate: [(outgoing,tag)]}
-                        
+                           
         # Loop on the structure to build exactly what is request
         for l_name in request:
             lorentz = eval('self.model.lorentz.%s' % l_name)
@@ -897,7 +903,8 @@ class AbstractALOHAModel(dict):
                     conjg_builder = builder.define_conjugate_builder(conjg)
                     # Compute routines
                     self.compute_aloha(conjg_builder, symmetry=lorentz.name,
-                                        routines=routines)
+                                         routines=routines)
+            
         
         # Build mutiple lorentz call
         for list_l_name, tag, outgoing in data:
@@ -939,8 +946,10 @@ class AbstractALOHAModel(dict):
                         conjg_builder = builder.define_conjugate_builder(conjg)
                         # Compute routines
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
-                                        routines=routines)             
-                        
+                                        routines=routines)
+                      
+  
+                            
     def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):
         """ define all the AbstractRoutine linked to a given lorentz structure
         symmetry authorizes to use the symmetry of anoter lorentz structure.
@@ -970,7 +979,7 @@ class AbstractALOHAModel(dict):
                 wavefunction = builder.compute_routine(outgoing, tag)
                 #Store the information
                 self.set(realname, outgoing, wavefunction)
-            
+          
 
     def compute_aloha_without_kernel(self, builder, symmetry=None, routines=None):
         """define all the AbstractRoutine linked to a given lorentz structure
@@ -991,10 +1000,9 @@ class AbstractALOHAModel(dict):
 
     def write(self, output_dir, language):
         """ write the full set of Helicity Routine in output_dir"""
-
         for abstract_routine in self.values():
             abstract_routine.write(output_dir, language)
-        
+
         for routine in self.external_routines:
             self.locate_external(routine, language, output_dir)
 

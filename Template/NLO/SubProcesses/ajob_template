@@ -7,8 +7,19 @@ if [[ ! -e $1 && -e ../$1 ]] ; then
 fi
 }
 
+tarCounter=0
+while [[ (-f MadLoop5_resources.tar.gz) && (! -f MadLoop5_resources/HelConfigs.dat) && ($tarCounter < 10) ]]; do
+    if [[ $tarCounter > 0 ]]; then
+	sleep 2s
+    fi
+    tar -xzf MadLoop5_resources.tar.gz >/dev/null 2>&1
+    tarCounter=$[$tarCounter+1]
+done
 
-
+if [[ (-e MadLoop5_resources.tar.gz) && (! -e MadLoop5_resources/HelConfigs.dat) ]]; then
+    echo "Cannot untar and unzip file `pwd`/MadLoop5_resources.tar.gz." > log.txt
+    exit
+fi
 
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
@@ -43,7 +54,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         if [[ "$4" != "" ]]; then
             if [[ "$4" == "H" ||"$4" == "S" || "$4" == "V" || "$4" == "B" || "$4" == "F" ]]; then
                 if [[ -e ../G$4$i ]]; then
-                    cp -f ../G$4$i/mint_grids ./preset_mint_grids
+                    cp -f ../G$4$i/mint_grids ./preset_mint_grids >/dev/null 2>&1
                     cp -f ../G$4$i/grid.MC_integer . >/dev/null 2>&1
                 else
                     echo "Cannot find direcotry ../G$4$i/" > log.txt
@@ -78,16 +89,14 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
 	fi
     fi
 
-    link1up MadLoopParams.dat
-    link1up HelFilter.dat 
-    link1up LoopFilter.dat
-    link1up ColorDenomFactors.dat
-    link1up HelConfigs.dat
-    link1up ColorNumFactors.dat
     link1up FKS_params.dat
+    link1up configs_and_props_info.dat
+    link1up leshouche_info.dat
+#   Not necessary anymore
+#    link1up MadLoop5_resources
     link1up OLE_order.olc
     link1up param_card.dat
-    link1up libLHAPDF.so
+    link1up initial_states_map.dat
     
 #   check where is the basic file for the creation of input_app.txt
 #       
@@ -142,7 +151,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         status=$?
         T="$(($(date +%s)-T))"
         echo "Time in seconds: ${T}" >>log.txt
-        cp -f log.txt log_MINT$3.txt
+        cp -f log.txt log_MINT$3.txt  >/dev/null 2>&1
     fi
     exit $status
 done

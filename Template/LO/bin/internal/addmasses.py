@@ -289,7 +289,8 @@ for ref in reflist:
         g.write(event_description+"\n")
         for p in event:
             g.write(p.writeMe())
-        g.write(event_poundSign+"\n")
+        if event_poundSign.strip():
+            g.write(event_poundSign+"\n")
         g.write("</event>\n")
 #at the end
 g.write("</LesHouchesEvents>\n")

@@ -62,7 +62,6 @@ class ModelReader(loop_base_objects.LoopModel):
 
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
-        
         # Read in param_card
         if param_card:
             # Create a dictionary from LHA block name and code to parameter name
@@ -80,8 +79,7 @@ class ModelReader(loop_base_objects.LoopModel):
                 if not os.path.isfile(param_card):
                     raise MadGraph5Error, "No such file %s" % param_card
                 param_card = card_reader.ParamCard(param_card)
-            assert isinstance(param_card, card_reader.ParamCard)
-                
+            assert isinstance(param_card, card_reader.ParamCard)    
            
             
             key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
@@ -146,7 +144,8 @@ class ModelReader(loop_base_objects.LoopModel):
                     runner = Alphas_Runner(value, nloop=3)
                     value = runner(scale)
                 exec("locals()[\'%s\'] = %s" % (param.name, param.value))
-                    
+
+            
         # Define all functions used
         for func in self['functions']:
             exec("def %s(%s):\n   return %s" % (func.name,
@@ -159,8 +158,7 @@ class ModelReader(loop_base_objects.LoopModel):
                 key != ('external',)]
         keys.sort(key=len)
         for key in keys:
-            derived_parameters += self['parameters'][key]
-
+            derived_parameters += self['parameters'][key]	
 
         # Now calculate derived parameters
         for param in derived_parameters:
@@ -173,7 +171,7 @@ class ModelReader(loop_base_objects.LoopModel):
             if not eval(param.name) and eval(param.name) != 0:
                 logger.warning("%s has no expression: %s" % (param.name,
                                                              param.expr))
-        
+
         # Correct width sign for Majorana particles (where the width
         # and mass need to have the same sign)
         for particle in self.get('particles'):

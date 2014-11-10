@@ -107,7 +107,7 @@ c For MINT:
       common/SHevents/Hevents
       character*10 dum
 c statistics for MadLoop      
-      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
       double precision virtual_over_born
@@ -121,6 +121,10 @@ c timing statistics
 
 c general MadFKS parameters
       include "FKSParams.inc"
+
+c applgrid
+      integer iappl
+      common /for_applgrid/ iappl
 
 C-----
 C  BEGIN CODE
@@ -148,7 +152,9 @@ c
       nqdp=0
       nini=0
       n10=0
-      n1=0
+      do i=0,9
+        n1(i)=0
+      enddo
       
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
@@ -192,6 +198,18 @@ c at the NLO)
         stop
       endif
       write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
+c APPLgrid
+      if (imode.eq.0) iappl=0 ! overwrite when starting completely fresh
+      if(iappl.ne.0) then
+         write(6,*) "Initializing aMCfast ..."
+c     Set flavor map, starting from all possible
+c     parton lumi configurations defined in initial_states_map.dat
+         call setup_flavourmap
+c     Fill the number of combined matrix elements for given initial state luminosity
+         call find_iproc_map
+         write(6,*) "   ... done."
+      endif
+
       itotalpoints=0
       ivirtpoints=0
       ivirtpointsExcept=0
@@ -247,7 +265,6 @@ c
 c
 c Setup for parton-level NLO reweighting
          if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
-         call initplot
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2)
          call topout
@@ -320,7 +337,12 @@ c to save grids:
          write(*,*)
      &        "  Unknown return code (10):                        ",n10
          write(*,*)
-     &        "  Unknown return code (1):                         ",n1
+     &        "  Unit return code distribution (1):               "
+         do j=0,9
+           if (n1(j).ne.0) then
+              write(*,*) "#Unit ",j," = ",n1(j)
+           endif
+         enddo
       endif
 
       call cpu_time(tAfter)

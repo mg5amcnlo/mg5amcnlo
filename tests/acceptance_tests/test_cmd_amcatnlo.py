@@ -55,16 +55,13 @@ class TestMECmdShell(unittest.TestCase):
     def setUp(self):
         
         self.tmpdir = tempfile.mkdtemp(prefix='amc')
-        self.tmpdir = "/tmp/"
-        # if we need to keep the directory for testing purpose
         #if os.path.exists(self.tmpdir):
         #    shutil.rmtree(self.tmpdir)
         #os.mkdir(self.tmpdir)
         self.path = pjoin(self.tmpdir,'MGProcess')
-        
+
     def tearDown(self):
-        pass
-        #shutil.rmtree(self.tmpdir)
+        shutil.rmtree(self.tmpdir)
     
     
     def generate(self, process, model, multiparticles=[]):
@@ -129,10 +126,10 @@ class TestMECmdShell(unittest.TestCase):
         os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat' % (self.path, self.path))
 
         card = open('%s/Cards/shower_card_default.dat' % self.path).read()
-        self.assertTrue( 'ANALYSE     =' in card)
-        card = card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwan_pp_tj.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
-        self.assertTrue( 'EXTRALIBS   = stdhep Fmcfio' in card)
-        card = card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
+        self.assertTrue( 'ANALYSE      =' in card)
+        card = card.replace('ANALYSE      =', 'ANALYSE     = mcatnlo_hwan_pp_tj.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
+        self.assertTrue( 'EXTRALIBS    = stdhep Fmcfio' in card)
+        card = card.replace('EXTRALIBS    = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
         open('%s/Cards/shower_card_default.dat' % self.path, 'w').write(card)
         os.system('cp  %s/Cards/shower_card_default.dat %s/Cards/shower_card.dat'% (self.path, self.path))
 
@@ -442,7 +439,7 @@ class TestMECmdShell(unittest.TestCase):
         #splitting of the shower
         # 1) hep output
         shower_card = open('%s/Cards/shower_card.dat' % self.path).read()
-        shower_card = shower_card.replace('nsplit_jobs= 1', 'nsplit_jobs= 4')
+        shower_card = shower_card.replace('nsplit_jobs  = 1', 'nsplit_jobs  = 4')
         open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
         self.cmd_line.run_cmd('shower run_01 -f')
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__1.hep.gz' % self.path))
@@ -451,8 +448,8 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__4.hep.gz' % self.path))
 
         # 2) top output
-        shower_card = shower_card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   =')  
-        shower_card = shower_card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwan_pp_lvl.o mcatnlo_hbook_gfortran8.o')  
+        shower_card = shower_card.replace('EXTRALIBS    = stdhep Fmcfio', 'EXTRALIBS    =')  
+        shower_card = shower_card.replace('ANALYSE      =', 'ANALYSE      = mcatnlo_hwan_pp_lvl.o mcatnlo_hbook_gfortran8.o')  
         open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
         self.cmd_line.run_cmd('shower run_01 -f')
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.tar.gz' % self.path))

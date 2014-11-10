@@ -92,8 +92,6 @@ class FeynmanLine(object):
         assert isinstance(vertex, VertexPoint), 'The begin point should be a ' + \
                  'Vertex_Point object'
 
-        assert vertex is not self.end
-
         self.begin = vertex
         vertex.add_line(self)
         return
@@ -104,8 +102,6 @@ class FeynmanLine(object):
         assert isinstance(vertex, VertexPoint), 'The end point should be a ' + \
                  'Vertex_Point object'
 
-        assert vertex is not self.begin
-                 
         self.end = vertex
         vertex.add_line(self)
         return
@@ -1797,6 +1793,8 @@ class DiagramDrawer(object):
 
         # check if we need curved loop particles
         curved_for_loop = False
+        circled_for_loop = False
+        
         if isinstance(diagram, LoopFeynmanDiagram):
             # If only 2 particle in the loop require that those lines are
             # curved
@@ -1804,10 +1802,17 @@ class DiagramDrawer(object):
                 curved_for_loop = True
                 self.curved_part_start = (0, 0)
         
+            # for tadpole DOES NOT CRASH BUT STILL NEED FIXING
+            elif len([l for l in diagram.lineList if l.loop_line]) == 1:
+                circled_for_loop = True
+                self.curved_part_start = (0, 0)
+
         # drawing the particles
-        for line in diagram.lineList:    
-            if not curved_for_loop or not line.loop_line:
+        for line in diagram.lineList:
+            if (not curved_for_loop and not circled_for_loop) or not line.loop_line:
                 self.draw_line(line)
+            elif circled_for_loop:
+                self.draw_circled_line(line)
             else:
                 self.draw_curved_line(line)
                 
@@ -1855,6 +1860,34 @@ class DiagramDrawer(object):
         if line.is_external():
             number = line.number
             self.associate_number(line, number)
+
+    # To draw tadpole
+    def draw_circled_line(self, line):
+        """Draw the line information.
+        First, call the method associate the line type [draw_circled_XXXXXX]
+        Then finalize line representation by adding his name."""
+
+        # if 4 point (or more interaction at the beginning/end of the loop
+        # need to reduce curvature
+        if len(line.begin.lines) > 3 or len(line.end.lines) > 3 :
+            cercle = False
+        else:
+            cercle = True
+
+        # Find the type line of the particle [straight, wavy, ...]
+        line_type = line.get_info('line')
+        # Call the routine associate to this type [self.draw_straight, ...]
+        if hasattr(self, 'draw_circled_' + line_type):
+            getattr(self, 'draw_circled_' + line_type)(line, cercle)
+        else:
+            self.draw_circled_straight(line, reduce)
+            
+        # Finalize the line representation with adding the name of the particle
+        name = line.get_name()
+        self.associate_name(line, name)
+        
+        #store begin for helping future curving
+        self.curved_part_start = (line.begin.pos_x, line.begin.pos_y*1.2)
 
     def draw_curved_line(self, line):
         """Draw the line information.

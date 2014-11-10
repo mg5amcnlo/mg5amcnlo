@@ -139,10 +139,10 @@ C----------------------------------------------------------------------
 C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
-      REAL*8 XNORM
+      REAL*8 XNORM,IEVTTOT
       integer nsingle,ncorr,nlepton,nplots,ncuts
       common/cplots/nsingle,ncorr,nlepton,nplots,ncuts
-      INTEGER I,J,KK,IEVTTOT,l,nwgt_analysis
+      INTEGER I,J,KK,l,nwgt_analysis
       integer l0,ilep1,ilep2,io,ipair,icuts
       integer NPL
       parameter(NPL=15000)

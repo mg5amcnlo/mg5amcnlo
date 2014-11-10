@@ -45,6 +45,7 @@ C---  set to zero if x out of range
          do i=-5,5
             fx(i)=nnfx(i)/x
          enddo
+         fx(7)=nnfx(7)/x
       elseif     ((pdlabel(1:3) .eq. 'mrs')
      .   .or. (pdlabel(2:4) .eq. 'mrs')) then
 

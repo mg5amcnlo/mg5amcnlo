@@ -209,7 +209,11 @@ class AddVariable(list):
                 continue
             tag = tuple(term.sort())
             if tag in items:
+                orig_prefac = items[tag].prefactor # to assume to zero 0.33333 -0.3333
                 items[tag].prefactor += term.prefactor
+                if items[tag].prefactor and \
+                    abs(items[tag].prefactor) / (abs(orig_prefac)+abs(term.prefactor)) < 1e-8:
+                    items[tag].prefactor = 0
                 del self[pos]
                 pos -=1
             else:
@@ -938,6 +942,7 @@ class MultLorentz(MultVariable):
                     if not veto or not scalar.contains(veto):
                         scalar = scalar.simplify()
                         prefactor = 1
+
                         if hasattr(scalar, 'vartype') and scalar.prefactor not in  [1,-1]:
                             prefactor = scalar.prefactor
                             scalar.prefactor = 1
@@ -1048,7 +1053,16 @@ class LorentzObjectRepresentation(dict):
             else:
                 raise self.LorentzObjectRepresentationError("There is no key of (0,) in representation.")                    
         else:
-            self[(0,)] = representation
+            if isinstance(representation,dict):
+                try:
+                    self[(0,)] = representation[(0,)]
+                except Exception:
+                    if representation:
+		   	            raise LorentzObjectRepresentation.LorentzObjectRepresentationError("There is no key of (0,) in representation.")
+                    else:
+			            self[(0,)] = 0
+            else:
+                self[(0,)] = representation
 
     def __str__(self):
         """ string representation """

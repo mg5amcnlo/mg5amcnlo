@@ -95,7 +95,30 @@ c      --------------------------------------------
        integer id,nbin
        double precision xbin,xlo,xhi
 
+c      APPLgrid commons
+       include "reweight_appl.inc"
+       include "appl_common.inc"
+       integer iappl
+       common /for_applgrid/ iappl
+
        nbin = int((xhi-xlo)/(xbin*0.9999d0))
+
+c      Initialize the grids only if the switch "iappl" is different from zero
+c      and if the title string containes the word "central" and does not contain
+c      the word "Born".
+       if(iappl.ne.0.and.index(name,"central").ne.0.and.
+     1                   index(name,"Born").eq.0)then
+c      Observable parameters
+          appl_obs_nbins = nbin
+          appl_obs_min   = xlo
+          appl_obs_max   = xhi
+c      Initialize APPLgrid routines
+          call APPL_init
+c      Keep track of the position of this histogram
+          nh_obs = nh_obs + 1
+          ih_obs(nh_obs) = id
+       endif
+
 c      -- Call C++ back end function --
        call rbook_be_(id,name,len(name),nbin,xlo,xhi)
       
@@ -127,6 +150,26 @@ c      ------------------------------------------
        integer ihisto
        double precision xval,wgt
 
+c      APPLgrid commons
+       include "reweight_appl.inc"
+       include "appl_common.inc"
+       integer iappl
+       common /for_applgrid/ iappl
+       integer j
+c
+       if(iappl.ne.0)then
+          do j=1,nh_obs
+             if(ihisto.eq.ih_obs(j))then
+                appl_obs_num   = j
+                appl_obs_histo = xval
+c      Fill the reference APPLgrid histograms
+                call APPL_fill_ref
+c      Fill the APPLgrid files
+                call APPL_fill
+             endif
+          enddo
+       endif
+
 c      -- Call C++ back end function --
        call rfill_be_(ihisto,xval,wgt)
 
@@ -154,6 +197,22 @@ c     ------------------------------------------
       integer ih1,ih2,ih3
       character*(*) oper
       double precision x,y
+
+c     APPLgrid commons
+      include "reweight_appl.inc"
+      include "appl_common.inc"
+      integer iappl
+      common /for_applgrid/ iappl
+      integer j
+      if(iappl.ne.0)then
+         do j=1,nh_obs
+            if(ih1.eq.ih_obs(j))then
+               appl_obs_num = j
+               call APPL_fill_ref_out
+               call APPL_term
+            endif
+         enddo
+      endif
 
 c     -- Call C++ back end function --
       call ropera_be_(ih1,oper,len(oper),ih2,ih3,x,y)
