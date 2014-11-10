@@ -513,6 +513,10 @@ c
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
+      double precision twgt, maxwgt,swgt(maxevents)
+      integer                             lun, nw, itminx
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itminx
+      
       integer              icor
       common/to_correlated/icor
 
@@ -620,6 +624,7 @@ c
       open(unit=25,file='ftn25',status='unknown',err=102)
       read(25,*, err=1011, end=1012)
      .     ((grid(2,i,j),i=1,ng),j=1,invar)
+      read(25,*) twgt
       call read_discrete_grids(25)
       write(*,*) 'Grid read from file'
       flat_grid=.false.
@@ -1890,6 +1895,7 @@ c               if (1d0/sqrt(tsigma) .lt. accur) then
                   open(26, file='ftn26',status='unknown')
                   write(26,fmt='(4f21.17)')
      $                 ((grid(2,i,j),i=1,ng),j=1,invar)
+                  write(26,*) twgt
 c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)
                   call write_discrete_grids(26)
                   close(26)                  
@@ -1950,6 +1956,7 @@ c     Check nun and chi2 (ja 03/11)
                   open(26, file='ftn26',status='unknown')
                   write(26,fmt='(4f21.17)')
      $                 ((grid(2,i,j),i=1,ng),j=1,invar)
+                  write(26,*) twgt
 c                  write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
                   call write_discrete_grids(26)
                   close(26)
@@ -1982,6 +1989,7 @@ c 129              close(22)
                open(26, file='ftn26',status='unknown')
                write(26,fmt='(4f21.17)')
      $              ((grid(2,i,j),i=1,ng),j=1,invar)
+               write(26,*) twgt 
                call write_discrete_grids(26)
 c               write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
                close(26)

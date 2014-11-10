@@ -29,6 +29,10 @@ for i in $@ ; do
      if [[ $offset -eq $subdir ]]; then
 	 rm -f ftn25 ftn26 ftn99
 	 rm -f $k
+     else
+        if [[ -e ../ftn25 ]]; then
+	    cp ../ftn25 .
+	fi
      fi
 	 cat ../input_app.txt >& input_app.txt
      echo $i >> input_app.txt

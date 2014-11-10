@@ -7,8 +7,10 @@ try:
     import madgraph
 except ImportError:
     import internal.sum_html as sum_html
+    import internal.misc as misc
 else:
     import madgraph.madevent.sum_html as sum_html
+    import madgraph.various.misc as misc
 
 class grid_information(object):
 
@@ -108,7 +110,9 @@ class grid_information(object):
             
         # discrete sampler information
         if not self.discrete_grid:
-            self.discrete_grid += finput.read()
+            self.discrete_grid = DiscreteSampler(finput)
+        else:
+            self.discrete_grid.add(finput)
         
         
     def add_results_information(self, path):
@@ -147,10 +151,11 @@ class grid_information(object):
             fsock.write('%+.16f' % v)
         if  data:
             fsock.write('\n')
+        mean = self.sum_wgt*self.target_evt/self.nb_ps_point
+        fsock.write('%s' %(mean*self.target_evt/self.nb_ps_point**2))            
         fsock.write('\n')
-        fsock.write(self.discrete_grid)
-            
-            
+        self.discrete_grid.write(fsock)
+                    
     def get_cross_section(self):
         """return the cross-section error"""
         
@@ -162,11 +167,6 @@ class grid_information(object):
         sigma -= self.nonzero * mean**2
         sigma /= self.nb_ps_point*(self.nb_ps_point -1)
 
-        #print 'integral', mean
-        #print 'integral of the absolute fct', rmean        
-        #print 'error', math.sqrt(abs(sigma))
-        #print 'info', self.sum_wgt_square, vol, self.nonzero, mean, 1, self.nb_ps_point
-        
         return mean, rmean, math.sqrt(abs(sigma))
         
         
@@ -283,24 +283,204 @@ class grid_information(object):
                 
         # return the new grid
         return test_grid
-
-
-if __name__ == "__main__":
-    o = grid_information()
-    o.add_one_grid_information('./grid_information')
-    o.write_associate_grid('./mine')
-            
         
 
+class DiscreteSampler(dict):
+    """ """        
+    
+    def __init__(self, fpath=None):
         
+        if fpath:
+            self.read(fpath)
+    
+    def add(self, fpath):
         
-                
-                
-                
+        self.read(fpath, mode='add')
+    
+    def read(self, fpath, mode='init'):
+        """parse the input"""
 
+# Example of input:
+#          <DiscreteSampler_grid>
+#  Helicity
+#  10 # Attribute 'min_bin_probing_points' of the grid.
+#  1 # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
+# # binID   n_entries weight   weight_sqr   abs_weight
+#    1   255   1.666491280568920E-002   4.274101502263763E-004   1.666491280568920E-002
+#    2   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
+#    3   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
+#    4   235   1.599927969559557E-002   3.935536991290621E-004   1.599927969559557E-002
+#  </DiscreteSampler_grid>
+        
+        
+
+        if isinstance(fpath, str):
+            if '\n' in fpath:
+                fsock = (line+'\n' for line in fpath.split('\n'))
+            else:
+                fsock = open(fpath) 
+        else:
+            fsock =fpath
             
+        while 1:
+            try:
+                line = fsock.next()
+            except StopIteration:
+                break
+            line = line.lower()
+            if '<discretesampler_grid>' in line:
+                grid = self.get_grid_from_file(fsock)
+                if mode == 'init' or grid.name not in self:
+                    self[grid.name] = grid
+                elif mode == 'add':
+                    self[grid.name] += grid
+
+    def get_grid_from_file(self, fsock):
+        """read the stream and define the grid"""
+        
+#          <DiscreteSampler_grid>
+#  Helicity
+#  10 # Attribute 'min_bin_probing_points' of the grid.
+#  1 # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
+# # binID   n_entries weight   weight_sqr   abs_weight
+#    1   255   1.666491280568920E-002   4.274101502263763E-004   1.666491280568920E-002
+#    2   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
+#    3   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
+#    4   235   1.599927969559557E-002   3.935536991290621E-004   1.599927969559557E-002
+#  </DiscreteSampler_grid>
+        
+        def next_line(fsock):
+            line = fsock.next()
+            if '#' in line:
+                line = line.split('#',1)[0]
+            line = line.strip()
+            if line == '':
+                return next_line(fsock)
+            else:
+                return line
+        
+        firstline = next_line(fsock)
+        if '#' in firstline:
+            firstline = firstline.split('#',1)[0]
+        name = firstline.strip()
+        grid = DiscreteSamplerDimension(name)
+
+        # line 2 min_bin_probing_points
+        line = next_line(fsock)
+        grid.min_bin_probing_points = int(line)
+
+        # line 3  grid_mode
+        line = next_line(fsock)
+        grid.grid_mode = int(line)
+        
+        # line 4 and following grid information
+        line = next_line(fsock)
+        while 'discretesampler_grid' not in line.lower():
+            grid.add_bin_entry(*line.split())
+            line = next_line(fsock)
+        return grid
+    
+    def write(self, path):
+        """write into a file"""
+        
+        if isinstance(path, str):
+            fsock = open(path, 'w')
+        else:
+            fsock = path
+        
+        for  dimension in self.values():
+            dimension.write(fsock)
+        
             
+class DiscreteSamplerDimension(dict):
+    """ """
+    
+    def __init__(self, name):
+        
+        self.name = name
+        self.min_bin_probing_points = 10
+        self.grid_mode = 1 #1=='default',2=='initialization'
+        
+
+    def add_bin_entry(self, bin_id, n_entries, weight, weight_sqr, abs_weight):
+# # binID   n_entries weight   weight_sqr   abs_weight
+#    3   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
+#    4   235   1.599927969559557E-002   3.935536991290621E-004   1.599927969559557E-002
+                
+        self[bin_id] = Bin_Entry(n_entries,  weight, weight_sqr, abs_weight)
+
+    def __iadd__(self, grid):
+        """adding the entry of the second inside this grid"""
+
+        for bin_id, bin_info in grid.items():
+            if bin_id in self:
+                self[bin_id] += bin_info
+            else:
+                self[bin_id] = bin_info
+        return self
+        
+    def write(self, path):
+        """write the grid in the correct formatted way"""
+        
+        if isinstance(path, str):
+            fsock = open(path, 'w')
+        else:
+            fsock = path
+                
+        template = """ <DiscreteSampler_grid>
+   %(name)s
+  %(min_bin_probing_points)s # Attribute 'min_bin_probing_points' of the grid.
+  %(grid_mode)s # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
+# # binID   n_entries weight   weight_sqr   abs_weight
+  %(bins_informations)s
+</DiscreteSampler_grid>
+"""
             
+        data = {'name': self.name,
+                'min_bin_probing_points': self.min_bin_probing_points,
+                'grid_mode': self.grid_mode,
+                'bins_informations' : '\n'.join('%s %s' % (bin_id,str(bin_info)) \
+                                            for (bin_id, bin_info) in self.items())
+                }
+        
+        misc.sprint(template % data)
+        fsock.write(template % data)
+    
+            
+class Bin_Entry(object):
+    """ One bin (of the Discrite Sampler grid) """
+    
+    def __init__(self, n_entries, weight, weight_sqr, abs_weight):
+        """initialize the bin information"""
+        
+        self.n_entries = int(n_entries)
+        self.weight = float(weight)
+        self.weight_sqr = float(weight_sqr)
+        self.abs_weight = float(abs_weight)
+    
+    def __iadd__(self, other):
+        """adding two bin together"""
+        tot_entries = (self.n_entries + other.n_entries)
+        
+        self.weight = (self.n_entries * self.weight + 
+                       other.n_entries * other.weight) / tot_entries 
+        
+        self.weight_sqr = (self.n_entries * self.weight_sqr + 
+                       other.n_entries * other.weight_sqr) / tot_entries 
+                       
+        self.abs_weight = (self.n_entries * self.abs_weight + 
+                       other.n_entries * other.abs_weight) / tot_entries                                
+        
+        
+        self.n_entries = tot_entries
+        misc.sprint("adding %s ->%s" % (other.n_entries, self.n_entries))
+        
+        return self
+            
+    def __str__(self):
+        
+        return ' %s %s %s %s' % (self.n_entries, self.weight, self.weight_sqr,
+                                 self.abs_weight)
             
                           
         
