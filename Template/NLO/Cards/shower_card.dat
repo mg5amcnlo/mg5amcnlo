@@ -19,7 +19,7 @@
 #***********************************************************************
 # Number of events, jobs, errors, and random seeds                     *
 #***********************************************************************
-nevts_shower = -1     # N evts to shower (< 0 = all)
+nevents      = -1     # N evts to shower (< 0 = all)
 nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
 combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
 maxprint     = 2      # N evts to print in the log

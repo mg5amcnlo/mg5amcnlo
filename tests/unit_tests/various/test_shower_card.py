@@ -46,7 +46,7 @@ class TestShowerCard(unittest.TestCase):
 #***********************************************************************
 # Number of events, jobs, errors, and random seeds                     *
 #***********************************************************************
-nevts_shower = -1     # N evts to shower (< 0 = all)
+nevents = -1     # N evts to shower (< 0 = all)
 nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
 combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
 maxprint     = 2      # N evts to print in the log
@@ -160,7 +160,7 @@ ANALYSE      =                   # User's analysis and histogramming
 #***********************************************************************
 # Number of events, jobs, errors, and random seeds                     *
 #***********************************************************************
-nevts_shower = -1     # N evts to shower (< 0 = all)
+nevents = -1     # N evts to shower (< 0 = all)
 nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
 combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
 maxprint     = 2      # N evts to print in the log
@@ -256,7 +256,7 @@ ANALYSE      =                   # User's analysis and histogramming
     def test_shower_card_py8(self):
         """test that the py8 card is correctly written"""
         goal = \
-"""NEVTS_SHOWER=-1
+"""NEVENTS=-1
 MAXPR_PY8=2
 ERR_FR_PY8=0.100
 RNDEVSEED_PY8=0
@@ -288,7 +288,7 @@ PY8UTI=""
     def test_shower_card_py8_analyse(self):
         """test that the py8 card is correctly written"""
         goal = \
-"""NEVTS_SHOWER=-1
+"""NEVENTS=-1
 MAXPR_PY8=2
 ERR_FR_PY8=0.100
 RNDEVSEED_PY8=0
@@ -320,7 +320,7 @@ PY8UTI=""
     def test_shower_card_hwpp(self):
         """test that the hwpp card is correctly written"""
         goal = \
-"""NEVTS_SHOWER=-1
+"""NEVENTS=-1
 MAXPR_HWPP=2
 ERR_FR_HWPP=0.100
 RNDEVSEED_HWPP=0
@@ -353,7 +353,7 @@ HWPPUTI=""
     def test_shower_card_hwpp_analyse(self):
         """test that the hwpp card is correctly written"""
         goal = \
-"""NEVTS_SHOWER=-1
+"""NEVENTS=-1
 MAXPR_HWPP=2
 ERR_FR_HWPP=0.100
 RNDEVSEED_HWPP=0
@@ -386,7 +386,7 @@ HWPPUTI=""
     def test_shower_card_hw6(self):
         """test that the hw6 card is correctly written"""
         goal = \
-"""NEVTS_SHOWER=-1
+"""NEVENTS=-1
 MAXPR_HW=2
 ERR_FR_HW=0.100
 RNDEVSEED1_HW=0
@@ -420,7 +420,7 @@ HWUTI="mcatnlo_hwan_stdhep.o"
     def test_shower_card_hw6_analyse(self):
         """test that the hw6 card is correctly written"""
         goal = \
-"""NEVTS_SHOWER=-1
+"""NEVENTS=-1
 MAXPR_HW=2
 ERR_FR_HW=0.100
 RNDEVSEED1_HW=0
@@ -454,7 +454,7 @@ HWUTI="mcatnlo_hwan_stdhep.o"
     def test_shower_card_py6(self):
         """test that the py6 card is correctly written"""
         goal = \
-"""NEVTS_SHOWER=-1
+"""NEVENTS=-1
 MAXPR_PY=2
 ERR_FR_PY=0.100
 RNDEVSEED_PY=0
@@ -488,7 +488,7 @@ PYUTI="mcatnlo_pyan_stdhep.o"
     def test_shower_card_py6_analyse(self):
         """test that the py6 card is correctly written"""
         goal = \
-"""NEVTS_SHOWER=-1
+"""NEVENTS=-1
 MAXPR_PY=2
 ERR_FR_PY=0.100
 RNDEVSEED_PY=0

@@ -310,7 +310,7 @@ fi
 
 cat <<EOF > ./$ifile 
  '$SCRTCH$EVPREFIX'               ! event file
-  $NEVTS_SHOWER                   ! number of events
+  $NEVENTS                        ! number of events
   $pdftype                        ! 0->Herwig PDFs, 1 otherwise
  '$PART1'  '$PART2'               ! hadron types
   $beammom1 $beammom2               ! beam momenta
