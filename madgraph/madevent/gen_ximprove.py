@@ -80,6 +80,12 @@ class gen_ximprove(object):
         if "nhel_refine" in run_card:
             self.nhel = run_card["nhel_refine"]
         
+        if int(self.nhel) == 1:
+            # increase min/max event for MC over helicities
+            misc.sprint("due to MC overhelicities increase event by %s" % 2**(self.cmd.proc_characteristics['nexternal']//3))
+            self.min_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//3)
+            self.max_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//2)
+            
         # Default option for the run
         self.gen_events = True
         self.min_iter = 3
@@ -165,6 +171,10 @@ class gen_ximprove(object):
         
         self.max_event_in_iter = 20000
         self.min_events = 7500
+        if int(self.nhel) == 1:
+            self.min_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//3)
+            self.max_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//2)
+
         self.gen_events_security = 1.3
             
     alphabet = "abcdefghijklmnopqrstuvwxyz"
@@ -754,8 +764,8 @@ class gensym(object):
                'gridmode': -2
                } 
         
-        if options['helicity']== 1:
-            options['event'] *= 2**(self.cmd.proc_characteristics['nexternal']//2)
+        if int(options['helicity']) == 1:
+            options['event'] *= 2**(self.cmd.proc_characteristics['nexternal']//3)
         
         for Gdir in Gdirs:
             self.write_parameter_file(pjoin(Gdir, 'input_app.txt'), options)   
@@ -808,9 +818,11 @@ class gensym(object):
                    'gridmode': 2
                    }
         
-        if options['helicity']== 1:
-            options['event'] *= 2**(self.cmd.proc_characteristics['nexternal']//2)
-        
+        if int(options['helicity'])== 1:
+            options['event'] *= 2**(self.cmd.proc_characteristics['nexternal']//3)
+            misc.sprint("due to MC overhelicities increase event by %s" % 2**(self.cmd.proc_characteristics['nexternal']//3))
+        else:
+            misc.sprint("NOMVoverheleicity", options['helicity'])
         
         if parralelization:
             options['gridmode'] = -2
