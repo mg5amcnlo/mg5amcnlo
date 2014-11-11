@@ -461,6 +461,9 @@ class Bin_Entry(object):
     def __iadd__(self, other):
         """adding two bin together"""
         tot_entries = (self.n_entries + other.n_entries)
+        if not tot_entries:
+            misc.sprint(self, other, "are both zero")
+            return self
         
         self.weight = (self.n_entries * self.weight + 
                        other.n_entries * other.weight) / tot_entries 

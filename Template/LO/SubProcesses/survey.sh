@@ -34,7 +34,9 @@ for i in $@ ; do
 	    cp ../ftn25 .
 	fi
      fi
+     if [[ ! -e input_app.txt  ]]; then
 	 cat ../input_app.txt >& input_app.txt
+     fi
      echo $i >> input_app.txt
 
      for((try=1;try<=10;try+=1)); 

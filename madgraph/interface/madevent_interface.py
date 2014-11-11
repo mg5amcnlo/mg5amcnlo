@@ -3308,16 +3308,25 @@ zeor by MadLoop.""")
 
                 # add the grid information if needed
                 for G in output_files:
+                    offset = float(argument[0]) - int(float(argument[0]))
+                    offset = int(str(offset).split('.')[1])
+                    if offset ==0 or offset == int(float(argument[0])):
+                        if os.path.exists(pjoin(cwd, G, 'input_app.txt')):
+                            os.remove(pjoin(cwd, G, 'input_app.txt'))
+                    
                     if os.path.exists(pjoin(cwd, G, 'ftn25')):
                         offset = float(argument[0]) - int(float(argument[0]))
                         offset = int(str(offset).split('.')[1])
+                        misc.sprint("ftn25 is present", offset, argument[0])
                         if offset ==0 or offset == int(float(argument[0])):
+                            os.remove(pjoin(cwd, G, 'ftn25'))
+                            misc.sprint("remove it")
                             continue
                         else:
+                            misc.sprint('keep it')
                             input_files.append(pjoin(cwd, G, 'ftn25'))
-
+                    
                  
-                                
                 #submitting
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
                              input_files=input_files, output_files=output_files,

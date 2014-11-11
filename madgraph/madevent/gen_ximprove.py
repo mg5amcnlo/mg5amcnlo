@@ -755,7 +755,7 @@ class gensym(object):
 
         # 1. write the new input_app.txt to double the number of points
         run_card = self.cmd.run_card        
-        options = {'event' : 2**(step+1) * self.cmd.opts['points'] / self.splitted_grid,
+        options = {'event' : 2**(step) * self.cmd.opts['points'] / self.splitted_grid,
                'maxiter': 1,
                'miniter': 1,
                'accuracy': self.cmd.opts['accuracy'],
@@ -765,10 +765,12 @@ class gensym(object):
                } 
         
         if int(options['helicity']) == 1:
-            options['event'] *= 2**(self.cmd.proc_characteristics['nexternal']//3)
+            options['event'] = options['event'] * 2**(self.cmd.proc_characteristics['nexternal']//3)
+            
         
         for Gdir in Gdirs:
             self.write_parameter_file(pjoin(Gdir, 'input_app.txt'), options)   
+        
         
         #2. resubmit the new jobs
         packet = cluster.Packet((Pdir, G, step+1), self.combine_grid, \
@@ -799,7 +801,7 @@ class gensym(object):
         """        
         options['event'] = int(options['event'])
         open(path, 'w').write(template % options)
-        
+
 
 
     
@@ -819,10 +821,7 @@ class gensym(object):
                    }
         
         if int(options['helicity'])== 1:
-            options['event'] *= 2**(self.cmd.proc_characteristics['nexternal']//3)
-            misc.sprint("due to MC overhelicities increase event by %s" % 2**(self.cmd.proc_characteristics['nexternal']//3))
-        else:
-            misc.sprint("NOMVoverheleicity", options['helicity'])
+            options['event'] = options['event'] * 2**(self.cmd.proc_characteristics['nexternal']//3)
         
         if parralelization:
             options['gridmode'] = -2

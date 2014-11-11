@@ -1314,7 +1314,7 @@ c
 c     Begin code
 c
       if(ISUM_HEL.ne.0) then
-        call DS_update_grid('Helicity')
+        call DS_update_grid('Helicity', filterZeros=.True.)
       endif
 
       end subroutine updated_discrete_dimensions
