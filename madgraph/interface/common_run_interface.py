@@ -2502,8 +2502,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[start] not in self.run_set:
                 args[start] = [l for l in self.run_set if l.lower() == args[start]][0]
 
-            if args[start+1] in self.conflict and card == '':
-                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+            if args[start] in self.conflict and card == '':
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
 
@@ -2534,8 +2535,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
         elif (args[start] in self.param_card or args[start] == 'width') \
                                                   and card in ['','param_card']:
-            if args[start+1] in self.conflict and card == '':
-                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+            if args[start] in self.conflict and card == '':
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
             
@@ -2594,7 +2596,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # PARAM_CARD NO BLOCK NAME ---------------------------------------------
         elif args[start] in self.pname2block and card != 'run_card':
             if args[start] in self.conflict and card == '':
-                text = 'ambiguous name (present in both param_card and run_card. Please specify'
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
             
@@ -2614,7 +2617,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                               and card in ['','MadWeight_card']:
             
             if args[start] in self.conflict and card == '':
-                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
                        
@@ -2629,7 +2633,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                              and card in ['', 'MadWeight_card']:
             
             if args[start] in self.conflict and card == '':
-                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
 
@@ -2659,31 +2664,30 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[start] not in self.shower_card:
                 args[start] = [l for l in self.shower_card if l.lower() == args[start]][0]
 
-            if args[start+1] in self.conflict and card == '':
-                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+            if args[start] in self.conflict and card == '':
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
 
             if args[start+1] == 'default':
                 default = madgraph.various.shower_card.ShowerCard(pjoin(self.me_dir,'Cards','shower_card_default.dat'))
                 if args[start] in default.keys():
-                    self.setS(args[start],default[args[start]])
+                    self.shower_card.set_param(args[start],default[args[start]],pjoin(self.me_dir,'Cards','shower_card.dat'))
                 else:
                     logger.info('remove information %s from the shower_card' % args[start])
                     del self.shower_card[args[start]]
             elif  args[start+1].lower() in ['t','.true.','true']:
-                self.setS(args[start], '.true.')
+                self.shower_card.set_param(args[start],'.true.',pjoin(self.me_dir,'Cards','shower_card.dat'))
             elif  args[start+1].lower() in ['f','.false.','false']:
-                self.setS(args[start], '.false.')
+                self.shower_card.set_param(args[start],'.false.',pjoin(self.me_dir,'Cards','shower_card.dat'))
             else:
                 try:
                     val = eval(args[start+1])
-                except NameError:
-                    val = args[start+1]
-                self.setS(args[start], val)
-                
-                shower = self.run_card['parton_shower'].upper()
-                self.shower_card.write_card(shower,pjoin(self.me_dir,'MCatNLO','shower_card_set.dat'))
+                except:
+                    args_str = ' '.join(str(a) for a in args[1:len(args)])
+                    val = args_str
+                self.shower_card.set_param(args[start],val,pjoin(self.me_dir,'Cards','shower_card.dat'))
 
         #INVALID --------------------------------------------------------------
         else:
@@ -2712,7 +2716,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
         if value:
             logger.info('modify madweight_card information BLOCK "%s" with id "%s" set to %s' %\
-                    (block, name, value))
+                    (block, name, value), '$MG:color:BLACK')
         else:
             logger.value("Invalid command: No value. To set default value. Use \"default\" as value")
             return
@@ -2720,12 +2724,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.mw_card[block][name] = value
     
     def setR(self, name, value):
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
+        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value), '$MG:color:BLACK')
         self.run_card[name] = value
-
-    def setS(self, name, value):
-        logger.info('modify parameter %s of the shower_card.dat to %s' % (name, value))
-        self.shower_card[name] = value
 
     def setP(self, block, lhaid, value):
         if isinstance(value, str):
@@ -2746,7 +2746,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('Invalid input: \'%s\' not valid intput.'% value)
 
         logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
-                    (block, lhaid, value))
+                    (block, lhaid, value), '$MG:color:BLACK')
         self.param_card[block].param_dict[lhaid].value = value
     
     def reask(self, *args, **opt):

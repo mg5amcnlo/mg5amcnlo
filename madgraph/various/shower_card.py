@@ -32,8 +32,7 @@ class ShowerCard(dict):
                     'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar', 'combine_td']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
     for i in range(1,100):
-        dmstring='dm_'+str(i)
-        string_vars.append(dmstring)
+        string_vars.append('dm_'+str(i))
     int_vars = ['nsplit_jobs', 'maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'njmax']
     float_vars = ['maxerrs', 'lambda_5', 'b_mass', 'qcut']
 
@@ -76,7 +75,7 @@ class ShowerCard(dict):
         self.testing = testing
         dict.__init__(self)
         self.keylist = self.keys()
-            
+
         if card:
             self.read_card(card)
 
@@ -94,6 +93,8 @@ class ShowerCard(dict):
             key = args[0].strip().lower()
             value = args[1].strip()
             self.set_param(key, value)
+        for i in range(1,100):
+            self['dm_'+str(i)] = ''
 
         self.text=content
 
@@ -134,15 +135,16 @@ class ShowerCard(dict):
         self.keylist.append(key)
 
         #then update self.text and write the new card
-        if write_to and self.testing:
+        if write_to:
+            print '\033[1m' + 'INFO: modify parameter %s of the shower_card.dat to %s' % (key, value) + '\033[0;0m'
             key_re = re.compile('^(\s*)%s\s*=\s*(.+)\s*$' % key , re.IGNORECASE)
             newlines = []
             for line in self.text.split('\n'):
                 key_match = key_re.match(line)
-                if key_match:
+                if key_match and str(key)[0:2].upper() != 'DM':
                     try:
                         comment = line.split('#')[1]
-                    except ValueError:
+                    except:
                         comment = ''
                     if key not in self.logical_vars:
                         newlines.append('%s = %s #%s' % (key, value, comment))
@@ -151,8 +153,14 @@ class ShowerCard(dict):
                             newlines.append('%s = %s #%s' % (key, 'T', comment))
                         else:
                             newlines.append('%s = %s #%s' % (key, 'F', comment))
+                elif key_match and str(key)[0:2].upper() == 'DM':
+                    del line
                 else: 
                     newlines.append(line)
+
+            if str(key)[0:2].upper() == 'DM':
+                newlines.append('%s = %s' % (str(key).upper(), value[1:len(value)-1]))
+
             self.text = '\n'.join(newlines) + '\n'
 
             if self.testing:
