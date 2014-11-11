@@ -717,7 +717,7 @@ def gunzip(path, keep=False, stdout=None):
         if stdout:
             os.system('gunzip -c %s > %s' % (path, stdout))
         else:
-            os.system('gunzip  %s') 
+            os.system('gunzip  %s' % path) 
         return
     
     if not stdout:

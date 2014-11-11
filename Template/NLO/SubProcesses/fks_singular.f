@@ -396,6 +396,8 @@ c For tests
      &                 total_wgt_sum_min
       double precision virt_wgt,born_wgt_ao2pi
       common/c_fks_singular/virt_wgt,born_wgt_ao2pi
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
 
 c APPLgrid stuff
       integer iappl
@@ -894,7 +896,12 @@ c Apply the FxFx Sudakov damping on the S events
 
          if (dsig.ne.dsig) then
             write (*,*) 'ERROR #51 in dsig:',dsig,'skipping event'
+c Set dsig (and the other variables that go into the integrator) to zero
+c and do not fill any of the plots by returning here.
             dsig=0d0
+            virt_wgt=0d0
+            born_wgt_ao2pi=0d0
+            virtual_over_born=0d0
             return
          endif
 
@@ -1220,6 +1227,8 @@ c For tests
       double precision ximin
       parameter(ximin=0.05d0)
 
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
 c
 c This is the table that will be used to unweight. (It contains for
 c arguments, 1st argument: nFKSproces; 2nd argument: S or H events; 3rd
@@ -2183,6 +2192,7 @@ c Add the H-events to the S-events for UNLOPS
                   unwgt_table(0,1,j)=0d0
                   unwgt_table(0,3,j)=0d0
                   unwgt_table(1,3,j)=0d0
+                  virtual_over_born=0d0
                endif
             enddo
          endif
@@ -2341,7 +2351,7 @@ c For UNLOPS, the H-events are already added to the S-events
                do j=1,iproc_save(nFKSprocess)
                   unwgt_table(nFKSprocess,2,j)=0d0
                enddo
-         endif
+            endif
          endif
 
          if (nbody.and.dsigH.ne.0d0) then
