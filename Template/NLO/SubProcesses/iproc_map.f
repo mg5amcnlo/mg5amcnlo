@@ -206,7 +206,7 @@ c Print the map to the screen
       include 'nFKSconfigs.inc'
       include 'nexternal.inc'
       include 'genps.inc'
-      include "leshouche_info.inc"
+      include "leshouche_decl.inc"
       include "reweight_appl.inc"
       include "appl_common.inc"
 *

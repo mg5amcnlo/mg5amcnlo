@@ -484,29 +484,6 @@ c Call the actual cuts function
       END
 
 
-      subroutine unweight_function(p_born,unwgtfun)
-c This is a user-defined function to which to unweight the events
-c A non-flat distribution will generate events with a certain
-c weight. This is particularly useful to generate more events
-c (with smaller weight) in tails of distributions.
-c It computes the unwgt factor from the momenta and multiplies
-c the weight that goes into MINT (or vegas) with this factor.
-c Before writing out the events (or making the plots), this factor
-c is again divided out.
-c This function should be called with the Born momenta to be sure
-c that it stays the same for the events, counter-events, etc.
-c A value different from 1 makes that MINT (or vegas) does not list
-c the correct cross section.
-      implicit none
-      include 'nexternal.inc'
-      double precision unwgtfun,p_born(0:3,nexternal-1)
-
-      unwgtfun=1d0
-
-      return
-      end
-
-
       function chi_gamma_iso(dr,R0,xn,epsgamma,pTgamma)
 c Eq.(3.4) of Phys.Lett. B429 (1998) 369-374 [hep-ph/9801442]
       implicit none
@@ -926,6 +903,36 @@ c
       enddo
       IDUP_tmp(nexternal)=0
 c
+      return
+      end
+
+
+      subroutine unweight_function(p_born,unwgtfun)
+c This is a user-defined function to which to unweight the events
+c A non-flat distribution will generate events with a certain
+c weight. This is particularly useful to generate more events
+c (with smaller weight) in tails of distributions.
+c It computes the unwgt factor from the momenta and multiplies
+c the weight that goes into MINT (or vegas) with this factor.
+c Before writing out the events (or making the plots), this factor
+c is again divided out.
+c This function should be called with the Born momenta to be sure
+c that it stays the same for the events, counter-events, etc.
+c A value different from 1 makes that MINT (or vegas) does not list
+c the correct cross section.
+      implicit none
+      include 'nexternal.inc'
+      double precision unwgtfun,p_born(0:3,nexternal-1),shat,sumdot
+      external sumdot
+
+      unwgtfun=1d0
+
+c How to enhance the tails is very process dependent. But, it is
+c probably easiest to enhance the tails using shat, e.g.:
+c      shat=sumdot(p_born(0,1),p_born(0,2),1d0)
+c      unwgtfun=max(100d0**2,shat)/100d0**2
+c      unwgtfun=unwgtfun**2
+
       return
       end
 

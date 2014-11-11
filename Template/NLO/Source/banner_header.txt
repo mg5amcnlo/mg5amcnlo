@@ -1,4 +1,4 @@
-<LesHouchesEvents version="1.0">
+<LesHouchesEvents version="3.0">
 <header>
 <!--
 #*********************************************************************

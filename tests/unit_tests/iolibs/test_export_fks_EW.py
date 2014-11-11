@@ -67,6 +67,7 @@ class IOExportFKSEWTest(unittest.TestCase,\
     def setUp(self):
         if not hasattr(self, 'myfks_me') or \
            not hasattr(self, 'myfortranmodel') or \
+           not hasattr(self, 'myfkshelasmulti') or \
            not hasattr(self, 'myreals'):
 
             IOExportFKSEWTest.created_files = ['test']
@@ -94,6 +95,7 @@ class IOExportFKSEWTest(unittest.TestCase,\
             
 
             fkshelasmulti = fks_helas.FKSHelasMultiProcess(myfksmulti)
+            IOExportFKSEWTest.myfkshelasmulti = fkshelasmulti
             IOExportFKSEWTest.myfks_me = fkshelasmulti['matrix_elements'][0]
             IOExportFKSEWTest.myreals = fkshelasmulti['real_matrix_elements']
 
@@ -142,7 +144,7 @@ Parameters              alpha_s
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_lh_order(\
             self.give_pos(self.created_files[0]),\
-            self.myfks_me)
+            self.myfkshelasmulti['matrix_elements'])
         self.assertFileContains(self.created_files[0], goal)
         
     def test_write_coloramps_file_EW(self):
@@ -316,141 +318,120 @@ Parameters              alpha_s
         relevant informations for all the splittings"""
 
         goal = \
-"""      INTEGER MAXPROC_USED, MAXFLOW_USED
-      PARAMETER (MAXPROC_USED = 2)
-      PARAMETER (MAXFLOW_USED = 1)
-      INTEGER IDUP_D(14,5,MAXPROC_USED)
-      INTEGER MOTHUP_D(14,2,5,MAXPROC_USED)
-      INTEGER ICOLUP_D(14,2,5,MAXFLOW_USED)
-      INTEGER ILH
-
-      DATA (IDUP_D(1,ILH,1),ILH=1,5)/-11,22,6,-6,-11/
-      DATA (MOTHUP_D(1,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(1,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(1,1,ILH,  1),ILH=1, 5)/  0,  0,501,  0,  0/
-      DATA (ICOLUP_D(1,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-      DATA (IDUP_D(1,ILH,2),ILH=1,5)/-13,22,6,-6,-13/
-      DATA (MOTHUP_D(1,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(1,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(2,ILH,1),ILH=1,5)/11,22,6,-6,11/
-      DATA (MOTHUP_D(2,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(2,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(2,1,ILH,  1),ILH=1, 5)/  0,  0,501,  0,  0/
-      DATA (ICOLUP_D(2,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-      DATA (IDUP_D(2,ILH,2),ILH=1,5)/13,22,6,-6,13/
-      DATA (MOTHUP_D(2,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(2,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(3,ILH,1),ILH=1,5)/-1,22,6,-6,-1/
-      DATA (MOTHUP_D(3,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(3,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(3,1,ILH,  1),ILH=1, 5)/  0,  0,502,  0,  0/
-      DATA (ICOLUP_D(3,2,ILH,  1),ILH=1, 5)/501,  0,  0,502,501/
-      DATA (IDUP_D(3,ILH,2),ILH=1,5)/-3,22,6,-6,-3/
-      DATA (MOTHUP_D(3,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(3,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(4,ILH,1),ILH=1,5)/1,22,6,-6,1/
-      DATA (MOTHUP_D(4,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(4,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(4,1,ILH,  1),ILH=1, 5)/502,  0,501,  0,502/
-      DATA (ICOLUP_D(4,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-      DATA (IDUP_D(4,ILH,2),ILH=1,5)/3,22,6,-6,3/
-      DATA (MOTHUP_D(4,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(4,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(5,ILH,1),ILH=1,5)/-2,22,6,-6,-2/
-      DATA (MOTHUP_D(5,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(5,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(5,1,ILH,  1),ILH=1, 5)/  0,  0,502,  0,  0/
-      DATA (ICOLUP_D(5,2,ILH,  1),ILH=1, 5)/501,  0,  0,502,501/
-      DATA (IDUP_D(5,ILH,2),ILH=1,5)/-4,22,6,-6,-4/
-      DATA (MOTHUP_D(5,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(5,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(6,ILH,1),ILH=1,5)/2,22,6,-6,2/
-      DATA (MOTHUP_D(6,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(6,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(6,1,ILH,  1),ILH=1, 5)/502,  0,501,  0,502/
-      DATA (ICOLUP_D(6,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-      DATA (IDUP_D(6,ILH,2),ILH=1,5)/4,22,6,-6,4/
-      DATA (MOTHUP_D(6,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(6,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(7,ILH,1),ILH=1,5)/22,-11,6,-6,-11/
-      DATA (MOTHUP_D(7,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(7,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(7,1,ILH,  1),ILH=1, 5)/  0,  0,501,  0,  0/
-      DATA (ICOLUP_D(7,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-      DATA (IDUP_D(7,ILH,2),ILH=1,5)/22,-13,6,-6,-13/
-      DATA (MOTHUP_D(7,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(7,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(8,ILH,1),ILH=1,5)/22,11,6,-6,11/
-      DATA (MOTHUP_D(8,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(8,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(8,1,ILH,  1),ILH=1, 5)/  0,  0,501,  0,  0/
-      DATA (ICOLUP_D(8,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-      DATA (IDUP_D(8,ILH,2),ILH=1,5)/22,13,6,-6,13/
-      DATA (MOTHUP_D(8,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(8,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(9,ILH,1),ILH=1,5)/22,-1,6,-6,-1/
-      DATA (MOTHUP_D(9,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(9,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(9,1,ILH,  1),ILH=1, 5)/  0,  0,502,  0,  0/
-      DATA (ICOLUP_D(9,2,ILH,  1),ILH=1, 5)/  0,501,  0,502,501/
-      DATA (IDUP_D(9,ILH,2),ILH=1,5)/22,-3,6,-6,-3/
-      DATA (MOTHUP_D(9,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(9,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(10,ILH,1),ILH=1,5)/22,1,6,-6,1/
-      DATA (MOTHUP_D(10,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(10,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(10,1,ILH,  1),ILH=1, 5)/  0,502,501,  0,502/
-      DATA (ICOLUP_D(10,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-      DATA (IDUP_D(10,ILH,2),ILH=1,5)/22,3,6,-6,3/
-      DATA (MOTHUP_D(10,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(10,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(11,ILH,1),ILH=1,5)/22,-2,6,-6,-2/
-      DATA (MOTHUP_D(11,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(11,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(11,1,ILH,  1),ILH=1, 5)/  0,  0,502,  0,  0/
-      DATA (ICOLUP_D(11,2,ILH,  1),ILH=1, 5)/  0,501,  0,502,501/
-      DATA (IDUP_D(11,ILH,2),ILH=1,5)/22,-4,6,-6,-4/
-      DATA (MOTHUP_D(11,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(11,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(12,ILH,1),ILH=1,5)/22,2,6,-6,2/
-      DATA (MOTHUP_D(12,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(12,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(12,1,ILH,  1),ILH=1, 5)/  0,502,501,  0,502/
-      DATA (ICOLUP_D(12,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-      DATA (IDUP_D(12,ILH,2),ILH=1,5)/22,4,6,-6,4/
-      DATA (MOTHUP_D(12,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(12,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
-
-      DATA (IDUP_D(13,ILH,1),ILH=1,5)/22,22,6,-6,22/
-      DATA (MOTHUP_D(13,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(13,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(13,1,ILH,  1),ILH=1, 5)/  0,  0,501,  0,  0/
-      DATA (ICOLUP_D(13,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-
-      DATA (IDUP_D(14,ILH,1),ILH=1,5)/22,22,6,-6,22/
-      DATA (MOTHUP_D(14,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP_D(14,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP_D(14,1,ILH,  1),ILH=1, 5)/  0,  0,501,  0,  0/
-      DATA (ICOLUP_D(14,2,ILH,  1),ILH=1, 5)/  0,  0,  0,501,  0/
-
-
+"""# I -> IDUP_D
+# M -> MOTHUP_D
+# C -> ICOLUP_D
+I      1      1       -11 22 6 -6 -11
+M      1      1      1        0   0   1   1   1
+M      1      2      1        0   0   2   2   2
+C      1      1      1        0   0 501   0   0
+C      1      2      1        0   0   0 501   0
+I      1      2       -13 22 6 -6 -13
+M      1      1      2        0   0   1   1   1
+M      1      2      2        0   0   2   2   2
+I      2      1       11 22 6 -6 11
+M      2      1      1        0   0   1   1   1
+M      2      2      1        0   0   2   2   2
+C      2      1      1        0   0 501   0   0
+C      2      2      1        0   0   0 501   0
+I      2      2       13 22 6 -6 13
+M      2      1      2        0   0   1   1   1
+M      2      2      2        0   0   2   2   2
+I      3      1       -1 22 6 -6 -1
+M      3      1      1        0   0   1   1   1
+M      3      2      1        0   0   2   2   2
+C      3      1      1        0   0 502   0   0
+C      3      2      1      501   0   0 502 501
+I      3      2       -3 22 6 -6 -3
+M      3      1      2        0   0   1   1   1
+M      3      2      2        0   0   2   2   2
+I      4      1       1 22 6 -6 1
+M      4      1      1        0   0   1   1   1
+M      4      2      1        0   0   2   2   2
+C      4      1      1      502   0 501   0 502
+C      4      2      1        0   0   0 501   0
+I      4      2       3 22 6 -6 3
+M      4      1      2        0   0   1   1   1
+M      4      2      2        0   0   2   2   2
+I      5      1       -2 22 6 -6 -2
+M      5      1      1        0   0   1   1   1
+M      5      2      1        0   0   2   2   2
+C      5      1      1        0   0 502   0   0
+C      5      2      1      501   0   0 502 501
+I      5      2       -4 22 6 -6 -4
+M      5      1      2        0   0   1   1   1
+M      5      2      2        0   0   2   2   2
+I      6      1       2 22 6 -6 2
+M      6      1      1        0   0   1   1   1
+M      6      2      1        0   0   2   2   2
+C      6      1      1      502   0 501   0 502
+C      6      2      1        0   0   0 501   0
+I      6      2       4 22 6 -6 4
+M      6      1      2        0   0   1   1   1
+M      6      2      2        0   0   2   2   2
+I      7      1       22 -11 6 -6 -11
+M      7      1      1        0   0   1   1   1
+M      7      2      1        0   0   2   2   2
+C      7      1      1        0   0 501   0   0
+C      7      2      1        0   0   0 501   0
+I      7      2       22 -13 6 -6 -13
+M      7      1      2        0   0   1   1   1
+M      7      2      2        0   0   2   2   2
+I      8      1       22 11 6 -6 11
+M      8      1      1        0   0   1   1   1
+M      8      2      1        0   0   2   2   2
+C      8      1      1        0   0 501   0   0
+C      8      2      1        0   0   0 501   0
+I      8      2       22 13 6 -6 13
+M      8      1      2        0   0   1   1   1
+M      8      2      2        0   0   2   2   2
+I      9      1       22 -1 6 -6 -1
+M      9      1      1        0   0   1   1   1
+M      9      2      1        0   0   2   2   2
+C      9      1      1        0   0 502   0   0
+C      9      2      1        0 501   0 502 501
+I      9      2       22 -3 6 -6 -3
+M      9      1      2        0   0   1   1   1
+M      9      2      2        0   0   2   2   2
+I     10      1       22 1 6 -6 1
+M     10      1      1        0   0   1   1   1
+M     10      2      1        0   0   2   2   2
+C     10      1      1        0 502 501   0 502
+C     10      2      1        0   0   0 501   0
+I     10      2       22 3 6 -6 3
+M     10      1      2        0   0   1   1   1
+M     10      2      2        0   0   2   2   2
+I     11      1       22 -2 6 -6 -2
+M     11      1      1        0   0   1   1   1
+M     11      2      1        0   0   2   2   2
+C     11      1      1        0   0 502   0   0
+C     11      2      1        0 501   0 502 501
+I     11      2       22 -4 6 -6 -4
+M     11      1      2        0   0   1   1   1
+M     11      2      2        0   0   2   2   2
+I     12      1       22 2 6 -6 2
+M     12      1      1        0   0   1   1   1
+M     12      2      1        0   0   2   2   2
+C     12      1      1        0 502 501   0 502
+C     12      2      1        0   0   0 501   0
+I     12      2       22 4 6 -6 4
+M     12      1      2        0   0   1   1   1
+M     12      2      2        0   0   2   2   2
+I     13      1       22 22 6 -6 22
+M     13      1      1        0   0   1   1   1
+M     13      2      1        0   0   2   2   2
+C     13      1      1        0   0 501   0   0
+C     13      2      1        0   0   0 501   0
+I     14      1       22 22 6 -6 22
+M     14      1      1        0   0   1   1   1
+M     14      2      1        0   0   2   2   2
+C     14      1      1        0   0 501   0   0
+C     14      2      1        0   0   0 501   0
 """
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_leshouche_info_file(\
-            writers.FortranWriter(self.give_pos(self.created_files[0])),
-            self.myfks_me,
-            self.myfortranmodel)
+            self.give_pos(self.created_files[0]),
+            self.myfks_me)
         self.assertFileContains(self.created_files[0], goal)
 
     @PostponeToEW

@@ -710,21 +710,44 @@ def gunzip(path, keep=False, stdout=None):
         else:
             raise Exception, "%(path)s does not finish by .gz and the file %(path)s.gz does not exists" %\
                               {"path": path}         
+
+    
+    #for large file (>1G) it is faster and safer to use a separate thread
+    if os.path.getsize(path) > 1e8:
+        if stdout:
+            os.system('gunzip -c %s > %s' % (path, stdout))
+        else:
+            os.system('gunzip  %s') 
+        return
+    
     if not stdout:
-        stdout = path[:-3]
+        stdout = path[:-3]        
     open(stdout,'w').write(ziplib.open(path, "r").read())
     if not keep:
         os.remove(path)
 
-def gzip(path, stdout=None, error=True):
+def gzip(path, stdout=None, error=True, forceexternal=False):
     """ a standard replacement for os.system('gzip %s ' % path)"""
+
+
+    
+    #for large file (>1G) it is faster and safer to use a separate thread
+    if os.path.getsize(path) > 1e9:
+        call(['gzip', '-f', path])
+        if stdout:
+            shutil.move('%s.gz' % path, stdout)
+        return
+    
     if not stdout:
         stdout = "%s.gz" % path
     elif not stdout.endswith(".gz"):
         stdout = "%s.gz" % stdout
+
     try:
         ziplib.open(stdout,"w").write(open(path).read())
-    except:
+    except OverflowError:
+        gzip(path, stdout, error=error, forceexternal=True)
+    except Exception:
         if error:
             raise
     else:

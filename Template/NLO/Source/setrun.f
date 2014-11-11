@@ -56,7 +56,7 @@ c
      &     xmaxup(maxpup),lprup(maxpup)
 c
       include 'nexternal.inc'
-      include 'leshouche_info.inc'
+      include 'leshouche_decl.inc'
       logical gridrun,gridpack
       integer          iseed
       common /to_seed/ iseed
@@ -73,7 +73,8 @@ c----------
       
 c MZ add the possibility to have shower_MC input lowercase
       call to_upper(shower_MC)
-
+C
+      call read_leshouche_info(idup_d,mothup_d,icolup_d)
 
 c merging cuts
       xqcut=0d0

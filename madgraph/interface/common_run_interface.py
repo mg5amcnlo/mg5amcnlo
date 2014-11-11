@@ -195,6 +195,7 @@ class CheckValidForCmd(object):
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
         
+        
         ufo_path = pjoin(self.me_dir,'bin','internal', 'ufomodel')
         # Import model
         if not MADEVENT:
@@ -220,7 +221,7 @@ class CheckValidForCmd(object):
 #            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
             
         # check if the name are passed to default MG5
-        if '-modelname' in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
+        if '-modelname' not in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
             model.pass_particles_name_in_mg_default()        
         model = model_reader.ModelReader(model)
         particles_name = dict([(p.get('name'), p.get('pdg_code'))
@@ -2058,7 +2059,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_lhapdf_pdfsetsdir(self):
         lhapdf_version = self.get_lhapdf_version()
 
-        if lhapdf_version.startswith('5.'):
+        # check if the LHAPDF_DATA_PATH variable is defined
+        if 'LHAPDF_DATA_PATH' in os.environ.keys() and os.environ['LHAPDF_DATA_PATH']:
+            datadir = os.environ['LHAPDF_DATA_PATH']
+
+        elif lhapdf_version.startswith('5.'):
             datadir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
                          stdout = subprocess.PIPE).stdout.read().strip()
 
@@ -2141,7 +2146,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     elif len(split) == 2:
                         if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
                             all_var = [comment.strip().lower()]
+                    elif len(split) >=2 and split[1].startswith('('):
+                        all_var = [split[0].strip().lower()]
                     else:
+                        if not bname.startswith('qnumbers'):
+                            logger.debug("not recognize information for %s %s : %s",
+                                      bname, lha_id, comment)
                         # not recognized format
                         continue
 
@@ -2363,9 +2373,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if args[0] in self.special_shortcut:
             if len(args) == 1:
                 values = {}
-            elif len(args) == 2:  
+            elif len(args) == 2: 
+                targettype = float
+                if args[1].strip().isdigit():
+                    targettype = int
+                 
                 try:  
-                    values = {'0': float(args[1])}
+                    values = {'0': targettype(args[1])}
                 except ValueError as e:
                     logger.warning("Wrong argument: The last entry should be a number.")
                     return
