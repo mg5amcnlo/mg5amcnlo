@@ -119,7 +119,8 @@ c check that the event normalization input is reasoble
 
 c info for reweight
 
-      if (ickkw.ne.0 .and. ickkw.ne.4 .and. ickkw.ne.3) then
+      if ( ickkw.ne.0 .and. ickkw.ne.4 .and. ickkw.ne.3 .and.
+     &     ickkw.ne.-1) then
          write (*,*) 'ickkw parameter not known. ickkw=',ickkw
          stop
       endif
