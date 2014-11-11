@@ -1042,7 +1042,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # now pass the event to a detector simulator and reconstruct objects
         ########################################################################
         if lock:
-            lock.acquire()
+            lock.wait()
         # Prepare the output file with the banner
         ff = open(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 'w')
         if os.path.exists(pjoin(self.me_dir, 'Source', 'banner_header.txt')):
@@ -1215,7 +1215,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.update_status('Running Delphes', level=None)
         # Wait that the gunzip of the files is finished (if any)
         if lock:
-            lock.acquire()
+            lock.wait()
 
 
 

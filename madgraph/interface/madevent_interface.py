@@ -2330,13 +2330,23 @@ Beware that this can be dangerous for local multicore runs.""")
                         
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
             # processes, so that we place OPP last.
-            if 'MLReductionLib' in self.MadLoopparam.user_set and \
-                        self.MadLoopparam.get('MLReductionLib').startswith('1'):
-                logger.warning(
-"""You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
-Beware that this can bring significant slowdown; the optimal choice being to first start with TIR reduction.""")
-            # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-            self.MadLoopparam.set('MLReductionLib','2|3|1', ifnotdefault=False)
+            if self.run_card['nhel'] == '0':
+                if 'MLReductionLib' in self.MadLoopparam.user_set and \
+                            self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    logger.warning(
+    """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
+    Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
+                # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
+                self.MadLoopparam.set('MLReductionLib','2|3|1', ifnotdefault=False)
+            else:
+                if 'MLReductionLib' in self.MadLoopparam.user_set and \
+                    not self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    logger.warning(
+    """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
+    Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
+                # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
+                self.MadLoopparam.set('MLReductionLib','1|2|3', ifnotdefault=False)
+            
             
             # MadLoop runtime speed is important for loop-induced processes.
             # We therefore chose here to only have the minimal numerical stability

@@ -1549,6 +1549,13 @@ c         if (kn .eq. events) then
          if (non_zero .eq. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
 
+C
+C    Now updated the discrete dimensions of the DiscreteSampler module
+C    used for sampling helicity configurations and matrix<i> config
+C    choice in the grouped case.
+C
+           call updated_discrete_dimensions()
+
 c          # special mode where we store information to combine them
            if(use_cut.eq.-2)then
                 open(unit=22, file="grid_information")
@@ -1697,12 +1704,7 @@ c            write(*,*) 'New number of events',events,twgt
             cur_it = cur_it + 1
             kn = 0
             wmax = -1d0
-C
-C    Now updated the discrete dimensions of the DiscreteSampler module
-C    used for sampling helicity configurations and matrix<i> config
-C    choice in the grouped case.
-C
-           call updated_discrete_dimensions() 
+
 c
 c     do so adjusting of weights according to number of events in bin
 c
