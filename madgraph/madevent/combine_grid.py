@@ -432,14 +432,14 @@ class DiscreteSamplerDimension(dict):
   %(min_bin_probing_points)s # Attribute 'min_bin_probing_points' of the grid.
   %(grid_mode)s # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
 #  binID   n_entries weight   weight_sqr   abs_weight
-  %(bins_informations)s
+%(bins_informations)s
   </DiscreteSampler_grid>
 """
             
         data = {'name': self.name,
                 'min_bin_probing_points': self.min_bin_probing_points,
                 'grid_mode': self.grid_mode,
-                'bins_informations' : '\n'.join('  %s %s' % (bin_id,str(bin_info)) \
+                'bins_informations' : '\n'.join('    %s %s' % (bin_id,str(bin_info)) \
                                             for (bin_id, bin_info) in self.items())
                 }
         
