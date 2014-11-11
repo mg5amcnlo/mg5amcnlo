@@ -2324,7 +2324,7 @@ Integrated cross-section
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
-        logger.info('Prepairing MCatNLO run')
+        logger.info('Preparing MCatNLO run')
         try:     
             misc.gunzip(evt_file)
         except Exception:
@@ -2403,6 +2403,9 @@ Integrated cross-section
         if shower == 'HERWIGPP':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
 
+        if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+            extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
+
         if 'LD_LIBRARY_PATH' in os.environ.keys():
             ldlibrarypath = os.environ['LD_LIBRARY_PATH']
         else:
@@ -2466,8 +2469,11 @@ Integrated cross-section
         # special treatment for pythia8
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
-            files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
-            files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
+            if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+                files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
+                files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
+            else:
+                files.ln(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -2552,11 +2558,12 @@ Integrated cross-section
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
 
             # run the plot creation in a secure way
-            try:
-                self.do_plot('%s -f' % self.run_name)
-            except Exception, error:
-                logger.info("Fail to make the plot. Continue...")
-                pass
+            if hep_format == 'StdHEP':
+                try:
+                    self.do_plot('%s -f' % self.run_name)
+                except Exception, error:
+                    logger.info("Fail to make the plot. Continue...")
+                    pass
 
         elif out_id == 'TOP':
             #copy the topdrawer file(s) back in events
@@ -3246,26 +3253,30 @@ Integrated cross-section
             if os.path.exists(pdfinput):
                 input_files.append(pdfinput)
             input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
+            input_files.append(pjoin(cwd, os.path.pardir, 'leshouche_info.dat'))
             input_files.append(args[0])
             output_files.append('%s.rwgt' % os.path.basename(args[0]))
             output_files.append('reweight_xsec_events.output')
             output_files.append('scale_pdf_dependence.dat')
 
             return self.cluster.submit2(exe, args, cwd=cwd, 
-                             input_files=input_files, output_files=output_files) 
+                             input_files=input_files, output_files=output_files,
+                             required_output=output_files) 
 
         elif 'ajob' in exe:
             # the 'standard' amcatnlo job
             # check if args is a list of string 
             if type(args[0]) == str:
-                input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
+                input_files, output_files, required_output, args = self.getIO_ajob(exe,cwd, args)
                 #submitting
                 self.cluster.submit2(exe, args, cwd=cwd, 
-                             input_files=input_files, output_files=output_files)
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output)
 
                 # keep track of folders and arguments for splitted evt gen
-                if len(args) == 4 and '_' in output_files[-1]:
-                    self.split_folders[pjoin(cwd,output_files[-1])] = [exe] + args
+                subfolder=output_files[-1].split('/')[0]
+                if len(args) == 4 and '_' in subfolder:
+                    self.split_folders[pjoin(cwd,subfolder)] = [exe] + args
 
         elif 'shower' in exe:
             # a shower job
@@ -3278,7 +3289,10 @@ Integrated cross-section
                 input_files.append(pjoin(cwd, 'Pythia8.exe'))
                 input_files.append(pjoin(cwd, 'Pythia8.cmd'))
                 input_files.append(pjoin(cwd, 'config.sh'))
-                input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
+                if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+                    input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
+                else:
+                    input_files.append(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'))
             else:
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
@@ -3330,11 +3344,14 @@ Integrated cross-section
         
         keep_fourth_arg = False
         output_files = []
+        required_output = []
         input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
                      pjoin(cwd, 'initial_states_map.dat'),
+                     pjoin(cwd, 'configs_and_props_info.dat'),
+                     pjoin(cwd, 'leshouche_info.dat'),
                      pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
@@ -3372,7 +3389,13 @@ Integrated cross-section
                 if os.path.exists(pjoin(cwd,current)):
                     input_files.append(pjoin(cwd, current))
                 output_files.append(current)
+
+                required_output.append('%s/results.dat' % current)
+                required_output.append('%s/log.txt' % current)
+                required_output.append('%s/mint_grids' % current)
+                required_output.append('%s/grid.MC_integer' % current)
                 if len(args) == 4:
+                    required_output.append('%s/scale_pdf_dependence.dat' % current)
                     args[2] = '-1'
                     # use a grid train on another part
                     base = '%s_G%s' % (args[3],i)
@@ -3416,6 +3439,14 @@ Integrated cross-section
                     keep_fourth_arg = True
                     # this is for the split event generation
                     output_files.append('G%s%s_%s' % (args[1], i, args[3]))
+                    required_output.append('G%s%s_%s/log_MINT%s.txt' % (args[1], i, args[3],args[2]))
+
+                else:
+                    required_output.append('%s/log_MINT%s.txt' % (current,args[2]))
+                if args[2] in ['0','1']:
+                    required_output.append('%s/results.dat' % current)
+                if args[2] == '1':
+                    output_files.append('%s/results.dat' % current)
 
         else:
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
@@ -3428,7 +3459,7 @@ Integrated cross-section
         if len(args) == 4 and not keep_fourth_arg:
             args = args[:3]
             
-        return input_files, output_files, args
+        return input_files, output_files, required_output,  args
             
     def write_madinMMC_file(self, path, run_mode, mint_mode):
         """writes the madinMMC_?.2 file"""

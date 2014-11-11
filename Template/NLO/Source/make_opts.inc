@@ -16,8 +16,7 @@ ifeq ($(origin CFLAGS),undefined)
   CFLAGS = -O 
 endif
 
-  
-
+# Increase the number of allowed charcters in a Fortran line
 FFLAGS+= -ffixed-line-length-132
 
 # Set FC unless it's defined by an environment variable

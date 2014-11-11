@@ -32,7 +32,7 @@ c Scales
      #                         muF2_id_str,QES_id_str
 c
       write(ifile,'(a)')
-     #     '<LesHouchesEvents version="1.0">'
+     #     '<LesHouchesEvents version="3.0">'
       write(ifile,'(a)')
      #     '  <!--'
       write(ifile,'(a)')'  <scalesfunctionalform>'
@@ -78,7 +78,7 @@ c     in write_lhe_event. It is set to -99 through a block data
 c     statement.
       event_id=0
 c
-      write(ifile,'(a)') '<LesHouchesEvents version="1.0">'
+      write(ifile,'(a)') '<LesHouchesEvents version="3.0">'
       write(ifile,'(a)') '  <header>'
       write(ifile,'(a)') '  <MG5ProcCard>'
       open (unit=92,file=path(1:index(path," ")-1)//'proc_card_mg5.dat'

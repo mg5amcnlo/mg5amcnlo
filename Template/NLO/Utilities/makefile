@@ -5,7 +5,7 @@ INCLUDE=-I../SubProcesses/$(P01)
 FF=gfortran -g -fno-automatic -ffixed-line-length-132 $(INCLUDE)
 FILES=handling_lhe_events.o fill_MC_mshell.o
 FILES2=madfks_plot.o dbook.o setcuts.o analysis_td_template.o \
-       open_output_files.o open_output_files_dummy.o
+       open_output_files.o open_output_files_dummy.o appl_interface_dummy.o
 
 %.o : %.f
 	$(FF) -c $<
@@ -13,7 +13,7 @@ FILES2=madfks_plot.o dbook.o setcuts.o analysis_td_template.o \
 all: check_events combine_plots compare_events merge_events plot_events \
 	plot_events_lhef select_events split_events sum_plots uncertainties
 
-check_events : $(FILES) check_events.o dbook.o
+check_events : $(FILES) check_events.o dbook.o appl_interface_dummy.o
 	$(FF) $^ -o $@
 
 combine_plots : combine_plots.o

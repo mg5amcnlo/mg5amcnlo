@@ -6,7 +6,8 @@
       data HasReadOnce/.FALSE./
 
 
-      CHARACTER*64 fileName, buff, buff2, mode
+      character(*) filename
+      CHARACTER*64 buff, buff2, mode
       include "FKSParams.inc"
 
       logical printParam, couldRead, paramPrinted
@@ -18,36 +19,36 @@
           goto 901
       endif
 
-      open(666, file=fileName, err=676, action='READ')
+      open(68, file=fileName, err=676, action='READ')
       do
-         read(666,*,end=999) buff
+         read(68,*,end=999) buff
          if(index(buff,'#').eq.1) then
 
            if (buff .eq. '#IRPoleCheckThreshold') then
-             read(666,*,end=999) IRPoleCheckThreshold
+             read(68,*,end=999) IRPoleCheckThreshold
              if (IRPoleCheckThreshold .lt. -1.01d0 ) then
                stop 'IRPoleCheckThreshold must be >= -1.0d0.'
              endif 
 
            elseif (buff .eq. '#PrecisionVirtualAtRunTime') then
-             read(666,*,end=999) PrecisionVirtualAtRunTime
+             read(68,*,end=999) PrecisionVirtualAtRunTime
              if (IRPoleCheckThreshold .lt. -1.01d0 ) then
                stop 'PrecisionVirtualAtRunTime must be >= -1.0d0.'
              endif 
 
            else if (buff .eq. '#NHelForMCoverHels') then
-             read(666,*,end=999) NHelForMCoverHels
+             read(68,*,end=999) NHelForMCoverHels
              if (NHelForMCoverHels .lt. -1) then
                stop 'NHelForMCoverHels must be >= -1.'
              endif 
            else if (buff .eq. '#VirtualFraction') then
-             read(666,*,end=999) Virt_fraction
+             read(68,*,end=999) Virt_fraction
              if (Virt_fraction .lt. 0 .or. virt_fraction .gt.1) then
                 stop 'VirtualFraction should be a fraction'/
      $               /' between 0 and 1'
              endif 
            else if (buff .eq. '#MinVirtualFraction') then
-             read(666,*,end=999) Min_Virt_fraction
+             read(68,*,end=999) Min_Virt_fraction
              if (min_virt_fraction .lt. 0 .or. min_virt_fraction .gt.1)
      $            then
                 stop 'VirtualFraction should be a fraction'/
@@ -100,7 +101,7 @@ C     a non existing or malformed parameter file
       paramPrinted=.TRUE.
       endif
 
-      close(666)
+      close(68)
       HasReadOnce=.TRUE.
   901 continue
       end

@@ -588,8 +588,15 @@ class RunCard(dict):
                 return '.false.'
             
         elif format == 'int':
-            return str(int(value))
-        
+            try:
+                return str(int(value))
+            except ValueError:
+                fl = float(value)
+                if int(fl) == fl:
+                    return str(int(fl))
+                else:
+                    raise
+                
         elif format == 'float':
             if isinstance(value, str):
                 value = value.replace('d','e')

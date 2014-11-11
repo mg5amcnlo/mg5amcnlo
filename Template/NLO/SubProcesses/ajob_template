@@ -8,7 +8,7 @@ fi
 }
 
 tarCounter=0
-while [[ (-e MadLoop5_resources.tar.gz) && (! -e MadLoop5_resources/HelConfigs.dat) && ($tarCounter < 10) ]]; do
+while [[ (-f MadLoop5_resources.tar.gz) && (! -f MadLoop5_resources/HelConfigs.dat) && ($tarCounter < 10) ]]; do
     if [[ $tarCounter > 0 ]]; then
 	sleep 2s
     fi
@@ -90,6 +90,8 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     fi
 
     link1up FKS_params.dat
+    link1up configs_and_props_info.dat
+    link1up leshouche_info.dat
 #   Not necessary anymore
 #    link1up MadLoop5_resources
     link1up OLE_order.olc

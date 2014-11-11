@@ -15,7 +15,6 @@ C
       double precision tolerance, tolerance_default
       double precision, allocatable :: accuracies(:)
       double precision accuracy
-      parameter (tolerance_default = 1d-5)
       double precision ren_scale, energy
       include 'genps.inc'
       include 'nexternal.inc'
@@ -61,6 +60,7 @@ cc
       include 'orders.inc'
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
+      include 'FKSParams.inc'
       
 C-----
 C  BEGIN CODE
@@ -80,13 +80,15 @@ C-----
       call run_printout          !Prints out a summary of the run settings
       include 'pmass.inc'
      
+      call FKSParamReader('FKS_params.dat',.TRUE.,.FALSE.)
+      tolerance_default = IRPoleCheckThreshold
 
 c     Set the energy to be characteristic of the run
       totmass = 0.0d0
       do i=1,nexternal
         totmass = totmass + pmass(i)
       enddo
-      energy = max((ebeam(1)+ebeam(2))/2.0d0,2.0d0*totmass)
+      energy = max((ebeam(1)+ebeam(2))/20.0d0,2.0d0*totmass)
 c     Set the renormalization scale to be of the order of sqrt(s) but
 c     not equal to it so as to be sensitive to all logs in the check.
       ren_scale = energy/2.0d0

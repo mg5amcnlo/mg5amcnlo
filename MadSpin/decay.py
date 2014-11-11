@@ -2662,6 +2662,8 @@ class decay_all_events(object):
         decay_text = []
         for decays in self.mscmd.list_branches.values():
             for decay in  decays:
+                if '=' not in decay:
+                    decay += ' QCD=99'
                 if ',' in decay:
                     decay_text.append('(%s)' % decay)
                 else:

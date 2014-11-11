@@ -5262,7 +5262,7 @@ class UFO_model_to_mg4(object):
           """
                     text = ufo_fct_template % {
                                 'name': fct.name,
-                                'args': ",".join(fct.arguments),                
+                                'args': ", ".join(fct.arguments),                
                                 'fct': self.p_to_f.parse(fct.expr)
                                  }
                     fsock.writelines(text)
@@ -5273,18 +5273,19 @@ class UFO_model_to_mg4(object):
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
                                         "theta_function", "cond", "reglog", "arg"]:
                         ufo_fct_template = """
-          %(complex_mp_format)s function %(name)s(%(args)s)
+          %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
           implicit none
-          %(complex_mp_format)s %(args)s
-          %(name)s = %(fct)s
+          %(complex_mp_format)s mp__%(args)s
+          mp__%(name)s = %(fct)s
 
           return
           end
           """
                         text = ufo_fct_template % {
                                 'name': fct.name,
-                                'args': ",".join(fct.arguments),                
-                                'fct': self.mp_p_to_f.parse(fct.expr)
+                                'args': ", mp__".join(fct.arguments),                
+                                'fct': self.mp_p_to_f.parse(fct.expr),
+                                'complex_mp_format': self.mp_complex_format
                                  }
                         fsock.writelines(text)
 

@@ -6288,6 +6288,13 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
 
         for pid in particles:
             width = param['decay'].get((pid,)).value
+            particle = self._curr_model.get_particle(pid) 
+            #if particle['color'] !=1 and 0 < width.real < 0.1:
+            #    logger.warning("width of colored particle \"%s(%s)\" lower than QCD scale: %s. Set width to zero "
+            #                   % (particle.get('name'), pid, width.real))
+            #    width = 0
+                
+            
             if not pid in param['decay'].decay_table:
                 continue
             if pid not in decay_info:
@@ -6295,6 +6302,12 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             for BR in param['decay'].decay_table[pid]:
                 if len(BR.lhacode) == 3 and skip_2body:
                     continue
+                if BR.value * width <0.1 and particle['color'] !=1:
+                    logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
+                                   % (particle.get('name'), BR.value * width, BR.lhacode[1:]))
+                                     
+                    continue
+                
                 decay_info[pid].append([BR.lhacode[1:], BR.value * width])
 
         madevent_interface.MadEventCmd.update_width_in_param_card(decay_info,
