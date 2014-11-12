@@ -55,6 +55,18 @@ logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
 
 
 try:
+    import madgraph
+except ImportError:    
+    # import from madevent directory
+    import internal.extended_cmd as cmd
+    import internal.banner as banner_mod
+    import internal.misc as misc
+    import internal.cluster as cluster
+    import internal.check_param_card as check_param_card
+    import internal.files as files
+    from internal import InvalidCmd, MadGraph5Error
+    MADEVENT=True    
+else:
     # import from madgraph directory
     import madgraph.interface.extended_cmd as cmd
     import madgraph.various.banner as banner_mod
@@ -64,18 +76,9 @@ try:
     import models.check_param_card as check_param_card
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
-except Exception, error:
-    if __debug__:
-        print error
-    # import from madevent directory
-    import internal.extended_cmd as cmd
-    import internal.banner as banner_mod
-    import internal.misc as misc
-    import internal.cluster as cluster
-    import internal.check_param_card as check_param_card
-    import internal.files as files
-    from internal import InvalidCmd, MadGraph5Error
-    MADEVENT=True
+
+    
+
 
 #===============================================================================
 # HelpToCmd

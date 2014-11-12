@@ -239,8 +239,7 @@ class Cluster(object):
         if update_first:
             idle, run, finish, fail = self.control(me_dir)
             update_first(idle, run, finish)
-            nb_job = idle + run + finish + fail
-
+        
         #usefull shortcut for readibility
         longtime, shorttime = self.options['cluster_status_update']
         
@@ -249,7 +248,7 @@ class Cluster(object):
             old_mode = mode
             nb_iter += 1
             idle, run, finish, fail = self.control(me_dir)
-            if nb_job
+            if nb_job:
                 if  idle + run + finish + fail != nb_job:
                     nb_job = idle + run + finish + fail
                     nb_iter = 1 # since some packet finish prevent to pass in long waiting mode
