@@ -334,7 +334,7 @@ class DiscreteSampler(dict):
                 if mode == 'init' or tag not in self:
                     self[tag] = grid
                 elif mode == 'add':
-                    if grid.grid_type == 1 and grid.grid_mode == 2:
+                    if grid.grid_type == 1 and grid.grid_mode == 1:
                         # reference grid not in init mode. They should 
                         #all be the same so no need to make the sum
                         continue
@@ -425,7 +425,10 @@ class DiscreteSamplerDimension(dict):
         if self.grid_mode == 1:
             #no need of special update just the sum is fine
             self += running_grid
+            misc.sprint("adding the grid")
         else:
+            misc.sprint("special update", [self.grid_mode])
+            self.grid_mode = 1 #end initialisation
             #need to check if running_grid has enough entry bin per bin
             # if this is the case take that value
             # otherwise use the ref one (but rescaled)
@@ -446,6 +449,12 @@ class DiscreteSamplerDimension(dict):
                     bin_ref.abs_weight = bin_ref.abs_weight * ratio + bin_info.abs_weight
                     bin_ref.weight_sqr = bin_ref.weight_sqr *ratio_sqr + bin_info.weight_sqr
                     bin_ref.n_entries += bin_info.n_entries
+
+        #remove bin if entry if zero
+        for key in self.keys():
+            if not self[key].abs_weight:
+                del self[key]
+    
 
         return self
 
