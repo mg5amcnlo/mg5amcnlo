@@ -344,16 +344,15 @@ class DiscreteSampler(dict):
         """read the stream and define the grid"""
         
 #          <DiscreteSampler_grid>
-#  Helicity
+#    Helicity
+#  1 # grid_type: 1 for a reference and 2 for a running grid.
 #  10 # Attribute 'min_bin_probing_points' of the grid.
 #  1 # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
-#  1 # grid_type. 1=='ref', 2=='run'
 # # binID   n_entries weight   weight_sqr   abs_weight
-#    1   255   1.666491280568920E-002   4.274101502263763E-004   1.666491280568920E-002
-#    2   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
-#    3   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
-#    4   235   1.599927969559557E-002   3.935536991290621E-004   1.599927969559557E-002
+#    1   512   7.658545534133427E-003   9.424671508005602E-005   7.658545534133427E-003
+#    4   478   8.108669631788431E-003   1.009367301168054E-004   8.108669631788431E-003
 #  </DiscreteSampler_grid>
+  
         
         def next_line(fsock):
             line = fsock.next()
@@ -365,24 +364,26 @@ class DiscreteSampler(dict):
             else:
                 return line
         
+        #name
         firstline = next_line(fsock)
         if '#' in firstline:
             firstline = firstline.split('#',1)[0]
         name = firstline.strip()
         grid = DiscreteSamplerDimension(name)
 
-        # line 2 min_bin_probing_points
+        # line 2 grid_type
+        line = next_line(fsock)
+        grid.grid_type = int(line)
+
+        # line 3 min_bin_probing_points
         line = next_line(fsock)
         grid.min_bin_probing_points = int(line)
 
-        # line 3  grid_mode
+        # line 4  grid_mode
         line = next_line(fsock)
         grid.grid_mode = int(line)
-        
-        # line 4 grid_type
-        line = next_line(fsock)
-        grid.grid_type = int(line)
-        
+
+
         # line 5 and following grid information
         line = next_line(fsock)
         while 'discretesampler_grid' not in line.lower():
@@ -475,10 +476,9 @@ class DiscreteSamplerDimension(dict):
                 
         template = """  <DiscreteSampler_grid>
   %(name)s
+  %(grid_type)s # grid_type. 1=='ref', 2=='run'
   %(min_bin_probing_points)s # Attribute 'min_bin_probing_points' of the grid.
   %(grid_mode)s # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
-  %(grid_type)s # grid_type. 1=='ref', 2=='run'
-
 #  binID   n_entries weight   weight_sqr   abs_weight
 %(bins_informations)s
   </DiscreteSampler_grid>
