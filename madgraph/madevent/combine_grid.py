@@ -330,10 +330,15 @@ class DiscreteSampler(dict):
             line = line.lower()
             if '<discretesampler_grid>' in line:
                 grid = self.get_grid_from_file(fsock)
-                if mode == 'init' or grid.name not in self:
-                    self[grid.name] = grid
+                tag = (grid.name, grid.grid_type)
+                if mode == 'init' or tag not in self:
+                    self[tag] = grid
                 elif mode == 'add':
-                    self[grid.name] += grid
+                    if grid.grid_type == 1 and grid.grid_mode == 2:
+                        # reference grid not in init mode. They should 
+                        #all be the same so no need to make the sum
+                        continue
+                    self[tag] += grid
 
     def get_grid_from_file(self, fsock):
         """read the stream and define the grid"""
@@ -342,6 +347,7 @@ class DiscreteSampler(dict):
 #  Helicity
 #  10 # Attribute 'min_bin_probing_points' of the grid.
 #  1 # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
+#  1 # grid_type. 1=='ref', 2=='run'
 # # binID   n_entries weight   weight_sqr   abs_weight
 #    1   255   1.666491280568920E-002   4.274101502263763E-004   1.666491280568920E-002
 #    2   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
@@ -373,7 +379,11 @@ class DiscreteSampler(dict):
         line = next_line(fsock)
         grid.grid_mode = int(line)
         
-        # line 4 and following grid information
+        # line 4 grid_type
+        line = next_line(fsock)
+        grid.grid_type = int(line)
+        
+        # line 5 and following grid information
         line = next_line(fsock)
         while 'discretesampler_grid' not in line.lower():
             grid.add_bin_entry(*line.split())
@@ -389,6 +399,9 @@ class DiscreteSampler(dict):
             fsock = path
         
         for  dimension in self.values():
+            if dimension.grid_type != 1: #1 is for the reference grid
+                continue
+            dimension.update(self[(dimension.name, 2)]) #2 is for the run grid
             dimension.write(fsock)
         
             
@@ -400,7 +413,40 @@ class DiscreteSamplerDimension(dict):
         self.name = name
         self.min_bin_probing_points = 10
         self.grid_mode = 1 #1=='default',2=='initialization'
+        self.grid_type = 1 # 1=='ref', 2=='run'
+
+    def update(self, running_grid):
+        """update the reference with the associate running grid """
+
+        assert self.name == running_grid.name
+        assert self.grid_type == 1 and running_grid.grid_type == 2
         
+        if self.grid_mode == 1:
+            #no need of special update just the sum is fine
+            self += running_grid
+        else:
+            #need to check if running_grid has enough entry bin per bin
+            # if this is the case take that value
+            # otherwise use the ref one (but rescaled)
+            sum_ref = sum(w.abs_weight for w in self.values())
+            sum_run =  sum(w.abs_weight for w in running_grid.values())
+            ratio = sum_run / sum_ref
+            sum_ref = sum(w.weight_sqr for w in self.values())
+            sum_run =  sum(w.weight_sqr for w in running_grid.values())            
+            ratio_sqr = sum_run / sum_ref
+            
+            for bin_id, bin_info in running_grid.items():
+                if bin_info.n_entries > self.min_bin_probing_points:
+                    self[bin_id] = bin_info
+                else:
+                    bin_ref = self[bin_id]
+                    # modify the entry
+                    bin_ref.weight = bin_ref.weight * ratio + bin_info.weight
+                    bin_ref.abs_weight = bin_ref.abs_weight * ratio + bin_info.abs_weight
+                    bin_ref.weight_sqr = bin_ref.weight_sqr *ratio_sqr + bin_info.weight_sqr
+                    bin_ref.n_entries += bin_info.n_entries
+
+        return self
 
     def add_bin_entry(self, bin_id, n_entries, weight, weight_sqr, abs_weight):
 # # binID   n_entries weight   weight_sqr   abs_weight
@@ -431,6 +477,8 @@ class DiscreteSamplerDimension(dict):
   %(name)s
   %(min_bin_probing_points)s # Attribute 'min_bin_probing_points' of the grid.
   %(grid_mode)s # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
+  %(grid_type)s # grid_type. 1=='ref', 2=='run'
+
 #  binID   n_entries weight   weight_sqr   abs_weight
 %(bins_informations)s
   </DiscreteSampler_grid>
@@ -439,6 +487,7 @@ class DiscreteSamplerDimension(dict):
         data = {'name': self.name,
                 'min_bin_probing_points': self.min_bin_probing_points,
                 'grid_mode': self.grid_mode,
+                'grid_type': self.grid_type,
                 'bins_informations' : '\n'.join('    %s %s' % (bin_id,str(bin_info)) \
                                             for (bin_id, bin_info) in self.items())
                 }
