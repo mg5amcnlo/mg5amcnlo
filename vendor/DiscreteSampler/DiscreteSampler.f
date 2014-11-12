@@ -52,11 +52,12 @@
 !       ::  update all of them at the same time without argument.
 !       ::  It uses the running grid for this and it reinitilizes it.
 !
-!     DS_write_grid((file_name|stream_id), (dim_name|void))
+!     DS_write_grid((file_name|stream_id), (dim_name|void), (grid_type|void))
 !       :: Append to file 'file_name' or a given stream the data for 
 !       :: the current reference grid for dimension dim_name or
 !       :: or all of them if called without dim_name.
-!       :: Notice that
+!       :: You can specify grid_type to be written out to be either 'ref'
+!       :: or 'run', and it is 'ref' by default.
 !
 !     DS_load_grid((file_name|stream_id), (dim_name|void))
 !       :: Reset the run_grid for dimension dim_name and loads in
@@ -1501,14 +1502,6 @@
 
           empty_ref_grid = (ref_grid(ref_d_index)%n_tot_entries.eq.0)
 
-          if (ref_grid(ref_d_index)%grid_mode.eq.2) then
-!           This means that the reference grid is in 'initialization'
-!           mode and should be overwritten by the running grid (instead
-!           of being combined with it) when updated. We empty it now
-!           then.
-            call DS_reinitialize_dimension(ref_grid(ref_d_index))
-          endif
-
           do i=1,size(run_grid(d_index)%bins)
             mBinID = run_grid(d_index)%bins(i)%bid
             ref_bin_index = DS_bin_index(
@@ -1523,7 +1516,7 @@
               ref_bin_index = DS_bin_index(
      &                                ref_grid(ref_d_index)%bins,mBinID)
             endif
-            ref_bin = ref_grid(ref_d_index)%bins(ref_bin_index)
+            
             run_bin = run_grid(d_index)%bins(i)
             if ((run_bin%n_entries.lt.ref_grid(ref_d_index)%
      &           min_bin_probing_points).and.empty_ref_grid) then
@@ -1535,37 +1528,35 @@
      &        "requested is "//trim(toStr(ref_grid(ref_d_index)%
      &        min_bin_probing_points))//" times)."
             endif
-            new_bin = ref_bin + run_bin 
 
-!           Update the grid global cumulative information first
-            ref_grid(ref_d_index)%n_tot_entries =
-     &           ref_grid(ref_d_index)%n_tot_entries + run_bin%n_entries
+          ref_bin = ref_grid(ref_d_index)%bins(ref_bin_index)
+          if (ref_grid(ref_d_index)%grid_mode.eq.2) then
+!           This means that the reference grid is in 'initialization'
+!           mode and should be overwritten by the running grid (instead
+!           of being combined with it) when updated except for the
+!           bins with not enough entries in the run_grid.
+            if (run_bin%n_entries.ge.ref_grid(ref_d_index)%
+     &                                    min_bin_probing_points) then
+              call DS_reinitialize_bin(ref_bin)
+            else
+!             Then we combine the run_bin and the ref_bin by weighting
+!             the ref_bin with the ratio of the corresponding norms
+              ref_bin%weight = ref_bin%weight * (run_grid(
+     &          d_index)%abs_norm / ref_grid(ref_d_index)%abs_norm)
+              ref_bin%abs_weight = ref_bin%abs_weight * (run_grid(
+     &          d_index)%abs_norm / ref_grid(ref_d_index)%abs_norm)
+              ref_bin%weight_sqr = ref_bin%weight_sqr * (run_grid(
+     &          d_index)%norm_sqr / ref_grid(ref_d_index)%norm_sqr)
+            endif
+          endif
 
-!           Remove the contributions from the old ref_bin
-            ref_grid(ref_d_index)%norm = 
-     &                       ref_grid(ref_d_index)%norm - ref_bin%weight
-            ref_grid(ref_d_index)%norm_sqr = 
-     &               ref_grid(ref_d_index)%norm_sqr - ref_bin%weight_sqr
-            ref_grid(ref_d_index)%abs_norm = 
-     &               ref_grid(ref_d_index)%abs_norm - ref_bin%abs_weight
-            ref_grid(ref_d_index)%variance_norm = 
-     &          ref_grid(ref_d_index)%variance_norm -
-     &                                          DS_bin_variance(ref_bin)
-!           And add back the one of the new bin 
-            ref_grid(ref_d_index)%norm = 
-     &                       ref_grid(ref_d_index)%norm + new_bin%weight
-            ref_grid(ref_d_index)%norm_sqr = 
-     &               ref_grid(ref_d_index)%norm_sqr + new_bin%weight_sqr
-            ref_grid(ref_d_index)%abs_norm = 
-     &               ref_grid(ref_d_index)%abs_norm + new_bin%abs_weight
-            ref_grid(ref_d_index)%variance_norm = 
-     &        ref_grid(ref_d_index)%variance_norm +
-     &                                          DS_bin_variance(new_bin)
+          new_bin = ref_bin + run_bin
 
-!           Now update the ref grid bin
-            ref_grid(ref_d_index)%bins(ref_bin_index) = new_bin
+!         Now update the ref grid bin
+          ref_grid(ref_d_index)%bins(ref_bin_index) = new_bin
 
           enddo
+          call DS_synchronize_grid_with_bins(ref_grid(ref_d_index))
 
 !         Now we set the global attribute of the reference_grid to be
 !         the ones of the running grid.
@@ -1959,13 +1950,15 @@
 !       This function writes the ref_grid to a file specified by its 
 !       filename.
 !       ---------------------------------------------------------------
-        subroutine DS_write_grid_with_filename(filename, dim_name)
+        subroutine DS_write_grid_with_filename(filename, dim_name,
+     &                                                        grid_type)
         implicit none
 !         
 !         Subroutine arguments
 !
           character(len=*), intent(in)           :: filename
           character(len=*), intent(in), optional :: dim_name
+          character(len=*), intent(in), optional :: grid_type          
 !         
 !         Local variables
 !
@@ -1988,9 +1981,17 @@
           stop 1
 12        continue
           if (present(dim_name)) then
-            call DS_write_grid_with_streamID(123, dim_name)
+            if (present(grid_type)) then
+              call DS_write_grid_with_streamID(123, dim_name, grid_type)
+            else
+              call DS_write_grid_with_streamID(123, dim_name)
+            endif
           else
-            call DS_write_grid_with_streamID(123)
+            if (present(grid_type)) then              
+              call DS_write_grid_with_streamID(123, grid_type=grid_type)
+            else
+              call DS_write_grid_with_streamID(123)
+            endif                
           endif
           close(123)
         end subroutine DS_write_grid_with_filename
@@ -1999,45 +2000,85 @@
 !       This function writes the ref_grid or all grids to a file
 !       specified by its stream ID.
 !       ---------------------------------------------------------------
-        subroutine DS_write_grid_with_streamID(streamID, dim_name)
+        subroutine DS_write_grid_with_streamID(streamID, dim_name, 
+     &                                                       grid_type)
         implicit none
 !         
 !         Subroutine arguments
 !
           integer, intent(in)                    :: streamID
           character(len=*), intent(in), optional :: dim_name
+          character(len=*), intent(in), optional :: grid_type
 !         
 !         Local variables
 !
           type(SampledDimension)                 :: grid
           integer                                :: i
+          integer                                :: chosen_grid
 !
 !         Begin code
 !
-          if (.not.allocated(ref_grid)) then
+          if (present(grid_type)) then
+            if (grid_type.eq.'ref') then
+              chosen_grid = 1
+            elseif (grid_type.eq.'run') then
+              chosen_grid = 2
+            elseif (grid_type.eq.'all') then
+              chosen_grid = 3
+            else
+              write(*,*) 'DiscreteSampler:: Error in'//
+     &          " subroutine 'DS_write_grid_with_streamID',"//
+     &          " argument grid_type='"//grid_type//"' not"//
+     &          " recognized."
+              stop 1
+            endif
+          else
+            chosen_grid = 1
+          endif
+          if ((chosen_grid.eq.1.or.chosen_grid.eq.3)
+     &                        .and..not.allocated(ref_grid)) then
+            return
+          endif
+          if ((chosen_grid.eq.2..or.chosen_grid.eq.3)
+     &                        .and..not.allocated(run_grid)) then
             return
           endif
           if (present(dim_name)) then
-            grid = ref_grid(DS_dim_index(ref_grid, dim_name))
-            call DS_write_grid_from_grid(grid, streamID)
+            if (chosen_grid.eq.1.or.chosen_grid.eq.3) then            
+              grid = ref_grid(DS_dim_index(ref_grid, dim_name))
+              call DS_write_grid_from_grid(grid, streamID,'ref')
+            endif
+            if (chosen_grid.eq.2.or.chosen_grid.eq.3) then
+              grid = run_grid(DS_dim_index(run_grid, dim_name))
+              call DS_write_grid_from_grid(grid, streamID,'run')
+            endif
           else
-            do i=1,size(ref_grid)
-              grid = ref_grid(i)
-              call DS_write_grid_from_grid(grid, streamID)
-            enddo
+            if (chosen_grid.eq.1.or.chosen_grid.eq.3) then
+              do i=1,size(ref_grid)
+                grid = ref_grid(i)
+                call DS_write_grid_from_grid(grid, streamID,'ref')
+              enddo
+            endif
+            if (chosen_grid.eq.2.or.chosen_grid.eq.3) then
+              do i=1,size(run_grid)
+                grid = run_grid(i)
+                call DS_write_grid_from_grid(grid, streamID,'run')
+              enddo
+            endif
           endif
         end subroutine DS_write_grid_with_streamID
 
 !       ---------------------------------------------------------------
 !       This function writes a given grid to a file.
 !       ---------------------------------------------------------------
-        subroutine DS_write_grid_from_grid(grid, streamID)
+        subroutine DS_write_grid_from_grid(grid, streamID, grid_type)
         implicit none
 !         
 !         Subroutine arguments
 !
           integer, intent(in)                    :: streamID
           type(SampledDimension), intent(in)     :: grid
+          character(len=*), intent(in)           :: grid_type          
 !         
 !         Local variables
 !
@@ -2048,6 +2089,17 @@
 
           write(streamID,*) ' <DiscreteSampler_grid>'
           write(streamID,*) ' '//trim(toStr(grid%dimension_name))
+          if (grid_type.eq.'ref') then
+            write(streamID,*) ' '//trim(toStr(1))
+     &      //" # 1 for a reference and 2 for a running grid."
+          elseif (grid_type.eq.'run') then
+            write(streamID,*) ' '//trim(toStr(2))
+     &      //" # 1 for a reference and 2 for a running grid."
+          else
+            write(*,*) "DiscreteSampler:: Error, grid_type'"//
+     &       grid_type//"' not recognized."
+            stop 1
+          endif  
           write(streamID,*) ' '//trim(toStr(grid%min_bin_probing_points
      &      ))//" # Attribute 'min_bin_probing_points' of the grid."
           write(streamID,*) ' '//trim(toStr(grid%grid_mode
@@ -2130,6 +2182,7 @@
           integer                      :: char_size
           integer                      :: read_position
           integer                      :: run_dim_index
+          integer                      :: grid_mode
 
 !
 !         Begin code
@@ -2138,10 +2191,12 @@
           startedGrid   = .False.
           read_position = 0
           do
+998         continue          
             read(streamID, "(A)", size=char_size, eor=998,
      &                                    end=999, advance='no') TwoBuff
+
+      
             if (char_size.le.1) then
-998           continue
               cycle
             endif
             if (TwoBuff(1:1).eq.'#'.or.TwoBuff(2:2).eq.'#') then
@@ -2187,9 +2242,21 @@
                     endif
                     call DS_register_dimension(trim(buff),0,.False.)
                   case(2)
+                    read(streamID,*,end=990) grid_mode
+                    if (grid_mode.ne.1) then
+                      write(*,*) 'DiscreteSampler:: Warning, the '//
+     &                  "grid read is not of type 'reference'."//
+     &                  "  It will be skipped."
+                      call DS_remove_dimension_from_grid(run_grid, 
+     &                                                    run_dim_index)
+                      read_position = 0
+                      startedGrid = .False.
+                      goto 998
+                    endif
+                  case(3)
                     read(streamID,*,end=990) 
      &                run_grid(size(run_grid))%min_bin_probing_points
-                  case(3)
+                  case(4)
                     read(streamID,*,end=990) 
      &                run_grid(size(run_grid))%grid_mode
 !                   Make sure that the last info read before reading the
@@ -2226,7 +2293,7 @@
 !
 !         Subroutine argument
 !
-          type(sampledDimension)                 :: grid
+          type(sampledDimension), intent(inout) :: grid
 !         
 !         Local variables
 !

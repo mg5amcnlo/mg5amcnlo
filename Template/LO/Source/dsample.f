@@ -859,15 +859,19 @@ c
       endif
       end
 
-      subroutine write_discrete_grids(stream_id)
+      subroutine write_discrete_grids(stream_id, grid_type)
 c************************************************************************
 c     Write out the grid using the DiscreteSampler module
 c************************************************************************
       use DiscreteSampler          
       implicit none
       integer, intent(in)                           :: stream_id
+      character(len=*)                              :: grid_type
       
-      call DS_write_grid(stream_id)
+      if (DS_get_dim_status('Helicity').ge.1) then
+        call DS_write_grid(stream_id, dim_name='Helicity', 
+     &                                              grid_type=grid_type)
+      endif
 
       end subroutine write_discrete_grids
 
@@ -1291,7 +1295,7 @@ C     Subroutine to take care of the update of the discrete grids
 C     (used for helicity and the matrix<i> choice in the grouped case
 C     as implented in the DiscreteSampler module.
 C
-      subroutine updated_discrete_dimensions()
+      subroutine update_discrete_dimensions()
       use DiscreteSampler
       implicit none
 c
@@ -1317,7 +1321,7 @@ c
         call DS_update_grid('Helicity', filterZeros=.True.)
       endif
 
-      end subroutine updated_discrete_dimensions
+      end subroutine update_discrete_dimensions
 
       subroutine sample_put_point(wgt, point, iteration,ipole)
 c**************************************************************************
@@ -1549,13 +1553,6 @@ c         if (kn .eq. events) then
          if (non_zero .eq. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
 
-C
-C    Now updated the discrete dimensions of the DiscreteSampler module
-C    used for sampling helicity configurations and matrix<i> config
-C    choice in the grouped case.
-C
-           call updated_discrete_dimensions()
-
 c          # special mode where we store information to combine them
            if(use_cut.eq.-2)then
                 open(unit=22, file="grid_information")
@@ -1566,9 +1563,20 @@ c          # special mode where we store information to combine them
                 write(22,*) (xmin(j), j=1,invar)
                 write(22,*) (xmax(j), j=1,invar)
                 write(22,*) mean, rmean, sigma, wmax, kn,events
-                call write_discrete_grids(22)
+c               In order not to write out the reference grid but just
+c               the points which were added for this last iteration,
+c               we write out the discrete 'running' grids before the
+c               update of the reference grid.
+                call write_discrete_grids(22,'all')
                 close(22)
            endif
+
+C
+C    Now updated the discrete dimensions of the DiscreteSampler module
+C    used for sampling helicity configurations and matrix<i> config
+C    choice in the grouped case.
+C
+           call update_discrete_dimensions()
 
             mean=mean*dble(events)/dble(non_zero)
             rmean=rmean*dble(events)/dble(non_zero)
@@ -1899,7 +1907,7 @@ c               if (1d0/sqrt(tsigma) .lt. accur) then
      $                 ((grid(2,i,j),i=1,ng),j=1,invar)
                   write(26,*) twgt
 c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)
-                  call write_discrete_grids(26)
+                  call write_discrete_grids(26,'ref')
                   close(26)                  
                   endif
                   call sample_writehtm()
@@ -1960,7 +1968,7 @@ c     Check nun and chi2 (ja 03/11)
      $                 ((grid(2,i,j),i=1,ng),j=1,invar)
                   write(26,*) twgt
 c                  write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
-                  call write_discrete_grids(26)
+                  call write_discrete_grids(26,'ref')
                   close(26)
                   endif
                   call sample_writehtm()
@@ -1992,7 +2000,7 @@ c 129              close(22)
                write(26,fmt='(4f21.17)')
      $              ((grid(2,i,j),i=1,ng),j=1,invar)
                write(26,*) twgt 
-               call write_discrete_grids(26)
+               call write_discrete_grids(26,'ref')
 c               write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
                close(26)
                endif
