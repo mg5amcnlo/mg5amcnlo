@@ -339,6 +339,7 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
                     #running the function
                     packet.fct(*packet.args)                    
                 del self.id_to_packet[job_id]
+                return 'resubmit'
             
             return 'done'
         
