@@ -425,9 +425,7 @@ class DiscreteSamplerDimension(dict):
         if self.grid_mode == 1:
             #no need of special update just the sum is fine
             self += running_grid
-            misc.sprint("adding the grid")
         else:
-            misc.sprint("special update", [self.grid_mode])
             self.grid_mode = 1 #end initialisation
             #need to check if running_grid has enough entry bin per bin
             # if this is the case take that value
@@ -435,20 +433,24 @@ class DiscreteSamplerDimension(dict):
             sum_ref = sum(w.abs_weight for w in self.values())
             sum_run =  sum(w.abs_weight for w in running_grid.values())
             ratio = sum_run / sum_ref
-            sum_ref = sum(w.weight_sqr for w in self.values())
-            sum_run =  sum(w.weight_sqr for w in running_grid.values())            
-            ratio_sqr = sum_run / sum_ref
+            sum_ref_sqr = sum(w.weight_sqr for w in self.values())
+            sum_run_sqr =  sum(w.weight_sqr for w in running_grid.values())            
+            ratio_sqr = sum_run_sqr / sum_ref_sqr
             
+            self.min_bin_probing_points = 80
             for bin_id, bin_info in running_grid.items():
                 if bin_info.n_entries > self.min_bin_probing_points:
+                    bin_ref = self[bin_id]
                     self[bin_id] = bin_info
-                else:
+                else:                    
+                    wgt_run = bin_info.n_entries / self.min_bin_probing_points
+                    wgt_ref = (self.min_bin_probing_points - bin_info.n_entries)/ self.min_bin_probing_points       
                     bin_ref = self[bin_id]
                     # modify the entry
-                    bin_ref.weight = bin_ref.weight * ratio + bin_info.weight
-                    bin_ref.abs_weight = bin_ref.abs_weight * ratio + bin_info.abs_weight
-                    bin_ref.weight_sqr = bin_ref.weight_sqr *ratio_sqr + bin_info.weight_sqr
-                    bin_ref.n_entries += bin_info.n_entries
+                    bin_ref.weight = bin_ref.weight * ratio * wgt_ref  + bin_info.weight * wgt_run
+                    bin_ref.abs_weight = bin_ref.abs_weight * ratio * wgt_ref + bin_info.abs_weight * wgt_run
+                    bin_ref.weight_sqr = bin_ref.weight_sqr *ratio_sqr * wgt_ref + bin_info.weight_sqr * wgt_run
+                    bin_ref.n_entries = self.min_bin_probing_points                 
 
         #remove bin if entry if zero
         for key in self.keys():
@@ -492,16 +494,25 @@ class DiscreteSamplerDimension(dict):
 %(bins_informations)s
   </DiscreteSampler_grid>
 """
+        
+        #order the bin from higest contribution to lowest
+        bins = [o for o in self.items()]
+        def compare(x,y):
+            if x[1].weight - y[1].weight <0:
+                return 1
+            else:
+                return -1
+
+        bins.sort(cmp=compare)
             
         data = {'name': self.name,
                 'min_bin_probing_points': self.min_bin_probing_points,
                 'grid_mode': self.grid_mode,
                 'grid_type': self.grid_type,
                 'bins_informations' : '\n'.join('    %s %s' % (bin_id,str(bin_info)) \
-                                            for (bin_id, bin_info) in self.items())
+                                            for (bin_id, bin_info) in bins)
                 }
         
-        misc.sprint(template % data)
         fsock.write(template % data)
     
             
@@ -520,7 +531,6 @@ class Bin_Entry(object):
         """adding two bin together"""
         tot_entries = (self.n_entries + other.n_entries)
         if not tot_entries:
-            misc.sprint(self, other, "are both zero")
             return self
         
         self.weight = (self.n_entries * self.weight + 
@@ -534,7 +544,6 @@ class Bin_Entry(object):
         
         
         self.n_entries = tot_entries
-        misc.sprint("adding %s ->%s" % (other.n_entries, self.n_entries))
         
         return self
             

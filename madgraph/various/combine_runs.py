@@ -110,7 +110,8 @@ class CombineRuns(object):
         fsock.write('--------------------- Multi run with %s jobs. ---------------------\n'
                     % njobs)
         for r in results:
-            fsock.write('job %s : %s %s %s\n' % (r.name, r.xsec, r.axsec, r.nunwgt))  
+            fsock.write('job %s : %s %s +- %s %s\n' % (r.name, r.xsec, r.axsec,\
+                                                       r.xerru, r.nunwgt))  
             
         #Now read in all of the events and write them
         #back out with the appropriate scaled weight

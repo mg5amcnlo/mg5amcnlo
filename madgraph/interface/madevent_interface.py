@@ -3261,7 +3261,7 @@ zeor by MadLoop.""")
                         
                 #Find the correct ajob
                 Gre = re.compile("\s*j=(G[\d\.\w]+)")
-                Ire = re
+                origre = re.compile("grid_directory=(G[\d\.\w]+)")
                 try : 
                     fsock = open(exe)
                 except Exception:
@@ -3280,6 +3280,10 @@ zeor by MadLoop.""")
                         if os.path.isdir(pjoin(cwd,G)):
                             input_files.append(G)
                             required_output.append('%s/results.dat' % G)
+                
+                if origre.search(text):
+                    G_grid = origre.search(text).groups()[0]
+                    input_files.append(pjoin(G_grid, 'ftn26'))
                 
                 #submitting
                 self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
@@ -3317,13 +3321,10 @@ zeor by MadLoop.""")
                     if os.path.exists(pjoin(cwd, G, 'ftn25')):
                         offset = float(argument[0]) - int(float(argument[0]))
                         offset = int(str(offset).split('.')[1])
-                        misc.sprint("ftn25 is present", offset, argument[0])
                         if offset ==0 or offset == int(float(argument[0])):
                             os.remove(pjoin(cwd, G, 'ftn25'))
-                            misc.sprint("remove it")
                             continue
                         else:
-                            misc.sprint('keep it')
                             input_files.append(pjoin(cwd, G, 'ftn25'))
                     
                  

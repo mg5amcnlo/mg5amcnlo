@@ -197,7 +197,6 @@ class gen_ximprove(object):
         all_channels.sort(cmp= lambda x,y: 1 if y.get('luminosity') - \
                                                 x.get('luminosity') > 0 else -1) 
                           
-        
         to_refine = []
         for C in all_channels:
             if C.get('xsec') == 0:
@@ -242,7 +241,7 @@ class gen_ximprove(object):
         for C in to_refine:
             #1. Compute the number of points are needed to reach target
             needed_event = goal_lum*C.get('xsec')
-            nb_split = int(max(0,((needed_event-1)// self.max_request_event) +1))            
+            nb_split = int(max(0,((needed_event-1)// self.max_request_event) +1))
             if not self.split_channels:
                 nb_split = 1
             if nb_split > self.max_splitting:
@@ -252,6 +251,7 @@ class gen_ximprove(object):
             nevents =  needed_event / nb_split * (C.get('nevents') / C.get('nunwgt'))
             #split by iter
             nevents = int(nevents / (2**self.min_iter-1))
+            #
             # forbid too low/too large value
             nevents = min(self.min_event_in_iter, max(self.max_event_in_iter, nevents))
 
@@ -534,6 +534,7 @@ class gensym(object):
         if self.cmd.proc_characteristics['loop_induced']:
             nexternal = self.cmd.proc_characteristics['nexternal']
             self.splitted_grid = max(2, (nexternal-2)**3)
+        
 
     
     def launch(self):
@@ -628,7 +629,7 @@ class gensym(object):
         
         if self.splitted_grid <= 1:
             return self.submit_to_cluster_no_splitting(job_list)
-       
+
         self.write_parameter(parralelization=True)
 
         # launch the job with the appropriate grouping
@@ -692,7 +693,7 @@ class gensym(object):
             #check for luminosity
             raise Exception, "Not Implemented"
         else:   
-            if error >  self.cmd.opts['accuracy']:
+            if cross/error >  self.cmd.opts['accuracy']:
                 need_submit = True
             else:
                 need_submit = False
@@ -801,8 +802,6 @@ class gensym(object):
         """        
         options['event'] = int(options['event'])
         open(path, 'w').write(template % options)
-
-
 
     
     
