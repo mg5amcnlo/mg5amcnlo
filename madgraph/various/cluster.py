@@ -1284,7 +1284,13 @@ class LSFCluster(Cluster):
                required_output=[], nb_submit=0):
         """Submit the job prog to an LSF cluster"""
         
-        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
+        if 'SubProcesses' in os.path.realpath(os.path.join(cwd,prog)):
+            #this is for usual runs
+            me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
+        elif 'MCatNLO' in os.path.realpath(os.path.join(cwd,prog)):
+            #this is for shower runs
+            me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/MCatNLO',1)[0]
+            
         me_dir = misc.digest(me_dir)[-14:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
