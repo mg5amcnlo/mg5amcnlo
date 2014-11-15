@@ -1,4 +1,4 @@
-      SUBROUTINE MP_%(proc_prefix)sCOMPUTE_LOOP_COEFS(PS,ANSDP)
+      SUBROUTINE MP_COMPUTE_LOOP_COEFS(PS,ANSDP)
 C  
 %(info_lines)s
 C
@@ -54,42 +54,42 @@ C
 	  include 'mp_coupl_same_name.inc'
 
 	  LOGICAL CHECKPHASE, HELDOUBLECHECKED
-      common/%(proc_prefix)sINIT/CHECKPHASE, HELDOUBLECHECKED
+      common/INIT/CHECKPHASE, HELDOUBLECHECKED
 
 	  INTEGER HELOFFSET
 	  INTEGER GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPGROUPS)
-	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL,HELOFFSET
+	  common/Filters/GOODAMP,GOODHEL,HELOFFSET
 
 	  INTEGER HELPICKED
-	  common/%(proc_prefix)sHELCHOICE/HELPICKED
+	  common/HELCHOICE/HELPICKED
 
 	  %(mp_born_amps_decl)s	  
 	  %(complex_mp_format)s W(20,NWAVEFUNCS)
-	  common/MP_%(proc_prefix)sW/W  
+	  common/MP_W/W  
 
 	  %(complex_dp_format)s DPW(20,NWAVEFUNCS)
-	  common/%(proc_prefix)sW/DPW
+	  common/W/DPW
 
 	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
-	  common/MP_%(proc_prefix)sWL/WL,PL
+	  common/MP_WL/WL,PL
 
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
-	  common/MP_%(proc_prefix)sLCOEFS/LOOPCOEFS
+	  common/MP_LCOEFS/LOOPCOEFS
 
       %(complex_mp_format)s AMPL(3,NCTAMPS)
-	  common/MP_%(proc_prefix)sAMPL/AMPL
+	  common/MP_AMPL/AMPL
 
 	  INTEGER CF_D(NCOLORROWS,%(color_matrix_size)s)
 	  INTEGER CF_N(NCOLORROWS,%(color_matrix_size)s)
-	  common/%(proc_prefix)sCF/CF_D,CF_N
+	  common/CF/CF_D,CF_N
 
 	  INTEGER HELC(NEXTERNAL,NCOMB)
-	  common/%(proc_prefix)sHELCONFIGS/HELC
+	  common/HELCONFIGS/HELC
 
 	  LOGICAL MP_DONE_ONCE
-	  common/MP_%(proc_prefix)sDONE_ONCE/MP_DONE_ONCE
+	  common/MP_DONE_ONCE/MP_DONE_ONCE
 
 C ----------
 C BEGIN CODE

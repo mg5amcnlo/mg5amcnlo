@@ -21,7 +21,6 @@ import models.check_param_card as check_param_card
 import aloha.aloha_writers as aloha_writers
 import aloha
 from madgraph import MadGraph5Error
-import madgraph.various.misc as misc
 
 class HelasWriterError(Exception):
     """Class for the error of this module """
@@ -229,8 +228,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
         except KeyError, error:
             return ""
         else:
-            return call(amplitude)
-
+            return call(amplitude
     def add_wavefunction(self, key, function):
         """Set the function for writing the wavefunction
         corresponding to the key"""
@@ -943,13 +941,12 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
     mp_prefix = check_param_card.ParamCard.mp_prefix
 
-    def __init__(self, argument={}, hel_sum = False, proc_prefix=''):
+    def __init__(self, argument={}, hel_sum = False):
         """Allow generating a HelasCallWriter from a Model.The hel_sum argument
         specifies if amplitude and wavefunctions must be stored specifying the
         helicity, i.e. W(1,i) vs W(1,i,H).
         """
         self.hel_sum = hel_sum
-        self.proc_prefix = proc_prefix
         super(FortranUFOHelasCallWriter, self).__init__(argument)
 
     def format_helas_object(self, prefix, number):
@@ -965,7 +962,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         """ Routine for automatic generation of a call to CutTools for loop
         amplitudes."""
 
-        call = "CALL %(proc_prefix)sLOOP%(numLoopLines)s"
+        call = "CALL LOOP%(numLoopLines)s"
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
             call += "%(numMotherWfs)s%(numCouplings)s(%(numeratorNumber)d,"
             for i in range(len(loopamp.get('pairing'))):
@@ -986,7 +983,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         call = call + "%(LoopSymmetryFactor)d,"
         call = call + "%(ampNumber)d,AMPL(1,%(ampNumber)d),S(%(ampNumber)d))"
         
-        call_function = lambda amp: call % amp.get_helas_call_dict(proc_prefix=self.proc_prefix)
+        call_function = lambda amp: call % amp.get_helas_call_dict()
         self.add_amplitude(loopamp.get_call_key(), call_function)
         return
 
@@ -1257,18 +1254,17 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             for lwf in ldiag.get('loop_wavefunctions'):
                     res.append(self.get_wavefunction_call(lwf))
             for lamp in ldiag.get_loop_amplitudes():
-                create_coef=['CALL %(proc_prefix)sCREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
+                create_coef=['CALL CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
                              '%(loop_rank)d','%(lcut_size)d',
                              'LOOPCOEFS(0,%(loop_number)d)',
                              '%(LoopSymmetryFactor)d','%(amp_number)d,H)']
-                res.append(','.join(create_coef) % {\
+                res.append(','.join(create_coef)%{\
                   'number':lamp.get_final_loop_wavefunction().get('number'),
                   'loop_rank':lamp.get_analytic_info('wavefunction_rank'),
                   'lcut_size':lamp.get_lcut_size(),
                   'loop_number':lamp.get('number'),
                   'amp_number':lamp.get('amplitudes')[0].get('number'),
-                  'LoopSymmetryFactor':lamp.get('loopsymmetryfactor'),
-                  'proc_prefix': self.proc_prefix})
+                  'LoopSymmetryFactor':lamp.get('loopsymmetryfactor')})
         
         coef_merge=[]
         
@@ -1278,15 +1274,14 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                 # denominator.
                 refamp=lamps[0]
                 for lamp in lamps[1:]:
-                    merge_coef=['CALL %(proc_prefix)sADD_COEFS(LOOPCOEFS(0,%(ref_number)d)',
+                    merge_coef=['CALL ADD_COEFS(LOOPCOEFS(0,%(ref_number)d)',
                                 '%(ref_rank)d','LOOPCOEFS(0,%(new_number)d)',
                                 '%(new_rank)d)']
                     coef_merge.append(','.join(merge_coef)%{\
                       'ref_number':refamp.get('number'),
                       'ref_rank':refamp.get_analytic_info('wavefunction_rank'),
                       'new_number':lamp.get('number'),
-                      'new_rank':lamp.get_analytic_info('wavefunction_rank'),
-                      'proc_prefix': self.proc_prefix})
+                      'new_rank':lamp.get_analytic_info('wavefunction_rank')})
         return res, coef_merge
 
     def get_loop_CT_calls(self, matrix_element, group_loops=False):
@@ -1339,7 +1334,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         """ Routine for automatic generation of a call to CutTools for loop
         amplitudes for the optimized output."""
         
-        call = "CALL %(proc_prefix)sLOOP%(numLoopLines)s"
+        call = "CALL LOOP%(numLoopLines)s"
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
             call += "%(numMotherWfs)s(%(numeratorNumber)d,"
             for i in range(len(loopamp.get('pairing'))):
@@ -1355,8 +1350,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         call = call + "LOOPRES(1,%(loopNumber)d),S(%(loopNumber)d),%(loopNumber)d)"
         
         call_function = lambda amp: call % amp.get_helas_call_dict(\
-                                            OptimizedOutput=True,
-                                            proc_prefix=self.proc_prefix)
+                                                           OptimizedOutput=True)
         self.add_amplitude(loopamp.get_call_key(), call_function)
         return
 
@@ -1439,14 +1433,12 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop')):
             # We add here the call to the UPDATE_COEF subroutine
-            call += "\n CALL %(proc_prefix)sUPDATE_WL_%(loop_mother_rank)d_%(vertex_rank)d("
+            call += "\n CALL UPDATE_WL_%(loop_mother_rank)d_%(vertex_rank)d("
             call += "WL(1,0,1,%(loop_mother_number)d),%(lcut_size)d,COEFS,"
             call += "%(in_size)d,%(out_size)d,WL(1,0,1,%(out)d))"
-            
-            
         # Now we have a line correctly formatted
         call_function = lambda wf: call % wf.get_helas_call_dict(\
-          OptimizedOutput=True, specifyHel=self.hel_sum, proc_prefix = self.proc_prefix)
+          OptimizedOutput=True, specifyHel=self.hel_sum)
 
         # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument, helas_objects.HelasWavefunction):

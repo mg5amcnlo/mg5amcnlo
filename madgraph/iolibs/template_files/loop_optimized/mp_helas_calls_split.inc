@@ -39,25 +39,25 @@ C
 
 	  INTEGER GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPGROUPS)
-	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL
+	  common/Filters/GOODAMP,GOODHEL
 
       %(mp_born_amps_decl)s
 	  %(complex_mp_format)s W(20,NWAVEFUNCS)
-	  common/MP_%(proc_prefix)sW/W
+	  common/MP_W/W
 
 	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
-	  common/MP_%(proc_prefix)sWL/WL,PL
+	  common/MP_WL/WL,PL
 
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
-	  common/MP_%(proc_prefix)sLCOEFS/LOOPCOEFS
+	  common/MP_LCOEFS/LOOPCOEFS
 
       %(complex_mp_format)s AMPL(3,NCTAMPS)
-	  common/MP_%(proc_prefix)sAMPL/AMPL
+	  common/MP_AMPL/AMPL
 
       %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
 	  LOGICAL S(NLOOPGROUPS)
-	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
+	  common/LOOPRES/LOOPRES,S
 C
 C ----------
 C BEGIN CODE

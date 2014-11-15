@@ -79,7 +79,6 @@ class LoopExporterFortran(object):
 
         if not hasattr(self, "proc_prefix"):
             self.proc_prefix = ''
-        self.full_path_to_dat = False
         if opt:
             self.opt = opt
         else: 
@@ -187,7 +186,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
        Fortran format."""
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
-    CT_interface_template = "CT_interface.inc"
+
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
@@ -492,7 +491,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
-
+        self.proc_prefix = 'P%i_' % matrix_element.get('processes')[0].get('id')
         try:
             os.mkdir(dirpath)
         except os.error as error:
@@ -660,10 +659,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             dict['nbornamps_decl'] = ''
         
         dict['proc_prefix'] = self.proc_prefix
-        if self.full_path_to_dat:
-            dict['proc_path'] = pjoin('SubProcesses', "P%s" % matrix_element.get('processes')[0].shell_string(),'')
-        else:
-            dict['proc_path'] = ''
         
         return dict
     
@@ -835,7 +830,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             replace_dict['finalize_CT']='\n'.join([\
                      'RES(%d)=NORMALIZATION*RES(%d)'%(i,i) for i in range(1,4)])
         
-        file = open(os.path.join(self.template_dir, self.CT_interface_template)).read()  
+        file = open(os.path.join(self.template_dir,'CT_interface.inc')).read()  
 
         file = file % replace_dict
         files.append(file)
@@ -968,6 +963,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                          noSplit=False):
         """Create the loop_matrix.f file."""
         
+        print 960, "self.template_dir", self.template_dir, self.proc_prefix
+        
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
@@ -1024,7 +1021,7 @@ C                ENDIF
                          ANS(3)=ANS(3)+DBLE(CFTOT*AMPL(3,I))+DIMAG(CFTOT*AMPL(3,I))                         
                        ENDIF"""      
         else:
-            replace_dict['set_reference']='call %ssmatrix(p,ref)'%self.proc_prefix
+            replace_dict['set_reference']='call smatrix(p,ref)'
             replace_dict['loop_induced_helas_calls'] = ""
             replace_dict['loop_induced_finalize'] = ""
             replace_dict['loop_induced_setup'] = ""
@@ -1092,10 +1089,10 @@ C                ENDIF
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>1000)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'born_ct_helas_calls',self.proc_prefix+'helas_calls_ampb')
+                            'born_ct_helas_calls','helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,loop_amp_helas_calls,\
-                    toBeRepaced,self.proc_prefix+'helas_calls_ampl')
+                    toBeRepaced,'helas_calls_ampl')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict[toBeRepaced]='\n'.join(loop_amp_helas_calls)
@@ -1320,7 +1317,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         file = file % replace_dict
         writer.writelines(file)
 
-    def write_CT_interface(self, writer, matrix_element,optimized_output=True):
+    def write_CT_interface(self, writer, matrix_element):
         """ We can re-use the mother one for the loop optimized output."""
         LoopProcessExporterFortranSA.write_CT_interface(\
                             self, writer, matrix_element,optimized_output=True)
@@ -1418,10 +1415,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'mp_born_ct_helas_calls','MP_'+self.proc_prefix+'helas_calls_ampb')
+                            'mp_born_ct_helas_calls','mp_helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'mp_helas_calls_split.inc',file,coef_construction,\
-                    'mp_coef_construction','MP_'+self.proc_prefix+'coef_construction')
+                    'mp_coef_construction','mp_coef_construction')
         else:
             replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['mp_coef_construction']='\n'.join(coef_construction)
@@ -1501,7 +1498,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     'ANS(1)=ANS(1)+DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'
                     
         else:
-            replace_dict['set_reference']='call %ssmatrix(p,ref)'%self.proc_prefix
+            replace_dict['set_reference']='call smatrix(p,ref)'
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join(['DO K=1,3',
@@ -1556,13 +1553,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'born_ct_helas_calls',self.proc_prefix+'helas_calls_ampb')
+                            'born_ct_helas_calls','helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,coef_construction,\
-                    'coef_construction',self.proc_prefix+'coef_construction')
+                    'coef_construction','coef_construction')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,loop_CT_calls,\
-                    'loop_CT_calls',self.proc_prefix+'loop_CT_calls')
+                    'loop_CT_calls','loop_CT_calls')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['coef_construction']='\n'.join(coef_construction)
@@ -1585,102 +1582,87 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 #===============================================================================
 # LoopProcessExporterFortranSA
 #===============================================================================
-class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
-                                      export_v4.ProcessExporterFortranMatchBox):
+class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
                                    
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
     
     #specific template of the born
     matrix_template = "matrix_standalone_matchbox.inc"
-    CT_interface_template = "CT_interface_matchbox.inc"
+    
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         super(LoopProcessExporterFortranMatchBox, self).__init__(mgme_dir, dir_path, opt)
-        self.full_path_to_dat = True
 
-    def generate_loop_subprocess(self, matrix_element, fortran_model):
-        """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
-        including the necessary loop_matrix.f, born_matrix.f and include files.
-        Notice that this is too different from generate_subprocess_directory_v4
-        so that there is no point reusing this mother function."""
+    
+    def write_bornmatrix(self, writer, matrix_element, fortran_model, write=True):
+        """Create the born_matrix.f file for the born process as for a standard
+        tree-level computation."""
 
-        self.proc_prefix = 'P%i_' % matrix_element.get('processes')[0].get('id')
-        return super(LoopProcessExporterFortranMatchBox, self).generate_loop_subprocess(matrix_element, fortran_model)
-
-
-    def link_files_from_Subprocesses(self,proc_name=""):
-        """ To link required files from the Subprocesses directory to the
-        different P* ones"""
+        replace_dict = super(LoopProcessExporterFortranMatchBox, self).write_bornmatrix(writer,
+                                 matrix_element, fortran_model, write=False)
         
-        linkfiles = ['coupl.inc', 'makefile',
-                     'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
-                     'mp_coupl_same_name.inc']
+        # need to add the matchbox dedicated output:
+        replace_dict["proc_prefix"] = self.proc_prefix
+        replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
         
-        for file in linkfiles:
-            ln('../%s' % file)
-
-        # The mp module
-        ln('../../lib/mpmodule.mod')
-            
-        # For convenience also link the madloop param card
-        ln('../../Cards/MadLoopParams.dat')
+        if write:
+            path = pjoin(_file_path, 'iolibs', 'template_files', self.matrix_template)
+            content = open(path).read()
+            content = content % replace_dict
+            # Write the file
+            writer.writelines(content)
+        else:
+            return replace_dict # for subclass update   
         
-    def write_CT_interface(self, writer, matrix_element, optimized_output=False):
-        """ Create the file CT_interface.f which contains the subroutine defining
-        the loop HELAS-like calls along with the general interfacing subroutine. """
+    def get_color_string_lines(self, matrix_element):
+        """Return the color matrix definition lines for this matrix element. Split
+        rows in chunks of size n."""
 
-        out = super(LoopProcessExporterFortranMatchBox, self).write_CT_interface(writer, matrix_element, optimized_output=optimized_output)
-
-        #write the common file in SOURCE:
-        path = pjoin(os.path.dirname(writer.name),"../../Source/", 'CT_interface_common.f')
-        misc.sprint(path)
-        new_writer = writer.__class__(path) 
+        if not matrix_element.get('color_matrix'):
+            return "\n".join(["out = 1"])
         
-        text= """  
-         SUBROUTINE INITCT()
-C 
-C INITIALISATION OF CUTTOOLS
-C  
-C LOCAL VARIABLES 
-C
-      real*8 THRS
-      LOGICAL EXT_NUM_FOR_R1
-      LOGICAL INIT
-      DATA INIT /.TRUE./
-      SAVE INIT
-C  
-C GLOBAL VARIABLES 
-C
-      include 'MadLoopParams.inc'
-C ----------
-C BEGIN CODE
-C ----------
+        #start the real work
+        color_denominators = matrix_element.get('color_matrix').\
+                                                         get_line_denominators()
+        matrix_strings = []
+        my_cs = color.ColorString()
+                
+        for i_color in xrange(len(color_denominators)):
+            # Then write the numerators for the matrix elements
+            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
+            t_str=repr(my_cs)
+            t_match=re.compile(r"(\w+)\(([\s\d+\,]*)\)")
+            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2,1) T(1,2)' returns with findall:
+            # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
+            all_matches = t_match.findall(t_str)
+            output = {}
+            for i,match in enumerate(all_matches):
+                ctype, arg = match[0], [m.strip() for m in match[1].split(',')]
+                if ctype not in ['T', 'Tr']:
+                    raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
+                arg += ['0']
+                for j, v in enumerate(arg):
+                    output[(i,j)] = v
+          
+        
+        matrix_strings=[]
+        for i,key in enumerate(output):
+            if i == 0:
+                #first entry
+                matrix_strings.append(""" 
+                if (in1.eq.%s.and.in2.eq.%s)then
+                out = %s
+                """  % (key[0], key[1], output[key]))
+            else:
+                #first entry
+                matrix_strings.append(""" 
+                elseif (in1.eq.%s.and.in2.eq.%s)then
+                out = %s
+                """  % (key[0], key[1], output[key]))                
+        matrix_strings.append(" else \n stop 1 \n endif")
+        return "\n".join(matrix_strings) 
 
-C DEFAULT PARAMETERS FOR CUTTOOLS
-C -------------------------------  
-C THRS1 IS THE PRECISION LIMIT BELOW WHICH THE MP ROUTINES ACTIVATES
-      THRS=CTSTABTHRES
-C LOOPLIB SET WHAT LIBRARY CT USES
-C 1 -> LOOPTOOLS
-C 2 -> AVH
-C 3 -> QCDLOOP
-      LOOPLIB=CTLOOPLIBRARY
-C MADLOOP'S NUMERATOR IN THE DEFAULT OUTPUT IS SLOWER THAN THE RECONSTRUCTED ONE IN CT. SO WE BETTER USE CT ONE IN THIS CASE.
-      EXT_NUM_FOR_R1=.FALSE.
-C -------------------------------      
-
-      if(INIT) THEN
-       INIT=.FALSE.
-C The initialization below is for CT v1.8.+
-      CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
-C The initialization below is for the older stable CT v1.7, still used for now in the beta release.
-C      CALL CTSINIT(THRS,LOOPLIB)
-      ENDIF
 
 
-      END
-"""
-        new_writer.write(text)
-        return out
-   
+        
         
