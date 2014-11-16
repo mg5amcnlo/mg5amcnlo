@@ -867,9 +867,23 @@ c************************************************************************
       implicit none
       integer, intent(in)                           :: stream_id
       character(len=*)                              :: grid_type
-      
-      if (DS_get_dim_status('Helicity').ge.1) then
+      logical MC_grouped_subproc
+      common/to_MC_grouped_subproc/MC_grouped_subproc
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+c
+c     Begin code
+c
+
+      if (ISUM_HEL.ne.0.and.DS_get_dim_status('Helicity').ge.1) then
         call DS_write_grid(stream_id, dim_name='Helicity', 
+     &                                              grid_type=grid_type)
+      endif
+
+      if(MC_grouped_subproc.and.
+     &             DS_get_dim_status('grouped_processes').ge.1) then
+        call DS_write_grid(stream_id, dim_name='grouped_processes', 
      &                                              grid_type=grid_type)
       endif
 
@@ -1314,11 +1328,16 @@ c
       INTEGER                    ISUM_HEL
       LOGICAL                    MULTI_CHANNEL
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+      logical MC_grouped_subproc
+      common/to_MC_grouped_subproc/MC_grouped_subproc
 c
 c     Begin code
 c
       if(ISUM_HEL.ne.0) then
         call DS_update_grid('Helicity', filterZeros=.True.)
+      endif
+      if(MC_grouped_subproc.and.DS_get_dim_status('grouped_processes').ne.-1) then
+        call DS_update_grid('grouped_processes', filterZeros=.True.)
       endif
 
       end subroutine update_discrete_dimensions

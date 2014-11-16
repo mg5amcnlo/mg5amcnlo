@@ -10,8 +10,11 @@
 !     List of public subroutines and usage :
 !
 !
-!     DS_register_dimension(name, n_bins)
+!     DS_register_dimension(name, n_bins,(all_grid|void))
 !       ::  Register a new dimension with its name and number of bins
+!       ::  If all_grid is specified and set to False, then only a 
+!       ::  running grid is specified, it is useful for registering
+!       ::  grid intended for convolution only.
 !
 !     DS_remove_dimension(name)
 !       ::  Removes and clear the dimension of input name
@@ -658,7 +661,14 @@
             DS_get_dim_status = 1
             return
           endif    
-          
+         
+!         If the running grid has zero entries, then consider the grid
+!         uninitialized
+          if(size(run_grid(run_grid_index)%bins).eq.0) then
+            DS_get_dim_status = 0
+            return
+          endif
+
           do i=1,size(ref_grid(ref_grid_index)%bins)
             mRunBin = DS_get_bin(run_grid(run_grid_index)%bins,
      &                             ref_grid(ref_grid_index)%bins(i)%bid)
@@ -1017,7 +1027,16 @@
           ref_dim_index = DS_dim_index(ref_grid,d_name,.TRUE.)
           run_dim_index = DS_dim_index(run_grid,d_name,.TRUE.)
 
-          n_bins = size(ref_grid(DS_dim_index(ref_grid,d_name))%bins)
+          if (ref_dim_index.ne.-1) then
+            n_bins = size(ref_grid(DS_dim_index(ref_grid,d_name))%bins)
+          elseif (run_dim_index.ne.-1) then
+            n_bins = size(run_grid(DS_dim_index(run_grid,d_name))%bins)
+          else
+            write(*,*) 'DiscreteSampler:: No grid registered for name'//
+     &        " '"//d_name//"'."
+            return
+          endif  
+
           write(*,*) "DiscreteSampler:: ========================"//
      &       "=========================="
           write(*,*) "DiscreteSampler:: Information for dimension '"//

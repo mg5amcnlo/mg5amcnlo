@@ -161,7 +161,13 @@ C Of course this option can also not be used for polarized beams.
 	    	
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
 			T = ANS_ML(1,0)
-            
+            DO JJ=1,JAMP2(0)
+              JAMP2(JJ) = JAMP2(JJ) + ML_JAMP2(JJ)
+            ENDDO
+            DO JJ=1,NLOOPDIAGRAMS
+              AMP2(JJ) = AMP2(JJ)+ ML_AMP2(JJ)
+            ENDDO
+
 			DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                   T=T*ABS(POL(JJ))
@@ -211,7 +217,13 @@ C           The helicity configuration was chosen already by genps and put in a 
             
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
 			T = ANS_ML(1,0)
-            
+            DO JJ=1,JAMP2(0)
+              JAMP2(JJ) = JAMP2(JJ) + ML_JAMP2(JJ)
+            ENDDO
+            DO JJ=1,NLOOPDIAGRAMS
+              AMP2(JJ) = AMP2(JJ)+ ML_AMP2(JJ)
+            ENDDO
+
 			DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                 T=T*ABS(POL(JJ))
@@ -241,14 +253,6 @@ c         Set right sign for ANS, based on sign of chosen helicity
  10      CONTINUE   
       ENDIF
     ENDIF
-
-    DO I=1,JAMP2(0)
-       JAMP2(I) = JAMP2(i) + ML_JAMP2(I)
-    ENDDO
-    DO I=1,NLOOPDIAGRAMS
-       AMP2(i) = AMP2(i)+ ML_AMP2(I)
-    ENDDO
-
 
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0

@@ -440,6 +440,7 @@ C Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero if AUTOMATIC_TI
       NROTATIONS_DP=0
     ENDIF
   ENDIF
+ENDIF
 
   QP_TOOLS_AVAILABLE=.FALSE.
   INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
@@ -525,8 +526,6 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
     WRITE(*,*) 'Stopped by user request.'
     stop
   ENDIF
-
-ENDIF
 
 IF(NTRY.EQ.0) THEN
   HELDOUBLECHECKED=(.NOT.DoubleCheckHelicityFilter).OR.(HelicityFilterLevel.eq.0)

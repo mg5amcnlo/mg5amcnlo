@@ -3807,17 +3807,17 @@ c           This is dummy particle used in multiparticle vertices
         else:
             card = 'param_card.dat'
         # Requiring each helicity configuration to be probed by 10 points before
-        # using the resulting grid for MC over helicity sampling seems reasonable 
+        # using the resulting grid for MC over helicity sampling seems reasonable
+        replace_dict = {'param_card_name':card, 
+                        'ncomb':ncomb,
+                        'hel_init_points':n_grouped_proc*10}
         if v5:
-            text = open(path).read() % {'param_card_name':card, 
-                                        'secondparam':'',
-                                        'ncomb':ncomb,
-                                        'hel_init_points':n_grouped_proc*10} 
+            replace_dict['secondparam']=',.true.'
         else:
-            text = open(path).read() % {'param_card_name':card, 
-                                        'secondparam': ',.true.',
-                                        'ncomb':ncomb,
-                                        'hel_init_points':n_grouped_proc*10} 
+            replace_dict['secondparam']=''            
+
+        text = open(path).read() % replace_dict
+
         writer.write(text)
         
         return True

@@ -111,7 +111,7 @@ C PDEN is dummy for Golem95 so we just initialize it to zero here so as to use i
       PDEN(I,J)=0.0d0
     ENDDO
   ENDDO
-  CALL SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+  CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
   CALL %(proc_prefix)sGOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
   RETURN
 ## } else {
@@ -191,7 +191,7 @@ C This way whenever the CTMode exceeds the cache size it rolls back to the begin
       CASE(2)
 C     PJFry++
 ## if(pjfry_available){
-      CALL SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
       CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)
 C     CONVERT TO MADLOOP CONVENTION
       CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)
@@ -250,7 +250,7 @@ C The zero index is dummy and means no caching at all since TIR_CACHE_SIZE=0.
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
       END
 
-      SUBROUTINE SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      SUBROUTINE %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
       IMPLICIT NONE
 
       INTEGER CTMODE,NLOOPLINE

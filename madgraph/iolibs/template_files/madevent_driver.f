@@ -34,6 +34,10 @@ c
       integer ngroup
       common/to_group/ngroup
       data ngroup/0/
+
+      logical MC_grouped_subproc
+      data MC_grouped_subproc/.True./
+      common/to_MC_grouped_subproc/MC_grouped_subproc
 c
 c     PARAM_CARD
 c
