@@ -64,17 +64,20 @@ class ProcessExporterFortran(object):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent', 'mp': False
+                        }
+
     def __init__(self, mgme_dir = "", dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
         self.model = None
 
+        self.opt = dict(self.default_opt)
         if opt:
-            self.opt = opt
-        else:
-            self.opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madevent', 'mp': False}
+            self.opt.update(opt)
+
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -884,9 +887,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 pass
         return res_list
 
-    def get_JAMP_lines(self, col_amps, basename="JAMP(", basename2="AMP(", split=-1):
+    def get_JAMP_lines(self, col_amps, basename="JAMP(", basename2="AMP(", split=-1,
+                       basenameLC=None):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
-        defined as a matrix element or directly as a color_amplitudes dictionary"""
+        defined as a matrix element or directly as a color_amplitudes dictionary,
+        basenameLC should be define to allow to add LeadingColor computation (usefull for MatchBox)"""
 
         # Let the user call get_JAMP_lines directly from a MatrixElement or from
         # the color amplitudes lists.
@@ -913,8 +918,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 coeff_list=coeff_list[n:]
                 res = ((basename+"%i)=") % (i + 1)) + \
                       (((basename+"%i)") % (i + 1)) if not first and split>0 else '')
-                res2 = (("LN"+basename+"%i)=") % (i + 1)) + \
-                      ((("LN"+basename+"%i)") % (i + 1)) if not first and split>0 else '')
+                if basenameLC:
+                    res2 = ((basenameLC+"%i)=") % (i + 1)) + \
+                      (((basenameLC+"%i)") % (i + 1)) if not first and split>0 else '')
                 first=False
                 # Optimization: if all contributions to that color basis element have
                 # the same coefficient (up to a sign), put it in front
@@ -925,8 +931,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     common_factor = True
                     global_factor = diff_fracs[0]
                     res = res + '%s(' % self.coeff(1, global_factor, False, 0)
-                    res2 = res2 + '%s(' % self.coeff(1, global_factor, False, 0)
-    
+                    if basenameLC:
+                        res2 = res2 + '%s(' % self.coeff(1, global_factor, False, 0)
+                
+                # loop for JAMP
                 for (coefficient, amp_number) in coefs:
                     if common_factor:
                         res = (res + "%s" + basename2 + "%d)") % \
@@ -935,38 +943,44 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                    coefficient[2],
                                                    coefficient[3]),
                                                    amp_number)
-                    
-                        if(coefficient[3]==0):
-                              res2=  (res2 + "%s" + basename2 + "%d)") % \
-                                                   (self.coeff(coefficient[0],
-                                                   coefficient[1] / abs(coefficient[1]),
-                                                   coefficient[2],
-                                                   coefficient[3]),
-                                                   amp_number)
-                        else:
-                              res2=  res2 + "+0D0" 
                     else:
                         res = (res + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
                                                    coefficient[1],
                                                    coefficient[2],
                                                    coefficient[3]),
                                                    amp_number)
-                        if(coefficient[3]==0):
-                          res2 = (res2 + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
+                # loop for Leading color JAMP
+                if basenameLC:
+                    for (coefficient, amp_number) in coefs:
+                        if common_factor:
+                            if coefficient[3]==0:
+                                res2=  (res2 + "%s" + basename2 + "%d)") % \
+                                                   (self.coeff(coefficient[0],
+                                                   coefficient[1] / abs(coefficient[1]),
+                                                   coefficient[2],
+                                                   coefficient[3]),
+                                                   amp_number)
+                            else:
+                                res2=  res2 + "+0D0" 
+                    else:
+                            if(coefficient[3]==0):
+                                res2 = (res2 + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
                                                    coefficient[1],
                                                    coefficient[2],
                                                    coefficient[3]),
                                                    amp_number) 
-                        else:
-                              res2=  res2 + "+0D0" 
+                            else:
+                                res2=  res2 + "+0D0" 
 
     
                 if common_factor:
                     res = res + ')'
-                    res2 = res2 + ')'
+                    if basenameLC:
+                        res2 = res2 + ')'
     
                 res_list.append(res)
-                res_list.append(res2)
+                if basenameLC:
+                    res_list.append(res2)
         return res_list
 
     def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False):
@@ -1706,6 +1720,10 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
     """class to take care of exporting a set of matrix element for the Matchbox
     code in the case of Born only routine"""
 
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent', 'mp': False,
+                        'sa_symmetry': True}
+
     #specific template of the born
     matrix_template = "matrix_standalone_matchbox.inc"
     
@@ -1780,6 +1798,20 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
     
     def make(self,*args,**opts):
         pass
+    
+    def get_JAMP_lines(self, col_amps, basename="JAMP(", basename2="AMP(", split=-1,
+                       basenameLC=None):
+        """Adding leading color part of the colorflow"""
+        
+        if not basenameLC:
+            basenameLC= "LN%s" % basename
+        
+        return super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
+                                            basename=basename,
+                                            basename2=basename2,
+                                            split=-1,
+                                            basenameLC=basenameLC)
+    
 #===============================================================================
 # ProcessExporterFortranMW
 #===============================================================================
@@ -1825,6 +1857,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # add the makefile in Source directory 
         filename = os.path.join(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FortranWriter(filename))
+
+
+
         
     #===========================================================================
     # convert_model_to_mg4

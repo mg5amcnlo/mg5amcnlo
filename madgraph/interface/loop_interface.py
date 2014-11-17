@@ -34,6 +34,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.various.misc as misc
 import aloha
 
 # Special logger for the Cmd Interface
@@ -491,7 +492,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format in ['standalone', 'matchbox']:
-            for me in matrix_elements:
+            for me in matrix_elements:            
                 calls = calls + \
                         self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)

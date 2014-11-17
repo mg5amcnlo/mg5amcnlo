@@ -228,7 +228,8 @@ class HelasCallWriter(base_objects.PhysicsObject):
         except KeyError, error:
             return ""
         else:
-            return call(amplitude
+            return call(amplitude)
+
     def add_wavefunction(self, key, function):
         """Set the function for writing the wavefunction
         corresponding to the key"""
