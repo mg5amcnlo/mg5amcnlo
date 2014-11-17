@@ -992,6 +992,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                         (ifstring, part.get_pdg_code(), part.get_anti_pdg_code())
             iflines_mass += 'get_mass_from_id=abs(%s)\n' % part.get('mass')
 
+        if mass_particles:
+            iflines_mass += 'else\n'
+        else:
+            iflines_mass = 'if (.true.) then\n'
+
         for i, part in enumerate(width_particles):
             if i == 0:
                 ifstring = 'if'
@@ -1004,6 +1009,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 iflines_width += '%s (id.eq.%d.or.id.eq.%d) then\n' % \
                         (ifstring, part.get_pdg_code(), part.get_anti_pdg_code())
             iflines_width += 'get_width_from_id=abs(%s)\n' % part.get('width')
+
+        if width_particles:
+            iflines_width += 'else\n'
+        else:
+            iflines_width = 'if (.true.) then\n'
 
         replace_dict = {'iflines_mass' : iflines_mass,
                         'iflines_width' : iflines_width}

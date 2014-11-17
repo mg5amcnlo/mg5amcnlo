@@ -645,7 +645,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     if abs(part.pdg_code) in done:
                         continue
                     done.append(abs(part.pdg_code))
-                    param = param_card['decay'].get((part.pdg_code,))
+                    try:
+                        param = param_card['decay'].get((part.pdg_code,))
+                    except KeyError:
+                        continue
 
                     if  param.value != 0:
                         logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''
