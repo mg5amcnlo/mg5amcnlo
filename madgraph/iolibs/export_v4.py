@@ -1053,8 +1053,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 res = ((JAMP_format+"=") % str(i + 1)) + \
                       ((JAMP_format % str(i + 1)) if not first and split>0 else '')
                 if JAMP_formatLC:
-                    res2 = ((JAMP_formatLC+"%i)=") % (i + 1)) + \
-                      (((JAMP_formatLC+"%i)") % (i + 1)) if not first and split>0 else '')
+                    resLC = ((JAMP_formatLC+"=") % str(i + 1)) + \
+                      ((JAMP_formatLC % str(i + 1)) if not first and split>0 else '')
 
                 first=False
                 # Optimization: if all contributions to that color basis element have
@@ -1067,7 +1067,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     global_factor = diff_fracs[0]
                     res = res + '%s(' % self.coeff(1, global_factor, False, 0)
                     if JAMP_formatLC:
-                        res2 = res2 + '%s(' % self.coeff(1, global_factor, False, 0)
+                        resLC = resLC + '%s(' % self.coeff(1, global_factor, False, 0)
                 
                 # loop for JAMP
                 for (coefficient, amp_number) in coefs:
@@ -1089,32 +1089,32 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     for (coefficient, amp_number) in coefs:
                         if common_factor:
                             if coefficient[3]==0:
-                                res2=  (res2 + "%s" + AMP_format + "%d)") % \
+                                resLC = (resLC + "%s" + AMP_format) % \
                                                    (self.coeff(coefficient[0],
                                                    coefficient[1] / abs(coefficient[1]),
                                                    coefficient[2],
                                                    coefficient[3]),
                                                    str(amp_number))
                             else:
-                                res2=  res2 + "+0D0" 
+                                resLC=  resLC + "+0D0" 
                     else:
-                            if(coefficient[3]==0):
-                                res2 = (res2 + "%s" + AMP_format + "%d)") % (self.coeff(coefficient[0],
+                        if(coefficient[3]==0):
+                            resLC = (resLC + "%s" + AMP_format) % (self.coeff(coefficient[0],
                                                    coefficient[1],
                                                    coefficient[2],
                                                    coefficient[3]),
-                                                   str(amp_number)) 
-                            else:
-                                res2=  res2 + "+0D0" 
+                                                   str(amp_number))
+                        else:
+                            resLC =  resLC + "+0D0" 
     
                 if common_factor:
                     res = res + ')'
                     if JAMP_formatLC:
-                        res2 = res2 + ')'
+                        resLC = resLC + ')'
     
                 res_list.append(res)
                 if JAMP_formatLC:
-                    res_list.append(res2)
+                    res_list.append(resLC)
         return res_list
 
     def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False):
@@ -2098,19 +2098,20 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
     
     def make(self,*args,**opts):
         pass
+
+    def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", split=-1,
+                       JAMP_formatLC=None):
     
-    def get_JAMP_lines(self, col_amps, basename="JAMP(", basename2="AMP(", split=-1,
-                       basenameLC=None):
         """Adding leading color part of the colorflow"""
         
-        if not basenameLC:
-            basenameLC= "LN%s" % basename
+        if not JAMP_formatLC:
+            JAMP_formatLC= "LN%s" % JAMP_format
         
         return super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
-                                            basename=basename,
-                                            basename2=basename2,
+                                            JAMP_format=JAMP_format,
+                                            AMP_format=AMP_format,
                                             split=-1,
-                                            basenameLC=basenameLC)
+                                            JAMP_formatLC=JAMP_formatLC)
 
 
 
