@@ -586,6 +586,10 @@ class ProcessExporterCPP(object):
         replace_dict = {}
 
         replace_dict['nwavefuncs'] = len(wavefunctions)
+        
+        #ensure no recycling of wavefunction ! incompatible with some output
+        for me in self.matrix_elements:
+            me.restore_original_wavefunctions()
 
         replace_dict['wavefunction_calls'] = "\n".join(\
             self.helas_call_writer.get_wavefunction_calls(\

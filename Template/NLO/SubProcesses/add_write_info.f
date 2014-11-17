@@ -9,7 +9,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "coloramps.inc"
       include "reweight0.inc"
       include "nFKSconfigs.inc"
-      include "leshouche_info.inc"
+      include "leshouche_decl.inc"
       include "run.inc"
 
 c Arguments
@@ -228,7 +228,7 @@ c
       enddo
 c Assume helicity summed
       do i=1,nexternal
-         jpart(7,i)=0
+         jpart(7,i)=9
       enddo
       if (firsttime2 .and. isum_hel.ne.0) then
          write (*,*) 'WARNING: for writing the events, no helicity '//
@@ -798,46 +798,6 @@ c                  whichever is closer to mass shell
          endif
       enddo
       end
-
-      subroutine get_ID_H(IDUP_tmp)
-      implicit none
-      include "genps.inc"
-      include 'nexternal.inc'
-      integer maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-c      include 'leshouche.inc'
-      common /c_leshouche_inc/idup,mothup,icolup
-      integer IDUP_tmp(nexternal),i
-c
-      do i=1,nexternal
-         IDUP_tmp(i)=IDUP(i,1)
-      enddo
-c
-      return
-      end
-
-      subroutine get_ID_S(IDUP_tmp)
-      implicit none
-      include "genps.inc"
-      include 'nexternal.inc'
-      integer    maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include 'born_leshouche.inc'
-      integer IDUP_tmp(nexternal),i
-c
-      do i=1,nexternal-1
-         IDUP_tmp(i)=IDUP(i,1)
-      enddo
-      IDUP_tmp(nexternal)=0
-c
-      return
-      end
-
 
       subroutine fill_icolor_H(iflow,jpart)
       implicit none

@@ -970,7 +970,11 @@ c            ddum(j) = tx(2,j)                 !Use last value
       endif
 
       im = ddum(j)
-      if (im.ge.ng) im = ng -1
+      if (im.ge.ng)then
+         im = ng -1
+         ddum(j) = ng
+      endif
+      if (im.lt.0) im = 0
       ip = im + 1
       ij = Minvar(j,ipole)
 c------

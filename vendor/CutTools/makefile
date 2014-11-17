@@ -1,6 +1,6 @@
 PRECISION= QP
 #PRECISION= MP
-CTS_VERSION = v1.9.2
+CTS_VERSION = v1.9.3
 SRC = ./src
 CTS_DIR = cuttools_$(CTS_VERSION)
 CTS_TAR = $(CTS_DIR).tar.gz
@@ -14,7 +14,7 @@ else
 endif
 
 # These flags are vital for CT, so we enforce them here
-FFLAGS += -fno-automatic -O2 -funroll-all-loops -fPIC
+FFLAGS += -fPIC -fno-automatic -O2 -funroll-all-loops
 #FFLAGS += -fno-automatic -Ofast -funroll-all-loops  
 
 EXE = 

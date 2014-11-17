@@ -141,18 +141,20 @@ import internal.madevent_interface as cmd_interface
 
 # Call the cmd interface main loop
 try:
-    if (args and os.path.exists(args[0])):
+    if (args and os.path.isfile(args[0])):
         # They are an input file 
         input_file = args[0]
         if options.web:
             cmd_line = cmd_interface.MadEventCmd()
             cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
             cmd_line.use_rawinput = False
+            cmd_line.haspiping = False
             cmd_line.run_cmd('import command ' + input_file)
             cmd_line.run_cmd('quit')      
         else:
             cmd_line = cmd_interface.MadEventCmdShell()
             cmd_line.use_rawinput = False
+            cmd_line.haspiping = False
             cmd_line.run_cmd('import command ' + input_file)
             cmd_line.run_cmd('quit')
     elif args:

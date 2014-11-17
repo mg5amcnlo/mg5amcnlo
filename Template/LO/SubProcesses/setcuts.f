@@ -87,6 +87,25 @@ c     reading parameters
       include 'run_config.inc'
       character*20 param(maxpara),value(maxpara)
       integer npara
+c For checking the consistency of the grouping and the cuts defined here
+      integer iproc
+      logical equal
+      LOGICAL  IS_A_J_SAVE(NEXTERNAL),IS_A_L_SAVE(NEXTERNAL)
+     $     ,IS_A_B_SAVE(NEXTERNAL),IS_A_A_SAVE(NEXTERNAL)
+     $     ,IS_A_ONIUM_SAVE(NEXTERNAL),IS_A_NU_SAVE(NEXTERNAL)
+     $     ,IS_HEAVY_SAVE(NEXTERNAL),DO_CUTS_SAVE(NEXTERNAL)
+      double precision r2min_save(nexternal,nexternal)
+     $     ,r2max_save(nexternal,nexternal),s_min_save(nexternal
+     $     ,nexternal),s_max_save(nexternal,nexternal)
+     $     ,ptll_min_save(nexternal,nexternal),ptll_max_save(nexternal
+     $     ,nexternal),etmin_save(nexternal),etmax_save(nexternal)
+     $     ,emin_save(nexternal) ,emax_save(nexternal)
+     $     ,etamin_save(nexternal),etamax_save(nexternal)
+      save  IS_A_J_SAVE,IS_A_L_SAVE,IS_A_B_SAVE,IS_A_A_SAVE
+     $     ,IS_A_ONIUM_SAVE,IS_A_NU_SAVE,IS_HEAVY_SAVE,DO_CUTS
+     $     ,r2min_save,r2max_save,s_min_save,s_max_save,ptll_min_save
+     $     ,ptll_max_save,etmin_save,etmax_save,emin_save,emax_save
+     $     ,etamin_save,etamax_save
 c
 c     setup masses for the final-state particles
 c
@@ -158,6 +177,9 @@ c     Check which particles come from decays
       if(.not.cut_decays)
      $       call check_decay(from_decay)
 
+
+      do iproc=1,maxsproc
+
 c
 c     check if I have to apply cuts on the particles
 c
@@ -174,89 +196,89 @@ c
 
 c-do not apply cuts to these
          if (pmass(i).gt.20d0)     do_cuts(i)=.false.  ! no cuts on top,W,Z,H
-         if (abs(idup(i,1,1)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
-         if (abs(idup(i,1,1)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
-         if (abs(idup(i,1,1)).eq.16) do_cuts(i)=.false.  ! no cuts on vt vt~
+         if (abs(idup(i,1,iproc)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
+         if (abs(idup(i,1,iproc)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
+         if (abs(idup(i,1,iproc)).eq.16) do_cuts(i)=.false.  ! no cuts on vt vt~
 c-flavor-jets
-         if (abs(idup(i,1,1)).le.min(maxjetflavor,6)) then
+         if (abs(idup(i,1,iproc)).le.min(maxjetflavor,6)) then
               is_a_j(i)=.true.
-c              write(*,*)'jet:ithe pdg is ',abs(idup(i,1,1)),' maxflavor=',maxjetflavor
-         else if (abs(idup(i,1,1)).ge.maxjetflavor+1 .and. abs(idup(i,1,1)).le.5) then
+c              write(*,*)'jet:ithe pdg is ',abs(idup(i,1,iproc)),' maxflavor=',maxjetflavor
+         else if (abs(idup(i,1,iproc)).ge.maxjetflavor+1 .and. abs(idup(i,1,iproc)).le.5) then
               is_a_b(i)=.true.
-c              write(*,*)'bjet:the pdg is ',abs(idup(i,1,1)),' maxflavor=',maxjetflavor
+c              write(*,*)'bjet:the pdg is ',abs(idup(i,1,iproc)),' maxflavor=',maxjetflavor
          endif
 
-         if (abs(idup(i,1,1)).eq.21)  is_a_j(i)=.true. ! gluon is a jet
+         if (abs(idup(i,1,iproc)).eq.21)  is_a_j(i)=.true. ! gluon is a jet
 c-charged-leptons
-         if (abs(idup(i,1,1)).eq.11)  is_a_l(i)=.true. ! e+  e-
-         if (abs(idup(i,1,1)).eq.13)  is_a_l(i)=.true. ! mu+ mu-
-         if (abs(idup(i,1,1)).eq.15)  is_a_l(i)=.true. ! ta+ ta-
+         if (abs(idup(i,1,iproc)).eq.11)  is_a_l(i)=.true. ! e+  e-
+         if (abs(idup(i,1,iproc)).eq.13)  is_a_l(i)=.true. ! mu+ mu-
+         if (abs(idup(i,1,iproc)).eq.15)  is_a_l(i)=.true. ! ta+ ta-
 c-b-quarks
-c         if (abs(idup(i,1,1)).eq.5)   is_a_b(i)=.true. ! b b~
+c         if (abs(idup(i,1,iproc)).eq.5)   is_a_b(i)=.true. ! b b~
 c-photon
-         if (idup(i,1,1).eq.22)   is_a_a(i)=.true. ! photon
+         if (idup(i,1,iproc).eq.22)   is_a_a(i)=.true. ! photon
 c-neutrino's for missing et
-         if (abs(idup(i,1,1)).eq.12) is_a_nu(i)=.true.  ! no cuts on ve ve~
-         if (abs(idup(i,1,1)).eq.14) is_a_nu(i)=.true.  ! no cuts on vm vm~
-         if (abs(idup(i,1,1)).eq.16) is_a_nu(i)=.true.  ! no cuts on vt vt~
+         if (abs(idup(i,1,iproc)).eq.12) is_a_nu(i)=.true.  ! no cuts on ve ve~
+         if (abs(idup(i,1,iproc)).eq.14) is_a_nu(i)=.true.  ! no cuts on vm vm~
+         if (abs(idup(i,1,iproc)).eq.16) is_a_nu(i)=.true.  ! no cuts on vt vt~
          if (pmass(i).gt.10d0)     is_heavy(i)=.true. ! heavy fs particle
 c-onium
-         if (idup(i,1,1).eq.441)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.10441)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.100441)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.10443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.20443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.100443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.30443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.9000443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.9010443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.9020443)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.445)   is_a_onium(i)=.true. ! charmonium
-         if (idup(i,1,1).eq.9000445)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.441)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.10441)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.100441)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.10443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.20443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.100443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.30443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.9000443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.9010443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.9020443)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.445)   is_a_onium(i)=.true. ! charmonium
+         if (idup(i,1,iproc).eq.9000445)   is_a_onium(i)=.true. ! charmonium
 
-         if (idup(i,1,1).eq.551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.10551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.100551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.110551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.200551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.210551)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.10553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.20553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.30553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.100553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.110553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.120553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.130553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.200553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.210553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.220553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.300553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.9000553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.9010553)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.10555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.20555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.100555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.110555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.200555)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.557)   is_a_onium(i)=.true. ! bottomonium
-         if (idup(i,1,1).eq.100557)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.10551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.100551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.110551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.200551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.210551)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.10553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.20553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.30553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.100553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.110553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.120553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.130553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.200553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.210553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.220553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.300553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.9000553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.9010553)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.10555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.20555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.100555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.110555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.200555)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.557)   is_a_onium(i)=.true. ! bottomonium
+         if (idup(i,1,iproc).eq.100557)   is_a_onium(i)=.true. ! bottomonium
 
-         if (idup(i,1,1).eq.541)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1,1).eq.10541)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1,1).eq.543)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1,1).eq.10543)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1,1).eq.20543)   is_a_onium(i)=.true. ! Bc
-         if (idup(i,1,1).eq.545)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,iproc).eq.541)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,iproc).eq.10541)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,iproc).eq.543)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,iproc).eq.10543)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,iproc).eq.20543)   is_a_onium(i)=.true. ! Bc
+         if (idup(i,1,iproc).eq.545)   is_a_onium(i)=.true. ! Bc
       enddo
 
 c
 c     et and eta cuts
 c
-      do i=nincoming+1,nexternal
          Smin = 0d0
+      do i=nincoming+1,nexternal
          etmin(i)  = 0d0
          etmax(i)  = -1
 
@@ -271,7 +293,7 @@ c
 c        JET
             if(is_a_j(i))then
                  etmin(i)=ptj
-                 SMIN = SMIN + ptj
+                 SMIN = SMIN + max(ptj,ej)
                  etmax(i)=ptjmax
                  emin(i)=ej
                  emax(i)=ejmax
@@ -281,7 +303,7 @@ c        JET
 c        LEPTON
             if(is_a_l(i))then
                  etmin(i)=ptl
-                 SMIN = SMIN + ptl
+                 SMIN = SMIN + max(ptl,el)
                  etmax(i)=ptlmax
                  emin(i)=el
                  emax(i)=elmax
@@ -291,7 +313,7 @@ c        LEPTON
 c        BJET
             if(is_a_b(i))then
                  etmin(i)=ptb
-                 SMIN = SMIN + ptb
+                 SMIN = SMIN + max(ptb,eb)
                  etmax(i)=ptbmax
                  emin(i)=eb
                  emax(i)=ebmax
@@ -300,7 +322,7 @@ c        BJET
             endif
 c        PHOTON
             if(is_a_a(i))then
-                 etmin(i) = max(pta, ptgmin)
+                 etmin(i) = max(pta, ptgmin, eamax)
                  SMIN = SMIN + etmin(i)
                  etmax(i)=ptamax
                  emin(i)=ea
@@ -377,16 +399,16 @@ c
                if(is_a_a(i).and.is_a_a(j)) s_min(j,i)=mmaa*dabs(mmaa)  
                if( is_a_b(i).and.is_a_b(j) ) s_min(j,i)=mmbb*dabs(mmbb)     
                if((is_a_l(i).and.is_a_l(j)).and.
-     &            (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
-     &            (idup(i,1,1)*idup(j,1,1).lt.0)) 
+     &            (abs(idup(i,1,iproc)).eq.abs(idup(j,1,iproc))).and.
+     &            (idup(i,1,iproc)*idup(j,1,iproc).lt.0)) 
      &            s_min(j,i)=mmll*dabs(mmll)  !only on l+l- pairs (same flavour) 
 
                if(is_a_j(i).and.is_a_j(j)) s_max(j,i)=mmjjmax*dabs(mmjjmax)   
                if(is_a_a(i).and.is_a_a(j)) s_max(j,i)=mmaamax*dabs(mmaamax)  
                if( is_a_b(i).and.is_a_b(j) ) s_max(j,i)=mmbbmax*dabs(mmbbmax)     
                if((is_a_l(i).and.is_a_l(j)).and.
-     &            (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
-     &            (idup(i,1,1)*idup(j,1,1).lt.0)) 
+     &            (abs(idup(i,1,iproc)).eq.abs(idup(j,1,iproc))).and.
+     &            (idup(i,1,iproc)*idup(j,1,iproc).lt.0)) 
      &            s_max(j,i)=mmllmax*dabs(mmllmax)  !only on l+l- pairs (same flavour)
             endif
          enddo
@@ -401,14 +423,14 @@ c
             ptll_min(j,i)=0.0d0**2
             ptll_max(j,i)=-1
             if(((is_a_l(i).and.is_a_l(j)).and.
-     &      (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
-     &      (idup(i,1,1)*idup(j,1,1).lt.0))! Leptons from same flavor but different charge
-     &       .or.(is_a_nu(i).and.is_a_l(j))
-     &       .or.(is_a_l(i).and.is_a_nu(j))   !a lepton and a neutrino
-     &       .or.(is_a_nu(i).and.is_a_nu(j))) then ! two neutrinos 
+     &           (abs(idup(i,1,iproc)).eq.abs(idup(j,1,iproc))).and.
+     &           (idup(i,1,iproc)*idup(j,1,iproc).lt.0)) ! Leptons from same flavor but different charge
+     &           .or.(is_a_nu(i).and.is_a_l(j))
+     &           .or.(is_a_l(i).and.is_a_nu(j)) !a lepton and a neutrino
+     &           .or.(is_a_nu(i).and.is_a_nu(j))) then ! two neutrinos 
                ptll_min(j,i)=ptllmin*dabs(ptllmin)
                ptll_max(j,i)=ptllmax*dabs(ptllmax)
-           endif
+            endif
          enddo
       enddo
 
@@ -467,21 +489,124 @@ c
                if(is_a_a(i).and.is_a_a(j)) s_min(j,i)=mmaa*dabs(mmaa)
                if( is_a_b(i).and.is_a_b(j) ) s_min(j,i)=mmbb*dabs(mmbb)
                if((is_a_l(i).and.is_a_l(j)).and.
-     &            (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
-     &            (idup(i,1,1)*idup(j,1,1).lt.0))
+     &            (abs(idup(i,1,iproc)).eq.abs(idup(j,1,iproc))).and.
+     &            (idup(i,1,iproc)*idup(j,1,iproc).lt.0))
      &            s_min(j,i)=mmll*dabs(mmll)  !only on l+l- pairs (same flavour)
 
                if(is_a_j(i).and.is_a_j(j)) s_max(j,i)=mmjjmax*dabs(mmjjmax)
                if(is_a_a(i).and.is_a_a(j)) s_max(j,i)=mmaamax*dabs(mmaamax)
                if( is_a_b(i).and.is_a_b(j) ) s_max(j,i)=mmbbmax*dabs(mmbbmax)
                if((is_a_l(i).and.is_a_l(j)).and.
-     &            (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
-     &            (idup(i,1,1)*idup(j,1,1).lt.0))
+     &            (abs(idup(i,1,iproc)).eq.abs(idup(j,1,iproc))).and.
+     &            (idup(i,1,iproc)*idup(j,1,iproc).lt.0))
      &            s_max(j,i)=mmllmax*dabs(mmllmax)  !only on l+l- pairs (same flavour)
             endif
          endif
       enddo
       enddo
+
+c Check that results are consistent among all the grouped subprocesses
+
+      if (iproc.eq.1) then
+         do i=nincoming+1,nexternal
+            do_cuts_save(i)=do_cuts(i)
+            is_a_j_save(i)=is_a_j(i)
+            is_a_b_save(i)=is_a_b(i)
+            is_a_l_save(i)=is_a_l(i)
+            is_a_a_save(i)=is_a_a(i)
+            is_a_nu_save(i)=is_a_nu(i)
+            is_a_onium_save(i)=is_a_onium(i)
+            is_heavy_save(i)=is_heavy(i) 
+            etmin_save(i)=etmin(i)
+            etmax_save(i)=etmax(i)
+            emin_save(i)=emin(i)
+            emax_save(i)=emax(i)
+            etamin_save(i)=etamin(i)
+            etamax_save(i)=etamax(i)
+            if (i.eq.nexternal) cycle
+            do j=i+1,nexternal
+               r2min_save(j,i) = r2min(j,i)
+               r2max_save(j,i) = r2max(j,i)
+               s_min_save(j,i) = s_min(j,i)
+               s_max_save(j,i) = s_max(j,i)
+               ptll_min_save(j,i) = ptll_min(j,i)
+               ptll_max_save(j,i) = ptll_max(j,i)
+            enddo
+         enddo
+      else
+         equal=.true.
+         do i=nincoming+1,nexternal
+            if (do_cuts_save(i).neqv.do_cuts(i)) equal=.false.
+            if (is_a_j_save(i).neqv.is_a_j(i)) then
+               if (ptjmin4(1).gt.0d0 .or. ptjmax4(1).ge.0d0) equal=.false.
+               if (ptjmin4(2).gt.0d0 .or. ptjmax4(2).ge.0d0) equal=.false.
+               if (ptjmin4(3).gt.0d0 .or. ptjmax4(3).ge.0d0) equal=.false.
+               if (ptjmin4(4).gt.0d0 .or. ptjmax4(4).ge.0d0) equal=.false.
+               if (Htjmin4(2).gt.0d0 .or. Htjmax4(2).ge.0d0) equal=.false.
+               if (Htjmin4(3).gt.0d0 .or. Htjmax4(3).ge.0d0) equal=.false.
+               if (Htjmin4(4).gt.0d0 .or. Htjmax4(4).ge.0d0) equal=.false.
+               if (inclHtmin.gt.0d0 .or. inclHtmax.ge.0d0) equal=.false.
+               if (htjmin.gt.0d0 .or. htjmax.ge.0d0) equal=.false.
+               if (xptj.gt.0d0) equal=.false.
+               if (xetamin.gt.0d0 .or. deltaeta.gt.0d0) equal=.false.
+               if (ptgmin.ne.0d0) equal=.false.
+               if (kt_durham.gt.0d0) equal=.false.
+            endif
+            if (is_a_b_save(i).neqv.is_a_b(i)) then
+               if (inclHtmin.gt.0d0 .or. inclHtmax.ge.0d0) equal=.false.
+               if (xptb.gt.0d0) equal=.false.
+            endif
+            if (is_a_a_save(i).neqv.is_a_a(i)) then
+               if (xpta.gt.0d0) equal=.false.
+               if (ptgmin.ne.0d0) equal=.false.
+            endif
+            if (is_a_l_save(i).neqv.is_a_l(i)) then
+               if (ptlmin4(1).gt.0d0 .or. ptlmax4(1).ge.0d0) equal=.false.
+               if (ptlmin4(2).gt.0d0 .or. ptlmax4(2).ge.0d0) equal=.false.
+               if (ptlmin4(3).gt.0d0 .or. ptlmax4(3).ge.0d0) equal=.false.
+               if (ptlmin4(4).gt.0d0 .or. ptlmax4(4).ge.0d0) equal=.false.
+               if (mmnl.gt.0d0 .or. mmnlmax.ge.0d0) equal=.false.
+               if (xptl.gt.0d0) equal=.false.
+               if (ptgmin.ne.0d0 .and. isoEM) equal=.false.
+            endif
+            if (is_a_nu_save(i).neqv.is_a_nu(i)) then
+               if (misset.gt.0d0 .or. missetmax.ge.0d0) equal=.false.
+               if (mmnl.gt.0d0 .or. mmnlmax.ge.0d0) equal=.false.
+            endif
+            if (is_heavy_save(i).neqv.is_heavy(i)) then
+               if (ptheavy.gt.0d0) equal=.false.
+            endif
+            if (etmin_save(i).ne.etmin(i)) equal=.false.
+            if (etmax_save(i).ne.etmax(i)) equal=.false.
+            if (emin_save(i).ne.emin(i)) equal=.false.
+            if (emax_save(i).ne.emax(i)) equal=.false.
+            if (etamin_save(i).ne.etamin(i)) equal=.false.
+            if (etamax_save(i).ne.etamax(i)) equal=.false.
+            if (i.eq.nexternal) cycle
+            do j=i+1,nexternal
+               if (r2min_save(j,i).ne.r2min(j,i)) equal=.false.
+               if (r2max_save(j,i).ne.r2max(j,i)) equal=.false.
+               if (s_min_save(j,i).ne.s_min(j,i)) equal=.false.
+               if (s_max_save(j,i).ne.s_max(j,i)) equal=.false.
+               if (ptll_min_save(j,i).ne.ptll_min(j,i)) equal=.false.
+               if (ptll_max_save(j,i).ne.ptll_max(j,i)) equal=.false.
+            enddo
+         enddo
+         if (.not.equal) then
+            write (*,*) 'Grouping of subprocesses not'/
+     $           /' consistent with setcuts.f. Either change'/
+     $           /' your cuts and/or turn grouping of subprocesses off.'
+            open(unit=26,file='../../../error',status='unknown')
+            write(26,*) 'Error: grouping of subprocesses not'/
+     $           /' consistent with setcuts.f. Either change'/
+     $           /' your cuts and/or turn grouping of subprocesses off.'
+            stop 1
+         endif
+      endif
+      enddo
+
+
+
 
 c
 c    ERROR TRAPS 
@@ -551,7 +676,7 @@ c    count number of leptons to see if special cuts are applicable or not
 
 c     set possible xqcut combinations (for better grid preparation)
         if(xqcut.gt.0)
-     $       call setxqcuts()
+     $       call setxqcuts(do_cuts)
 
 c      call write_cuts()
       RETURN
@@ -559,7 +684,7 @@ c      call write_cuts()
       END
 
 
-      subroutine setxqcuts()
+      subroutine setxqcuts(do_cuts)
 c**************************************************
 c     Set xqcuti and xqcutij between all particles
 c     to allow for grid preparation based on xqcut
@@ -569,6 +694,8 @@ c**************************************************
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cuts.inc'
+
+      logical  do_cuts(nexternal)
 
       double precision pmass(nexternal)
       common/to_mass/  pmass
@@ -607,13 +734,15 @@ c**************************************************
      $                 idup(iforest(2,k,j),1,1).eq.21.or.
      $                 iabs(idup(iforest(2,k,j),1,1)).le.maxjetflavor.or.
      $                 idup(iforest(2,k,j),1,1).eq.21)then
-                     xqcutij(iforest(2,k,j),iforest(1,k,j))=xqcut
-                     xqcutij(iforest(1,k,j),iforest(2,k,j))=xqcut
+                     if (do_cuts(iforest(2,k,j)).and. do_cuts(iforest(1,k,j)))then
+                        xqcutij(iforest(2,k,j),iforest(1,k,j))=xqcut
+                        xqcutij(iforest(1,k,j),iforest(2,k,j))=xqcut
+                     endif
                   endif
                endif
             enddo
             if(.not.foundpartner.and.(iabs(idup(i,1,1)).le.maxjetflavor.or.
-     $           idup(i,1,1).eq.21)) xqcuti(i)=max(0d0,sqrt(xqcut**2-pmass(i)**2))
+     $           idup(i,1,1).eq.21).and.do_cuts(i)) xqcuti(i)=max(0d0,sqrt(xqcut**2-pmass(i)**2))
          enddo
       enddo
 

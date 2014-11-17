@@ -127,7 +127,6 @@ class TestFeynmanLine(unittest.TestCase):
         #test end point
         self.my_line.def_end_point(self.my_vertex)
         self.assertTrue(self.my_line.end is self.my_vertex)
-        self.assertRaises(AssertionError,self.my_line.def_end_point, self.my_vertex2)
         self.assertTrue(self.my_line.end is self.my_vertex)
 
         #test if the vertex references the line correctly

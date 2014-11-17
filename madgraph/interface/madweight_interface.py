@@ -377,8 +377,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 raise self.InvalidCmd('Please specify a valid LHCO File')
             
             if input_file.endswith('.gz'):
-                fsock = open(evt_file, 'w') 
-                subprocess.call(['gunzip', '-c', input_file], stdout=fsock)
+                misc.gunzip(input_file, keep=True, stdout=evt_file)
             else:
                 files.cp(input_file, evt_file)
             
@@ -657,7 +656,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                     except KeyError:
                         continue
                     error = math.sqrt(error)
-                    fsock.write('%s %s %s %s %s \n' % (event, card, tf_set, value, error))
+                    fsock.write('%s %s %s %s %s \n' % (event.replace('@', ' '), card, tf_set, value, error))
     
         # write the likelihood file:
         fsock = open(pjoin(self.me_dir, 'Events', name, 'un-normalized_likelihood.out'), 'w')

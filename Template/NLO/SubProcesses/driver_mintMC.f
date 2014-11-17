@@ -118,13 +118,17 @@ c For MINT:
      $     ,nvirt_acc
       double precision ran2
       external ran2
+      
+      integer ifile,ievents
+      double precision inter,absint,uncer
+      common /to_write_header_init/inter,absint,uncer,ifile,ievents
 
       logical SHsep
       logical Hevents
       common/SHevents/Hevents
       character*10 dum
 c statistics for MadLoop      
-      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
 c timing statistics
@@ -157,7 +161,9 @@ c
       nqdp=0
       nini=0
       n10=0
-      n1=0
+      do i=0,9
+        n1(i)=0
+      enddo
       
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
@@ -276,7 +282,7 @@ c
          write(*,*)'Final result:',ans(2),' +/-',unc(2)
          write(*,*)'chi**2 per D.o.F.:',chi2(1)
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*) ans(1),unc(1),0d0,0,0,0,0,0d0,0d0,ans(2)
+         write(58,*) ans(1),unc(2),0d0,0,0,0,0,0d0,0d0,ans(2)
          close(58)
 c
 c to save grids:
@@ -328,6 +334,15 @@ c Prepare the MINT folding
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2)
+         
+c If integrating the virtuals alone, in update_unwgt_table we include
+c the virtuals in ans(1). Therefore, no need to have them in ans(5) and
+c we have to set them to zero.
+         if (only_virt) then
+            ans(3)=0d0 ! virtual Xsec
+            ans(5)=0d0 ! ABS virtual Xsec
+         endif
+
          open(unit=58,file='res_1',status='unknown')
          write(58,*)'Final result [ABS]:',ans(1)+ans(5),' +/-'
      $        ,sqrt(unc(1)**2+unc(5)**2)
@@ -407,7 +422,13 @@ c determine how many events for the virtual and how many for the no-virt
          if(plotEv)open(unit=99,file='hard-events.top',status='unknown')
          open(unit=lunlhe,file='events.lhe',status='unknown')
 
-         call write_header_init(lunlhe,ncall,ans(2),ans(1)+ans(5),unc(2))
+c fill the information for the write_header_init common block
+         ifile=lunlhe
+         ievents=ncall
+         inter=ans(2)
+         absint=ans(1)+ans(5)
+         uncer=unc(2)
+
          if(plotEv)call initplot
 
          weight=(ans(1)+ans(5))/ncall
@@ -428,8 +449,13 @@ c determine how many events for the virtual and how many for the no-virt
             else
                if (ran2().lt.ans(5)/(ans(1)+ans(5)) .or. only_virt) then
                   abrv='virt'
-                  vn=1
-                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  if (only_virt) then
+                     vn=2
+                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  else
+                     vn=1
+                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  endif
                else
                   abrv='novi'
                   vn=2
@@ -445,8 +471,8 @@ c Uncomment the next to lines to plot the integral from the PS points
 c trown during event generation. This corresponds only to the cross
 c section if these points are thrown flat, so not using the xmmm() stuff
 c in mint.
-c$$$         write (*,*) 'Integral from novi points computed',x(2),x(3)
-c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
+c         write (*,*) 'Integral from novi points computed',x(2),x(3)
+c         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif
@@ -489,7 +515,12 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write(*,*)
      &        "  Unknown return code (10):                        ",n10
          write(*,*)
-     &        "  Unknown return code (1):                         ",n1
+     &        "  Unit return code distribution (1):               "
+         do j=0,9
+           if (n1(j).ne.0) then
+              write(*,*) "#Unit ",j," = ",n1(j)
+           endif
+         enddo
       endif
 
       call cpu_time(tAfter)
@@ -745,6 +776,10 @@ c From dsample_fks
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
       include 'run.inc'
+      include 'cuts.inc'
+      include 'fks_info.inc'
+      double precision zero
+      parameter       (ZERO = 0d0)
       integer ndim,ipole
       common/tosigint/ndim,ipole
       integer           iconfig
@@ -784,7 +819,7 @@ c From dsample_fks
       common/fks_indices/i_fks,j_fks
       logical firsttime
       integer sum
-      parameter (sum=3)
+      data sum/3/
       data firsttime /.true./
       logical j_fks_initial(fks_configs),found_ini1,found_ini2
      $     ,found_fnl,j_fks_initial_found,j_fks_final_found
@@ -809,10 +844,30 @@ c From dsample_fks
       common/mc_int2/volh,mc_hel,ihel,fillh
       double precision double_check(nintegrals)
       save double_check
+      logical foundB(2)
+      integer nFKSprocessBorn(2)
+      save nFKSprocessBorn,foundB
+      integer nattr,npNLO,npLO
+      common/event_attributes/nattr,npNLO,npLO
+c PDG codes of particles
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+      common /c_leshouche_inc/idup,mothup,icolup
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
+         if (ickkw.eq.4) then
+            sum=0
+            write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
+     $           /' Born PS point (sum=0)'
+         endif
          firsttime=.false.
          maxproc_save=0
+         foundB(1)=.false.
+         foundB(2)=.false.
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
 c Set Bjorken x's to some random value before calling the dlum() function
@@ -824,6 +879,17 @@ c Set Bjorken x's to some random value before calling the dlum() function
                call reweight_settozero()
                call reweight_settozero_all(nFKSprocess*2,.true.)
                call reweight_settozero_all(nFKSprocess*2-1,.true.)
+            endif
+            if (sum.eq.0) then
+               if (particle_type(i_fks).eq.8) then
+                  if (j_fks.le.nincoming) then
+                     foundB(1)=.true.
+                     nFKSprocessBorn(1)=nFKSprocess
+                  else
+                     foundB(2)=.true.
+                     nFKSprocessBorn(2)=nFKSprocess
+                  endif
+               endif
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
@@ -944,8 +1010,16 @@ c gluons splitting
                   endif
                endif
             enddo
+         elseif (sum.eq.0 .and. ickkw.eq.4) then
+c MC over FKS directories (1 FKS directory per nbody PS point)
+            proc_map(0,0)=fks_configs
+            do i=1,fks_configs
+               proc_map(i,0)=1
+               proc_map(i,1)=i
+            enddo
          else
-            write (*,*) 'sum not know in driver_mintMC.f',sum
+            write (*,*) 'sum not known in driver_mintMC.f',sum
+            stop
          endif
          write (*,*) 'FKS process map (sum=',sum,') :'
          do i=1,proc_map(0,0)
@@ -956,6 +1030,35 @@ c For the S-events, we can combine processes when they give identical
 c processes at the Born. Make sure we check that we get indeed identical
 c IRPOC's
          call find_iproc_map()
+c
+c For FxFx or UNLOPS matching with pythia8, set the correct attributes
+c for the <event> tag in the LHEF file. "npNLO" are the number of Born
+c partons in this multiplicity when running the code at NLO accuracy
+c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
+c "npNLO".
+         if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIGPP') .and.
+     $        (ickkw.eq.3.or.ickkw.eq.4))then
+            nattr=2
+            nFKSprocess=1 ! just pick the first nFKSprocess
+            call fks_inc_chooser()
+            call leshouche_inc_chooser()
+            npNLO=0
+            npLO=-1
+            do i=nincoming+1,nexternal
+c include all quarks (except top quark) and the gluon.
+               if(abs(idup(i,1)).le.5 .or. idup(i,1).eq.21)
+     &              npNLO=npNLO+1
+            enddo
+            npNLO=npNLO-1
+            if (npNLO.gt.99) then
+               write (*,*) 'Too many partons',npNLO
+               stop
+            endif
+            if (abrv.eq.'born') then
+               npLO=npNLO
+               npNLO=-1
+            endif
+         endif
       endif
 
       fold=ifl
@@ -1011,6 +1114,40 @@ c Pick the first one because that's the one with the soft singularity.
          nFKSprocess=proc_map(proc_map(0,1),1)
          nFKSprocess_all=nFKSprocess
          call fks_inc_chooser()
+         if (sum.eq.0) then
+c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
+            if (j_fks.le.nincoming) then
+               if (.not.foundB(1)) then
+                  write(*,*) 'Trying to generate Born momenta with '/
+     &                 /'initial state j_fks, but there is no '/
+     &                 /'configuration with i_fks a gluon and j_fks '/
+     &                 /'initial state'
+                  stop
+               endif
+               nFKSprocess=nFKSprocessBorn(1)
+            else
+               if (.not.foundB(2)) then
+                  write(*,*) 'Trying to generate Born momenta with '/
+     &              /'final state j_fks, but there is no configuration'/
+     &              /' with i_fks a gluon and j_fks final state'
+                  stop
+               endif
+               nFKSprocess=nFKSprocessBorn(2)
+            endif
+c$$$            if (abs(particle_type(i_fks)).eq.3) then
+c$$$               do nFKSprocess=1,fks_configs
+c$$$                  if ( j_fks.eq.fks_j_D(nFKSprocess) .and.
+c$$$     $                 particle_type_D(nFKSprocess
+c$$$     $                 ,fks_i_D(nFKSprocess)).eq.8) exit
+c$$$               enddo
+c$$$            endif
+c$$$            if (nFKSprocess.gt.fks_configs) then
+c$$$               write (*,*) 'Trying the generate Born momenta, '/
+c$$$     $              /'but no FKS dir with soft singularity found'
+c$$$     $              ,nFKSprocess ,i_fks,j_fks
+c$$$               stop
+c$$$            endif
+         endif
          nbody=.true.
          fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
          nFKSprocess_used=nFKSprocess
@@ -1031,6 +1168,10 @@ c THIS CAN BE OPTIMIZED
 c Fill the importance sampling array
             call fill_MC_integer(2,ihel,(abs(f1(1))+abs(f1(2)))*volh)
          endif
+c Set calculated Born to zero to prevent numerical inaccuracies: not
+c always exactly the same momenta in computation of Born when computed
+c for different nFKSprocess.
+         if(sum.eq.0) calculatedBorn=.false.
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum or a combination

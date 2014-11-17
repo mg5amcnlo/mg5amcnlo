@@ -319,8 +319,11 @@ class Combine_results(list, OneResult):
 
         def fstr(nb):
             data = '%E' % nb
-            nb, power = data.split('E')
-            nb = float(nb) /10
+            if data == 'NAN':
+                nb, power = 0,0
+            else:
+                nb, power = data.split('E')
+                nb = float(nb) /10
             power = int(power) + 1
             return '%.5fE%+03i' %(nb,power)
 

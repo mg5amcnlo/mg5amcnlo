@@ -188,11 +188,25 @@ c BW stuff
      $     ,s_mass_FKS(fks_configs,-nexternal:nexternal)
       save s_mass_FKS
       common/to_phase_space_s_channel/s_mass
+c Les Houches common block
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+      common /c_leshouche_inc/idup,mothup,icolup
 c
       real*8         emass(nexternal)
       common/to_mass/emass
       logical firsttime
       data firsttime /.true./
+      if (firsttime) then
+         do i = 1,lmaxconfigs
+            do j = -nexternal,0
+               pmass(j,i) = 0d0
+               pwidth(j,i) = 0d0
+            end do
+         end do
+      endif
       include "born_props.inc"
 
       if(.not.IS_A_J(NEXTERNAL))then
@@ -210,6 +224,11 @@ c not necessarily the softest.  Therefore, it could be that even though
 c the Born does not have enough energy to pass the cuts set by ptj, the
 c event could.
       if (firsttime) then
+         do i=-nexternal,nexternal
+            xm(i)=0d0
+            xw(i)=0d0
+            mass_min(i)=0d0
+         end do
          firsttime=.false.
          do iFKS=1,fks_configs
             j_fks=FKS_J_D(iFKS)
@@ -264,7 +283,18 @@ c lepton of opposite charge. (Only add half of it, i.e. 'the part
 c contributing from this lepton'). Remove possible overcounting with the
 c lepton pT
                   do j=nincoming+1,nexternal
-                     if (is_a_lm(j)) then
+                     if (is_a_lm(j) .and. idup(i,1).eq.-idup(j,1)) then
+                        if (j_fks.gt.nincoming)
+     &                       taumin(iFKS) = taumin(iFKS)-ptl-emass(i) +
+     &                              max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+                        taumin_s(iFKS) = taumin_s(iFKS)-ptl-emass(i)
+     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+                        taumin_j(iFKS) = taumin_j(iFKS)-ptl-emass(i)
+     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+                        xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,mll_sf/2d0
+     $                       ,ptl+emass(i))
+                        exit
+                     elseif (is_a_lm(j)) then
                         if (j_fks.gt.nincoming)
      &                       taumin(iFKS)= taumin(iFKS)-ptl-emass(i) +
      &                                     max(mll/2d0,ptl+emass(i))
@@ -290,7 +320,18 @@ c lepton of opposite charge. (Only add half of it, i.e. 'the part
 c contributing from this lepton'). Remove possible overcounting with the
 c lepton pT
                   do j=nincoming+1,nexternal
-                     if (is_a_lp(j)) then
+                     if (is_a_lp(j) .and. idup(i,1).eq.-idup(j,1)) then
+                        if (j_fks.gt.nincoming)
+     &                       taumin(iFKS) = taumin(iFKS)-ptl-emass(i) +
+     &                              max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+                        taumin_s(iFKS) = taumin_s(iFKS)-ptl-emass(i)
+     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+                        taumin_j(iFKS) = taumin_j(iFKS)-ptl-emass(i)
+     $                       + max(mll/2d0,mll_sf/2d0,ptl+emass(i))
+                        xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,mll_sf/2d0
+     $                       ,ptl+emass(i))
+                        exit
+                     elseif (is_a_lp(j)) then
                         if (j_fks.gt.nincoming)
      &                       taumin(iFKS) = taumin(iFKS)-ptl-emass(i) +
      &                                      max(mll/2d0,ptl+emass(i))
@@ -381,7 +422,7 @@ c mass of the BW
                if ( itree(1,i).eq.1 .or. itree(1,i).eq.2 ) t_channel=i
                if (t_channel.ne.0) exit ! only s-channels
                mass_min(i)=mass_min(itree(1,i))+mass_min(itree(2,i))
-               if (xm(i).lt.mass_min(i)) then
+               if (xm(i).lt.mass_min(i)-vtiny) then
                   write (*,*)
      $                 'ERROR in the determination of conflicting BW',i
      $                 ,xm(i),mass_min(i)

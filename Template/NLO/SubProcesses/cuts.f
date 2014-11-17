@@ -58,6 +58,10 @@ c Sort array of results: ismode>0 for real, isway=0 for ascending order
       parameter (ismode=1)
       parameter (isway=0)
       parameter (izero=0)
+c The UNLOPS cut
+      double precision p_unlops(0:3,nexternal)
+      include "run.inc" ! includes the ickkw parameter
+      logical passUNLOPScuts
 c logicals that define if particles are leptons, jets or photons. These
 c are filled from the PDG codes (iPDG array) in this function.
       logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal)
@@ -121,6 +125,21 @@ c DeltaR and invariant mass cuts
                            return
                         endif
                      endif
+                     if (ipdg(i).eq.-ipdg(j)) then
+                        if (drll_sf.gt.0d0) then
+                           if (R2_04(p(0,i),p(0,j)).lt.drll_sf**2) then
+                              passcuts_user=.false.
+                              return
+                           endif
+                        endif
+                        if (mll_sf.gt.0d0) then
+                           if (invm2_04(p(0,i),p(0,j),1d0).lt.mll_sf**2)
+     $                          then
+                              passcuts_user=.false.
+                              return
+                           endif
+                        endif
+                     endif
                   endif
                enddo
             endif
@@ -157,6 +176,24 @@ c more than the Born).
             endif
          enddo
       endif
+
+c The UNLOPS cut:
+      if (ickkw.eq.4 .and. ptj.gt.0d0) then
+c Use special pythia pt cut for minimal pT
+         do i=1,nexternal
+            do j=0,3
+               p_unlops(j,i)=p(j,i)
+            enddo
+         enddo
+         call pythia_UNLOPS(p_unlops,passUNLOPScuts)
+         if (.not. passUNLOPScuts) then
+            passcuts_user=.false.
+            return
+         endif
+c Bypass normal jet cuts
+         goto 122
+      endif
+
 
       if (ptj.gt.0d0.and.nQCD.gt.1) then
 
@@ -197,22 +234,10 @@ c                                            particle in pQCD, which doesn't
 c                                            necessarily correspond to the particle
 c                                            label in the process
 c
-         call amcatnlo_fastjetppgenkt_timed(pQCD,nQCD,rfj,sycut,palg,
-     $        pjet,njet,jet)
+         call amcatnlo_fastjetppgenkt_etamax_timed(
+     $    pQCD,nQCD,rfj,sycut,etaj,palg,pjet,njet,jet)
 c
 c******************************************************************************
-
-c Apply the maximal pseudo-rapidity cuts on the jets:      
-         if (etaj.gt.0d0) then 
-c Count the number of jets that pass the pseud-rapidity cut
-            njet_eta=0
-            do i=1,njet
-               if (abs(eta(pjet(0,i))).lt.ETAJ) then
-                  njet_eta=njet_eta+1
-               endif
-            enddo
-            njet=njet_eta
-         endif
 
 c Apply the jet cuts
          if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
@@ -220,6 +245,7 @@ c Apply the jet cuts
             return
          endif
       endif
+ 122  continue
 c
 c PHOTON (ISOLATION) CUTS
 c
@@ -435,29 +461,6 @@ c Call the actual cuts function
       passcuts = passcuts_user(pp,istatus,ipdg)
       RETURN
       END
-
-
-      subroutine unweight_function(p_born,unwgtfun)
-c This is a user-defined function to which to unweight the events
-c A non-flat distribution will generate events with a certain
-c weight. This is particularly useful to generate more events
-c (with smaller weight) in tails of distributions.
-c It computes the unwgt factor from the momenta and multiplies
-c the weight that goes into MINT (or vegas) with this factor.
-c Before writing out the events (or making the plots), this factor
-c is again divided out.
-c This function should be called with the Born momenta to be sure
-c that it stays the same for the events, counter-events, etc.
-c A value different from 1 makes that MINT (or vegas) does not list
-c the correct cross section.
-      implicit none
-      include 'nexternal.inc'
-      double precision unwgtfun,p_born(0:3,nexternal-1)
-
-      unwgtfun=1d0
-
-      return
-      end
 
 
       function chi_gamma_iso(dr,R0,xn,epsgamma,pTgamma)
@@ -841,3 +844,75 @@ c-----
       invm2_04 = dot(ptot,ptot)
       RETURN
       END
+
+
+      subroutine get_ID_H(IDUP_tmp)
+      implicit none
+      include "genps.inc"
+      include 'nexternal.inc'
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+c      include 'leshouche.inc'
+      common /c_leshouche_inc/idup,mothup,icolup
+      integer IDUP_tmp(nexternal),i
+c
+      do i=1,nexternal
+         IDUP_tmp(i)=IDUP(i,1)
+      enddo
+c
+      return
+      end
+
+      subroutine get_ID_S(IDUP_tmp)
+      implicit none
+      include "genps.inc"
+      include 'nexternal.inc'
+      integer    maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
+      include 'born_leshouche.inc'
+      integer IDUP_tmp(nexternal),i
+c
+      do i=1,nexternal-1
+         IDUP_tmp(i)=IDUP(i,1)
+      enddo
+      IDUP_tmp(nexternal)=0
+c
+      return
+      end
+
+
+      subroutine unweight_function(p_born,unwgtfun)
+c This is a user-defined function to which to unweight the events
+c A non-flat distribution will generate events with a certain
+c weight. This is particularly useful to generate more events
+c (with smaller weight) in tails of distributions.
+c It computes the unwgt factor from the momenta and multiplies
+c the weight that goes into MINT (or vegas) with this factor.
+c Before writing out the events (or making the plots), this factor
+c is again divided out.
+c This function should be called with the Born momenta to be sure
+c that it stays the same for the events, counter-events, etc.
+c A value different from 1 makes that MINT (or vegas) does not list
+c the correct cross section.
+      implicit none
+      include 'nexternal.inc'
+      double precision unwgtfun,p_born(0:3,nexternal-1),shat,sumdot
+      external sumdot
+
+      unwgtfun=1d0
+
+c How to enhance the tails is very process dependent. But, it is
+c probably easiest to enhance the tails using shat, e.g.:
+c      shat=sumdot(p_born(0,1),p_born(0,2),1d0)
+c      unwgtfun=max(100d0**2,shat)/100d0**2
+c      unwgtfun=unwgtfun**2
+
+      return
+      end
+
+

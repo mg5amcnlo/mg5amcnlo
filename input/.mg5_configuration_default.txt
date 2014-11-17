@@ -30,6 +30,11 @@
 #!
 # fortran_compiler = None
 
+#! Prefered C++ Compiler
+#! If None: try to find g++ or clang on the system
+#!
+# cpp_compiler = None
+
 #! Prefered Text Editor
 #!  Default: use the shell default Editor
 #!           or try to find one available on the system
@@ -49,12 +54,10 @@
 # timeout = 60
 
 #! Pythia8 path.
-#!  Defines the path to the pythia8 directory.
-#!  This is the directory that contains the subdirectory examples;
-#!  in particular, it is crucial that the file
-#   pythia8_path/examples/config.sh be present.
+#!  Defines the path to the main pythia8 directory (i.e. that containing
+#!  the pythia8 configure script) .
 #!  If using a relative path, that starts from the mg5 directory
-# pythia8_path = ./pythia8
+# pythia8_path =
 
 #! Herwig++ paths
 #!  specify here the paths also to HepMC ant ThePEG
@@ -84,8 +87,8 @@
 #!  0: single machine/ 1: cluster / 2: multicore
 # run_mode = 2
 
-#! Cluster Type [pbs|sge|condor|lsf|ge|slurm] Use for cluster run only
-#!  And cluster queue
+#! Cluster Type [pbs|sge|condor|lsf|ge|slurm|htcaas|htcaas2] Use for cluster run only
+#!  And cluster queue (or partition for slurm)
 # cluster_type = condor
 # cluster_queue = madgraph
 
@@ -146,6 +149,20 @@
 #! Set what OLP to use for the loop ME generation
 # OLP = MadLoop
 
+#! Set the PJFry++ lib libpjfry.a directory
+#! if auto: try to find it automatically on the system (default)
+#! if '' or None: not use PJFry++
+#! if pjfry=/PATH/TO/pjfry/lib: use that specific installation path for PJFry++
+# pjfry = auto
+
+#! Set the Golem95 lib libgolem.a directory
+#! It only supports version higher than 1.3.0
+#! if auto: try to find it automatically on the system (default)
+#! if '' or None: not use Golem95
+#! if golem=/PATH/TO/golem/lib: use that speficif installation path for Golem95
+# golem = auto
+
+
 #! Set how MadLoop dependencies (such as CutTools) should be handled
 #!  > external : ML5 places a link to the MG5_aMC-wide libraries
 #!  > internal : ML5 copies all dependencies in the output so that it is independent
@@ -156,5 +173,9 @@
 #! Path to the directory containing syscalc executables
 #! relative path start from main directory
 # syscalc_path = ./SysCalc
+
+#! Absolute paths to config scripts in the bin directories for APPLgrid and aMCFast.
+# applgrid = applgrid-config
+# amcfast = amcfast-config
 
 

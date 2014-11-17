@@ -5,6 +5,8 @@ import os
 import loop_me_comparator
 import me_comparator
 import unittest
+import re
+import copy
 
 
 from madgraph import MG5DIR
@@ -38,15 +40,6 @@ ML5_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0
                        ('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}),
                        ('d u~ > w- g',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2})]
 
-def procToFolderName(proc):
-    """ Transform a string proc like 'u u~ > e+ e-' to a string for a folder name
-    which would be uux_epem"""
-    res=''.join(proc.split(' '))
-    equiv_strings = [('+','p'),('-','m'),('~','x'),('>','_')]
-    for eq in equiv_strings:
-        res=res.replace(eq[0],eq[1])
-    return res
-
 # The longer processes below are treated one by one so that they can be better
 # independently checked/updated (especially the corresponding reference pickle.)
 
@@ -61,9 +54,6 @@ ML4_processes_long =  [
                        ('d~ d > a g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
                        ('g g > z t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
                        ('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})]
-
-ML4_processes_long_dic = dict((procToFolderName(elem[0]),elem) for elem in \
-                                                             ML4_processes_long)
 
 ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
                        ('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
@@ -85,8 +75,50 @@ ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':
                        ('g s > e- ve~ c',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
                        ('g g > z c c~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})]
 
+ML5_uuxddx_SplitOrders =  [
+   ('u u~ > d d~',{},['QCD'],{'QCD^2==':6,'QED^2==':0})
+   ,('u u~ > d d~',{},['QCD'],{'QCD^2==':4,'QED^2==':2})
+   ,('u u~ > d d~',{},['QCD'],{'QCD^2==':2,'QED^2==':4})
+   ,('u u~ > d d~',{},['QCD'],{'QCD^2>':2})
+   ,('u u~ > d d~',{},['QCD'],{'QED^2<=':2})
+   ,('u u~ > d d~',{},['QCD'],{'QCD^2=':99,'QED^2=':99})
+   ]
+
+ML5_SplitOrders_long =  [
+   ('u d~ > d d~ g w+' ,{},['QCD'],{'QCD^2==':6,'QED^2==':4}),
+   ('d d~ > d d~' ,{},['QCD'],{'WEIGHTED^2>':6})]
+
+
+def procToFolderName(proc, sqso = {}):
+    """ Transform a string proc like 'u u~ > e+ e-' to a string for a folder name
+    which would be uux_epem. Also adds a suffix to this name according to the 
+    squared split orders sqso if specified."""
+    res=''.join(proc.split(' '))
+    equiv_strings = [('+','p'),('-','m'),('~','x'),('>','_')]
+    for eq in equiv_strings:
+        res=res.replace(eq[0],eq[1])
+    
+    if sqso=={}:
+        return res
+    
+    sq_order_re = re.compile(
+          r"^\s*(?P<coup_name>\w*)\s*\^2\s*(?P<logical_operator>(==)|(<=)|=|>)")
+    sqso_strings = {'==':'_eq_','<=':'_le_','=':'_le_','>':'_gt_'}
+    for coup, value in sqso.items(): 
+        parsed = sq_order_re.match(coup)
+        if parsed is None:
+            raise MadGraph5Error, " Could not parse squared orders %s"%coup
+        res = res + "_%ssq%s%i"%(parsed.group('coup_name'),
+                          sqso_strings[parsed.group('logical_operator')],value)
+    return res
+
+
+ML4_processes_long_dic = dict((procToFolderName(elem[0]),elem) for elem in \
+                                                             ML4_processes_long)
 ML5_processes_long_dic = dict((procToFolderName(elem[0]),elem) for elem in \
                                                              ML5_processes_long)
+ML5_SplitOrders_long_dic = dict((procToFolderName(elem[0], sqso=elem[3]),elem) \
+                                              for elem in ML5_SplitOrders_long)
 
 class ML5Test(unittest.TestCase):
     """ A class to test ML5 versus runs from older versions or ML4 """
@@ -123,12 +155,12 @@ class ML5Test(unittest.TestCase):
             runner.model,runner.name,energy=runner.energy)
         
     def compare_processes(self, my_proc_list = [], model = 'loop_sm-parallel_test',
-            pickle_file = "", energy = 2000, tolerance = 1e-06, filename = "",
-            chosen_runner = "ML5_opt"):
+            pickle_file = "", energy = 2000, tolerance = 3e-06, filename = "",
+            chosen_runner = "ML5_opt", compare_with = ['ML5_opt','ML5_def']):
         """ A helper function to compare processes. 
         Note that the chosen_runner is what runner should to create the reference
-        pickle if missing"""
-        
+        pickle if missing"""            
+
         # Print out progress if it is a run for an individual process
         if len(my_proc_list)==1:
             print "\n== %s =="%my_proc_list[0][0]
@@ -149,20 +181,48 @@ class ML5Test(unittest.TestCase):
         # Create a MERunner object for MadLoop 5 optimized
         ML5_opt = loop_me_comparator.LoopMG5Runner()
         ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename)
-    
-        # Create a MERunner object for MadLoop 5 default
-        ML5_default = loop_me_comparator.LoopMG5Runner()
-        ML5_default.setup(_mg5_path, optimized_output=False, temp_dir=filename) 
+        
+        file = open(os.path.join(_mg5_path,'Template','loop_material','StandAlone',
+                                 'Cards','MadLoopParams.dat'), 'r')
+
+        MLParams = file.read()
+        MLred = re.search(r'#MLReductionLib\n',MLParams)
+        MLredstr=MLParams[MLred.end():MLred.end()+1]
+
+        if MLredstr=="1":
+            # Create a MERunner object for MadLoop 5 default
+            ML5_default = loop_me_comparator.LoopMG5Runner()
+            ML5_default.setup(_mg5_path, optimized_output=False, temp_dir=filename) 
 
         # Create and setup a comparator
         my_comp = loop_me_comparator.LoopMEComparator()
         
+        # Remove the default ML5 comparator if using TIR
+        to_compare_with = copy.copy(compare_with)
+        if MLredstr=="1":
+            try:
+                to_compare_with.pop(to_compare_with.index('ML5_def'))
+            except ValueError:
+                pass  
+
+        runners_available = {'ML5_opt':ML5_opt, 'ML5_def':ML5_opt, 
+                                                         'Stored':stored_runner}
         # Always put the saved run first if you use it, so that the corresponding PS
         # points will be used.
+        runners_to_compare = []
         if pickle_file != "":
-            my_comp.set_me_runners(stored_runner,ML5_opt,ML5_default)
-        else:
-            my_comp.set_me_runners(ML5_opt,ML5_default)
+            runners_to_compare.append(stored_runner)
+        runners_to_compare.extend([runners_available[runner] for runner in \
+                                                               to_compare_with])
+        
+        if len(runners_to_compare)<=1:
+                raise MadGraph5Error,\
+"""  Only one runner to compute the result with, so there is no possible comparison.
+  This is most likely due to the fact that you are running a TIR only comparison
+  and the reference pickle cannot be found."""            
+        
+        # Set the runners to include
+        my_comp.set_me_runners(*runners_to_compare)
         
         # Run the actual comparison
         my_comp.run_comparison(my_proc_list,
@@ -213,7 +273,7 @@ class ML5Test(unittest.TestCase):
         self.compare_processes(ML5_processes_short,model = self.test_model_name,
                                    pickle_file = 'ml5_short_parallel_tests.pkl',
                                         filename = 'ptest_short_ml5_vs_old_ml5',
-                                                            chosen_runner='ML5')
+                                                        chosen_runner='ML5_opt')
 
     # In principle since previous version of ML5 has been validated against ML4, 
     # it is not necessary to test both against ML4 and the old ML5.
@@ -222,6 +282,12 @@ class ML5Test(unittest.TestCase):
                                     pickle_file = 'ml4_short_parallel_test.pkl',
                                             filename = 'ptest_short_ml5_vs_ml4',
                                                             chosen_runner='ML4')
+
+    def test_uuxddx_SplitOrders_vs_stored_ML5(self):
+        self.compare_processes(ML5_uuxddx_SplitOrders,model = self.test_model_name,
+                      pickle_file = 'ml5_uuxddx_SplitOrders_parallel_tests.pkl',
+                                filename = 'ptest_uuxddx_SplitOrders_vs_old_ml5',
+                             chosen_runner='ML5_opt',compare_with = ['ML5_opt'])
 
     # The tests below probe one quite long process at a time individually, so
     # one can better manage them.
@@ -448,4 +514,25 @@ class ML5Test(unittest.TestCase):
                filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
                chosen_runner = 'ML5_opt')
 
+    #===========================================================================
+    # Now some longer checks against older version of MadLoop 5 for processes
+    # with squared order constraints
+    #===========================================================================
 
+#   ('u d~ > d d~ g w+' ,{},['QCD'],{'QCD^2==':6,'QED^2==':4})
+    def test_long_sm_vs_stored_ML5_sqso_udx_ddxgwp_QCDeq6_QEDeq4(self):
+        proc = "udx_ddxgwp_QCDsq_eq_6_QEDsq_eq_4"
+        self.compare_processes([ML5_SplitOrders_long_dic[proc]],
+               model = self.test_model_name_c_massive,
+               pickle_file = 'ml5_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_old_ml5_sqso_%s'%proc,
+               chosen_runner = 'ML5_opt',compare_with = ['ML5_opt'])
+        
+#   ('d d~ > d d~' ,{},['QCD'],{'WEIGHTED^2>':6})]
+    def test_long_sm_vs_stored_ML5_sqso_ddx_ddx_WEIGHTEDgt6(self):
+        proc = "ddx_ddx_WEIGHTEDsq_gt_6"
+        self.compare_processes([ML5_SplitOrders_long_dic[proc]],
+               model = self.test_model_name_c_massive,
+               pickle_file = 'ml5_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_old_ml5_sqso_%s'%proc,
+               chosen_runner = 'ML5_opt',compare_with = ['ML5_opt'])

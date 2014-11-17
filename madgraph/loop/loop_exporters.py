@@ -48,6 +48,8 @@ import madgraph.various.progressbar as pbar
 import madgraph.core.color_amp as color_amp
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
+from madgraph.loop.loop_base_objects import LoopDiagram
+from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
 
 pjoin = os.path.join
 
@@ -55,6 +57,7 @@ import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 from madgraph.iolibs.files import cp, ln, mv
+pjoin = os.path.join
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.loop_exporter')
 
@@ -91,20 +94,29 @@ class LoopExporterFortran(object):
         self.fortran_compiler = self.opt['fortran_compiler']
         self.dependencies = self.opt['output_dependencies']
 
-        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)
-        
+        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)        
+
+
     def link_CutTools(self, targetPath):
         """Link the CutTools source directory inside the target path given
         in argument"""
                 
         if self.dependencies=='internal':
-            shutil.copytree(self.cuttools_dir, 
-                           pjoin(targetPath,'Source','CutTools'), symlinks=True)
+            new_CT_path = pjoin(targetPath,'Source','CutTools')
+            shutil.copytree(self.cuttools_dir, new_CT_path, symlinks=True)
+            
+            current = misc.detect_current_compiler(os.path.join(new_CT_path,
+                                                                    'makefile'))
+            new = 'gfortran' if self.fortran_compiler is None else \
+                                                          self.fortran_compiler
+            if current != new:
+                misc.mod_compilator(new_CT_path, new, current)
+            
             # Create the links to the lib folder
             linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
-                ln(os.path.join(os.path.pardir,'Source','CutTools','includects',file),
-                                                 os.path.join(targetPath,'lib'))
+                ln(pjoin(targetPath,'Source','CutTools','includects',file), 
+                                                        pjoin(targetPath,'lib'))
             # Make sure it is recompiled at least once. Because for centralized
             # MG5_aMC installations, it might be that compiler differs.
             # Not necessary anymore because I check the compiler version from
@@ -131,7 +143,7 @@ class LoopExporterFortran(object):
             linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
                 ln(os.path.join(self.cuttools_dir,'includects',file),
-                                                 os.path.join(targetPath,'lib'))
+                                    os.path.join(targetPath,'lib'),abspath=True)
 
         elif self.dependencies=='environment_paths':
             # Here the user chose to define the dependencies path in one of 
@@ -146,8 +158,7 @@ class LoopExporterFortran(object):
             else:
                 raise InvalidCmd("Could not find the location of the files"+\
                     " libcts.a and mp_module.mod in you environment paths.")
-            
-
+    
     def get_aloha_model(self, model):
         """ Caches the aloha model created here as an attribute of the loop 
         exporter so that it can later be used in the LoopHelasMatrixElement
@@ -185,20 +196,71 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
 
+    MadLoop_banner = MadLoopBannerStyles.get_MadLoop_Banner(
+               style='classic2', color='green', 
+               top_frame_char = '=', bottom_frame_char = '=',
+               left_frame_char = '{',right_frame_char = '}',
+               print_frame=True, side_margin = 7, up_margin = 1)
+
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
         super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
         
         # We must change some files to their version for NLO computations
-        cpfiles= ["Source/makefile","SubProcesses/makefile",\
-                  "SubProcesses/check_sa.f","SubProcesses/MadLoopParamReader.f",
+        cpfiles= ["Source/makefile",
                   "Cards/MadLoopParams.dat",
+                  "SubProcesses/MadLoopParamReader.f",
                   "SubProcesses/MadLoopParams.inc"]
+        # first write SubProcesses/makefile from SubProcesses/makefile.inc
+        # dummy variables
+        link_tir_libs=[]
+        tir_libs=[]
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'makefile'
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                                         link_tir_libs,tir_libs)
+        # Return to original PWD
+        os.chdir(cwd)
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+            
+        # We need minimal editing of MadLoopCommons.f
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+                                   'print_banner_commands':self.MadLoop_banner})
+        writer.close()
+        
+        
+        # Copy the whole MadLoop5_resources directory (empty at this stage)
+        if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
+                                                        'MadLoop5_resources')):
+            cp(pjoin(self.loop_dir,'StandAlone','SubProcesses',
+                    'MadLoop5_resources'),pjoin(self.dir_path,'SubProcesses'))
+
+        # Link relevant cards from Cards inside the MadLoop5_resources
+        ln(pjoin(self.dir_path,'Cards','MadLoopParams.dat'), 
+                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
+        ln(pjoin(self.dir_path,'Cards','param_card.dat'), 
+                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
+        ln(pjoin(self.dir_path,'Cards','ident_card.dat'), 
+                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
+
+        # And remove check_sa in the SubProcess folder since now there is a
+        # check_sa tailored to each subprocess.
+        if os.path.isfile(pjoin(self.dir_path,'SubProcesses','check_sa.f')):
+            os.remove(pjoin(self.dir_path,'SubProcesses','check_sa.f'))
 
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
@@ -214,9 +276,28 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         # Return to original PWD
         os.chdir(cwd)
-        
+
         # We must link the CutTools to the Library folder of the active Template
         super(LoopProcessExporterFortranSA, self).link_CutTools(self.dir_path)
+
+    # This function is placed here and not in optimized exporterd,
+    # because the same makefile.inc should be used in all cases.
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,tir_include=[]):
+        """ Create the file makefile which links to the TIR libraries."""
+            
+        file = open(os.path.join(self.loop_dir,'StandAlone',
+                                 'SubProcesses','makefile.inc')).read()  
+        replace_dict={}
+        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        replace_dict['tir_libs']=' '.join(tir_libs)
+        replace_dict['dotf']='%.f'
+        replace_dict['doto']='%.o'
+        replace_dict['tir_include']=' '.join(tir_include)
+        file=file%replace_dict
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
         
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
@@ -226,6 +307,18 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         self.get_aloha_model(model)
         super(LoopProcessExporterFortranSA, self).convert_model_to_mg4(model,
            wanted_lorentz = wanted_lorentz, wanted_couplings = wanted_couplings)
+
+
+    def get_ME_identifier(self, matrix_element):
+        """ A function returning a string uniquely identifying the matrix 
+        element given in argument so that it can be used as a prefix to all
+        MadLoop5 subroutines and common blocks related to it. This allows
+        to compile several processes into one library as requested by the 
+        BLHA (Binoth LesHouches Accord) guidelines. """
+
+        # return 'ML5_%s_'%matrix_element.get('processes')[0].shell_string()    
+        # The version below is shorter
+        return 'ML5_%d_'%matrix_element.get('processes')[0].get('id')   
 
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
@@ -488,7 +581,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         cwd = os.getcwd()
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
-                       "P%s" % matrix_element.get('processes')[0].shell_string())
+                      "P%s" % matrix_element.get('processes')[0].shell_string())
 
         try:
             os.mkdir(dirpath)
@@ -533,16 +626,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         # Do not draw the loop diagrams if they are too many.
         # The user can always decide to do it manually, if really needed
-        if (len(matrix_element.get('base_amplitude').get('loop_diagrams'))>1000):
-            logger.info("There are more than 1000 loop diagrams."+\
-                                               "Only the first 1000 are drawn.")
+        loop_diags = [loop_diag for loop_diag in\
+		  matrix_element.get('base_amplitude').get('loop_diagrams')\
+		  if isinstance(loop_diag,LoopDiagram) and \
+                                                      loop_diag.get('type') > 0]
+        if len(loop_diags)>5000:
+            logger.info("There are more than 5000 loop diagrams."+\
+                                              "Only the first 5000 are drawn.")
         filename = "loop_matrix.ps"
-        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
-              matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
-              filename,
-              model=matrix_element.get('processes')[0].get('model'),
-              amplitude='')
+            loop_diags[:5000]),filename,
+            model=matrix_element.get('processes')[0].get('model'),amplitude='')
         logger.info("Drawing loop Feynman diagrams for " + \
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
@@ -560,12 +654,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                           print_weighted=False))
             plot.draw()
 
-        if not matrix_element.get('processes')[0].get('has_born'):
-            # There is a specific check_sa.f for loop induced processes
-            shutil.copy(os.path.join(self.loop_dir,'StandAlone','SubProcesses',
-                                     'check_sa_loop_induced.f'),
-                        os.path.join(self.dir_path, 'SubProcesses','check_sa.f'))
-
         self.link_files_from_Subprocesses(proc_name=\
                               matrix_element.get('processes')[0].shell_string())
         
@@ -580,10 +668,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         """ To link required files from the Subprocesses directory to the
         different P* ones"""
         
-        linkfiles = ['check_sa.f', 'coupl.inc', 'makefile',
+        linkfiles = ['coupl.inc', 'makefile',
                      'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
                      'mp_coupl_same_name.inc',
-                     'MadLoopParamReader.f',
+                     'MadLoopParamReader.f','MadLoopCommons.f',
                      'MadLoopParams.inc']
         
         for file in linkfiles:
@@ -592,14 +680,22 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # The mp module
         ln('../../lib/mpmodule.mod')
             
-        # For convenience also link the madloop param card
-        ln('../../Cards/MadLoopParams.dat')
+        # Also like the whole MadLoop5_files directory
+        ln('../MadLoop5_resources')
 
     def generate_general_replace_dict(self,matrix_element):
         """Generates the entries for the general replacement dictionary used
         for the different output codes for this exporter"""
         
         dict={}
+        # A general process prefix which appears in front of all MadLooop
+        # subroutines and common block so that several processes can be compiled
+        # together into one library, as necessary to follow BLHA guidelines.
+        dict['proc_prefix'] = self.get_ME_identifier(matrix_element)
+
+        # The proc_id is used for MadEvent grouping, so none of our concern here
+        # and it is simply set to an empty string.        
+        dict['proc_id'] = ''
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
         dict['info_lines'] = info_lines
@@ -633,10 +729,18 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Color matrix size
         # For loop induced processes it is NLOOPAMPSxNLOOPAMPS and otherwise
         # it is NLOOPAMPSxNBORNAMPS
+        # Also, how to access the number of Born squared order contributions
+
         if matrix_element.get('processes')[0].get('has_born'):
             dict['color_matrix_size'] = 'nbornamps'
+            dict['get_nsqso_born']=\
+                           "include 'nsqso_born.inc'"
         else:
-            dict['color_matrix_size'] = 'nloopamps'
+            dict['get_nsqso_born']="""INTEGER NSQSO_BORN
+            PARAMETER (NSQSO_BORN=0)
+            """
+            dict['color_matrix_size'] = 'nloopamps'    
+        
         # These placeholders help to have as many common templates for the
         # output of the loop induced processes and those with a born 
         # contribution.
@@ -648,6 +752,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             dict['nbornamps_decl'] = \
               """INTEGER NBORNAMPS
                  PARAMETER (NBORNAMPS=%d)"""%nbornamps
+            dict['nBornAmps'] = nbornamps
+                 
         else:
             dict['ncomb_helas_objs'] = ''  
             dict['dp_born_amps_decl'] = ''
@@ -655,6 +761,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             dict['copy_mp_to_dp_born_amps'] = ''
             dict['mp_born_amps_decl'] = ''
             dict['nbornamps_decl'] = ''
+            dict['nBornAmps'] = 0
         
         return dict
     
@@ -683,7 +790,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.
         self.general_replace_dict=\
-                              self.generate_general_replace_dict(matrix_element)
+                              self.generate_general_replace_dict(matrix_element)                                 
+        
         # Extract max number of loop couplings (specific to this output type)
         self.general_replace_dict['maxlcouplings']= \
                                          matrix_element.find_max_loop_coupling()
@@ -692,13 +800,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         if matrix_element.get('processes')[0].get('has_born'):
             self.general_replace_dict['dp_born_amps_decl_in_mp'] = \
                   self.general_replace_dict['complex_dp_format']+" DPAMP(NBORNAMPS,NCOMB)"+\
-                  "\n common/AMPS/DPAMP"
+                  "\n common/%sAMPS/DPAMP"%self.general_replace_dict['proc_prefix']
             self.general_replace_dict['dp_born_amps_decl'] = \
                   self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS,NCOMB)"+\
-                  "\n common/AMPS/AMP"
+                  "\n common/%sAMPS/AMP"%self.general_replace_dict['proc_prefix']
             self.general_replace_dict['mp_born_amps_decl'] = \
                   self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS,NCOMB)"+\
-                  "\n common/MP_AMPS/AMP"
+                  "\n common/%sMP_AMPS/AMP"%self.general_replace_dict['proc_prefix']
             self.general_replace_dict['copy_mp_to_dp_born_amps'] = \
                    '\n'.join(['DO I=1,NBORNAMPS','DPAMP(I,H)=AMP(I,H)','ENDDO'])
         
@@ -709,7 +817,16 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             filename = 'loop_matrix.f'
             calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
-                                          LoopFortranModel) 
+                                          LoopFortranModel)
+
+            # Write out the proc_prefix in a file, this is quite handy
+            proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
+            proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
+            proc_prefix_writer.close()
+                        
+            filename = 'check_sa.f'
+            self.write_check_sa(writers.FortranWriter(filename),matrix_element)
+            
             filename = 'CT_interface.f'
             self.write_CT_interface(writers.FortranWriter(filename),\
                                     matrix_element)
@@ -735,6 +852,23 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         
         return self.generate_loop_subprocess(matrix_element,fortran_model)
 
+    def write_check_sa(self, writer, matrix_element):
+        """Writes out the steering code check_sa. In the optimized output mode,
+        All the necessary entries in the replace_dictionary have already been 
+        set in write_loopmatrix because it is only there that one has access to
+        the information about split orders."""        
+        replace_dict = copy.copy(self.general_replace_dict)     
+        for key in ['print_so_born_results','print_so_loop_results',
+            'write_so_born_results','write_so_loop_results','set_coupling_target']:
+            if key not in replace_dict.keys():
+                replace_dict[key]=''
+        if matrix_element.get('processes')[0].get('has_born'):
+            file = open(os.path.join(self.template_dir,'check_sa.inc')).read()
+        else:
+            file = open(os.path.join(self.template_dir,\
+                                          'check_sa_loop_induced.inc')).read()            
+        file=file%replace_dict
+        writer.writelines(file)
 
     def write_improve_ps(self, writer, matrix_element):
         """ Write out the improve_ps subroutines which modify the PS point
@@ -810,7 +944,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
     def write_CT_interface(self, writer, matrix_element, optimized_output=False):
         """ Create the file CT_interface.f which contains the subroutine defining
-        the loop HELAS-like calls along with the general interfacing subroutine. """
+         the loop HELAS-like calls along with the general interfacing subroutine. """
 
         files=[]
 
@@ -925,7 +1059,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     # Helper function to split HELAS CALLS in dedicated subroutines placed
     # in different files.
     def split_HELASCALLS(self, writer, replace_dict, template_name, masterfile, \
-                         helas_calls, entry_name, bunch_name,n_helas=2000):
+                         helas_calls, entry_name, bunch_name,n_helas=2000,
+                         required_so_broadcaster = 'LOOP_REQ_SO_DONE',
+                         continue_label = 1000):
         """ Finish the code generation with splitting.         
         Split the helas calls in the argument helas_calls into bunches of 
         size n_helas and place them in dedicated subroutine with name 
@@ -938,13 +1074,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             helascalls_replace_dict['bunch_number']=i+1                
             helascalls_replace_dict['helas_calls']=\
                                            '\n'.join(helas_calls[k:k + n_helas])
+            helascalls_replace_dict['required_so_broadcaster']=\
+                                                         required_so_broadcaster
+            helascalls_replace_dict['continue_label']=continue_label
             new_helascalls_file = open(os.path.join(self.template_dir,\
-                                            template_name)).read()
+                                                          template_name)).read()
             new_helascalls_file = new_helascalls_file % helascalls_replace_dict
             helascalls_files.append(new_helascalls_file)
         # Setup the call to these HELASCALLS subroutines in loop_matrix.f
-        helascalls_calls = [ "CALL %s_%d(P,NHEL,H,IC)"%(bunch_name,a+1) \
-                            for a in range(len(helascalls_files))]
+        helascalls_calls = [ "CALL %s%s_%d(P,NHEL,H,IC)"%\
+                    (self.general_replace_dict['proc_prefix'] ,bunch_name,a+1) \
+                                          for a in range(len(helascalls_files))]
         replace_dict[entry_name]='\n'.join(helascalls_calls)
         if writer:
             for i, helascalls_file in enumerate(helascalls_files):
@@ -981,6 +1121,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Also sets here the details of the squaring of the loop ampltiudes
         # with the born or the loop ones.
         if not matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['compute_born']=\
+"""C There is of course no born for loop induced processes
+ANS(0)=0.0d0
+"""
             replace_dict['set_reference']='\n'.join([
               'C For loop-induced, the reference for comparison is set later'+\
               ' from the total contribution of the previous PS point considered.',
@@ -991,20 +1135,20 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
               'HELPICKED_BU=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.',
               'IF(SKIPLOOPEVAL) THEN','GOTO 1227','ENDIF'])
             replace_dict['loop_induced_finalize'] = \
-            """HELPICKED=HELPICKED_BU
+            ("""HELPICKED=HELPICKED_BU
                DO I=NCTAMPS+1,NLOOPAMPS
                IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN
                  WRITE(*,*) '##W03 WARNING Contribution ',I
                  WRITE(*,*) ' is unstable for helicity ',H
                ENDIF
-C                IF(.NOT.ISZERO(ABS(AMPL(2,I))+ABS(AMPL(3,I)),REF,-1,H)) THEN
+C                IF(.NOT.%(proc_prefix)sISZERO(ABS(AMPL(2,I))+ABS(AMPL(3,I)),REF,-1,H)) THEN
 C                  WRITE(*,*) '##W04 WARNING Contribution ',I,' for helicity ',H,' has a contribution to the poles.'
 C                  WRITE(*,*) 'Finite contribution         = ',AMPL(1,I)
 C                  WRITE(*,*) 'single pole contribution    = ',AMPL(2,I)
 C                  WRITE(*,*) 'double pole contribution    = ',AMPL(3,I)
 C                ENDIF
                ENDDO
-               1227 CONTINUE"""
+               1227 CONTINUE""")%replace_dict
             replace_dict['loop_helas_calls']=""
             replace_dict['nctamps_or_nloopamps']='nloopamps'
             replace_dict['nbornamps_or_nloopamps']='nloopamps'
@@ -1014,8 +1158,14 @@ C                ENDIF
                          ANS(2)=ANS(2)+DBLE(CFTOT*AMPL(2,I))+DIMAG(CFTOT*AMPL(2,I))
                          ANS(3)=ANS(3)+DBLE(CFTOT*AMPL(3,I))+DIMAG(CFTOT*AMPL(3,I))                         
                        ENDIF"""      
-        else:
-            replace_dict['set_reference']='call smatrix(p,ref)'
+        else: 
+            replace_dict['compute_born']=\
+"""C Compute the born, for a specific helicity if asked so.
+call %(proc_prefix)ssmatrixhel(P_USER,USERHEL,ANS(0))
+"""%self.general_replace_dict
+            replace_dict['set_reference']=\
+"""C We chose to use the born evaluation for the reference
+call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
             replace_dict['loop_induced_helas_calls'] = ""
             replace_dict['loop_induced_finalize'] = ""
             replace_dict['loop_induced_setup'] = ""
@@ -1024,6 +1174,13 @@ C                ENDIF
             replace_dict['squaring']='\n'.join(['DO K=1,3',
                    'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J,H)))',
                                                                        'ENDDO'])
+
+        # Write a dummy nsquaredSO.inc which is used in the default
+        # loop_matrix.f code (even though it does not support split orders evals)
+        # just to comply with the syntax expected from the external code using MadLoop.
+        writers.FortranWriter('nsquaredSO.inc').writelines(
+"""INTEGER NSQUAREDSO
+PARAMETER (NSQUAREDSO=0)""")
 
         # Actualize results from the loops computed. Only necessary for
         # processes with a born.
@@ -1040,36 +1197,47 @@ C                ENDIF
             replace_dict['actualize_ans']='\n'.join(actualize_ans)
         else:
             replace_dict['actualize_ans']=\
-            """IF(.NOT.ISZERO(ABS(ANS(2))+ABS(ANS(3)),REF*(10.0d0**-2),-1,H)) THEN
-                 WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
-                 WRITE(*,*) 'Finite contribution         = ',ANS(1)
-                 WRITE(*,*) 'single pole contribution    = ',ANS(2)
-                 WRITE(*,*) 'double pole contribution    = ',ANS(3)
-               ENDIF"""
+            ("""C We add five powers to the reference value to loosen a bit the vanishing pole check.
+C               IF(.NOT.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)).AND..NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),ABS(ANS(1))*(10.0d0**5),-1,H)) THEN
+C                 WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
+C                 WRITE(*,*) 'Finite contribution         = ',ANS(1)
+C                 WRITE(*,*) 'single pole contribution    = ',ANS(2)
+C                 WRITE(*,*) 'double pole contribution    = ',ANS(3)
+C               ENDIF""")%replace_dict
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open('ColorNumFactors.dat','w')
+        CMWriter=open(pjoin('..','MadLoop5_resources',
+            '%(proc_prefix)sColorNumFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMNum:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
-        CMWriter=open('ColorDenomFactors.dat','w')
+        CMWriter=open(pjoin('..','MadLoop5_resources',
+          '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMDenom:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
         
         # Write out the helicity configurations
         HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open('HelConfigs.dat','w')
+        HelConfigWriter=open(pjoin('..','MadLoop5_resources',
+                 '%(proc_prefix)sHelConfigs.dat'%self.general_replace_dict),'w')
         for HelConfig in HelConfigs:
             HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
         HelConfigWriter.close()
         
         # Extract helas calls
         loop_amp_helas_calls = fortran_model.get_loop_amp_helas_calls(\
-                                                            matrix_element)
-        born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
-                                                            matrix_element)
+                                                                 matrix_element)
+        # The proc_prefix must be replaced
+        loop_amp_helas_calls = [lc % self.general_replace_dict 
+                                                 for lc in loop_amp_helas_calls]
+        
+        born_ct_helas_calls, UVCT_helas_calls = \
+                           fortran_model.get_born_ct_helas_calls(matrix_element)
+        # In the default output, we do not need to separate these two kind of
+        # contributions
+        born_ct_helas_calls = born_ct_helas_calls + UVCT_helas_calls
         file = open(os.path.join(self.template_dir,\
         
                         'loop_matrix_standalone.inc')).read()
@@ -1092,15 +1260,17 @@ C                ENDIF
             replace_dict[toBeRepaced]='\n'.join(loop_amp_helas_calls)
         
         file = file % replace_dict
+
+        loop_calls_finder = re.compile(r'^\s*CALL\S*LOOP\S*')
+        n_loop_calls = len(filter(lambda call: 
+               not loop_calls_finder.match(call) is None, loop_amp_helas_calls))
         if writer:
             # Write the file
             writer.writelines(file)  
-            return len(filter(lambda call: call.find('CALL LOOP') != 0, \
-                              loop_amp_helas_calls))
+            return n_loop_calls
         else:
             # Return it to be written along with the others
-            return len(filter(lambda call: call.find('CALL LOOP') != 0, \
-                              loop_amp_helas_calls)), file
+            return n_loop_calls, file
                   
     def write_bornmatrix(self, writer, matrix_element, fortran_model):
         """Create the born_matrix.f file for the born process as for a standard
@@ -1134,8 +1304,9 @@ C                ENDIF
         # ones (provided they are not used further in the code.)
         bornME.optimization = True
         
-        return super(LoopProcessExporterFortranSA,self).\
-          write_matrix_element_v4(writer,bornME,fortran_model)
+        return super(LoopProcessExporterFortranSA,self).write_matrix_element_v4(
+                                                  writer, bornME, fortran_model, 
+                           proc_prefix=self.general_replace_dict['proc_prefix'])
 
     def write_born_amps_and_wfs(self, writer, matrix_element, fortran_model,\
                                 noSplit=False): 
@@ -1156,8 +1327,11 @@ C                ENDIF
             replace_dict['h_w_suffix']=''            
 
         # Extract helas calls
-        born_amps_and_wfs_calls = fortran_model.get_born_ct_helas_calls(\
-                                                matrix_element, include_CT=True)
+        born_amps_and_wfs_calls , uvct_amp_calls = \
+          fortran_model.get_born_ct_helas_calls(matrix_element, include_CT=True)
+        # In the default output, these two kind of contributions do not need to
+        # be differentiated
+        born_amps_and_wfs_calls = born_amps_and_wfs_calls + uvct_amp_calls
         
         # Turn these HELAS calls to the multiple-precision version of the HELAS
         # subroutines.
@@ -1194,8 +1368,91 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop_optimized')
     # The option below controls wether one wants to group together in one single
-    # CutTools call the loops with same denominator structure
+    # CutTools/TIR call the loops with same denominator structure
     group_loops=True
+    
+    # List of potential TIR library one wants to link to
+    all_tir=['pjfry','iregi','golem']
+    
+    def __init__(self, mgme_dir="", dir_path = "", opt=None):
+        """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
+        information on where to find all the loop-related source files, 
+        like CutTools and TIR"""
+
+        super(LoopProcessOptimizedExporterFortranSA,self).__init__(mgme_dir, 
+                                                                   dir_path, opt)
+
+        # TIR available ones
+        self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True}
+
+        for tir in self.all_tir:
+            tir_dir="%s_dir"%tir
+            if tir_dir in self.opt:
+                setattr(self,tir_dir,self.opt[tir_dir])
+            else:
+                setattr(self,tir_dir,'')
+
+    def copy_v4template(self, modelname):
+        """Additional actions needed for setup of Template
+        """
+        super(LoopProcessOptimizedExporterFortranSA, self).copy_v4template(modelname)
+        # We must link the TIR to the Library folder of the active Template
+        link_tir_libs=[]
+        tir_libs=[]
+        tir_include=[]
+        # special for PJFry++
+        link_pjfry_lib=""
+        pjfry_lib=""
+        pjdir=""
+        for tir in self.all_tir:
+            tir_dir="%s_dir"%tir
+            libpath=getattr(self,tir_dir)
+            libname="lib%s.a"%tir
+            tir_name=tir
+            libpath = self.link_TIR(os.path.join(self.dir_path, 'lib'),
+                                              libpath,libname,tir_name=tir_name)
+            setattr(self,tir_dir,libpath)
+            if libpath != "":
+                if tir in ['pjfry','golem']:
+                    # Apparently it is necessary to link against the original 
+                    # location of the pjfry library, so it needs a special treatment.
+                    link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
+                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
+                    if tir=='golem':
+                        trgt_path = pjoin(os.path.dirname(libpath),'include')
+                        golem_include = misc.find_includes_path(trgt_path,'.mod')
+                        if golem_include is None:
+                            logger.error(
+'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
+'Generation carries on but you will need to edit the include path by hand in the makefiles.')
+                            golem_include = '<Not_found_define_it_yourself>'                
+                        tir_include.append('-I %s'%str(golem_include))
+                        # To be able to easily compile a MadLoop library using
+                        # makefiles built outside of the MG5_aMC framework
+                        # (such as what is done with the Sherpa interface), we
+                        # place here an easy handle on the golem includes
+                        ln(golem_include, starting_dir=pjoin(self.dir_path,'lib'),
+                                            name='golem95_include',abspath=True)
+                        
+                else :
+                    link_tir_libs.append('-l%s'%tir)
+                    tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
+
+        os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'makefile'
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                                     link_tir_libs,tir_libs,
+                                                     tir_include=tir_include)
+        # Return to original PWD
+        os.chdir(cwd)
+                     
 
     def link_files_from_Subprocesses(self,proc_name=""):
         """ Does the same as the mother routine except that it also links
@@ -1208,11 +1465,127 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
                  'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
 
+
+    def link_TIR(self, targetPath,libpath,libname,tir_name='TIR'):
+        """Link the TIR source directory inside the target path given
+        in argument"""
+        
+        if tir_name in ['pjfry','golem']:
+            # not self-contained libraries
+            if (not isinstance(libpath,str)) or (not os.path.exists(libpath)) \
+            or (not os.path.isfile(pjoin(libpath,libname))):
+                if isinstance(libpath,str) and libpath != '' and \
+                (not os.path.isfile(pjoin(libpath,libname))):
+                    # WARNING ONLY appears when the libpath is a wrong specific path.
+                    #logger.warning("The %s tensor integration library could not be found"%tir_name\
+                    #               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+                    #               +" It will not be available.")
+                    logger.warning("The %s tensor integration library could not be found"%tir_name\
+                                   +" with PATH:%s specified in mg5_configuration.txt."%libpath\
+                                   +" It will not be available.")
+                self.tir_available_dict[tir_name]=False
+                return ""
+        else:
+            # self-contained libraries
+            if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
+                # WARNING ONLY appears when the libpath is a wrong specific path.
+                #logger.warning("The %s tensor integration library could not be found"%tir_name\
+                #               +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+                #               +" It will not be available.")
+                logger.warning("The %s tensor integration library could not be found"%tir_name\
+                                   +" with PATH:%s specified in mg5_configuration.txt."%libpath\
+                                   +" It will not be available.")
+                self.tir_available_dict[tir_name]=False
+                return ""
+       
+        if self.dependencies=='internal':
+            if tir_name in ["pjfry","golem"]:
+                self.tir_available_dict[tir_name]=False
+                logger.warning("When using the 'output_dependencies=internal' "+\
+" MG5_aMC option, the tensor integral library %s cannot be employed because"%tir_name+\
+" it is not distributed with the MG5_aMC code so that it cannot be copied locally.")
+                return ""
+            elif tir_name == "iregi":
+                # This is the right paths for IREGI
+                new_iregi_path = pjoin(targetPath,os.path.pardir,'Source','IREGI')
+                shutil.copytree(pjoin(libpath,os.path.pardir), new_iregi_path, 
+                                                                  symlinks=True)
+                
+                current = misc.detect_current_compiler(
+                                 pjoin(new_iregi_path,'src','makefile_ML5_lib'))
+                new = 'gfortran' if self.fortran_compiler is None else \
+                                                        self.fortran_compiler
+                if current != new:
+                    misc.mod_compilator(pjoin(new_iregi_path,'src'), new,current)
+                    misc.mod_compilator(pjoin(new_iregi_path,'src','oneloop'), 
+                                                                   new, current)
+
+                # Create the links to the lib folder
+                ln(pjoin(targetPath,os.path.pardir,'Source','IREGI','src',
+                                                            libname),targetPath)
+            else:
+                logger.info("Tensor integral reduction library "+\
+                                            "%s not implemented yet."%tir_name)
+            return libpath
+ 
+        elif self.dependencies=='external':
+            if not os.path.exists(pjoin(libpath,libname)) and tir_name=='iregi':
+                logger.info('Compiling IREGI. This has to be done only once and'+\
+                             ' can take a couple of minutes.','$MG:color:BLACK')
+                
+                current = misc.detect_current_compiler(os.path.join(\
+                                                    libpath,'makefile_ML5_lib'))
+                new = 'gfortran' if self.fortran_compiler is None else \
+                                                        self.fortran_compiler
+                if current != new:
+                    misc.mod_compilator(libpath, new,current)
+                    misc.mod_compilator(pjoin(libpath,'oneloop'), new, current)
+
+                misc.compile(cwd=libpath, job_specs = False)
+
+                if not os.path.exists(pjoin(libpath,libname)):            
+                    logger.warning("IREGI could not be compiled. Check"+\
+                      "the compilation errors at %s. The related "%libpath+\
+                                              "functionalities are turned off.")
+                    self.tir_available_dict[tir_name]=False
+                    return ""
+            # Apparently it is necessary to link against the original location 
+            # of the pjfry/golem library
+            if not tir_name in ['pjfry','golem']:
+                ln(os.path.join(libpath,libname),targetPath,abspath=True)
+
+        elif self.dependencies=='environment_paths':
+            # Here the user chose to define the dependencies path in one of 
+            # his environmental paths
+            newlibpath = misc.which_lib(libname)
+            if not newlibpath is None:
+                logger.info('MG5_aMC is using %s installation found at %s.'%\
+                                                          (tir_name,newlibpath)) 
+                # Apparently it is necessary to link against the original location 
+                # of the pjfry/golem library
+                if not tir_name in ['pjfry','golem']:
+                    ln(newlibpath,targetPath,abspath=True)
+                self.tir_available_dict[tir_name]=True
+                return os.path.dirname(newlibpath)
+            else:
+                logger.warning("Could not find the location of the file"+\
+                  " %s in you environment paths. The related "%libname+\
+                                             "functionalities are turned off.")
+                self.tir_available_dict[tir_name]=False
+                return ""
+            
+        self.tir_available_dict[tir_name]=True
+        return libpath
+        
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
-        """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
-        the optimized FortranModel"""
-        # Create the necessary files for the loop matrix element subroutine
+        """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f,GOLEM_inteface.f 
+        and loop_num.f only but with the optimized FortranModel"""
+                
+        # Warn the user that the 'matrix' output where all relevant code is
+        # put together in a single file is not supported in this loop output.
+        if writer:
+            raise MadGraph5Error, 'Matrix output mode no longer supported.'
         
         if not isinstance(fortran_model,\
           helas_call_writers.FortranUFOHelasCallWriter):
@@ -1233,9 +1606,140 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # many files generated here.
         self.general_replace_dict=LoopProcessExporterFortranSA.\
                               generate_general_replace_dict(self,matrix_element)
+
+        # Now fill in the replace dict entries specific to the TIR implementation
+        self.set_TIR_replace_dict_entries()
+        # and those specific to the optimized output
+        self.set_optimized_output_specific_replace_dict_entries(matrix_element)
+
+        # Create the necessary files for the loop matrix element subroutine      
+        proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
+        proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
+        proc_prefix_writer.close()
+                    
+        filename = 'loop_matrix.f'
+        calls = self.write_loopmatrix(writers.FortranWriter(filename),
+                                      matrix_element,
+                                      OptimizedFortranModel)
+        
+        filename = 'check_sa.f'
+        self.write_check_sa(writers.FortranWriter(filename),matrix_element)
+        
+        filename = 'polynomial.f'
+        calls = self.write_polynomial_subroutines(
+                                      writers.FortranWriter(filename),
+                                      matrix_element)
+        
+        filename = 'improve_ps.f'
+        calls = self.write_improve_ps(writers.FortranWriter(filename),
+                                                             matrix_element)
+        
+        filename = 'CT_interface.f'
+        self.write_CT_interface(writers.FortranWriter(filename),\
+                                matrix_element)
+        
+        filename = 'TIR_interface.f'
+        self.write_TIR_interface(writers.FortranWriter(filename),
+                                matrix_element)
+        
+        if 'golem' in self.tir_available_dict and self.tir_available_dict['golem']:
+            filename = 'GOLEM_interface.f'
+            self.write_GOLEM_interface(writers.FortranWriter(filename),
+                                       matrix_element)
+
+        filename = 'loop_num.f'
+        self.write_loop_num(writers.FortranWriter(filename),\
+                                matrix_element,OptimizedFortranModel)
+        
+        filename = 'mp_compute_loop_coefs.f'
+        self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
+                                     matrix_element,OptimizedFortranModel)
+
+        return calls
+
+    def set_TIR_replace_dict_entries(self):
+        """ Specify the entries of the replacement dictionary which depend on
+        the choice of Tensor Integral Reduction (TIR) libraries specified by the
+        user and their availability on the system."""
+        
+        for tir in self.all_tir:
+            if self.tir_available_dict[tir]:
+                if tir=="pjfry":
+                    self.general_replace_dict['pjfry_calling']=\
+                    ("        CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,"\
+                    +"PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)\n"\
+                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
+                    +"         CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
+                    )%self.general_replace_dict
+                elif tir=="iregi":
+                    self.general_replace_dict['iregi_calling']=\
+                    ("        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
+                    +"RANK,PDEN,M2L,MU_R,PJCOEFS,STABLE)\n"\
+                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
+                    +"        CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
+                    )%self.general_replace_dict
+                    self.general_replace_dict['iregi_free_ps']=\
+                    "IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS"
+                    self.general_replace_dict['initiregi']=\
+                    "      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)"
+                elif tir=="golem":
+                    self.general_replace_dict['golem_calling']=\
+                    ("IF(MLReductionLib(I_LIB).EQ.4)THEN\n"\
+                     +"C      Using Golem95\n"\
+                     +"        CALL %(proc_prefix)sGOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)\n"\
+                     +"        RETURN\n"\
+                     +"ENDIF")%self.general_replace_dict
+                else:
+                    raise MadGraph5Error,"%s was not a well-defined TIR."%tir_name
+            else:
+                if tir=="pjfry":
+                    self.general_replace_dict['pjfry_calling']=\
+                    "        WRITE(*,*)'PJFRY is not installed correctly !'\n"\
+                    +"        STOP"
+                elif tir=="iregi":
+                    self.general_replace_dict['iregi_calling']=\
+                    "        WRITE(*,*)'IREGI is not installed correctly !'\n"\
+                    +"        STOP"
+                    self.general_replace_dict['initiregi']=''
+                    self.general_replace_dict['iregi_free_ps']=''
+                elif tir=="golem":
+                    self.general_replace_dict['golem_calling']=''
+        # the first entry is the CutTools, we make sure it is available
+        looplibs_av=['.TRUE.']
+        # one should be careful about the order in the following
+        if "pjfry" in self.all_tir:
+            if self.tir_available_dict["pjfry"]:             
+                looplibs_av.extend(['.TRUE.'])
+            else:
+                looplibs_av.extend(['.FALSE.'])
+        else:
+            looplibs_av.extend(['.FALSE.'])
+        if "iregi" in self.all_tir:
+            if self.tir_available_dict["iregi"]:             
+                looplibs_av.extend(['.TRUE.'])
+            else:
+                looplibs_av.extend(['.FALSE.'])
+        else:
+            looplibs_av.extend(['.FALSE.'])
             
-        # Now some features specific to the optimized output        
+        if "golem" in self.all_tir:
+            if self.tir_available_dict["golem"]:
+                looplibs_av.extend(['.TRUE.'])
+            else:
+                looplibs_av.extend(['.FALSE.'])
+        else:
+            looplibs_av.extend(['.FALSE.'])
+        self.general_replace_dict['data_looplibs_av']="DATA LOOPLIBS_AVAILABLE /"\
+        +','.join(looplibs_av)+"/"
+
+
+    def set_optimized_output_specific_replace_dict_entries(self, matrix_element):
+        """ Specify the entries of the replacement dictionary which are specific
+        to the optimized output and only relevant to it (the more general entries
+        are set in the the mother class LoopProcessExporterFortranSA."""
+        
         max_loop_rank=matrix_element.get_max_loop_rank()
+        self.general_replace_dict['maxrank']=max_loop_rank
         self.general_replace_dict['loop_max_coefs']=\
                         q_polynomial.get_number_of_coefs_for_rank(max_loop_rank)
         max_loop_vertex_rank=matrix_element.get_max_loop_vertex_rank()
@@ -1264,43 +1768,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if matrix_element.get('processes')[0].get('has_born'):
             self.general_replace_dict['dp_born_amps_decl'] = \
                   self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS)"+\
-                  "\n common/AMPS/AMP"
+                  "\n common/%sAMPS/AMP"%self.general_replace_dict['proc_prefix']
             self.general_replace_dict['mp_born_amps_decl'] = \
                   self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
-                  "\n common/MP_AMPS/AMP"
-
-        if writer:
-            raise MadGraph5Error, 'Matrix output mode no longer supported.'
-
-        else:
-                        
-            filename = 'loop_matrix.f'
-            calls = self.write_loopmatrix(writers.FortranWriter(filename),
-                                          matrix_element,
-                                          OptimizedFortranModel)
-            filename = 'polynomial.f'
-            calls = self.write_polynomial_subroutines(
-                                          writers.FortranWriter(filename),
-                                          matrix_element)
-            
-            filename = 'improve_ps.f'
-            calls = self.write_improve_ps(writers.FortranWriter(filename),
-                                                                 matrix_element)
-            
-            filename = 'CT_interface.f'
-            self.write_CT_interface(writers.FortranWriter(filename),\
-                                    matrix_element)
-
-            filename = 'loop_num.f'
-            self.write_loop_num(writers.FortranWriter(filename),\
-                                    matrix_element,OptimizedFortranModel)
-            
-            filename = 'mp_compute_loop_coefs.f'
-            self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
-                                         matrix_element,OptimizedFortranModel)
-
-            return calls
-
+                  "\n common/%sMP_AMPS/AMP"%self.general_replace_dict['proc_prefix']
+    
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools
         which contains the Helas calls building the loop"""
@@ -1315,6 +1787,76 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """ We can re-use the mother one for the loop optimized output."""
         LoopProcessExporterFortranSA.write_CT_interface(\
                             self, writer, matrix_element,optimized_output=True)
+        
+    def write_TIR_interface(self, writer, matrix_element):
+        """ Create the file TIR_interface.f which does NOT contain the subroutine
+         defining the loop HELAS-like calls along with the general interfacing 
+         subroutine. """
+
+        # First write TIR_interface which interfaces MG5 with TIR.
+        replace_dict=copy.copy(self.general_replace_dict)
+        
+        # We finalize TIR result differently wether we used the built-in 
+        # squaring against the born.
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['finalize_TIR']='\n'.join([\
+         'RES(%d)=NORMALIZATION*2.0d0*DBLE(RES(%d))'%(i,i) for i in range(1,4)])
+        else:
+            replace_dict['finalize_TIR']='\n'.join([\
+                     'RES(%d)=NORMALIZATION*RES(%d)'%(i,i) for i in range(1,4)])
+            
+        file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
+
+        file = file % replace_dict
+        
+        
+        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
+                                                    coef_format=replace_dict['complex_dp_format'],\
+                                                    sub_prefix=replace_dict['proc_prefix'])
+        if self.tir_available_dict['pjfry']:
+            file += '\n\n'+FPR.write_pjfry_mapping()
+        if self.tir_available_dict['iregi']:
+            file += '\n\n'+FPR.write_iregi_mapping()
+        
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
+
+    def write_GOLEM_interface(self, writer, matrix_element):
+        """ Create the file GOLEM_interface.f which does NOT contain the subroutine
+         defining the loop HELAS-like calls along with the general interfacing 
+         subroutine. """
+
+        # First write GOLEM_interface which interfaces MG5 with TIR.
+        replace_dict=copy.copy(self.general_replace_dict)
+        
+        # We finalize TIR result differently wether we used the built-in 
+        # squaring against the born.
+        if matrix_element.get('processes')[0].get('has_born'):
+            factor='2.0D0'
+        else:
+            factor='1.0D0'
+        replace_dict['finalize_GOLEM']='\n'.join([
+        'RES(1)=NORMALIZATION*%s*DBLE(RES_GOLEM%%c+'%factor+\
+        '2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)',\
+            'RES(2)=NORMALIZATION*%s*DBLE(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)'%factor,\
+            'RES(3)=NORMALIZATION*%s*DBLE(RES_GOLEM%%a)'%factor])
+            
+        file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
+ 
+        file = file % replace_dict
+
+        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
+                                                    coef_format=replace_dict['complex_dp_format'],\
+                                                    sub_prefix=replace_dict['proc_prefix'])
+        
+        file += '\n\n'+FPR.write_golem95_mapping()
+        
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
 
     def write_polynomial_subroutines(self,writer,matrix_element):
         """ Subroutine to create all the subroutines relevant for handling
@@ -1335,16 +1877,38 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         subroutines=[]
         
         # Start from the routine in the template
-        file = open(os.path.join(self.template_dir,'polynomial.inc')).read()  
-        file = file % self.general_replace_dict
-        subroutines.append(file)
-        
+        replace_dict = copy.copy(self.general_replace_dict)
+        dp_routine = open(os.path.join(self.template_dir,'polynomial.inc')).read()
+        mp_routine = open(os.path.join(self.template_dir,'polynomial.inc')).read()
+        # The double precision version of the basic polynomial routines, such as
+        # create_loop_coefs
+        replace_dict['complex_format'] = replace_dict['complex_dp_format']
+        replace_dict['real_format'] = replace_dict['real_dp_format']
+        replace_dict['born_amps_decl'] = replace_dict['dp_born_amps_decl']
+        replace_dict['mp_prefix'] = ''
+        replace_dict['kind'] = 8
+        replace_dict['zero_def'] = '0.0d0'
+        replace_dict['one_def'] = '1.0d0'
+        dp_routine = dp_routine % replace_dict 
+        # The quadruple precision version of the basic polynomial routines
+        replace_dict['complex_format'] = replace_dict['complex_mp_format']
+        replace_dict['real_format'] = replace_dict['real_mp_format']
+        replace_dict['born_amps_decl'] = replace_dict['mp_born_amps_decl']
+        replace_dict['mp_prefix'] = 'MP_'
+        replace_dict['kind'] = 16
+        replace_dict['zero_def'] = '0.0e0_16'
+        replace_dict['one_def'] = '1.0e0_16'
+        mp_routine = mp_routine % replace_dict
+        subroutines.append(dp_routine)
+        subroutines.append(mp_routine)        
+
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
-                                             matrix_element.get_max_loop_rank())
+                                         matrix_element.get_max_loop_rank(),
+                                         sub_prefix=replace_dict['proc_prefix'])
         mp_poly_writer=q_polynomial.FortranPolynomialRoutines(
                     matrix_element.get_max_loop_rank(),coef_format='complex*32',
-                                                               sub_prefix='MP_')
+                                   sub_prefix='MP_'+replace_dict['proc_prefix'])
         # The eval subroutine
         subroutines.append(poly_writer.write_polynomial_evaluator())
         subroutines.append(mp_poly_writer.write_polynomial_evaluator())
@@ -1383,20 +1947,39 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['mp_squaring']=\
-          'ANS(1)=ANS(1)+DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J),KIND=16),KIND=16)'        
+"""ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
+TEMP2 = DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J)),KIND=16)
+IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+  ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2
+  ANS(1,0)=ANS(1,0)+TEMP2
+ENDIF"""%self.general_replace_dict  
         else:
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
-            replace_dict['mp_squaring']='\n'.join(['DO K=1,3',
-                'ANS(K)=ANS(K)+DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J))'+\
-                                                           ',KIND=16)','ENDDO'])
-        
+            replace_dict['mp_squaring']=\
+"""ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
+IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN                               
+DO K=1,3
+TEMP2 = DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
+ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
+ANS(K,0)=ANS(K,0)+TEMP2
+ENDDO
+ENDIF"""%self.general_replace_dict
         # Extract helas calls
-        born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
-                                                            matrix_element)
+        squared_orders = matrix_element.get_squared_order_contribs()
+        split_orders = matrix_element.get('processes')[0].get('split_orders')
+        
+        born_ct_helas_calls , uvct_helas_calls = \
+                           fortran_model.get_born_ct_helas_calls(matrix_element,
+                       squared_orders=squared_orders, split_orders=split_orders)
         self.turn_to_mp_calls(born_ct_helas_calls)
+        self.turn_to_mp_calls(uvct_helas_calls)
         coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
-                                    matrix_element,group_loops=self.group_loops)
+                                    matrix_element,group_loops=self.group_loops,
+                        squared_orders=squared_orders,split_orders=split_orders)
+        # The proc_prefix must be replaced
+        coef_construction = [c % self.general_replace_dict for c 
+                                                           in coef_construction]
         self.turn_to_mp_calls(coef_construction)
         self.turn_to_mp_calls(coef_merging)        
                                          
@@ -1408,12 +1991,22 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'mp_born_ct_helas_calls','mp_helas_calls_ampb')
+                            'mp_born_ct_helas_calls','mp_helas_calls_ampb',
+                            required_so_broadcaster = 'MP_CT_REQ_SO_DONE',
+                            continue_label = 2000)
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                            'mp_helas_calls_split.inc',file,uvct_helas_calls,\
+                            'mp_uvct_helas_calls','mp_helas_calls_uvct',
+                            required_so_broadcaster = 'MP_UVCT_REQ_SO_DONE',
+                            continue_label = 3000)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'mp_helas_calls_split.inc',file,coef_construction,\
-                    'mp_coef_construction','mp_coef_construction')
+                    'mp_coef_construction','mp_coef_construction',
+                    required_so_broadcaster = 'MP_LOOP_REQ_SO_DONE',
+                    continue_label = 4000)
         else:
             replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
+            replace_dict['mp_uvct_helas_calls']='\n'.join(uvct_helas_calls)
             replace_dict['mp_coef_construction']='\n'.join(coef_construction)
         
         replace_dict['mp_coef_merging']='\n'.join(coef_merging)
@@ -1445,8 +2038,82 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                              'vertex_max_coefs':overall_max_loop_vert_rank})
         IncWriter.close()
 
+    def setup_check_sa_replacement_dictionary(self,\
+                                       split_orders,squared_orders,amps_orders):
+        """ Sets up the replacement dictionary for the writeout of the steering
+        file check_sa.f"""
+        if len(squared_orders)<1:
+            self.general_replace_dict['print_so_loop_results']=\
+                                         "write(*,*) 'No split orders defined.'"
+        elif len(squared_orders)==1:
+            self.general_replace_dict['set_coupling_target']=''
+            self.general_replace_dict['print_so_loop_results']=\
+              "write(*,*) 'All loop contributions are of split orders (%s)'"%(
+                      ' '.join(['%s=%d'%(split_orders[i],squared_orders[0][i]) \
+                                            for i in range(len(split_orders))]))
+        else:
+            self.general_replace_dict['set_coupling_target']='\n'.join([
+'# Here we leave the default target squared split order to -1, meaning that we'+
+' aim at computing all individual contributions. You can choose otherwise.',
+'call %(proc_prefix)sSET_COUPLINGORDERS_TARGET(-1)'%self.general_replace_dict])
+            self.general_replace_dict['print_so_loop_results'] = '\n'.join([
+              '\n'.join(["write(*,*) '%dL) Loop ME for orders (%s) :'"%((j+1),(' '.join(
+          ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))]))),
+              "IF (PREC_FOUND(%d).NE.-1.0d0) THEN"%(j+1),
+              "write(*,*) ' > accuracy = ',PREC_FOUND(%d)"%(j+1),
+              "ELSE",
+              "write(*,*) ' > accuracy =   NA'",              
+              "ENDIF",
+              "write(*,*) ' > finite   = ',MATELEM(1,%d)"%(j+1),
+              "write(*,*) ' > 1eps     = ',MATELEM(2,%d)"%(j+1),
+              "write(*,*) ' > 2eps     = ',MATELEM(3,%d)"%(j+1)
+              ]) for j, so in enumerate(squared_orders)])
+        self.general_replace_dict['write_so_loop_results'] = '\n'.join(
+          ["write (69,*) 'Split_Orders_Names %s'"%(' '.join(split_orders))]+
+          ['\n'.join([
+          "write (69,*) 'Loop_SO_Results %s'"%(' '.join(
+                                           ['%d'%so_value for so_value in so])),
+          "write (69,*) 'SO_Loop ACC  ',PREC_FOUND(%d)"%(j+1),
+          "write (69,*) 'SO_Loop FIN  ',MATELEM(1,%d)"%(j+1),
+          "write (69,*) 'SO_Loop 1EPS ',MATELEM(2,%d)"%(j+1),
+          "write (69,*) 'SO_Loop 2EPS ',MATELEM(3,%d)"%(j+1),
+          ]) for j, so in enumerate(squared_orders)])
+
+        # We must reconstruct here the born squared orders.
+        squared_born_so_orders = []
+        for i, amp_order in enumerate(amps_orders['born_amp_orders']):
+            for j in range(0,i+1):
+                key = tuple([ord1 + ord2 for ord1,ord2 in \
+                        zip(amp_order[0],amps_orders['born_amp_orders'][j][0])])
+                if not key in squared_born_so_orders:
+                    squared_born_so_orders.append(key)
+        if len(squared_born_so_orders)<1:
+            self.general_replace_dict['print_so_born_results'] = ''
+        elif len(squared_born_so_orders)==1: 
+            self.general_replace_dict['print_so_born_results'] = \
+              "write(*,*) 'All Born contributions are of split orders (%s)'"%(
+                ' '.join(['%s=%d'%(split_orders[i],squared_born_so_orders[0][i]) 
+                                            for i in range(len(split_orders))]))
+        else:
+            self.general_replace_dict['print_so_born_results'] = '\n'.join([
+          "write(*,*) '%dB) Born ME for orders (%s) = ',MATELEM(0,%d)"%(j+1,' '.join(
+       ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))]),j+1)
+                                for j, so in enumerate(squared_born_so_orders)])
+        self.general_replace_dict['write_so_born_results'] = '\n'.join(
+          ['\n'.join([
+          "write (69,*) 'Born_SO_Results %s'"%(' '.join(
+                                           ['%d'%so_value for so_value in so])),
+          "write (69,*) 'SO_Born BORN ',MATELEM(0,%d)"%(j+1),
+          ]) for j, so in enumerate(squared_born_so_orders)])
+        
+        # Add a bottom bar to both print_so_[loop|born]_results 
+        self.general_replace_dict['print_so_born_results'] += \
+                             '\nwrite (*,*) "---------------------------------"'
+        self.general_replace_dict['print_so_loop_results'] += \
+                             '\nwrite (*,*) "---------------------------------"'
+
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
-                         noSplit=False):
+                         noSplit=False, write_auxiliary_files=True,):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \
@@ -1457,7 +2124,76 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         writers.FortranWriter.downcase = False
 
+        # We start off with the treatment of the split_orders since some 
+        # of the information extracted there will come into the 
+        # general_replace_dict. Split orders are abbreviated SO in all the 
+        # keys of the replacement dictionaries.
+        
+        # Take care of the split_orders
+        squared_orders, amps_orders = matrix_element.get_split_orders_mapping()
+        # Creating here a temporary list containing only the information of 
+        # what are the different squared split orders contributing
+        # (i.e. not using max_contrib_amp_number and max_contrib_ref_amp_number)
+        sqso_contribs = [sqso[0] for sqso in squared_orders]
+        split_orders = matrix_element.get('processes')[0].get('split_orders')
+        # The entries set in the function below are only for check_sa written
+        # out in write_matrix_element_v4 (it is however placed here because the
+        # split order information is only available here).
+        self.setup_check_sa_replacement_dictionary(\
+                                         split_orders,sqso_contribs,amps_orders)
+        
+        # Now recast the split order basis for the loop, born and counterterm
+        # amplitude into one single splitorderbasis.
+        overall_so_basis = list(set(
+            [born_so[0] for born_so in amps_orders['born_amp_orders']]+
+            [born_so[0] for born_so in amps_orders['loop_amp_orders']]))
+        # We must re-sort it to make sure it follows an increasing WEIGHT order
+        order_hierarchy = matrix_element.get('processes')[0]\
+                                            .get('model').get('order_hierarchy')
+        if set(order_hierarchy.keys()).union(set(split_orders))==\
+                                                    set(order_hierarchy.keys()):
+            overall_so_basis.sort(key= lambda so: 
+                         sum([order_hierarchy[split_orders[i]]*order_power for \
+                                              i, order_power in enumerate(so)]))
+
+        # Those are additional entries used throughout the different files of
+        # MadLoop5
+        self.general_replace_dict['split_order_str_list'] = str(split_orders)
+        self.general_replace_dict['nSO'] = len(split_orders)
+        self.general_replace_dict['nSquaredSO'] = len(sqso_contribs)
+        self.general_replace_dict['nAmpSO'] = len(overall_so_basis)
+
+        writers.FortranWriter('nsquaredSO.inc').writelines(
+"""INTEGER NSQUAREDSO
+PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
+        
         replace_dict = copy.copy(self.general_replace_dict)
+        # Build the general array mapping the split orders indices to their
+        # definition
+        replace_dict['ampsplitorders'] = '\n'.join(self.get_split_orders_lines(\
+                                             overall_so_basis,'AMPSPLITORDERS'))
+        replace_dict['SquaredSO'] = '\n'.join(self.get_split_orders_lines(\
+                                                  sqso_contribs,'SQPLITORDERS'))
+        
+        # Specify what are the squared split orders selected by the proc def.
+        replace_dict['chosen_so_configs'] = self.set_chosen_SO_index(
+                               matrix_element.get('processes')[0],sqso_contribs)
+        
+        # Now we build the different arrays storing the split_orders ID of each
+        # amp.
+        ampSO_list=[-1]*sum(len(el[1]) for el in amps_orders['loop_amp_orders'])
+        for SO in amps_orders['loop_amp_orders']:
+            for amp_number in SO[1]:
+                ampSO_list[amp_number-1]=overall_so_basis.index(SO[0])+1
+
+        replace_dict['loopAmpSO'] = '\n'.join(self.format_integer_list(
+                                                    ampSO_list,'LOOPAMPORDERS'))
+        ampSO_list=[-1]*sum(len(el[1]) for el in amps_orders['born_amp_orders'])
+        for SO in amps_orders['born_amp_orders']:
+            for amp_number in SO[1]:
+                ampSO_list[amp_number-1]=overall_so_basis.index(SO[0])+1
+        replace_dict['BornAmpSO'] = '\n'.join(self.format_integer_list(
+                                                    ampSO_list,'BORNAMPORDERS'))
 
         # Helicity offset convention
         # For a given helicity, the attached integer 'i' means
@@ -1482,84 +2218,159 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Also sets here the details of the squaring of the loop ampltiudes
         # with the born or the loop ones.
         if not matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['compute_born']=\
+"""
+C The born is of course 0 for loop-induced processes.
+DO I=0,NSQUAREDSO
+  ANS(0,I)=0.0d0
+ENDDO
+"""
             replace_dict['set_reference']='\n'.join([
               'C Chose the arbitrary scale of reference to use for comparisons'+\
-              ' for this loop-induced process.','ref=1.0d-50'])
+              ' for this loop-induced process.','ref=1.0d-50',
+              'DO I=0,NSQUAREDSO','ANS(I,0)=0.0d0','ENDDO'])
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
-            replace_dict['squaring']=\
-                    'ANS(1)=ANS(1)+DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'
-                    
+            replace_dict['squaring']='\n'.join([\
+              'ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))'%self.general_replace_dict,
+              'TEMP2 = DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))',
+              'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
+              'ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2',
+              'ANS(1,0)=ANS(1,0)+TEMP2',
+              'ENDIF'])       
         else:
-            replace_dict['set_reference']='call smatrix(p,ref)'
+            replace_dict['compute_born']=\
+"""
+C First compute the borns, it will store them in ANS(0,I)
+C It is left untouched for the rest of MadLoop evaluation.
+C Notice that the squared split order index I does NOT
+C correspond to the same ordering of J for the loop ME 
+C results stored in ANS(K,J), with K in [1-3].The ordering 
+C of each can be obtained with ML5SOINDEX_FOR_SQUARED_ORDERS 
+C and SQSOINDEX_FROM_ORDERS for the loop ME and born ME 
+C respectively. For this to work, we assume that there is 
+C always more squared split orders in the loop ME than in the
+C born ME, which is practically always true. In any case, only
+C the split_order summed value I=0 is used in ML5 code.
+DO I=0,NSQSO_BORN
+  BORNBUFF(I)=0.0d0
+ENDDO
+CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,BORNBUFF(0))
+DO I=0,NSQSO_BORN
+  ANS(0,I)=BORNBUFF(I)
+ENDDO
+"""%self.general_replace_dict
+            replace_dict['set_reference']='\n'.join(
+              ['C We set here the reference to the born summed over all split orders',
+              'REF=0.0d0','DO I=1,NSQSO_BORN','REF=REF+ANS(0,I)','ENDDO'])
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
-            replace_dict['squaring']='\n'.join(['DO K=1,3',
-                   'ANS(K)=ANS(K)+2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
-                                                                       'ENDDO'])
+            replace_dict['squaring']='\n'.join([
+              'ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))'%self.general_replace_dict,
+              'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
+              'DO K=1,3',
+              'TEMP2 = 2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
+              'ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2',
+              'ANS(K,0)=ANS(K,0)+TEMP2',
+              'ENDDO',                   
+              'ENDIF'])
 
         # Actualize results from the loops computed. Only necessary for
         # processes with a born.
         actualize_ans=[]
         if matrix_element.get('processes')[0].get('has_born'):
-            actualize_ans.append("DO I=1,NLOOPGROUPS")
-            actualize_ans.extend("ANS(%d)=ANS(%d)+LOOPRES(%d,I)"%(i,i,i) for i \
-                                                                  in range(1,4)) 
+            actualize_ans.append(
+"""DO I=1,NLOOPGROUPS
+LTEMP=.TRUE.
+DO K=1,NSQUAREDSO
+  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.K) THEN
+    IF (.NOT.S(K,I)) LTEMP=.FALSE.
+    DO J=1,3
+      ANS(J,K)=ANS(J,K)+LOOPRES(J,K,I)
+      ANS(J,0)=ANS(J,0)+LOOPRES(J,K,I)
+    ENDDO
+  ENDIF
+ENDDO""")
             actualize_ans.append(\
-               "IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN")
+               "IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.LTEMP)) THEN")
             actualize_ans.append(\
                    "WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'")            
             actualize_ans.extend(["ENDIF","ENDDO"])            
         replace_dict['actualize_ans']='\n'.join(actualize_ans)
         
-        # Write out the color matrix
-        (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open('ColorNumFactors.dat','w')
-        for ColorLine in CMNum:
-            CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
-        CMWriter.close()
-        CMWriter=open('ColorDenomFactors.dat','w')
-        for ColorLine in CMDenom:
-            CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
-        CMWriter.close()
-        
-        # Write out the helicity configurations
-        HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open('HelConfigs.dat','w')
-        for HelConfig in HelConfigs:
-            HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
-        HelConfigWriter.close()
+        if write_auxiliary_files:
+            # Write out the color matrix
+            (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
+            CMWriter=open(pjoin('..','MadLoop5_resources',
+            '%(proc_prefix)sColorNumFactors.dat'%self.general_replace_dict),'w')
+            for ColorLine in CMNum:
+                CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
+            CMWriter.close()
+            CMWriter=open(pjoin('..','MadLoop5_resources',
+            '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
+            for ColorLine in CMDenom:
+                CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
+            CMWriter.close()
+            
+            # Write out the helicity configurations
+            HelConfigs=matrix_element.get_helicity_matrix()
+            HelConfigWriter=open(pjoin('..','MadLoop5_resources',
+                 '%(proc_prefix)sHelConfigs.dat'%self.general_replace_dict),'w')
+            for HelConfig in HelConfigs:
+                HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
+            HelConfigWriter.close()
         
         # Extract helas calls
-        born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
-                                                            matrix_element)
+        born_ct_helas_calls, uvct_helas_calls = \
+                           fortran_model.get_born_ct_helas_calls(matrix_element,
+                        squared_orders=squared_orders,split_orders=split_orders)
         coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
-                                    matrix_element,group_loops=self.group_loops)
-        loop_CT_calls = fortran_model.get_loop_CT_calls(\
-                                    matrix_element,group_loops=self.group_loops)
+                                    matrix_element,group_loops=self.group_loops,
+                        squared_orders=squared_orders,split_orders=split_orders)
+
+        loop_CT_calls = fortran_model.get_loop_CT_calls(matrix_element,\
+                       group_loops=self.group_loops,
+                       squared_orders=squared_orders, split_orders=split_orders)
+        # The proc_prefix must be replaced
+        coef_construction = [c % self.general_replace_dict for c 
+                                                           in coef_construction]
+        loop_CT_calls = [lc % self.general_replace_dict for lc in loop_CT_calls]
         
         file = open(os.path.join(self.template_dir,\
                                            'loop_matrix_standalone.inc')).read()
 
         # Decide here wether we need to split the loop_matrix.f file or not.
-        # 200 is reasonable but feel free to change it.
+        # 200 is reasonable but feel free to change it.        
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'born_ct_helas_calls','helas_calls_ampb')
+                            'born_ct_helas_calls','helas_calls_ampb',
+                            required_so_broadcaster = 'CT_REQ_SO_DONE',
+                            continue_label = 2000)
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                            'helas_calls_split.inc',file,uvct_helas_calls,\
+                            'uvct_helas_calls','helas_calls_uvct',
+                            required_so_broadcaster = 'UVCT_REQ_SO_DONE',
+                            continue_label = 3000)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,coef_construction,\
-                    'coef_construction','coef_construction')
+                    'coef_construction','coef_construction',
+                    required_so_broadcaster = 'LOOP_REQ_SO_DONE',
+                    continue_label = 4000)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,loop_CT_calls,\
-                    'loop_CT_calls','loop_CT_calls')
+                    'loop_CT_calls','loop_CT_calls',
+                    required_so_broadcaster = 'CTCALL_REQ_SO_DONE',
+                    continue_label = 5000)
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
+            replace_dict['uvct_helas_calls']='\n'.join(uvct_helas_calls)
             replace_dict['coef_construction']='\n'.join(coef_construction)
             replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
-        
+        replace_dict['iregi_free_ps']=self.general_replace_dict['iregi_free_ps']
+        replace_dict['data_looplibs_av']=self.general_replace_dict['data_looplibs_av']
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
                                                                  loop_CT_calls))   
@@ -1590,3 +2401,4 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
                         'fortran_compiler':'gfortran',
                         'output_dependencies':'external',
                         'sa_symmetry':True}
+

@@ -10,6 +10,10 @@ c Wrapper routines for the fixed order analyses
       double precision xsecScale_acc(maxscales,maxscales)
      $     ,xsecPDFr_acc(0:maxPDFs)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
+      integer iappl
+      common /for_applgrid/ iappl
+      include "appl_common.inc"
+
       nwgt=1
       weights_info(nwgt)="central value  "
       if (do_rwgt_scale) then
@@ -50,6 +54,17 @@ c Wrapper routines for the fixed order analyses
          enddo
          nwgt=nwgt+npdfs
       endif
+      if(iappl.ne.0)then
+c Initialize grid parameters to negative values.
+         appl_Q2min   = -1d0
+         appl_Q2max   = -1d0
+         appl_xmin    = -1d0
+         appl_xmax    = -1d0
+         appl_nQ2     = -1
+         appl_Q2order = -1
+         appl_nx      = -1
+         appl_xorder  = -1
+      endif
       call analysis_begin(nwgt,weights_info)
 c To keep track of the accumulated results:
       do ii=1,numscales
@@ -79,6 +94,9 @@ c To keep track of the accumulated results:
       double precision xsecScale_acc(maxscales,maxscales)
      $     ,xsecPDFr_acc(0:maxPDFs)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
+      integer iappl
+      common /for_applgrid/ iappl
+      include "appl_common.inc"
 c
       if(usexinteg.and..not.mint) then
          xnorm=1.d0/float(itmax)
@@ -88,6 +106,8 @@ c
          xnorm=1d0
       endif
       if(useitmax)xnorm=xnorm/float(itmax)
+c Normalization factor for the APPLgrid grids
+      if(iappl.ne.0) appl_norm_histo = 1d0 / dble(ncall*itmax)
       call analysis_end(xnorm)
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
@@ -157,6 +177,9 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       double precision xsecScale_acc(maxscales,maxscales)
      $     ,xsecPDFr_acc(0:maxPDFs)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
+      integer iappl
+      common /for_applgrid/ iappl
+      include "appl_common.inc"
 c Born, n-body or (n+1)-body contribution:
       if(itype.eq.11) then
          ibody=1 ! (n+1)-body
@@ -222,6 +245,10 @@ c this ratio should essentially be the weight from vegas
             nwgt=nwgt+1
             wgts(nwgt)=wgtNLOxsecPDF(ibody,i)*ratio
          enddo
+      endif
+      if(iappl.ne.0)then
+         appl_itype     = ibody
+         appl_www_histo = wgts(1)
       endif
       call analysis_fill(p,istatus,ipdg,wgts,ibody)
 c Fill the accumulated results

@@ -1698,9 +1698,9 @@ private:
     version = 1;
     if ( currentLine.find("version=\"2" ) != std::string::npos )
       version = 2;
-    else if ( currentLine.find("version=\"1" ) == std::string::npos )
-      throw std::runtime_error
-	("Tried to read a LesHouchesEvents file which is not version 1.0.");
+    //else if ( currentLine.find("version=\"1" ) == std::string::npos )
+    //  throw std::runtime_error
+    //("Tried to read a LesHouchesEvents file which is not version 1.0.");
 
     // Loop over all lines until we hit the </init> tag.
     while ( getline() && currentLine.find("</init>") == std::string::npos ) {

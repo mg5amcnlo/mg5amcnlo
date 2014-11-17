@@ -12,6 +12,8 @@ Block SMINPUTS
 ## INFORMATION FOR MASS
 ###################################
 Block MASS 
+   11 5.110000e-04 # Me 
+   13 1.056600e-01 # MMU 
    15 1.776820e+00 # MTA 
   111 1.349766e-01 # Mpi0 
   211 1.395702e-01 # Mpic 
@@ -19,6 +21,8 @@ Block MASS
 ## Those values should be edited following analytical the 
 ## analytical expression. Some generator could simply ignore 
 ## those values and use the analytical expression
+  12 0.000000 # ve : 0.0 
+  14 0.000000 # vm : 0.0 
   16 0.000000 # vt : 0.0 
 
 ###################################
@@ -29,7 +33,11 @@ DECAY  15 2.265000e-12
 ## Those values should be edited following analytical the 
 ## analytical expression. Some generator could simply ignore 
 ## those values and use the analytical expression
+DECAY  12 0.000000 # ve : 0.0 
+DECAY  14 0.000000 # vm : 0.0 
 DECAY  16 0.000000 # vt : 0.0 
+DECAY  11 0.000000 # e- : 0.0 
+DECAY  13 0.000000 # mu- : 0.0 
 DECAY  211 0.000000 # pi+ : 0.0 
 DECAY  111 0.000000 # pi0 : 0.0 
 
@@ -40,16 +48,17 @@ Block CKMBLOCK
     1 2.277360e-01 # cabi 
 
 ###################################
-## INFORMATION FOR FRBLOCK
+## INFORMATION FOR TAUDECAY
 ###################################
-Block FRBlock 
-    1 1.304100e-01 # F1 
-    2 1.000000e+00 # F2 
-    3 1.000000e+00 # F3 
-    4 1.000000e+00 # Fr1 
-    5 1.000000e+00 # Fr2 
-    6 1.000000e+00 # G1 
-    7 1.000000e+00 # G2 
+Block taudecay 
+    1 1.000000e+00 # F0 
+    2 1.304100e-01 # F1 
+    3 1.000000e+00 # F2 
+    4 1.000000e+00 # F3 
+    5 1.000000e+00 # Fr1 
+    6 1.000000e+00 # Fr2 
+    7 1.000000e+00 # Gr1 
+    8 1.000000e+00 # Gr2 
 #===========================================================
 # QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)
 #===========================================================

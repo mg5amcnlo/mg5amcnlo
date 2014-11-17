@@ -53,6 +53,25 @@ C
       RETURN
       END
 
+      SUBROUTINE UPDATE_AS_PARAM2(MU_R2,AS2)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+      DOUBLE PRECISION MU_R2, AS2
+      INCLUDE 'input.inc'
+      INCLUDE 'coupl.inc'
+
+      MU_R = MU_R2
+      G = SQRT(4.0D0*PI*AS2)
+      AS = AS2
+
+      CALL UPDATE_AS_PARAM()
+
+
+      RETURN
+      END
+
       SUBROUTINE MP_UPDATE_AS_PARAM()
 
       IMPLICIT NONE
