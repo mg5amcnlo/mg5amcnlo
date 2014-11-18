@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.2.2(XX/XX/XX) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
+2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.
                     For LHC processes no sizeable effect have been observe so far.
                 MZ: some informations for aMC@NLO runs which were before passed via include files are
