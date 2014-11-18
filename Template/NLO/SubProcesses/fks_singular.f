@@ -759,7 +759,7 @@ c subtract alpha*(H1+E1) from the NLO cross section
                  bsv_wgt=bsv_wgt-veto_compensating_factor
 c save the virtual_wgt to be used in the H1_factor
                  H1_factor_virt=virtual_wgt
-                 H1_factor_born=born_wgt/(2d0*pi)
+                 H1_factor_born=1d0/(2d0*pi)
               endif
               if(doreweight)then
                 if(wgtbpower.gt.0)then
