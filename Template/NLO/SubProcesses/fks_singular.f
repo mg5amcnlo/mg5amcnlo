@@ -399,9 +399,8 @@ c For tests
 c veto-xsec
       double precision Q2,ptjmax,mu,alpha,E1,veto_compensating_factor
      $     ,H1_factor,muMad,alphah,alphaMad,H1_factor_virt,Q
-     $     ,H1_factor_Born,veto_multiplier,muh,Efull,H1_comp,alphas
-     $     ,virtual_wgt
-      save H1_factor_virt,H1_factor_Born
+     $     ,veto_multiplier,muh,Efull,H1_comp,alphas
+      save H1_factor_virt
       external alphas
       double precision average_virtual,virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
@@ -543,7 +542,6 @@ c veto-xsec
       if (ickkw.eq.-1) then
          if (nbody) then
             H1_factor_virt=0d0
-            H1_factor_Born=0d0
          endif
       endif
 
@@ -746,20 +744,17 @@ c For FxFx merging, include the compensation term
                  endif
                  muMad=sqrt(QES2)
                  alpha=alphas(mu)
-                 alphah=alphas(sqrt(Q2))
+                 alphah=alphas(Q)
                  alphaMad=g**2/(4*pi)
                  call AnomalyExp(Q2, alpha, mu, ptjmax, E1)
 c compensating factor for difference between muMad and the soft scale mu
                  H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/mu)**2 +
      $                Log(muMad/mu)*(36d0 - 48d0*Log(Q/mu))))/9d0
-                 virtual_wgt=virt_wgt/alphaMad/born_wgt
-                 veto_compensating_factor=(virtual_wgt*alpha +
+                 H1_factor_virt=virt_wgt/alphaMad/born_wgt
+                 veto_compensating_factor=(H1_factor_virt*alpha +
      $                H1_comp*alpha/(2d0*pi) + E1) * born_wgt
 c subtract alpha*(H1+E1) from the NLO cross section
                  bsv_wgt=bsv_wgt-veto_compensating_factor
-c save the virtual_wgt to be used in the H1_factor
-                 H1_factor_virt=virtual_wgt
-                 H1_factor_born=1d0/(2d0*pi)
               endif
               if(doreweight)then
                 if(wgtbpower.gt.0)then
@@ -941,7 +936,7 @@ c     scale muh
          H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
      $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
 c     (first order of) the Hard function
-         H1_factor=H1_factor_virt + H1_comp*H1_factor_Born
+         H1_factor=H1_factor_virt + H1_comp/(2d0*pi**2)
          call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
      $        JETRADIUS, Efull)
          veto_multiplier=(1d0+alphah*H1_factor)*Efull
@@ -988,7 +983,7 @@ c     scale muh
          H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
      $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
 c     (first order of) the Hard function
-         H1_factor=H1_factor_virt + H1_comp*H1_factor_Born
+         H1_factor=H1_factor_virt + H1_comp/(2d0*pi**2)
          call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
      $        JETRADIUS, Efull)
          veto_multiplier=(1d0+alphah*H1_factor)*Efull
