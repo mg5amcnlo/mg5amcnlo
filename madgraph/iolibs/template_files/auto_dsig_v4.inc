@@ -10,7 +10,9 @@ C     Input:
 C             pp    4 momentum of external particles
 C             wgt   weight from Monte Carlo
 C             imode 0 run, 1 init, 2 reweight, 
-C                   3 finalize, 4 only PDFs
+C                   3 finalize, 4 only PDFs,
+C                   5 squared amplitude only (never
+C                     generate events)
 C     Output:
 C             Amplitude squared and summed
 C ****************************************************
@@ -89,8 +91,8 @@ C       Set up process information from file symfact
  20     WRITE(*,*)'Error opening symfact.dat. No symmetry factor used.'
         RETURN
       ENDIF
-C   Only run if IMODE is 0
-      IF(IMODE.NE.0.AND.IMODE.NE.4) RETURN
+C     Continue only if IMODE is 0, 4 or 5
+      IF(IMODE.NE.0.AND.IMODE.NE.4.and.IMODE.NE.5) RETURN
 
 %(passcuts_begin)s
 %(pdf_lines)s
@@ -115,6 +117,7 @@ c           Set sign of dsig based on sign of PDF and matrix element
              DSIGUU=0D0
              DSIG%(proc_id)s=0D0
          ENDIF
+C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(DSIG%(proc_id)s).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
            CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d)

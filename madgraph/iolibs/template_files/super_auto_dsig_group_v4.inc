@@ -84,8 +84,7 @@ C     CM_RAP has parton-parton system rapidity
 C     Keep track of whether cuts already calculated for this event
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
-      logical MC_grouped_subproc
-      common/to_MC_grouped_subproc/MC_grouped_subproc
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -160,7 +159,6 @@ C     No finalize needed
       ENDIF
 
 C   IMODE.EQ.0, regular run mode
-
 	  IF(MC_grouped_subproc.and.DS_get_dim_status('grouped_processes').eq.-1) then
 	    call DS_register_dimension('grouped_processes', 0)
 		call DS_set_min_points(10,'grouped_processes')
@@ -231,7 +229,7 @@ c       We must initialize the grid and probe all channels
                   IPROC=I
                   ICONF=J
                   IMIRROR=K
-                  DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)			  
+                  DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,5)			  
 			      call map_3_to_1(J,I,K,MAXSPROC,2,Lmapped)
 			      IF (SELPROC(K,I,J).ne.0.0d0) then
 		            call DS_add_entry('grouped_processes',Lmapped,(DSIG/SELPROC(K,I,J)))

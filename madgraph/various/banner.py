@@ -550,7 +550,7 @@ class RunCard(dict):
     """A class object for the run_card"""
 
     #list of paramater which are allowed BUT not present in the _default file.
-    hidden_param = ['lhaid', 'gridrun', 'fixed_couplings']
+    hidden_param = ['lhaid', 'gridrun', 'fixed_couplings', 'grouped_proc_mc']
     true = ['true', 'True','.true.','T', True, 1,'TRUE']
 
     def __init__(self, run_card):
@@ -673,6 +673,9 @@ class RunCard(dict):
                 logger.warning('draj cut discarded since photon isolation is used')
                 self['draj'] = '0' 
     
+#       Disable MC over grouped subprocesses by default
+        self.add_line('MC_grouped_subproc', 'bool', False, log=10)
+
         self.add_line('maxjetflavor', 'int', 4)
         if int(self['maxjetflavor']) > 6:
             raise InvalidRunCard, 'maxjetflavor should be lower than 5! (6 is partly supported)'

@@ -1322,6 +1322,7 @@ c
 c
 c     Local
 c
+      type(SampledDimension) tmp_dim      
 c
 c     Global
 c
@@ -1335,6 +1336,11 @@ c     Begin code
 c
       if(ISUM_HEL.ne.0) then
         call DS_update_grid('Helicity', filterZeros=.True.)
+        tmp_dim = DS_get_dimension(ref_grid,'Helicity')
+C       Security in case of all helicity vanishing (G1 of gg > qq )
+        if (size(tmp_dim%bins).eq.0) then
+          call none_pass(-1)
+        endif
       endif
       if(MC_grouped_subproc.and.DS_get_dim_status('grouped_processes').ne.-1) then
         call DS_update_grid('grouped_processes', filterZeros=.True.)
@@ -1566,7 +1572,7 @@ c
 c     Now if done with an iteration, print out stats, rebin, reset
 c         
 c         if (kn .eq. events) then
-         if (kn .ge. max_events .and. non_zero .lt. 5) then
+         if (kn .ge. max_events .and. non_zero .le. 5) then
             call none_pass(max_events)
          endif
          if (non_zero .eq. events .or. (kn .gt. 200*events .and.
