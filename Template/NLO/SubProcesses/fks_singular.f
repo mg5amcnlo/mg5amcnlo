@@ -738,7 +738,7 @@ c For FxFx merging, include the compensation term
      $                   /'renormalisation scale',QES2,mu_R
                     stop
                  endif
-                 if (abs(QES2-Q2**2).gt.1d-7) then
+                 if (abs(QES2-Q2).gt.1d-7) then
                     write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
      $                   /'scale should be equal to the '/
      $                   /'inv. mass of the LO kinematics',QES2,Q2
@@ -923,7 +923,7 @@ c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
          Q2=shat
 c     set muMad to be the ren scale that was used in the virtual
          call set_alphaS(p1_cnt(0,1,0))
-         if (abs(QES2-Q2**2).gt.1d-7) then
+         if (abs(QES2-Q2).gt.1d-7) then
             write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
      $           /'scale should be equal to the '/
      $           /'inv. mass of the LO kinematics',QES2,Q2
@@ -970,6 +970,12 @@ c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
          Q2=shat
 c     set muMad to be the ren scale used in the virtual
          call set_alphaS(p1_cnt(0,1,0))
+         if (abs(QES2-Q2).gt.1d-7) then
+            write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+     $           /'scale should be equal to the '/
+     $           /'inv. mass of the LO kinematics',QES2,Q2
+            stop
+         endif
          muMad=sqrt(QES2)        
          muh=sqrt(Q2)            ! hard scale
          alphaMad=g**2/(4*pi)    ! alpha_s used by MG5_aMC in the virtual corrections
