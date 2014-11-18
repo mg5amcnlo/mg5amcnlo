@@ -513,6 +513,7 @@ c a scale to be used as a reference for renormalization scale
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'run.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
       double precision tmp,pt,et,dot,xm2,sumdot,xmt2,ptmp(0:3)
       external pt,et,dot,sumdot
@@ -522,7 +523,22 @@ c a scale to be used as a reference for renormalization scale
       common/ctemp_scale_id/temp_scale_id
 c
       tmp=0
-      if(itype.eq.1)then
+      if(ickkw.eq.-1)then
+c Special for analytic resummation in veto'ed cross sections: Inv. mass
+c of all particles except the "real emission one". (Use only for
+c processes without (massless QCD) partons at the LO.)
+         do j=0,3
+            ptmp(j)=0d0
+         enddo
+         do i=nincoming+1,nexternal-1
+            do j=0,3
+               ptmp(j)=ptmp(j)+pp(j,i)
+            enddo
+         enddo
+         tmp=sqrt(dot(ptmp,ptmp))
+         temp_scale_id='Q := invariant mass of all particles'/
+     $        /' except "extra parton"'
+      elseif(itype.eq.1)then
 c Sum of transverse energies
         do i=nincoming+1,nexternal
           tmp=tmp+et(pp(0,i))
@@ -545,20 +561,6 @@ c     take max() to avoid numerical instabilities
             tmp=tmp+sqrt(max(xmt2,0d0))/2d0
          enddo
          temp_scale_id='H_T/2 := sum_i mT(i)/2, i=final state'
-      elseif(itype.eq.4)then
-c Inv. mass of all particles except the "real emission one". Use only
-c for processes without (massless) QCD partons at the LO.
-         do j=0,3
-            ptmp(j)=0d0
-         enddo
-         do i=nincoming+1,nexternal-1
-            do j=0,3
-               ptmp(j)=ptmp(j)+pp(j,i)
-            enddo
-         enddo
-         tmp=sqrt(dot(ptmp,ptmp))
-         temp_scale_id='Q := invariant mass of all particles'/
-     $        /' except "extra parton"'
       else
         write(*,*)'Unknown option in scale_global_reference',itype
         stop

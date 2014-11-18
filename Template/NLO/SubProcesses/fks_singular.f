@@ -738,22 +738,27 @@ c For FxFx merging, include the compensation term
      $                   /'renormalisation scale',QES2,mu_R
                     stop
                  endif
+                 if (abs(QES2-Q2**2).gt.1d-7) then
+                    write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+     $                   /'scale should be equal to the '/
+     $                   /'inv. mass of the LO kinematics',QES2,Q2
+                    stop
+                 endif
                  muMad=sqrt(QES2)
                  alpha=alphas(mu)
                  alphah=alphas(sqrt(Q2))
-                 alphaMad=alphas(muMad)
+                 alphaMad=g**2/(4*pi)
                  call AnomalyExp(Q2, alpha, mu, ptjmax, E1)
 c compensating factor for difference between muMad and the soft scale mu
                  H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/mu)**2 +
      $                Log(muMad/mu)*(36d0 - 48d0*Log(Q/mu))))/9d0
-                 virtual_wgt=virt_wgt+
-     &                average_virtual*born_wgt*alphaMad/(2*pi)
-                 veto_compensating_factor=virtual_wgt*alpha/alphaMad
-     $                      +(H1_comp*alpha/(2d0*pi)+E1)*born_wgt
+                 virtual_wgt=virt_wgt/alphaMad/born_wgt
+                 veto_compensating_factor=(virtual_wgt*alpha +
+     $                H1_comp*alpha/(2d0*pi) + E1) * born_wgt
 c subtract alpha*(H1+E1) from the NLO cross section
                  bsv_wgt=bsv_wgt-veto_compensating_factor
 c save the virtual_wgt to be used in the H1_factor
-                 H1_factor_virt=virtual_wgt/(born_wgt*alphaMad)
+                 H1_factor_virt=virtual_wgt
                  H1_factor_born=born_wgt/(2d0*pi)
               endif
               if(doreweight)then
@@ -916,13 +921,14 @@ c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
          call set_cms_stuff(izero)
          Q=sqrtshat
          Q2=shat
-c$$$c     set sqrt(\hat(s)) correctly to be the one of the (n+1)-body
-c$$$c     kinematics
-c$$$         call set_cms_stuff(mohdr)
-c$$$         Q=sqrtshat
-c$$$         Q2=shat
-c     set muMad to be the ren scale used in the virtual
+c     set muMad to be the ren scale that was used in the virtual
          call set_alphaS(p1_cnt(0,1,0))
+         if (abs(QES2-Q2**2).gt.1d-7) then
+            write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+     $           /'scale should be equal to the '/
+     $           /'inv. mass of the LO kinematics',QES2,Q2
+            stop
+         endif
          muMad=sqrt(QES2)
          muh=sqrt(Q2)            ! hard scale
          alphaMad=g**2/(4*pi)    ! alpha_s used by MG5_aMC in the virtual corrections
@@ -935,10 +941,10 @@ c     scale muh
          H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
      $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
 c     (first order of) the Hard function
-         H1_factor=(H1_factor_virt + H1_comp*H1_factor_Born)*alphah
+         H1_factor=H1_factor_virt + H1_comp*H1_factor_Born
          call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
      $        JETRADIUS, Efull)
-         veto_multiplier=(1d0+H1_factor)*Efull
+         veto_multiplier=(1d0+alphah*H1_factor)*Efull
          enhanceH=enhance*veto_multiplier
       else
          enhanceH=enhance
@@ -976,10 +982,10 @@ c     scale muh
          H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
      $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
 c     (first order of) the Hard function
-         H1_factor=(H1_factor_virt + H1_comp*H1_factor_Born)*alphah
+         H1_factor=H1_factor_virt + H1_comp*H1_factor_Born
          call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
      $        JETRADIUS, Efull)
-         veto_multiplier=(1d0+H1_factor)*Efull
+         veto_multiplier=(1d0+alphah*H1_factor)*Efull
          enhanceS=enhance*veto_multiplier
       else
          enhanceS=enhance
