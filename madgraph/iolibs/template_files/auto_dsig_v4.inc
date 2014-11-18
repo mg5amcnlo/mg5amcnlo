@@ -101,6 +101,14 @@ C     Continue only if IMODE is 0, 4 or 5
             RETURN
          ENDIF
          CALL SMATRIX%(proc_id)s(PP,DSIGUU)
+		 IF (IMODE.EQ.5) THEN
+            IF (DSIGUU.LT.1D199) THEN		 
+		      DSIG%(proc_id)s = DSIGUU
+			else
+		      DSIG%(proc_id)s = 0.0d0
+			endif
+			RETURN
+		 ENDIF
 C     Select a flavor combination (need to do here for right sign)
          CALL RANMAR(R)
          IPSEL=0

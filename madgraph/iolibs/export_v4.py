@@ -3806,11 +3806,14 @@ c           This is dummy particle used in multiparticle vertices
             card = 'Source/MODEL/MG5_param.dat'
         else:
             card = 'param_card.dat'
-        # Requiring each helicity configuration to be probed by 10 points before
-        # using the resulting grid for MC over helicity sampling seems reasonable
+        # Requiring each helicity configuration to be probed by 10 points for 
+        # matrix element before using the resulting grid for MC over helicity
+        # sampling.
+        # We multiply this by 2 because each grouped subprocess is called at most
+        # twice for each IMIRROR.
         replace_dict = {'param_card_name':card, 
                         'ncomb':ncomb,
-                        'hel_init_points':n_grouped_proc*10}
+                        'hel_init_points':n_grouped_proc*10*2}
         if v5:
             replace_dict['secondparam']=',.true.'
         else:

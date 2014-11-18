@@ -84,6 +84,10 @@ C     CM_RAP has parton-parton system rapidity
 C     Keep track of whether cuts already calculated for this event
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+C     To be able to control when the matrix<i> subroutine can add entries to the grid for the MC over helicity configuration
+      LOGICAL ALLOW_HELICITY_GRID_ENTRIES
+	  DATA ALLOW_HELICITY_GRID_ENTRIES/.True./
+	  COMMON/TO_ALLOW_HELICITY_GRID_ENTRIES/ALLOW_HELICITY_GRID_ENTRIES
 
 C ----------
 C BEGIN CODE
@@ -229,10 +233,11 @@ c       We must initialize the grid and probe all channels
                   IPROC=I
                   ICONF=J
                   IMIRROR=K
+C                 The IMODE=5 computes the matrix_element only, without PDF convolution 
                   DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,5)			  
 			      call map_3_to_1(J,I,K,MAXSPROC,2,Lmapped)
 			      IF (SELPROC(K,I,J).ne.0.0d0) then
-		            call DS_add_entry('grouped_processes',Lmapped,(DSIG/SELPROC(K,I,J)))
+		            call DS_add_entry('grouped_processes',Lmapped,DSIG)
 		          endif
                   IF(K.EQ.2)THEN
 C                   Need to flip back x values
@@ -241,7 +246,7 @@ C                   Need to flip back x values
                     XBK(2)=XDUM
                     CM_RAP=-CM_RAP
                   ENDIF
-                  SELPROC(K,I,J) = DSIG
+                  SELPROC(K,I,J) = DSIG*SELPROC(K,I,J)
                   SUMPROB = SUMPROB + SELPROC(K,I,J) 
 		        ENDIF
               ENDDO
@@ -284,7 +289,7 @@ C     Update weigth w.r.t SELPROC normalized to selection probability
 
       ELSE
 C       We are using the grouped_processes grid and it is initialized.
-        call DS_get_point('grouped_processes',R,Lmapped,MC_grouped_proc_jacobian,'norm',(/'PDF_convolution'/))
+        call DS_get_point('grouped_processes',R,Lmapped,MC_grouped_proc_jacobian,'uniform',(/'PDF_convolution'/))
 		WGT=WGT*MC_grouped_proc_jacobian
 		call map_1_to_3(Lmapped,MAXSPROC,2,ICONF,IPROC,IMIRROR)
 	  ENDIF
@@ -292,8 +297,14 @@ C       We are using the grouped_processes grid and it is initialized.
 C     Redo clustering to ensure consistent with final IPROC
       CUTSDONE=.FALSE.
 
+	  IF(grouped_MC_grid_status.eq.0) then
+C       If we were in the initialization phase of the grid for MC over grouped processes, we must instruct the matrix<i> subroutine not to add again an entry in the grid for this PS point at the call DSIGPROC just below.
+        ALLOW_HELICITY_GRID_ENTRIES = .False.
+      endif
 C     Call DSIGPROC to calculate sigma for process
       DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)
+c     Reset ALLOW_HELICITY_GRID_ENTRIES
+	  ALLOW_HELICITY_GRID_ENTRIES = .True. 
 
 	  IF(grouped_MC_grid_status.ge.1) then
 	    call map_3_to_1(ICONF,IPROC,IMIRROR,MAXSPROC,2,Lmapped)

@@ -97,6 +97,10 @@ C
 %(define_iconfigs_lines)s
 %(helicity_lines)s
 
+C  To be able to control when the matrix<i> subroutine can add entries to the grid for the MC over helicity configuration
+   LOGICAL ALLOW_HELICITY_GRID_ENTRIES
+   COMMON/TO_ALLOW_HELICITY_GRID_ENTRIES/ALLOW_HELICITY_GRID_ENTRIES
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -175,7 +179,7 @@ C Of course this option can also not be used for polarized beams.
                   T=T*(2d0-ABS(POL(JJ)))
                ENDIF
             ENDDO
-			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0) then
+			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0.and.ALLOW_HELICITY_GRID_ENTRIES) then
 			  call DS_add_entry('Helicity',I,T)
 			endif
             ANS=ANS+DABS(T)

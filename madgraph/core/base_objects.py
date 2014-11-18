@@ -427,32 +427,36 @@ class Particle(PhysicsObject):
         spin = self.get('spin')
         if spin ==1:
             # Scalar
-            return [ 0 ]
+            res = [ 0 ]
         elif spin == 2:
             # Spinor
-            return [ -1, 1 ]
+            res = [ -1, 1 ]                
         elif spin == 3 and self.get('mass').lower() == 'zero':
             # Massless vector
-            return [ -1, 1 ]
+            res = [ -1, 1 ]
         elif spin == 3:
             # Massive vector
-            return [ -1, 0, 1 ]
+            res = [ -1, 0, 1 ]
         elif spin == 4 and self.get('mass').lower() == 'zero':
             # Massless tensor
-            return [-3, 3]
+            res = [-3, 3]
         elif spin == 4:
             # Massive tensor
-            return [-3, -1, 1, 3]
-        
+            res = [-3, -1, 1, 3]
         elif spin == 5 and self.get('mass').lower() == 'zero':
             # Massless tensor
-            return [-2, -1, 1, 2]
+            res = [-2, -1, 1, 2]
         elif spin in [5, 99]:
             # Massive tensor
-            return [-2, -1, 0, 1, 2]
-        
-        raise self.PhysicsObjectError, \
+            res = [-2, -1, 0, 1, 2]
+        else:
+            raise self.PhysicsObjectError, \
               "No helicity state assignment for spin %d particles" % spin
+                  
+        if not self.get('is_part'):
+            res.reverse()
+        
+        return res
 
     def is_fermion(self):
         """Returns True if this is a fermion, False if boson"""
