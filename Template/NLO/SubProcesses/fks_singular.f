@@ -731,7 +731,7 @@ c For FxFx merging, include the compensation term
                  Q=sqrtshat
                  Q2=shat
                  ptjmax=ptj
-                 mu=2*ptjmax
+                 mu=ptjmax
                  if (abs(QES2-mu_R**2).gt.1d-7) then
                     write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
      $                   /'scale should be equal to the '/
@@ -912,18 +912,22 @@ c Apply the FxFx Sudakov damping on the real-emission PS points
          enhanceH=enhance*rewgt_mohdr
       elseif (ickkw.eq.-1) then
 c This is for the NNLL veto cross section
-c     set sqrt(\hat(s)) correctly to be the one of the (n+1)-body
-c     kinematics
-         call set_cms_stuff(mohdr)
+c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
+         call set_cms_stuff(izero)
          Q=sqrtshat
          Q2=shat
+c$$$c     set sqrt(\hat(s)) correctly to be the one of the (n+1)-body
+c$$$c     kinematics
+c$$$         call set_cms_stuff(mohdr)
+c$$$         Q=sqrtshat
+c$$$         Q2=shat
 c     set muMad to be the ren scale used in the virtual
          call set_alphaS(p1_cnt(0,1,0))
          muMad=sqrt(QES2)
          muh=sqrt(Q2)            ! hard scale
          alphaMad=g**2/(4*pi)    ! alpha_s used by MG5_aMC in the virtual corrections
          ptjmax=ptj              ! from cuts.inc
-         mu=2*ptjmax             ! soft scale
+         mu=ptjmax               ! soft scale
          alpha=alphas(mu)
          alphah=alphas(muh)
 c     compensating factor for difference between muMad and the hard
@@ -964,7 +968,7 @@ c     set muMad to be the ren scale used in the virtual
          muh=sqrt(Q2)            ! hard scale
          alphaMad=g**2/(4*pi)    ! alpha_s used by MG5_aMC in the virtual corrections
          ptjmax=ptj              ! from cuts.inc
-         mu=2*ptjmax             ! soft scale
+         mu=ptjmax               ! soft scale
          alpha=alphas(mu)
          alphah=alphas(muh)
 c     compensating factor for difference between muMad and the hard
