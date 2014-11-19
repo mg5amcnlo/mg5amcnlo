@@ -104,6 +104,34 @@ class ProcessExporterFortran(object):
         
 
 
+    #===========================================================================
+    #  create the run_card 
+    #===========================================================================
+    def create_run_card(self, matrix_elements, history):
+        """ """
+ 
+        run_card = banner_mod.RunCard()
+        
+        if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):            
+            processes = [me.get('processes')  for megroup in matrix_elements 
+                                        for me in megroup['matrix_elements']]
+        else:
+            processes = [me.get('processes') 
+                                 for me in matrix_elements['matrix_elements']]
+            
+        misc.sprint([process.nice_string() for process in processes])
+        run_card.create_default_for_process(self.proc_characteristic, 
+                                            history,
+                                            processes)
+          
+        
+        
+        
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+        
+        
+        
  
     #===========================================================================
     # copy the Template in a new directory.
@@ -125,7 +153,7 @@ class ProcessExporterFortran(object):
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # Duplicate run_card and plot_card
-            for card in ['run_card', 'plot_card']:
+            for card in ['plot_card']:
                 try:
                     shutil.copy(pjoin(self.dir_path, 'Cards',
                                              card + '.dat'),
@@ -247,6 +275,9 @@ class ProcessExporterFortran(object):
                               online = False, compiler='g77'):
         """Function to finalize v4 directory, for inheritance.
         """
+        
+        self.create_run_card(matrix_elements, history)
+        
         pass
 
     #===========================================================================
@@ -1709,6 +1740,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if history and os.path.isdir(pjoin(self.dir_path, 'Cards')):
             output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
+        
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
 
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
@@ -2268,6 +2301,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         if os.path.isdir(os.path.join(self.dir_path, 'Cards')):
             output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
+
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
 
     #===========================================================================
     # export model files
@@ -3222,6 +3257,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         #crate the proc_characteristic file 
         self.create_proc_charac(matrix_elements, history)
 
+
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
 
         #return to the initial dir
         #os.chdir(old_pos)               

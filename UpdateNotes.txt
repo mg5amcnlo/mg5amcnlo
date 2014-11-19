@@ -1,5 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.3.0(XX/XX/XX) OM+VH: Adding the possibility to compute cross-section for loop-induced process
+                OM: New MultiCore class with better thread support
+                OM+VH: Change the handling of the run_card.
+                      - The default value depends now of your running process.
+                      - cut_decays is now on False by default
+                      - nhel can only take 0/1 value. 1 is a real MC over helicity (with importance sampling)
+                      - use_syst is set on by default (but for matching)                      
+
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.
                     For LHC processes no sizeable effect have been observe so far.

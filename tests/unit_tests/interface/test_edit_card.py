@@ -56,8 +56,12 @@ class TestEditCardCmd(unittest.TestCase):
         files.cp(pjoin(root_path, 'input_files/restrict_sm.dat'), '/tmp/edit_card/Cards/%s_default.dat' % card)
                 
         card = 'run_card'
-        files.cp(pjoin(template_path, 'LO/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
-        files.cp(pjoin(template_path, 'LO/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
+        import madgraph.various.banner as banner_mod
+        card = banner_mod.RunCardLO()
+        card.write('/tmp/edit_card/Cards/run_card.dat')
+        card.write('/tmp/edit_card/Cards/run_card_default.dat')
+
+
         card = 'MadWeight_card'
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)

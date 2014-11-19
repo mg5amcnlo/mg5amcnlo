@@ -69,7 +69,7 @@ class TESTBanner(unittest.TestCase):
         # access element of the card
         self.assertRaises(KeyError, mybanner.get, 'param_card', 'mt')
         self.assertEqual(mybanner.get('param_card', 'mass', 6).value, 175.0)
-        self.assertEqual(mybanner.get('run_card', 'lpp1'), '0')
+        self.assertEqual(mybanner.get('run_card', 'lpp1'), 0)
         
 
 MadLoopParam = bannermod.MadLoopParam
