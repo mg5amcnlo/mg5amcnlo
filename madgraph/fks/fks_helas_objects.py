@@ -458,7 +458,7 @@ class FKSHelasRealProcess(object): #test written
         """Equality operator:
         compare two FKSHelasRealProcesses by comparing their dictionaries"""
 
-        for key in [k for k in self.__dict__.keys() if k not in ['fks_infos']]:
+        for key in [k for k in self.__dict__.keys() if k not in ['fks_infos', 'charges']]:
             if self.__dict__[key] != other.__dict__[key]:
                 return False
 

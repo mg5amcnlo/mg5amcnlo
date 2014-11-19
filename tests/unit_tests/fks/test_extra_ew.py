@@ -60,16 +60,8 @@ class TestAMCatNLOEW(unittest.TestCase):
                             {'QED':2, 'QCD':2},
                             {'QED':2, 'QCD':2}]
 
-        # perturbation couplings
-        pert_couplings_list = [['QCD'],
-                               ['QED'],
-                               ['QED','QCD'],
-                               ['QCD'],
-                               ['QED'],
-                               ['QED','QCD'],
-                               ['QCD'],
-                               ['QED'],
-                               ['QED','QCD']]
+        # perturbation couplings (always set to [QED, QCD]
+        pert_couplings_list = 9*[['QED','QCD']]
 
         # expected squared_orders (should take into
         #  account the perturbation
@@ -141,47 +133,116 @@ class TestAMCatNLOEW(unittest.TestCase):
                     self.assertEqual(len(info['splitting_type']), 1)
 
 
-    def test_generate_fks_ew_extra_moms(self):
+    def test_generate_fks_ew_extra_cnts_ttx_full(self):
         """check that the generate command works as expected.
         for processes which feature g/a > qqbar splitting.
         Check if the extra countertersm are found when needed"""
-        cmd_list = [
-            'u u~ > g g [real=QED QCD]',
-            'u u~ > g g QED=2 QCD=2 [real=QED QCD]',
-            'u u~ > g a QED=2 QCD=2 [real=QED QCD]']
 
-        len_extra_cnt_amp_list = [0, 2, 1]
-        nrealproc_list = [10, 10, 12]
-        born_ids = [[2,-2,21,21], [2,-2,21,21], [2,-2,21,22]]
-        print 'fix test leptons!'
-        for cmd, born_id, len_extra_cnt, nrealprocs in zip(cmd_list, born_ids, len_extra_cnt_amp_list, nrealproc_list):
-            self.interface.do_generate(cmd)
+        self.interface.do_define('p p a')
+        self.interface.do_generate('p p > t t~ QED=2 QCD=2 [real=QCD QED]')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
 
-            fksprocess = self.interface._fks_multi_proc['born_processes'][0]
+        #there should be 12 processes: 4 qqbar + 4qbarq + gg + ga + ag + aa  
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']),12 )
+        for proc in self.interface._fks_multi_proc['born_processes']:
+            init_id = [l['id'] for l in proc.born_amp['process']['legs'] if not l['state']]
+            # gg initial state, 2 extra cnts
+            if init_id == [21, 21]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 2)
+                # 18 real emission MEs
+                self.assertEqual(len(proc.real_amps), 18)
+                # 22 real FKS configurations
+                self.assertEqual(len(sum([real.fks_infos for real in proc.real_amps], [])), 22)
+                for real in proc.real_amps:
+                    init_real_id = real.pdgs[:2]
+                    if any([idd in quarks for idd in init_real_id]):
+                        self.assertNotEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    else:
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+            # ag initial state, 1 extra cnt
+            elif init_id == [21, 22] or init_id == [22, 21]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 1)
+                # 14 real emission MEs (add mu/e leptons, photon splitting into quarks
+                # must not be incuded here)
+                self.assertEqual(len(proc.real_amps), 14)
+                # 17 real FKS configurations
+                self.assertEqual(len(sum([real.fks_infos for real in proc.real_amps], [])), 17)
+                for real in proc.real_amps:
+                    init_real_id = real.pdgs[:2]
+                    # the gluon has to split in order to need for an extra cnt
+                    if any([idd in quarks for idd in init_real_id]) and 22 in init_real_id:
+                        self.assertNotEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    else:
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+            # all others no cnts
+            # aa 
+            elif init_id == [22, 22]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                # 14 real emission MEs (add mu/e leptons, photon splitting into quarks
+                # must not be incuded here)
+                self.assertEqual(len(proc.real_amps), 10)
+                for real in proc.real_amps:
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+            # qq
+            else:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                for real in proc.real_amps:
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
 
-            self.assertEqual(born_id, [l['id'] for l in fksprocess.born_amp['process']['legs']])
-            
-            print 'if test fails, check fks_base - MZMZ17062014 '
-            self.assertEqual(len_extra_cnt, len(fksprocess.extra_cnt_amp_list))
-            for amp in fksprocess.extra_cnt_amp_list:
-                print [l['id'] for l in amp['process']['legs']]
 
-            for amp in fksprocess.real_amps:
-                for info in amp.fks_infos:
-                    # check that if the splitting is g > qq then
-                    # 2 underlying borns are there
-                    if len_extra_cnt > 0: 
-                        if info['ij_id'] == 21 and \
-                                amp.process['legs'][info['i'] - 1]['id'] != 21:
-                            self.assertEqual(len(info['underlying_born']), 2)
-                            self.assertEqual(info['splitting_type'], ['QCD', 'QED'])
-                            print info
-                        else:
-                            self.assertEqual(len(info['underlying_born']), 1)
-                            self.assertEqual(len(info['splitting_type']), 1)
+    def test_generate_fks_ew_extra_cnts_ttx_qed2qcd1(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        In this case the extra counterterms/splittings should not be 
+        included in the gg since it is only needed for counterterms"""
 
-            self.assertEqual(nrealprocs, len(fksprocess.real_amps))
+        self.interface.do_define('p p a')
+        self.interface.do_generate('p p > t t~ QED=2 QCD=1 [real=QCD QED]')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
 
+        #there should be 12 processes: 4 qqbar + 4qbarq + gg + ga + ag + aa  
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']),12 )
+        for proc in self.interface._fks_multi_proc['born_processes']:
+            init_id = [l['id'] for l in proc.born_amp['process']['legs'] if not l['state']]
+            # gg initial state, no extra cnts
+            if init_id == [21, 21]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                # 1 real emission MEs (only extra photon radiation
+                self.assertEqual(len(proc.real_amps), 1)
+                # 2 real FKS configurations
+                self.assertEqual(len(sum([real.fks_infos for real in proc.real_amps], [])), 2)
+                for real in proc.real_amps:
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+            # ag initial state, 1 extra cnt
+            elif init_id == [21, 22] or init_id == [22, 21]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 1)
+                # 22 real emission MEs (add mu/e leptons, photon splitting into quarks
+                # MUST be incuded here)
+                self.assertEqual(len(proc.real_amps), 22)
+                # 25 real FKS configurations
+                self.assertEqual(len(sum([real.fks_infos for real in proc.real_amps], [])), 25)
+                for real in proc.real_amps:
+                    init_real_id = real.pdgs[:2]
+                    # the gluon has to split in order to need for an extra cnt
+                    if any([idd in quarks for idd in init_real_id]) and 22 in init_real_id:
+                        self.assertNotEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    else:
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+            # all others no cnts
+            # aa 
+            elif init_id == [22, 22]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                # 14 real emission MEs (add mu/e leptons, photon splitting into quarks
+                # must not be incuded here)
+                self.assertEqual(len(proc.real_amps), 10)
+                for real in proc.real_amps:
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+            # qq
+            else:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                for real in proc.real_amps:
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
 
 
     def test_combine_equal_processes_qcd_qed(self):
@@ -205,7 +266,6 @@ class TestAMCatNLOEW(unittest.TestCase):
         
         # check the reals, they should be in the same order
         for i1, r1, in enumerate(fksme1.real_processes): 
-            self.assertNotEqual(r1.charges, [0.] * 5)
             for i2, r2, in enumerate(fksme2.real_processes): 
                 if i1 == i2:
                     self.assertEqual(r1,r2)
@@ -236,7 +296,6 @@ class TestAMCatNLOEW(unittest.TestCase):
         
         # check the reals, they should be in the same order
         for i1, r1, in enumerate(fksme1.real_processes): 
-            self.assertEqual(r1.charges, [0.] * 5)
             for i2, r2, in enumerate(fksme2.real_processes): 
                 if i1 == i2:
                     self.assertEqual(r1,r2)

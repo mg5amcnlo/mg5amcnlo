@@ -537,8 +537,12 @@ class FKSProcess(object):
         if combine is true, FKS_real_processes having the same pdgs (i.e. real amplitude)
         are combined together
         """
-
+        #copy the born process
         born_proc = copy.copy(self.born_amp['process'])
+        #and generate also a born amplitude keeping strictly the born orders
+        born_proc_strict = copy.copy(self.born_amp['process'])
+        born_proc_strict['orders'] = copy.copy(born_proc_strict['born_orders'])
+        born_amp_strict = diagram_generation.Amplitude(born_proc_strict)
         born_pdgs = self.get_pdg_codes()
         leglist = self.get_leglist()
         extra_cnt_pdgs = []
@@ -600,7 +604,10 @@ class FKSProcess(object):
                 # which has ij_id mimimum, i.e. only if mom > ij_id
                 # in practice this means not to integrate splittings when the mother 
                 # is a photon but only when it is a gluon
-                if born_cnt_amp['diagrams'] and mom_cnt < ij_id:
+                # also, take into account that if born_amp_strict (i.e. the born amplitude 
+                # generated with orders = born_orders) has no diagrams, this real emission
+                # will be included in the process having as a born the extra_cnt
+                if born_cnt_amp['diagrams'] and ( mom_cnt < ij_id or not born_amp_strict['diagrams']):
                     continue
 
                 ij = leglist[i].get('number')

@@ -454,28 +454,30 @@ c Note that all the wgts and jacs should be positive.
          inoborn_cnt=0
          xnoborn_cnt=0.d0
          fksmaxwgt=0.d0
-c Put here call to compute bpower
-         call compute_bpower(p_born,bpower)
-         wgtbpower=bpower
-c Store the power of alphas of the Born events in the appl common block.
-         if(iappl.ne.0) appl_bpower = wgtbpower
+CMZ DO NOT COMPUTE BPOWER
+CMZ c Put here call to compute bpower
+CMZ          call compute_bpower(p_born,bpower)
+CMZ         wgtbpower=bpower
+CMZc Store the power of alphas of the Born events in the appl common block.
+CMZ         if(iappl.ne.0) appl_bpower = wgtbpower
 c Initialize histograms
          call initplot
-c Compute cpower done for bottom Yukawa, routine needs to be adopted
-c for other muR-dependendent factors
-         call compute_cpower(p_born,cpower)
-         if(dabs(cpower+1d0).lt.tiny) then
-            wgtcpower=0d0
-         else
-            wgtcpower=cpower
-         endif
-c Check that things are done consistently
-         if(wgtcpower.ne.cpowerinput.and.dabs(cpower+1d0).gt.tiny)then
-           write(*,*)'Inconsistency in the computation of cpower',
-     #               wgtcpower,cpowerinput
-           write(*,*)'Check value in reweight0.inc'
-           stop
-         endif
+CMZ DO NOT COMPUTE CPOWER
+CMZc Compute cpower done for bottom Yukawa, routine needs to be adopted
+CMZc for other muR-dependendent factors
+CMZ         call compute_cpower(p_born,cpower)
+CMZ         if(dabs(cpower+1d0).lt.tiny) then
+CMZ            wgtcpower=0d0
+CMZ         else
+CMZ            wgtcpower=cpower
+CMZ         endif
+CMZc Check that things are done consistently
+CMZ         if(wgtcpower.ne.cpowerinput.and.dabs(cpower+1d0).gt.tiny)then
+CMZ           write(*,*)'Inconsistency in the computation of cpower',
+CMZ     #               wgtcpower,cpowerinput
+CMZ           write(*,*)'Check value in reweight0.inc'
+CMZ           stop
+CMZ         endif
 
          firsttime=.false.
       endif
@@ -4967,6 +4969,9 @@ c         stop
       double precision tiny
       parameter (tiny=1d-6)
 
+C should NOT be used (MZ, 18/11/2014)
+      write(*,*)"ERROR, bpower must NOT be used in the EW branch"
+      stop 1
 c Make sure that we sum over helicities (such that we do get a
 c non-zero Born)
       isum_hel_orig = isum_hel
