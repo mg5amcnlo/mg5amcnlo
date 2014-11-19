@@ -88,7 +88,7 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
       LOGICAL ALLOW_HELICITY_GRID_ENTRIES
 	  DATA ALLOW_HELICITY_GRID_ENTRIES/.True./
 	  COMMON/TO_ALLOW_HELICITY_GRID_ENTRIES/ALLOW_HELICITY_GRID_ENTRIES
-	  c     To limit the number of calls to switchmom, use in DSIGPROC the cached variable last_iconfig. It is in this subroutine as well so that we can set it to -1 to ignore caching (to prevent undesired effect if this subroutine is called from elsewhere and to 0 to reset the cache.
+c     To limit the number of calls to switchmom, use in DSIGPROC the cached variable last_iconfig. It is in this subroutine as well so that we can set it to -1 to ignore caching (to prevent undesired effect if this subroutine is called from elsewhere and to 0 to reset the cache.
 	  INTEGER LAST_ICONF
 	  DATA LAST_ICONF/-1/
 	  COMMON/TO_LAST_ICONF/LAST_ICONF
@@ -374,7 +374,7 @@ C     CM_RAP has parton-parton system rapidity
       DOUBLE PRECISION CM_RAP
       LOGICAL SET_CM_RAP
       COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
-	  c     To limit the number of calls to switchmom, use in DSIGPROC the cached variable last_iconfig. When set to -1, it ignores caching (to prevent undesired effect if this subroutine is called from elsewhere) and when set to 0, it resets the cache.
+c     To limit the number of calls to switchmom, use in DSIGPROC the cached variable last_iconfig. When set to -1, it ignores caching (to prevent undesired effect if this subroutine is called from elsewhere) and when set to 0, it resets the cache.
 	  INTEGER LAST_ICONF
 	  DATA LAST_ICONF/-1/
 	  COMMON/TO_LAST_ICONF/LAST_ICONF

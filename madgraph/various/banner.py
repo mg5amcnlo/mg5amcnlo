@@ -674,7 +674,7 @@ class RunCard(dict):
                 self['draj'] = '0' 
     
 #       Disable MC over grouped subprocesses by default
-        self.add_line('MC_grouped_subproc', 'bool', False, log=10)
+        self.add_line('MC_grouped_subproc', 'bool', True, log=10)
 
         self.add_line('maxjetflavor', 'int', 4)
         if int(self['maxjetflavor']) > 6:
