@@ -1432,8 +1432,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         # place here an easy handle on the golem includes
                         ln(golem_include, starting_dir=pjoin(self.dir_path,'lib'),
                                             name='golem95_include',abspath=True)
-                        ln(pjoin(libpath,libname), starting_dir=pjoin(self.dir_path,'lib'),
-                                            name=libname,abspath=True)
+                        ln(libpath, starting_dir=pjoin(self.dir_path,'lib'),
+                                            name='golem95_lib',abspath=True)
                         
                 else :
                     link_tir_libs.append('-l%s'%tir)
