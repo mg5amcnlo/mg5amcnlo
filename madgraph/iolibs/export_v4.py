@@ -1006,8 +1006,20 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 res_list.append('C JAMPs contributing to orders '+' '.join(
                               ['%s=%i'%order for order in zip(split_order_names,
                                                                 amp_order[0])]))
-            res_list.extend(self.get_JAMP_lines(col_amps_order,
-                                   JAMP_format="JAMP(%s,{0})".format(str(i+1))))
+            if self.opt['export_format'] in ['madloop_matchbox']:
+                 res_list.extend(self.get_JAMP_lines(col_amps_order,
+                                   JAMP_format="JAMP(%s,{0})".format(str(i+1)),
+                                   JAMP_formatLC="LNJAMP(%s,{0})".format(str(i+1))))
+            else:
+                 res_list.extend(self.get_JAMP_lines(col_amps_order,
+                                   JAMP_format="JAMP(%s,{0})".format(str(i+1))))         
+	    
+	    
+	    
+	    
+	    
+	    
+
 
         return res_list
 
@@ -1097,15 +1109,15 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                    str(amp_number))
                             else:
                                 resLC=  resLC + "+0D0" 
-                    else:
-                        if(coefficient[3]==0):
-                            resLC = (resLC + "%s" + AMP_format) % (self.coeff(coefficient[0],
+                        else:
+                            if(coefficient[3]==0):
+                                resLC = (resLC + "%s" + AMP_format) % (self.coeff(coefficient[0],
                                                    coefficient[1],
                                                    coefficient[2],
                                                    coefficient[3]),
                                                    str(amp_number))
-                        else:
-                            resLC =  resLC + "+0D0" 
+                            else:
+                                resLC =  resLC + "+0D0" 
     
                 if common_factor:
                     res = res + ')'
@@ -1970,13 +1982,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             matrix_template = 'matrix_standalone_msP_v4.inc'
         elif self.opt['export_format']=='standalone_msF':
             matrix_template = 'matrix_standalone_msF_v4.inc'
-
         if len(split_orders)>0:
-            if self.opt['export_format'] in ['standalone_msP', 'standalone_msF', 'matchbox']:
+            if self.opt['export_format'] in ['standalone_msP', 'standalone_msF']:
                 logger.debug("Warning: The export format %s is not "+\
                   " available for individual ME evaluation of given coupl. orders."+\
                   " Only the total ME will be computed.", self.opt['export_format'])
             else:
+	      if self.opt['export_format'] in ['madloop_matchbox']:
+		replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
+		matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
+	      else:
                 matrix_template = "matrix_standalone_splitOrders_v4.inc"
 
         if write:
@@ -2026,17 +2041,18 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                         'sa_symmetry': True}
 
     #specific template of the born
+           
+
     matrix_template = "matrix_standalone_matchbox.inc"
     
-    def write_matrix_element_v4(self, writer, matrix_element, fortran_model, write=True):
+    def write_matrix_element_v4(self, writer, matrix_element, fortran_model, write=True,proc_prefix=''):
+        
         """Create the born_matrix.f file for the born process as for a standard
         tree-level computation."""
-
         replace_dict = super(ProcessExporterFortranMatchBox, self).write_matrix_element_v4(
                               writer, matrix_element, fortran_model, write=False)
-        
         # need to add the matchbox dedicated output:
-        replace_dict["proc_prefix"] = 'P%i_' % matrix_element.get('processes')[0].get('id')
+        replace_dict["proc_prefix"] = 'ML5_%i_' % matrix_element.get('processes')[0].get('id')
         replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
         
         if write:
@@ -4786,7 +4802,7 @@ class UFO_model_to_mg4(object):
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         # In standalone and madloop we do no use the compiled param card but
         # still parse the .dat one so we must load it.
-        if self.opt['export_format'] in ['madloop','madloop_optimized']:
+        if self.opt['export_format'] in ['madloop','madloop_optimized','madloop_matchbox']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
         elif self.opt['export_format'].startswith('standalone') or self.opt['export_format'] in ['madweight']\
@@ -4817,7 +4833,7 @@ class UFO_model_to_mg4(object):
                                   'madloop','madloop_optimized', 'standalone_rw', 'madweight']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
-        elif self.opt['export_format'] in ['matchbox']:
+        elif self.opt['export_format'] in ['matchbox','madloop_matchbox']:
             pass
         else:
             raise MadGraph5Error('Unknown format')
@@ -5620,11 +5636,13 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
                 if all([amp['process']['has_born'] for amp in cmd._curr_amps]):
                     if output_type == "madloop":
                         ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                        options['export_format'] = 'madloop_optimized'
                     elif output_type == "madloop_matchbox":
                         ExporterClass=loop_exporters.LoopProcessExporterFortranMatchBox
+                        options['export_format'] = 'madloop_matchbox'
                     else:
                         raise Exception, "output_type not recognize %s" % output_type
-                    options['export_format'] = 'madloop_optimized'
+                    
                 else:
                     logger.warning('ML5 can only exploit the optimized output for '+\
                                    ' processes with born diagrams. The optimization '+\

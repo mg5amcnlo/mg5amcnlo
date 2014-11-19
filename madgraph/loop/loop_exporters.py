@@ -1303,7 +1303,6 @@ C               ENDIF""")%replace_dict
         # This is to decide wether once to reuse old wavefunction to store new
         # ones (provided they are not used further in the code.)
         bornME.optimization = True
-        
         return super(LoopProcessExporterFortranSA,self).write_matrix_element_v4(
                                                   writer, bornME, fortran_model, 
                            proc_prefix=self.general_replace_dict['proc_prefix'])
@@ -1423,7 +1422,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         golem_include = misc.find_includes_path(trgt_path,'.mod')
                         if golem_include is None:
                             logger.error(
-'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
+'Could not find the include directory for golem, looking in %s.\n' % str(trgt_path)+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
                             golem_include = '<Not_found_define_it_yourself>'                
                         tir_include.append('-I %s'%str(golem_include))
@@ -1433,6 +1432,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         # place here an easy handle on the golem includes
                         ln(golem_include, starting_dir=pjoin(self.dir_path,'lib'),
                                             name='golem95_include',abspath=True)
+                        ln(pjoin(libpath,libname), starting_dir=pjoin(self.dir_path,'lib'),
+                                            name=libname,abspath=True)
                         
                 else :
                     link_tir_libs.append('-l%s'%tir)
@@ -2387,6 +2388,7 @@ ENDDO""")
 # LoopProcessExporterFortranSA
 #===============================================================================
 class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
+					 #,export_v4.ProcessExporterFortranMatchBox):
                                          
                                          
 #                                         LoopExporterFortran,
@@ -2396,9 +2398,85 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
        Fortran format."""
 
     default_opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madloop', 'mp':True,
+                        'export_format':'madloop_matchbox', 'mp':True,
                         'loop_dir':'', 'cuttools_dir':'', 
                         'fortran_compiler':'gfortran',
                         'output_dependencies':'external',
                         'sa_symmetry':True}
+
+
+
+    def get_color_string_lines(self, matrix_element):
+        """Return the color matrix definition lines for this matrix element. Split
+        rows in chunks of size n."""
+
+        if not matrix_element.get('color_matrix'):
+            return "\n".join(["out = 1"])
+        
+        #start the real work
+        color_denominators = matrix_element.get('color_matrix').\
+                                                         get_line_denominators()
+        matrix_strings = []
+        my_cs = color.ColorString()
+        for i_color in xrange(len(color_denominators)):
+            # Then write the numerators for the matrix elements
+            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
+            t_str=repr(my_cs)
+            t_match=re.compile(r"(\w+)\(([\s\d+\,]*)\)")
+            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2,1) T(1,2)' returns with findall:
+            # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
+            all_matches = t_match.findall(t_str)
+            output = {}
+            arg=[]
+            for i,match in enumerate(all_matches):
+                ctype, tmparg = match[0], [m.strip() for m in match[1].split(',')]
+                if ctype not in ['T', 'Tr']:
+                    raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
+                tmparg += ['0']
+                arg +=tmparg
+            for j, v in enumerate(arg):
+                    output[(i_color,j)] = v
+
+            for i,key in enumerate(output):
+              if matrix_strings == []:
+                #first entry
+                matrix_strings.append(""" 
+                if (in1.eq.%s.and.in2.eq.%s)then
+                out = %s
+                """  % (key[0], key[1], output[key]))
+              else:
+                #first entry
+                matrix_strings.append(""" 
+                elseif (in1.eq.%s.and.in2.eq.%s)then
+                out = %s
+                """  % (key[0], key[1], output[key]))                
+        matrix_strings.append(" else \n out = - 1 \n endif")
+        return "\n".join(matrix_strings)
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
