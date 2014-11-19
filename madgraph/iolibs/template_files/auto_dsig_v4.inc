@@ -103,7 +103,7 @@ C     Continue only if IMODE is 0, 4 or 5
          CALL SMATRIX%(proc_id)s(PP,DSIGUU)
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
-		      DSIG%(proc_id)s = DSIGUU
+		      DSIG%(proc_id)s = DSIGUU*CONV
 			else
 		      DSIG%(proc_id)s = 0.0d0
 			endif

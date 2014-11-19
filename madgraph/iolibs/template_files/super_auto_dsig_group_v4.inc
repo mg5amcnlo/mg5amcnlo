@@ -88,6 +88,10 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
       LOGICAL ALLOW_HELICITY_GRID_ENTRIES
 	  DATA ALLOW_HELICITY_GRID_ENTRIES/.True./
 	  COMMON/TO_ALLOW_HELICITY_GRID_ENTRIES/ALLOW_HELICITY_GRID_ENTRIES
+	  c     To limit the number of calls to switchmom, use in DSIGPROC the cached variable last_iconfig. It is in this subroutine as well so that we can set it to -1 to ignore caching (to prevent undesired effect if this subroutine is called from elsewhere and to 0 to reset the cache.
+	  INTEGER LAST_ICONF
+	  DATA LAST_ICONF/-1/
+	  COMMON/TO_LAST_ICONF/LAST_ICONF
 
 C ----------
 C BEGIN CODE
@@ -185,6 +189,8 @@ C   IMODE.EQ.0, regular run mode
 	
 C     Select among the subprocesses based on PDF weight
       SUMPROB=0D0
+C     Turn caching on in dsigproc to avoid too many calls to switchmom
+      LAST_ICONF=0
       DO J=1,SYMCONF(0)
          DO IPROC=1,MAXSPROC
             IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
@@ -209,6 +215,8 @@ C                 Need to flip back x values
             endif
          ENDDO
        ENDDO
+C      Turn caching in dsigproc back off to avoid side effects.
+       LAST_ICONF=-1
 
 c     Cannot make a selection with all PDFs to zero, so we return now
 	  IF(SUMPROB.eq.0.0d0) then
@@ -225,6 +233,8 @@ C     routine since it might change it
 	  IF (MC_grouped_subproc.and.grouped_MC_grid_status.eq.0) then
 c       We must initialize the grid and probe all channels
         SUMPROB=0.0d0
+C       Turn caching on in dsigproc to avoid too many calls to switchmom
+        LAST_ICONF=0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
             IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN		  
@@ -253,6 +263,8 @@ C                   Need to flip back x values
 			ENDIF
           ENDDO
         ENDDO
+C       Turn caching in dsigproc back off to avoid side effects.
+        LAST_ICONF=-1
 C       If these additional entries were enough to initialize the gird, then update it
 C       To do this check we must *not* used the cached varianble grouped_MC_grid_status
 		IF(DS_get_dim_status('grouped_processes').ge.1) then
@@ -289,7 +301,7 @@ C     Update weigth w.r.t SELPROC normalized to selection probability
 
       ELSE
 C       We are using the grouped_processes grid and it is initialized.
-        call DS_get_point('grouped_processes',R,Lmapped,MC_grouped_proc_jacobian,'uniform',(/'PDF_convolution'/))
+        call DS_get_point('grouped_processes',R,Lmapped,MC_grouped_proc_jacobian,'norm',(/'PDF_convolution'/))
 		WGT=WGT*MC_grouped_proc_jacobian
 		call map_1_to_3(Lmapped,MAXSPROC,2,ICONF,IPROC,IMIRROR)
 	  ENDIF
@@ -362,6 +374,10 @@ C     CM_RAP has parton-parton system rapidity
       DOUBLE PRECISION CM_RAP
       LOGICAL SET_CM_RAP
       COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
+	  c     To limit the number of calls to switchmom, use in DSIGPROC the cached variable last_iconfig. When set to -1, it ignores caching (to prevent undesired effect if this subroutine is called from elsewhere) and when set to 0, it resets the cache.
+	  INTEGER LAST_ICONF
+	  DATA LAST_ICONF/-1/
+	  COMMON/TO_LAST_ICONF/LAST_ICONF
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -374,14 +390,22 @@ C
       INTEGER I,J,K,JC(NEXTERNAL)
       INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
       INCLUDE 'symperms.inc'
+	  SAVE P1,JC
 
-      ICONFIG=SYMCONF(ICONF)
-      DO I=1,MAXSPROC
-        SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
-      ENDDO
+      if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF) then
 
-C     Set momenta according to this permutation
-      CALL SWITCHMOM(PP,P1,PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
+        ICONFIG=SYMCONF(ICONF)
+        DO I=1,MAXSPROC
+          SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+        ENDDO
+
+C       Set momenta according to this permutation
+        CALL SWITCHMOM(PP,P1,PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
+
+	    if (LAST_ICONF.ne.-1) then
+		  LAST_ICONF = ICONF
+		endif
+	  endif
 
       IB(1)=1
       IB(2)=2
@@ -408,7 +432,17 @@ C       Flip CM_RAP (to get rapidity right)
       IF (PASSCUTS(P1)) THEN
 %(call_dsig_proc_lines)s
       ENDIF
+
+	  IF (LAST_ICONF.ne.-1.and.IMIRROR.EQ.2) then
+C       Flip back local momenta P1 if cached
+        DO I=1,NEXTERNAL
+          P1(2,I)=-P1(2,I)
+          P1(3,I)=-P1(3,I)
+        ENDDO
+	  endif
+
       RETURN
+
       END
 
 
