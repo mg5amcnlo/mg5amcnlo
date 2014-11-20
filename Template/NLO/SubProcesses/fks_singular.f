@@ -460,6 +460,7 @@ CMZ          call compute_bpower(p_born,bpower)
 CMZ         wgtbpower=bpower
 CMZc Store the power of alphas of the Born events in the appl common block.
 CMZ         if(iappl.ne.0) appl_bpower = wgtbpower
+         bpower=0d0
 c Initialize histograms
          call initplot
 CMZ DO NOT COMPUTE CPOWER
