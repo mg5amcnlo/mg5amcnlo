@@ -513,6 +513,7 @@ c a scale to be used as a reference for renormalization scale
       include 'genps.inc'
       include 'nexternal.inc'
       include 'run.inc'
+      include 'cuts.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
       double precision tmp,pt,et,dot,xm2,sumdot,xmt2,ptmp(0:3)
       external pt,et,dot,sumdot
@@ -534,9 +535,11 @@ c processes without (massless QCD) partons at the LO.)
                ptmp(j)=ptmp(j)+pp(j,i)
             enddo
          enddo
-         tmp=sqrt(dot(ptmp,ptmp))
-         temp_scale_id='Q := invariant mass of all particles'/
-     $        /' except "extra parton"'
+c$$$         tmp=sqrt(dot(ptmp,ptmp))
+c$$$         temp_scale_id='Q := invariant mass of all particles'/
+c$$$     $        /' except "extra parton"'
+         tmp=ptj
+         temp_scale_id='Q := veto scale (ptjmax)'
       elseif(itype.eq.1)then
 c Sum of transverse energies
         do i=nincoming+1,nexternal
