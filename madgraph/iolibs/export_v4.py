@@ -119,7 +119,6 @@ class ProcessExporterFortran(object):
             processes = [me.get('processes') 
                                  for me in matrix_elements['matrix_elements']]
             
-        misc.sprint([process.nice_string() for process in processes])
         run_card.create_default_for_process(self.proc_characteristic, 
                                             history,
                                             processes)
@@ -3428,8 +3427,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
         self.proc_characteristic['ninitial'] = ninitial
-        if 'nexternal' in self.proc_characteristic:
-            self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
+        self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
 
         if ninitial < 1 or ninitial > 2:
             raise writers.FortranWriter.FortranWriterError, \

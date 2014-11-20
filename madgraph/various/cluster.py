@@ -512,7 +512,9 @@ class MultiCore(Cluster):
         self.update_fct = None
         
         self.lock = threading.Event() # allow nice lock of the main thread
-        self.pids = [] # allow to clean jobs submit via subprocess
+        self.pids = Queue.Queue() # allow to clean jobs submit via subprocess
+        self.done_pid = []  # list of job finisned
+        self.done_pid_queue = Queue.Queue()
         self.fail_msg = None
 
         # starting the worker node
@@ -535,7 +537,8 @@ class MultiCore(Cluster):
             try:
                 args = self.queue.get()
                 tag, exe, arg, opt = args
-                try:
+                if 1:
+                #try:
                     # check for executable case
                     if isinstance(exe,str):
                         if os.path.exists(exe) and not exe.startswith('/'):
@@ -544,9 +547,9 @@ class MultiCore(Cluster):
                             opt['stderr'] = subprocess.STDOUT
                         proc = misc.Popen([exe] + arg,  **opt)
                         pid = proc.pid
-                        self.pids.append(pid)
+                        self.pids.put(pid)
                         proc.wait()
-                        if proc.returncode not in [0, 143, -15]:
+                        if proc.returncode not in [0, 143, -15] and not self.stoprequest.isSet():
                             fail_msg = 'program %s launch ends with non zero status: %s. Stop all computation' % \
                             (' '.join([exe]+arg), proc.returncode)
                             logger.warning(fail_msg)
@@ -558,7 +561,7 @@ class MultiCore(Cluster):
                     # function. for CPU intensive fct this will slow down the computation
                     else:
                         pid = tag
-                        self.pids.append(pid)
+                        self.pids.put(pid)
                         # the function should return 0 if everything is fine
                         # the error message otherwise
                         returncode = exe(*arg, **opt)
@@ -566,15 +569,16 @@ class MultiCore(Cluster):
                             logger.warning("fct %s does not return 0", exe)
                             self.stoprequest.set()
                             self.remove("fct %s does not return 0" % exe)
-                except Exception,error:
-                    logger.warning(str(error))
-                    self.stoprequest.set()
-                    self.remove(error)
-                    if __debug__:
-                        raise
+#                 except Exception,error:
+#                     logger.warning(str(error))
+#                     self.stoprequest.set()
+#                     self.remove(error)
+#                     if __debug__:
+#                         raise
 
                 self.queue.task_done()
                 self.done.put(tag)
+                self.done_pid_queue.put(pid)
                 #release the mother to print the status on the screen
                 try:
                     self.lock.set()
@@ -621,33 +625,25 @@ class MultiCore(Cluster):
         # ensure the worker to stop
         self.stoprequest.set()
         if error:
-            self.fail_msg = error        
+            self.fail_msg = error
+            
+        # cleaning the queue done_pid_queue and move them to done_pid        
+        while not self.done_pid_queue.empty():
+            pid = self.done_pid_queue.get()
+            self.done_pid.append(pid)
+#            self.done_pid_queue.task_done()
 
-        for pid in list(self.pids):
+        while not self.pids.empty():
+            pid = self.pids.get()
+            self.pids.task_done()
             if isinstance(pid, tuple):
+                continue
+            if pid in self.done_pid:
                 continue
             out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )            
-            if out == 0:
-                try:
-                    self.pids.remove(pid)
-                except:
-                    pass
-            #out = os.system('kill -9 %s &> /dev/null' % pid)
 
-        time.sleep(1) # waiting if some were submitting at the time of ctrl-c
-        for pid in list(self.pids):
-            if isinstance(pid, tuple):
-                continue
-            out = os.system('CPIDS=$(pgrep -P %s); kill -15 $CPIDS > /dev/null 2>&1' % pid )
-            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} ) 
-            if out == 0:
-                try:
-                    self.pids.remove(pid)
-                except:
-                    pass
-                    
 
     def wait(self, me_dir, update_status, update_first=None):
         """Waiting that all the jobs are done. This function also control that
@@ -702,7 +698,14 @@ class MultiCore(Cluster):
                 else:
                     update_status(Idle, Running, Done)
                 last_status = (Idle, Running, Done)
-                    
+            
+            # cleaning the queue done_pid_queue and move them to done_pid
+            while not self.done_pid_queue.empty():
+                pid = self.done_pid_queue.get()
+                self.done_pid.append(pid)
+                self.done_pid_queue.task_done()
+                     
+                
             # Define how to wait for the next iteration
             if use_lock:
                 # simply wait that a worker release the lock
@@ -728,9 +731,11 @@ class MultiCore(Cluster):
         except Exception:
             pass
         self.done = Queue.Queue()
+        self.done_pid = []
+        self.done_pid_queue = Queue.Queue()
         self.nb_done = 0
         self.submitted = Queue.Queue()
-        self.pids = []
+        self.pids = Queue.Queue()
         self.stoprequest.clear()
 
 class CondorCluster(Cluster):

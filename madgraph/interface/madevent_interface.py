@@ -2537,8 +2537,7 @@ zeor by MadLoop.""")
                     self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' % 
                              (self.nb_refine, subdir, nb_proc+1, len(subproc)))
-            else:
-                misc.sprint( 'no ajob for ', Pdir)
+
 
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
                      html=True)
@@ -3466,9 +3465,9 @@ zeor by MadLoop.""")
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
         
+        logger.info("compile Source Directory")
         # Compile
-        for name in ['../bin/internal/gen_ximprove', 'all', 
-                     '../bin/internal/combine_events']:
+        for name in [ 'all', '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         

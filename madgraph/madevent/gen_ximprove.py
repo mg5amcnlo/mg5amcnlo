@@ -23,6 +23,7 @@ import os
 import glob
 import logging
 import math
+import re
 import subprocess
 import shutil
 
@@ -535,7 +536,8 @@ class gensym(object):
             nexternal = self.cmd.proc_characteristics['nexternal']
             self.splitted_grid = max(2, (nexternal-2)**3)
         
-
+        self.splitted_for_Pdir = lambda x: self.splitted_grid
+        self.combining_job_for_Pdir = lambda x: self.combining_job
     
     def launch(self):
         """ """
@@ -589,6 +591,38 @@ class gensym(object):
     def submit_to_cluster(self, job_list):
         """ """
 
+        if self.run_card['job_strategy'] > 0:
+            if len(job_list) >1:
+                for path, dirs in job_list.items():
+                    self.submit_to_cluster({path:dirs})
+                return
+            path, value = job_list.items()[0]
+            nexternal = self.cmd.proc_characteristics['nexternal']
+            current = open(pjoin(path, "nexternal.inc")).read()
+            ext = re.search(r"PARAMETER \(NEXTERNAL=(\d+)\)", current).group(1)
+            
+            if self.run_card['job_strategy'] == 2:
+                self.splitted_grid = 2
+                if nexternal == int(ext):
+                    to_split = 2
+                else:
+                    to_split = 0
+                if hasattr(self, 'splitted_Pdir'):
+                    self.splitted_Pdir[path] = to_split
+                else:
+                    self.splitted_Pdir = {path: to_split}
+                    self.splitted_for_Pdir = lambda x : self.splitted_Pdir[x]
+            elif self.run_card['job_strategy'] == 1:
+                if nexternal == int(ext):
+                    combine = 1
+                else:
+                    combine = self.combining_job
+                if hasattr(self, 'splitted_Pdir'):
+                    self.splitted_Pdir[path] = combine
+                else:
+                    self.splitted_Pdir = {path: combine}
+                    self.combining_job_for_Pdir = lambda x : self.splitted_Pdir[x]
+
         if not self.splitted_grid:
             return self.submit_to_cluster_no_splitting(job_list)
         elif self.cmd.cluster_mode == 0:
@@ -604,7 +638,7 @@ class gensym(object):
            This is the old mode which is still usefull in single core"""
        
         # write the template file for the parameter file   
-        self.write_parameter(parralelization=False)
+        self.write_parameter(parralelization=False, Pdirs=job_list.keys())
         
         
         # launch the job with the appropriate grouping
@@ -614,7 +648,7 @@ class gensym(object):
             while jobs:
                 i+=1
                 to_submit = ['0'] # the first entry is actually the offset
-                for _ in range(self.combining_job):
+                for _ in range(self.combining_job_for_Pdir(Pdir)):
                     if jobs:
                         to_submit.append(jobs.pop(0))
                         
@@ -630,13 +664,16 @@ class gensym(object):
         if self.splitted_grid <= 1:
             return self.submit_to_cluster_no_splitting(job_list)
 
-        self.write_parameter(parralelization=True)
-
-        # launch the job with the appropriate grouping
         for Pdir, jobs in job_list.items():
+            if self.splitted_for_Pdir(Pdir) <= 1:
+                return self.submit_to_cluster_no_splitting({Pdir:jobs})
+
+            self.write_parameter(parralelization=True, Pdirs=[Pdir])
+            # launch the job with the appropriate grouping
+
             for job in jobs:
                 packet = cluster.Packet((Pdir, job, 1), self.combine_grid, (Pdir, job, 1))
-                for i in range(self.splitted_grid):    
+                for i in range(self.splitted_for_Pdir(Pdir)):    
                     self.cmd.launch_job(pjoin(self.me_dir, 'SubProcesses', 'survey.sh'),
                                     argument=[i+1, job],
                                     cwd=pjoin(self.me_dir,'SubProcesses' , Pdir),
@@ -649,7 +686,7 @@ class gensym(object):
         grid_calculator = combine_grid.grid_information()
         
         Gdirs = [] #build the the list of directory
-        for i in range(self.splitted_grid):
+        for i in range(self.splitted_for_Pdir(Pdir)):
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
             Gdirs.append(path)
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
@@ -805,7 +842,7 @@ class gensym(object):
 
     
     
-    def write_parameter(self, parralelization):
+    def write_parameter(self, parralelization, Pdirs=None):
         """Write the parameter of the survey run"""
 
         run_card = self.cmd.run_card
@@ -827,8 +864,11 @@ class gensym(object):
             options['maxiter'] = 1 #this is automatic in dsample anyway
             options['miniter'] = 1 #this is automatic in dsample anyway
             options['event'] /= self.splitted_grid 
-                
-        for Pdir in self.subproc:
+        
+        if not Pdirs:
+            Pdirs = self.subproc
+               
+        for Pdir in Pdirs:
             path =pjoin(self.me_dir, 'SubProcesses', Pdir, 'input_app.txt') 
             self.write_parameter_file(path, options)
         

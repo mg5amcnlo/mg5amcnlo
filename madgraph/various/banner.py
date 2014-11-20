@@ -1269,10 +1269,8 @@ class ConfigFile(dict):
                         break
             else:
                 logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
-                            'This argument is not defined by default. Please consider to add it')
-                print [name, value] 
-                print [k for k in self.keys() if k.lower().startswith(name[0].lower())]
-                raise Exception
+                            'This argument is not defined by default. Please consider to add it.')
+                logger.debug("Did you mean %s", [k for k in self.keys() if k.lower().startswith(name[0].lower())])
                 dict.__setitem__(self, name, self.format_variable(str(value), str, name))
                 if change_userdefine:
                     self.user_set.add(name.lower())
@@ -1881,6 +1879,7 @@ class RunCardLO(RunCard):
         self.add_param('gseed', 0, hidden=True, include=False)
         self.add_param('issgridfile', '', hidden=True)
         self.add_param('hightestmult', 0, hidden=True, fortran_name="nhmult")
+        self.add_param('job_strategy', 2, hidden=True, include=False)
  
  
 
@@ -1990,6 +1989,9 @@ class RunCardLO(RunCard):
                 self['lpp2'] = 0
                 self['ebeam1'] = 500
                 self['ebeam2'] = 500
+            else:
+                self['lpp1'] = 0
+                self['lpp2'] = 0                
                 
         # Check if need matching
         min_particle = 99
@@ -2027,6 +2029,8 @@ class RunCardLO(RunCard):
                 self['ickkw'] = 1
                 self['xqcut'] = 30
                 self['use_syst'] = False 
+                self['drjj'] = 0
+                self['drjl'] = 0
                 
 
     def remove_all_cut(self): 
