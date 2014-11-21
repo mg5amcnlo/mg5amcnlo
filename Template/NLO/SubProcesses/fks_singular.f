@@ -736,15 +736,13 @@ c For FxFx merging, include the compensation term
      $                   /'renormalisation scale',QES2,mu_R
                     stop
                  endif
-                 if (abs(QES2-ptjmax**2).gt.1d-7) then
-                    write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
-     &                   /'scale should be equal to the veto scale',QES2
-     &                   ,ptjmax**2
-                    stop
-                 endif
+c$$$                 if (abs(QES2-Q2).gt.1d-7) then
+c$$$                    write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+c$$$     $                   /'scale should be equal to the shat',QES2,Q2
+c$$$                    stop
+c$$$                 endif
                  muMad=sqrt(QES2)
                  alpha=alphas(mu)
-                 alphah=alphas(Q)
                  alphaMad=g**2/(4*pi)
                  call AnomalyExp(Q2, alpha, mu, ptjmax, E1)
 c compensating factor for difference between muMad and the soft scale mu
@@ -923,12 +921,12 @@ c     set muMad to be the ren scale that was used in the virtual
          alphaMad=g**2/(4*pi)    ! alpha_s used by MG5_aMC in the virtual corrections
          ptjmax=ptj              ! from cuts.inc
          mu=ptjmax               ! soft scale
-         if (abs(QES2-ptjmax**2).gt.1d-7) then
-            write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
-     &           /'scale should be equal to the veto scale',
-     &           QES2,ptjmax**2
-            stop
-         endif
+c$$$         if (abs(QES2-Q2).gt.1d-7) then
+c$$$            write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+c$$$     &           /'scale should be equal to the inv mass',
+c$$$     &           QES2,Q2
+c$$$            stop
+c$$$         endif
          alpha=alphas(mu)
          alphah=alphas(muh)
 c     compensating factor for difference between muMad and the hard
@@ -972,12 +970,12 @@ c     set muMad to be the ren scale used in the virtual
          mu=ptjmax               ! soft scale
          alpha=alphas(mu)
          alphah=alphas(muh)
-         if (abs(QES2-ptjmax**2).gt.1d-7) then
-            write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
-     &           /'scale should be equal to the veto scale',
-     &           QES2,ptjmax**2
-            stop
-         endif
+c$$$         if (abs(QES2-Q2).gt.1d-7) then
+c$$$            write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+c$$$     &           /'scale should be equal to inv mass',
+c$$$     &           QES2,Q2
+c$$$            stop
+c$$$         endif
 c     compensating factor for difference between muMad and the hard
 c     scale muh
          H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
@@ -4649,31 +4647,6 @@ c convert to Binoth Les Houches Accord standards
             if ((ran2().le.virtual_fraction .and.
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
                call cpu_time(tBefore)
-
-c$$$               Call BinothLHA(p_born,born_wgt,virt_wgt)
-               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
-               write (*,*) '1',virt_wgt/(g**2/(4*pi))
-               QES2=100d0**2
-               virt_wgt=0d0
-c$$$               Call BinothLHA(p_born,born_wgt,virt_wgt)
-               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
-               write (*,*) '2',virt_wgt/(g**2/(4*pi))
-               QES2=10d0**2
-
-c$$$               muMad=100d0
-c$$$               mu=10d0
-               
-               write (*,*) born_wgt/(2d0*pi**2)*2d0*(pi**2+24d0
-     &              *Log(100d0/10d0)**2+Log(100d0/10d0)*(36d0 - 48d0
-     &              *Log(sqrtshat/10d0)))/9d0
-               
-               write (*,*) born_wgt/(2d0*pi**2)*(-8d0 * log(100d0/10d0)
-     &              + (-16d0/3d0)*log(100d0/10d0)*(log(100d0/10d0)+2d0
-     &              *log(10d0/sqrtshat)))
-               
-c$$$               H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/mu)**2 +
-c$$$     $              Log(muMad/mu)*(36d0 - 48d0*Log(sqrtshat/mu))))/9d0
-
                Call BinothLHA(p_born,born_wgt,virt_wgt)
 c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                call cpu_time(tAfter)

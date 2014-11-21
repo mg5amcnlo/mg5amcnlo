@@ -213,6 +213,7 @@ c a scale to be used as a reference for renormalization scale
       include 'nexternal.inc'
       include 'reweight0.inc'
       include 'run.inc'
+      include 'cuts.inc'
       double precision muR_ref_dynamic,pp(0:3,nexternal)
       double precision tmp,scale_global_reference,pt,et,dot,sumdot
       external pt,et,dot,sumdot
@@ -259,6 +260,9 @@ c of the colorless system (as returned by setclscales)
          enddo
          tmp=tmp**(1d0/max(wgtbpower,1d0))
          temp_scale_id='FxFx merging scale'
+      elseif(ickkw.eq.-1) then
+         tmp=ptj
+         temp_scale_id='NNLO veto scale: ptj_max'
       elseif(imurtype.eq.1)then
         tmp=scale_global_reference(pp)
       elseif(imurtype.eq.2)then
@@ -527,14 +531,14 @@ c
 c Special for analytic resummation in veto'ed cross sections: Inv. mass
 c of all particles except the "real emission one". (Use only for
 c processes without (massless QCD) partons at the LO.)
-         do j=0,3
-            ptmp(j)=0d0
-         enddo
-         do i=nincoming+1,nexternal-1
-            do j=0,3
-               ptmp(j)=ptmp(j)+pp(j,i)
-            enddo
-         enddo
+c$$$         do j=0,3
+c$$$            ptmp(j)=0d0
+c$$$         enddo
+c$$$         do i=nincoming+1,nexternal-1
+c$$$            do j=0,3
+c$$$               ptmp(j)=ptmp(j)+pp(j,i)
+c$$$            enddo
+c$$$         enddo
 c$$$         tmp=sqrt(dot(ptmp,ptmp))
 c$$$         temp_scale_id='Q := invariant mass of all particles'/
 c$$$     $        /' except "extra parton"'
