@@ -1222,8 +1222,9 @@ class ConfigFile(dict):
         
         if isinstance(finput, self.__class__):
             dict.__init__(self, finput)
-            for key in self.__dict__:
-                setattr(self, key, copy.copy(finput.getattr(finput, key)) )
+            assert finput.__dict__.keys()
+            for key in finput.__dict__:
+                setattr(self, key, copy.copy(getattr(finput, key)) )
             return
         
         # Initialize it with all the default value
@@ -1554,8 +1555,6 @@ class RunCard(ConfigFile):
         self.fortran_name = {}
         #parameter which are not supported anymore. (no action on the code)
         self.legacy_parameter = {}
-        #keep track of the default value
-        self.default = {}
         #a list with all the cuts variable
         self.cuts_parameter = []
         

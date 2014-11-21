@@ -85,6 +85,7 @@ class TestConfigFileCase(unittest.TestCase):
         self.config = bannermod.ConfigFile()
         self.config.add_param('lower', 1)
         self.config.add_param('UPPER', 1)
+        assert self.config.__dict__
    
     def test_sum_object(self):
         """ check for the case handling only #more test in TESTMadLoopParam """
@@ -128,7 +129,48 @@ class TestConfigFileCase(unittest.TestCase):
 #       
 #    def test_update(self):
 #        """actually tested in sum_object"""
+
+
+class TestRunCard(unittest.TestCase):
+    """ A class to test the TestConfig functionality """
+    # a lot of the funtionality are actually already tested in the child
+    # TESTMadLoopParam and are not repeated here.
      
+        
+    def test_basic(self):
+        """ """
+        
+        # check the class factory works        
+        run_card = bannermod.RunCard()
+        self.assertTrue(isinstance(run_card, bannermod.RunCard))
+        self.assertTrue(isinstance(run_card, bannermod.RunCardLO))
+        self.assertFalse(isinstance(run_card, bannermod.RunCardNLO))
+        
+        path = pjoin(_file_path, '..', 'input_files', 'run_card_matching.dat')
+        run_card = bannermod.RunCard(path)
+        self.assertTrue(isinstance(run_card, bannermod.RunCard))
+        self.assertTrue(isinstance(run_card, bannermod.RunCardLO))
+        self.assertFalse(isinstance(run_card, bannermod.RunCardNLO))        
+        
+        path = pjoin(_file_path,'..', 'input_files', 'run_card_nlo.dat')
+        run_card = bannermod.RunCard(path)
+        self.assertTrue(isinstance(run_card, bannermod.RunCard))
+        self.assertTrue(isinstance(run_card, bannermod.RunCardNLO))
+        self.assertFalse(isinstance(run_card, bannermod.RunCardLO))         
+        
+        #check the copy
+        run_card2 = bannermod.RunCard(run_card)
+        self.assertTrue(isinstance(run_card, bannermod.RunCard))
+        self.assertTrue(isinstance(run_card, bannermod.RunCardNLO))
+        self.assertFalse(isinstance(run_card, bannermod.RunCardLO))         
+        #check all list/dict are define
+        self.assertTrue(hasattr(run_card2, 'user_set'))
+        self.assertTrue(hasattr(run_card2, 'hidden_param'))
+        self.assertTrue(hasattr(run_card2, 'not_in_include')) 
+        self.assertTrue(hasattr(run_card2, 'fortran_name'))
+        self.assertFalse(hasattr(run_card2, 'default'))
+        self.assertTrue(hasattr(run_card2, 'cuts_parameter'))         
+  
 
 MadLoopParam = bannermod.MadLoopParam
 class TESTMadLoopParam(unittest.TestCase):

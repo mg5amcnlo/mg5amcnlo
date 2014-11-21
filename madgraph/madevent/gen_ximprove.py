@@ -706,10 +706,10 @@ class gensym(object):
         #3. combine the information about the total crossection / error
         # start by keep the interation in memory
         cross, across, sigma = grid_calculator.get_cross_section()
-        self.cross[G] += cross**3/sigma
-        self.abscross[G] += across * cross**2/sigma
-        self.sigma[G] += cross**2/ sigma
-        self.chi2[G] += cross**4/sigma
+        self.cross[(Pdir,G)] += cross**3/sigma
+        self.abscross[(Pdir,G)] += across * cross**2/sigma
+        self.sigma[(Pdir,G)] += cross**2/ sigma
+        self.chi2[(Pdir,G)] += cross**4/sigma
         # and use those iteration to get the current estimator
         cross = self.cross[(Pdir,G)]/self.sigma[(Pdir,G)]
         if step > 1:
