@@ -171,6 +171,18 @@ class TestRunCard(unittest.TestCase):
         self.assertFalse(hasattr(run_card2, 'default'))
         self.assertTrue(hasattr(run_card2, 'cuts_parameter'))         
   
+    def test_default(self):
+      
+        run_card = bannermod.RunCard()
+        fsock = tempfile.NamedTemporaryFile(mode = 'w')
+        run_card.write(fsock)
+      
+        run_card2 = bannermod.RunCard(fsock.name)
+      
+        for key in run_card:
+            self.assertEqual(run_card[key], run_card2[key])
+      
+      
 
 MadLoopParam = bannermod.MadLoopParam
 class TESTMadLoopParam(unittest.TestCase):

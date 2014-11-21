@@ -1651,11 +1651,14 @@ class RunCard(ConfigFile):
             
             for key in to_write:
                 text += '  %s\t= %s # %s\n' % (self[key], key, 'hidden parameter')
-            
-        
-        fsock = open(output_file,'w')
-        fsock.write(text)
-        fsock.close()
+
+        if isinstance(output_file, str):
+            fsock = open(output_file,'w')
+            fsock.write(text)
+            fsock.close()
+        else:
+            output_file.write(text)
+
 
     def get_default(self, name, default=None, log_level=None):
         """return self[name] if exist otherwise default. log control if we 
@@ -1763,7 +1766,7 @@ class RunCardLO(RunCard):
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
         self.add_param("lpp1", 1, fortran_name="lpp(1)")
-        self.add_param("lpp2", 2, fortran_name="lpp(2)")
+        self.add_param("lpp2", 1, fortran_name="lpp(2)")
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
         self.add_param("polbeam1", 0, fortran_name="pb1")

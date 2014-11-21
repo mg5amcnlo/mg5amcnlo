@@ -104,7 +104,7 @@
 #*********************************************************************
 # Minimum and maximum pt's (for max, -1 means no cut)                *
 #*********************************************************************
- %(ptb)s  = ptj       ! minimum pt for the jets 
+ %(ptj)s  = ptj       ! minimum pt for the jets 
  %(ptb)s  = ptb       ! minimum pt for the b 
  %(pta)s  = pta       ! minimum pt for the photons 
  %(ptl)s  = ptl       ! minimum pt for the charged leptons 
