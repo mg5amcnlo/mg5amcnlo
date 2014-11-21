@@ -151,7 +151,8 @@ c
 c find the jets
       do i=1,nexternal
          if (istatus(i).eq.1 .and.
-     &        (abs(ipdg(i)).le.maxjetflavor .or. ipdg(i).eq.21)) then
+     &        (abs(ipdg(i)).le.maxjetflavor .or. ipdg(i).eq.21
+     &         .or.(ipdg(i).eq.22.and.gamma_is_j))) then
             is_a_j(i)=.true.
          else
             is_a_j(i)=.false.
@@ -251,7 +252,7 @@ c PHOTON (ISOLATION) CUTS
 c
 c find the photons
       do i=1,nexternal
-         if (istatus(i).eq.1 .and. ipdg(i).eq.22) then
+         if (istatus(i).eq.1 .and. ipdg(i).eq.22 .and. .not.gamma_is_j) then
             is_a_ph(i)=.true.
          else
             is_a_ph(i)=.false.

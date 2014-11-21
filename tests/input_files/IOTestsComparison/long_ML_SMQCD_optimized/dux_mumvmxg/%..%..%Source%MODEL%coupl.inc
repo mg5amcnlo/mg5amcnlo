@@ -12,7 +12,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMMON/RSCALE/ MU_R
 
       DOUBLE PRECISION NF
-      PARAMETER(NF=4)
+      PARAMETER(NF=4D0)
+      DOUBLE PRECISION NL
+      PARAMETER(NL=2D0)
 
       DOUBLE PRECISION MDL_MT,MDL_MW,MDL_MZ,MDL_MTA,MDL_MB,MDL_MH
 
