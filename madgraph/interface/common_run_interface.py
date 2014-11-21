@@ -2753,7 +2753,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     def setR(self, name, value):
         logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
-        self.run_card[name] = value
+        self.run_card.set(name,value, user=True)
 
     def setML(self, name, value, default=False):
         

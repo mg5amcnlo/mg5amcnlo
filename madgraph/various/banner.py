@@ -1222,64 +1222,92 @@ class ConfigFile(dict):
         
         if isinstance(finput, self.__class__):
             dict.__init__(self, finput)
-            self.user_set = set(finput.user_set)
+            for key in self.__dict__:
+                setattr(self, key, copy.copy(finput.getattr(finput, key)) )
             return
         
         # Initialize it with all the default value
-        self.default_setup()
         self.user_set = set()
+        self.lower_to_case = {}
+        self.default_setup()
+
         
         
         # if input is define read that input
         if isinstance(finput, (file, str)):
             self.read(finput)
 
+    def default_setup(self):
+        pass
+
+    def __copy__(self):
+        return self.__class__(self)
+
     def __add__(self, other):
         """define the sum"""
         assert isinstance(other, dict)
-        base = copy.copy(self)
-        base.update(other)
+        base = self.__class__(self)
+        #base = copy.copy(self)
+        base.update((key.lower(),value) for key, value in other.items())
         return base
 
     def __radd__(self, other):
         """define the sum"""
         new = copy.copy(other)
-        new.update(self)
+        new.update((key, value) for key, value in self.items())
         return new
     
+    def __contains__(self, key):
+        return dict.__contains__(self, key.lower())
 
+    def __iter__(self):
+        iter = super(ConfigFile, self).__iter__()
+        return (self.lower_to_case[name] for name in iter)
+    
+    def keys(self):
+        return [name for name in self]
+    
+    def items(self):
+        return [(self.lower_to_case[name], value) for name,value in \
+                                               super(ConfigFile, self).items()]
+    
     def __setitem__(self, name, value, change_userdefine=False):
         """set the attribute and set correctly the type if the value is a string"""
-        
         if  not len(self):
             #Should never happen but when deepcopy/pickle
             self.default_setup()
             
-        name = name.strip()
-        
+        name = name.strip() 
         # 1. Find the type of the attribute that we want
         if name in self:
+            lower_name = name.lower()
             targettype = type(self[name])
         else:
-            if name.lower() in [k.lower() for k in self]:
-                for case_name in self:
-                    if case_name.lower() == name.lower():
-                        name = case_name
-                        targettype = type(self[name])
-                        break
-            else:
-                logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
-                            'This argument is not defined by default. Please consider to add it.')
-                logger.debug("Did you mean %s", [k for k in self.keys() if k.lower().startswith(name[0].lower())])
-                dict.__setitem__(self, name, self.format_variable(str(value), str, name))
-                if change_userdefine:
-                    self.user_set.add(name.lower())
-                return
+            lower_name = name.lower()          
+            logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
+                        'This argument is not defined by default. Please consider to add it.')
+            logger.debug("Did you mean %s", [k for k in self.keys() if k.startswith(name[0].lower())])
+            self.add_param(lower_name, self.format_variable(str(value), str, name))
+            self.lower_to_case[lower_name] = name
+            if change_userdefine:
+                self.user_set.add(lower_name)
+            return
     
         value = self.format_variable(value, targettype, name=name)
-        dict.__setitem__(self, name, value)
+        dict.__setitem__(self, lower_name, value)
         if change_userdefine:
-            self.user_set.add(name.lower())
+            self.user_set.add(lower_name)
+
+    def add_param(self, name, value):
+        """add a default parameter to the class"""
+
+        lower_name = name.lower()
+        if __debug__:
+            if lower_name in self:
+                raise Exception("Duplicate case for %s in %s" % (name,self.__class__))
+            
+        dict.__setitem__(self, lower_name, value)
+        self.lower_to_case[lower_name] = name
 
     @staticmethod
     def format_variable(value, targettype, name="unknown"):
@@ -1351,13 +1379,14 @@ class ConfigFile(dict):
 
     def __getitem__(self, name):
         
-        try:
-            return dict.__getitem__(self, name)
-        except Exception:
-            if name in [k.lower() for k in self]:
-                for case_name in self:
-                    if case_name.lower() == name:
-                        return dict.__getitem__(self, case_name)
+        if __debug__:
+            if name.lower() not in self:
+                if name.lower() in [key.lower() for key in self] :
+                    raise Exception, "Some key are not lower case %s. Invalid use of the class!"\
+                                     % [key for key in self if key.lower() != key]
+
+        return dict.__getitem__(self, name.lower())
+
     
     def set(self, name, value, ifnotdefault=True, user=False):
         """convenient way to change attribute.
@@ -1383,14 +1412,14 @@ class ProcCharacteristic(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        dict.__setitem__(self, 'loop_induced', False)
-        dict.__setitem__(self, 'has_isr', False)
-        dict.__setitem__(self, 'has_fsr', False)
-        dict.__setitem__(self, 'nb_channel', 0)
-        dict.__setitem__(self, 'nexternal', 0)
-        dict.__setitem__(self, 'ninitial', 0)
-        dict.__setitem__(self, 'grouped_matrix', True)
-        dict.__setitem__(self, 'has_loops', False)
+        self.add_param('loop_induced', False)
+        self.add_param('has_isr', False)
+        self.add_param('has_fsr', False)
+        self.add_param('nb_channel', 0)
+        self.add_param('nexternal', 0)
+        self.add_param('ninitial', 0)
+        self.add_param('grouped_matrix', True)
+        self.add_param('has_loops', False)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1437,10 +1466,10 @@ class GridpackCard(ConfigFile):
     def default_setup(self):
         """default value for the GridpackCard"""
     
-        dict.__setitem__(self, "GridRun", True)
-        dict.__setitem__(self, "gevents", 2500)
-        dict.__setitem__(self, "gseed", 1)
-        dict.__setitem__(self, "ngran", -1)  
+        self.add_param("GridRun", True)
+        self.add_param("gevents", 2500)
+        self.add_param("gseed", 1)
+        self.add_param("ngran", -1)  
  
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1524,7 +1553,7 @@ class RunCard(ConfigFile):
         #some parameter have different name in fortran code
         self.fortran_name = {}
         #parameter which are not supported anymore. (no action on the code)
-        self.legacy_parameter = []
+        self.legacy_parameter = {}
         #keep track of the default value
         self.default = {}
         #a list with all the cuts variable
@@ -1543,11 +1572,9 @@ class RunCard(ConfigFile):
         legacy:Parameter which is not used anymore (raise a warning if not default)
         cut: defines the list of cut parameter to allow to set them all to off.
         """
- 
-        dict.__setitem__(self, name, value)
-         
-        self.default[name] = value
-        
+
+        super(RunCard, self).add_param(name, value)
+        name = name.lower()
         if fortran_name:
             self.fortran_name[name] = fortran_name
         if not include:
@@ -1555,11 +1582,13 @@ class RunCard(ConfigFile):
         if hidden:
             self.hidden_param.append(name)
         if legacy:
-            self.legacy_parameter.append(name)
+            self.legacy_parameter[name] = value
             if include:
                 self.not_in_include.append(name)
         if cut:
             self.cuts_parameter.append(name)
+
+
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1586,6 +1615,7 @@ class RunCard(ConfigFile):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
+        to_write = set(self.user_set)
         if not template:
             if not MADEVENT:
                 template = pjoin(MG5DIR, 'Template', 'LO', 'Cards', 
@@ -1608,9 +1638,21 @@ class RunCard(ConfigFile):
                     text += line
                 elif nline[1].strip() in self:
                     text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
+                    if nline[1].strip().lower() in to_write:
+                        to_write.remove(nline[1].strip().lower())
                 else:
                     logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
                     text += line 
+        
+        if to_write:
+            text+="""#********************************************************************* 
+#  Additional parameter
+#*********************************************************************
+"""
+            
+            for key in to_write:
+                text += '  %s\t= %s # %s\n' % (self[key], key, 'hidden parameter')
+            
         
         fsock = open(output_file,'w')
         fsock.write(text)
@@ -1879,7 +1921,7 @@ class RunCardLO(RunCard):
         self.add_param('gseed', 0, hidden=True, include=False)
         self.add_param('issgridfile', '', hidden=True)
         self.add_param('hightestmult', 0, hidden=True, fortran_name="nhmult")
-        self.add_param('job_strategy', 2, hidden=True, include=False)
+        self.add_param('job_strategy', 0, hidden=True, include=False)
  
  
 
@@ -1951,7 +1993,7 @@ class RunCardLO(RunCard):
             self.get_default('lhaid', log=20)
    
         for name in self.legacy_parameter:
-            if self[name] != self.default[name]:
+            if self[name] != self.legacy_parameter[name]:
                 logger.warning("The parameter %s is not supported anymore this parameter will be ignored." % name)
                 
 
@@ -2184,27 +2226,27 @@ class MadLoopParam(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        dict.__setitem__(self, "MLReductionLib", "1|4|3|2")
-        dict.__setitem__(self, "IREGIMODE", 2)
-        dict.__setitem__(self, "IREGIRECY", True)
-        dict.__setitem__(self, "CTModeRun", -1)
-        dict.__setitem__(self, "MLStabThres", 1e-3)
-        dict.__setitem__(self, "NRotations_DP", 1)
-        dict.__setitem__(self, "NRotations_QP", 0)
-        dict.__setitem__(self, "ImprovePSPoint", 2)
-        dict.__setitem__(self, "CTLoopLibrary", 2)
-        dict.__setitem__(self, "CTStabThres", 1e-2)
-        dict.__setitem__(self, "CTModeInit", 1)
-        dict.__setitem__(self, "CheckCycle", 3)
-        dict.__setitem__(self, "MaxAttempts", 10)
-        dict.__setitem__(self, "ZeroThres", 1e-9)
-        dict.__setitem__(self, "OSThres", 1.0e-8)
-        dict.__setitem__(self, "DoubleCheckHelicityFilter", True)
-        dict.__setitem__(self, "WriteOutFilters", True)
-        dict.__setitem__(self, "UseLoopFilter", False)
-        dict.__setitem__(self, "HelicityFilterLevel", 2)
-        dict.__setitem__(self, "LoopInitStartOver", False)
-        dict.__setitem__(self, "HelInitStartOver", False)
+        self.add_param("MLReductionLib", "1|4|3|2")
+        self.add_param("IREGIMODE", 2)
+        self.add_param("IREGIRECY", True)
+        self.add_param("CTModeRun", -1)
+        self.add_param("MLStabThres", 1e-3)
+        self.add_param("NRotations_DP", 1)
+        self.add_param("NRotations_QP", 0)
+        self.add_param("ImprovePSPoint", 2)
+        self.add_param("CTLoopLibrary", 2)
+        self.add_param("CTStabThres", 1e-2)
+        self.add_param("CTModeInit", 1)
+        self.add_param("CheckCycle", 3)
+        self.add_param("MaxAttempts", 10)
+        self.add_param("ZeroThres", 1e-9)
+        self.add_param("OSThres", 1.0e-8)
+        self.add_param("DoubleCheckHelicityFilter", True)
+        self.add_param("WriteOutFilters", True)
+        self.add_param("UseLoopFilter", False)
+        self.add_param("HelicityFilterLevel", 2)
+        self.add_param("LoopInitStartOver", False)
+        self.add_param("HelInitStartOver", False)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

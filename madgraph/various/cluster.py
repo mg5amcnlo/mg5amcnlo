@@ -680,10 +680,8 @@ class MultiCore(Cluster):
             # Those variable should be thread safe but approximate.
             Idle = self.queue.qsize()
             Done = self.nb_done + self.done.qsize()
-            Running = max(0, self.submitted.qsize() - Idle - Done)            
-            
-            
-            
+            Running = max(0, self.submitted.qsize() - Idle - Done) 
+                       
             if Idle + Running <= 0 and not force_one_more_loop:
                 update_status(Idle, Running, Done)
                 # Going the quit since everything is done

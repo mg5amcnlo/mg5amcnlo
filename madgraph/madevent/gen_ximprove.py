@@ -707,13 +707,13 @@ class gensym(object):
         # start by keep the interation in memory
         cross, across, sigma = grid_calculator.get_cross_section()
         self.cross[G] += cross**3/sigma
-        self.abscross[G] += cross * across**2/sigma
+        self.abscross[G] += across * cross**2/sigma
         self.sigma[G] += cross**2/ sigma
         self.chi2[G] += cross**4/sigma
         # and use those iteration to get the current estimator
-        cross = self.cross[G]/self.sigma[G]
+        cross = self.cross[(Pdir,G)]/self.sigma[(Pdir,G)]
         if step > 1:
-            error = math.sqrt(abs((self.chi2[G]/cross**2 - self.sigma[G])/step-1)/self.sigma[G])
+            error = math.sqrt(abs((self.chi2[(Pdir,G)]/cross**2 - self.sigma[(Pdir,G)])/step-1)/self.sigma[(Pdir,G)])
         else:
             error = sigma
         
@@ -759,7 +759,7 @@ class gensym(object):
             # create the appropriate results.dat
             #compute the value
             grid_calculator.results.compute_values()
-            abscross = self.abscross[G]/self.sigma[G]
+            abscross = self.abscross[(Pdir,G)]/self.sigma[(Pdir,G)]
             nw = grid_calculator.results.nw
             luminosity = sum([R.luminosity for R in grid_calculator.results])
             wgt = grid_calculator.results.wgt

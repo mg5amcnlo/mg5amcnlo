@@ -17,9 +17,11 @@
 import unittest
 import tempfile
 import madgraph.various.banner as bannermod
+import madgraph.various.misc as misc
 import os
 import models
 from madgraph import MG5DIR
+
 import StringIO
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -72,9 +74,65 @@ class TESTBanner(unittest.TestCase):
         self.assertEqual(mybanner.get('run_card', 'lpp1'), 0)
         
 
+
+class TestConfigFileCase(unittest.TestCase):
+    """ A class to test the TestConfig functionality """
+    # a lot of the funtionality are actually already tested in the child
+    # TESTMadLoopParam and are not repeated here.
+     
+    def setUp(self):
+        
+        self.config = bannermod.ConfigFile()
+        self.config.add_param('lower', 1)
+        self.config.add_param('UPPER', 1)
+   
+    def test_sum_object(self):
+        """ check for the case handling only #more test in TESTMadLoopParam """
+        
+        self.assertEqual(self.config.lower_to_case, {"lower":"lower", "upper":"UPPER"})
+
+        # add a dictionary
+        a = {'lower2':2, 'UPPER2':2, 'Mixed':2} 
+        config2 = self.config + a
+        
+        #ensure that config is not change
+        self.assertEqual(len(self.config),2)
+        self.assertEqual(self.config.lower_to_case, {"lower":"lower", "upper":"UPPER"})
+
+        self.assertEqual(type(config2), bannermod.ConfigFile)
+        self.assertFalse(dict.__contains__(config2, 'UPPER2'))
+        self.assertTrue('UPPER2' in config2)
+        
+        # from a dictionary add a config file
+        config3 = a + self.config
+        self.assertTrue(not hasattr(config3, 'lower_to_dict'))
+        self.assertEqual(type(config3), dict)
+        self.assertTrue(dict.__contains__(config3, 'UPPER2'))
+        self.assertTrue(config3.__contains__('UPPER2'))        
+        self.assertTrue(dict.__contains__(config3, 'UPPER'))
+        self.assertTrue(config3.__contains__('UPPER'))
+          
+        
+    def test_for_loop(self):
+        """ check correct handling of case"""
+    
+        keys = []
+        for key in self.config:
+            keys.append(key)
+        self.assertEqual(set(keys), set(self.config.keys()))
+        self.assertTrue('upper' not in keys)
+        self.assertTrue('UPPER' in keys)
+    
+#    def test_in(self):
+#        """actually tested in sum_object"""
+#       
+#    def test_update(self):
+#        """actually tested in sum_object"""
+     
+
 MadLoopParam = bannermod.MadLoopParam
 class TESTMadLoopParam(unittest.TestCase):
-    """ A class to test the banner functionality """
+    """ A class to test the MadLoopParam functionality """
     
     
     def test_initMadLoopParam(self):
