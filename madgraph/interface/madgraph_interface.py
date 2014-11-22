@@ -6213,9 +6213,12 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     tmp_mass = mass
                     for p in mode:
                         try:
-                            tmp_mass -= abs(eval(str(p.mass), data))
+                            value_mass = eval(str(p.mass), data)
                         except Exception:
-                            tmp_mass -= abs(eval("mdl_"+str(p.mass), data))
+                            # the p object can still be UFO reference. since the 
+                            # mass name might hve change load back the MG5 one.
+                            value_mass = eval(str(model.get_particle(p.pdg_code).get('mass')), data)
+                        tmp_mass -= abs(value_mass)             
                     if tmp_mass <=0:
                         continue
     
