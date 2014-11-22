@@ -182,7 +182,14 @@ class TestRunCard(unittest.TestCase):
         for key in run_card:
             self.assertEqual(run_card[key], run_card2[key])
       
+        run_card = bannermod.RunCardNLO()
+        fsock = tempfile.NamedTemporaryFile(mode = 'w')
+        run_card.write(fsock)
       
+        run_card2 = bannermod.RunCard(fsock.name)
+      
+        for key in run_card:
+            self.assertEqual(run_card[key], run_card2[key])      
 
 MadLoopParam = bannermod.MadLoopParam
 class TESTMadLoopParam(unittest.TestCase):

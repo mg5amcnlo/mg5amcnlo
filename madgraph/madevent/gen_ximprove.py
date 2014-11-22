@@ -81,12 +81,10 @@ class gen_ximprove(object):
         if "nhel_refine" in run_card:
             self.nhel = run_card["nhel_refine"]
         
-        #if int(self.nhel) == 1:
-        #    # increase min/max event for MC over helicities
-        #    misc.sprint("due to MC overhelicities increase event by %s" % 2**(self.cmd.proc_characteristics['nexternal']//3))
-        #    self.min_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//3)
-        #    self.max_event_in_iter *= 2**(self.cmd.proc_characteristics['nexternal']//2)
+        if self.run_card['refine_evt_by_job'] != -1:
+            self.max_request_event = run_card['refine_evt_by_job']
             
+                
         # Default option for the run
         self.gen_events = True
         self.min_iter = 3
@@ -472,16 +470,20 @@ class gen_ximprove_loop_induced(gen_ximprove):
     keep_grid_for_refine = True
 
     def increase_parralelization(self, nexternal):
-        
-        if nexternal == 3:
+
+        self.max_splitting = 1000   
+             
+        if self.run_card['refine_evt_by_job'] != -1:
+            pass
+        elif nexternal == 3:
             self.max_request_event = 200
         elif nexternal == 4:
             self.max_request_event = 100
-        elif nexternal == 5:
+        elif nexternal >= 5:
             self.max_request_event = 50
             self.min_event_in_iter = 125
             self.max_iter = 5
-        self.max_splitting = 1000
+
 
 def get_ximprove(cmd, opt):
     """Factory Determine the appropriate class and returns it"""
@@ -535,6 +537,10 @@ class gensym(object):
         if self.cmd.proc_characteristics['loop_induced']:
             nexternal = self.cmd.proc_characteristics['nexternal']
             self.splitted_grid = max(2, (nexternal-2)**3)
+        
+        #if the user defines it in the run_card:
+        if self.run_card['survey_splitting'] != -1:
+            self.splitted_grid = self.run_card['survey_splitting']
         
         self.splitted_for_Pdir = lambda x: self.splitted_grid
         self.combining_job_for_Pdir = lambda x: self.combining_job
