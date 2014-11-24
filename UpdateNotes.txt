@@ -7,6 +7,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                       - cut_decays is now on False by default
                       - nhel can only take 0/1 value. 1 is a real MC over helicity (with importance sampling)
                       - use_syst is set on by default (but for matching)                      
+                OM: Cuts are also applied for 1>N processes (but the default run_card doesn't have any cut).
+                    
 
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.

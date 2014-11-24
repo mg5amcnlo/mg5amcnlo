@@ -707,31 +707,35 @@ class gensym(object):
             fsock.close()
             
          
-        # 2. create the new grid and put it in all directory   
-        grid_calculator.write_associate_grid(pjoin(Gdirs[0],'ftn25'))
-        for Gdir in Gdirs[1:]:
-            files.ln(pjoin(Gdirs[0], 'ftn25'),  Gdir)
 
-        #3. combine the information about the total crossection / error
+
+        #2. combine the information about the total crossection / error
         # start by keep the interation in memory
         cross, across, sigma = grid_calculator.get_cross_section()
-        self.cross[(Pdir,G)] += cross**3/sigma
-        self.abscross[(Pdir,G)] += across * cross**2/sigma
-        self.sigma[(Pdir,G)] += cross**2/ sigma
-        self.chi2[(Pdir,G)] += cross**4/sigma
-        # and use those iteration to get the current estimator
-        cross = self.cross[(Pdir,G)]/self.sigma[(Pdir,G)]
-        if step > 1:
-            error = math.sqrt(abs((self.chi2[(Pdir,G)]/cross**2 - self.sigma[(Pdir,G)])/step-1)/self.sigma[(Pdir,G)])
-        else:
-            error = sigma
+        if cross !=0:
+            self.cross[(Pdir,G)] += cross**3/sigma
+            self.abscross[(Pdir,G)] += across * cross**2/sigma
+            self.sigma[(Pdir,G)] += cross**2/ sigma
+            self.chi2[(Pdir,G)] += cross**4/sigma
+            # and use those iteration to get the current estimator
+            cross = self.cross[(Pdir,G)]/self.sigma[(Pdir,G)]
+            if step > 1:
+                error = math.sqrt(abs((self.chi2[(Pdir,G)]/cross**2 - self.sigma[(Pdir,G)])/step-1)/self.sigma[(Pdir,G)])
+            else:
+                error = sigma
+        
+            # 3. create the new grid and put it in all directory   
+            grid_calculator.write_associate_grid(pjoin(Gdirs[0],'ftn25'))
+            for Gdir in Gdirs[1:]:
+                files.ln(pjoin(Gdirs[0], 'ftn25'),  Gdir)
+
         
         # 4. make the submission of the next iteration
         #   Three cases - less than 3 iteration -> continue
         #               - more than 3 and less than 5 -> check error
         #               - more than 5 -> prepare info for refine
         need_submit = False
-        if step < self.min_iterations:
+        if step < self.min_iterations and cross != 0:
             need_submit = True
         elif step >= self.cmd.opts['iterations']:
             need_submit = False
@@ -739,7 +743,9 @@ class gensym(object):
             #check for luminosity
             raise Exception, "Not Implemented"
         else:   
-            if cross/error >  self.cmd.opts['accuracy']:
+            if cross == 0:
+                need_submit = False
+            elif cross/error >  self.cmd.opts['accuracy']:
                 need_submit = True
             else:
                 need_submit = False
@@ -767,15 +773,20 @@ class gensym(object):
                                     
             # create the appropriate results.dat
             #compute the value
-            grid_calculator.results.compute_values()
-            abscross = self.abscross[(Pdir,G)]/self.sigma[(Pdir,G)]
-            nw = grid_calculator.results.nw
-            luminosity = sum([R.luminosity for R in grid_calculator.results])
-            wgt = grid_calculator.results.wgt
-            maxit = step
-            nunwgt = grid_calculator.results.nunwgt 
-            wgt = 0
-            nevents = grid_calculator.results.nevents 
+            if cross == 0:
+                abscross,nw, luminosity = 0, 0, 0
+                wgt, maxit,nunwgt, wgt, nevents = 0,0,0,0,0
+                error = 0
+            else:
+                grid_calculator.results.compute_values()
+                abscross = self.abscross[(Pdir,G)]/self.sigma[(Pdir,G)]
+                nw = grid_calculator.results.nw
+                luminosity = sum([R.luminosity for R in grid_calculator.results])
+                wgt = grid_calculator.results.wgt
+                maxit = step
+                nunwgt = grid_calculator.results.nunwgt 
+                wgt = 0
+                nevents = grid_calculator.results.nevents 
             #format the results.dat
             def fstr(nb):
                 data = '%E' % nb

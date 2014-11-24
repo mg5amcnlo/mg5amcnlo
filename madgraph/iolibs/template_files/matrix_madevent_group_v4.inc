@@ -124,6 +124,9 @@ C ----------
             TS(I)=T
          ENDIF
       ENDDO
+      IF(NTRY(IMIRROR).EQ.(MAXTRIES+1)) THEN
+         call reset_cumulative_variable() ! avoid biais of the initialization
+      ENDIF
       IF (ISUM_HEL.NE.0) then
 !         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
 		  HEL_PICKED = -1

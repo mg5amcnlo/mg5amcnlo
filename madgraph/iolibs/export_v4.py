@@ -4596,8 +4596,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         INTEGER NTRY(2)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
         read(stream_id,*) GOODHEL
-        NTRY(1) = MAXTRIES
-        NTRY(2) = MAXTRIES
+        NTRY(1) = MAXTRIES + 1
+        NTRY(2) = MAXTRIES + 1
         return
         end 
         

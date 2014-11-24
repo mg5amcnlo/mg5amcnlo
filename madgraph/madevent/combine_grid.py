@@ -58,8 +58,10 @@ class grid_information(object):
         line = finput.readline()
         if self.nonzero == 0:
             #first information added
-            self.nonzero, self.ng, self.maxinvar = [int(i) for i in line.split()]
-            
+            try:
+                self.nonzero, self.ng, self.maxinvar = [int(i) for i in line.split()]
+            except ValueError:
+                return
         else:
             nonzero, ng, maxinvar = [self.convert_to_number(i) for i in line.split()]
             self.nonzero+=nonzero
@@ -167,7 +169,10 @@ class grid_information(object):
                     
     def get_cross_section(self):
         """return the cross-section error"""
-        
+
+        if self.nb_ps_point == 0:
+            return 0, 0, 0
+                
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
         rmean =  self.sum_abs_wgt*self.target_evt/self.nb_ps_point
         

@@ -1379,12 +1379,12 @@ c
 c
 c     Local
 c
-      integer i, j, k, knt, non_zero, nun,itsum
+      integer i, j, k, knt, nun,itsum
       double precision vol,xnmin,xnmax,tot,xdum,tmp1,chi2tmp
       double precision rc, dr, xo, xn, x(maxinvar), dum(ng-1)
       save vol,knt
       double precision  chi2
-      save chi2, non_zero
+      save chi2
       double precision wmax1,ddumb
       save wmax1
       double precision twgt1,xchi2,xxmean,tmeant,tsigmat
@@ -1410,8 +1410,8 @@ c
       common/to_result/mean,rmean,sigma
 
       double precision grid2(0:ng,maxinvar)
-      integer               inon_zero(ng,maxinvar)
-      common/to_grid2/grid2,inon_zero
+      integer               inon_zero(ng,maxinvar), non_zero
+      common/to_grid2/grid2,inon_zero,non_zero
 
       double precision tmean, trmean, tsigma
       integer             dim, events, itm, kn, cur_it, invar, configs
@@ -2107,6 +2107,10 @@ c     Remove file events.lhe (otherwise event combination gets screwed up)
       write(67,*)
       close(67)
 
+      open(unit=67, file='grid_information')
+      write(67,*) ''
+      close(67)
+
       stop
       end
             
@@ -2323,6 +2327,33 @@ c-----
       ran1=r(j)
       r(j)=(float(ix1)+float(ix2)*rm2)*rm1
       return
+      end
+
+      subroutine reset_cumulative_variable()
+C       Reset to zero all the variable which evaluates the cross-section.
+C       grid information for the current-grid/non-zero entry/...
+C       This is used to avoid the (small) bias introduce in the first iteration
+C       Due to the initialization of the helicity sum.
+
+      include 'genps.inc'
+
+      double precision grid2(0:ng,maxinvar)
+      integer               inon_zero(ng,maxinvar)
+      common/to_grid2/grid2,inon_zero, non_zero
+      double precision    grid(2, ng, 0:maxinvar)
+      common /data_grid/ grid
+C     LOCAL
+      integer i,j
+
+      non_zero = 0
+      do j=1,maxinvar
+         do i=1,ng -1
+            inon_zero = 0
+            grid2(i,j) = 0
+            grid(1,i,j) = 0
+         enddo
+      enddo
+      return 
       end
 
 

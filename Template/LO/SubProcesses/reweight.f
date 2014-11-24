@@ -1521,7 +1521,11 @@ c     factor in front of matrix element
      $           s_xpdf(1,i),s_qpdf(1,i))
             endif
          enddo
-         s_rwfact=s_rwfact*asref**n_qcd
+         if (asref.gt.0d0.and.n_qcd.le.nexternal)then
+            s_rwfact=s_rwfact*asref**n_qcd
+         else
+            s_rwfact=0d0
+         endif
       endif
 
       return
