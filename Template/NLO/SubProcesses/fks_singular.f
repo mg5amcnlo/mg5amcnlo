@@ -1244,7 +1244,7 @@ c
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379660d0)  !CONV TO PICOBARNS
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
      $     ,etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
@@ -1412,8 +1412,16 @@ c
      #                     1/(2.d0*deltaS)
         endif
       endif
-c
-      probne=1.d0
+
+c For UNLOPS all real-emission contributions need to be added to the
+c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
+c events are called, so this will remain 0.
+      if (ickkw.eq.4) then
+         probne=0d0
+      else
+         probne=1.d0
+      endif
+
 c All counterevent have the same final-state kinematics. Check that
 c one of them passes the hard cuts, and they exist at all
 c
@@ -2006,15 +2014,8 @@ com-- muR-dependent fac is reweighted here
              unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
      &            +PD(j)*xsec*(1-probne)*CONV * rwgt_muR_dep_fac(scale)
 com-- muR-dependent fac is reweighted here
-             if (ickkw.ne.4) then
-                unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
-     &               +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
-com-- muR-dependent fac is reweighted here
-             else         ! for UNLOPS, add the H-events to the S-events
-                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
-     &               +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
-com-- muR-dependent fac is reweighted here
-             endif
+             unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
+     &            +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
           enddo
           if(doreweight)then
              if(ifill1H.eq.0)then
@@ -2175,11 +2176,6 @@ c Update the shower starting scale with the shape from montecarlocounter
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
 
-c Add the H-events to the S-events for UNLOPS
-         if (ickkw.eq.4) then
-            dsigS=dsigS+totH_wgt*fkssymmetryfactor
-         endif
-
          call unweight_function(p_born,unwgtfun)
          dsigS=dsigS*unwgtfun
 
@@ -2295,7 +2291,7 @@ c
      &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactor
                enddo
             endif
-            if(check_reweight.and.doreweight .and. ickkw.ne.4) then
+            if(check_reweight.and.doreweight) then
                do i_process=1,iproc_save(nFKSprocess)
                   if (nbody) then
                      call fill_reweight0inc_nbody(i_process)
@@ -2337,9 +2333,6 @@ c Plot observables for counterevents and Born
      &           (plotEv.or.plotKin) )
      &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_born)
          endif
-
-c For UNLOPS, the H-events are already added to the S-events
-         if (ickkw.eq.4) return
 
          dsigH = totH_wgt*fkssymmetryfactor
          call unweight_function(p_born,unwgtfun)
