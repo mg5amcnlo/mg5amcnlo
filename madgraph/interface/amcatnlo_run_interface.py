@@ -3607,18 +3607,20 @@ Integrated cross-section
             for code in ['applgrid','amcfast']:
                 try:
                     p = subprocess.Popen([self.options[code], '--version'], \
-                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    output, error = p.communicate()
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                except OSError:
+                    raise aMCatNLOError(('No valid %s installation found. \n' + \
+                       'Please set the path to %s-config by using \n' + \
+                       'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+                else:
+                    output, _ = p.communicate()
                     if code is 'applgrid' and output < '1.4.63':
                         raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
-                                                +' You are using %s',output)
+                                             +' You are using %s',output)
                     if code is 'amcfast' and output < '1.1.1':
                         raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
-                                                +' You are using %s',output)
-                except Exception:
-                    raise aMCatNLOError(('No valid %s installation found. \n' + \
-                          'Please set the path to %s-config by using \n' + \
-                          'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+                                             +' You are using %s',output)
+                
             # set-up the Source/make_opts with the correct applgrid-config file
             appllibs="  APPLLIBS=$(shell %s --ldcflags) $(shell %s --ldflags) \n" \
                              % (self.options['applgrid'],self.options['amcfast'])
