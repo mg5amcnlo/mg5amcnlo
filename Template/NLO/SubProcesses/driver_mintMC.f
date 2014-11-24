@@ -1300,7 +1300,9 @@ c used.
       logical Hevents
       common/SHevents/Hevents
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
+      integer i_process_addwrite
+      common/c_addwrite/i_process_addwrite
       logical unwgt
       double precision evtsgn_save,evtsgn_target
       double precision evtsgn
@@ -1323,6 +1325,7 @@ c used.
       logical only_virt
       integer imode
       common /c_imode/imode,only_virt
+
 c Trivial check on the Born contribution
       do i=1,iproc_save(nFKSprocess_used_born)
          if (unwgt_table(0,2,i).ne.0d0) then
@@ -1564,6 +1567,7 @@ c Pick one of the nFKSprocesses and one of the IPROC's
                      evtsgn=sign(1d0,unwgt_table(nFKSprocess,2
      $                    ,i_process))
                      evtsgn_save=evtsgn_save+evtsgn
+                     i_process_addwrite=i_process
                      if (doreweight) then
                         nFKSprocess_reweight(1)=nFKSprocess
                      endif
@@ -1589,9 +1593,9 @@ c Pick one of the nFKSprocesses and IPROC's of the Born
                      endif
                      evtsgn=sign(1d0,f_unwgt(nFKSprocess,i_process))
                      evtsgn_save=evtsgn_save+evtsgn
-c Set the i_process to one of the (n+1)-body configurations that leads
+c Set the i_process_addwrite to one of the (n+1)-body configurations that leads
 c to this Born configuration. Needed for add_write_info to work properly
-                     i_process=etoi(i_process,nFKSprocess)
+                     i_process_addwrite=etoi(i_process,nFKSprocess)
                      if (doreweight) then
 c for the reweight info, do not write the ones that gave a zero
 c contribution
@@ -1711,9 +1715,9 @@ c Pick one of the IPROC's of the Born
                   evtsgn=sign(1d0,f_unwgt(nFKSprocess_used_born
      $                 ,i_process))
                   evtsgn_save=evtsgn_save + evtsgn
-c Set the i_process to one of the (n+1)-body configurations that leads
+c Set the i_process_addwrite to one of the (n+1)-body configurations that leads
 c to this Born configuration. Needed for add_write_info to work properly
-                  i_process=etoi(i_process,nFKSprocess_used_born)
+                  i_process_addwrite=etoi(i_process,nFKSprocess_used_born)
                   if (evtsgn.eq.evtsgn_target) return
                enddo
 c Pick the sign randomly according to all the signs accumulated. 

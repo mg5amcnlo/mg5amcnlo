@@ -31,8 +31,8 @@ c Local
       data firsttime2/.true./
 
 c The process chosen to write
-      integer i_process
-      common/c_addwrite/i_process
+      integer i_process_addwrite
+      common/c_addwrite/i_process_addwrite
       
 c Random numbers
       double precision ran2
@@ -205,7 +205,7 @@ c Set the shower scale
 c This is an (n+1)-body process (see update_unwgt_table in
 c driver_mintMC.f). For S events it corresponds to the underlying Born
 c process chosen
-      ip=i_process
+      ip=i_process_addwrite
       if (ip.lt.1 .or. ip.gt.maxproc_used) then
          write (*,*)'ERROR #12 in add_write_info,'/
      &        /' not a well-defined process',ip,Hevents
