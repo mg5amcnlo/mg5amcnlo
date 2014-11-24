@@ -247,9 +247,12 @@ class gen_ximprove(object):
                 nb_split = self.max_splitting
             self.write_multijob(C, nb_split)
             #2. estimate how many points we need in each iteration
-            nevents =  needed_event / nb_split * (C.get('nevents') / C.get('nunwgt'))
-            #split by iter
-            nevents = int(nevents / (2**self.min_iter-1))
+            if C.get('nunwgt') > 0:
+                nevents =  needed_event / nb_split * (C.get('nevents') / C.get('nunwgt'))
+                #split by iter
+                nevents = int(nevents / (2**self.min_iter-1))
+            else:
+                nevents = self.max_event_in_iter
             #
             # forbid too low/too large value
             nevents = min(self.min_event_in_iter, max(self.max_event_in_iter, nevents))
