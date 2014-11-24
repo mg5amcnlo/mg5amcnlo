@@ -1701,8 +1701,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """ find a valid run_name for the current job """
 
         name = 'run_%02d'
-        data = [int(s[4:]) for s in os.listdir(pjoin(me_dir,'Events')) if
-                        s.startswith('run_') and len(s)>5 and s[4:].isdigit()]
+        data = [int(s[4:j]) for s in os.listdir(pjoin(me_dir,'Events')) for 
+                j in range(4,len(s)+1) if \
+                s.startswith('run_') and s[4:j].isdigit()]
         return name % (max(data+[0])+1)
 
 
