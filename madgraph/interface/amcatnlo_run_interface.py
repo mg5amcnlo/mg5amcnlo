@@ -3437,7 +3437,10 @@ Integrated cross-section
                     keep_fourth_arg = True
                     # this is for the split event generation
                     output_files.append('G%s%s_%s' % (args[1], i, args[3]))
-                required_output.append('%s/log_MINT%s.txt' % (current,args[2]))
+                    required_output.append('G%s%s_%s/log_MINT%s.txt' % (args[1], i, args[3],args[2]))
+
+                else:
+                    required_output.append('%s/log_MINT%s.txt' % (current,args[2]))
                 if args[2] in ['0','1']:
                     required_output.append('%s/results.dat' % current)
                 if args[2] == '1':
