@@ -663,7 +663,10 @@ class MultiCore(Cluster):
             while self.done.qsize():
                 try:
                     tag = self.done.get(True, 1)
-                    if tuple(tag) in self.id_to_packet:
+                except Queue.Empty:
+                    pass
+                else:
+                    if self.id_to_packet and tuple(tag) in self.id_to_packet:
                         packet = self.id_to_packet[tuple(tag)]
                         remaining = packet.remove_one()
                         if remaining == 0:
@@ -673,8 +676,6 @@ class MultiCore(Cluster):
                             force_one_more_loop = True
                     self.nb_done += 1
                     self.done.task_done()
-                except Queue.Empty:
-                    pass            
 
             # Get from the various queue the Idle/Done/Running information 
             # Those variable should be thread safe but approximate.
@@ -690,7 +691,7 @@ class MultiCore(Cluster):
                 break
             
             if (Idle, Running, Done) != last_status:
-                if first:
+                if first and update_first:
                     update_first(Idle, Running, Done)
                     first = False
                 else:
@@ -716,7 +717,8 @@ class MultiCore(Cluster):
                 # a simple time.sleep()
                 time.sleep(sleep_time)
                 sleep_time = min(sleep_time + 2, 180)
-        update_first(Idle, Running, Done)
+        if update_first:
+            update_first(Idle, Running, Done)
         
         if self.stoprequest.isSet():
             if isinstance(self.fail_msg, Exception):

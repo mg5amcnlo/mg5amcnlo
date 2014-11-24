@@ -91,13 +91,18 @@ class aMCatNLOError(Exception):
     pass
 
 
-def compile_dir(arguments):
+def compile_dir(*arguments):
     """compile the direcory p_dir
     arguments is the tuple (me_dir, p_dir, mode, options, tests, exe, run_mode)
     this function needs not to be a class method in order to do
     the compilation on multicore"""
 
-    (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
+    if len(arguments) == 1:
+        (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments[0]
+    elif len(arguments)==7:
+        (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
+    else:
+        raise aMCatNLOError, 'not correct number of argument'
     logger.info(' Compiling %s...' % p_dir)
 
     this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
@@ -1304,7 +1309,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        if mode in ['LO', 'NLO'] and self.run_card['iappl'] == '2' and not options['only_generation']:
+        if mode in ['LO', 'NLO'] and self.run_card['iappl'] == 2 and not options['only_generation']:
             options['only_generation'] = True
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
@@ -1368,7 +1373,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
-        if self.run_card['iappl']=='2':
+        if self.run_card['iappl'] == 2:
             self.applgrid_distribute(options,mode,p_dirs)
 
         if options['reweightonly']:
@@ -1382,7 +1387,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             mode_dict = {'NLO': 'all', 'LO': 'born'}
             logger.info('Doing fixed order %s' % mode)
             req_acc = self.run_card['req_acc_FO']
-            if not options['only_generation'] and req_acc != '-1':
+            if not options['only_generation'] and req_acc != -1:
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], 0, '-1', '6','0.10') 
                 self.update_status('Setting up grids', level=None)
                 self.run_all(job_dict, [['0', mode_dict[mode], '0']], 'Setting up grids')
@@ -1422,7 +1427,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
             # collect the scale and PDF uncertainties
             scale_pdf_info={}
-            if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
+            if self.run_card['reweight_scale'] or self.run_card['reweight_PDF']:
                 data_files=[]
                 for dir in p_dirs:
                     for obj in folder_names[mode]:
@@ -1460,7 +1465,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             cross, error = sum_html.make_all_html_results(self, folder_names[mode])
             self.results.add_detail('cross', cross)
             self.results.add_detail('error', error)
-            if self.run_card['iappl'] != '0':
+            if self.run_card['iappl'] != 0:
                 self.applgrid_combine(cross,error)
             self.update_status('Run complete', level='parton', update_results=True)
 
@@ -1591,9 +1596,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         for obs in range(0,nobs):
             gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
             # combine APPLgrids from different channels for observable 'obs'
-            if self.run_card["iappl"] == "1":
+            if self.run_card["iappl"] == 1:
                 misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
-            elif self.run_card["iappl"] == "2":
+            elif self.run_card["iappl"] == 2:
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
                 misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
@@ -1737,7 +1742,7 @@ Integrated cross-section
         for line in proc_card_lines:
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
-        lpp = {'0':'l', '1':'p', '-1':'pbar'}
+        lpp = {0:'l', 1:'p', -1:'pbar'}
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
         (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
@@ -1777,11 +1782,11 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.' and int(self.run_card['ickkw']) != 4:
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale'] and int(self.run_card['ickkw']) != 4:
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.' and int(self.run_card['ickkw']) != 4:
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF'] and int(self.run_card['ickkw']) != 4:
                    message = message + \
                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -1809,11 +1814,11 @@ Integrated cross-section
                 message = '\n      ' + status[step] + proc_info + \
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
-                if self.run_card['reweight_scale']=='.true.':
+                if self.run_card['reweight_scale']:
                     message = message + \
                         ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                         (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if self.run_card['reweight_PDF']=='.true.':
+                if self.run_card['reweight_PDF']:
                     message = message + \
                         ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                         (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -2277,7 +2282,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') and int(self.run_card['ickkw']) != 4 :
+        if (self.run_card['reweight_scale'] or self.run_card['reweight_PDF']) and int(self.run_card['ickkw']) != 4 :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton', update_results=True)
@@ -3393,7 +3398,7 @@ Integrated cross-section
                         to_move = ['mint_grids', 'grid.MC_integer']
                     else: 
                         to_move  = []
-                    if self.run_card['iappl'] =='2':
+                    if self.run_card['iappl'] == 2:
                         for grid in glob.glob(pjoin(cwd,base,'grid_obs_*_in.root')):
                             to_move.append(grid)
                     if not os.path.exists(pjoin(cwd,current)):
@@ -3563,8 +3568,8 @@ Integrated cross-section
 
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf' and \
-                (self.banner.get_detail('run_card', 'lpp1') != '0' or \
-                 self.banner.get_detail('run_card', 'lpp1') != '0'):
+                (self.banner.get_detail('run_card', 'lpp1') != 0 or \
+                 self.banner.get_detail('run_card', 'lpp1') != 0):
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
@@ -3575,9 +3580,9 @@ Integrated cross-section
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
         else:
-            if self.run_card['lpp1'] == '1' == self.run_card['lpp2']:
+            if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
-            if self.run_card['lpp1'] == '0' == self.run_card['lpp2']:
+            if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
@@ -3585,7 +3590,7 @@ Integrated cross-section
                 pass
 
         # read the run_card to find if applgrid is used or not
-        if self.run_card['iappl'] != '0':
+        if self.run_card['iappl'] != 0:
             os.environ['applgrid'] = 'True'
             # check versions of applgrid and amcfast
             for code in ['applgrid','amcfast']:
@@ -3599,7 +3604,7 @@ Integrated cross-section
                     if code is 'amcfast' and output < '1.1.1':
                         raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
                                                 +' You are using %s',output)
-                except Exception:
+                except Exception,error:
                     raise aMCatNLOError(('No valid %s installation found. \n' + \
                           'Please set the path to %s-config by using \n' + \
                           'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
@@ -3751,10 +3756,12 @@ Integrated cross-section
                     tests, exe, self.options['run_mode']])
         try:
             compile_cluster.wait(self.me_dir, update_status)
-
-        except:
+        except Exception, error:
+            logger.warning("Fail to compile the Subprocesses")
+            if __debug__:
+                raise
             compile_cluster.remove()
-            self.quit()
+            self.do_quit('')
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:

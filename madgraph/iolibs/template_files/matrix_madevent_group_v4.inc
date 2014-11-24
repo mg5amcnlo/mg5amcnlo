@@ -31,16 +31,21 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+c
+c global (due to reading writting) 
+c
+        LOGICAL GOODHEL(NCOMB,2)
+	INTEGER NTRY(2)
+        common/BLOCK_GOODHEL/NTRY,GOODHEL
 C  
 C LOCAL VARIABLES 
 C  
-        INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(2)
+        INTEGER NHEL(NEXTERNAL,NCOMB)
         INTEGER ISHEL(2)
         REAL*8 T,MATRIX%(proc_id)s
         REAL*8 R,SUMHEL,TS(NCOMB)
         INTEGER I,IDEN
         INTEGER JC(NEXTERNAL),II
-        LOGICAL GOODHEL(NCOMB,2)
         REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
         INTEGER NGOOD(2), IGOOD(NCOMB,2)
 	INTEGER JHEL(2), J, JJ
@@ -66,11 +71,9 @@ C
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 %(define_iconfigs_lines)s
     DATA XTRY, XREJ /0,0/
-    DATA NTRY /0,0/
     DATA NGOOD /0,0/
     DATA ISHEL/0,0/
     SAVE YFRAC, IGOOD, JHEL
-    DATA GOODHEL/THEL*.FALSE./
 %(helicity_lines)s
 %(den_factor_line)s
 

@@ -3392,7 +3392,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
         sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
         replace_dict['ampsplitorders']='\n'.join(amp_so)
-        replace_dict['sqsplitorders']='\n'.join(sqamp_so)         
+        replace_dict['sqsplitorders']='\n'.join(sqamp_so)
+        
+        
         # Extract JAMP lines
         # If no split_orders then artificiall add one entry called 'ALL_ORDERS'
         jamp_lines = self.get_JAMP_lines_split_order(\
@@ -3480,6 +3482,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['passcuts_end'] = "ENDIF"
             replace_dict['define_subdiag_lines'] = ""
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
+
+        if not isinstance(self, ProcessExporterFortranMEGroup):
+            ncomb=matrix_element.get_helicity_combinations()
+            replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
+        else:
+            replace_dict['read_write_good_hel'] = "C routine in auto_dsig"
+            
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
@@ -3600,8 +3609,76 @@ c           This is dummy particle used in multiparticle vertices
         writer.writelines(lines)
 
         return True
+    
+    #===========================================================================
+    # read_write_good_hel
+    #===========================================================================
+    def read_write_good_hel(self, ncomb):
+        """return the code to read/write the good_hel common_block"""    
 
+        convert = {'ncomb' : ncomb}
+        if isinstance(self, ProcessExporterFortranMEGroup):
+            convert['mirror'] = ', 2'
+            convert['dim_ntry'] = '(2)'
+            convert['reset_ntry'] = "NTRY(1) = MAXTRIES\n  NTRY(2) = MAXTRIES"
+            convert['init']= """
+            
+            
+            """
+        else:
+            convert['mirror'] = ''
+            convert['dim_ntry'] = ''
+            convert['reset_ntry'] = "NTRY = MAXTRIES\n"
 
+        output = """
+        subroutine write_good_hel(stream_id)
+        implicit none
+        integer stream_id
+        INTEGER                 NCOMB
+        PARAMETER (             NCOMB=%(ncomb)d)
+        LOGICAL GOODHEL(NCOMB%(mirror)s)
+        INTEGER NTRY%(dim_ntry)s
+        common/BLOCK_GOODHEL/NTRY,GOODHEL
+        write(stream_id,*) GOODHEL
+        return
+        end
+        
+        
+        subroutine read_good_hel(stream_id)
+        implicit none
+        include 'genps.inc'
+        integer stream_id
+        INTEGER                 NCOMB
+        PARAMETER (             NCOMB=%(ncomb)d)
+        LOGICAL GOODHEL(NCOMB%(mirror)s)
+        INTEGER NTRY%(dim_ntry)s
+        common/BLOCK_GOODHEL/NTRY,GOODHEL
+        read(stream_id,*) GOODHEL
+        %(reset_ntry)s
+        return
+        end 
+        
+        subroutine init_good_hel()
+        implicit none
+        INTEGER                 NCOMB
+        PARAMETER (             NCOMB=%(ncomb)d)
+        LOGICAL GOODHEL(NCOMB%(mirror)s)        
+        INTEGER NTRY%(dim_ntry)s
+        INTEGER I
+        INTEGER MAXTRIES
+        
+        
+        write(*,*) "************************GOODHEL toFALSE*********"
+        do i=1,NCOMB
+            GOODHEL(I) = .false.
+        enddo
+        MAXTRIES=0
+        %(reset_ntry)s
+        end
+        
+        """ % convert
+        
+        return output
                                 
     #===========================================================================
     # write_config_subproc_map_file
@@ -4378,6 +4455,9 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                  "proc": matrix_elements[iproc].get('processes')[0].base_string()})
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
 
+        ncomb=matrix_elements[0].get_helicity_combinations()
+        replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
+        
         file = open(pjoin(_file_path, \
                        'iolibs/template_files/super_auto_dsig_group_v4.inc')).read()
         file = file % replace_dict
@@ -4471,6 +4551,77 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         writer.writelines(lines)
 
         return True
+
+    #===========================================================================
+    # read_write_good_hel
+    #===========================================================================
+    def read_write_good_hel(self, ncomb):
+        """return the code to read/write the good_hel common_block"""    
+
+        convert = {'ncomb' : ncomb}
+        if isinstance(self, ProcessExporterFortranMEGroup):
+            convert['mirror'] = ', 2'
+            convert['dim_ntry'] = '(2)'
+            convert['reset_ntry'] = "NTRY(1) = MAXTRIES\n  NTRY(2) = MAXTRIES"
+            convert['init']= """
+            
+            
+            """
+        else:
+            convert['mirror'] = ''
+            convert['dim_ntry'] = ''
+            convert['reset_ntry'] = "NTRY = MAXTRIES\n"
+
+        output = """
+        subroutine write_good_hel(stream_id)
+        implicit none
+        integer stream_id
+        INTEGER                 NCOMB
+        PARAMETER (             NCOMB=%(ncomb)d)
+        LOGICAL GOODHEL(NCOMB, 2)
+        INTEGER NTRY(2)
+        common/BLOCK_GOODHEL/NTRY,GOODHEL
+        write(stream_id,*) GOODHEL
+        return
+        end
+        
+        
+        subroutine read_good_hel(stream_id)
+        implicit none
+        include 'genps.inc'
+        integer stream_id
+        INTEGER                 NCOMB
+        PARAMETER (             NCOMB=%(ncomb)d)
+        LOGICAL GOODHEL(NCOMB, 2)
+        INTEGER NTRY(2)
+        common/BLOCK_GOODHEL/NTRY,GOODHEL
+        read(stream_id,*) GOODHEL
+        NTRY(1) = MAXTRIES
+        NTRY(2) = MAXTRIES
+        return
+        end 
+        
+        subroutine init_good_hel()
+        implicit none
+        INTEGER                 NCOMB
+        PARAMETER (             NCOMB=%(ncomb)d)
+        LOGICAL GOODHEL(NCOMB, 2)        
+        INTEGER NTRY(2)
+        INTEGER I
+        
+        write(*,*) "************************GOODHEL toFALSE*********"
+        do i=1,NCOMB
+            GOODHEL(I,1) = .false.
+            GOODHEL(I,2) = .false.
+        enddo
+        NTRY(1) = 0
+        NTRY(2) = 0
+        end        
+        """ % convert
+        
+        return output
+                           
+
 
     #===========================================================================
     # write_configs_file

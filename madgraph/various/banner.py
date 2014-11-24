@@ -1441,7 +1441,7 @@ class RunCardLO(RunCard):
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False)
         self.add_param('survey_splitting', -1, hidden=True, include=False)
-        self.add_param('refine_splitting', -1, hidden=True, include=False)
+        self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
  
 
         
@@ -1622,15 +1622,15 @@ class RunCardNLO(RunCard):
         
         self.add_param('run_tag', 'tag_1', include=False)
         self.add_param('nevents', 10000)
-        self.add_param('req_acc', -1)
-        self.add_param('nevt_job', -1)
+        self.add_param('req_acc', -1, include=False)
+        self.add_param('nevt_job', -1, include=False)
         self.add_param('event_norm', 'average')
         #FO parameter
-        self.add_param('req_acc_fo', 0.01)        
-        self.add_param('npoints_fo_grid', 5000)
-        self.add_param('niters_fo_grid', 4)
-        self.add_param('npoints_fo', 10000)        
-        self.add_param('niters_fo', 6)
+        self.add_param('req_acc_fo', 0.01, include=False)        
+        self.add_param('npoints_fo_grid', 5000, include=False)
+        self.add_param('niters_fo_grid', 4, include=False)
+        self.add_param('npoints_fo', 10000, include=False)        
+        self.add_param('niters_fo', 6, include=False)
         #seed and collider
         self.add_param('iseed', 0)
         self.add_param('lpp1', 1, fortran_name='lpp(1)')        

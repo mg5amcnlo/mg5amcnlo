@@ -879,7 +879,11 @@ c
       if (ISUM_HEL.ne.0.and.DS_get_dim_status('Helicity').ge.1) then
         call DS_write_grid(stream_id, dim_name='Helicity', 
      &                                              grid_type=grid_type)
+      elseif(ISUM_HEL.eq.0)then
+        call write_good_hel(stream_id)  
       endif
+      
+
 
       if(MC_grouped_subproc.and.
      &             DS_get_dim_status('grouped_processes').ge.1) then
@@ -896,7 +900,13 @@ c************************************************************************
       use DiscreteSampler          
       implicit none
       integer, intent(in)                           :: stream_id
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
       
+      if (ISUM_HEL.eq.0)then
+         call read_good_hel(stream_id)
+      endif
       call DS_load_grid(stream_id)
 
       end subroutine read_discrete_grids

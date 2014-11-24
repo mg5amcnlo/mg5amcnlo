@@ -17,8 +17,9 @@ class grid_information(object):
     start, stop = -1,1 #original interval
 
 
-    def __init__(self):
+    def __init__(self, mc_hel):
         # information that we need to get to create a new grid
+        self.mc_hel= mc_hel 
         self.grid_base = collections.defaultdict(int)
         self.original_grid = collections.defaultdict(int) 
         self.non_zero_grid = collections.defaultdict(int)
@@ -38,6 +39,7 @@ class grid_information(object):
         #
         self.results = sum_html.Combine_results('combined')
         self.discrete_grid = ""
+
         
         
 
@@ -108,11 +110,15 @@ class grid_information(object):
         else: 
             self.target_evt += data[5]  
             
-        # discrete sampler information
+        # discrete sampler/helicity information
+        if not self.mc_hel:
+            self.helicity_line = finput.readline()
+            
         if not self.discrete_grid:
             self.discrete_grid = DiscreteSampler(finput)
         else:
             self.discrete_grid.add(finput)
+
         
         
     def add_results_information(self, path):
@@ -152,8 +158,11 @@ class grid_information(object):
         if  data:
             fsock.write('\n')
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
-        fsock.write('%s' %(mean*self.target_evt/self.nb_ps_point**2))            
-        fsock.write('\n')
+        fsock.write('%s\n' %(mean*self.target_evt/self.nb_ps_point**2))            
+        
+        if not self.mc_hel:
+            fsock.write(self.helicity_line)
+        
         self.discrete_grid.write(fsock)
                     
     def get_cross_section(self):
@@ -284,6 +293,7 @@ class grid_information(object):
         # return the new grid
         return test_grid
         
+
 
 class DiscreteSampler(dict):
     """ """        

@@ -137,6 +137,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
+      call init_good_hel()
       call get_user_params(ncall,itmax,itmin,mincfig)
       maxcfig=mincfig
       minvar(1,1) = 0              !This tells it to map things invarients

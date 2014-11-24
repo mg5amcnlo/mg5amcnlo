@@ -689,7 +689,7 @@ class gensym(object):
     def combine_grid(self, Pdir, G, step):
         
         # 1. create an object to combine the grid information and fill it
-        grid_calculator = combine_grid.grid_information()
+        grid_calculator = combine_grid.grid_information(self.run_card['nhel'])
         
         Gdirs = [] #build the the list of directory
         for i in range(self.splitted_for_Pdir(Pdir)):
