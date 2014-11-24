@@ -2334,17 +2334,18 @@ C       Reset to zero all the variable which evaluates the cross-section.
 C       grid information for the current-grid/non-zero entry/...
 C       This is used to avoid the (small) bias introduce in the first iteration
 C       Due to the initialization of the helicity sum.
-
+      implicit none
       include 'genps.inc'
 
       double precision grid2(0:ng,maxinvar)
-      integer               inon_zero(ng,maxinvar)
+      integer               inon_zero(ng,maxinvar), non_zero
       common/to_grid2/grid2,inon_zero, non_zero
       double precision    grid(2, ng, 0:maxinvar)
       common /data_grid/ grid
 C     LOCAL
       integer i,j
 
+      write(*,*) "RESET CUMULATIVE VARIABLE"
       non_zero = 0
       do j=1,maxinvar
          do i=1,ng -1

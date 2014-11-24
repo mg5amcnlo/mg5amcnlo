@@ -3617,18 +3617,7 @@ c           This is dummy particle used in multiparticle vertices
         """return the code to read/write the good_hel common_block"""    
 
         convert = {'ncomb' : ncomb}
-        if isinstance(self, ProcessExporterFortranMEGroup):
-            convert['mirror'] = ', 2'
-            convert['dim_ntry'] = '(2)'
-            convert['reset_ntry'] = "NTRY(1) = MAXTRIES\n  NTRY(2) = MAXTRIES"
-            convert['init']= """
-            
-            
-            """
-        else:
-            convert['mirror'] = ''
-            convert['dim_ntry'] = ''
-            convert['reset_ntry'] = "NTRY = MAXTRIES\n"
+
 
         output = """
         subroutine write_good_hel(stream_id)
@@ -3636,8 +3625,8 @@ c           This is dummy particle used in multiparticle vertices
         integer stream_id
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB%(mirror)s)
-        INTEGER NTRY%(dim_ntry)s
+        LOGICAL GOODHEL(NCOMB)
+        INTEGER NTRY
         common/BLOCK_GOODHEL/NTRY,GOODHEL
         write(stream_id,*) GOODHEL
         return
@@ -3650,11 +3639,11 @@ c           This is dummy particle used in multiparticle vertices
         integer stream_id
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB%(mirror)s)
-        INTEGER NTRY%(dim_ntry)s
+        LOGICAL GOODHEL(NCOMB)
+        INTEGER NTRY
         common/BLOCK_GOODHEL/NTRY,GOODHEL
         read(stream_id,*) GOODHEL
-        %(reset_ntry)s
+        NTRY = MAXTRIES + 1
         return
         end 
         
@@ -3662,18 +3651,14 @@ c           This is dummy particle used in multiparticle vertices
         implicit none
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB%(mirror)s)        
-        INTEGER NTRY%(dim_ntry)s
+        LOGICAL GOODHEL(NCOMB)        
+        INTEGER NTRY
         INTEGER I
-        INTEGER MAXTRIES
         
-        
-        write(*,*) "************************GOODHEL toFALSE*********"
         do i=1,NCOMB
             GOODHEL(I) = .false.
         enddo
-        MAXTRIES=0
-        %(reset_ntry)s
+        NTRY = 0
         end
         
         """ % convert
@@ -4609,7 +4594,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         INTEGER NTRY(2)
         INTEGER I
         
-        write(*,*) "************************GOODHEL toFALSE*********"
         do i=1,NCOMB
             GOODHEL(I,1) = .false.
             GOODHEL(I,2) = .false.

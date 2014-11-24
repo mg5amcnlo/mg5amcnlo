@@ -31,15 +31,20 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+c
+c global (due to reading writting)
+c 
+    LOGICAL GOODHEL(NCOMB)
+    INTEGER NTRY
+    common/BLOCK_GOODHEL/NTRY,GOODHEL
 C  
 C LOCAL VARIABLES 
 C  
-    INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+    INTEGER NHEL(NEXTERNAL,NCOMB)
     REAL*8 T,MATRIX%(proc_id)s
     REAL*8 R,SUMHEL,TS(NCOMB)
     INTEGER I,IDEN
     INTEGER IPROC,JC(NEXTERNAL),II
-    LOGICAL GOODHEL(NCOMB)
     REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
     INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
     REAL     XRAN1
@@ -60,10 +65,9 @@ C
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 %(define_iconfigs_lines)s
-    DATA NTRY,IDUM /0,-1/
+    DATA IDUM /0,-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
     SAVE YFRAC, IGOOD, JHEL
-    DATA GOODHEL/THEL*.FALSE./
 %(helicity_lines)s
 %(den_factor_line)s
 C ----------
@@ -108,7 +112,10 @@ C ----------
              TS(I)=T
            ENDIF
         ENDDO
-		IF (ISUM_HEL.NE.0) then
+        IF(NTRY.EQ.(MAXTRIES+1)) THEN
+           call reset_cumulative_variable() ! avoid biais of the initialization
+        ENDIF
+	IF (ISUM_HEL.NE.0) then
 !         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
 		  HEL_PICKED = -1
 !         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .

@@ -29,6 +29,12 @@ C
     PARAMETER (THEL=2*NCOMB)
     INTEGER Hel_Average_Factor
     PARAMETER (Hel_Average_Factor=%(hel_avg_factor)d)
+c
+c global (due to reading writting) 
+c
+        LOGICAL GOODHEL(NCOMB,2)
+	INTEGER NTRY(2)
+        common/BLOCK_GOODHEL/NTRY,GOODHEL
 C  
 C ARGUMENTS 
 C 
@@ -38,15 +44,11 @@ C LOCAL VARIABLES
 C  
         INTEGER NHEL(NEXTERNAL,NCOMB)
 		INTEGER I, II, J ,JJ
-        INTEGER NTRY(2)
         INTEGER ISHEL(2)
         REAL*8 R,SUMHEL,TS(NCOMB), T
-        LOGICAL GOODHEL(NCOMB,2)
-        DATA GOODHEL/THEL*.FALSE./
 		REAL*8 HWGT,XTOT
         INTEGER NGOOD(2), IGOOD(NCOMB,2)         
   		INTEGER JHEL(2)	
-        DATA NTRY /0,0/
         DATA NGOOD /0,0/
         DATA ISHEL/0,0/
 
@@ -186,6 +188,7 @@ C Of course this option can also not be used for polarized beams.
             TS(I)=T
          ENDIF
         ENDDO
+
       IF (ISUM_HEL.NE.0) then
 !         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
 		  HEL_PICKED = -1
@@ -198,6 +201,7 @@ C Of course this option can also not be used for polarized beams.
 !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
             CALL DS_UPDATE_GRID('Helicity')
 			CALL DS_SET_GRID_MODE('Helicity','init')
+	    call reset_cumulative_variable() ! avoid biais of the initialization
           endif
 	  ELSE
         JHEL(IMIRROR) = 1
@@ -214,6 +218,10 @@ C Of course this option can also not be used for polarized beams.
         IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
            ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
+        IF(NTRY(IMIRROR).EQ.(MAXTRIES+1)) THEN
+           call reset_cumulative_variable() ! avoid biais of the initialization
+        ENDIF
+
 	  endif
       ELSE ! random helicity
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.

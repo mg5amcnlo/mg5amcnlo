@@ -185,7 +185,7 @@ class gen_ximprove(object):
         assert self.err_goal >=1
         self.err_goal = int(self.err_goal)
         
-        goal_lum = self.err_goal/(self.results.xsec)    #pb^-1 
+        goal_lum = self.err_goal/(self.results.xsec+1e-99)    #pb^-1 
         logger.info('Effective Luminosity %s pb^-1', goal_lum)
 
         

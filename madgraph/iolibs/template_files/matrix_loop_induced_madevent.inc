@@ -33,6 +33,12 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+c
+c global (due to reading writting) 
+c
+        LOGICAL GOODHEL(NCOMB)
+	INTEGER NTRY
+        common/BLOCK_GOODHEL/NTRY,GOODHEL
 C  
 C LOCAL VARIABLES 
 C  
@@ -42,7 +48,6 @@ C
     INTEGER I,IDEN
     INTEGER IPROC,JC(NEXTERNAL),II
     LOGICAL GOODHEL(NCOMB)
-    DATA GOODHEL/THEL*.FALSE./
     REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
     INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
     REAL     XRAN1
@@ -55,7 +60,7 @@ C
 C Prec_found ans ans_ml are saved so that they don't have to be re-allocated everytime
 	SAVE ML_ANS_DIMENSION,ANS_ML,PREC_FOUND
 
-    DATA NTRY,IDUM /0,-1/
+    DATA IDUM /0,-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
 
 	LOGICAL INIT_MADLOOP
@@ -183,6 +188,7 @@ C Of course this option can also not be used for polarized beams.
 !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
             CALL DS_UPDATE_GRID('Helicity')
 			CALL DS_SET_GRID_MODE('Helicity','init')
+	    call reset_cumulative_variable() ! avoid biais of the initialization
           endif
 	    ELSE
            JHEL = 1
@@ -199,6 +205,10 @@ C Of course this option can also not be used for polarized beams.
           IF(NTRY.EQ.MAXTRIES)THEN
               ISUM_HEL=MIN(ISUM_HEL,NGOOD)
           ENDIF
+        IF(NTRY(IMIRROR).EQ.(MAXTRIES+1)) THEN
+           call reset_cumulative_variable() ! avoid biais of the initialization
+        ENDIF
+
 		endif
        ELSE              !RANDOM HELICITY
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
