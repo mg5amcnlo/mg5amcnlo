@@ -1487,6 +1487,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 raise aMCatNLOError('Required accuracy ("req_acc" in the run_card) should '\
                                         'be between larger than 0 and smaller than 1, '\
                                         'or set to -1 for automatic determination. Current value is %s' % req_acc)
+# For more than 1M events, set req_acc to 0.001 (except when it was explicitly set in the run_card)
+            elif float(req_acc) < 0 and nevents > 1000000 :
+                req_acc='0.001'
 
             shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
 
