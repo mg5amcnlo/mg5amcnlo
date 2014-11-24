@@ -890,7 +890,9 @@ c Apply the FxFx Sudakov damping on the S events
          dsig = (ev_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
-     &        virt_wgt*fkssymmetryfactorBorn +
+c Do not include the virtuals here. They are explicitly included in
+c driver_mintFO.f
+c     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
 
@@ -918,7 +920,7 @@ c and do not fill any of the plots by returning here.
              write(*,*)'Error #2[wg] in dsig',ifill2,ifill3,ifill4
              stop
            endif
-           wgtref = dsig
+           wgtref = dsig+virt_wgt/vegaswgt
            xsec = enhanceS*unwgtfun
            do i=1,4
               if (i.eq.1) then
