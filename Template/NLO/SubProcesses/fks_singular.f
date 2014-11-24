@@ -936,7 +936,7 @@ c     scale muh
          H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
      $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
 c     (first order of) the Hard function
-         H1_factor=H1_factor_virt + H1_comp/(2d0*pi**2)
+         H1_factor=H1_factor_virt + H1_comp/(2d0*pi)
          call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
      $        JETRADIUS, Efull)
          veto_multiplier=(1d0+alphah*H1_factor)*Efull
@@ -983,7 +983,7 @@ c     scale muh
          H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
      $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
 c     (first order of) the Hard function
-         H1_factor=H1_factor_virt + H1_comp/(2d0*pi**2)
+         H1_factor=H1_factor_virt + H1_comp/(2d0*pi)
          call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
      $        JETRADIUS, Efull)
          veto_multiplier=(1d0+alphah*H1_factor)*Efull
