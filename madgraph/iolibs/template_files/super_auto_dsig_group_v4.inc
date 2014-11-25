@@ -269,6 +269,7 @@ C       If these additional entries were enough to initialize the gird, then upd
 C       To do this check we must *not* used the cached varianble grouped_MC_grid_status
 		IF(DS_get_dim_status('grouped_processes').ge.1) then
 		  CALL DS_update_grid('grouped_processes')
+		  call reset_cumulative_variable()
 		endif
       ENDIF
 

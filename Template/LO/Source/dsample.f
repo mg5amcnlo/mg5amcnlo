@@ -476,6 +476,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'maxconfigs.inc'
+      include 'run.inc'
 c
 c     Arguments
 c
@@ -485,6 +486,7 @@ c
 c     Local
 c
       integer i, j
+      integer get_maxsproc
 c
 c     Global
 c
@@ -664,6 +666,7 @@ c         enddo
  101  close(25)
 c      write(*,*) 'Tried reading it',i,j
  102  write(*,*) 'Error opening grid'
+
 c
 c     Unable to read grid, using uniform grid and equal points in
 c     each configuration
@@ -685,6 +688,14 @@ c
 c      write(*,*) 'Forwarding random number generator'
 
  103  write(*,*) 'Grid defined OK'
+
+C     sanity check that we have a minimal number of event      
+      if ( MC_GROUPED_SUBPROC )then
+         events = max(events, maxtries)
+      else 
+         events = max(events, 2*maxtries*get_maxsproc())
+      endif
+
       end
 
       subroutine setgrid(j,xo,a,itype)

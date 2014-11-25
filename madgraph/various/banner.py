@@ -1432,7 +1432,7 @@ class RunCardLO(RunCard):
         #parameter not in the run_card by default
         self.add_param('gridrun', False, hidden=True)
         self.add_param('fixed_couplings', True, hidden=True)
-        self.add_param('mc_grouped_subproc', False, hidden=True)
+        self.add_param('mc_grouped_subproc', True, hidden=True)
         self.add_param('xmtcentral', 0.0, hidden=True, fortran_name="xmtc")
         self.add_param('d', 1.0, hidden=True)
         self.add_param('gseed', 0, hidden=True, include=False)
@@ -1444,8 +1444,6 @@ class RunCardLO(RunCard):
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
  
 
-        
-        
         
     def check_validity(self):
         """ """

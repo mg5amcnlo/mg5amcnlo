@@ -132,8 +132,10 @@ C       Call UNWGT to unweight and store events
         ENDIF
 %(passcuts_end)s
       END
-
+## if(read_write_good_hel) {
 C
 C     Functionality to handling grid
 C
 %(read_write_good_hel)s
+
+## }

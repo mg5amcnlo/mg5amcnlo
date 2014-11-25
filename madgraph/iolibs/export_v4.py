@@ -3487,15 +3487,16 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             ncomb=matrix_element.get_helicity_combinations()
             replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
         else:
-            replace_dict['read_write_good_hel'] = "C routine in auto_dsig"
-            
+            replace_dict['read_write_good_hel'] = ""
+        
+        
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
         file = file % replace_dict
 
         # Write the file
-        writer.writelines(file)
+        writer.writelines(file, {'read_write_good_hel':replace_dict['read_write_good_hel']})
 
     #===========================================================================
     # write_coloramps_file
@@ -3659,6 +3660,12 @@ c           This is dummy particle used in multiparticle vertices
             GOODHEL(I) = .false.
         enddo
         NTRY = 0
+        end
+        
+        integer function get_maxsproc()
+        implicit none
+        get_maxsproc = 1
+        return 
         end
         
         """ % convert
@@ -4544,18 +4551,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         """return the code to read/write the good_hel common_block"""    
 
         convert = {'ncomb' : ncomb}
-        if isinstance(self, ProcessExporterFortranMEGroup):
-            convert['mirror'] = ', 2'
-            convert['dim_ntry'] = '(2)'
-            convert['reset_ntry'] = "NTRY(1) = MAXTRIES\n  NTRY(2) = MAXTRIES"
-            convert['init']= """
-            
-            
-            """
-        else:
-            convert['mirror'] = ''
-            convert['dim_ntry'] = ''
-            convert['reset_ntry'] = "NTRY = MAXTRIES\n"
 
         output = """
         subroutine write_good_hel(stream_id)
@@ -4600,7 +4595,16 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         enddo
         NTRY(1) = 0
         NTRY(2) = 0
-        end        
+        end
+        
+        integer function get_maxsproc()
+        implicit none
+        include 'maxamps.inc'
+        
+        get_maxsproc = maxsproc
+        return 
+        end
+                
         """ % convert
         
         return output

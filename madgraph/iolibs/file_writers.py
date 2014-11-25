@@ -124,7 +124,7 @@ class FileWriter(file):
         
         # Setup the contextual environment
         for contextual_variable, value in context.items():
-            exec('%s=%s'%(str(contextual_variable),str(value)))
+            exec('%s=%s'%(str(contextual_variable),repr(value)))
         
         res = []
         # The variable below tracks the conditional statements structure
