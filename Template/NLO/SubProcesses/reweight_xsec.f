@@ -2306,11 +2306,6 @@ C
       end
 
 
-
-
-
-
-
       function compute_rwgt_wgt_NLO_NNLLveto(muSoft,muHard)
 c Recomputes the NLO+NNLL jet veto cross section using the weights saved
       implicit none
@@ -2327,7 +2322,10 @@ c Recomputes the NLO+NNLL jet veto cross section using the weights saved
       double precision compute_rwgt_wgt_NLO_NNLLveto
       double precision muSoft,muHard
       double precision xsec,xlum,dlum,xlgmuf,xlgmur,xsec11,xsec12
-     $     ,xsec20,QES2_local
+     $     ,xsec20,QES2_local,save_veto_multiplier,born_wgt,virt_wgt
+     $     ,alphaMad,veto_compensating_factor,veto_multiplier_new
+      double precision alphas
+      external alphas
       integer k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
@@ -2340,47 +2338,18 @@ c
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
-c veto-xsec
-      double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
-     $     ,alphaMad,Q,muh,Efull,H1_comp,alphas,veto_compensating_factor
-     $     ,veto_multiplier_new
-      external alphas
 c
       xsec=0.d0
       xsec11=0.d0
       xsec12=0.d0
       xsec20=0.d0
       save_nFKSprocess=nFKSprocess
+      save_veto_multiplier=veto_multiplier
       if(wgtkin(0,1,2).gt.0.d0)then
-         call set_cms_stuff(izero)
-         Q = sqrtshat
-         Q2 = shat
-         ptjmax=ptj
-         muMad = sqrt(QES2)
-         muh = Q*muHard ! new hard scale
-         mu = ptjmax*muSoft ! new soft scale
-         alpha = alphas(mu)
-         alphah = alphas(muh)
-
-c veto_compensating factor computed with the new scales
-c This factor is not included in the weights
-         H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/mu)**2 +
-     $        Log(muMad/mu)*(36d0 - 48d0*Log(Q/mu))))/9d0
-         call AnomalyExp(Q2, alpha, mu, ptjmax, E1)
-         veto_compensating_factor=(H1_factor_virt*alpha +
-     $        H1_comp*alpha/(2d0*pi) + E1) * wgtwborn(2)
-c veto_multiplier computed for the new scales
-         H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
-     $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
-         H1_factor=H1_factor_virt + H1_comp/(2d0*pi)
-         call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
-     $        JETRADIUS, Efull)
-         veto_multiplier_new=(1d0+alphah*H1_factor)*Efull
-c This factor is already included in the weights. Therefore, take the
-c ratio with the factor already included.
-         veto_multiplier_new=veto_multiplier_new/veto_multiplier
+         call compute_veto_multiplier(H1_factor_virt,muSoft,muHard
+     $        ,veto_multiplier)
+         veto_multiplier_new=veto_multiplier/save_veto_multiplier
       else
-         veto_compensating_factor=0d0
          veto_multiplier_new=1d0
       endif
 
@@ -2388,12 +2357,18 @@ c ratio with the factor already included.
 
       call set_cms_stuff(mohdr)
       if(wgtkin(0,1,1).gt.0.d0)then
-         call set_alphaS(wgtkin(0,1,1))
+         mu_r=sqrt(wgtmuR2(1))*muSoft
+         scale=mu_r
+         g=sqrt(4d0*pi*alphas(scale))
+         call update_as_param()
+         q2fact(1)=muSoft**2*wgtmuF12(1)
+         q2fact(2)=muSoft**2*wgtmuF22(1)
+
          xbk(1) = wgtxbj(1,1)
          xbk(2) = wgtxbj(2,1)
          nFKSprocess=nFKSprocess_used
          xlum = dlum()
-         xsec11=xsec11+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
+         xsec11=xsec11+xlum*wgtwreal(1)*g**(2*wgtbpower+2)
       endif
 c
  541  continue
@@ -2407,25 +2382,23 @@ c
 
       call set_cms_stuff(izero)
       if(wgtkin(0,1,2).gt.0.d0)then
-         call set_alphaS(wgtkin(0,1,2))
+         mu_r=sqrt(wgtmuR2(2))*muSoft
+         scale=mu_r
+         g=sqrt(4d0*pi*alphas(scale))
+         call update_as_param()
+         q2fact(1)=muSoft**2*wgtmuF12(2)
+         q2fact(2)=muSoft**2*wgtmuF22(2)
          QES2_local=wgtqes2(2)
          xlgmuf=log(q2fact(1)/QES2_local)
          xlgmur=log(scale**2/QES2_local)
-         if (abs(xlgmur).gt.1d-10 .or. abs(xlgmuf).gt.1d-10 ) then
-            write (*,*) 'ERROR #11 in reweighting',xlgmur,xlgmuf
-            stop 1
-         else
-            xlgmur=0d0
-            xlgmuf=0d0
-         endif
       endif
       do k=2,4
          xbk(1) = wgtxbj(1,k)
          xbk(2) = wgtxbj(2,k)
          nFKSprocess=nFKSprocess_used
          xlum = dlum()
-         xsec12=xsec12+xlum*( wgtwreal(k)+wgtwdeg(k) )* g**(2*wgtbpower
-     $        +2.d0)
+         xsec12=xsec12+xlum*(wgtwreal(k)+wgtwdeg(k)+wgtwdegmuf(k)
+     $        *xlgmuf)*g**(2*wgtbpower+2)
          if(k.eq.2)then
             nFKSprocess=nFKSprocess_used_born
             xlum = dlum()
@@ -2435,8 +2408,11 @@ c
                xsec20=xsec20+xlum*wgtwborn(k)
             endif
             xsec12=xsec12+xsec20
-            xsec12=xsec12+xlum*wgtwns(k)* g**(2*wgtbpower+2.d0)
+            xsec12=xsec12+xlum*(wgtwns(k)+wgtwnsmuf(k)*xlgmuf+
+     $           wgtwnsmur(k)*xlgmur)*g**(2*wgtbpower+2)
 c include the veto_compensating factor
+            call compute_veto_compensating_factor(H1_factor_virt
+     $           ,wgtwborn(2),muSoft,muHard,veto_compensating_factor)
             xsec12=xsec12-xlum*veto_compensating_factor
          endif
       enddo
@@ -2449,6 +2425,7 @@ c include the veto_multiplier
       xsec20=xsec20*veto_multiplier_new
 c
       nFKSprocess=save_nFKSprocess
+      veto_multiplier=save_veto_multiplier
 c
       wgtNLO11=xsec11
       wgtNLO12=xsec12-xsec20

@@ -81,16 +81,16 @@ C-----
 
 
       
-      subroutine compute_veto_compensating_factor(virt_wgt,born_wgt
-     $     ,veto_compensating_factor)
+      subroutine compute_veto_compensating_factor(H1_factor_virt,
+     $     born_wgt,muSoft,muHard,veto_compensating_factor)
       implicit none
-      include 'reweight.inc'
       include 'q_es.inc'
       include 'coupl.inc'
       include 'cuts.inc'
-      double precision virt_wgt,born_wgt,veto_compensating_factor
+	double precision H1_factor_virt,born_wgt,veto_compensating_factor
+     &     ,muSoft,muHard
       double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
-     $     ,alphaMad,Q,muh,Efull,H1_comp,alphas
+     $     ,Q,muh,Efull,H1_comp,alphas
       external alphas
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
@@ -103,13 +103,7 @@ C-----
       Q=sqrtshat
       Q2=shat
       ptjmax=ptj
-      mu=ptjmax
-      if (abs(QES2-mu_R**2).gt.1d-7) then
-         write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
-     $        /'scale should be equal to the '/
-     $        /'renormalisation scale',QES2,mu_R
-         stop
-      endif
+      mu=ptjmax*muSoft
       if (abs(QES2-ptjmax**2).gt.1d-7) then
          write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
      $        /'scale should be equal to the veto scale',QES2
@@ -118,27 +112,26 @@ C-----
       endif
       muMad=sqrt(QES2)
       alpha=alphas(mu)
-      alphaMad=g**2/(4*pi)
       call AnomalyExp(Q2, alpha, mu, ptjmax, E1)
 c compensating factor for difference between muMad and the soft scale mu
       H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/mu)**2 + Log(muMad/mu)*(36d0
      $     - 48d0*Log(Q/mu))))/9d0
-      H1_factor_virt=virt_wgt/alphaMad/born_wgt
       veto_compensating_factor=(H1_factor_virt*alpha + H1_comp*alpha
      $     /(2d0*pi) + E1) * born_wgt
 
       return
       end
 
-      subroutine compute_veto_multiplier()
+      subroutine compute_veto_multiplier(H1_factor_virt,muSoft,muHard
+     &     ,veto_multiplier)
       implicit none
       include 'nexternal.inc'
-      include 'reweight.inc'
       include 'q_es.inc'
       include 'coupl.inc'
       include 'cuts.inc'
+      double precision muSoft,muHard,H1_factor_virt,veto_multiplier
       double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
-     $     ,alphaMad,Q,muh,Efull,H1_comp,alphas
+     $     ,Q,muh,Efull,H1_comp,alphas
       external alphas
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
@@ -159,12 +152,6 @@ c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
       ptjmax=ptj
 c     set muMad to be the ren scale that was used in the virtual
       call set_alphaS(p1_cnt(0,1,0))
-      if (abs(QES2-mu_R**2).gt.1d-7) then
-         write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
-     $        /'scale should be equal to the '/
-     $        /'renormalisation scale',QES2,mu_R
-         stop
-      endif
       if (abs(QES2-ptjmax**2).gt.1d-7) then
          write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
      $        /'scale should be equal to the veto scale',QES2
@@ -172,9 +159,8 @@ c     set muMad to be the ren scale that was used in the virtual
          stop
       endif
       muMad=sqrt(QES2)
-      muh=sqrt(Q2)              ! hard scale
-      alphaMad=g**2/(4*pi)      ! alpha_s used by MG5_aMC in the virtual corrections
-      mu=ptjmax                 ! soft scale
+      muh=sqrt(Q2)*muHard       ! hard scale
+      mu=ptjmax*muSoft          ! soft scale
       alpha=alphas(mu)
       alphah=alphas(muh)
 c     compensating factor for difference between muMad and the hard

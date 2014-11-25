@@ -724,8 +724,9 @@ c For FxFx merging, include the compensation term
      $                   /' be zero (no QCD partons at the'/
      $                   /' Born allowed)', bpower
                  endif
-                 call compute_veto_compensating_factor(virt_wgt,born_wgt
-     $                ,veto_compensating_factor)
+                 H1_factor_virt=virt_wgt/(g**2/(4d0*pi))/born_wgt
+                 call compute_veto_compensating_factor(H1_factor_virt
+     $                ,born_wgt,1d0,1d0,veto_compensating_factor)
                  bsv_wgt=bsv_wgt-veto_compensating_factor
               endif
               if(doreweight)then
@@ -869,7 +870,8 @@ c
 
       if (ickkw.eq.-1) then
 c This is for the NNLL veto cross section
-         call compute_veto_multiplier()
+         call compute_veto_multiplier(H1_factor_virt,1d0,1d0
+     $        ,veto_multiplier)
          enhance=enhance*veto_multiplier
       endif
 
