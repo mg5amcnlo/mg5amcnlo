@@ -123,4 +123,7 @@ c i.e. also for Yukawa: ren_group_coeff = gamma0
       double precision ren_group_coeff_in
       parameter (ren_group_coeff_in=0d0)
 
+c NLO+NNLL jet veto stuff
+      double precision veto_multiplier,H1_factor_virt
+      common/cwgt_jet_veto/veto_multiplier,H1_factor_virt
 

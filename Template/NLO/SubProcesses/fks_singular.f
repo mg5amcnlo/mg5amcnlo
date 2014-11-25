@@ -397,10 +397,8 @@ c For tests
       double precision virt_wgt,born_wgt_ao2pi
       common/c_fks_singular/virt_wgt,born_wgt_ao2pi
 c veto-xsec
-      double precision Q2,ptjmax,mu,alpha,E1,veto_compensating_factor
-     $     ,H1_factor,muMad,alphah,alphaMad,H1_factor_virt,Q
-     $     ,veto_multiplier,muh,Efull,H1_comp,alphas
-      save H1_factor_virt
+      double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
+     $     ,alphaMad,Q,muh,Efull,H1_comp,alphas,veto_compensating_factor
       external alphas
       double precision average_virtual,virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
@@ -767,9 +765,6 @@ c subtract alpha*(H1+E1) from the NLO cross section
                    wgtwns(2)=wgtwns(2)-rewgt_exp_izero*wgtwborn(2)
      $                  /(4d0*pi)
                 endif
-                if (ickkw.eq.-1) then
-                   wgtwns(2)=wgtwns(2)-veto_compensating_factor/g**2
-                endif
                 wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(nint(2*wgtbpower
      &               +2.d0))
                 wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
@@ -1054,8 +1049,10 @@ c and do not fill any of the plots by returning here.
              endif
            enddo
            call reweight_fill_extra()
-           if(check_reweight.and.doreweight)
+           if(check_reweight.and.doreweight .and. ickkw.ne.-1)
      #       call check_rwgt_wgt("NLO")
+           if(check_reweight.and.doreweight .and. ickkw.eq.-1)
+     #       call check_rwgt_wgt("JET")
            if(do_rwgt_scale.or.do_rwgt_pdf)call fill_rwgt_NLOplot()
 c Example of reweighted cross section (scale changed)
 c           dsig_new=compute_rwgt_wgt_NLO(new_muR_fact,new_muF1_fact,
