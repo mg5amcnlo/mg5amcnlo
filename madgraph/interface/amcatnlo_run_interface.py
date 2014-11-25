@@ -3289,8 +3289,8 @@ Integrated cross-section
             if shower == 'PYTHIA8':
                 input_files.append(pjoin(cwd, 'Pythia8.exe'))
                 input_files.append(pjoin(cwd, 'Pythia8.cmd'))
-                input_files.append(pjoin(cwd, 'config.sh'))
                 if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+                    input_files.append(pjoin(cwd, 'config.sh'))
                     input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
                 else:
                     input_files.append(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'))
