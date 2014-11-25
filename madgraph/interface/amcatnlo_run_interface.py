@@ -1820,9 +1820,14 @@ Integrated cross-section
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
                 if self.run_card['reweight_scale']=='.true.':
-                    message = message + \
-                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
-                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
+                    if int(self.run_card['ickkw'])!=-1:
+                        message = message + \
+                            ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
+                            (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
+                    else:
+                        message = message + \
+                            ('\n      Soft and hard scale dependence (added in quadrature): +%0.1f%% -%0.1f%%') % \
+                            (scale_pdf_info['scale_upp_quad'], scale_pdf_info['scale_low_quad'])
                 if self.run_card['reweight_PDF']=='.true.':
                     message = message + \
                         ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
@@ -3088,8 +3093,12 @@ Integrated cross-section
         scale_upp=0.0
         scale_low=0.0
         if numofscales>0:
+            # max and min of the full envelope
             scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
             scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
+            # ren and fac scale dependence added in quadrature
+            scale_pdf_info['scale_upp_quad'] = ((cntrl_val+math.sqrt(math.pow(max(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(max(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val-1)*100
+            scale_pdf_info['scale_low_quad'] = (1-(cntrl_val-math.sqrt(math.pow(min(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(min(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val)*100
 
         # get the pdf uncertainty in percent (according to the Hessian method)
         lhaid=int(self.run_card['lhaid'])

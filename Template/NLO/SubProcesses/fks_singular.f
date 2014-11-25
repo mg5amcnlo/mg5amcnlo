@@ -397,9 +397,7 @@ c For tests
       double precision virt_wgt,born_wgt_ao2pi
       common/c_fks_singular/virt_wgt,born_wgt_ao2pi
 c veto-xsec
-      double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
-     $     ,alphaMad,Q,muh,Efull,H1_comp,alphas,veto_compensating_factor
-      external alphas
+      double precision veto_compensating_factor
       double precision average_virtual,virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
       double precision virtual_over_born
@@ -726,32 +724,8 @@ c For FxFx merging, include the compensation term
      $                   /' be zero (no QCD partons at the'/
      $                   /' Born allowed)', bpower
                  endif
-                 Q=sqrtshat
-                 Q2=shat
-                 ptjmax=ptj
-                 mu=ptjmax
-                 if (abs(QES2-mu_R**2).gt.1d-7) then
-                    write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
-     $                   /'scale should be equal to the '/
-     $                   /'renormalisation scale',QES2,mu_R
-                    stop
-                 endif
-c$$$                 if (abs(QES2-Q2).gt.1d-7) then
-c$$$                    write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
-c$$$     $                   /'scale should be equal to the shat',QES2,Q2
-c$$$                    stop
-c$$$                 endif
-                 muMad=sqrt(QES2)
-                 alpha=alphas(mu)
-                 alphaMad=g**2/(4*pi)
-                 call AnomalyExp(Q2, alpha, mu, ptjmax, E1)
-c compensating factor for difference between muMad and the soft scale mu
-                 H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/mu)**2 +
-     $                Log(muMad/mu)*(36d0 - 48d0*Log(Q/mu))))/9d0
-                 H1_factor_virt=virt_wgt/alphaMad/born_wgt
-                 veto_compensating_factor=(H1_factor_virt*alpha +
-     $                H1_comp*alpha/(2d0*pi) + E1) * born_wgt
-c subtract alpha*(H1+E1) from the NLO cross section
+                 call compute_veto_compensating_factor(virt_wgt,born_wgt
+     $                ,veto_compensating_factor)
                  bsv_wgt=bsv_wgt-veto_compensating_factor
               endif
               if(doreweight)then
@@ -893,9 +867,14 @@ c
          endif
       endif
 
+      if (ickkw.eq.-1) then
+c This is for the NNLL veto cross section
+         call compute_veto_multiplier()
+         enhance=enhance*veto_multiplier
+      endif
+
       cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
-
 
 c Apply the FxFx Sudakov damping on the real-emission PS points
       if (ev_wgt.ne.0d0 .and. ickkw.eq.3..and.
@@ -905,37 +884,6 @@ c Apply the FxFx Sudakov damping on the real-emission PS points
       elseif(rewgt_mohdr_calculated) then
          if (rewgt_mohdr.gt.1d0) rewgt_mohdr=1d0
          enhanceH=enhance*rewgt_mohdr
-      elseif (ickkw.eq.-1) then
-c This is for the NNLL veto cross section
-c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
-         call set_cms_stuff(izero)
-         Q=sqrtshat
-         Q2=shat
-c     set muMad to be the ren scale that was used in the virtual
-         call set_alphaS(p1_cnt(0,1,0))
-         muMad=sqrt(QES2)
-         muh=sqrt(Q2)            ! hard scale
-         alphaMad=g**2/(4*pi)    ! alpha_s used by MG5_aMC in the virtual corrections
-         ptjmax=ptj              ! from cuts.inc
-         mu=ptjmax               ! soft scale
-c$$$         if (abs(QES2-Q2).gt.1d-7) then
-c$$$            write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
-c$$$     &           /'scale should be equal to the inv mass',
-c$$$     &           QES2,Q2
-c$$$            stop
-c$$$         endif
-         alpha=alphas(mu)
-         alphah=alphas(muh)
-c     compensating factor for difference between muMad and the hard
-c     scale muh
-         H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
-     $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
-c     (first order of) the Hard function
-         H1_factor=H1_factor_virt + H1_comp/(2d0*pi)
-         call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
-     $        JETRADIUS, Efull)
-         veto_multiplier=(1d0+alphah*H1_factor)*Efull
-         enhanceH=enhance*veto_multiplier
       else
          enhanceH=enhance
       endif
@@ -952,37 +900,6 @@ c Apply the FxFx Sudakov damping on the Born, virtual & counter PS points
       elseif(rewgt_izero_calculated) then
          if (rewgt_izero.gt.1d0) rewgt_izero=1d0
          enhanceS=enhance*rewgt_izero
-      elseif (ickkw.eq.-1) then
-c This is for the NNLL veto cross section
-c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
-         call set_cms_stuff(izero)
-         Q=sqrtshat
-         Q2=shat
-c     set muMad to be the ren scale used in the virtual
-         call set_alphaS(p1_cnt(0,1,0))
-         muMad=sqrt(QES2)        
-         muh=sqrt(Q2)            ! hard scale
-         alphaMad=g**2/(4*pi)    ! alpha_s used by MG5_aMC in the virtual corrections
-         ptjmax=ptj              ! from cuts.inc
-         mu=ptjmax               ! soft scale
-         alpha=alphas(mu)
-         alphah=alphas(muh)
-c$$$         if (abs(QES2-Q2).gt.1d-7) then
-c$$$            write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
-c$$$     &           /'scale should be equal to inv mass',
-c$$$     &           QES2,Q2
-c$$$            stop
-c$$$         endif
-c     compensating factor for difference between muMad and the hard
-c     scale muh
-         H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 +
-     $        Log(muMad/muh)*(36d0 - 48d0*Log(Q/muh))))/9d0
-c     (first order of) the Hard function
-         H1_factor=H1_factor_virt + H1_comp/(2d0*pi)
-         call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, 
-     $        JETRADIUS, Efull)
-         veto_multiplier=(1d0+alphah*H1_factor)*Efull
-         enhanceS=enhance*veto_multiplier
       else
          enhanceS=enhance
       endif
@@ -6094,3 +6011,4 @@ c
       IF(SEED.LE.0) SEED = SEED + M
       FK88RANDOM = SEED*MINV
       END
+

@@ -1753,9 +1753,12 @@ c
       if(do_rwgt_pdf)then
         do n=0,numPDFs-1
           call InitPDF(n)
-          dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
-     #                               ymuF2_over_ref,yQES_over_ref,
-     #                               iwgtinfo)
+          if (ickkw.ne.-1) then
+             dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
+     $            ymuF2_over_ref,yQES_over_ref, iwgtinfo)
+          else
+             dummy=compute_rwgt_wgt_NLO_NNLLveto(1d0,1d0)
+          endif
           wgtNLOxsecPDF(1,n)=wgtNLO11
           wgtNLOxsecPDF(2,n)=wgtNLO12
           wgtNLOxsecPDF(3,n)=wgtNLO20

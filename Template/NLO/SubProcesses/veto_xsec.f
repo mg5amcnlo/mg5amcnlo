@@ -77,3 +77,113 @@ C-----
      $     CF*Gamma0*Log(mu**2/ptjmax**2)**2 - 
      $     2*CF*Gamma0*Log(mu**2/ptjmax**2)*Log(Q2/ptjmax**2)))/(8.*Pi)
 	end subroutine AnomalyExp
+
+
+
+      
+      subroutine compute_veto_compensating_factor(virt_wgt,born_wgt
+     $     ,veto_compensating_factor)
+      implicit none
+      include 'reweight.inc'
+      include 'q_es.inc'
+      include 'coupl.inc'
+      include 'cuts.inc'
+      double precision virt_wgt,born_wgt,veto_compensating_factor
+      double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
+     $     ,alphaMad,Q,muh,Efull,H1_comp,alphas
+      external alphas
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     #                        sqrtshat,shat
+      integer izero
+      parameter (izero=0)
+      double precision pi
+      parameter (pi=3.1415926535897932385d0)
+      call set_cms_stuff(izero)
+      Q=sqrtshat
+      Q2=shat
+      ptjmax=ptj
+      mu=ptjmax
+      if (abs(QES2-mu_R**2).gt.1d-7) then
+         write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+     $        /'scale should be equal to the '/
+     $        /'renormalisation scale',QES2,mu_R
+         stop
+      endif
+      if (abs(QES2-ptjmax**2).gt.1d-7) then
+         write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+     $        /'scale should be equal to the veto scale',QES2
+     $        ,ptjmax**2
+         stop
+      endif
+      muMad=sqrt(QES2)
+      alpha=alphas(mu)
+      alphaMad=g**2/(4*pi)
+      call AnomalyExp(Q2, alpha, mu, ptjmax, E1)
+c compensating factor for difference between muMad and the soft scale mu
+      H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/mu)**2 + Log(muMad/mu)*(36d0
+     $     - 48d0*Log(Q/mu))))/9d0
+      H1_factor_virt=virt_wgt/alphaMad/born_wgt
+      veto_compensating_factor=(H1_factor_virt*alpha + H1_comp*alpha
+     $     /(2d0*pi) + E1) * born_wgt
+
+      return
+      end
+
+      subroutine compute_veto_multiplier()
+      implicit none
+      include 'nexternal.inc'
+      include 'reweight.inc'
+      include 'q_es.inc'
+      include 'coupl.inc'
+      include 'cuts.inc'
+      double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
+     $     ,alphaMad,Q,muh,Efull,H1_comp,alphas
+      external alphas
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     #                        sqrtshat,shat
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      integer izero
+      parameter (izero=0)
+      double precision pi
+      parameter (pi=3.1415926535897932385d0)
+c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
+      call set_cms_stuff(izero)
+      Q=sqrtshat
+      Q2=shat
+      ptjmax=ptj
+c     set muMad to be the ren scale that was used in the virtual
+      call set_alphaS(p1_cnt(0,1,0))
+      if (abs(QES2-mu_R**2).gt.1d-7) then
+         write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+     $        /'scale should be equal to the '/
+     $        /'renormalisation scale',QES2,mu_R
+         stop
+      endif
+      if (abs(QES2-ptjmax**2).gt.1d-7) then
+         write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
+     $        /'scale should be equal to the veto scale',QES2
+     $        ,ptjmax**2
+         stop
+      endif
+      muMad=sqrt(QES2)
+      muh=sqrt(Q2)              ! hard scale
+      alphaMad=g**2/(4*pi)      ! alpha_s used by MG5_aMC in the virtual corrections
+      mu=ptjmax                 ! soft scale
+      alpha=alphas(mu)
+      alphah=alphas(muh)
+c     compensating factor for difference between muMad and the hard
+c     scale muh
+      H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/muh)**2 + Log(muMad/muh)
+     $     *(36d0 - 48d0*Log(Q/muh))))/9d0
+c     (first order of) the Hard function
+      H1_factor=H1_factor_virt + H1_comp/(2d0*pi)
+      call Anomaly(Q2, alpha, alphah, mu, muh, ptjmax, JETRADIUS, Efull)
+      veto_multiplier=(1d0+alphah*H1_factor)*Efull
+      return
+      end
