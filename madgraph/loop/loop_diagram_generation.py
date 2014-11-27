@@ -558,6 +558,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # already asked for the loop squared.
         if self['process']['has_born']:
             self['process']['has_born'] = self['born_diagrams']!=[]
+        self['has_born'] = self['process']['has_born']
 
         ldg_debug_info("User input born orders",self['process']['orders'])
         ldg_debug_info("User input squared orders",
