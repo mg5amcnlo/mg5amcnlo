@@ -975,7 +975,7 @@ c with the reference weight
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
 
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -1206,7 +1206,7 @@ c with the reference weight
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
 
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -1511,7 +1511,7 @@ c with the reference weight
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
 
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS

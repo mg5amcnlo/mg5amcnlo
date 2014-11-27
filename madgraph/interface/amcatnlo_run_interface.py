@@ -1487,6 +1487,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 raise aMCatNLOError('Required accuracy ("req_acc" in the run_card) should '\
                                         'be between larger than 0 and smaller than 1, '\
                                         'or set to -1 for automatic determination. Current value is %s' % req_acc)
+# For more than 1M events, set req_acc to 0.001 (except when it was explicitly set in the run_card)
+            elif float(req_acc) < 0 and nevents > 1000000 :
+                req_acc='0.001'
 
             shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
 
@@ -1787,11 +1790,11 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.' and int(self.run_card['ickkw']) != 4:
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.' and int(self.run_card['ickkw']) != 4:
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.':
                    message = message + \
                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -2292,7 +2295,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') and int(self.run_card['ickkw']) != 4 :
+        if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton', update_results=True)
@@ -3295,8 +3298,8 @@ Integrated cross-section
             if shower == 'PYTHIA8':
                 input_files.append(pjoin(cwd, 'Pythia8.exe'))
                 input_files.append(pjoin(cwd, 'Pythia8.cmd'))
-                input_files.append(pjoin(cwd, 'config.sh'))
                 if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+                    input_files.append(pjoin(cwd, 'config.sh'))
                     input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
                 else:
                     input_files.append(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'))
@@ -3613,18 +3616,20 @@ Integrated cross-section
             for code in ['applgrid','amcfast']:
                 try:
                     p = subprocess.Popen([self.options[code], '--version'], \
-                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    output, error = p.communicate()
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                except OSError:
+                    raise aMCatNLOError(('No valid %s installation found. \n' + \
+                       'Please set the path to %s-config by using \n' + \
+                       'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+                else:
+                    output, _ = p.communicate()
                     if code is 'applgrid' and output < '1.4.63':
                         raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
-                                                +' You are using %s',output)
+                                             +' You are using %s',output)
                     if code is 'amcfast' and output < '1.1.1':
                         raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
-                                                +' You are using %s',output)
-                except Exception:
-                    raise aMCatNLOError(('No valid %s installation found. \n' + \
-                          'Please set the path to %s-config by using \n' + \
-                          'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+                                             +' You are using %s',output)
+                
             # set-up the Source/make_opts with the correct applgrid-config file
             appllibs="  APPLLIBS=$(shell %s --ldcflags) $(shell %s --ldflags) \n" \
                              % (self.options['applgrid'],self.options['amcfast'])

@@ -5018,8 +5018,8 @@ This implies that with decay chains:
                     continue
                 path = self.options[key]
                 #this is for pythia8
-                if key == 'pythia8_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Pythia.h')):
-                    if not os.path.isfile(pjoin(path, 'include', 'Pythia.h')):
+                if key == 'pythia8_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Pythia8', 'Pythia.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'Pythia8', 'Pythia.h')):
                         self.options['pythia8_path'] = None
                     else:
                         continue
