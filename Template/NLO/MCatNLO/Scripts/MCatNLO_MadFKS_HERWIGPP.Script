@@ -611,6 +611,8 @@ set /Herwig/Particles/Omega_bbar+:Stable Stable
 #
 #553
 set /Herwig/Particles/Upsilon:Stable Stable
+#551
+set /Herwig/Particles/eta_b:Stable Stable
 
 EOF
 fi
