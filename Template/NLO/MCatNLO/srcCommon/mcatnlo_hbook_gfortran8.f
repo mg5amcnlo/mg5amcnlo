@@ -1327,6 +1327,8 @@ C fine modifiche
       YTIT=YU+YTIT0
       WRITE(99,101) XL,YTIT,TITLE(NH)(1:40)
 101   FORMAT('  TITLE ',2(F8.4,1X),'"',A,'"')
+      WRITE(99,151) TITLE(NH)
+151   FORMAT(' (  TITLE    TOP "',A,'"')
       YTIT=YTIT-2.*YTIT0
       WRITE(99,102) XTIT,YTIT,HINT(NH)
 102   FORMAT('  TITLE ',2(F8.4,1X),'" INT=',1PE10.3,'"')
