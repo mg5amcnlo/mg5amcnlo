@@ -1647,4 +1647,4 @@ class LoopInducedMultiProcess(diagram_generation.MultiProcess):
     def get_amplitude_from_proc(cls,proc):
         """ Return the correct amplitude type according to the characteristics of
             the process proc """
-        return LoopAmplitude({"process": proc})   
+        return LoopAmplitude({"process": proc, 'has_born':False})   

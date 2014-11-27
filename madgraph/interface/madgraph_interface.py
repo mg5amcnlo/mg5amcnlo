@@ -3882,6 +3882,8 @@ This implies that with decay chains:
         for amp in myproc.get('amplitudes'):
             if amp not in self._curr_amps:
                 self._curr_amps.append(amp)
+                if amp['has_born']:
+                    raise Exception
             elif warning_duplicate:
                 raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                             amp.nice_string_processes()
