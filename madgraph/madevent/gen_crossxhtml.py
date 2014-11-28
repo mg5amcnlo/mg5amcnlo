@@ -24,15 +24,18 @@ import glob
 import logging
 
 try:
+    import madgraph
+except ImportError:
     import internal.files as files
     import internal.save_load_object as save_load_object
     import internal.lhe_parser as lhe_parser
     import internal.misc as misc
-except ImportError:
+else:
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.various.lhe_parser as lhe_parser
     import madgraph.various.misc as misc
+
 pjoin = os.path.join
 exists = os.path.exists
 logger = logging.getLogger('madgraph.stdout') # -> stdout
@@ -737,7 +740,6 @@ class OneTagResults(dict):
     def update_status(self, level='all', nolevel=[]):
         """update the status of the current run """
 
-        import misc as misc
         exists = os.path.exists
         run = self['run_name']
         tag =self['tag']

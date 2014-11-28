@@ -609,7 +609,7 @@ class LoopDiagramDrawerTest(unittest.TestCase):
 
         myStructRep=loop_base_objects.FDStructureList()
         
-        myPentaDiag1.tag(myStructRep,7,8,self.myproc)
+        myPentaDiag1.tag(myStructRep, self.myproc['model'],7,8)
         
         return myPentaDiag1,myStructRep
         # test the drawing of myPentaDiag with its loop vertices and those in the 

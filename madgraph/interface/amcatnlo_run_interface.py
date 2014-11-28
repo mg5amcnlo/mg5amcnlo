@@ -54,24 +54,9 @@ logger = logging.getLogger('madgraph.stdout') # -> stdout
 logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
  
 try:
-    # import from madgraph directory
-    import madgraph.interface.extended_cmd as cmd
-    import madgraph.interface.common_run_interface as common_run
-    import madgraph.iolibs.files as files
-    import madgraph.iolibs.save_load_object as save_load_object
-    import madgraph.various.banner as banner_mod
-    import madgraph.various.cluster as cluster
-    import madgraph.various.misc as misc
-    import madgraph.various.gen_crossxhtml as gen_crossxhtml
-    import madgraph.various.sum_html as sum_html
-    import madgraph.various.shower_card as shower_card
-    import madgraph.various.FO_analyse_card as analyse_card
-
-    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
-    aMCatNLO = False
-except ImportError, error:
-    logger.debug(error)
-    # import from madevent directory
+    import madgraph
+except ImportError: 
+    aMCatNLO = True 
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
     import internal.banner as banner_mod
@@ -83,20 +68,41 @@ except ImportError, error:
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.sum_html as sum_html
     import internal.shower_card as shower_card
-    import internal.FO_analyse_card as analyse_card
-    aMCatNLO = True
+    import internal.FO_analyse_card as analyse_card 
+else:
+    # import from madgraph directory
+    aMCatNLO = False
+    import madgraph.interface.extended_cmd as cmd
+    import madgraph.interface.common_run_interface as common_run
+    import madgraph.iolibs.files as files
+    import madgraph.iolibs.save_load_object as save_load_object
+    import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
+    import madgraph.madevent.sum_html as sum_html
+    import madgraph.various.banner as banner_mod
+    import madgraph.various.cluster as cluster
+    import madgraph.various.misc as misc
+    import madgraph.various.shower_card as shower_card
+    import madgraph.various.FO_analyse_card as analyse_card
+    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
+    
+
 
 class aMCatNLOError(Exception):
     pass
 
 
-def compile_dir(arguments):
+def compile_dir(*arguments):
     """compile the direcory p_dir
     arguments is the tuple (me_dir, p_dir, mode, options, tests, exe, run_mode)
     this function needs not to be a class method in order to do
     the compilation on multicore"""
 
-    (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
+    if len(arguments) == 1:
+        (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments[0]
+    elif len(arguments)==7:
+        (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
+    else:
+        raise aMCatNLOError, 'not correct number of argument'
     logger.info(' Compiling %s...' % p_dir)
 
     this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
@@ -1294,16 +1300,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
         randinit.write('r=%d' % iseed)
         randinit.close()
-
-
-    def get_characteristics(self, file):
-        """reads the proc_characteristics file and initialises the correspondant
-        dictionary"""
-        lines = [l for l in open(file).read().split('\n') if l and not l.startswith('#')]
-        self.proc_characteristics = {}
-        for l in lines:
-            key, value = l.split('=')
-            self.proc_characteristics[key.strip()] = value.strip()
             
         
     def run(self, mode, options):
@@ -1313,7 +1309,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        if mode in ['LO', 'NLO'] and self.run_card['iappl'] == '2' and not options['only_generation']:
+        if mode in ['LO', 'NLO'] and self.run_card['iappl'] == 2 and not options['only_generation']:
             options['only_generation'] = True
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
 
@@ -1377,7 +1373,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
-        if self.run_card['iappl']=='2':
+        if self.run_card['iappl'] == 2:
             self.applgrid_distribute(options,mode,p_dirs)
 
         if options['reweightonly']:
@@ -1391,7 +1387,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             mode_dict = {'NLO': 'all', 'LO': 'born'}
             logger.info('Doing fixed order %s' % mode)
             req_acc = self.run_card['req_acc_FO']
-            if not options['only_generation'] and req_acc != '-1':
+            if not options['only_generation'] and req_acc != -1:
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], 0, '-1', '6','0.10') 
                 self.update_status('Setting up grids', level=None)
                 self.run_all(job_dict, [['0', mode_dict[mode], '0']], 'Setting up grids')
@@ -1431,7 +1427,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
             # collect the scale and PDF uncertainties
             scale_pdf_info={}
-            if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
+            if self.run_card['reweight_scale'] or self.run_card['reweight_PDF']:
                 data_files=[]
                 for dir in p_dirs:
                     for obj in folder_names[mode]:
@@ -1469,7 +1465,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             cross, error = sum_html.make_all_html_results(self, folder_names[mode])
             self.results.add_detail('cross', cross)
             self.results.add_detail('error', error)
-            if self.run_card['iappl'] != '0':
+            if self.run_card['iappl'] != 0:
                 self.applgrid_combine(cross,error)
             self.update_status('Run complete', level='parton', update_results=True)
 
@@ -1498,8 +1494,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     % (shower, ', '.join(shower_list)))
 
 # check that PYTHIA6PT is not used for processes with FSR
-            if shower == 'PYTHIA6PT' and \
-                self.proc_characteristics['has_fsr'] == 'true':
+            if shower == 'PYTHIA6PT' and self.proc_characteristics['has_fsr']:
                 raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
 
             if mode in ['aMC@NLO', 'aMC@LO']:
@@ -1604,9 +1599,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         for obs in range(0,nobs):
             gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
             # combine APPLgrids from different channels for observable 'obs'
-            if self.run_card["iappl"] == "1":
+            if self.run_card["iappl"] == 1:
                 misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
-            elif self.run_card["iappl"] == "2":
+            elif self.run_card["iappl"] == 2:
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
                 misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
@@ -1750,7 +1745,7 @@ Integrated cross-section
         for line in proc_card_lines:
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
-        lpp = {'0':'l', '1':'p', '-1':'pbar'}
+        lpp = {0:'l', 1:'p', -1:'pbar'}
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
         (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
@@ -1790,11 +1785,11 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
+                if self.run_card['nevents']>=10000 and self.run_card['reweight_scale']:
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.':
+                if self.run_card['nevents']>=10000 and self.run_card['reweight_PDF']:
                    message = message + \
                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -1822,11 +1817,11 @@ Integrated cross-section
                 message = '\n      ' + status[step] + proc_info + \
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
-                if self.run_card['reweight_scale']=='.true.':
+                if self.run_card['reweight_scale']:
                     message = message + \
                         ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                         (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if self.run_card['reweight_PDF']=='.true.':
+                if self.run_card['reweight_PDF']:
                     message = message + \
                         ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                         (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -2290,7 +2285,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') :
+        if self.run_card['reweight_scale'] or self.run_card['reweight_PDF'] :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton', update_results=True)
@@ -3406,7 +3401,7 @@ Integrated cross-section
                         to_move = ['mint_grids', 'grid.MC_integer']
                     else: 
                         to_move  = []
-                    if self.run_card['iappl'] =='2':
+                    if self.run_card['iappl'] == 2:
                         for grid in glob.glob(pjoin(cwd,base,'grid_obs_*_in.root')):
                             to_move.append(grid)
                     if not os.path.exists(pjoin(cwd,current)):
@@ -3579,8 +3574,8 @@ Integrated cross-section
 
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf' and \
-                (self.banner.get_detail('run_card', 'lpp1') != '0' or \
-                 self.banner.get_detail('run_card', 'lpp1') != '0'):
+                (self.banner.get_detail('run_card', 'lpp1') != 0 or \
+                 self.banner.get_detail('run_card', 'lpp1') != 0):
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
@@ -3591,9 +3586,9 @@ Integrated cross-section
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
         else:
-            if self.run_card['lpp1'] == '1' == self.run_card['lpp2']:
+            if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
-            if self.run_card['lpp1'] == '0' == self.run_card['lpp2']:
+            if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
@@ -3601,7 +3596,7 @@ Integrated cross-section
                 pass
 
         # read the run_card to find if applgrid is used or not
-        if self.run_card['iappl'] != '0':
+        if self.run_card['iappl'] != 0:
             os.environ['applgrid'] = 'True'
             # check versions of applgrid and amcfast
             for code in ['applgrid','amcfast']:
@@ -3733,7 +3728,7 @@ Integrated cross-section
                     " the one specified in MG5_aMC. Please recompile IREGI.")
 
         # check if MadLoop virtuals have been generated
-        if self.proc_characteristics['has_loops'].lower() == 'true' and \
+        if self.proc_characteristics['has_loops'] and \
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
@@ -3769,10 +3764,12 @@ Integrated cross-section
                     tests, exe, self.options['run_mode']])
         try:
             compile_cluster.wait(self.me_dir, update_status)
-
-        except:
+        except Exception, error:
+            logger.warning("Fail to compile the Subprocesses")
+            if __debug__:
+                raise
             compile_cluster.remove()
-            self.quit()
+            self.do_quit('')
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:

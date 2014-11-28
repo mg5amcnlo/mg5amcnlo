@@ -7,7 +7,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and TIR.
 C     
-C     Process: g g > t t~ [ QCD ]
+C     Process: g g > t t~ [ virt = QCD ]
 C     
 C     
 C     CONSTANTS 
@@ -60,20 +60,14 @@ C
       REAL*8 LSCALE
       COMMON/ML5_0_CT/LSCALE,CTMODE
 
-
       COMPLEX*16 LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
       COMMON/ML5_0_LCOEFS/LOOPCOEFS
-
 C     ----------
 C     BEGIN CODE
 C     ----------
 
 C     INITIALIZE TIR IF NEEDED
-      IF(MLREDUCTIONLIB(I_LIB).EQ.4)THEN
-C       Using Golem95
-        CALL ML5_0_GOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
-        RETURN
-      ENDIF
+
       IF (TIRINIT) THEN
         TIRINIT=.FALSE.
         CALL ML5_0_INITTIR()
@@ -128,7 +122,6 @@ C     NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       DO I=0,RANK
         NLOOPCOEFS=NLOOPCOEFS+(3+I)*(2+I)*(1+I)/6
       ENDDO
-
       SELECT CASE(MLREDUCTIONLIB(I_LIB))
       CASE(2)
 C     PJFry++
@@ -141,10 +134,9 @@ C     IREGI
 C     CONVERT TO MADLOOP CONVENTION
       CALL ML5_0_CONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)
       END SELECT
-
       DO I=1,3
-        RES(I)=LOOPCOEFS(0,I_SQSO,I_LOOPGROUP)*TIRCOEFS(0,I)
-        DO J=1,NLOOPCOEFS-1
+        RES(I)=(0.0D0,0.0D0)
+        DO J=0,NLOOPCOEFS-1
           RES(I)=RES(I)+LOOPCOEFS(J,I_SQSO,I_LOOPGROUP)*TIRCOEFS(J,I)
         ENDDO
       ENDDO

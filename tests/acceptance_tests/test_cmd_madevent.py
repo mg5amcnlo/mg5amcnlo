@@ -302,7 +302,7 @@ class TestMECmdShell(unittest.TestCase):
     def load_result(self, run_name):
         
         import madgraph.iolibs.save_load_object as save_load_object
-        import madgraph.various.gen_crossxhtml as gen_crossxhtml
+        import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
         
         result = save_load_object.load_from_file('%s/HTML/results.pkl' % self.run_dir)
         return result[run_name]
@@ -553,7 +553,7 @@ class TestMEfromfile(unittest.TestCase):
     def load_result(self, run_name):
         
         import madgraph.iolibs.save_load_object as save_load_object
-        import madgraph.various.gen_crossxhtml as gen_crossxhtml
+        import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
         
         result = save_load_object.load_from_file(pjoin(self.run_dir,'HTML/results.pkl'))
         return result[run_name]
@@ -631,7 +631,7 @@ class TestMEfromPdirectory(unittest.TestCase):
     def load_result(self, run_name):
         
         import madgraph.iolibs.save_load_object as save_load_object
-        import madgraph.various.gen_crossxhtml as gen_crossxhtml
+        import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
         
         result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
         return result[run_name]

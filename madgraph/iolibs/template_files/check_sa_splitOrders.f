@@ -17,8 +17,9 @@ C     INCLUDE FILES
 C     
 C ---  the include file with the values of the parameters and masses	
       INCLUDE "coupl.inc"
-C ---  integer nexternal ! number particles (incoming+outgoing) in the me 
-      INCLUDE "nexternal.inc" 
+C integer nexternal and number particles (incoming+outgoing) in the me 
+      INTEGER NEXTERNAL, NINCOMING
+      PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
 C ---  particle masses
       REAL*8 PMASS(NEXTERNAL)	
 C ---  integer    n_max_cg
@@ -100,7 +101,7 @@ c
 c     
 c     Now we can call the matrix element!
 c
-      CALL SMATRIX_SPLITORDERS(P,MATELEMS)
+      CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P,MATELEMS)
       MATELEM=MATELEMS(0)
       %(printout_sqorders)s
 c
@@ -161,7 +162,9 @@ C ****************************************************************************
 C ---- auxiliary function to change convention between madgraph and rambo
 c ---- four momenta. 	  
 	  IMPLICIT NONE
-	  INCLUDE "nexternal.inc"
+C integer nexternal and number particles (incoming+outgoing) in the me 
+        INTEGER NEXTERNAL, NINCOMING
+        PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
 C	  ARGUMENTS
 	  REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
 C         LOCAL
@@ -234,7 +237,9 @@ C *    P  = PARTICLE MOMENTA ( DIM=(4,NEXTERNAL-nincoming) )            *
 C *    WT = WEIGHT OF THE EVENT                                         *
 C ***********************************************************************
       IMPLICIT REAL*8(A-H,O-Z)
-      INCLUDE "nexternal.inc"
+C integer nexternal and number particles (incoming+outgoing) in the me 
+      INTEGER NEXTERNAL, NINCOMING
+      PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
       DIMENSION XM(NEXTERNAL-NINCOMING),P(4,NEXTERNAL-NINCOMING)
       DIMENSION Q(4,NEXTERNAL-NINCOMING),Z(NEXTERNAL-NINCOMING),R(4), B(3),P2(NEXTERNAL-NINCOMING),XM2(NEXTERNAL-NINCOMING), E(NEXTERNAL-NINCOMING),V(NEXTERNAL-NINCOMING),IWARN(5)
       SAVE ACC,ITMAX,IBEGIN,IWARN

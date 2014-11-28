@@ -105,6 +105,9 @@ c-----
       if (nsteps .lt. 1) nsteps=1
       nwrite = itmax*ncall/nsteps
 
+C     Fix for 2>1 process where ndim is 2 and not 1
+      ninvar = max(2,ninvar)
+
       call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
       call graph_init
       do i=1,itmax
@@ -201,7 +204,7 @@ c      nun = n_unwgted()
 c     JA 02/2011 Added twgt to results.dat to allow event generation in
 c     first iteration for gridpack runs
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,tsigma,0.0,
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,tsigma, 0.0,
      &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean
       else
          write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,0.0,tsigma,
@@ -473,6 +476,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'maxconfigs.inc'
+      include 'run.inc'
 c
 c     Arguments
 c
@@ -482,6 +486,7 @@ c
 c     Local
 c
       integer i, j
+      integer get_maxsproc
 c
 c     Global
 c
@@ -510,6 +515,10 @@ c
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
+      double precision twgt, maxwgt,swgt(maxevents)
+      integer                             lun, nw, itminx
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itminx
+      
       integer              icor
       common/to_correlated/icor
 
@@ -615,10 +624,10 @@ c     Try to read grid from file
 c
       flat_grid=.true.
       open(unit=25,file='ftn25',status='unknown',err=102)
-      read(25,fmt='(4f20.17)', err=101, end=101)
-     .     ((grid(2,i,j),i=1,ng),j=1,maxinvar)
-c      write(*,*) 'Got the grid OK, now getting alpha'
-c      read(25,fmt='(4f20.17)',err=101,end=101)(alpha(i),i=1,maxconfigs)
+      read(25,*, err=1011, end=1012)
+     .     ((grid(2,i,j),i=1,ng),j=1,invar)
+      read(25,*) twgt
+      call read_discrete_grids(25)
       write(*,*) 'Grid read from file'
       flat_grid=.false.
       close(25)
@@ -650,14 +659,19 @@ c         enddo
          enddo
       endif
       goto 103
+ 1011  write(*,*) 'fail to open file'
+       goto 101
+ 1012  write(*,*) 'fail to read data'
+       goto 101
  101  close(25)
 c      write(*,*) 'Tried reading it',i,j
  102  write(*,*) 'Error opening grid'
+
 c
 c     Unable to read grid, using uniform grid and equal points in
 c     each configuration
 c
-      write(*,*) 'Using Uniform Grid!'
+      write(*,*) 'Using Uniform Grid!', maxinvar
       do j = 1, maxinvar
          do i = 1, ng
             grid(2, i, j) = xgmin+ (xgmax-xgmin)*(i / dble(ng))**1
@@ -674,6 +688,14 @@ c
 c      write(*,*) 'Forwarding random number generator'
 
  103  write(*,*) 'Grid defined OK'
+
+C     sanity check that we have a minimal number of event      
+      if ( MC_GROUPED_SUBPROC )then
+         events = max(events, maxtries)
+      else 
+         events = max(events, 2*maxtries*get_maxsproc())
+      endif
+
       end
 
       subroutine setgrid(j,xo,a,itype)
@@ -847,6 +869,97 @@ c
          endif
       endif
       end
+
+      subroutine write_discrete_grids(stream_id, grid_type)
+c************************************************************************
+c     Write out the grid using the DiscreteSampler module
+c************************************************************************
+      use DiscreteSampler          
+      implicit none
+      integer, intent(in)                           :: stream_id
+      character(len=*)                              :: grid_type
+      logical MC_grouped_subproc
+      common/to_MC_grouped_subproc/MC_grouped_subproc
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+c
+c     Begin code
+c
+
+      if (ISUM_HEL.ne.0.and.DS_get_dim_status('Helicity').ge.1) then
+        call DS_write_grid(stream_id, dim_name='Helicity', 
+     &                                              grid_type=grid_type)
+      elseif(ISUM_HEL.eq.0)then
+        call write_good_hel(stream_id)  
+      endif
+      
+
+
+      if(MC_grouped_subproc.and.
+     &             DS_get_dim_status('grouped_processes').ge.1) then
+        call DS_write_grid(stream_id, dim_name='grouped_processes', 
+     &                                              grid_type=grid_type)
+      endif
+
+      end subroutine write_discrete_grids
+
+      subroutine read_discrete_grids(stream_id)
+c************************************************************************
+c     Write out the grid using the DiscreteSampler module
+c************************************************************************
+      use DiscreteSampler          
+      implicit none
+      integer, intent(in)                           :: stream_id
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+      
+      if (ISUM_HEL.eq.0)then
+         call read_good_hel(stream_id)
+      endif
+      call DS_load_grid(stream_id)
+
+      end subroutine read_discrete_grids
+
+      subroutine sample_get_discrete_x(wgt,picked_bin,iconfig,dim_name)
+c************************************************************************
+c     Returns maxdim random numbers between 0 and 1, and the wgt
+c     associated with this set of points, and the iteration number
+c     This routine chooses the point within the range specified by
+c     xmin and xmax for dimension j in configuration ipole
+c************************************************************************
+      use DiscreteSampler
+
+      implicit none
+      include 'genps.inc'
+C     Subroutine arguments
+      integer picked_bin
+      character(len=*) dim_name
+      real*8 wgt
+C     This variable iconfig is what corresponds to ipole in sample_get_x
+C     and is used for random number generation
+      integer iconfig
+C     Local variables
+      real*8 jacobian
+      real*8 rdm
+      integer dummy
+c     
+c      Begin code
+c
+C     Fetch a random number bewteen 0.0 and 1.0
+c     The fourth argument is not used and therefore a dummy
+      dummy = 0
+      call ntuple(rdm,0.0d0,1.0d0,dummy,iconfig)
+C     Pick a point using the DiscreteSampler module
+      CALL DS_get_point(dim_name, rdm, picked_bin, jacobian, 'norm') 
+C     Store the helicity sampling jacobian so that it can be divided out
+c     of wgt later when adding an entry to the DiscreteSampler helicity
+c      grid. Also we don't want to multiply wgt by it yet since this is
+c     taken care of at the level of matrix<i> already.
+      hel_jacobian = jacobian
+      
+      end subroutine sample_get_discrete_x
 
       subroutine sample_get_x(wgt, x, j, ipole, xmin, xmax)
 c************************************************************************
@@ -1168,6 +1281,93 @@ c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
 
       end
 
+C
+C     Subroutine to take care of the update of the discrete grids
+C     (used for helicity and the matrix<i> choice in the grouped case
+C     as implented in the DiscreteSampler module.
+C
+      subroutine add_entry_to_discrete_dimensions(wgt)
+      use DiscreteSampler
+      implicit none
+c
+c     Constants
+c
+      include 'genps.inc'
+c
+c     Arguments
+c
+      double precision wgt
+c
+c     Local
+c
+c
+c     Global
+c
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+      logical cutsdone, cutspassed
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+c
+c     Begin code
+c
+c       It is important to divide the wgt stored in the grid by the 
+c       corresponding jacobian otherwise it flattens the sampled
+c       distribution.
+C       Also, if HEL_PICKED is equal to -1, it means that MadEvent
+C       is in the initialization stage where all helicity were probed
+c       and added individually to the grid directly by matrix<i>.f so
+c       that they shouldn't be added here.
+        if(ISUM_HEL.ne.0.and.HEL_PICKED.ne.-1.and.
+     &                            (.NOT.CUTSDONE.or.CUTSPASSED)) then
+          call DS_add_entry('Helicity',HEL_PICKED,(wgt/hel_jacobian))
+        endif
+
+      end subroutine add_entry_to_discrete_dimensions
+
+C
+C     Subroutine to take care of the update of the discrete grids
+C     (used for helicity and the matrix<i> choice in the grouped case
+C     as implented in the DiscreteSampler module.
+C
+      subroutine update_discrete_dimensions()
+      use DiscreteSampler
+      implicit none
+c
+c     Constants
+c
+      include 'genps.inc'
+c
+c     Arguments
+c
+c
+c     Local
+c
+      type(SampledDimension) tmp_dim      
+c
+c     Global
+c
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+      logical MC_grouped_subproc
+      common/to_MC_grouped_subproc/MC_grouped_subproc
+c
+c     Begin code
+c
+      if(ISUM_HEL.ne.0) then
+        call DS_update_grid('Helicity', filterZeros=.True.)
+        tmp_dim = DS_get_dimension(ref_grid,'Helicity')
+C       Security in case of all helicity vanishing (G1 of gg > qq )
+        if (size(tmp_dim%bins).eq.0) then
+          call none_pass(-1)
+        endif
+      endif
+      if(MC_grouped_subproc.and.DS_get_dim_status('grouped_processes').ne.-1) then
+        call DS_update_grid('grouped_processes', filterZeros=.True.)
+      endif
+
+      end subroutine update_discrete_dimensions
 
       subroutine sample_put_point(wgt, point, iteration,ipole)
 c**************************************************************************
@@ -1190,12 +1390,12 @@ c
 c
 c     Local
 c
-      integer i, j, k, knt, non_zero, nun,itsum
+      integer i, j, k, knt, nun,itsum
       double precision vol,xnmin,xnmax,tot,xdum,tmp1,chi2tmp
       double precision rc, dr, xo, xn, x(maxinvar), dum(ng-1)
       save vol,knt
       double precision  chi2
-      save chi2, non_zero
+      save chi2
       double precision wmax1,ddumb
       save wmax1
       double precision twgt1,xchi2,xxmean,tmeant,tsigmat
@@ -1221,8 +1421,8 @@ c
       common/to_result/mean,rmean,sigma
 
       double precision grid2(0:ng,maxinvar)
-      integer               inon_zero(ng,maxinvar)
-      common/to_grid2/grid2,inon_zero
+      integer               inon_zero(ng,maxinvar), non_zero
+      common/to_grid2/grid2,inon_zero,non_zero
 
       double precision tmean, trmean, tsigma
       integer             dim, events, itm, kn, cur_it, invar, configs
@@ -1275,6 +1475,7 @@ c
 c-----
 c  Begin Code
 c-----
+
       if (first_time) then
          first_time = .false.
          twgt1 = 0d0       !
@@ -1305,6 +1506,9 @@ c-----
       endif
 
       if (iteration .eq. cur_it) then
+c        Add the current point to the DiscreteSamplerGrid
+         call add_entry_to_discrete_dimensions(wgt)
+
          kn = kn + 1
          if (.true.) then       !Average points to increase error estimate
             twgt1=twgt1+dabs(wgt)     !This doesn't change anything should remove
@@ -1389,11 +1593,37 @@ c
 c     Now if done with an iteration, print out stats, rebin, reset
 c         
 c         if (kn .eq. events) then
-         if (kn .ge. max_events .and. non_zero .lt. 5) then
+         if (kn .ge. max_events .and. non_zero .le. 5) then
             call none_pass(max_events)
          endif
          if (non_zero .eq. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
+
+c          # special mode where we store information to combine them
+           if(use_cut.eq.-2)then
+                open(unit=22, file="grid_information")
+                write(22,*) non_zero, ng, invar
+                write(22,*) ((grid(1,i,j),i=1,ng),j=1,invar)
+                write(22,*) ((grid(2,i,j),i=1,ng),j=1,invar)
+                write(22,*) ((inon_zero(i,j),i=1,ng),j=1,invar)
+                write(22,*) (xmin(j), j=1,invar)
+                write(22,*) (xmax(j), j=1,invar)
+                write(22,*) mean, rmean, sigma, wmax, kn,events
+c               In order not to write out the reference grid but just
+c               the points which were added for this last iteration,
+c               we write out the discrete 'running' grids before the
+c               update of the reference grid.
+                call write_discrete_grids(22,'all')
+                close(22)
+           endif
+
+C
+C    Now updated the discrete dimensions of the DiscreteSampler module
+C    used for sampling helicity configurations and matrix<i> config
+C    choice in the grouped case.
+C
+           call update_discrete_dimensions()
+
             mean=mean*dble(events)/dble(non_zero)
             rmean=rmean*dble(events)/dble(non_zero)
             twgt1=twgt1*dble(events)/dble(non_zero)
@@ -1420,6 +1650,7 @@ c               vol = 1d0/(knt*itm)
                sigma = (sigma/vol/vol-non_zero*mean*mean*navg)  !knt replaced by non_zero
      .              / dble(knt-1) / dble(knt)
             else
+
                sigma = (sigma/vol/vol - knt*mean*mean)
      .              / dble(knt-1) / dble(knt)
             endif
@@ -1511,6 +1742,7 @@ c     &           '  Fluctuation: ',sigma,
 c     &           wmax*(dble(non_zero)/dble(kn)),
 c     &           dble(non_zero)/dble(kn)*100.,'%'
 c            close(22)
+
 c------
 c    Here we will double the number of events requested for the next run
 c-----
@@ -1526,12 +1758,13 @@ c            write(*,*) 'New number of events',events,twgt
             cur_it = cur_it + 1
             kn = 0
             wmax = -1d0
+
 c
 c     do so adjusting of weights according to number of events in bin
 c
             do j=1,invar
                do i = 1, ng
-                  if (use_cut .ne. 2 .and.
+                  if (abs(use_cut) .ne. 2 .and.
      &                use_cut .ne. 3 .and. use_cut .ne. 5)
      $                 inon_zero(i,j) = 0
                   if (use_cut .eq. 3) grid(1,i,j)=grid2(i,j)
@@ -1716,10 +1949,12 @@ c               if (1d0/sqrt(tsigma) .lt. accur) then
                   write(*, 80) real(tmean), real(tsigma), real(trmean), real(chi2)
                   if (use_cut .ne. 0) then
                   open(26, file='ftn26',status='unknown')
-                  write(26,fmt='(4f20.17)')
-     $                 ((grid(2,i,j),i=1,ng),j=1,maxinvar)
-                  write(26,fmt='(4f20.17)') (alpha(i),i=1,maxconfigs)
-                  close(26)
+                  write(26,fmt='(4f21.17)')
+     $                 ((grid(2,i,j),i=1,ng),j=1,invar)
+                  write(26,*) twgt
+c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)
+                  call write_discrete_grids(26,'ref')
+                  close(26)                  
                   endif
                   call sample_writehtm()
 c                  open(unit=22,file=result_file,status='old',
@@ -1775,9 +2010,11 @@ c     Check nun and chi2 (ja 03/11)
                   write(*, 80) real(tmean), real(tsigma), real(chi2)
                   if (use_cut .ne. 0) then
                   open(26, file='ftn26',status='unknown')
-                  write(26,fmt='(4f20.17)')
-     $                 ((grid(2,i,j),i=1,ng),j=1,maxinvar)
-                  write(26,fmt='(4f20.17)') (alpha(i),i=1,maxconfigs)
+                  write(26,fmt='(4f21.17)')
+     $                 ((grid(2,i,j),i=1,ng),j=1,invar)
+                  write(26,*) twgt
+c                  write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
+                  call write_discrete_grids(26,'ref')
                   close(26)
                   endif
                   call sample_writehtm()
@@ -1806,9 +2043,11 @@ c 129              close(22)
      .              13X,21HChi**2 per DoF.     =,f12.4/1X,79(1H-))
                if (use_cut .ne. 0) then
                open(26, file='ftn26',status='unknown')
-               write(26,fmt='(4f20.17)')
-     $              ((grid(2,i,j),i=1,ng),j=1,maxinvar)
-               write(26,fmt='(4f20.17)') (alpha(i),i=1,maxconfigs)
+               write(26,fmt='(4f21.17)')
+     $              ((grid(2,i,j),i=1,ng),j=1,invar)
+               write(26,*) twgt 
+               call write_discrete_grids(26,'ref')
+c               write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
                close(26)
                endif
                call sample_writehtm()
@@ -1879,6 +2118,10 @@ c     Remove file events.lhe (otherwise event combination gets screwed up)
       write(67,*)
       close(67)
 
+      open(unit=67, file='grid_information')
+      write(67,*) ''
+      close(67)
+
       stop
       end
             
@@ -1912,7 +2155,7 @@ c-----
 c  Begin Code
 c-----
       kmax=k
-      do i=k+1,ng-1
+      do i=k+1,ng
          if (grid(1,i,j) .gt. 0d0) kmax=i
       enddo
       xo = grid(1,k,j)
@@ -1929,7 +2172,7 @@ c      do i=k+1,ng-1                      !Original without kmax stuff
       end do
 c      grid(1, ng, j) = (xn + xo) / 2d0  !Original without kmax stuff
       grid(1, kmax, j) = (xn + xo) / 2d0
-      x(j) = x(j) + grid(1, ng, j)
+      x(j) = x(j) + grid(1, kmax, j)
       end
 
       double precision function xbin(y,j)
@@ -2095,6 +2338,34 @@ c-----
       ran1=r(j)
       r(j)=(float(ix1)+float(ix2)*rm2)*rm1
       return
+      end
+
+      subroutine reset_cumulative_variable()
+C       Reset to zero all the variable which evaluates the cross-section.
+C       grid information for the current-grid/non-zero entry/...
+C       This is used to avoid the (small) bias introduce in the first iteration
+C       Due to the initialization of the helicity sum.
+      implicit none
+      include 'genps.inc'
+
+      double precision grid2(0:ng,maxinvar)
+      integer               inon_zero(ng,maxinvar), non_zero
+      common/to_grid2/grid2,inon_zero, non_zero
+      double precision    grid(2, ng, 0:maxinvar)
+      common /data_grid/ grid
+C     LOCAL
+      integer i,j
+
+      write(*,*) "RESET CUMULATIVE VARIABLE"
+      non_zero = 0
+      do j=1,maxinvar
+         do i=1,ng -1
+            inon_zero = 0
+            grid2(i,j) = 0
+            grid(1,i,j) = 0
+         enddo
+      enddo
+      return 
       end
 
 

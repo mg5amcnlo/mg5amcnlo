@@ -57,6 +57,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.various.rambo as rambo
 import madgraph.various.misc as misc
 import madgraph.various.progressbar as pbar
+import madgraph.various.banner as bannermod
 
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
@@ -634,6 +635,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                        'complex_mass': self.cmass_scheme,
                        'export_format':'madloop', 
                        'mp':True,
+                       'SubProc_prefix':'P',
+                       'compute_color_flows': not process.get('has_born'),
               'loop_dir': pjoin(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
                        'fortran_compiler': self.cmd.options['fortran_compiler'],
@@ -704,50 +707,39 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             stands for multiple precision and can either be a bool or an integer
             to specify the mode."""
 
+        # Instanciate a MadLoopParam card
+        file = open(pjoin(dir_name,'MadLoopParams.dat'), 'r')
+        MLCard = bannermod.MadLoopParam(file)
+
         if isinstance(mp,bool):
             mode = 4 if mp else 1
         else:
             mode = mp
-        # Read the existing option card
-        file = open(pjoin(dir_name,'MadLoopParams.dat'), 'r')
-        MLParams = file.read()
-        file.close()
-        # Additional option specifications
-        for key in MLOptions.keys():
-            if key == "ImprovePS":
-                MLParams = re.sub(r"#ImprovePS\n\S+","#ImprovePS\n%s"%(\
-                            '.TRUE.' if MLOptions[key] else '.FALSE.'),MLParams)
-            elif key == "ForceMP":
-                if MLOptions[key]:
-                    mode = 4
-            elif key == "MLReductionLib":
-                value=MLOptions[key]
+
+        for key, value in MLOptions.items():
+            if key == "MLReductionLib":
                 if isinstance(value,list):
-                    if value:
-                        mlred="|".join([str(vl) for vl in value])
+                    if len(value)==0:
+                        ml_reds = '1'
                     else:
-                        mlred="1"
-                    MLParams = re.sub(r"#MLReductionLib\n\S+","#MLReductionLib\n%s"\
-                        %(mlred),MLParams)
-                else:
-                    MLParams = re.sub(r"#MLReductionLib\n\S+","#MLReductionLib\n%d"\
-                            %(MLOptions[key] if MLOptions[key] else 1),MLParams)
+                        ml_reds="|".join([str(vl) for vl in value]) 
+                MLCard.set("MLReductionLib",ml_reds)      
+            elif key == 'ImprovePS':
+                MLCard.set('ImprovePSPoint',2 if value else -1)
+            elif key == 'ForceMP':
+                mode = 4
+            elif key in MLCard:
+                MLCard.set(key,value)    
             else:
-                logger.error("Key %s is not a valid MadLoop option."%key)
+                raise Exception, 'The MadLoop options %s specified in function'%key+\
+                  ' fix_MadLoopParamCard does not correspond to an option defined'+\
+                  ' MadLoop nor is it specially handled in this function.'
 
-        # Mandatory option specifications
-        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
-        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
-        MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n%s"%(\
-                               '.TRUE.' if loop_filter else '.FALSE.'),MLParams)
-        MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
-                            "#DoubleCheckHelicityFilter\n%s"%('.TRUE.' if 
-                             DoubleCheckHelicityFilter else '.FALSE.'),MLParams)
-
-        # Write out the modified MadLoop option card
-        file = open(pjoin(dir_name,'MadLoopParams.dat'), 'w')
-        file.write(MLParams)
-        file.close()
+        MLCard.set('CTModeRun',mode)
+        MLCard.set('CTModeInit',mode)
+        MLCard.set('UseLoopFilter',loop_filter)
+        MLCard.set('DoubleCheckHelicityFilter',DoubleCheckHelicityFilter)
+        MLCard.write(pjoin(dir_name,os.pardir,'SubProcesses','MadLoopParams.dat'))
 
     @classmethod
     def fix_PSPoint_in_check(cls, dir_path, read_ps = True, npoints = 1,
@@ -1032,7 +1024,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         retcode = subprocess.call(['make','check'],
                                    cwd=dir_name, stdout=devnull, stderr=devnull)
         compilation_time = time.time()-start
-                     
         if retcode != 0:
             logging.info("Error while executing make in %s" % dir_name)
             return None, None, None
@@ -1041,6 +1032,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             start=time.time()
             retcode = subprocess.call('./check',
                                    cwd=dir_name, stdout=devnull, stderr=devnull)
+
             run_time = time.time()-start
             ram_usage = None
         else:
@@ -1077,17 +1069,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         The key is the name of the parameter and the value is the corresponding
         string read from the card."""
         
-        res = {}
-        # Not elegant, but the file is small anyway, so no big deal.
-        MLCard_lines = open(MLCardPath).readlines()
-        try:
-            for i, line in enumerate(MLCard_lines):
-                if line.startswith('#'):
-                    res[line.split()[0][1:]]=MLCard_lines[i+1].split()[0]
-            return res
-        except IndexError:
-            raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
-                                                           'not well formatted.'
+        return bannermod.MadLoopParam(MLCardPath)
+
 
     @classmethod
     def set_MadLoop_Params(cls,MLCardPath,params):
@@ -1096,33 +1079,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         The key is the name of the parameter and the value is the corresponding
         string to write in the card."""
         
-        # Not elegant, but the file is small anyway, so no big deal.
-        MLCard_lines = open(MLCardPath).readlines()
-        newCard_lines = []
-        modified_Params = []
-        param_to_modify=None
-        for i, line in enumerate(MLCard_lines):
-            if not param_to_modify is None:
-                modified_Params.append(param_to_modify)
-                newCard_lines.append(params[param_to_modify]+'\n')
-                param_to_modify = None
-            else:
-                if line.startswith('#') and \
-                   line.split()[0][1:] in params.keys():
-                    param_to_modify = line.split()[0][1:]
-                newCard_lines.append(line)
-        if not param_to_modify is None:
-            raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
-                                                           'not well formatted.'
-        
-        left_over = set(params.keys())-set(modified_Params)
-        if left_over != set([]):
-            raise MadGraph5Error, 'The following parameters could not be '+\
-                             'accessed in MadLoopParams.dat : %s'%str(left_over)
-
-        newCard=open(MLCardPath,'w')
-        newCard.writelines(newCard_lines)
-        newCard.close()
+        MLcard = bannermod.MadLoopParam(MLCardPath)
+        for key,value in params.items():
+            MLcard.set(key, value, ifnotdefault=False)
+        MLcard.write(MLCardPath, commentdefault=True) 
 
     @classmethod    
     def run_initialization(cls, run_dir=None, SubProc_dir=None, infos=None,\
@@ -1134,7 +1094,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         The list attempt gives the successive number of PS points the 
         initialization should be tried with before calling it failed.
         Returns the number of PS points which were necessary for the init.
-        Notice at least run_dir or SubProc_dir must be provided."""
+        Notice at least run_dir or SubProc_dir must be provided.
+        A negative attempt number given in input means that quadprec will be
+        forced for initialisation."""
         
         # If the user does not want detailed info, then set the dictionary
         # to a dummy one.
@@ -1159,17 +1121,26 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 raise MadGraph5Error, 'Could not find a valid running directory'+\
                                                       ' in %s.'%str(SubProc_dir)
 
+        # Use the presence of the file born_matrix.f to decide if it is a 
+        # loop-induced process or not. It's not crucial, but just that because
+        # of the dynamic adjustment of the ref scale used for deciding what are
+        # the zero contributions, more points are neeeded for loop-induced.
+        if not os.path.isfile(pjoin(run_dir,'born_matrix.f')):
+            if len(attempts)>=1 and attempts[0]<8:
+                attempts[0]=8
+            if len(attempts)>=2 and attempts[1]<25:
+                attempts[1]=25
+
         to_attempt = copy.copy(attempts)
         to_attempt.reverse()
         my_req_files = copy.copy(req_files)
         
         # Make sure that LoopFilter really is needed.
-        MLCardPath = pjoin(SubProc_dir,os.pardir,'Cards',\
-                                                            'MadLoopParams.dat')
+        MLCardPath = pjoin(SubProc_dir,os.pardir,'Cards','MadLoopParams.dat')
         if not os.path.isfile(MLCardPath):
             raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
                                                                      %MLCardPath
-        if 'FALSE' in cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter'].upper():
+        if not cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter']:
             try:
                 my_req_files.pop(my_req_files.index('LoopFilter.dat'))
             except ValueError:
@@ -1184,11 +1155,37 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                             proc_prefix+fname)) for fname in my_req_files]) or \
                          not os.path.isfile(pjoin(run_dir,'check')) or \
                          not os.access(pjoin(run_dir,'check'), os.X_OK)
-    
+        
+        # Check if this is a process without born by checking the presence of the
+        # file born_matrix.f
+        is_loop_induced = os.path.exists(pjoin(run_dir,'born_matrix.f'))
+        
+        # For loop induced processes, always attempt quadruple precision if
+        # double precision attempts fail and the user didn't specify himself
+        # quadruple precision initializations attempts
+        if not any(attempt<0 for attempt in to_attempt):
+            to_attempt = [-attempt for attempt in to_attempt] + to_attempt
+        use_quad_prec = 1
         curr_attempt = 1
         while to_attempt!=[] and need_init():
-            curr_attempt = to_attempt.pop()+1
+            curr_attempt = to_attempt.pop()
+            # if the attempt is a negative number it means we must force 
+            # quadruple precision at initialization time
+            MLCard = bannermod.MadLoopParam(pjoin(SubProc_dir,'MadLoopParams.dat'))    
+            if curr_attempt < 0:
+                use_quad_prec = -1
+                # In quadruple precision we can lower the ZeroThres threshold
+                MLCard.set('CTModeInit',4)
+                MLCard.set('ZeroThres',1e-11)
+            else:
+                # Restore the default double precision intialization params
+                MLCard.set('CTModeInit',1)
+                MLCard.set('ZeroThres',1e-9)
             # Plus one because the filter are written on the next PS point after
+            curr_attempt = abs(curr_attempt+1)
+            MLCard.set('MaxAttempts',curr_attempt) 
+            MLCard.write(pjoin(SubProc_dir,'MadLoopParams.dat'))
+
             # initialization is performed.
             cls.fix_PSPoint_in_check(run_dir, read_ps = False, 
                                                          npoints = curr_attempt)
@@ -1206,7 +1203,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if need_init():
             return None
         else:
-            return curr_attempt-1
+            return use_quad_prec*(curr_attempt-1)
 
     def skip_loop_evaluation_setup(self, dir_name, skip=True):
         """ Edit loop_matrix.f in order to skip the loop evaluation phase.
@@ -1238,7 +1235,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.close()
 
     def setup_process(self, matrix_element, export_dir, reusing = False,
-                                                param_card = None,MLOptions={},clean=True):
+                                      param_card = None,MLOptions={},clean=True):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
@@ -1276,6 +1273,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                        'complex_mass': self.cmass_scheme,
                        'export_format':'madloop', 
                        'mp':True,
+                       'SubProc_prefix':'P',
+        'compute_color_flows':not matrix_element['processes'][0].get('has_born'),
           'loop_dir': pjoin(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
                        'fortran_compiler':self.cmd.options['fortran_compiler'],
@@ -1350,10 +1349,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                        MLOptions = {}):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
-        
-        # Normally, this should work for loop-induced processes as well
-#        if not matrix_element.get('processes')[0]['has_born']:
-#            return None
 
         if options and 'split_orders' in options.keys():
             split_orders = options['split_orders']
@@ -1429,8 +1424,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['n_contrib_hel']=n_contrib_hel
         res_timings['n_tot_hel']=len(helicities)
         
-        # We aim at a 30 sec run
-        target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,5)
+        # We aim at a 15 sec run
+        target_pspoints_number = max(int(15.0/time_per_ps_estimate)+1,5)
 
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
@@ -2157,8 +2152,6 @@ def generate_loop_matrix_element(process_definition, reuse, output_path=None,
     # Make sure to disable loop_optimized_output when considering loop induced 
     # processes
     loop_optimized_output = cmd.options['loop_optimized_output']
-    if not amplitude.get('process').get('has_born'):
-        loop_optimized_output = False
     timing['Diagrams_generation']=time.time()-start
     timing['n_loops']=len(amplitude.get('loop_diagrams'))
     start=time.time()
@@ -2206,9 +2199,7 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
     options['reuse'] = reusing
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
                                   model=model, output_path=output_path, cmd=cmd)
-    
-    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
-        myProfiler.loop_optimized_output=False
+
     if not myProfiler.loop_optimized_output:
         MLoptions={}
     else:
@@ -2258,8 +2249,7 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
     options['reuse'] = reusing
     myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
                                     output_path=output_path,model=model,cmd=cmd)
-    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
-        myStabilityChecker.loop_optimized_output=False
+
     if not myStabilityChecker.loop_optimized_output:
         MLoptions = {}
     else:
@@ -2306,8 +2296,7 @@ def check_timing(process_definition, param_card= None, cuttools="",tir={},
     options['reuse'] = reusing
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model,tir_dir=tir,
                                                output_path=output_path, cmd=cmd)
-    if not reusing and not matrix_element.get('processes')[0].get('has_born'):
-        myTimer.loop_optimized_output=False
+
     if not myTimer.loop_optimized_output:
         MLoptions = {}
     else:
@@ -2483,8 +2472,6 @@ def check_process(process, evaluator, quick, options):
                 loop_base_objects.cutting_method = 'optimal' if \
                                             number_checked%2 == 0 else 'default'
                 amplitude = loop_diagram_generation.LoopAmplitude(newproc)
-                if not amplitude.get('process').get('has_born'):
-                    evaluator.loop_optimized_output = False   
         except InvalidCmd:
             result=False
         else:
@@ -2961,7 +2948,8 @@ def output_timings(process, timings):
                                        %f(timings['Process_compilation'],'%.3gs')
     res_str += "|= Initialization............ %s\n"\
                                             %f(timings['Initialization'],'%.3gs')
-    res_str += "\n= Unpolarized time / PSpoint. ========== %.3gms\n"\
+
+    res_str += "\n= Helicity sum time / PSpoint ========== %.3gms\n"\
                                     %(timings['run_unpolarized_total']*1000.0)
     if loop_optimized_output:
         coef_time=timings['run_unpolarized_coefs']*1000.0
@@ -2972,8 +2960,7 @@ def output_timings(process, timings):
                                   %(coef_time,int(round(100.0*coef_time/total)))
         res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
-
-    res_str += "\n= Polarized time / PSpoint... ========== %.3gms\n"\
+    res_str += "\n= One helicity time / PSpoint ========== %.3gms\n"\
                                     %(timings['run_polarized_total']*1000.0)
     if loop_optimized_output:
         coef_time=timings['run_polarized_coefs']*1000.0
@@ -3210,8 +3197,6 @@ def check_gauge_process(process, evaluator, options=None):
             amplitude = diagram_generation.Amplitude(process)
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
-            if not amplitude.get('process').get('has_born'):
-                evaluator.loop_optimized_output = False
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -3463,8 +3448,6 @@ def check_lorentz_process(process, evaluator,options=None):
             amplitude = diagram_generation.Amplitude(process)
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
-            if not amplitude.get('process').get('has_born'):
-                evaluator.loop_optimized_output = False 
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -3672,8 +3655,6 @@ def get_value(process, evaluator, p=None, options=None):
             amplitude = diagram_generation.Amplitude(process)
         else:
             amplitude = loop_diagram_generation.LoopAmplitude(process)
-            if not amplitude.get('process').get('has_born'):
-                evaluator.loop_optimized_output = False
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))

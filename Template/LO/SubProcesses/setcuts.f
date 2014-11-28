@@ -185,7 +185,6 @@ c     check if I have to apply cuts on the particles
 c
       do i=nincoming+1,nexternal
          do_cuts(i)=.true.
-         if(nincoming.eq.1) do_cuts(i)=.false.
          if(.not.cut_decays.and.from_decay(i)) do_cuts(i)=.false.
          is_a_j(i)=.false.
          is_a_l(i)=.false.

@@ -60,25 +60,21 @@ c-----
 c      write(*,*) 'Enter compression (0=none, 1=sym, 2=BW, 3=full)'
 c      read(*,*) icomp
 c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
-      if (icomp .eq. 0) then
-         write(*,*) 'No compression, summing every diagram and ',
-     $        'every B.W.'
-      elseif (icomp .eq. 1) then
-         write(*,*) 'Using symmetry but summing every B.W. '
-      elseif (icomp .eq. 2) then
-         write(*,*) 'Assuming B.W. but summing every diagram. '
-      elseif (icomp .eq. 3) then
-         write(*,*) 'Full compression. Using symmetry and assuming B.W.'
-      else
-         write(*,*) 'Unknown compression',icomp
-         stop
-      endif
+c      if (icomp .eq. 0) then
+c         write(*,*) 'No compression, summing every diagram and ',
+c     $        'every B.W.'
+c      elseif (icomp .eq. 1) then
+c         write(*,*) 'Using symmetry but summing every B.W. '
+c      elseif (icomp .eq. 2) then
+c         write(*,*) 'Assuming B.W. but summing every diagram. '
+c      elseif (icomp .eq. 3) then
+c         write(*,*) 'Full compression. Using symmetry and assuming B.W.'
+c      else
+c         write(*,*) 'Unknown compression',icomp
+c         stop
+c      endif
 
       call load_para(npara,param,value)
-      call get_integer(npara,param,value," nhel ",nhel_survey,0)
-c     If different card options set for nhel_refine and nhel_survey:
-      call get_integer(npara,param,value," nhel_survey ",nhel_survey,
-     $     1*nhel_survey)
       call get_logical(npara,param,value," gridpack ",gridpack,.false.)
       call get_real(npara,param,value," bwcutoff ",bwcutoff,5d0)
       call get_real(npara,param,value," ebeam1 ",ebeam(1),0d0)
@@ -106,13 +102,7 @@ c     Set stot
          stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
       endif
 
-      write(*,*) 'Read parameters:'
-      write(*,*) 'nhel_survey = ',nhel_survey
-      write(*,*) 'gridpack    = ',gridpack
-      write(*,*) 'bwcutoff    = ',bwcutoff
-      write(*,*) 'sqrt(stot)  = ',sqrt(stot)
-
-      call printout
+c      call printout
       include 'props.inc'
 
 c
@@ -128,101 +118,9 @@ c
       enddo
       close(25)
 
-      call write_input(j, nhel_survey)
       call write_bash(mapconfig,use_config,prwidth,icomp,iforest,sprop)
       end
 
-      subroutine write_input(nconfigs, nhel_survey)
-c***************************************************************************
-c     Writes out input file for approximate calculation based on the
-c     number of active configurations
-c***************************************************************************
-      implicit none
-c
-c     Constants
-c
-      include 'genps.inc'
-      include 'nexternal.inc'
-      include 'run_config.inc'
-      integer    nhel_survey
-c      integer   npoint_tot,         npoint_min
-c      parameter (npoint_tot=50000, npoint_min=1000)
-c
-c     Arguments
-c
-      integer nconfigs
-c
-c     local
-c
-      integer npoints,itmax
-      double precision acc
-c-----
-c  Begin Code
-c-----
-      write(*,*) 'Give npoints, max iter, and accuracy'
-      read(*,*)  npoints,itmax,acc
-
-      open (unit=26, file = 'input_app.txt', status='unknown',
-     $     err=99)
-      write(26,*) npoints,itmax,3,
-     &     '     !Number of events and max and min iterations'      
-      write(26,'(f8.4,a)') acc, '    !Accuracy'
-      write(26,*) ' 2       !Grid Adjustment 0=none, 2=adjust'
-      write(26,*) ' 1       !Suppress Amplitude 1=yes'
-      write(26,*) nhel_survey,'       !Helicity Sum/event 0=exact'
-      close(26)
-      return
- 99   close(26)
-      write(*,*) 'Error opening input_app.txt'
-      end
-
-      subroutine open_bash_file(lun)
-c***********************************************************************
-c     Opens bash file for looping including standard header info
-c     which can be used with pbs, or stand alone
-c***********************************************************************
-      implicit none
-c
-c     Constants
-c
-      include 'maxparticles.inc'
-      include 'run_config.inc'
-c
-c     Arguments
-c
-      integer lun
-c
-c     Local
-c
-      character*30 fname
-      integer ic, npos
-      character*10 formstr
-
-      data ic/0/
-c-----
-c  Begin Code
-c-----
-      ic=ic+1
-      fname='ajob'
-c     Write ic with correct number of digits
-      npos=int(dlog10(dble(ic)))+1
-      write(formstr,'(a,i1,a)') '(I',npos,')'
-      write(fname(5:(5+npos-1)),formstr) ic
-      open (unit=lun, file = fname, status='unknown')
-      write(lun,15) '#!/bin/bash'
-c      write(lun,15) '#PBS -q ' // PBS_QUE
-c      write(lun,15) '#PBS -o PBS.log'
-c      write(lun,15) '#PBS -e PBS.err'
-c      write(lun,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
-c      write(lun,15) '    cd $PBS_O_WORKDIR'
-c      write(lun,15) 'fi'
-      write(lun,15) 'k=run1_app.log'
-      write(lun,15) 'script=' // fname
-c      write(lun,15) 'rm -f wait.$script >& /dev/null'
-c      write(lun,15) 'touch run.$script'
-      write(lun,'(a$)') 'for i in '
- 15   format(a)
-      end
 
       subroutine write_bash(mapconfig,use_config, prwidth, jcomp,iforest,
      $     sprop)
@@ -273,12 +171,10 @@ c     First open symfact file
       open (unit=27, file = 'symfact.dat', status='unknown')
       nsym=int(dlog10(dble(mapconfig(0))))+3
 
-      call open_bash_file(26)
       ic = 0      
 c     ncode is number of digits needed for the code
       ncode=int(dlog10(3d0)*(max_particles-3))+1
       do i=1,mapconfig(0)
-         print *,'Writing config ',mapconfig(i)
          if (use_config(i) .gt. 0) then
             call bw_conflict(i,iforest(1,-max_branch,i),lconflict,
      $           sprop(1,-max_branch,i), gForceBW(-max_branch,i))
@@ -296,9 +192,9 @@ c                    JA 4/8/11 don't treat forced BW differently
                      if(lconflict(-j)) then
 c                        write(*,*) 'Got conflict ',-nbw,j
                         iarray(nbw)=1 !Cuts on BW
-                        if (nbw .gt. imax) then
-                           write(*,*) 'Too many BW w conflicts',nbw,imax
-                        endif
+c                        if (nbw .gt. imax) then
+c                           write(*,*) 'Too many BW w conflicts',nbw,imax
+c                        endif
                      endif
                   endif
                enddo
@@ -309,21 +205,15 @@ c            do j=1,2**nbw
                call enCode(icode,iarray,ibase,imax)
                if(failConfig(i,iarray,iforest(1,-max_branch,i),
      $           sprop(1,-max_branch,i),gForceBW(-max_branch,i))) then 
-                  print *,'Skipping impossible config ',mapconfig(i),'.',icode
                   goto 100
                endif
                ic=ic+1
-               if (ic .gt. ChanPerJob) then
-                  call close_bash_file(26)
-                  call open_bash_file(26)
-                  ic = 1
-               endif
                nconf=int(dlog10(dble(mapconfig(i))))+1
 c               write(*,*) 'mapping',ic,mapconfig(i),icode               
                if (icode .eq. 0) then
 c                 Create format string based on number of digits
                   write(formstr,'(a,i1,a)') '(I',nconf,'$)'
-                  write(26,formstr) mapconfig(i)
+                  write(*,formstr) mapconfig(i)
 c                 Write symmetry factors
                   write(formstr2,'(a,i1,a)') '(2i',nsym,')'
                   write(27,formstr2) mapconfig(i),use_config(i)
@@ -337,7 +227,7 @@ c                 Create format string based on number of digits
                      write(formstr,'(a,i2,a,i1,a)') '(F',nconf+ncode+1,
      $                    '.',ncode,'$)'
                   endif
-                  write(26,formstr) dconfig
+                  write(*,formstr) dconfig
 c                 Write symmetry factors
                   nconf=int(dlog10(dble(mapconfig(i))))+1
                   if(nconf+ncode+1.lt.10) then
@@ -350,7 +240,7 @@ c                 Write symmetry factors
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
                   write(27,formstr2) dconfig,use_config(i)
                endif
-               write(26,'(a$)') ' '
+               write(*,'(a$)') ' '
  100           call bw_increment_array(iarray,imax,ibase,done)
             enddo
          else
@@ -358,7 +248,6 @@ c                 Write symmetry factors
             write(27,formstr2) mapconfig(i),use_config(i)
          endif
       enddo
-      call close_bash_file(26)
       close(27)
       if(ic.eq.0) then
 c        Stop generation with error message
@@ -367,9 +256,8 @@ c        Stop generation with error message
          if(.not.file_exists) filename = '../' // filename
          open(unit=26,file=filename,status='unknown')
          write(26,*)'No Phase Space. Please check particle masses.'
-         write(*,*)'Error: No valid channels found. ',
-     $        'Please check particle masses.'
-         close(26)
+c         write(*,*)'Error: No valid channels found. ',
+c     $        'Please check particle masses.'
       endif
       end
 
@@ -424,7 +312,7 @@ c  Begin Code
 c-----
       include 'props.inc'   !Propagator mass and width information prmass,prwidth
       include 'pmass.inc'   !External particle masses
-      write(*,*) 'Checking for BW in config number ',iconfig
+c      write(*,*) 'Checking for BW in config number ',iconfig
 c
 c     Reset variables
 c      
@@ -458,8 +346,8 @@ c
             if (xmass(-i) .gt. prmass(-i,iconfig) .and.
      $           iden_part(-i).eq.0) then !Can't be on shell, and not radiation
                lconflict(-i)=.true.
-               write(*,*) "Found Conflict", iconfig,i,
-     $              prmass(-i,iconfig),xmass(-i)
+c               write(*,*) "Found Conflict", iconfig,i,
+c     $              prmass(-i,iconfig),xmass(-i)
             endif
          endif
          if (iden_part(-i).eq.0) then
@@ -475,14 +363,14 @@ c
          if (lconflict(-j)) then 
             lconflict(itree(1,-j)) = .true.
             lconflict(itree(2,-j)) = .true.
-            write(*,*) 'Adding conflict ',itree(1,-j),itree(2,-j)
+c            write(*,*) 'Adding conflict ',itree(1,-j),itree(2,-j)
          endif
       enddo
 c
 c     If not enough energy, mark all BWs as conflicting
 c
       if(stot.lt.mtot**2)then
-         write(*,*) 'Not enough energy, set all BWs as conflicting'
+c         write(*,*) 'Not enough energy, set all BWs as conflicting'
          do j=i,1,-1
             lconflict(-j) = .true.
          enddo
@@ -496,8 +384,8 @@ c
                lconflict(-j) = .false.
 c               write(*,*) 'No conflict BW',iconfig,j
                continue
-            else
-               write(*,*) 'Conflicting BW',iconfig,j
+c            else
+c               write(*,*) 'Conflicting BW',iconfig,j
             endif
          endif
       enddo                  
@@ -616,76 +504,6 @@ c     Fail if too small phase space
 
       return
       end
-
-      subroutine close_bash_file(lun)
-c***********************************************************************
-c     Opens bash file for looping including standard header info
-c     which can be used with pbs, or stand alone
-c***********************************************************************
-      implicit none
-c
-c     Constants
-c
-c
-c     Constants
-c
-c     Arguments
-c
-      integer lun
-c
-c     global
-c
-      logical gridpack
-      common/to_gridpack/gridpack
-c
-c     local
-c
-      character*30 fname
-      integer ic
-
-      data ic/0/
-c-----
-c  Begin Code
-c-----
-
-      write(lun,'(a)') '; do'
-c
-c     Now write the commands
-c      
-c      write(lun,20) 'echo $i >& run.$script'
-      write(lun,20) 'j=G$i'
-      write(lun,20) 'if [[ ! -e $j ]]; then'
-      write(lun,25) 'mkdir $j'
-      write(lun,20) 'fi'
-      write(lun,20) 'cd $j'
-      write(lun,20) 'rm -f ftn25 ftn26 ftn99'
-      write(lun,20) 'rm -f $k'
-      write(lun,20) 'cat ../input_app.txt >& input_app.txt'
-      write(lun,20) 'echo $i >> input_app.txt'
-      write(lun,20) 'for((try=1;try<=10;try+=1)); '
-      write(lun,20) 'do'
-      write(lun,20) '../madevent > $k <input_app.txt'
-      write(lun,20) 'if [ -s $k ]'
-      write(lun,20) 'then'
-      write(lun,20) '    break'
-      write(lun,20) 'else'
-      write(lun,20) 'sleep 1'
-c      write(lun,20) 'rm -rf $k; ../madevent > $k <input_app.txt'
-      write(lun,20) 'fi'
-      write(lun,20) 'done'
-      write(lun,20) 'rm -f ftn25 ftn99'
-      if(.not.gridpack) write(lun,20) 'rm -f ftn26'
-      write(lun,20) 'echo "" >> $k; echo "ls status:" >> $k; ls >> $k'
-      write(lun,20) 'cp $k log.txt'
-      write(lun,20) 'cd ../'
-      write(lun,15) 'done'
- 15   format(a)
- 20   format(5x,a)
- 25   format(10x,a)
-      close(lun)
-      end
-
-
 
       subroutine bw_increment_array(iarray,imax,ibase,done)
 c************************************************************************

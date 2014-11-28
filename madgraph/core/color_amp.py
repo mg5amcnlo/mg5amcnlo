@@ -234,15 +234,14 @@ class ColorBasis(dict):
         the colorize dictionary (produced by the colorize routine)
         associated to diagram with index index. Keep track of simplification
         results for maximal optimization."""
-
+        import madgraph.various.misc as misc
         # loop over possible color chains
         for col_chain, col_str in colorize_dict.items():
             # Create a canonical immutable representation of the the string
             canonical_rep, rep_dict = col_str.to_canonical()
-
             try:
                 # If this representation has already been considered,
-                # recycle the result. 
+                # recycle the result.                               
                 col_fact = self._canonical_dict[canonical_rep].create_copy()
             except KeyError:
                 # If the representation is really new
@@ -272,9 +271,12 @@ class ColorBasis(dict):
                 # for matching, we have to multiply col_fact by it.
                 for cs in col_fact:
                     cs.coeff = cs.coeff * col_str.coeff
-                # Must simplify once to put traces in a canonical ordering
-                col_fact = col_fact.simplify()
-
+                # Must simplify up to two times at NLO (since up to two traces
+                # can appear with a loop) to put traces in a canonical ordering.
+                # If it still causes issue, just do a full_simplify(), it would
+                # not bring any heavy additional computational load.
+                col_fact = col_fact.simplify().simplify()
+                
                 # Here we need to force a specific order for the summed indices
                 # in case we have K6 or K6bar Clebsch Gordan coefficients
                 for colstr in col_fact: colstr.order_summation()
@@ -288,7 +290,8 @@ class ColorBasis(dict):
                                 col_chain,
                                 col_str.coeff,
                                 col_str.is_imaginary,
-                                col_str.Nc_power)
+                                col_str.Nc_power,
+                                col_str.loop_Nc_power)
                 try:
                     self[immutable_col_str].append(basis_entry)
                 except KeyError:

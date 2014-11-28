@@ -21,9 +21,13 @@ logger = logging.getLogger('madevent.stdout') # -> stdout
 
 pjoin = os.path.join
 try:
-    import madgraph.various.cluster as cluster
+    import madgraph
 except ImportError:
     import internal.cluster as cluster
+    import internal.misc as misc
+else:
+    import madgraph.various.cluster as cluster
+    import madgraph.various.misc as misc
 
 class OneResult(object):
     
@@ -31,6 +35,7 @@ class OneResult(object):
         """Initialize all data """
         
         self.name = name
+        self.parent_name = ''
         self.axsec = 0  # Absolute cross section = Sum(abs(wgt))
         self.xsec = 0 # Real cross section = Sum(wgt)
         self.xerru = 0  # uncorrelated error
@@ -52,8 +57,17 @@ class OneResult(object):
     def read_results(self, filepath):
         """read results.dat and fullfill information"""
         
+        if isinstance(filepath, str):
+            finput = open(filepath)
+        elif isinstance(filepath, file):
+            finput = filepath
+        else:
+            raise Exception, "filepath should be a path or a file descriptor"
+        
+        
+        
         i=0
-        for line in open(filepath):
+        for line in finput:
             i+=1
             if i == 1:
                 def secure_float(d):
@@ -67,7 +81,8 @@ class OneResult(object):
                     
                 data = [secure_float(d) for d in line.split()]
                 self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
-                         self.maxit, self.nunwgt, self.luminosity, self.wgt, self.xsec = data[:10]
+                         self.maxit, self.nunwgt, self.luminosity, self.wgt, \
+                         self.xsec = data[:10]
                 if self.mfactor > 1:
                     self.luminosity /= self.mfactor
                     #self.ysec_iter.append(self.axsec)
@@ -115,7 +130,21 @@ class OneResult(object):
         
         self.ysec_iter = ysec
         self.yerr_iter = yerr
-
+    
+    def get(self, name):
+        
+        if name in ['xsec', 'xerru','xerrc']:
+            return getattr(self, name) * self.mfactor
+        elif name in ['luminosity']:
+            return getattr(self, name) / self.mfactor
+        elif (name == 'eff'):
+            return self.xerr*math.sqrt(self.nevents/(self.xsec+1e-99))
+        elif name == 'xerr':
+            return math.sqrt(self.xerru**2+self.xerrc**2)
+        elif name == 'name':
+            return pjoin(self.parent_name, self.name)
+        else:
+            return getattr(self, name)
 
 class Combine_results(list, OneResult):
     
@@ -129,6 +158,7 @@ class Combine_results(list, OneResult):
         oneresult = OneResult(name)
         oneresult.set_mfactor(mfactor)
         oneresult.read_results(filepath)
+        oneresult.parent_name = self.name
         self.append(oneresult)
     
     
@@ -277,7 +307,7 @@ class Combine_results(list, OneResult):
                     'mod_P_link': mod_link,
                     'cross': '%.4g' % oneresult.xsec,
                     'error': '%.3g' % oneresult.xerru,
-                    'events': oneresult.nevents,
+                    'events': oneresult.nevents/1000.0,
                     'unweighted': oneresult.nunwgt,
                     'luminosity': '%.3g' % oneresult.luminosity
                    }
@@ -375,20 +405,11 @@ function check_link(url,alt, id){
 """ 
 
 
+def collect_result(cmd, folder_names):
+    """ """ 
 
-
-
-
-def make_all_html_results(cmd, folder_names = []):
-    """ folder_names has been added for the amcatnlo runs """
     run = cmd.results.current['run_name']
-    if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
-        os.mkdir(pjoin(cmd.me_dir, 'HTML', run))
-    
-    unit = cmd.results.unit
-            
     all = Combine_results(run)
-    P_text = ""
     
     for Pdir in open(pjoin(cmd.me_dir, 'SubProcesses','subproc.mg')):
         Pdir = Pdir.strip()
@@ -415,19 +436,37 @@ def make_all_html_results(cmd, folder_names = []):
                     else:
                         dir = folder.replace('*', '_G' + name)
                     P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
-
         P_comb.compute_values()
-        P_text += P_comb.get_html(run, unit, cmd.me_dir)
-        P_comb.write_results_dat(pjoin(P_path, '%s_results.dat' % run))
         all.append(P_comb)
     all.compute_values()
-    all.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))
+    return all
 
+
+def make_all_html_results(cmd, folder_names = []):
+    """ folder_names has been added for the amcatnlo runs """
+    run = cmd.results.current['run_name']
+    if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
+        os.mkdir(pjoin(cmd.me_dir, 'HTML', run))
+    
+    unit = cmd.results.unit
+    P_text = ""      
+    Presults = collect_result(cmd, folder_names=folder_names)
+            
+    
+    for P_comb in Presults:
+        P_text += P_comb.get_html(run, unit, cmd.me_dir) 
+        P_comb.compute_values()
+        P_comb.write_results_dat(pjoin(cmd.me_dir, 'SubProcesses', P_comb.name,
+                                        '%s_results.dat' % run))
+
+    
+    Presults.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))   
+    
     fsock = open(pjoin(cmd.me_dir, 'HTML', run, 'results.html'),'w')
     fsock.write(results_header)
-    fsock.write('%s <dl>' % all.get_html(run, unit, cmd.me_dir))
-    fsock.write('%s </dl></body>' % P_text)
+    fsock.write('%s <dl>' % Presults.get_html(run, unit, cmd.me_dir))
+    fsock.write('%s </dl></body>' % P_text)         
+    
+    return Presults.xsec, Presults.xerru   
+            
 
-
-          
-    return all.xsec, all.xerru
