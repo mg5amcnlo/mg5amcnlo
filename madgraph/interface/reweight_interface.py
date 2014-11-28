@@ -251,16 +251,21 @@ class ReweightInterface(extended_cmd.Cmd):
 
         if not self.has_standalone_dir:
             self.create_standalone_directory()        
+        
+        if self.second_model or self.second_process:
+            rw_dir = pjoin(self.me_dir, 'rw_me_second')
+        else:
+            rw_dir = pjoin(self.me_dir, 'rw_me')
             
-        ff = open(pjoin(self.me_dir, 'rw_me','Cards', 'param_card.dat'), 'w')
+        ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
         ff.write(self.banner['slha'])
         ff.close()
         ff = open(pjoin(self.me_dir, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
         ff.write(self.banner['slha'])
         ff.close()        
         cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
-                                   ask=self.ask, pwd=pjoin(self.me_dir,'rw_me'))
-        new_card = open(pjoin(self.me_dir, 'rw_me', 'Cards', 'param_card.dat')).read()        
+                                   ask=self.ask, pwd=rw_dir)
+        new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()        
 
         
 
@@ -292,13 +297,25 @@ class ReweightInterface(extended_cmd.Cmd):
         #starts by computing the difference in the cards.
         s_orig = self.banner['slha']
         s_new = new_card
-        old_param = check_param_card.ParamCard(s_orig.splitlines())
-        new_param =  check_param_card.ParamCard(s_new.splitlines())
-        card_diff = old_param.create_diff(new_param)
-        if card_diff == '' and not (self.second_model or self.second_process):
-            raise self.InvalidCmd, 'original card and new card are identical'
-        mg_rwgt_info.append((str(rewgtid), card_diff))
-        
+        if not self.second_model:
+            old_param = check_param_card.ParamCard(s_orig.splitlines())
+            new_param =  check_param_card.ParamCard(s_new.splitlines())
+            card_diff = old_param.create_diff(new_param)
+            if card_diff == '' and not self.second_process:
+                raise self.InvalidCmd, 'original card and new card are identical'
+            if not self.second_process:
+                mg_rwgt_info.append((str(rewgtid), card_diff))
+            else:
+                str_proc = "\n change process  ".join([""]+self.second_process)
+                mg_rwgt_info.append((str(rewgtid), str_proc + '\n'+ card_diff))
+        else:
+            str_info = "change model %s" % self.second_model
+            if self.second_process:
+                str_info += "\n change process  ".join([""]+self.second_process)
+            card_diff = str_info
+            str_info += '\n' + s_new
+            mg_rwgt_info.append((str(rewgtid), str_info))
+
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
         self.banner['initrwgt'] += '\n<weightgroup type=\'mg_reweighting\'>\n'
@@ -436,6 +453,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
         run_id = (tag, hypp_id)
 
+        start = False
         if run_id in self.calculator:
             external = self.calculator[run_id]
             self.calculator_nbcall[run_id] += 1
@@ -459,7 +477,10 @@ class ReweightInterface(extended_cmd.Cmd):
             tmpdir = pjoin(self.me_dir,'rw_me_second', 'SubProcesses', Pdir)
             executable_prod="./check"
             if not os.path.exists(pjoin(tmpdir, 'check')):
-                misc.compile( cwd=tmpdir)
+                try:
+                    misc.compile( cwd=tmpdir)
+                except Exception:
+                    misc.compile(['check'], cwd=tmpdir)
             external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
                                                       stderr=STDOUT, cwd=tmpdir)
             self.calculator[run_id] = external 
@@ -468,21 +489,33 @@ class ReweightInterface(extended_cmd.Cmd):
             if hypp_id == 1:
                 external.stdin.write('param_card.dat\n')
             elif hypp_id == 0:
-                external.stdin.write('param_card_orig.dat\n')                
+                external.stdin.write('param_card_orig.dat\n')
+            start = True                
                 
         #import the value of alphas
         external.stdin.write('%g\n' % event.aqcd)
         stdin_text = event.get_momenta_str(orig_order)
         external.stdin.write(stdin_text)
         me_value = external.stdout.readline()
-        try: 
-            me_value = float(me_value)
-        except Exception:
-            print 'ZERO DETECTED'
-            print stdin_text
-            print me_value
-            os.system('lsof -p %s' % external.pid)
-            me_value = 0
+        if start:
+            while 1:
+                try: 
+                    me_value = float(me_value)
+                    break
+                except Exception:
+                    me_value = external.stdout.readline()             
+        else:
+            try: 
+                if 'nan' in me_value.lower():
+                    raise Exception
+                me_value = float(me_value)
+            except Exception:
+                print 'ZERO DETECTED for hypp', hypp_id
+                print stdin_text
+                print "RETURN VALUE IS", me_value
+                #os.system('lsof -p %s' % external.pid)
+                me_value = 0
+                raise Exception
         
         if len(self.calculator) > 100:
             logger.debug('more than 100 calculator. Perform cleaning')
@@ -699,10 +732,10 @@ class ReweightInterface(extended_cmd.Cmd):
         for proc in processes:
             if '[' not in proc:
                 commandline+="add process %s ;" % proc
-            elif 'noborn' in proc:
+            elif 'sqrvirt' in proc:
                 commandline+="add process %s ;" % proc
             else:
-                raise self.InvalidCmd('NLO processes can\'t be reweight (for Loop induce use [noborn=]')
+                raise self.InvalidCmd('NLO processes can\'t be reweight (for Loop induce use [sqrvirt =]')
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)

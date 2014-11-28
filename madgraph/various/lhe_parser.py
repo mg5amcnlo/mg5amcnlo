@@ -493,7 +493,9 @@ class Event(list):
                 order[0][ind] = 0
             else: #intermediate
                 continue
-            out[position] = '%g %g %g %g \n'% (part.E, part.px, part.py, part.pz)
+            format = '%.12f'
+            format_line = ' '.join([format]*4) + ' \n'
+            out[position] = format_line % (part.E, part.px, part.py, part.pz)
             
         out = ''.join(out).replace('e','d')
         return out    

@@ -80,16 +80,16 @@ class LoopExporterFortran(object):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
-        if opt:
-            self.opt = opt
-        else: 
-            self.opt = {'clean': False, 'complex_mass':False,
+
+        self.opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madloop', 'mp':True,
                         'loop_dir':'', 'cuttools_dir':'', 
                         'fortran_compiler':'gfortran',
                         'output_dependencies':'external',
                         'SubProc_prefix':'P',
-                        'compute_color_flows':False}
+                        'compute_color_flows':False,
+                        'mode':''}
+        self.opt.update(opt)
         
         self.SubProc_prefix = self.opt['SubProc_prefix']
         self.loop_dir = self.opt['loop_dir']
@@ -970,9 +970,12 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 replace_dict[key]=''
         if matrix_element.get('processes')[0].get('has_born'):
             file = open(os.path.join(self.template_dir,'check_sa.inc')).read()
+        elif self.opt['mode'] == 'reweight':
+            file = open(os.path.join(self.template_dir,\
+                                          'check_sa_reweight.inc')).read()            
         else:
             file = open(os.path.join(self.template_dir,\
-                                          'check_sa_loop_induced.inc')).read()            
+                                          'check_sa_loop_induced.inc')).read()
         file=file%replace_dict
         writer.writelines(file)
 

@@ -1034,7 +1034,8 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                if mode != self._done_export[1]:
+                
+                if not self._done_export[1].startswith(mode):
                     print mode, self._done_export[1]
                     raise self.InvalidCmd, \
                           '%s not valid directory for launch' % self._done_export[0]
@@ -1353,10 +1354,6 @@ This will take effect only in a NEW terminal
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
 
-
-
-
-
         if args and args[0][0] != '-':
             # This is a path
             path = args.pop(0)
@@ -1383,6 +1380,7 @@ This will take effect only in a NEW terminal
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
+                    
             else:
                 if self.options['pythia8_path']:
                     self._export_dir = self.options['pythia8_path']
@@ -1509,7 +1507,7 @@ This will take effect only in a NEW terminal
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
-        elif self._export_format == 'standalone':
+        elif self._export_format.startswith('standalone'):
             name_dir = lambda i: 'PROC_SA_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,

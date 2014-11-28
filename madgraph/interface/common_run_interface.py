@@ -2951,7 +2951,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('Fail to determine the type of the file. Not copied')
         if card_name != 'banner':
             logger.info('copy %s as %s' % (path, card_name))
-            files.cp(path, pjoin(self.mother_interface.me_dir, 'Cards', card_name))
+            files.cp(path, pjoin(self.me_dir, 'Cards', card_name))
         elif card_name == 'banner':
             banner_mod.split_banner(path, self.mother_interface.me_dir, proc_card=False)
             logger.info('Splitting the banner in it\'s component')

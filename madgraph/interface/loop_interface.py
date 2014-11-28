@@ -25,6 +25,7 @@ import re
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
+import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
@@ -34,7 +35,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
-import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.various.misc as misc
 import aloha
 
 # Special logger for the Cmd Interface
@@ -88,10 +89,9 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_output(self,args)
         
-        if args and args[0] in ['standalone']:
-            self._export_format = args.pop(0)
-        else:
-            self._export_format = 'standalone'
+        if self._export_format not in self.supported_ML_format:
+            raise self.InvalidCmd, "not supported format"
+        
 
     def check_launch(self, args, options):
         """ Further check that only valid options are given to the MadLoop
@@ -341,7 +341,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
       " corrections with this model because it does not support Feynman gauge.")
 
 class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
-        
+          
+    supported_ML_format = ['standalone', 'standalone_rw'] 
+    
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ Special init tasks for the Loop Interface """
 
@@ -420,16 +422,16 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         aloha_original_quad_mode = aloha.mp_precision
         aloha.mp_precision = True
 
-        if self._export_format not in ['standalone']:
-            raise self.InvalidCmd('ML5 only support standalone as export format.')
+        if self._export_format not in self.supported_ML_format:
+            raise self.InvalidCmd('ML5 only support "%s" as export format.' % \
+                                  ''.join(self.supported_ML_format))
 
-        if not os.path.isdir(self._export_dir) and \
-           self._export_format in ['matrix']:
+        if not os.path.isdir(self._export_dir) and self._export_format in ['matrix']:
             raise self.InvalidCmd('Specified export directory %s does not exist.'\
                                                          %str(self._export_dir))
 
         if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['standalone']:
+               and self._export_format.startswith('standalone'):
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
@@ -445,9 +447,12 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         self._curr_exporter = export_v4.ExportV4Factory(self, \
                                                  noclean, output_type='madloop')
-
-        if self._export_format in ['standalone']:
+        if self._export_format == 'standalone':
             self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+        if self._export_format == "standalone_rw":
+            self._export_format = "standalone"
+            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+            self._export_format = "standalone_rw"
 
         # Reset _done_export, since we have new directory
         self._done_export = False
@@ -504,7 +509,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone']:
+        if self._export_format.startswith('standalone'):
             path = pjoin(path, 'SubProcesses')
             
         cpu_time1 = time.time()
@@ -514,7 +519,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                         self._curr_matrix_elements.get_matrix_elements()
 
         # Fortran MadGraph5_aMC@NLO Standalone
-        if self._export_format == 'standalone':
+        if self._export_format.startswith('standalone'):
             for me in matrix_elements:
                 calls = calls + \
                         self._curr_exporter.generate_subprocess_directory_v4(\
@@ -575,7 +580,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         """Copy necessary sources and output the ps representation of 
         the diagrams, if needed"""
 
-        if self._export_format in ['standalone']:
+        if self._export_format.startswith('standalone'):
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
@@ -586,7 +591,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                                            wanted_lorentz,
                                            wanted_couplings)
 
-        if self._export_format in ['standalone']:
+        if self._export_format.startswith('standalone'):
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
                                            self.history,
@@ -594,7 +599,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                                            online,
                                            self.options['fortran_compiler'])
 
-        if self._export_format in ['standalone']:
+        if self._export_format.startswith('standalone'):
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
     def do_launch(self, line, *args,**opt):

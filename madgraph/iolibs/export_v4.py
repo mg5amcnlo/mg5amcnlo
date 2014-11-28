@@ -5742,7 +5742,9 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
       'fortran_compiler':cmd.options['fortran_compiler'],
       'output_dependencies':cmd.options['output_dependencies'],
       'SubProc_prefix':'P',
-      'compute_color_flows':cmd.options['loop_color_flows']}
+      'compute_color_flows':cmd.options['loop_color_flows'],
+      'mode': 'reweight' if cmd._export_format == "standalone_rw" else ''
+      }
 
     if output_type=='madloop':
         import madgraph.loop.loop_exporters as loop_exporters
@@ -5786,7 +5788,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
                 group_subprocesses = False
 
         assert group_subprocesses in [True, False]
-        
+
         opt = {'clean': not noclean,
                'complex_mass': cmd.options['complex_mass_scheme'],
                'export_format':cmd._export_format,
