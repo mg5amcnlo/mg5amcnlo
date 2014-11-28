@@ -80,6 +80,33 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                                      
         return super(FKSMultiProcess,self).filter(name, value)
 
+
+    def check_ij_confs(self):
+        """check that there is no duplicate FKS ij configuration"""
+        ijconfs_dict = {}
+        for born in self['born_processes']:
+            # the copy.copy is needed as duplicate configurations will be removed on the fly
+            for real in copy.copy(born.real_amps):
+                pdgs = ' '.join([ '%d' % pdg for pdg in real.pdgs])
+                for info in copy.copy(real.fks_infos):
+                    ij = [info['i'], info['j']]
+                    try:
+                        if ij in ijconfs_dict[pdgs]:
+                            logger.debug('Duplicate FKS configuration found for %s : ij = %s' %
+                                    (real.process.nice_string(), str(ij)))
+                            #remove the configuration
+                            born.real_amps[born.real_amps.index(real)].fks_infos.remove(info)
+                        else:
+                            ijconfs_dict[pdgs].append(ij)
+                    except KeyError:
+                        ijconfs_dict[pdgs] = [ij]
+                # check if any FKS configuration remains for the real emission, otherwise
+                # remove it
+                if not born.real_amps[born.real_amps.index(real)].fks_infos:
+                    logger.debug('Removing real %s from born %s' % \
+                            (real.process.nice_string(), born.born_amp['process'].nice_string()))
+                    born.real_amps.remove(real)
+
     
     def __init__(self, *arguments, **options):
         """Initializes the original multiprocess, then generates the amps for the 
@@ -151,11 +178,15 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
             born = FKSProcess(amp)
             self['born_processes'].append(born)
+
             born.generate_reals(self['pdgs'], self['real_amplitudes'], combine = False)
 
-        # finally combine the real amplitudes
-        for born in self['born_processes']:
+            # finally combine the real amplitudes
             born.combine_real_amplitudes()
+
+        # the following call is to cehck wether any duplicate (i,j) configuration
+        # exist, and to remove it in order to avoid double counting.
+        self.check_ij_confs()
 
         born_pdg_list = []
         for born in self['born_processes']:
