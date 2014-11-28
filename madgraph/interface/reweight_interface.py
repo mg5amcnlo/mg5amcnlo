@@ -74,6 +74,8 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.events_file = None
         self.processes = {}
+        self.second_model = None
+        self.second_process = None
         self.mg5cmd = master_interface.MasterCmd()
         self.seed = None
         
@@ -90,6 +92,10 @@ class ReweightInterface(extended_cmd.Cmd):
             
     def do_import(self, inputfile):
         """import the event file"""
+
+        args = self.split_arg(inputfile)
+        if not args:
+            return self.InvalidCmd, 'import requires arguments'
         
         # change directory where to write the output
         self.options['curr_dir'] = os.path.realpath(os.path.dirname(inputfile))
@@ -200,35 +206,26 @@ class ReweightInterface(extended_cmd.Cmd):
                                     pjoin(*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
     
-    def check_set(self, args):
-        """checking the validity of the set command"""
-        
-        if len(args) < 2:
-            raise self.InvalidCmd('set command requires at least two argument.')
-        
-        valid = ['max_weight','seed','curr_dir']
-        if args[0] not in self.options and args[0] not in valid:
-            raise self.InvalidCmd('Unknown options %s' % args[0])        
+    def help_change(self):
+        """help for change command"""
     
-        if args[0] == 'max_weight':
-            try:
-                args[1] = float(args[1].replace('d','e'))
-            except ValueError:
-                raise self.InvalidCmd('second argument should be a real number.')
+        print "change model X :use model X for the reweighting"
+        print "change process p p > e+ e-: use a new process for the reweighting"
+        print "change process p p > mu+ mu- --add : add one new process to existing ones"
+    
+    def do_change(self, line):
+        """allow to define a second model/processes"""
         
-        elif args[0] == 'BW_effect':
-            if args[1] in [0, False,'.false.', 'F', 'f', 'False', 'no']:
-                args[1] = 0
-            elif args[1] in [1, True,'.true.', 'T', 't', 'True', 'yes']:
-                args[1] = 1
+        args = self.split_arg(line)
+        
+        if args[0] == "model":
+            self.second_model = " ".join(args[1:])
+        elif args[0] == "process":
+            if args[-1] == "--add":
+                self.second_process.append(" ".join(args[1:-1]))
             else:
-                raise self.InvalidCmd('second argument should be either T or F.')
-        
-        elif args[0] == 'curr_dir':
-            if not os.path.isdir(args[1]):
-                raise self.InvalidCmd('second argument should be a path to a existing directory')
-
-            
+                self.second_process = [" ".join(args[1:])]
+                 
     def check_launch(self, args):
         """check the validity of the launch command"""
         
@@ -298,7 +295,7 @@ class ReweightInterface(extended_cmd.Cmd):
         old_param = check_param_card.ParamCard(s_orig.splitlines())
         new_param =  check_param_card.ParamCard(s_new.splitlines())
         card_diff = old_param.create_diff(new_param)
-        if card_diff == '':
+        if card_diff == '' and not (self.second_model or self.second_process):
             raise self.InvalidCmd, 'original card and new card are identical'
         mg_rwgt_info.append((str(rewgtid), card_diff))
         
@@ -331,7 +328,7 @@ class ReweightInterface(extended_cmd.Cmd):
             new_banner['slha'] = s_new   
             del new_banner['initrwgt']
             #ensure that original banner is kept untouched
-            assert new_banner['slha'] != self.banner['slha']
+            assert new_banner['slha'] != self.banner['slha'] or self.second_process
             assert 'initrwgt' in self.banner 
             ff = open(pjoin(self.mother.me_dir,'Events',self.mother.run_name, '%s_%s_banner.txt' % \
                           (self.mother.run_name, self.run_card['run_tag'])),'w') 
@@ -431,16 +428,19 @@ class ReweightInterface(extended_cmd.Cmd):
         """routine to return the matrix element"""
 
         tag, order = event.get_tag_and_order()
-        orig_order, Pdir = self.id_to_path[tag]
+        
+        if (not self.second_model and not self.second_process) or hypp_id==0:
+            orig_order, Pdir = self.id_to_path[tag]
+        else:
+            orig_order, Pdir = self.id_to_path_second[tag]
 
         run_id = (tag, hypp_id)
 
         if run_id in self.calculator:
             external = self.calculator[run_id]
             self.calculator_nbcall[run_id] += 1
-        else:
+        elif (not self.second_model and not self.second_process) or hypp_id==0:
             # create the executable for this param_card            
-
             tmpdir = pjoin(self.me_dir,'rw_me', 'SubProcesses', Pdir)
             executable_prod="./check"
             if not os.path.exists(pjoin(tmpdir, 'check')):
@@ -454,6 +454,22 @@ class ReweightInterface(extended_cmd.Cmd):
                 external.stdin.write('param_card.dat\n')
             elif hypp_id == 0:
                 external.stdin.write('param_card_orig.dat\n')
+        else:
+            # create the executable for this param_card            
+            tmpdir = pjoin(self.me_dir,'rw_me_second', 'SubProcesses', Pdir)
+            executable_prod="./check"
+            if not os.path.exists(pjoin(tmpdir, 'check')):
+                misc.compile( cwd=tmpdir)
+            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
+                                                      stderr=STDOUT, cwd=tmpdir)
+            self.calculator[run_id] = external 
+            self.calculator_nbcall[run_id] = 1       
+            # set the param_card
+            if hypp_id == 1:
+                external.stdin.write('param_card.dat\n')
+            elif hypp_id == 0:
+                external.stdin.write('param_card_orig.dat\n')                
+                
         #import the value of alphas
         external.stdin.write('%g\n' % event.aqcd)
         stdin_text = event.get_momenta_str(orig_order)
@@ -530,7 +546,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
     
     @misc.mute_logger()
-    def create_standalone_directory(self):
+    def create_standalone_directory(self, second=False):
         """generate the various directory for the weight evaluation"""
         
         # 0. clean previous run ------------------------------------------------
@@ -627,7 +643,101 @@ class ReweightInterface(extended_cmd.Cmd):
                     else:
                         continue
                 self.id_to_path[tag] = [order, Pdir]
+        
+        
+        # 3. If we need a new model/process-------------------------------------
+        if self.second_model or self.second_process:
+            self.create_second_standalone_directory()    
 
+    @misc.mute_logger()
+    def create_second_standalone_directory(self, second=False):
+        """generate the various directory for the weight evaluation"""
+        
+        # 0. clean previous run ------------------------------------------------
+        path_me = self.me_dir
+        try:
+            shutil.rmtree(pjoin(path_me,'rw_me_second'))
+        except Exception: 
+            pass
+        
+        mgcmd = self.mg5cmd
+        # 1. Load model---------------------------------------------------------  
+        if self.second_model:
+            use_mgdefault= True
+            complex_mass = False
+            if ' ' in self.second_model:
+                args = self.second_model
+                if '--modelname' in args:
+                    use_mgdefault = False
+                model_name = args[0]
+            else:
+                model_name = self.second_model
+            self.load_model(model_name, use_mgdefault, complex_mass)
+                
+            modelpath = self.model.get('modelpath')
+            if os.path.basename(modelpath) != mgcmd._curr_model['name']:
+                name, restrict = mgcmd._curr_model['name'].rsplit('-',1)
+                if os.path.exists(pjoin(os.path.dirname(modelpath),name, 'restrict_%s.dat' % restrict)):
+                    modelpath = pjoin(os.path.dirname(modelpath), mgcmd._curr_model['name'])
+                
+            commandline="import model %s " % modelpath
+            mgcmd.exec_cmd(commandline)
+            
+        # 2. compute the production matrix element -----------------------------
+        if self.second_process:
+            processes = self.second_process
+        else:
+            processes = [line[9:].strip() for line in self.banner.proc_card
+                         if line.startswith('generate')]
+            processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
+                          if re.search('^\s*add\s+process', line)]   
+        mgcmd.exec_cmd("set group_subprocesses False")
+
+        logger.info('generating the square matrix element for reweighting')
+        start = time.time()
+        commandline=''
+        for proc in processes:
+            if '[' not in proc:
+                commandline+="add process %s ;" % proc
+            elif 'noborn' in proc:
+                commandline+="add process %s ;" % proc
+            else:
+                raise self.InvalidCmd('NLO processes can\'t be reweight (for Loop induce use [noborn=]')
+        
+        commandline = commandline.replace('add process', 'generate',1)
+        logger.info(commandline)
+        mgcmd.exec_cmd(commandline, precmd=True)
+        commandline = 'output standalone_rw %s' % pjoin(path_me,'rw_me_second')
+        mgcmd.exec_cmd(commandline, precmd=True)        
+        logger.info('Done %.4g' % (time.time()-start))
+        
+        # 3. Store id to directory information ---------------------------------
+        matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
+        
+        self.id_to_path_second = {}
+        for me in matrix_elements:
+            for proc in me.get('processes'):
+                initial = []    #filled in the next line
+                final = [l.get('id') for l in proc.get('legs')\
+                      if l.get('state') or initial.append(l.get('id'))]
+                order = (initial, final)
+                tag = proc.get_initial_final_ids()
+                decay_finals = proc.get_final_ids_after_decay()
+
+                if tag[1] != decay_finals:
+                    order = (initial, list(decay_finals))
+                    decay_finals.sort()
+                    tag = (tag[0], tuple(decay_finals))
+                Pdir = pjoin(path_me, 'rw_me_second', 'SubProcesses', 
+                                  'P%s' % me.get('processes')[0].shell_string())
+                assert os.path.exists(Pdir), "Pdir %s do not exists" % Pdir                        
+                if tag in self.id_to_path_second:
+                    if not Pdir == self.id_to_path_second[tag][1]:
+                        misc.sprint(tag, Pdir, self.id_to_path_second[tag][1])
+                        raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
+                    else:
+                        continue
+                self.id_to_path_second[tag] = [order, Pdir]
 
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
