@@ -1705,9 +1705,9 @@ class RunCardNLO(RunCard):
                                 
         # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
         if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':
-            raise self.InvalidCmd('APPLgrid generation only possible with the use of LHAPDF')
+            raise InvalidRunCard('APPLgrid generation only possible with the use of LHAPDF')
         if self['iappl'] != 0 and not self['reweight_scale']:
-            raise self.InvalidCmd('APPLgrid generation only possible with including' +\
+            raise InvalidRunCard('APPLgrid generation only possible with including' +\
                                       ' the reweighting to get scale dependence')
 
         # check that the pdf is set correctly
