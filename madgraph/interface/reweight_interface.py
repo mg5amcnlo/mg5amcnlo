@@ -78,6 +78,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.second_process = None
         self.mg5cmd = master_interface.MasterCmd()
         self.seed = None
+        self.output_type = "default"
         
         if event_path:
             logger.info("Extracting the banner ...")
@@ -225,6 +226,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.second_process.append(" ".join(args[1:-1]))
             else:
                 self.second_process = [" ".join(args[1:])]
+        elif args[0] == "output":
+            if args[1] in ['default', '2.0']:
+                self.output_type = args[1]
+            
                  
     def check_launch(self, args):
         """check the validity of the launch command"""
@@ -337,7 +342,10 @@ class ReweightInterface(extended_cmd.Cmd):
         if self.mother:
             out_path = pjoin(self.mother.me_dir, 'Events', 'reweight.lhe')
             output2 = open(out_path, 'w')
+            lha_strategy = self.banner.get_lha_strategy() 
+            self.banner.set_lha_strategy(4*lha_strategy/abs(lha_strategy)) 
             self.banner.write(output2, close_tag=False)
+            self.banner.set_lha_strategy(lha_strategy)
             new_banner = banner.Banner(self.banner)
             if not hasattr(self, 'run_card'):
                 self.run_card = new_banner.charge_card('run_card')
@@ -371,14 +379,19 @@ class ReweightInterface(extended_cmd.Cmd):
 
             weight = self.calculate_weight(event)
             cross += weight
-            event.reweight_data[tag_name] = weight
-            #write this event with weight
-            output.write(str(event))
-            if self.mother:
+            if self.output_type == "default":
+                event.reweight_data[tag_name] = weight
+                #write this event with weight
+                output.write(str(event))
+            else:
                 event.wgt = weight
                 event.reweight_data = {}
-                output2.write(str(event))
+                if self.mother:
+                    output2.write(str(event))
+                else:
+                    output.write(str(event))
 
+                
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
         
@@ -422,7 +435,13 @@ class ReweightInterface(extended_cmd.Cmd):
                 #self.run_card['run_tag'] = self.run_card['run_tag'][9:]
                 #self.mother.run_name = old_name
         self.lhe_input.close()
-        files.mv(output.name, self.lhe_input.name)
+        if self.output_type == "default" and self.mother:
+            files.mv(output.name, self.lhe_input.name)
+        elif self.mother:
+            files.mv(output2.name, pjoin(self.mother.me_dir, 'Events', run_name, 'events.lhe'))
+        else:
+            files.mv(output2.name, self.lhe_input.name)      
+
         logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         logger.info('new cross-section is : %g pb' % cross)
         self.terminate_fortran_executables(new_card_only=True)

@@ -218,6 +218,39 @@ class Banner(dict):
                 if pid not in pid2label.keys(): 
                     block.remove((pid,))
 
+    def get_lha_strategy(self):
+        """get the lha_strategy: how the weight have to be handle by the shower"""
+        
+        if not self["init"]:
+            raise Exception, "No init block define"
+        
+        data = self["init"].split('\n')[0].split()
+        if len(data) != 10:
+            misc.sprint(len(data), self['init'])
+            raise Exception, "init block has a wrong format"
+        return int(data[-2])
+        
+    def set_lha_strategy(self, value):
+        """set the lha_strategy: how the weight have to be handle by the shower"""
+        
+        if not (-4 <= int(value) <= 4):
+            raise Exception, "wrong value for lha_strategy", value
+        if not self["init"]:
+            raise Exception, "No init block define"
+        
+        all_lines = self["init"].split('\n')
+        data = all_lines[0].split()
+        if len(data) != 10:
+            misc.sprint(len(data), self['init'])
+            raise Exception, "init block has a wrong format"
+        data[-2] = '%s' % value
+        all_lines[0] = ' '.join(data) + '\n'
+        self['init'] = '\n'.join(all_lines)
+
+        
+        
+        
+
 
     ############################################################################
     #  WRITE BANNER
