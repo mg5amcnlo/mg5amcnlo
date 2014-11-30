@@ -240,12 +240,13 @@ class gen_ximprove(object):
         for C in to_refine:
             #1. Compute the number of points are needed to reach target
             needed_event = goal_lum*C.get('xsec')
-            nb_split = int(max(0,((needed_event-1)// self.max_request_event) +1))
+            nb_split = int(max(1,((needed_event-1)// self.max_request_event) +1))
             if not self.split_channels:
                 nb_split = 1
             if nb_split > self.max_splitting:
                 nb_split = self.max_splitting
             self.write_multijob(C, nb_split)
+            
             #2. estimate how many points we need in each iteration
             if C.get('nunwgt') > 0:
                 nevents =  needed_event / nb_split * (C.get('nevents') / C.get('nunwgt'))
