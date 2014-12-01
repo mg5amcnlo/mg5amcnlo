@@ -101,7 +101,7 @@ C ----------
       ENDDO
       DO IHEL=1,NCOMB
          IF (GOODHEL(IHEL,nFKSprocess)) THEN
-           CALL B_SF_%(ilink)3.3d(P1,IHEL,T)
+           CALL B_SF_%(ilink)3.3d(IHEL,T)
            DO I=1,NSQAMPSO
              ANS(I)=ANS(I)+T(I)
            ENDDO
@@ -114,7 +114,7 @@ C ----------
       END
        
        
-      SUBROUTINE B_SF_%(ilink)3.3d(P,HELL,ANS)
+      SUBROUTINE B_SF_%(ilink)3.3d(HELL,ANS)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -141,7 +141,6 @@ C
 C  
 C ARGUMENTS 
 C  
-      REAL*8 P(0:3,NEXTERNAL-1)
       INTEGER HELL
       REAL*8 ANS(NSQAMPSO)
 C  

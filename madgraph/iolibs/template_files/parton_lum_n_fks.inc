@@ -11,24 +11,21 @@ C
 C CONSTANTS                                                           
 C                                                                     
       include 'genps.inc'                                            
-      include "nexternal.inc"
       DOUBLE PRECISION       CONV                                     
       PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
 C                                                                     
 C ARGUMENTS                                                           
 C                                                                     
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), lum                         
+      DOUBLE PRECISION lum                         
 C                                                                     
 C LOCAL VARIABLES                                                     
 C                                                                     
-      INTEGER I, ICROSS,ITYPE,LP                                      
-      DOUBLE PRECISION P1(0:3,NEXTERNAL)                              
+      INTEGER I, ICROSS,LP                                      
 %(pdf_vars)s
-      DOUBLE PRECISION XPQ(-7:7)                                      
 C                                                                     
 C EXTERNAL FUNCTIONS                                                  
 C                                                                     
-      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF                          
+      DOUBLE PRECISION PDG2PDF                          
 C                                                                     
 C GLOBAL VARIABLES                                                    
 C                                                                     
@@ -48,11 +45,7 @@ C ----------
 C BEGIN CODE                                                          
 C ----------                                                          
       lum = 0D0                                                      
-      if (imirror.eq.2) then
-%(pdf_lines_mirr)s
-      else
 %(pdf_lines)s
-      endif
       do i=1,IPROC
         lum = lum + pd(i) * conv 
       enddo

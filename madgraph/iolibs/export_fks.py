@@ -2384,10 +2384,6 @@ Parameters              %(params)s\n\
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
 
-        pdf_vars_mirr, pdf_data_mirr, pdf_lines_mirr = \
-                self.get_pdf_lines_mir(matrix_element, ninitial, False, True)
-        replace_dict['pdf_lines_mirr'] = pdf_lines_mirr
-    
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/parton_lum_n_fks.inc')).read()
         file = file % replace_dict

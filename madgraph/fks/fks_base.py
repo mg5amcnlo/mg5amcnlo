@@ -604,12 +604,16 @@ class FKSProcess(object):
                                                                     
                         cnt_process['squared_orders'] = \
                                 copy.copy(born_proc['squared_orders'])
+
+                        if cnt_process['squared_orders'][order] < 2:
+                            continue
                         # check if we need to include the counterterm
                         try:
                             cnt_process['squared_orders'][order] += -2
                         except KeyError:
                             cnt_process['squared_orders']['WEIGHTED'] += \
                                     -2 * cnt_process['model'].get('order_hierarchy')[order]
+
 
                         # MZMZ17062014 beware that the Amplitude reorders the legs
                         cnt_amp = diagram_generation.Amplitude(cnt_process)
