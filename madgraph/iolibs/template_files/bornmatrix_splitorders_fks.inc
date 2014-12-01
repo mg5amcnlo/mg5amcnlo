@@ -30,6 +30,7 @@ C
       data firsttime / .TRUE. /
       double precision tiny
       parameter (tiny = 1d-12)
+      double precision max_val
 C
 C     FUNCTIONS
 C
@@ -88,9 +89,13 @@ CALL SBORN_SPLITORDERS(P,ANS)
 
 C the born to be integrated
 ans_summed = 0d0
+max_val = 0d0
 do i = 1, nsqampso
  if (keep_order(i)) ANS_SUMMED = ANS_SUMMED + ANS(1,I)
+ max_val = max(max_val, abs(ans(1,I)))
 enddo
+C this is to avoid fake non-zero contributions 
+if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 
 C quantities for the counterterms
 do j = 1, nsplitorders
@@ -103,8 +108,8 @@ do j = 1, nsplitorders
   endif
  enddo
 C this is to avoid fake non-zero contributions 
- if (abs(ans_cnt(1,j)).lt.ans_summed*tiny) ans_cnt(1,j)=(0d0,0d0)
- if (abs(ans_cnt(2,j)).lt.ans_summed*tiny) ans_cnt(2,j)=(0d0,0d0)
+ if (abs(ans_cnt(1,j)).lt.max_val*tiny) ans_cnt(1,j)=(0d0,0d0)
+ if (abs(ans_cnt(2,j)).lt.max_val*tiny) ans_cnt(2,j)=(0d0,0d0)
 enddo
 
 return

@@ -42,9 +42,6 @@ class TestAMCatNLOEW(unittest.TestCase):
             'u u~ > d d~ QED=0 QCD=2 [real=QCD]',
             'u u~ > d d~ QED=0 QCD=2 [real=QED]',
             'u u~ > d d~ QED=0 QCD=2 [real=QED QCD]',
-            'u u~ > d d~  [real=QCD]',
-            'u u~ > d d~  [real=QED]',
-            'u u~ > d d~  [real=QED QCD]',
             'u u~ > d d~ QCD=2 QED=2 [real=QCD]',
             'u u~ > d d~ QCD=2 QED=2 [real=QED]',
             'u u~ > d d~ QCD=2 QED=2 [real=QED QCD]']
@@ -53,9 +50,6 @@ class TestAMCatNLOEW(unittest.TestCase):
         born_orders_list = [{'QED':0, 'QCD':2},
                             {'QED':0, 'QCD':2},
                             {'QED':0, 'QCD':2},
-                            {'WEIGHTED': 2},
-                            {'WEIGHTED': 2},
-                            {'WEIGHTED': 2},
                             {'QED':2, 'QCD':2},
                             {'QED':2, 'QCD':2},
                             {'QED':2, 'QCD':2}]
@@ -68,21 +62,18 @@ class TestAMCatNLOEW(unittest.TestCase):
         squared_orders_list = [{'QED':0, 'QCD':6},
                             {'QED':2, 'QCD':4},
                             {'QED':2, 'QCD':6},
-                            {'WEIGHTED': 6},
-                            {'WEIGHTED': 8},
-                            {'WEIGHTED': 8},
                             {'QED':4, 'QCD':6},
                             {'QED':6, 'QCD':4},
                             {'QED':6, 'QCD':6}]
 
         # number of expected born diagrams
         # 1 QCD diagram and 3 EW ones
-        nborndiag_list = [1, 4, 4, 1, 4, 4, 4, 4, 4]
+        nborndiag_list = [1, 4, 4, 4, 4, 4]
 
         # number of expected real emission processes
         # for QED perturbations also the gluon emissions have to be generated, 
         # as their alpha x alpha_s^2 contribution has to be included
-        nrealproc_list = [3, 6, 6, 3, 6, 6, 6, 6, 6]
+        nrealproc_list = [3, 6, 6, 6, 6, 6]
 
         # number of expected real emission diagrams
         # u u~ > d d~ g has 5 with QED=0, 17 with QED=2
@@ -97,9 +88,6 @@ class TestAMCatNLOEW(unittest.TestCase):
         #   u a > d d~ u [ QED ] QED=2 QCD=4
         #   u g > d u d~ [ QED ] QED=2 QCD=4
         nrealdiags_list = [[5, 5, 5],
-                           [4, 4, 17, 17, 4, 17],
-                           [4, 4, 17, 17, 4, 17],
-                           [5, 5, 5],
                            [4, 4, 17, 17, 4, 17],
                            [4, 4, 17, 17, 4, 17],
                            [17, 17, 17, 17, 17, 17],
@@ -286,8 +274,8 @@ class TestAMCatNLOEW(unittest.TestCase):
         newinterface = mgcmd.MasterCmd()
         newinterface2 = mgcmd.MasterCmd()
         # generate the processes
-        self.interface.do_generate('u u~ > t t~ [real=QCD]')
-        newinterface.do_generate('d d~ > t t~ [real=QCD]')
+        self.interface.do_generate('u u~ > t t~ QED=0 QCD=2 [real=QCD]')
+        newinterface.do_generate('d d~ > t t~ QED=0 QCD=2 [real=QCD]')
 
         fksproc1 = self.interface._fks_multi_proc
         fksproc2 = newinterface._fks_multi_proc

@@ -467,6 +467,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # avaliable in the model
         myprocdef['perturbation_couplings'] = list(myprocdef['model']['coupling_orders'])
 
+
+        myprocdef['orders'] = {}
+
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
