@@ -15,7 +15,7 @@ c Wrapper routines for the fixed order analyses
       include "appl_common.inc"
 
       nwgt=1
-      weights_info(nwgt)="central value  "
+      weights_info(nwgt)="  central value"
       if (do_rwgt_scale) then
          nwgt=nwgt+9
          if (numscales.ne.3) then

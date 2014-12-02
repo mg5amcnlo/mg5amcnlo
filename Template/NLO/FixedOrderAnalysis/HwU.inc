@@ -1,6 +1,6 @@
 *     -*-fortran-*-
 
-      integer max_plots,max_bins,max_wgts
+      integer max_plots,max_bins,max_wgts,max_points
       parameter (max_plots=200)
       parameter (max_bins=100)
       parameter (max_wgts=300)
