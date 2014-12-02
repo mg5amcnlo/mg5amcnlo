@@ -1,5 +1,5 @@
 C     HwU: Histograms with Uncertainties
-C     By  Rikkert Frederix
+C     By Rikkert Frederix, Dec. 2014
 
 c To be called once at the start of each run
       subroutine HwU_inithist(nweights,wgt_info)

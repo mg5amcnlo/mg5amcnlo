@@ -1625,24 +1625,84 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                      new_lines[i]=('  '+'  '.join(['%+14.7e' % j for j in current_line]) + '\n')
                  except ValueError:
                      pass
+        write_lines=[]
+        gnuplot_text_scale_pdf="plot 'MADatNLO.HwU' i %(index)d u (($1+$2)/2):3 ls 1 title columnheader(1), '' i %(index)d u (($1+$2)/2):3:4 w yerrorbar ls 1 title '', '' i %(index)d u (($1+$2)/2):5 ls 11 title 'scale uncertainty', '' i %(index)d u (($1+$2)/2):6 ls 11 title '', '' i %(index)d u (($1+$2)/2):7 ls 21 title 'pdf uncertainty', '' i %(index)d u (($1+$2)/2):8 ls 21 title ''\n\n"
+        i=0
+        replace_dict={}
+        gnuplot_lines=[]
+        for j,line in enumerate(new_lines):
+            try:
+                elements=[float(n) for n in line.split()]
+                scale_pdf_list=self.compute_scale_pdf(elements)
+                split_line=line.split()
+                for number in reversed(scale_pdf_list):
+                    split_line.insert(4,'%+14.7e' % number)
+                write_lines.append('  '+'  '.join(split_line)+'\n')
+            except (IndexError, ValueError):
+                pass
+            if j == 0:
+                line=line[:64]+'     scale upper     scale lower       PDF upper       PDF lower'+line[67:]
+                write_lines.append(line)
+            elif line[0:1]=='"':
+                write_lines.append('\n\n')
+                # remove surrounding white spaces from title
+                write_lines.append('"'+line.split('"')[1].strip()+'"'+line.split('"',2)[2])
+                # compute x-range
+                nbin=int(line.split()[-1])
+                gnuplot_lines.append('set xrange[%s :%s]\n'%(new_lines[j+1].split()[0],new_lines[j+nbin].split()[1]))
+                replace_dict['index']=i
+                gnuplot_lines.append(gnuplot_text_scale_pdf % replace_dict)
+                i=i+1
+                         
+
         with open(pjoin(self.me_dir,'SubProcesses',"MADatNLO.HwU"),'w') as output_file:
-            output_file.writelines(new_lines)
+            output_file.writelines(write_lines)
         
-        gnuplot_header="reset \n set terminal postscript enhanced mono dashed lw 1 \n set output 'MADatNLO.ps' \n set style line 1 lt 1 lc rgb 'dark-green' lw 1.0 pt -1 \n set style data histeps \n set mxtics 5 \n set mytics 10 \n set logscale y \n set format y '%.1t*10^{%+3T}'\n\n"
-        gnuplot_text="plot 'MADatNLO.HwU' i %d u (($1+$2)/2):3 ls 1 title columnheader(1), '' i %d u (($1+$2)/2):3:4 w yerrorbar ls 1 title ''\n"
-        
+        gnuplot_header="reset \n set terminal postscript enhanced mono dashed lw 1 \n set output 'MADatNLO.ps' \n set style line 1 lt 1 lc rgb 'dark-green' lw 1.0 pt -1 \n set style line 11 lt 2 lc rgb 'dark-green' lw 1.0 pt -1 \n set style line 21 lt 3 lc rgb 'dark-green' lw 1.0 pt -1 \n set style data histeps \n set mxtics 5 \n set mytics 10 \n set logscale y \n set format y '%.1t*10^{%+3T}'\n\n"
         with open(pjoin(self.me_dir,'SubProcesses',"MADatNLO.gnuplot"),'w') as output_file:
             output_file.write(gnuplot_header)
-            i=0
-            for j,line in enumerate(new_lines):
-                if line[0:1]=='"':
-                    nbin=int(line.split()[-1])
-                    output_file.write('set xrange[%s :%s]\n'%(new_lines[j+1].split()[0],new_lines[j+nbin].split()[1]))
-                    output_file.write(gnuplot_text % (i,i))
-                    i=i+1
-                    
+            output_file.writelines(gnuplot_lines)
 
+    def compute_scale_pdf(self,elements):
+        """returns a dictionary with upper and lower scale and pdf uncertainties"""
+        scale_pdf=[]
+        cntrl_val=elements[2]
+        if self.run_card['reweight_scale'].lower() == '.true.':
+            scales=elements[4:13]
+            scale_pdf.append(max(scales))
+            scale_pdf.append(min(scales))
+        else:
+            scale_pdf.append(0.)
+            scale_pdf.append(0.)
 
+        if self.run_card['reweight_PDF'].lower() == '.true.':
+            npdfs=int(self.run_card['PDF_set_max'])-int(self.run_card['PDF_set_min'])+1
+            pdfs=elements[-npdfs:]
+            # get the pdf uncertainty in percent (according to the Hessian method)
+            lhaid=int(self.run_card['lhaid'])
+            pdf_upp=0.0
+            pdf_low=0.0
+            if lhaid <= 90000:
+            # use Hessian method (CTEQ & MSTW)
+                if npdfs>1:
+                    for i in range(int(npdfs/2)):
+                        pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
+                        pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
+                    scale_pdf.append(cntrl_val+math.sqrt(pdf_upp))
+                    scale_pdf.append(cntrl_cal-math.sqrt(pdf_low))
+            else:
+            # use Gaussian method (NNPDF)
+                pdf_stdev=0.0
+                for i in range(npdfs-1):
+                    pdf_stdev = pdf_stdev + pow(pdfs[i+1] - cntrl_val,2)
+                pdf_stdev = math.sqrt(pdf_stdev/float(npdfs-2))
+                scale_pdf.append(cntrl_val+pdf_stdev)
+                scale_pdf.append(cntrl_val-pdf_stdev)
+        else:
+            scale_pdf.append(0.)
+            scale_pdf.append(0.)
+        return scale_pdf
+            
 
     def applgrid_combine(self,cross,error):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
@@ -3140,8 +3200,6 @@ Integrated cross-section
                 cntrl_val=scales[0]
 
         # get the scale uncertainty in percent
-        scale_upp=0.0
-        scale_low=0.0
         if numofscales>0:
             scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
             scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
