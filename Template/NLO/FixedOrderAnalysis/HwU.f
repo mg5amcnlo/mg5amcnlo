@@ -63,7 +63,7 @@ c Fill the histograms with a point
       include "HwU.inc"
       integer label,i,j,bin
       double precision x, wgts(*)
-      bin=int((x-histxm(label,1))/step(label)) +1
+      bin=int((x-histxl(label,1))/step(label)) +1
       if (bin.lt.1 .or. bin.gt.nbin(label)) return
       do i=1,np
          if ( p_label(i).eq.label .and. p_bin(i).eq.bin) then
