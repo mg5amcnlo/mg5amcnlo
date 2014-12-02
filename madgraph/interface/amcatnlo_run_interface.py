@@ -1454,6 +1454,14 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                 pjoin(self.me_dir, 'Events', self.run_name))
                 logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+            elif self.analyse_card['fo_analysis_format'].lower() == 'hwu':
+                self.combine_plots_HwU(folder_names[mode])
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.HwU'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.gnuplot'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             elif self.analyse_card['fo_analysis_format'].lower() == 'root':
                 misc.call(['./combine_root.sh'] + folder_names[mode], \
                                 stdout=devnull, 
@@ -1590,6 +1598,50 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         event_norm=self.run_card['event_norm']
         self.collect_log_files(folder_names[mode], 2)
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
+
+    def combine_plots_HwU(self,folder_names):
+        """Sums all the plots in the HwU format"""
+        logger.debug('Combining plots \n')
+        with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
+            all_jobs=dirf.readlines()
+        with open(pjoin(self.me_dir,'SubProcesses',all_jobs[0].rstrip(),"MADatNLO.HwU")) as first_file:
+            all_lines=first_file.readlines()
+        new_lines=copy.copy(all_lines)
+        for job in all_jobs[1:]:
+            with open(pjoin(self.me_dir,'SubProcesses',job.rstrip(),"MADatNLO.HwU")) as other_file:
+                all_lines=other_file.readlines()
+            for i,line in enumerate(all_lines):
+                 try:
+                     values_to_add  = [float(n) for n in line.split()]
+                     values_already = [float(n) for n in new_lines[i].split()]
+                     current_line=[]
+                     for j,val in enumerate(values_already):
+                         if j == 0 or j == 1:
+                             current_line.append(val)
+                         elif j == 3:
+                             current_line.append(math.sqrt(math.pow(val,2) + math.pow(values_to_add[j],2)))
+                         else:
+                             current_line.append(val + values_to_add[j])
+                     new_lines[i]=('  '+'  '.join(['%+14.7e' % j for j in current_line]) + '\n')
+                 except ValueError:
+                     pass
+        with open(pjoin(self.me_dir,'SubProcesses',"MADatNLO.HwU"),'w') as output_file:
+            output_file.writelines(new_lines)
+        
+        gnuplot_header="reset \n set terminal postscript enhanced mono dashed lw 1 \n set output 'MADatNLO.ps' \n set style line 1 lt 1 lc rgb 'dark-green' lw 1.0 pt -1 \n set style data histeps \n set mxtics 5 \n set mytics 10 \n set logscale y \n set format y '%.1t*10^{%+3T}'\n\n"
+        gnuplot_text="plot 'MADatNLO.HwU' i %d u (($1+$2)/2):3 ls 1 title columnheader(1), '' i %d u (($1+$2)/2):3:4 w yerrorbar ls 1 title ''\n"
+        
+        with open(pjoin(self.me_dir,'SubProcesses',"MADatNLO.gnuplot"),'w') as output_file:
+            output_file.write(gnuplot_header)
+            i=0
+            for j,line in enumerate(new_lines):
+                if line[0:1]=='"':
+                    nbin=int(line.split()[-1])
+                    output_file.write('set xrange[%s :%s]\n'%(new_lines[j+1].split()[0],new_lines[j+nbin].split()[1]))
+                    output_file.write(gnuplot_text % (i,i))
+                    i=i+1
+                    
+
 
 
     def applgrid_combine(self,cross,error):

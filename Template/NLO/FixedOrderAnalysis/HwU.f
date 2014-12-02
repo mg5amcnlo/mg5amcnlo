@@ -167,20 +167,21 @@ c Write the histograms to disk at the end of the run
       integer max_length
       parameter (max_length=(max_wgts+3)*16)
       character*(max_length) buffer
+c column info
+      write (buffer( 1:16),'(a)')'#           xmin'
+      write (buffer(17:32),'(a)')'            xmax'
+      write (buffer(33:48),'(1x,a15)') wgts_info(1)(1:15)
+      write (buffer(49:64),'(a)')'              dy'
+      do j=2,nwgts
+         write (buffer((j+2)*16+1:(j+3)*16),'(1x,a15)')
+     $        wgts_info(j)(1:15)
+      enddo
+      write (unit,'(a)') buffer(1:(nwgts+3)*16)
+      write (unit,'(a)') ''
       do label=1,max_plots
          if (.not. booked(label)) cycle
 c title
-         write (unit,'(a,a)') '#',title(label)
-c column info
-         write (buffer( 1:16),'(a)')'            xmin'
-         write (buffer(17:32),'(a)')'            xmax'
-         write (buffer(33:48),'(1x,a15)') wgts_info(1)(1:15)
-         write (buffer(49:64),'(a)')'              dy'
-         do j=2,nwgts
-            write (buffer((j+2)*16+1:(j+3)*16),'(1x,a15)')
-     $           wgts_info(j)(1:15)
-         enddo
-         write (unit,'(a)') buffer(1:(nwgts+3)*16)
+         write (unit,'(1a,a,1a,1x,i3)') '"',title(label),'"',nbin(label)
 c data
          do i=1,nbin(label)
             write (buffer( 1:16),'(2x,e14.7)') histxl(label,i)
