@@ -1626,7 +1626,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                  except ValueError:
                      pass
         write_lines=[]
-        gnuplot_text_scale_pdf="plot 'MADatNLO.HwU' i %(index)d u (($1+$2)/2):3 ls 1 title columnheader(1), '' i %(index)d u (($1+$2)/2):3:4 w yerrorbar ls 1 title '', '' i %(index)d u (($1+$2)/2):5 ls 11 title 'scale uncertainty', '' i %(index)d u (($1+$2)/2):6 ls 11 title '', '' i %(index)d u (($1+$2)/2):7 ls 21 title 'pdf uncertainty', '' i %(index)d u (($1+$2)/2):8 ls 21 title ''\n\n"
+        gnuplot_text_scale_pdf="plot 'MADatNLO.HwU' i %(index)d u (($1+$2)/2):3 ls 1 title columnheader(1), '' i %(index)d u (($1+$2)/2):3:4 w yerrorbar ls 1 title '', '' i %(index)d u (($1+$2)/2):5 ls 11 title 'scale uncertainty', '' i %(index)d u (($1+$2)/2):6 ls 11 title '', '' i %(index)d u (($1+$2)/2):7 ls 21 title 'PDF uncertainty', '' i %(index)d u (($1+$2)/2):8 ls 21 title ''\n\n"
         i=0
         replace_dict={}
         gnuplot_lines=[]
