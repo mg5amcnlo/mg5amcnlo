@@ -10,7 +10,8 @@ C     and PDF uncertainties through reweighting).                          C
 C                                                                          C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       
-c To be called once at the start of each run
+c To be called once at the start of each run. Initialises the packages
+c and sets the number of weights that need to be included for each point.
       subroutine HwU_inithist(nweights,wgt_info)
       implicit none
       include "HwU.inc"
@@ -34,7 +35,10 @@ c     zero if any of the other weights are non-zero.
       return
       end
 
-c Book the histograms at the start of the run
+c Book the histograms at the start of the run. Give a 'label' (an
+c integer) that identifies the plot when filling it and a title
+c ('title_l') for each plot. Also the number of bins ('nbin_l') and the
+c plot range (from 'xmin' to 'xmax') should be given.
       subroutine HwU_book(label,title_l,nbin_l,xmin,xmax)
       implicit none
       include "HwU.inc"
@@ -73,7 +77,11 @@ c     Set all the bins to zero.
       return
       end
       
-c Fill the histograms with a point
+c Fill the histograms identified with 'label' with a point at x with
+c weights giving by 'wgts'. The dimension of the 'wgts' array should
+c always be as large as the number of weights ('nweights') specified in
+c the 'HwU_inithist' subroutine. That means that each point should have
+c the same number of weights.
       subroutine HwU_fill(label,x,wgts)
       implicit none
       include "HwU.inc"
@@ -115,10 +123,12 @@ c     If a new bin, add it to the list of points
       end
 
 c Call after all correlated contributions for a give phase-space
-c point. I.e., every time you get a new set of random numbers for
+c point. I.e., every time you get a new set of random numbers from
 c MINT/VEGAS. It adds the current list of points to the histograms. Add
 c the squares to compute the statistical uncertainty on the bin. Do the
-c second only for the weight corresponding to the 'central value'.
+c second only for the weight corresponding to the 'central value'. In
+c this way, correlations between events and counter-events can be
+c correctly taken into account.
       subroutine HwU_add_points
       implicit none
       include "HwU.inc"
