@@ -222,6 +222,58 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(math.fabs(res_dict['xseca']-3.811e-1) < 0.01)
 
 
+    def test_raise_invalid_path_hwpp(self):
+        """test that an exception is raised when trying to shower with hwpp without
+        having set the corresponding pahts"""
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD] '], 'sm')
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertTrue( 'HERWIG6   = parton_shower' in card)
+        card = card.replace('HERWIG6   = parton_shower', 'HERWIGPP   = parton_shower')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.do('generate_events -pf')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+        #no shower the file
+        self.assertRaises(NLOCmd.aMCatNLOError, self.do, 'shower run_01 -f')
+
+
+    def test_raise_invalid_path_py8(self):
+        """test that an exception is raised when trying to shower with py8 without
+        having set the corresponding pahts"""
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD] '], 'sm')
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertTrue( 'HERWIG6   = parton_shower' in card)
+        card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.do('generate_events -pf')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+        #no shower the file
+        self.assertRaises(NLOCmd.aMCatNLOError, self.do, 'shower run_01 -f')
+
+
+
+
     def test_split_evt_gen(self):
         """test that the event generation splitting works"""
         cmd = os.getcwd()

@@ -2401,6 +2401,18 @@ Integrated cross-section
                     '\n'.join(fjwrapper_lines) + '\n')
 
         extrapaths = self.shower_card['extrapaths'].split()
+
+        # check that the path needed by HW++ and PY8 are set if one uses these shower
+        if shower in ['HERWIGPP', 'PYTHIA8']:
+            path_dict = {'HERWIGPP': ['hepmc_path',
+                                      'thepeg_path',
+                                      'hwpp_path'],
+                         'PYTHIA8': ['pythia8_path']}
+
+            if not all([self.options[ppath] for ppath in path_dict[shower]]):
+                raise aMCatNLOError('Some paths are missing in the configuration file.\n' + \
+                        ('Please make sure you have set these variables: %s' % ', '.join(path_dict[shower])))
+
         if shower == 'HERWIGPP':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
 
