@@ -142,7 +142,7 @@ c
       integer nexternal, ic(7,*)
       double precision P(0:4,*),wgt
       double precision aqcd, aqed, scale
-      character*300 buff
+      character*1000 buff
       logical u_syst
       character*(s_bufflen) s_buff(*)
       integer nclus

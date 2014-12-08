@@ -271,7 +271,7 @@ class ParamCard(dict):
         self.input_path = input_path
         if input_path:
             self.read(input_path)
-
+        
     def read(self, input_path):
         """ read a card and full this object with the content of the card """
 

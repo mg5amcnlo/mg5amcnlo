@@ -55,14 +55,12 @@ class TestMECmdShell(unittest.TestCase):
     def setUp(self):
         
         self.tmpdir = tempfile.mkdtemp(prefix='amc')
-        # if we need to keep the directory for testing purpose
         #if os.path.exists(self.tmpdir):
         #    shutil.rmtree(self.tmpdir)
         #os.mkdir(self.tmpdir)
         self.path = pjoin(self.tmpdir,'MGProcess')
-        
+
     def tearDown(self):
-        
         shutil.rmtree(self.tmpdir)
     
     
@@ -100,9 +98,9 @@ class TestMECmdShell(unittest.TestCase):
         interface.onecmd('output %s -f' % self.path)
         proc_card = open('%s/Cards/proc_card_mg5.dat' % self.path).read()
         self.assertTrue('generate' in proc_card or 'add process' in proc_card)
-        
+        run_cmd('set automatic_html_opening False --no_save')
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '%s' % self.path)
-        self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
+        self.cmd_line.run_cmd('set automatic_html_opening False --no_save')
         self.assertFalse(self.cmd_line.options['automatic_html_opening'])
 
     @staticmethod
@@ -128,10 +126,10 @@ class TestMECmdShell(unittest.TestCase):
         os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat' % (self.path, self.path))
 
         card = open('%s/Cards/shower_card_default.dat' % self.path).read()
-        self.assertTrue( 'ANALYSE     =' in card)
-        card = card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwan_pp_tj.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
-        self.assertTrue( 'EXTRALIBS   = stdhep Fmcfio' in card)
-        card = card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
+        self.assertTrue( 'ANALYSE      =' in card)
+        card = card.replace('ANALYSE      =', 'ANALYSE     = mcatnlo_hwan_pp_tj.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
+        self.assertTrue( 'EXTRALIBS    = stdhep Fmcfio' in card)
+        card = card.replace('EXTRALIBS    = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
         open('%s/Cards/shower_card_default.dat' % self.path, 'w').write(card)
         os.system('cp  %s/Cards/shower_card_default.dat %s/Cards/shower_card.dat'% (self.path, self.path))
 
@@ -306,7 +304,7 @@ class TestMECmdShell(unittest.TestCase):
                     os.system('rm -rf %s/Events/run_01' % self.path)
                     os.system('rm -rf %s/Events/run_01_LO' % self.path)                        
                     self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '%s' % self.path)
-                    self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
+                    self.cmd_line.run_cmd('set automatic_html_opening False --no_save')
 
                     card = open('%s/Cards/run_card_default.dat' % self.path).read()
                     self.assertTrue( '10000 = nevents' in card)
@@ -412,13 +410,12 @@ class TestMECmdShell(unittest.TestCase):
         """test if the generate_events and successively the shower script in 
         the bin directory works fine.
         Also check the splitting of the shower for bot hep and top output"""
-        
+
         self.generate_production()
         # to check that the cleaning of files work well
         os.system('touch %s/SubProcesses/P0_udx_epve/GF1' % self.path)
         self.do('quit')
-        misc.call([pjoin('.','bin','generate_events'), '-f'], cwd='%s' % self.path,
-                stdout = open(os.devnull, 'w'))
+        self.cmd_line.run_cmd('generate_events -f')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
@@ -442,21 +439,24 @@ class TestMECmdShell(unittest.TestCase):
         #splitting of the shower
         # 1) hep output
         shower_card = open('%s/Cards/shower_card.dat' % self.path).read()
-        shower_card = shower_card.replace('nsplit_jobs= 1', 'nsplit_jobs= 4')
+        shower_card = shower_card.replace('nsplit_jobs  = 1', 'nsplit_jobs  = 4')
         open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
-        misc.call([pjoin('.','bin','shower'), 'run_01', '-f'], cwd='%s' % self.path,
-                stdout = open(os.devnull, 'w'))
+        self.cmd_line.run_cmd('shower run_01 -f')
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__1.hep.gz' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__2.hep.gz' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__3.hep.gz' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__4.hep.gz' % self.path))
 
         # 2) top output
-        shower_card = shower_card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   =')  
-        shower_card = shower_card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwan_pp_lvl.o mcatnlo_hbook_gfortran8.o')  
+        shower_card = shower_card.replace('EXTRALIBS    = stdhep Fmcfio', 'EXTRALIBS    =')  
+        shower_card = shower_card.replace('ANALYSE      =', 'ANALYSE      = mcatnlo_hwan_pp_lvl.o mcatnlo_hbook_gfortran8.o')  
         open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
-        misc.call([pjoin('.','bin','shower'), 'run_01', '-f'], cwd='%s' % self.path,
-                stdout = open(os.devnull, 'w'))
+        self.cmd_line.run_cmd('shower run_01 -f')
+        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.tar.gz' % self.path))
+        self.assertFalse(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__1.top' % self.path))
+        misc.call(['tar', '-xzpvf', '%s/Events/run_01/plot_HERWIG6_1_0.tar.gz' % self.path],
+                  cwd='%s/Events/run_01/'% self.path,
+                  stdout = open(os.devnull, 'w'))
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__1.top' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__2.top' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__3.top' % self.path))

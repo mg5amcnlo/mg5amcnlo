@@ -56,6 +56,9 @@ C---USER CAN RESET PARAMETERS AT
 C   THIS POINT, OTHERWISE DEFAULT
 C   VALUES IN HWIGIN WILL BE USED.
 C
+C PTVETO MUST BE TRUE IN ORDER FOR SCALUP TO BE USED ALSO
+C IN CASE OF RADIATION OFF RESONANCES
+      PTVETO=.TRUE. 
 C************************************************************************
 C---UNCOMMENT THE ASSIGNMENT PRESPL=.FALSE. WHEN USING HERWIG VERSION 6.52 
 C---OR HIGHER (SEE MC@NLO MANUAL, APPENDIX A.8, PAGE 25)
@@ -68,9 +71,6 @@ C UNDERLYING EVENT
       IF(LHSOFT)WRITE(*,*)'Underlying event WILL be generated'
       IF(.NOT.LHSOFT)WRITE(*,*)'Underlying event WILL NOT be generated'
       WRITE(*,*)
-C
-      WRITE(*,*)'Enter decay modes for gauge bosons'
-      READ(*,*)MODBOS(1),MODBOS(2)
 C
       IF(LHSOFT.AND.IPDF.NE.1)THEN
          WRITE(*,*)' '
@@ -236,6 +236,7 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
         CALL HWUSTA('XI_B-   ')
         CALL HWUSTA('OMEGA_B-')
         CALL HWUSTA('B_C-    ')
+        CALL HWUSTA('ETA_B   ')
         CALL HWUSTA('UPSLON1S')
         CALL HWUSTA('SGM_BBR-')
         CALL HWUSTA('LMD_BBR0')

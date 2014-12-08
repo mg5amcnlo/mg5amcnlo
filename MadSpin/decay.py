@@ -72,10 +72,11 @@ class Event:
     """ class to read an event, record the information, write down the event in the lhe format.
             This class is used both for production and decayed events"""
 
-    def __init__(self, inputfile=None):
+    def __init__(self, inputfile=None, banner=None):
         """Store the name of the event file """
         self.inputfile=inputfile
         self.particle={}
+        self.banner = banner
 
     def give_momenta(self, map_event=None):
         """ return the set of external momenta of the event, 
@@ -162,18 +163,31 @@ class Event:
         """ return a string with the information of the event written 
                 in the lhe format.
         """
-        line="<event> \n"
+        line=self.event_init_line         # This is the <event> line
         line1=' %2d %6d %+13.7e %14.8e %14.8e %14.8e' % \
         (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
         line+=line1+"\n"
+        scales= []
         for item in range(1,len(self.event2mg.keys())+1):
             part=self.event2mg[item]
             if part>0:
                 particle_line=self.get_particle_line(self.particle[part])
+                if abs(self.particle[part]["istup"]) == 1:
+                    if "pt_scale" in self.particle[part]:
+                        scales.append(self.particle[part]["pt_scale"])
+                    else:
+                        scales.append(None)
             else:
                 particle_line=self.get_particle_line(self.resonance[part])
             line+=particle_line        
-
+        
+        if any(scales):
+            sqrts = self.particle[1]["pt_scale"]
+            line += "<scales %s></scales>\n" % ' '.join(['pt_clust_%i=\"%s\"' 
+                                                        %(i-1,s if s else sqrts)
+                                                       for i,s in enumerate(scales)
+                                                       if i>1])
+        
         if self.diese:
             line += self.diese
         if self.rwgt:
@@ -208,7 +222,7 @@ class Event:
                     daughters.append(index)
 
         if len(daughters)!=2:
-            logger.info("Got more than 2 daughters for one particles")
+            logger.info("Got more than 2 (%s) daughters for one particles" % len(daughters))
             logger.info("in one production event (before decay)")
 
 
@@ -274,8 +288,10 @@ class Event:
             if line[0]=="#":
                 self.diese+=line
                 continue
-            if '<event>' in line:
+            if '<event' in line:
                 #start new_event
+                #Get the right attributes (e.g. <event id='123' npNLO='-1'>)
+                self.event_init_line=line.lstrip().replace('nplo','npLO').replace('npnlo','npNLO')
                 line_type = 'init'
                 continue
             elif '<rwgt>' in line:
@@ -290,6 +306,9 @@ class Event:
             elif line_type == 'rwgt' and 'wgt' in line:
                 # force to continue to be in rwgt line up to </rwgt>
                 line_type = 'rwgt'
+            elif "pt_clust_" in line:
+                line_type="clusteringv3" 
+            
             elif '<' in line:
                 line_type = 'other_block'
             
@@ -347,6 +366,17 @@ class Event:
                     "mothup2":mothup2,"colup1":colup1,"colup2":colup2,"momentum":mom,"mass":mass,"helicity":helicity}
                 else: 
                     logger.warning('unknown status in lhe file')
+            elif line_type == "clusteringv3":
+                scales = re.findall(r"""pt_clust_(\d+)=\"([e\+\-.\d]+)\"""", line)
+                scales = sorted(scales, key= lambda x: -1*int(x[0]))
+                for index in range(1,len(self.particle)+1):
+                    if self.particle[index]["istup"] == 1:
+                        self.particle[index]["pt_scale"] = scales.pop()[1]
+                if not self.banner:
+                    self.particle[1]["pt_scale"] = self.particle[1]["momentum"].E + self.particle[2]["momentum"].E
+                else:
+                    self.particle[1]["pt_scale"] = float(self.banner.get('run_card', 'ebeam1'))+float(self.banner.get('run_card', 'ebeam2'))
+                
         return "no_event"
 
 class pid2label(dict):
@@ -1155,7 +1185,7 @@ class AllMatrixElement(dict):
             decaying_base = [id for id in final if abs(id) in self.decay_ids]
             decaying_base.sort()
             topo['base_order'] = (initial , final)
-            topo['matrix_element'] = me
+#            topo['matrix_element'] = me
             tags = []
             topo['tag2order'] = {}
              
@@ -1293,7 +1323,7 @@ class width_estimate(object):
         to_decay = list(set(to_decay))
         
         if to_decay:
-            logger.info('We need to recalculate the branching fractions')
+            logger.info('We need to recalculate the branching fractions for %s' % ','.join(to_decay))
             if hasattr(self.model.get('particles')[0], 'partial_widths'):
                 logger.info('using the FeynRules formula present in the model (arXiv:1402.1178)')
             else:
@@ -1517,14 +1547,17 @@ class width_estimate(object):
         
         label2pid = self.label2pid
         pid2label = self.label2pid
-        
         for res in self.br.keys():
             particle=self.model.get_particle(label2pid[res])
             if particle['self_antipart']: 
                 continue
             anti_res=pid2label[-label2pid[res]]
             self.br[anti_res] = []
-            self.width_value[anti_res]=self.width_value[res]
+            if res in self.width_value: 
+                self.width_value[anti_res]=self.width_value[res]
+            elif anti_res in self.width_value:
+                self.width_value[res]=self.width_value[anti_res]
+                res, anti_res = anti_res, res
             for chan, decay in enumerate(self.br[res]):
                 self.br[anti_res].append({})
                 bran=decay['br']
@@ -1879,7 +1912,7 @@ class decay_all_events(object):
         self.model = ms_interface.model
         self.banner = banner
         self.evtfile = inputfile
-        self.curr_event = Event(self.evtfile) 
+        self.curr_event = Event(self.evtfile, banner) 
         self.inverted_decay_mapping={}
                
         self.curr_dir = os.getcwd()
@@ -2113,7 +2146,33 @@ class decay_all_events(object):
             production_tag, event_map = self.load_event()
             if production_tag == 0 == event_map: #end of file
                 break
+ 
+            numdecays=0
+            for decay in self.all_ME[production_tag]['decays']:
+              if decay['decay_tag']:
+                  numdecays = numdecays + 1
 
+            if not numdecays:
+                #no decays for this production mode, run in passthrough mode, only adding the helicities to the events
+                nb_mc_masses=0
+                p, p_str=self.curr_event.give_momenta(event_map)
+                stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0)
+                stdin_text+=p_str
+                # here I also need to specify the Monte Carlo Masses
+                stdin_text+=" %s \n" % nb_mc_masses
+                
+                mepath = self.all_ME[production_tag]['path']
+                mepath = mepath.replace('production_me','full_me');
+                                
+                trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = self.loadfortran( 'unweighting', mepath, stdin_text)
+                                
+                self.reset_helicityonly_in_prod_event(event_map, helicities)
+                event_nb+=1
+                decayed_event = self.curr_event
+                self.outputfile.write(decayed_event.string_event())
+                #print "number of trials: "+str(trial_nb)
+                trial_nb_all_events+=trial_nb
+                continue
             
             # Here we need to select a decay configuration on a random basis:
             decay = self.all_ME.get_random_decay(production_tag)
@@ -2170,6 +2229,10 @@ class decay_all_events(object):
                                                       event_map, momenta_in_decay,use_mc_masses, helicities)
             
             
+            # Treat the case we get too many failures for the PS generation.
+            if failed > 500 :
+                logger.debug('Got a production event with %s failures for the phase-space generation generation ' % failed)
+
             # Treat the case that we ge too many overweight.
             if weight > decay_me['max_weight']:
                 report['over_weight'] += 1
@@ -2293,6 +2356,19 @@ class decay_all_events(object):
                     else:
                         self.curr_event.particle[part_for_curr_evt]['mass']=self.MC_masses[abs(pid)]
 
+ 
+    def reset_helicityonly_in_prod_event(self, event_map, helicities):
+
+        """ Reset the external momenta in the production event, since
+            the virtuality of decaying particles has slightly changed the kinematics
+        """
+       
+        for index in self.curr_event.event2mg.keys():
+            if self.curr_event.event2mg[index]>0:
+                part=self.curr_event.event2mg[index]       # index for production ME
+                part_for_curr_evt=event_map[part-1]+1 # index for curr event
+                pid=self.curr_event.particle[part_for_curr_evt]['pid']
+                self.curr_event.particle[part_for_curr_evt]['helicity']=helicities[part-1]
 
     def get_mom(self,momenta):
         """ input: list of momenta in a string format 
@@ -2517,10 +2593,10 @@ class decay_all_events(object):
         commandline=''
         for proc in processes:
             if '[' not in proc:
-                commandline+="add process %s ;" % proc
+                commandline+="add process %s  --no_warning=duplicate;" % proc
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s;" % (process)
+                commandline+="add process %s  --no_warning=duplicate;" % (process)
                 if not order:
                     continue
                 elif not order.startswith('virt='):
@@ -2544,9 +2620,9 @@ class decay_all_events(object):
                     result = re.split('([/$@]|\w+=\w+)', process, 1)                    
                     if len(result) ==3:
                         process, split, rest = result
-                        commandline+="add process %s pert_%s %s%s ;" % (process, order ,split, rest)
+                        commandline+="add process %s pert_%s %s%s  --no_warning=duplicate;" % (process, order ,split, rest)
                     else:
-                        commandline +='add process %s pert_%s;' % (process,order)                                       
+                        commandline +='add process %s pert_%s --no_warning=duplicate;' % (process,order)                                       
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -2574,7 +2650,10 @@ class decay_all_events(object):
                 final_states.add(label)
         for key in self.list_branches.keys():
             if key not in final_states and key not in self.mgcmd._multiparticles:
-                del self.list_branches[key]
+                if (len(self.list_branches)>1):
+                  del self.list_branches[key]
+                else:
+                  logger.info('keeping dummy decay for passthrough mode')
 
         # 4. compute the full matrix element -----------------------------------
         logger.info('generating the full square matrix element (with decay)')
@@ -2583,6 +2662,8 @@ class decay_all_events(object):
         decay_text = []
         for decays in self.mscmd.list_branches.values():
             for decay in  decays:
+                if '=' not in decay:
+                    decay += ' QCD=99'
                 if ',' in decay:
                     decay_text.append('(%s)' % decay)
                 else:
@@ -2606,15 +2687,15 @@ class decay_all_events(object):
             if '[' not in proc:
                 nb_comma = proc.count(',')
                 if nb_comma == 0:
-                    commandline+="add process %s, %s %s;" % (proc, decay_text, proc_nb)
+                    commandline+="add process %s, %s %s  --no_warning=duplicate;" % (proc, decay_text, proc_nb)
                 elif nb_comma == 1:
                     before, after = proc.split(',')
-                    commandline+="add process %s, %s, (%s, %s) %s;" % (before, decay_text, after, decay_text, proc_nb)
+                    commandline+="add process %s, %s, (%s, %s) %s  --no_warning=duplicate;" % (before, decay_text, after, decay_text, proc_nb)
                 else:
                     raise Exception, 'too much decay at MG level. this can not be done for the moment)'
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s, %s %s;" % (process, decay_text, proc_nb)
+                commandline+="add process %s, %s %s  --no_warning=duplicate;" % (process, decay_text, proc_nb)
                 if not order:
                     continue
                 elif not order.startswith('virt='):
@@ -2638,10 +2719,10 @@ class decay_all_events(object):
                     result = re.split('([/$@]|\w+=\w+)', process, 1)                    
                     if len(result) ==3:
                         process, split, rest = result
-                        commandline+="add process %s pert_%s %s%s , %s %s ;" % \
+                        commandline+="add process %s pert_%s %s%s , %s %s --no_warning=duplicate;" % \
                               (process, order, split, rest, decay_text, proc_nb)
                     else:
-                        commandline +='add process %s pert_%s, %s; %s' % \
+                        commandline +='add process %s pert_%s, %s %s  --no_warning=duplicate;' % \
                                            (process, order, decay_text, proc_nb)
                     
                         
@@ -2712,11 +2793,11 @@ class decay_all_events(object):
                                          'processes': matrix_element.get('processes'),
                                          'tag': me.shell_string(pdg_order=True)}
         #
-        if __debug__:
-            #check that all decay matrix element correspond to a decay only
-            for prod in self.all_ME.values():
-                for decay in prod['matrix_element']['base_amplitude']['process']['decay_chains']:
-                    assert decay.shell_string() in self.all_decay
+#        if __debug__:
+#            #check that all decay matrix element correspond to a decay only
+#            for prod in self.all_ME.values():
+#                for decay in prod['matrix_element']['base_amplitude']['process']['decay_chains']:
+#                    assert decay.shell_string() in self.all_decay
             
         
     def get_branching_ratio(self):
@@ -2862,7 +2943,16 @@ class decay_all_events(object):
             except ValueError, error:
                 continue
             else:
-                label2width[particle_label]=float(width.value)
+                if (width.value > 0.001):  
+                    label2width[particle_label]=float(width.value)
+                else: # the width is less than 1 MeV, need to use an effective width !!
+                      # this is useful to handle cases like tau decays
+                    label2width[particle_label]=0.001
+                    need_param_card_modif = True
+                    logger.warning('ATTENTION')
+                    logger.warning('Found a very small width in the param_card for particle '\
+                                   +str(particle_label))
+                    logger.warning('Use instead an effective width of 1 MeV ' )
                 #label2mass[particle_label]=float(mass.value)
                 #pid2mass[part]=label2mass[particle_label]
                 pid2width[abs(part)]=label2width[particle_label]
@@ -2870,18 +2960,19 @@ class decay_all_events(object):
                     need_param_card_modif = True
                     for param in self.model["parameters"][('external',)]:
                         if param.lhablock=="DECAY" and param.lhacode==[abs(part)]:
-                            label2width[particle_label]=param.value
+                            label2width[particle_label]=max(param.value,0.001)
                             pid2width[abs(part)]=label2width[particle_label]
                     logger.warning('ATTENTION')
                     logger.warning('Found a zero width in the param_card for particle '\
                                    +str(particle_label))
-                    logger.warning('Use instead the default value '\
+                    logger.warning('Use instead the default/effective value '\
                                    +str(label2width[particle_label]))
+               
         # now we need to modify the values of the width
         # in param_card.dat, since this is where the input 
         # parameters will be read when evaluating matrix elements
         if need_param_card_modif:
-            decay_misc.modify_param_card(self.pid2width, self.path_me)            
+            decay_misc.modify_param_card(pid2width, self.path_me)            
             
     def get_max_weight_from_event(self, decay_mapping):
         """ """
@@ -3343,6 +3434,7 @@ class decay_all_events(object):
         decayed_event.aqcd=curr_event.aqcd
         decayed_event.diese=curr_event.diese
         decayed_event.rwgt=curr_event.rwgt
+        decayed_event.event_init_line=curr_event.event_init_line
 
         part_number=0
         external=0

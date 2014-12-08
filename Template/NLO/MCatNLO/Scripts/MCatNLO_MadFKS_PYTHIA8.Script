@@ -92,7 +92,6 @@ FREEZE|freeze) PDFGROUP=LHAPDF ;;
 EXTRAPOLATE|extrapolate) PDFGROUP=LHAEXT ;;
 *) echo "no such option; failure in linklhapdf" ; exit 1 ;;
 esac
-source ../Source/fj_lhapdf_opts
 }    
 
 # creates the executable for NLO and MC; the entry of the function
@@ -211,23 +210,43 @@ rm -f $thisdir/$EXEC_NAMEFF
 # new compilation step for PY8 mode
 export PYTHIA8LOCATION=$PY8PATH
 
+# check the PYTHIA8 version by the position of certain files
+
+if [ ! -d $PYTHIA8LOCATION/xmldoc ]
+then
+ PY8VER="8.2"
+ echo ' USING PYTHIA 8, version >= 8.200'
+ chmod +x $PYTHIA8LOCATION/bin/pythia8-config
+ read HEPMCINCLIB <<< $($PYTHIA8LOCATION/bin/pythia8-config --hepmc2)
+else
+ PY8VER="8.1"
+ echo ' USING PYTHIA 8, version < 8.200'
+fi
+
 if [ "$PY8UTI" != "" ]
 then
- cp -rf $thisdir/srcPythia8/Pythia8.cc $thisdir/Pythia8.cc
+ if [ $PY8VER == "8.1" ]; then cp -rf $thisdir/srcPythia8/Pythia8.cc $thisdir/Pythia8.cc; fi
+ if [ $PY8VER == "8.2" ]; then cp -rf $thisdir/srcPythia8/Pythia82.cc $thisdir/Pythia82.cc; fi
  cp -rf $thisdir/srcPythia8/Makefile $thisdir/Makefile
 else
- cp -rf $thisdir/srcPythia8/Pythia8_hep.cc $thisdir/Pythia8.cc
+ if [ $PY8VER == "8.1" ]; then cp -rf $thisdir/srcPythia8/Pythia8_hep.cc $thisdir/Pythia8.cc; fi
+ if [ $PY8VER == "8.2" ]; then cp -rf $thisdir/srcPythia8/Pythia82_hep.cc $thisdir/Pythia82.cc; fi
  cp -rf $thisdir/srcPythia8/Makefile_hep $thisdir/Makefile
 fi
 if [ -f $thisdir/Pythia8.exe ]
 then
   rm -rf $thisdir/Pythia8.exe
 fi
-cp -rf $PYTHIA8LOCATION/xmldoc $thisdir
+
+if [ $PY8VER == "8.1" ]; then cp -rf $PYTHIA8LOCATION/xmldoc $thisdir; fi
+if [ $PY8VER == "8.2" ]; then cp -rf $PYTHIA8LOCATION/share/Pythia8/xmldoc $thisdir; fi
 PY8UTIMAKE="PY8UTI="$PY8UTI
 FORFILEMAKE="FORFILE="$PY8UTI
+HEPMCMAKE="HEPMCINCLIB="$HEPMCINCLIB
 LGFORTRANMAKE="LIBGFORTRAN=-lgfortran"
-make Pythia8 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE"
+
+if [ $PY8VER == "8.1" ]; then make Pythia8 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE"; fi
+if [ $PY8VER == "8.2" ]; then make Pythia82 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$HEPMCMAKE"; fi
 
 cd $thisdir
 if [ ! -f $thisdir/Pythia8.exe ]
@@ -296,7 +315,7 @@ ERR_NUM_PY8=${ERR_NUM_PY8/.*}
 let "ERR_NUM_PY8 += 1"
 
 echo " "
-echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
+echo "*****   Now ready for showering" $NEVENTS "events with $MCMODE "
 echo " "
 runMCMadFKS
 teststatus runMC
@@ -320,8 +339,6 @@ Main:spareMode1 = $NEVENTS            ! Number of events to be showered
 Main:spareWord1 = $EVENT_NORM         ! Event weights are normalized to sum 
                                       ! or average to the cross section
 Main:timesAllowErrors = $ERR_NUM_PY8  ! Number of allowed errors
-Main:showChangedSettings = on         ! Shows all non-default settings
-Main:showChangedParticleData = off    ! Shows all non-default particle settings
 
 ! 2) Settings related to output in init(), next(), amd stat().
 Init:showChangedSettings = on         ! Shows all non-default settings
@@ -344,7 +361,9 @@ Beams:LHEF = events.lhe            ! Input LHE file
 EOF
 if [ $UsedPdfLib = "LHAPDF" ]
 then
-cat <<EOF >> $ifile
+ if [ $PY8VER == "8.1" ]
+ then
+  cat <<EOF >> $ifile
 PDF:useLHAPDF = on                 ! Use of LHAPDF
 PDF:LHAPDFSET = $PDFSETN           ! PDF set
 EOF
@@ -362,9 +381,41 @@ EOF
   echo "Unknown PDFGROUP " $PDFGROUP
   exit 1
   fi
+ else
+  if [ -f $PYTHIA8LOCATION/lib/libpythia8lhapdf5.so ]
+  then
+  cat <<EOF >> $ifile
+PDF:pSet = LHAPDF5:$PDFSETN
+EOF
+   if [ $PDFGROUP = "LHAPDF" ]
+   then
+   cat <<EOF >> $ifile
+PDF:extrapolate = off        ! extrapolate PDF set outside the boundaries
+EOF
+   elif [ $PDFGROUP = "LHAEXT" ]
+   then
+   cat <<EOF >> $ifile
+PDF:extrapolate = on         ! extrapolate PDF set outside the boundaries
+EOF
+   else
+   echo "Unknown PDFGROUP " $PDFGROUP
+   exit 1
+   fi
+  elif [ -f $PYTHIA8LOCATION/lib/libpythia8lhapdf6.so ]
+  then
+  cat <<EOF >> $ifile
+PDF:pSet = LHAPDF6:$PDFSETN
+EOF
+  fi
+ fi
 else
-cat <<EOF >> $ifile
+ if [ $PY8VER == "8.1" ]
+ then
+ cat <<EOF >> $ifile
 PDF:useLHAPDF = off                ! Use of LHAPDF
+EOF
+ fi
+ cat <<EOF >> $ifile
 PDF:pSet = 7                       ! CTEQ6L
 EOF
 fi
@@ -488,6 +539,34 @@ BeamRemnants:primordialKT = off    ! No primordial kT
 25:mWidth = $HGGWIDTH              ! Higgs width
 EOF
 
+if [ $ICKKW = 0 ]
+then
+cat <<EOF >> $ifile
+
+! 9) Multijet merging.
+JetMatching:doFxFx = off          ! switch off FxFx
+
+
+EOF
+elif [ $ICKKW = 3 ]
+then
+cat <<EOF >> $ifile
+
+! 9) Multijet merging.
+JetMatching:doFxFx = on           ! switch on FxFx
+JetMatching:merge = on            ! switch on MLM-merging machinery
+JetMatching:qCut = $QCUT          ! merging scale
+JetMatching:qCutME = $PTJCUT      ! minimum-jet(pT) cut
+JetMatching:coneRadius = 1.0      ! jet radius definition
+JetMatching:etaJetMax = 1000.0    ! max jet rapidity definition
+JetMatching:nJetMax = $NJMAX      ! max multiplicity
+JetMatching:scheme = 1            ! MadGraph MLM-type merging
+JetMatching:setMad = off          ! Don't read from LHE in MG5LO format
+
+
+EOF
+fi
+
 if [ $PI_STABLE_PY8 = ".TRUE." ]
 then
 cat <<EOF >> $ifile
@@ -502,6 +581,7 @@ cat <<EOF >> $ifile
 521:maydecay = false               ! stable B hadrons
 531:maydecay = false               ! stable B hadrons
 541:maydecay = false               ! stable B hadrons
+551:maydecay = false               ! stable B hadrons
 553:maydecay = false               ! stable B hadrons
 5112:maydecay = false              ! stable B hadrons
 5122:maydecay = false              ! stable B hadrons

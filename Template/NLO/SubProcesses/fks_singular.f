@@ -396,6 +396,13 @@ c For tests
      &                 total_wgt_sum_min
       double precision virt_wgt,born_wgt_ao2pi
       common/c_fks_singular/virt_wgt,born_wgt_ao2pi
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
+
+c APPLgrid stuff
+      integer iappl
+      common /for_applgrid/ iappl
+      include "appl_common.inc" 
 
 c FxFx merging
       logical rewgt_mohdr_calculated,rewgt_izero_calculated
@@ -438,7 +445,10 @@ c Note that all the wgts and jacs should be positive.
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
          wgtbpower=bpower
-
+c Store the power of alphas of the Born events in the appl common block.
+         if(iappl.ne.0) appl_bpower = wgtbpower
+c Initialize histograms
+         call initplot
 c Compute cpower done for bottom Yukawa, routine needs to be adopted
 c for other muR-dependendent factors
          call compute_cpower(p_born,cpower)
@@ -880,13 +890,20 @@ c Apply the FxFx Sudakov damping on the S events
          dsig = (ev_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
-     &        virt_wgt*fkssymmetryfactorBorn +
+c Do not include the virtuals here. They are explicitly included in
+c driver_mintFO.f
+c     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
 
          if (dsig.ne.dsig) then
             write (*,*) 'ERROR #51 in dsig:',dsig,'skipping event'
+c Set dsig (and the other variables that go into the integrator) to zero
+c and do not fill any of the plots by returning here.
             dsig=0d0
+            virt_wgt=0d0
+            born_wgt_ao2pi=0d0
+            virtual_over_born=0d0
             return
          endif
 
@@ -903,7 +920,7 @@ c Apply the FxFx Sudakov damping on the S events
              write(*,*)'Error #2[wg] in dsig',ifill2,ifill3,ifill4
              stop
            endif
-           wgtref = dsig
+           wgtref = dsig+virt_wgt/vegaswgt
            xsec = enhanceS*unwgtfun
            do i=1,4
               if (i.eq.1) then
@@ -932,7 +949,7 @@ c     #                                   iwgtinfo)
          endif      
 
 c For tests
-         if(abs(dsig).gt.fksmaxwgt)then
+        if(abs(dsig).gt.fksmaxwgt)then
             fksmaxwgt=abs(dsig)
             xisave=xi_i_fks_ev
             ysave=y_ij_fks_ev
@@ -947,7 +964,8 @@ c Plot observables for counterevents and Born
      &              cnt_swgt*fkssymmetryfactor +
      &              (bsv_wgt-born_wgt)*fkssymmetryfactorBorn +
      &              deg_wgt*fkssymmetryfactorDeg +
-     &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt + virt_wgt
+     &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt +
+     &              virt_wgt/unwgtfun
          if(abs(plot_wgt).gt.1.d-20) then
             if(iplot.eq.-3)then
                write(*,*)'Error #1 in dsig'
@@ -1211,6 +1229,8 @@ c For tests
       double precision ximin
       parameter(ximin=0.05d0)
 
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
 c
 c This is the table that will be used to unweight. (It contains for
 c arguments, 1st argument: nFKSproces; 2nd argument: S or H events; 3rd
@@ -1224,7 +1244,7 @@ c
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379660d0)  !CONV TO PICOBARNS
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
      $     ,etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
@@ -1315,7 +1335,7 @@ c FxFx merging
       endif
 c Set the upper value of the shower scale for the H and S events,
 c respectively
-      if (ickkw.ne.3) then
+      if (ickkw.ne.3 .and. ickkw.ne.4) then
          call set_cms_stuff(mohdr)
          call set_shower_scale_noshape(pp,nFKSprocess*2)
          call set_cms_stuff(izero)
@@ -1392,8 +1412,16 @@ c
      #                     1/(2.d0*deltaS)
         endif
       endif
-c
-      probne=1.d0
+
+c For UNLOPS all real-emission contributions need to be added to the
+c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
+c events are called, so this will remain 0.
+      if (ickkw.eq.4) then
+         probne=0d0
+      else
+         probne=1.d0
+      endif
+
 c All counterevent have the same final-state kinematics. Check that
 c one of them passes the hard cuts, and they exist at all
 c
@@ -1434,6 +1462,9 @@ c
 c
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi' .or. nbody) goto 540
+
+c For UNLOPS, skip MC counter events
+      if (ickkw.eq.4) goto 540
 
       call set_cms_stuff(mohdr)
 c     Compute the scales and sudakov-reweighting for the FxFx merging
@@ -1985,7 +2016,6 @@ com-- muR-dependent fac is reweighted here
 com-- muR-dependent fac is reweighted here
              unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
      &            +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
-com-- muR-dependent fac is reweighted here
           enddo
           if(doreweight)then
              if(ifill1H.eq.0)then
@@ -2022,7 +2052,7 @@ com-- muR-dependent fac is reweighted here
  550  continue
 
       if( (.not.MCcntcalled) .and.
-     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+     &     abrv.ne.'born'.and. abrv.ne.'grid' .and. ickkw.ne.4)then
          if(pp(0,1).ne.-99d0)then
             call set_cms_stuff(mohdr)
             call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
@@ -2127,7 +2157,7 @@ c Apply the FxFx Sudakov damping on the S events
 
 c Update the shower starting scale with the shape from montecarlocounter
       if( (.not.MCcntcalled) .and.
-     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+     &     abrv.ne.'born'.and. abrv.ne.'grid' .and. ickkw.ne.4)then
          call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat,pp,ileg,
      &     xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5),ddum(6),ldum)
       endif
@@ -2160,6 +2190,7 @@ c Update the shower starting scale with the shape from montecarlocounter
                   unwgt_table(0,1,j)=0d0
                   unwgt_table(0,3,j)=0d0
                   unwgt_table(1,3,j)=0d0
+                  virtual_over_born=0d0
                endif
             enddo
          endif
@@ -2315,7 +2346,7 @@ c Plot observables for counterevents and Born
                do j=1,iproc_save(nFKSprocess)
                   unwgt_table(nFKSprocess,2,j)=0d0
                enddo
-         endif
+            endif
          endif
 
          if (nbody.and.dsigH.ne.0d0) then

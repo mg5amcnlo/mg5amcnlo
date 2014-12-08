@@ -9,13 +9,13 @@ C
       double precision pi, zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero = 0d0)
-      integer npoints, npointsChecked,ret_code
+      integer npoints, npointsChecked
       integer i, j, k
-      double precision tolerance
+      integer return_code
+      double precision tolerance, tolerance_default
+      double precision, allocatable :: accuracies(:)
       double precision accuracy
       double precision ren_scale, energy
-      parameter (ren_scale = 1d2)
-      parameter (energy = 1d3)
       include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
@@ -23,9 +23,11 @@ C
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       double precision pswgt
-      double precision virt_wgts(3), fks_double, fks_single
+      double precision fks_double, fks_single
+      double precision, allocatable :: virt_wgts(:,:)
       double precision double, single, finite
       double complex born(2)
+      double precision totmass
       logical calculatedborn
       common/ccalculatedborn/calculatedborn
       logical fksprefact
@@ -46,19 +48,22 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       include 'q_es.inc'
+      integer nsqso      
       double precision pmass(nexternal), pmass_rambo(nexternal)
       integer nfail
+      logical first_time
+      data first_time/.TRUE./
+      include 'FKSParams.inc'
       
-c general MadFKS parameters
-      include "FKSParams.inc"
-
 C-----
 C  BEGIN CODE
 C-----  
-c
-c     Read general MadFKS parameters
-c
-      call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+      if (first_time) then
+          call get_nsqso_loop(nsqso)          
+          allocate(virt_wgts(0:3,0:nsqso))
+          allocate(accuracies(0:nsqso))
+          first_time = .false.
+      endif
 
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
@@ -66,14 +71,27 @@ c
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
       include 'pmass.inc'
-      
+     
+      call FKSParamReader('FKS_params.dat',.TRUE.,.FALSE.)
+      tolerance_default = IRPoleCheckThreshold
+
+c     Set the energy to be characteristic of the run
+      totmass = 0.0d0
+      do i=1,nexternal
+        totmass = totmass + pmass(i)
+      enddo
+      energy = max((ebeam(1)+ebeam(2))/20.0d0,2.0d0*totmass)
+c     Set the renormalization scale to be of the order of sqrt(s) but
+c     not equal to it so as to be sensitive to all logs in the check.
+      ren_scale = energy/2.0d0
+
       write(*,*)' Insert the number of points to test'
       read(*,*) npoints
       write(*,*)'Insert the relative tolerance'
       write(*,*)' A negative number will mean use the default one: ',
-     1 IRPoleCheckThreshold 
+     1 tolerance_default 
       read(*,*) tolerance
-      if (tolerance .le. zero) tolerance = IRPoleCheckThreshold
+      if (tolerance .le. zero) tolerance = tolerance_default
 
       mu_r = ren_scale
       qes2 = ren_scale**2
@@ -160,12 +178,13 @@ c initialization
           enddo
 
           call sborn(p_born, born)
-          call sloopmatrix_thres(p_born,virt_wgts,tolerance,accuracy
-     $         ,ret_code) 
+          call sloopmatrix_thres(p_born,virt_wgts,tolerance,
+     1 accuracies,return_code)
+          accuracy=accuracies(0)
 
-          finite = virt_wgts(1)/dble(ngluons)
-          single = virt_wgts(2)/dble(ngluons)
-          double = virt_wgts(3)/dble(ngluons)
+          finite = virt_wgts(1,0)/dble(ngluons)
+          single = virt_wgts(2,0)/dble(ngluons)
+          double = virt_wgts(3,0)/dble(ngluons)
 
 C         If MadLoop was still in initialization mode, then skip this
 C         point for the checks
@@ -445,3 +464,5 @@ c     just a dummy subroutine
       end
 
       
+      subroutine initplot
+      end
