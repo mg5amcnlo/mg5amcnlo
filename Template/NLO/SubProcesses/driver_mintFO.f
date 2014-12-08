@@ -125,6 +125,10 @@ c general MadFKS parameters
 c applgrid
       integer iappl
       common /for_applgrid/ iappl
+c stats for granny_is_res
+      integer ntot_granny,n0_granny,ncover_granny,nlim_granny
+      common /c_granny_counters/ ntot_granny,n0_granny,ncover_granny
+     &     ,nlim_granny
 
 C-----
 C  BEGIN CODE
@@ -142,6 +146,10 @@ c
 c
 c     Read process number
 c
+      n0_granny=0
+      ntot_granny=0
+      ncover_granny=0
+      nlim_granny=0
       ntot=0
       nsun=0
       nsps=0
@@ -345,6 +353,12 @@ c to save grids:
          enddo
       endif
 
+      write (*,*) 'counters for the granny resonances'
+      write (*,*) 'ntot   ',ntot_granny
+      write (*,*) 'n0     ',n0_granny
+      write (*,*) 'ncover ',ncover_granny
+      write (*,*) 'nlim   ',nlim_granny
+      
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
       tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR

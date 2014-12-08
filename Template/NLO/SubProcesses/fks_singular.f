@@ -5654,7 +5654,9 @@ c common block that is filled by this subroutine
       logical granny_is_res
       integer igranny,iaunt
       logical granny_chain(-nexternal:nexternal)
+     &     ,granny_chain_real_final(-nexternal:nexternal)
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
 c other common blocks
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -5772,6 +5774,15 @@ c igranny, iaunt and granny_is_res from the saved information
          granny_is_res=.true.
          do i=-nexternal,nexternal
             granny_chain(i)=granny_chain_fks(i,nFKSprocess)
+            if (i.le.0) then
+               granny_chain_real_final(i)=.false.
+            elseif (i.lt.max(i_fks,j_fks)) then
+               granny_chain_real_final(i)=granny_chain(i)
+            elseif(i.eq.max(i_fks,j_fks)) then
+               granny_chain_real_final(i)=.true.
+            else
+               granny_chain_real_final(i)=granny_chain(i-1)
+            endif
          enddo
       else
          igranny=0
@@ -5779,6 +5790,7 @@ c igranny, iaunt and granny_is_res from the saved information
          granny_is_res=.false.
          do i=-nexternal,nexternal
             granny_chain(i)=.false.
+            granny_chain_real_final(i)=.false.
          enddo
       endif
       return
