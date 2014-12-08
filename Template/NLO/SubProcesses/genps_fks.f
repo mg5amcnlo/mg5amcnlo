@@ -51,13 +51,13 @@ c
          qmass(i)=pmass(i,iconfig)
          qwidth(i)=pwidth(i,iconfig)
          qmass_common(i)=qmass(i)
-         qwdith_common(i)=qmass(i)
+         qwidth_common(i)=qwidth(i)
       enddo
       do i=1,ndim
-         xvar(i)=x
+         xvar(i)=x(i)
       enddo
 c
-      call generate_momenta_conf(ndim,jac,x,itree,qmass,qwidth,p)
+      call generate_momenta_conf_wrapper(ndim,jac,x,itree,qmass,qwidth,p)
 c If the input weight 'wgt' to this subroutine was not equal to one,
 c make sure we update all the (counter-event) jacobians and return also
 c the updated wgt (i.e. the jacobian for the event)
@@ -78,7 +78,7 @@ c
       double precision virtgrannybar
       integer i,j,igranny_fail
       data igranny_fail /0/
-      double precision dot,dummy,pgranny(0:3)
+      double precision dot,dummy,pgranny(0:3),jac
       external dot
       double precision granny_m_red(-1:1)
       common /to_virtgranny/granny_m_red
@@ -90,6 +90,7 @@ c common block that is filled by this subroutine
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
      &     ,granny_chain_real_final
 c arguments for the generate_momenta_conf subroutine from common blocks
+      double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
       integer ndim,ipole
@@ -133,6 +134,7 @@ c
       integer i,j,igranny_fail
       data igranny_fail /0/
       double precision dot,rho,dummy,pgranny_bar(0:3),p_mother_bar3(3)
+     &     ,pcm(0:3),df1(0:3),jac
       external dot,rho
       double precision granny_m_red(-1:1)
       common /to_virtgranny/granny_m_red
@@ -144,6 +146,7 @@ c common block that is filled by this subroutine
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
      &     ,granny_chain_real_final
 c arguments for the generate_momenta_conf subroutine from common blocks
+      double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
       integer ndim,ipole
@@ -168,7 +171,7 @@ c
       if (virtgrannybar.le.granny_m_red(-1) .or.
      &     virtgrannybar.ge.granny_m_red(1) ) then
          igranny_fail=igranny_fail+1
-         virtgranny=0d0
+         virtgranny_red=0d0
          return
       endif
       jac=1d0
@@ -201,15 +204,20 @@ c
       subroutine generate_momenta_conf_wrapper(ndim,jac,x,itree,qmass
      $     ,qwidth,p)
       implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
       integer ndim
       double precision jac,x(99),p(0:3,nexternal)
-      integer itree(2,-max_branch:-1)
-      double precision qmass(-nexternal:0),qwidth(-nexternal:0)
+      integer itree(2,-max_branch:-1),i
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0),del1
+     &     ,del2,del3,del30,der,derivative,errder,random,ran2,virtgranny
+     &     ,virtgranny_red
+      external derivative,ran2,virtgranny
 c     granny stuff
       double precision tiny,granny_m(-1:1),step,granny_m_red_local(-1:1)
       double precision granny_m_red(-1:1)
       common /to_virtgranny/granny_m_red
-      logical input_granny_m
+      logical input_granny_m,compute_mapped,compute_non_shifted
       parameter (tiny=1d-3)
       integer irange,idir
       data irange/0/
@@ -223,6 +231,11 @@ c common block that is filled by this subroutine
      &     ,granny_chain_real_final
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
 c     debug stuff
       double precision temp
       logical debug_granny
@@ -230,6 +243,8 @@ c     debug stuff
       integer ntot_granny,n0_granny,ncover_granny,nlim_granny
       common /c_granny_counters/ ntot_granny,n0_granny,ncover_granny
      &     ,nlim_granny
+      logical nocntevents
+      common/cnocntevents/nocntevents
 c
 c     FIX THE WEIGHT: the value of the jacobian is always multiplied
 c     every time we call genrate_momenta_conf, so we have to reset it to
@@ -265,8 +280,8 @@ c physical range of the invariant mass in the event!)
          endif
          if (granny_m(0).eq.0d0) n0_granny=n0_granny+1
 c     Check that we have a function that is always increasing
-         del1=max(0d0,granny_m(-1)-grammy_m_red(-1))
-         del2=max(0d0,granny_m_red(1)-grammy_m(1))
+         del1=max(0d0,granny_m(-1)-granny_m_red(-1))
+         del2=max(0d0,granny_m_red(1)-granny_m(1))
          del30=granny_m_red(1)-granny_m_red(-1)
          del3=del30-del1-del2
          if (del3.lt.0d0) then
@@ -275,7 +290,7 @@ c     Check that we have a function that is always increasing
          endif
          if (del1.gt.0d0 .or. del2.gt.0d0) ncover_granny=ncover_granny+1
 c Check that granny_m_red_local is convering the whole integration range
-c of grammy_m. If that's the case, we do the special granny trick, if
+c of granny_m. If that's the case, we do the special granny trick, if
 c not, integrate as normal.
          if ( granny_m_red_local(0).lt.granny_m(-1) .or.
      $        granny_m_red_local(0).gt.granny_m( 1)) then
@@ -294,7 +309,7 @@ c     2nd term in eq.43 of the note
          endif
          if (compute_mapped.and.compute_non_shifted) then
 c     Could add importance sampling here
-            random=ran3()
+            random=ran2()
             if (random.lt.0.5d0) then
                compute_mapped=.false.
             else
@@ -370,7 +385,8 @@ c multiply the weights by the numerically computed jacobian
       end
 
 
-      subroutine generate_momenta_conf(ndim,jac,x,itree,qmass,qwidth,p)
+      subroutine generate_momenta_conf(input_granny_m,ndim,jac,x
+     &     ,granny_m_red,itree,qmass,qwidth,p)
 c
 c x(1)...x(ndim-5) --> invariant mass & angles for the Born
 c x(ndim-4) --> tau_born
@@ -388,6 +404,8 @@ c arguments
       double precision jac,x(99),p(0:3,nexternal)
       integer itree(2,-max_branch:-1)
       double precision qmass(-nexternal:0),qwidth(-nexternal:0)
+     &     ,granny_m_red(-1:1)
+      logical input_granny_m
 c common
 c     Arguments have the following meanings:
 c     -2 soft-collinear, incoming leg, - direction as in FKS paper
