@@ -4565,8 +4565,10 @@ c For the MINT folding
       double precision oneo8pi2
       parameter(oneo8pi2 = 1d0/(8d0*pi**2))
       include 'nFKSconfigs.inc'
-      INTEGER nFKSprocess, nFKSprocess_save
+      INTEGER nFKSprocess, nFKSprocess_save, nFKSprocess_col, nFKSprocess_chg
       COMMON/c_nFKSprocess/nFKSprocess
+      data nFKSprocess_col / 0 /
+      data nFKSprocess_chg / 0 /
       include "pmass.inc"
       
       if (firsttime) then
@@ -4576,6 +4578,12 @@ C check if any real emission need cahrge/color links
             call fks_inc_chooser()
             need_color_links_used = need_color_links_used .or. need_color_links
             need_charge_links_used = need_charge_links_used .or. need_charge_links
+C keep track of which FKS configuration actually needs color/charge
+C links
+            if (need_color_links.and.nFKSprocess_col.eq.0)
+     1          nFKSprocess_col = nFKSprocess
+            if (need_charge_links.and.nFKSprocess_chg.eq.0)
+     1          nFKSprocess_chg = nFKSprocess
             do i=1, nsplitorders
               split_type_used(i) = split_type_used(i) .or. split_type(i)
             enddo
@@ -4625,7 +4633,7 @@ c entering this function
       call sborn(p_born,wgt1)
 
 c Born contribution:
-      bsv_wgt=wgt1
+      bsv_wgt=0d0!wgt1
       born_wgt=wgt1
       virt_wgt=0d0
 
@@ -4761,18 +4769,25 @@ c     helicity contributions for the Q-terms of collinear limit.
      #    abrv.eq.'viLC') goto 548
 c
 c I(reg) terms, eq 5.5 of FKS
+      nFKSprocess_save = nFKSprocess
       do iord = 1, nsplitorders
         if (iord.eq.qcd_pos) then
             if (.not. need_color_links_used) cycle
             need_color_links=need_color_links_used
             need_charge_links=.false.
+            nFKSprocess=nFKSprocess_col
         else if (iord.eq.qed_pos) then
             if (.not. need_charge_links_used) cycle
             need_charge_links=need_charge_links_used
             need_color_links=.false.
+            nFKSprocess=nFKSprocess_chg
         else
             cycle
         endif
+C setup the fks i/j info
+        call fks_inc_chooser()
+C the following call to born is to setup the goodhel(nfksprocess)
+        call sborn(p_born,wgt1)
         contr=0d0
         do i=1,fks_j_from_i(i_fks,0)
            do j=1,i
@@ -4802,6 +4817,8 @@ c
         bsv_wgt=bsv_wgt-2*oneo8pi2*contr
       enddo
 
+C set back the fks i/j info as prior to enter this function
+      nFKSprocess = nFKSprocess_save
       call fks_inc_chooser()
 
  548  continue
