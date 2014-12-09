@@ -127,8 +127,9 @@ c applgrid
       common /for_applgrid/ iappl
 c stats for granny_is_res
       integer ntot_granny,n0_granny,ncover_granny,nlim_granny
+     &     ,del3_granny
       common /c_granny_counters/ ntot_granny,n0_granny,ncover_granny
-     &     ,nlim_granny
+     &     ,nlim_granny,del3_granny
 
 C-----
 C  BEGIN CODE
@@ -150,6 +151,7 @@ c
       ntot_granny=0
       ncover_granny=0
       nlim_granny=0
+      del3_granny=0
       ntot=0
       nsun=0
       nsps=0
@@ -358,6 +360,7 @@ c to save grids:
       write (*,*) 'n0     ',n0_granny
       write (*,*) 'ncover ',ncover_granny
       write (*,*) 'nlim   ',nlim_granny
+      write (*,*) 'del3   ',del3_granny
       
       call cpu_time(tAfter)
       tTot = tAfter-tBefore

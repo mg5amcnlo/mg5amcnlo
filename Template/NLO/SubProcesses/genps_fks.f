@@ -239,8 +239,9 @@ c     debug stuff
       logical debug_granny
       parameter (debug_granny=.true.)
       integer ntot_granny,n0_granny,ncover_granny,nlim_granny
+     &     ,del3_granny
       common /c_granny_counters/ ntot_granny,n0_granny,ncover_granny
-     &     ,nlim_granny
+     &     ,nlim_granny,del3_granny
       logical nocntevents
       common/cnocntevents/nocntevents
 c
@@ -280,8 +281,9 @@ c     Check that we have a function that is always increasing
          del30=granny_m2_red_local(1)-granny_m2_red_local(-1)
          del3=del30-del1-del2
          if (del3.lt.0d0) then
-c$$$            write (*,*) 'ERROR in setting of grandmother mass',granny_m2
-c$$$     &           ,granny_m2_red_local
+            del3_granny=del3_granny+1
+            write (*,*) 'ERROR in setting of grandmother mass',granny_m2
+     &           ,granny_m2_red_local
 c$$$            stop
          endif
          if (del1.gt.0d0 .or. del2.gt.0d0) ncover_granny=ncover_granny+1
@@ -328,7 +330,7 @@ c     Could add importance sampling here
          if (compute_non_shifted) then
 c integrate as normal (can skip event)
             input_granny_m2=.false.
-            only_event_phsp=.true.
+            only_event_phsp=.false.
             skip_event_phsp=.false.
             do i=-1,1
                granny_m2_red(i)=-99d99
@@ -361,8 +363,8 @@ c compute the derivative numerically (to compute the Jacobian)
      $              /' derivative',errder,der
                stop
             endif
-c compute the counter event kinematics using granny_m2(0) as mass for the
-c grandmother.
+c compute the counter event kinematics using granny_m2(0) as mass for
+c the grandmother.
             input_granny_m2=.true.
             skip_event_phsp=.true.
             only_event_phsp=.false.
@@ -2500,6 +2502,11 @@ c     the current one is the start of an s-channel chain.
                   if (start_s_chan(j))
      &                 max_m(j)=max_m(j)-(m(i)-min_m(i))
                enddo
+c     be sure to also update the range for granny: it always computed
+c     later
+               if (start_s_chan(igranny).and.igranny.lt.i) then
+                  max_m(igranny)=max_m(igranny)-(m(i)-min_m(i))
+               endif
             endif
          enddo
       enddo
