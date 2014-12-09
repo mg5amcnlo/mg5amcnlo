@@ -5753,10 +5753,11 @@ c chain of s-channels that originates from the grandmother
          enddo
          if (granny_is_res_fks(nFKSprocess)) then
 c granny is part of the chain            
-            granny_chain_fks(igranny,nFKSprocess)=.true.
+            granny_chain_fks(igranny_fks(nFKSprocess),nFKSprocess)
+     &           =.true.
 c loop from the granny to the external particles. If mother was part of
 c the granny chain, so are the daugthers.
-            do i=igranny,-1
+            do i=igranny_fks(nFKSprocess),-1
                if (granny_chain_fks(i,nFKSprocess)) then
                   granny_chain_fks(iforest(1,i,iconfig),nFKSprocess) =
      $                 .true.

@@ -80,8 +80,8 @@ c
       data igranny_fail /0/
       double precision dot,dummy,pgranny(0:3),jac
       external dot
-      double precision granny_m_red(-1:1)
-      common /to_virtgranny/granny_m_red
+      double precision granny_m2_red(-1:1)
+      common /to_virtgranny/granny_m2_red
 c common block that is filled by this subroutine
       logical granny_is_res
       integer igranny,iaunt
@@ -101,14 +101,14 @@ c arguments for the generate_momenta_conf subroutine from common blocks
       double precision xvar(99)
       common /c_vegas_x/xvar
 c      
-      granny_m_red(0)=virtgrannybar
-      if (virtgrannybar.le.granny_m_red(-1) .or.
-     &     virtgrannybar.ge.granny_m_red(1) ) then
+      granny_m2_red(0)=virtgrannybar
+      if (virtgrannybar.le.granny_m2_red(-1) .or.
+     &     virtgrannybar.ge.granny_m2_red(1) ) then
          igranny_fail=igranny_fail+1
          virtgranny=0d0
          return
       endif
-      call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m_red,itree
+      call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m2_red,itree
      &     ,qmass_common,qwidth_common,p)
       if (jac.gt.0d0) then
          do j=0,3
@@ -135,8 +135,8 @@ c
       double precision dot,rho,dummy,pgranny_bar(0:3),p_mother_bar3(3)
      &     ,pcm(0:3),df1(0:3),jac
       external dot,rho
-      double precision granny_m_red(-1:1)
-      common /to_virtgranny/granny_m_red
+      double precision granny_m2_red(-1:1)
+      common /to_virtgranny/granny_m2_red
 c common block that is filled by this subroutine
       logical granny_is_res
       integer igranny,iaunt
@@ -166,15 +166,15 @@ c
       double precision xvar(99)
       common /c_vegas_x/xvar
 c      
-      granny_m_red(0)=virtgrannybar
-      if (virtgrannybar.le.granny_m_red(-1) .or.
-     &     virtgrannybar.ge.granny_m_red(1) ) then
+      granny_m2_red(0)=virtgrannybar
+      if (virtgrannybar.le.granny_m2_red(-1) .or.
+     &     virtgrannybar.ge.granny_m2_red(1) ) then
          igranny_fail=igranny_fail+1
          virtgranny_red=0d0
          return
       endif
-      call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m_red,itree
-     &     ,qmass_common,qwidth_common,p)
+      call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m2_red
+     &     ,itree,qmass_common,qwidth_common,p)
       if (jac.gt.0d0) then
          do j=1,3
             pcm(j)=0d0
@@ -212,10 +212,10 @@ c
      &     ,virtgranny_red,MC_sum_factor
       external derivative,ran2,virtgranny
 c     granny stuff
-      double precision tiny,granny_m(-1:1),step,granny_m_red_local(-1:1)
-      double precision granny_m_red(-1:1)
-      common /to_virtgranny/granny_m_red
-      logical input_granny_m,compute_mapped,compute_non_shifted
+      double precision tiny,granny_m2(-1:1),step,granny_m2_red_local(-1:1)
+      double precision granny_m2_red(-1:1)
+      common /to_virtgranny/granny_m2_red
+      logical input_granny_m2,compute_mapped,compute_non_shifted
       parameter (tiny=1d-3)
       integer irange,idir
       data irange/0/
@@ -245,7 +245,7 @@ c     debug stuff
       common/cnocntevents/nocntevents
 c
       do i=-1,1
-         granny_m_red(i)=-99d99
+         granny_m2_red(i)=-99d99
       enddo
       if (granny_is_res) then
          ntot_granny=ntot_granny+1
@@ -254,52 +254,49 @@ c inv. mass, in terms of the integration variable (which is not the
 c physical range of the invariant mass in the event!)
          only_event_phsp=.true.
          skip_event_phsp=.false.
-         input_granny=.false.
-         call generate_momenta_conf(input_granny_m,ndim,jac,x
-     $        ,granny_m_red,itree,qmass,qwidth,p)
-         jac_ev=jac
-         do i=1,nexternal
-            do j=0,3
-               p_ev(j,i)=p(j,i
-            enddo
-         enddo
-         granny_m_red_local( 0)=granny_m_red( 0)
-         granny_m_red_local(-1)=granny_m_red(-1)
-         granny_m_red_local( 1)=granny_m_red( 1)
-         granny_m(0) =virtgranny(granny_m_red( 0)) ! central value
-         granny_m(1) =virtgranny(granny_m_red( 1)-tiny) ! upper limit
-         granny_m(-1)=virtgranny(granny_m_red(-1)+tiny) ! lower limit
+         input_granny_m2=.false.
+         call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $        ,granny_m2_red,itree,qmass,qwidth,p)
+         granny_m2_red_local( 0)=granny_m2_red( 0)
+         granny_m2_red_local(-1)=granny_m2_red(-1)
+         granny_m2_red_local( 1)=granny_m2_red( 1)
+         granny_m2(0) =virtgranny(granny_m2_red_local( 0)) ! central value
+         granny_m2(1) =virtgranny(granny_m2_red_local( 1)-tiny) ! upper limit
+         granny_m2(-1)=virtgranny(granny_m2_red_local(-1)+tiny) ! lower limit
          if (debug_granny) then
-            temp =virtgranny_red(granny_m_red( 0))+granny_m_red_local(0)
-            if (abs(temp-granny_m(0)).gt.1d-6) then
+            temp =virtgranny_red(granny_m2_red_local( 0))
+     &           +granny_m2_red_local(0)
+            if (abs((temp-granny_m2(0))/temp).gt.1d-3 .and.
+     &           granny_m2(0).ne.0d0)then
                write (*,*) 'DEBUG error: virtgranny,virtgranny_red'
-     &              ,granny_m(0),temp
+     &              ,granny_m2(0),temp,granny_m2_red_local(0)
                stop
             endif
          endif
-         if (granny_m(0).eq.0d0) n0_granny=n0_granny+1
+         if (granny_m2(0).eq.0d0) n0_granny=n0_granny+1
 c     Check that we have a function that is always increasing
-         del1=max(0d0,granny_m(-1)-granny_m_red(-1))
-         del2=max(0d0,granny_m_red(1)-granny_m(1))
-         del30=granny_m_red(1)-granny_m_red(-1)
+         del1=max(0d0,granny_m2(-1)-granny_m2_red_local(-1))
+         del2=max(0d0,granny_m2_red_local(1)-granny_m2(1))
+         del30=granny_m2_red_local(1)-granny_m2_red_local(-1)
          del3=del30-del1-del2
          if (del3.lt.0d0) then
-            write (*,*) 'ERROR in setting of grandmother mass',granny_m
-     &           ,granny_m_red
+c$$$            write (*,*) 'ERROR in setting of grandmother mass',granny_m2
+c$$$     &           ,granny_m2_red_local
+c$$$            stop
          endif
          if (del1.gt.0d0 .or. del2.gt.0d0) ncover_granny=ncover_granny+1
-c Check that granny_m_red_local is convering the whole integration range
-c of granny_m. If that's the case, we do the special granny trick, if
+c Check that granny_m2_red_local is convering the whole integration range
+c of granny_m2. If that's the case, we do the special granny trick, if
 c not, integrate as normal.
-         if ( granny_m_red_local(0).lt.granny_m(-1) .or.
-     $        granny_m_red_local(0).gt.granny_m( 1)) then
+         if ( granny_m2_red_local(0).lt.granny_m2(-1) .or.
+     $        granny_m2_red_local(0).gt.granny_m2( 1)) then
 c     3rd term in eq.43 of the note
             compute_non_shifted=.true.
          else
             compute_non_shifted=.false.
          endif
-         if ( granny_m(0).ge.granny_m_red_local(-1)+tiny .and.
-     $        granny_m(0).le.granny_m_red_local( 1)-tiny ) then
+         if ( granny_m2(0).ge.granny_m2_red_local(-1)+tiny .and.
+     $        granny_m2(0).le.granny_m2_red_local( 1)-tiny ) then
 c     2nd term in eq.43 of the note
             compute_mapped=.true.
          else
@@ -328,36 +325,34 @@ c     Could add importance sampling here
             nocntevents=.true.
             return
          endif
-
          if (compute_non_shifted) then
 c integrate as normal (can skip event)
-            input_granny_m=.false.
+            input_granny_m2=.false.
             only_event_phsp=.true.
             skip_event_phsp=.false.
             do i=-1,1
-               granny_m_red(i)=-99d99
+               granny_m2_red(i)=-99d99
             enddo
-            call generate_momenta_conf(input_granny_m,ndim,jac,x
-     $           ,granny_m_red,itree,qmass,qwidth,p)
+            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $           ,granny_m2_red,itree,qmass,qwidth,p)
          endif
          if (compute_mapped) then
 c Special Phase-space generation for granny stuff: keep its invariant
 c mass fixed.
-c Apply the theta functions on the range of granny_m_red also to the
-c corresponding granny_m.
+c Apply the theta functions on the range of granny_m2_red also to the
+c corresponding granny_m2.
 c compute the derivative numerically (to compute the Jacobian)
             only_event_phsp=.true.
             skip_event_phsp=.false.
-            der=derivative(virtgranny,granny_m_red_local(0),step,idir,
-     &           granny_m_red_local(-1),granny_m_red_local(1),errder)
+            der=derivative(virtgranny,granny_m2_red_local(0),step,idir,
+     &           granny_m2_red_local(-1),granny_m2_red_local(1),errder)
             if (debug_granny) then
-               temp =derivative(virtgranny_red,granny_m_red_local(0)
-     &              ,step,idir,granny_m_red_local(-1)
-     &              ,granny_m_red_local(1),errder)
+               temp =derivative(virtgranny_red,granny_m2_red_local(0)
+     &              ,step,idir,granny_m2_red_local(-1)
+     &              ,granny_m2_red_local(1),errder)
                if (abs(1d0+temp-der).gt.1d-3) then
                   write (*,*) 'DEBUG derivative error: '/
      &                 /'virtgranny,virtgranny_red',der,1d0+temp
-                  stop
                endif
             endif
             if(abs(der).lt.1.d-8) der=0.d0
@@ -366,25 +361,25 @@ c compute the derivative numerically (to compute the Jacobian)
      $              /' derivative',errder,der
                stop
             endif
-c compute the counter event kinematics using granny_m(0) as mass for the
+c compute the counter event kinematics using granny_m2(0) as mass for the
 c grandmother.
-            input_granny_m=.true.
+            input_granny_m2=.true.
             skip_event_phsp=.true.
             only_event_phsp=.false.
-            granny_m_red(0)=granny_m(0)
-            call generate_momenta_conf(input_granny_m,ndim,jac,x
-     $           ,granny_m_red,itree,qmass,qwidth,p)
+            granny_m2_red(0)=granny_m2(0)
+            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $           ,granny_m2_red,itree,qmass,qwidth,p)
 c multiply the weights by the numerically computed jacobian
             do i=-2,2
                jac_cnt(i)=jac_cnt(i)*abs(der)
             enddo
 c event kinematics: even though it shouldn't change from above, better
 c compute it again to set all the common blocks correctly.
-            input_granny_m=.false.
+            input_granny_m2=.false.
             only_event_phsp=.true.
             skip_event_phsp=.false.
-            call generate_momenta_conf(input_granny_m,ndim,jac,x
-     $           ,granny_m_red,itree,qmass,qwidth,p)
+            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $           ,granny_m2_red,itree,qmass,qwidth,p)
          endif
          do i=-2,2
             jac_cnt(i)=jac_cnt(i)*MC_sum_factor
@@ -392,15 +387,15 @@ c compute it again to set all the common blocks correctly.
       else
          skip_event_phsp=.false.
          only_event_phsp =.false.
-         input_granny_m=.false.
-         call generate_momenta_conf(input_granny_m,ndim,jac,x
-     $        ,granny_m_red,itree,qmass,qwidth,p)
+         input_granny_m2=.false.
+         call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $        ,granny_m2_red,itree,qmass,qwidth,p)
       endif
       end
 
 
-      subroutine generate_momenta_conf(input_granny_m,ndim,jac,x
-     &     ,granny_m_red,itree,qmass,qwidth,p)
+      subroutine generate_momenta_conf(input_granny_m2,ndim,jac,x
+     &     ,granny_m2_red,itree,qmass,qwidth,p)
 c
 c x(1)...x(ndim-5) --> invariant mass & angles for the Born
 c x(ndim-4) --> tau_born
@@ -418,8 +413,8 @@ c arguments
       double precision jac,x(99),p(0:3,nexternal)
       integer itree(2,-max_branch:-1)
       double precision qmass(-nexternal:0),qwidth(-nexternal:0)
-     &     ,granny_m_red(-1:1)
-      logical input_granny_m
+     &     ,granny_m2_red(-1:1)
+      logical input_granny_m2
 c common
 c     Arguments have the following meanings:
 c     -2 soft-collinear, incoming leg, - direction as in FKS paper
@@ -652,8 +647,8 @@ c Generate Born-level momenta
 c
 c Start by generating all the invariant masses of the s-channels
       if (granny_is_res) then
-         call generate_inv_mass_sch_granny(input_granny_m,ns_channel
-     &        ,itree,m,granny_m_red,sqrtshat_born,totmass,qwidth,qmass
+         call generate_inv_mass_sch_granny(input_granny_m2,ns_channel
+     &        ,itree,m,granny_m2_red,sqrtshat_born,totmass,qwidth,qmass
      &        ,cBW,cBW_mass ,cBW_width,s,x,xjac0,pass)
       else
          call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
@@ -721,9 +716,9 @@ c to prevent using those skipped because e.g. m(j_fks)#0
          else
             icountevts=0
          endif
-c skips counterevents when integrating over second fold for massive
+c     skips counterevents when integrating over second fold for massive
 c     j_fks
-c FIXTHIS FIXTHIS FIXTHIS FIXTHIS:         
+c     FIXTHIS FIXTHIS FIXTHIS FIXTHIS:         
          if( isolsign.eq.-1 )then
             write (*,*) 'ERROR, when doing 2nd fold of massive j_fks,'
      &           //' cannot skip event_phsp'
@@ -940,11 +935,11 @@ c
          endif
 c skips counterevents when integrating over second fold for massive
 c j_fks
-        if( isolsign.eq.-1 )icountevts=5 
+         if( isolsign.eq.-1 )icountevts=5
+         if (only_event_phsp) return
       else
          icountevts=icountevts+1
       endif
-
       if( (icountevts.le.2.and.m_j_fks.eq.0.d0.and.(.not.nbody)).or.
      &    (icountevts.eq.0.and.m_j_fks.eq.0.d0.and.nbody) .or.
      &    (icountevts.eq.0.and.m_j_fks.ne.0.d0) )then
@@ -2394,8 +2389,8 @@ c
       end
 
 
-      subroutine generate_inv_mass_sch_granny(input_granny_m,ns_channel
-     &     ,itree,m,granny_m_red,,sqrtshat_born,totmass,qwidth,qmass,cBW
+      subroutine generate_inv_mass_sch_granny(input_granny_m2,ns_channel
+     &     ,itree,m,granny_m2_red,sqrtshat_born,totmass,qwidth,qmass,cBW
      &     ,cBW_mass,cBW_width,s,x,xjac0,pass)
 c Identical to generate_inv_mass_sch, but that it generates the masses
 c from the inside to the outside (i.e., first the largest one, and then
@@ -2408,9 +2403,9 @@ c next-to-last, with granny itself as the final one.
      &     -max_branch:max_particles),x(99),s(-max_branch:max_particles)
      &     ,sqrtshat_born,totmass,xjac0,smin,smax,totalmass,min_m(
      &     -nexternal:nexternal),max_m(-nexternal:nexternal)
-     &     ,granny_m_red(-1:1)
+     &     ,granny_m2_red(-1:1)
       integer ns_channel,i,j,itree(2,-max_branch:-1),do_granny_daughters
-      logical pass,start_s_chan(-nexternal:nexternal),input_granny_m
+      logical pass,start_s_chan(-nexternal:nexternal),input_granny_m2
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-1:1,-nexternal:-1),
      &     cBW_width(-1:1,-nexternal:-1)
@@ -2511,7 +2506,7 @@ c     the current one is the start of an s-channel chain.
 c At the end, compute the grandmother invariant mass
       smin = (m(itree(1,igranny))+m(itree(2,igranny)))**2
       smax = max_m(igranny)**2
-      if (.not. input_granny_m) then
+      if (.not. input_granny_m2) then
          call generate_si(smin,smax,s(igranny),cBW(igranny),cBW_width(-1
      &        ,igranny),cBW_mass(-1,igranny),qmass(igranny)
      &        ,qwidth(igranny),x(-igranny),xjac0,s_mass(igranny))
@@ -2521,6 +2516,9 @@ c     if numerical inaccuracy, quit.
             pass=.false.
             return
          endif
+         granny_m2_red( 0)=s(igranny)
+         granny_m2_red(-1)=smin
+         granny_m2_red( 1)=smax
       else
 c     call this function just to get the right Jacobian.
          call generate_si(smin,smax,s(igranny),cBW(igranny),cBW_width(-1
@@ -2532,8 +2530,8 @@ c     if numerical inaccuracy, quit.
             pass=.false.
             return
          endif
-c     overwrite the mass with the granny_m_red(0).
-         s_mass(igranny)=granny_m_red(0)**2
+c     overwrite the mass with the granny_m2_red(0).
+         s(igranny)=granny_m2_red(0)
       endif
 c     Check that this is a valid invariant, i.e. sum of daughter masses
 c     is smaller than granny mass.
