@@ -4633,7 +4633,7 @@ c entering this function
       call sborn(p_born,wgt1)
 
 c Born contribution:
-      bsv_wgt=0d0!wgt1
+      bsv_wgt=wgt1
       born_wgt=wgt1
       virt_wgt=0d0
 
@@ -5500,7 +5500,34 @@ c      include "fks.inc"
       common /c_need_links/need_color_links, need_charge_links
       double precision oneo8pi2
       parameter(oneo8pi2 = 1d0/(8d0*pi**2))
+      include "nFKSconfigs.inc"
+      INTEGER nFKSprocess, nFKSprocess_save, nFKSprocess_col, nFKSprocess_chg
+      COMMON/c_nFKSprocess/nFKSprocess
+      logical need_color_links_used, need_charge_links_used
+
       include "pmass.inc"
+
+      nFKSprocess_col = 0
+      nFKSprocess_chg = 0
+
+      need_color_links_used = .false.
+      need_charge_links_used = .false.
+      
+C check if any real emission need cahrge/color links
+      nFKSprocess_save = nFKSprocess
+      do nFKSprocess = 1, FKS_configs
+        call fks_inc_chooser()
+        need_color_links_used = need_color_links_used .or. need_color_links
+        need_charge_links_used = need_charge_links_used .or. need_charge_links
+C keep track of which FKS configuration actually needs color/charge
+C links
+        if (need_color_links.and.nFKSprocess_col.eq.0)
+     1          nFKSprocess_col = nFKSprocess
+        if (need_charge_links.and.nFKSprocess_chg.eq.0)
+     1          nFKSprocess_chg = nFKSprocess
+      enddo
+      nFKSprocess = nFKSprocess_save
+      call fks_inc_chooser()
 c
       double=0.d0
       single=0.d0
@@ -5551,14 +5578,25 @@ c QED Born terms
       single=single+contr1*born*aeo2pi
 
 c Colour and charge-linked Born terms
+      nFKSprocess_save = nFKSprocess
       do ilink = 1, 2
         if (ilink.eq.1) then
+          if (.not. need_color_links_used) cycle
           need_color_links = .true.
           need_charge_links = .false.
+          nFKSprocess=nFKSprocess_col
         else
+          if (.not. need_color_links_used) cycle
           need_color_links = .false.
           need_charge_links = .true.
+          nFKSprocess=nFKSprocess_chg
         endif
+
+C setup the fks i/j info
+        call fks_inc_chooser()
+C the following call to born is to setup the goodhel(nfksprocess)
+        call sborn(p_born,wgt1)
+
         contr1=0d0
         do i=1,fks_j_from_i(i_fks,0)
           do j=1,i
@@ -5597,6 +5635,7 @@ c The factor -2 compensate for that missing in sborn_sf
       enddo
 
 C restore need_color/charge_links
+      nFKSprocess = nFKSprocess_save
       call fks_inc_chooser()
 
       if(.not.fksprefact)single=single+double*log(xmu2/QES2)
