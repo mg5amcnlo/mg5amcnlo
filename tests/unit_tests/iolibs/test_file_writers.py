@@ -57,7 +57,6 @@ class CheckFileCreate():
 
     def give_pos(self, filename):
         """ take a name and a change it in order to have a valid path in the output directory """
-        
         return os.path.join(self.output_path, filename)
 
     def clean_files(self):
