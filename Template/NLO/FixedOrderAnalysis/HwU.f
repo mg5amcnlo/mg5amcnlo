@@ -68,10 +68,12 @@ c     Compute the lower and upper bin edges
 c     Set all the bins to zero.
          do j=1,nwgts
             histy(j,label,i)=0d0
-            histy2(label,i)=0d0
             histy_acc(j,label,i)=0d0
             histy_err(label,i)=0d0
          enddo
+         histi(label,i)=0
+         histy2(label,i)=0d0
+         histy_err(label,i)=0d0
       enddo
       np=0
       return
@@ -138,6 +140,7 @@ c correctly taken into account.
             histy(j,p_label(i),p_bin(i))=
      $           histy(j,p_label(i),p_bin(i))+p_wgts(j,i)
          enddo
+         histi(p_label(i),p_bin(i))=histi(p_label(i),p_bin(i))+1
          histy2(p_label(i),p_bin(i))=
      $        histy2(p_label(i),p_bin(i))+p_wgts(1,i)**2
       enddo
@@ -171,6 +174,8 @@ c     for fNLO computations, because for bins with low statistics, the
 c     variance computation cannot be trusted.
             if (inclde) then
                do i=1,nbin(label)
+c     Skip bin if no entries
+                  if (histi(label,i).eq.0) cycle
 c     Divide weights by the number of PS points. This means that this is
 c     now normalised to the total cross section in that bin
                   do j=1,nwgts
@@ -178,15 +183,14 @@ c     now normalised to the total cross section in that bin
                   enddo
 c     Error estimation of the current bin
                   etot=sqrt(abs(histy2(label,i)*nPSinv-vtot(1)**2)
-     $                 *nPSinv)
-c     Skip bin if both error and central weight are zero. This means
-c     that in the current iteration no points were added to this bin.
-                  if (etot.eq.0 .and. vtot(1).eq.0d0) then
-                     cycle
-c     Where there was only 1 point added, error estimation is still
-c     equal to zero, which it should be 100%. Update this.
-                  elseif (etot.eq.0) then
-                     etot=vtot(1)
+     &                 *nPSinv)
+c     Include "Bessel's correction" to have a corrected (even though
+c     still biased) estimator of the standard deviation.
+                  if (histi(label,i).gt.1) then
+                     etot=etot* sqrt(dble(histi(label,i))
+     &                    /(dble(histi(label,i))-1.5d0))
+                  else
+                     etot=99d99
                   endif
 c     If the error estimation of the accumulated results is still zero
 c     (i.e. no points were added yet, e.g. because it is the first
@@ -237,6 +241,7 @@ c     ready for the next iteration.
                histy(j,label,i)=0d0
             enddo
             histy2(label,i)=0d0
+            histi(label,i)=0
          enddo
       enddo
       return
