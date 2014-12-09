@@ -108,7 +108,6 @@ c
          virtgranny=0d0
          return
       endif
-      jac=1d0
       call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m_red,itree
      &     ,qmass_common,qwidth_common,p)
       if (jac.gt.0d0) then
@@ -174,7 +173,6 @@ c
          virtgranny_red=0d0
          return
       endif
-      jac=1d0
       call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m_red,itree
      &     ,qmass_common,qwidth_common,p)
       if (jac.gt.0d0) then
@@ -211,7 +209,7 @@ c
       integer itree(2,-max_branch:-1),i
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),del1
      &     ,del2,del3,del30,der,derivative,errder,random,ran2,virtgranny
-     &     ,virtgranny_red
+     &     ,virtgranny_red,MC_sum_factor
       external derivative,ran2,virtgranny
 c     granny stuff
       double precision tiny,granny_m(-1:1),step,granny_m_red_local(-1:1)
@@ -246,11 +244,6 @@ c     debug stuff
       logical nocntevents
       common/cnocntevents/nocntevents
 c
-c     FIX THE WEIGHT: the value of the jacobian is always multiplied
-c     every time we call genrate_momenta_conf, so we have to reset it to
-c     the input value of this routine before every call.
-c
-
       do i=-1,1
          granny_m_red(i)=-99d99
       enddo
@@ -260,10 +253,16 @@ c This computes the event kinematics and sets the range for the granny
 c inv. mass, in terms of the integration variable (which is not the
 c physical range of the invariant mass in the event!)
          only_event_phsp=.true.
+         skip_event_phsp=.false.
+         input_granny=.false.
          call generate_momenta_conf(input_granny_m,ndim,jac,x
      $        ,granny_m_red,itree,qmass,qwidth,p)
-         skip_event_phsp=.true.
-         only_event_phsp=.false.
+         jac_ev=jac
+         do i=1,nexternal
+            do j=0,3
+               p_ev(j,i)=p(j,i
+            enddo
+         enddo
          granny_m_red_local( 0)=granny_m_red( 0)
          granny_m_red_local(-1)=granny_m_red(-1)
          granny_m_red_local( 1)=granny_m_red( 1)
@@ -307,6 +306,7 @@ c     2nd term in eq.43 of the note
             compute_mapped=.false.
             nlim_granny=nlim_granny+1
          endif
+         MC_sum_factor=1d0
          if (compute_mapped.and.compute_non_shifted) then
 c     Could add importance sampling here
             random=ran2()
@@ -315,9 +315,7 @@ c     Could add importance sampling here
             else
                compute_non_shifted=.false.
             endif
-            do i=0,2
-               jac_cnt(i)=jac_cnt(i)*2d0
-            enddo
+            MC_sum_factor=2d0
          endif
          if (.not. compute_mapped .and. .not. compute_non_shifted) then
             jac=0d0 ! double check: only event or only counter event...
@@ -334,6 +332,8 @@ c     Could add importance sampling here
          if (compute_non_shifted) then
 c integrate as normal (can skip event)
             input_granny_m=.false.
+            only_event_phsp=.true.
+            skip_event_phsp=.false.
             do i=-1,1
                granny_m_red(i)=-99d99
             enddo
@@ -346,6 +346,8 @@ c mass fixed.
 c Apply the theta functions on the range of granny_m_red also to the
 c corresponding granny_m.
 c compute the derivative numerically (to compute the Jacobian)
+            only_event_phsp=.true.
+            skip_event_phsp=.false.
             der=derivative(virtgranny,granny_m_red_local(0),step,idir,
      &           granny_m_red_local(-1),granny_m_red_local(1),errder)
             if (debug_granny) then
@@ -367,6 +369,8 @@ c compute the derivative numerically (to compute the Jacobian)
 c compute the counter event kinematics using granny_m(0) as mass for the
 c grandmother.
             input_granny_m=.true.
+            skip_event_phsp=.true.
+            only_event_phsp=.false.
             granny_m_red(0)=granny_m(0)
             call generate_momenta_conf(input_granny_m,ndim,jac,x
      $           ,granny_m_red,itree,qmass,qwidth,p)
@@ -374,7 +378,17 @@ c multiply the weights by the numerically computed jacobian
             do i=-2,2
                jac_cnt(i)=jac_cnt(i)*abs(der)
             enddo
+c event kinematics: even though it shouldn't change from above, better
+c compute it again to set all the common blocks correctly.
+            input_granny_m=.false.
+            only_event_phsp=.true.
+            skip_event_phsp=.false.
+            call generate_momenta_conf(input_granny_m,ndim,jac,x
+     $           ,granny_m_red,itree,qmass,qwidth,p)
          endif
+         do i=-2,2
+            jac_cnt(i)=jac_cnt(i)*MC_sum_factor
+         enddo
       else
          skip_event_phsp=.false.
          only_event_phsp =.false.
@@ -490,7 +504,7 @@ c parameters
       parameter (zero=0d0)
 c saves
       save m,stot,totmassin,totmass,ns_channel,nt_channel,one_body
-     &     ,ionebody,fksmass,nbranch
+     &     ,ionebody,fksmass,nbranch,isolsign
 c Conflicting BW stuff
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-1:1,-nexternal:-1),
@@ -638,9 +652,9 @@ c Generate Born-level momenta
 c
 c Start by generating all the invariant masses of the s-channels
       if (granny_is_res) then
-         call generate_inv_mass_sch_granny(ns_channel,itree,m
-     &        ,sqrtshat_born,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width
-     &        ,s,x,xjac0,pass)
+         call generate_inv_mass_sch_granny(input_granny_m,ns_channel
+     &        ,itree,m,granny_m_red,sqrtshat_born,totmass,qwidth,qmass
+     &        ,cBW,cBW_mass ,cBW_width,s,x,xjac0,pass)
       else
          call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
      &        ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0
@@ -701,13 +715,31 @@ c energy components will stay negative. Also set the upper limits of
 c the xi ranges to negative values to force crash if something
 c goes wrong. The jacobian of the counterevents are set negative
 c to prevent using those skipped because e.g. m(j_fks)#0
-      p_i_fks_ev(0)=-1.d0
-      xiimax_ev=-1.d0
-      do i=-2,2
-         p_i_fks_cnt(0,i)=-1.d0
-         xiimax_cnt(i)=-1.d0
-         jac_cnt(i)=-1.d0
-      enddo
+      if (skip_event_phsp) then
+         if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
+            icountevts=-2
+         else
+            icountevts=0
+         endif
+c skips counterevents when integrating over second fold for massive
+c     j_fks
+c FIXTHIS FIXTHIS FIXTHIS FIXTHIS:         
+         if( isolsign.eq.-1 )then
+            write (*,*) 'ERROR, when doing 2nd fold of massive j_fks,'
+     &           //' cannot skip event_phsp'
+            stop
+         endif
+      else
+         p_i_fks_ev(0)=-1.d0
+         xiimax_ev=-1.d0
+      endif
+      if (.not.only_event_phsp) then
+         do i=-2,2
+            p_i_fks_cnt(0,i)=-1.d0
+            xiimax_cnt(i)=-1.d0
+            jac_cnt(i)=-1.d0
+         enddo
+      endif
 c set cm stuff to values to make the program crash if not set elsewhere
       ybst_til_tolab=1.d14
       ybst_til_tocm=1.d14
@@ -715,7 +747,7 @@ c set cm stuff to values to make the program crash if not set elsewhere
       shat=0.d0
 c if collinear counterevent will not be generated, the following
 c quantity will stay zero
-      xij_aor=(0.d0,0.d0)
+      if (.not.only_event_phsp) xij_aor=(0.d0,0.d0)
 c
 c These will correspond to the vegas x's for the FKS variables xi_i,
 c y_ij and phi_i
@@ -2362,9 +2394,9 @@ c
       end
 
 
-      subroutine generate_inv_mass_sch_granny(ns_channel,itree,m
-     $     ,sqrtshat_born,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s
-     $     ,x,xjac0,pass)
+      subroutine generate_inv_mass_sch_granny(input_granny_m,ns_channel
+     &     ,itree,m,granny_m_red,,sqrtshat_born,totmass,qwidth,qmass,cBW
+     &     ,cBW_mass,cBW_width,s,x,xjac0,pass)
 c Identical to generate_inv_mass_sch, but that it generates the masses
 c from the inside to the outside (i.e., first the largest one, and then
 c the smaller ones). All the daughters of the granny are generated
@@ -2373,11 +2405,12 @@ c next-to-last, with granny itself as the final one.
       include 'genps.inc'
       include 'nexternal.inc'
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),M(
-     $     -max_branch:max_particles),x(99),s(-max_branch:max_particles)
-     $     ,sqrtshat_born,totmass,xjac0,smin,smax,totalmass,min_m(
-     $     -nexternal:nexternal),max_m(-nexternal:nexternal)
+     &     -max_branch:max_particles),x(99),s(-max_branch:max_particles)
+     &     ,sqrtshat_born,totmass,xjac0,smin,smax,totalmass,min_m(
+     &     -nexternal:nexternal),max_m(-nexternal:nexternal)
+     &     ,granny_m_red(-1:1)
       integer ns_channel,i,j,itree(2,-max_branch:-1),do_granny_daughters
-      logical pass,start_s_chan(-nexternal:nexternal)
+      logical pass,start_s_chan(-nexternal:nexternal),input_granny_m
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-1:1,-nexternal:-1),
      &     cBW_width(-1:1,-nexternal:-1)
@@ -2475,6 +2508,41 @@ c     the current one is the start of an s-channel chain.
             endif
          enddo
       enddo
+c At the end, compute the grandmother invariant mass
+      smin = (m(itree(1,igranny))+m(itree(2,igranny)))**2
+      smax = max_m(igranny)**2
+      if (.not. input_granny_m) then
+         call generate_si(smin,smax,s(igranny),cBW(igranny),cBW_width(-1
+     &        ,igranny),cBW_mass(-1,igranny),qmass(igranny)
+     &        ,qwidth(igranny),x(-igranny),xjac0,s_mass(igranny))
+c     if numerical inaccuracy, quit.
+         if ( xjac0.lt.0d0 ) then
+            xjac0=-5
+            pass=.false.
+            return
+         endif
+      else
+c     call this function just to get the right Jacobian.
+         call generate_si(smin,smax,s(igranny),cBW(igranny),cBW_width(-1
+     &        ,igranny),cBW_mass(-1,igranny),qmass(igranny)
+     &        ,qwidth(igranny),x(-igranny),xjac0,s_mass(igranny))
+c     if numerical inaccuracy, quit.
+         if ( xjac0.lt.0d0 ) then
+            xjac0=-5
+            pass=.false.
+            return
+         endif
+c     overwrite the mass with the granny_m_red(0).
+         s_mass(igranny)=granny_m_red(0)**2
+      endif
+c     Check that this is a valid invariant, i.e. sum of daughter masses
+c     is smaller than granny mass.
+      if (s(igranny) .lt. smin .or. s(igranny).gt.smax) then
+         xjac0=-5
+         pass=.false.
+         return
+      endif
+      m(igranny) = sqrt(s(igranny))
       return
       end
 
