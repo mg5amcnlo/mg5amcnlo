@@ -146,57 +146,87 @@ c correctly taken into account.
       end
 
 c Call after every iteration. This adds the histograms of the current
-c iteration ('histy') to the accumulated results ('histy_acc') with a
-c weight corresponding to the statistical uncertainties on the 'central
-c value' weights ('etot' (from 'histy2') and 'histy_err',
-c respectively). Note that this means that during the filling of the
-c histograms the central value should not be zero if any of the other
-c weights are non-zero.
+c iteration ('histy') to the accumulated results ('histy_acc'). When
+c 'use_weighted_bin_by_bin_average' is .true. it adds using a weight
+c corresponding to the statistical uncertainties on the 'central value'
+c weights ('etot' (from 'histy2') and 'histy_err', respectively), if
+c .false. it simply averages over the iterations. Note that this means
+c that during the filling of the histograms the central value should not
+c be zero if any of the other weights are non-zero.
       subroutine HwU_accum_iter(inclde,nPSpoints)
       implicit none
       include "HwU.inc"
-      logical inclde
+      logical inclde,use_weighted_bin_by_bin_average
+      parameter (use_weighted_bin_by_bin_average=.false.)
       integer nPSpoints,i,j,label
-      double precision nPSinv,etot,vtot(max_wgts)
+      double precision nPSinv,etot,vtot(max_wgts),niter,y_squared
+      data niter /0d0/
       nPSinv = 1d0/dble(nPSpoints)
+      niter = niter+1d0
       do label=1,max_plots
          if (.not. booked(label)) cycle
-         if (inclde) then
-            do i=1,nbin(label)
+         if (use_weighted_bin_by_bin_average) then
+c     Use the weighted average bin-by-bin. This is not really justified
+c     for fNLO computations, because for bins with low statistics, the
+c     variance computation cannot be trusted.
+            if (inclde) then
+               do i=1,nbin(label)
 c     Divide weights by the number of PS points. This means that this is
 c     now normalised to the total cross section in that bin
-               do j=1,nwgts
-                  vtot(j)=histy(j,label,i)*nPSinv
-               enddo
+                  do j=1,nwgts
+                     vtot(j)=histy(j,label,i)*nPSinv
+                  enddo
 c     Error estimation of the current bin
-               etot=sqrt(abs(histy2(label,i)*nPSinv-vtot(1)**2)*nPSinv)
+                  etot=sqrt(abs(histy2(label,i)*nPSinv-vtot(1)**2)
+     $                 *nPSinv)
 c     Skip bin if both error and central weight are zero. This means
 c     that in the current iteration no points were added to this bin.
-               if (etot.eq.0 .and. vtot(1).eq.0d0) then
-                  cycle
+                  if (etot.eq.0 .and. vtot(1).eq.0d0) then
+                     cycle
 c     Where there was only 1 point added, error estimation is still
 c     equal to zero, which it should be 100%. Update this.
-               elseif (etot.eq.0) then
-                  etot=vtot(1)
-               endif
+                  elseif (etot.eq.0) then
+                     etot=vtot(1)
+                  endif
 c     If the error estimation of the accumulated results is still zero
 c     (i.e. no points were added yet, e.g. because it is the first
 c     iteration) simply copy the results of this iteration over the
 c     accumulated results.
-               if (histy_err(label,i).eq.0d0) then
-                  do j=1,nwgts
-                     histy_acc(j,label,i)=vtot(j)
-                  enddo
-                  histy_err(label,i)=etot
-               else
+                  if (histy_err(label,i).eq.0d0) then
+                     do j=1,nwgts
+                        histy_acc(j,label,i)=vtot(j)
+                     enddo
+                     histy_err(label,i)=etot
+                  else
 c     Add the results of the current iteration to the accumalated results
-                  do j=1,nwgts
-                     histy_acc(j,label,i)=(histy_acc(j,label,i)
-     $                    /histy_err(label,i)+vtot(j)/etot)/(1d0
-     $                    /histy_err(label,i) + 1d0/etot)
-                  enddo
-                  histy_err(label,i)=1d0/sqrt(1d0/histy_err(label,i)**2
-     $                 +1d0/etot**2)
+                     do j=1,nwgts
+                        histy_acc(j,label,i)=(histy_acc(j,label,i)
+     $                       /histy_err(label,i)+vtot(j)/etot)/(1d0
+     $                       /histy_err(label,i) + 1d0/etot)
+                     enddo
+                     histy_err(label,i)=
+     $                   1d0/sqrt(1d0/histy_err(label,i)**2+1d0/etot**2)
+                  endif
+               enddo
+            endif
+         else
+c     simply sum the weights in the bins
+            do i=1,nbin(label)
+               if (niter.ne.1d0) y_squared=((niter-1)*histy_err(label
+     $              ,i))**2+(niter-1)*histy_acc(1,label,i)**2
+               do j=1,nwgts
+                  histy(j,label,i)=histy(j,label,i)*nPSinv
+                  histy_acc(j,label,i)=(histy_acc(j,label,i)*(niter
+     $                 -1d0)+histy(j,label,i))/niter
+               enddo
+c     base the error on the variance in the results per iteration. For a
+c     small number of iterations, this underestimates the actual
+c     uncertainty.
+               if (niter.eq.1) then
+                  histy_err(label,i)=0d0
+               else
+                  histy_err(label,i)= sqrt(((y_squared+histy(1,label,i)
+     $                 **2)/niter-histy_acc(1,label,i)**2)/niter)
                endif
             enddo
          endif
