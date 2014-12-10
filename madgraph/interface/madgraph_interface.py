@@ -899,13 +899,14 @@ class CheckValidForCmd(cmd.CheckCmd):
             return
 
         # request that we have one or two > in the process
-        if process.count('>') not in [1,2]:
+        nbsep = len(re.findall('>\D', process)) # not use process.count because of QCD^2>2
+        if nbsep not in [1,2]:
             raise self.InvalidCmd(
                'wrong format for \"%s\" this part requires one or two symbols \'>\', %s found'
-               % (process, process.count('>')))
+               % (process, nbsep))
 
         # we need at least one particles in each pieces
-        particles_parts = process.split('>')
+        particles_parts = re.split('>\D', process)
         for particles in particles_parts:
             if re.match(r'^\s*$', particles):
                 raise self.InvalidCmd(
@@ -3494,7 +3495,7 @@ This implies that with decay chains:
         a ProcessDefinition."""
 
         # Check basic validity of the line
-        if not line.count('>') in [1,2]:
+        if not len(re.findall('>\D', line)) in [1,2]:
             self.do_help('generate')
             raise self.InvalidCmd('Wrong use of \">\" special character.')
 
