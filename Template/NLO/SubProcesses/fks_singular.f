@@ -5528,7 +5528,7 @@ C links
       enddo
       nFKSprocess = nFKSprocess_save
       call fks_inc_chooser()
-c
+
       double=0.d0
       single=0.d0
       aso2pi=g**2/(8*pi**2)
@@ -5586,7 +5586,7 @@ c Colour and charge-linked Born terms
           need_charge_links = .false.
           nFKSprocess=nFKSprocess_col
         else
-          if (.not. need_color_links_used) cycle
+          if (.not. need_charge_links_used) cycle
           need_color_links = .false.
           need_charge_links = .true.
           nFKSprocess=nFKSprocess_chg
