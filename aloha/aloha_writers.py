@@ -654,8 +654,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         """Formatting the variable name to Fortran format"""
         
         if isinstance(name, aloha_lib.ExtVariable):
-            # external parameter nothing to do
+            # external parameter nothing to do but handling model prefix
             self.has_model_parameter = True
+            if name.lower() in ['pi', 'as', 'mu_r', 'aewm1','g']:
+                return name
             return '%s%s' % (aloha.aloha_prefix, name)
         
         if '_' in name:
@@ -727,8 +729,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         for name in keys:
             fct, objs = self.routine.fct[name]
 
-	    format = ' %s = %s\n' % (name, self.get_fct_format(fct))
-	    try:
+            format = ' %s = %s\n' % (name, self.get_fct_format(fct))
+            try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])
             except TypeError:
                 text = format % tuple([self.write_obj(obj) for obj in objs])
@@ -1827,6 +1829,32 @@ class ALOHAWriterForPython(WriteALOHA):
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         
         return name
+
+    def get_fct_format(self, fct):
+        """Put the function in the correct format"""
+        if not hasattr(self, 'fct_format'):
+            one = self.change_number_format(1)
+            self.fct_format = {'csc' : '{0}/cmath.cos(%s)'.format(one),
+                   'sec': '{0}/cmath.sin(%s)'.format(one),
+                   'acsc': 'cmath.asin({0}/(%s))'.format(one),
+                   'asec': 'cmath.acos({0}/(%s))'.format(one),
+                   're': ' complex(%s).real',
+                   'im': 'complex(%s).imag',
+                   'cmath.sqrt': 'cmath.sqrt(%s)',
+                   'sqrt': 'cmath.sqrt(%s)',
+                   'pow': 'pow(%s, %s)',
+                   'complexconjugate': 'complex(%s).conjugate()',
+                   '/' : '{0}/%s'.format(one),
+                   'abs': 'cmath.fabs(%s)'
+                   }
+            
+        if fct in self.fct_format:
+            return self.fct_format[fct]
+        elif hasattr(cmath, fct):
+            self.declaration.add(('fct', fct))
+            return 'cmath.{0}(%s)'.format(fct)
+        else:
+            raise Exception, "Unable to handle function name %s (no special rule defined and not in cmath)" % fct
     
     def define_expression(self):
         """Define the functions in a 100% way """
@@ -1836,6 +1864,30 @@ class ALOHAWriterForPython(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write('    %s = %s\n' % (name, self.write_obj(obj)))
+
+        def sort_fct(a, b):
+            if len(a) < len(b):
+                return -1
+            elif len(a) > len(b):
+                return 1
+            elif a < b:
+                return -1
+            else:
+                return +1
+            
+        keys = self.routine.fct.keys()        
+        keys.sort(sort_fct)
+        for name in keys:
+            fct, objs = self.routine.fct[name]
+            format = '    %s = %s\n' % (name, self.get_fct_format(fct))
+            try:
+                text = format % ','.join([self.write_obj(obj) for obj in objs])
+            except TypeError:
+                text = format % tuple([self.write_obj(obj) for obj in objs])
+            finally:
+                out.write(text)
+
+
 
         numerator = self.routine.expr
         if not 'Coup(1)' in self.routine.infostr:
@@ -1892,7 +1944,7 @@ class ALOHAWriterForPython(WriteALOHA):
             name = self.name
            
         out = StringIO()
-        
+        out.write("import cmath\n")
         if self.mode == 'mg5':
             out.write('import aloha.template_files.wavefunctions as wavefunctions\n')
         else:
