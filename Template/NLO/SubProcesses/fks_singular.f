@@ -319,17 +319,16 @@ c FKS stuff:
 
       double precision xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
-
       double precision xiimax_ev
       common /cxiimaxev/xiimax_ev
       double precision xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
-
       double precision xinorm_ev
       common /cxinormev/xinorm_ev
       double precision xinorm_cnt(-2:2)
       common /cxinormcnt/xinorm_cnt
-
+      double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       double precision p1_cnt(0:3,nexternal,-2:2)
       double precision wgt_cnt(-2:2)
       double precision pswgt_cnt(-2:2)
@@ -468,16 +467,18 @@ c Check that things are done consistently
          firsttime=.false.
       endif
 
-      prefact=xinorm_ev/xi_i_fks_ev*
-     #        1/(1-y_ij_fks_ev)
+c these should be the same
+      prefact=1d0/xi_i_hat_ev/(1-y_ij_fks_ev)
       if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or. abrv.eq
      &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbody))
      &     )then
-        prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
-     #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
-     #                  1/(1-y_ij_fks_ev)
+         prefact_cnt_ssc=xinorm_cnt(izero)/min(xiimax_cnt(izero)
+     &        ,xiScut_used)*log(xicut_used/min(xiimax_cnt(izero)
+     &        ,xiScut_used))*1/(1-y_ij_fks_ev)
         if(pmass(j_fks).eq.0.d0)then
-          prefact_c=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
+c For the soft-collinear, these should be itwo. But they are always
+c equal to ione, so no need to define separate prefactors.
+           prefact_c=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
      #              1/(1-y_ij_fks_ev)
           prefact_cnt_ssc_c=xinorm_cnt(ione)/min(xiimax_cnt(ione),xiScut_used)*
      #                      log(xicut_used/min(xiimax_cnt(ione),xiScut_used))*
@@ -552,7 +553,7 @@ c Set the ybst_til_tolab before applying the cuts.
         wgtxbj(2,1)=xbk(2)
       endif
       if (passcuts(pp,rwgt)) then
-c       Compute the scales and sudakov-reweighting for the FxFx merging
+c     Compute the scales and sudakov-reweighting for the FxFx merging
         if (ickkw.eq.3) then
            if (.not. setclscales(pp)) then
                write (*,*) 'ERROR in setclscales mohdr'
@@ -594,10 +595,10 @@ c one of them passes the hard cuts, and they exist at all
 c Set the ybst_til_tolab before applying the cuts. Update below
 c for the collinear, soft and/or soft-collinear subtraction terms
       call set_cms_stuff(izero)
-      if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
-     #     nocntevents ) goto 547
+      if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.nocntevents ) 
+     &     goto 547
 
-c Compute the scales and sudakov-reweighting for the FxFx merging
+c     Compute the scales and sudakov-reweighting for the FxFx merging
       if (ickkw.eq.3) then
          if (.not. setclscales(p1_cnt(0,1,0))) then
             write (*,*) 'ERROR in setclscales izero'
@@ -663,7 +664,7 @@ com-- muR-dependent fac is reweighted here
       endif
 c Soft subtraction term:
  545  continue
-      if (xi_i_fks_ev .lt. max(xiScut_used,xiBSVcut_used)) then
+      if (xi_i_hat_ev*xiimax_cnt(izero) .lt. max(xiScut_used,xiBSVcut_used)) then
          call set_cms_stuff(izero)
          if(doreweight)then
            wgtxbj(1,2)=xbk(1)
@@ -679,12 +680,12 @@ c Soft subtraction term:
             xlum_s = dlum()
             if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &           abrv(1:2).eq.'vi' .or. nbody) goto 546
-            if (xi_i_fks_ev .lt. xiScut_used) then
-              call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
-              xsec=fx_s*s_s*jac_cnt(0)
-              cnt_s=xlum_s*xsec
-              cnt_wgt_s=cnt_wgt_s-cnt_s*prefact*rwgt
-     f             * rwgt_muR_dep_fac(scale)
+            if (xi_i_hat_ev*xiimax_cnt(izero) .lt. xiScut_used) then
+               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
+               xsec=fx_s*s_s*jac_cnt(0)
+               cnt_s=xlum_s*xsec
+               cnt_wgt_s=cnt_wgt_s-cnt_s*prefact*rwgt
+     f              * rwgt_muR_dep_fac(scale)
 com-- muR-dependent fac is reweighted here
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
      f             * rwgt_muR_dep_fac(scale)
@@ -695,7 +696,7 @@ com-- muR-dependent fac is reweighted here
             endif
  546        continue
             if (abrv.eq.'real' .or. .not.nbody) goto 548
-            if (xi_i_fks_ev .lt. xiBSVcut_used) then
+            if (xi_i_hat_ev*xiimax_cnt(izero) .lt. xiBSVcut_used) then
               xsec=s_s*jac_cnt(0)*xinorm_ev/
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
      #             rwgt
@@ -740,7 +741,7 @@ com-- muR-dependent fac is reweighted here
 c Soft-Collinear subtraction term:
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
      &     nbody)goto 547
-      if (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
+      if (xi_i_hat_ev*xiimax_cnt(ione) .lt. xiScut_used .and.
      #    y_ij_fks_ev .gt. 1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
          call set_cms_stuff(itwo)
@@ -890,7 +891,7 @@ c Apply the FxFx Sudakov damping on the S events
          dsig = (ev_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
-c Do not include the virtuals here. They are explicitly included in
+c     Do not include the virtuals here. They are explicitly included in
 c driver_mintFO.f
 c     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
@@ -5429,7 +5430,7 @@ c parametrization allows it
       xiScut_used=xiScut
       if( nbody .or. (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi') )then
-        xiBSVcut_used=1.d0
+        xiBSVcut_used=1d0
       else
         xiBSVcut_used=xiBSVcut
       endif
