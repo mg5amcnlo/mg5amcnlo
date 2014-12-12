@@ -93,8 +93,8 @@ c
       double precision xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
 
-      logical softtest,colltest
-      common/sctests/softtest,colltest
+      logical softtest,colltest,fix_granny_test
+      common/sctests/softtest,colltest,fix_granny_test
       
       logical xexternal
       common /toxexternal/ xexternal

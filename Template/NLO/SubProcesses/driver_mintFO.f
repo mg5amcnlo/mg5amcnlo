@@ -356,11 +356,11 @@ c to save grids:
       endif
 
       write (*,*) 'counters for the granny resonances'
-      write (*,*) 'ntot   ',ntot_granny
-      write (*,*) 'n0     ',n0_granny
-      write (*,*) 'ncover ',ncover_granny
-      write (*,*) 'nlim   ',nlim_granny
-      write (*,*) 'del3   ',del3_granny
+      write (*,*) 'ntot     ',ntot_granny
+      write (*,*) '% n0     ',n0_granny/dble(ntot_granny)
+      write (*,*) '% ncover ',ncover_granny/dble(ntot_granny)
+      write (*,*) '% nlim   ',nlim_granny/dble(ntot_granny)
+      write (*,*) '% del3   ',del3_granny/dble(ntot_granny)
       
       call cpu_time(tAfter)
       tTot = tAfter-tBefore

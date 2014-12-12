@@ -212,7 +212,9 @@ c
      &     ,virtgranny_red,MC_sum_factor
       external derivative,ran2,virtgranny
 c     granny stuff
-      double precision tiny,granny_m2(-1:1),step,granny_m2_red_local(-1:1)
+      double precision tiny,granny_m2(-1:1),step,granny_m2_red_local(
+     &     -1:1),granny_m2_save(-1:1)
+      save granny_m2_save
       double precision granny_m2_red(-1:1)
       common /to_virtgranny/granny_m2_red
       logical input_granny_m2,compute_mapped,compute_non_shifted
@@ -251,6 +253,8 @@ c     debug stuff
       common /cxiifkscnt/xi_i_fks_cnt
       logical do_mapping_granny
       common /cdo_mapping_granny/do_mapping_granny
+      logical softtest,colltest,fix_granny_test
+      common/sctests/softtest,colltest,fix_granny_test
 c     
       do i=-1,1
          granny_m2_red(i)=-99d99
@@ -384,7 +388,12 @@ c the grandmother.
             input_granny_m2=.true.
             skip_event_phsp=.true.
             only_event_phsp=.false.
-            granny_m2_red(0)=granny_m2(0)
+            if (fix_granny_test) then
+               granny_m2_red(0)=granny_m2_save(0)
+            else
+               granny_m2_red(0)=granny_m2(0)
+               granny_m2_save(0)=granny_m2(0)
+            endif
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,itree,qmass,qwidth,p)
 c multiply the weights by the numerically computed jacobian
@@ -393,9 +402,14 @@ c multiply the weights by the numerically computed jacobian
             enddo
 c event kinematics: even though it shouldn't change from above, better
 c compute it again to set all the common blocks correctly.
-            input_granny_m2=.false.
+            input_granny_m2=fix_granny_test
             only_event_phsp=.true.
             skip_event_phsp=.false.
+            if (fix_granny_test) then
+               granny_m2_red( 0)=granny_m2_red_local( 0)
+               granny_m2_red(-1)=granny_m2_red_local(-1)
+               granny_m2_red( 1)=granny_m2_red_local( 1)
+            endif
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,itree,qmass,qwidth,p)
          endif
@@ -473,8 +487,8 @@ c     2 soft-collinear
       common/cbjrk12_cnt/tau_cnt,ycm_cnt
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-      logical softtest,colltest
-      common/sctests/softtest,colltest
+      logical softtest,colltest,fix_granny_test
+      common/sctests/softtest,colltest,fix_granny_test
       logical nocntevents
       common/cnocntevents/nocntevents
       double precision xiimax_ev
@@ -852,7 +866,7 @@ c case 3: j_fks is initial state
             call generate_momenta_massive_final(icountevts,isolsign
      &           ,i_fks,j_fks,p_born_l(0,imother),shat,sqrtshat ,m_j_fks
      &           ,x(ixEi),xmrec2,xp,phi_i_fks,    xiimax,xinorm
-     &           ,xi_i_fks,y_ij_fks,p_i_fks,xjac,xpswgt,pass)
+     &           ,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,pass)
             if (.not.pass) goto 112
          endif
       elseif(j_fks.le.nincoming) then
@@ -860,7 +874,7 @@ c case 3: j_fks is initial state
          call generate_momenta_initial(icountevts,i_fks,j_fks,xbjrk_born
      &        ,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks ,xp ,x(ixEi)
      &        ,shat,stot ,sqrtshat,tau,ycm,xbjrk ,p_i_fks,xiimax,xinorm
-     &        ,xi_i_fks,y_ij_fks ,xpswgt,xjac ,pass)
+     &        ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac ,pass)
          if (.not.pass) goto 112
       else
          write (*,*) 'Error #2 in genps_fks.f',j_fks
@@ -881,7 +895,8 @@ c All done, so check four-momentum conservation
       endif
 c      
       if(nincoming.eq.2)then
-         flux  = 1d0 /(2.D0*SQRT(LAMBDA(shat,m(1)**2,m(2)**2)))
+c$$$         flux  = 1d0 /(2.D0*SQRT(LAMBDA(shat,m(1)**2,m(2)**2)))
+         flux  = 1d0
       else                      ! Decays
          flux = 1d0/(2d0*sqrtshat)
       endif
@@ -1033,8 +1048,8 @@ c common blocks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       double complex xij_aor
       common/cxij_aor/xij_aor
-      logical softtest,colltest
-      common/sctests/softtest,colltest
+      logical softtest,colltest,fix_granny_test
+      common/sctests/softtest,colltest,fix_granny_test
       double precision xi_i_fks_fix,y_ij_fks_fix
       common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
 c local
@@ -1119,12 +1134,13 @@ c importance sampling towards soft singularity
 c insert here further importance sampling towards xi_i_hat->0
             xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          endif
+c in the case of counter events, xi_i_hat is an input to this function
          xi_i_fks=xi_i_hat*xiimax
       elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
      &        (.not.softtest)  )then
          if(xi_i_fks_fix.lt.xiimax)then
-            xi_i_fks=xi_i_fks_fix
+            xi_i_fks=xi_i_fks_fix*xiimax
          else
             xi_i_fks=xi_i_fks_fix*xiimax
          endif
@@ -1276,21 +1292,21 @@ c
 
       subroutine generate_momenta_massive_final(icountevts,isolsign
      &     ,i_fks,j_fks,p_born_imother,shat,sqrtshat,m_j_fks,x,xmrec2,xp
-     &     ,phi_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,p_i_fks,xjac
-     &     ,xpswgt,pass)
+     &     ,phi_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks
+     &     ,xjac ,xpswgt,pass)
       implicit none
       include 'nexternal.inc'
 c arguments
       integer icountevts,i_fks,j_fks,isolsign
       double precision shat,sqrtshat,x(2),xmrec2,xp(0:3,nexternal)
-     &     ,y_ij_fks,p_born_imother(0:3),m_j_fks,phi_i_fks
+     &     ,y_ij_fks,p_born_imother(0:3),m_j_fks,phi_i_fks,xi_i_hat
       double precision xiimax,xinorm,xi_i_fks,p_i_fks(0:3),xjac,xpswgt
       logical pass
 c common blocks
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-      logical softtest,colltest
-      common/sctests/softtest,colltest
+      logical softtest,colltest,fix_granny_test
+      common/sctests/softtest,colltest,fix_granny_test
       double precision xi_i_fks_fix,y_ij_fks_fix
       common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
 c local
@@ -1303,7 +1319,7 @@ c local
      $     ,shybst,chybst,chybstmo,xdir(3),veckn,veckbarn ,cosphi_i_fks
      $     ,sinphi_i_fks,cosphi_mother_fks,costh_mother_fks
      $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
-     $     ,sinth_mother_fks,xi_i_hat
+     $     ,sinth_mother_fks
       save xjactmp
 c external
       double precision rho
@@ -1590,14 +1606,14 @@ c
       subroutine generate_momenta_initial(icountevts,i_fks,j_fks,
      &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks ,xp,x
      &     , shat,stot,sqrtshat,tau,ycm,xbjrk ,p_i_fks,xiimax,xinorm
-     &     ,xi_i_fks,y_ij_fks,xpswgt ,xjac ,pass)
+     &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt ,xjac ,pass)
       implicit none
       include 'nexternal.inc'
 c arguments
       integer icountevts,i_fks,j_fks
       double precision xbjrk_born(2),tau_born,ycm_born,ycmhat,shat_born
      &     ,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),stot
-     &     ,x(2) ,y_ij_fks
+     &     ,x(2) ,y_ij_fks,xi_i_hat
       double precision shat,sqrtshat,tau,ycm,xbjrk(2),p_i_fks(0:3)
       logical pass
 c common blocks
@@ -1609,8 +1625,8 @@ c common blocks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       double complex xij_aor
       common/cxij_aor/xij_aor
-      logical softtest,colltest
-      common/sctests/softtest,colltest
+      logical softtest,colltest,fix_granny_test
+      common/sctests/softtest,colltest,fix_granny_test
       double precision xi_i_fks_fix,y_ij_fks_fix
       common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
 c local
@@ -1619,8 +1635,7 @@ c local
      $     ,ximaxtmp,omega,bstfact,shy_tbst,chy_tbst,chy_tbstmo
      $     ,xdir_t(3),cosphi_i_fks,sinphi_i_fks,shy_lbst,chy_lbst
      $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
-     $     ,xi_i_hat,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
-      save xi_i_hat
+     $     ,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
       double complex resAoR0
 c external
 c
@@ -1809,6 +1824,7 @@ c insert here further importance sampling towards xi_i_hat->0
             xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          endif
 c$$$         xi_i_fks=xi_i_hat*xiimax
+c     xi_i_hat is an input to the function if not event.
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
       elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.

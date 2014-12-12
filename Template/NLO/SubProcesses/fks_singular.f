@@ -597,7 +597,7 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       call set_cms_stuff(izero)
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.nocntevents ) 
      &     goto 547
-
+      
 c     Compute the scales and sudakov-reweighting for the FxFx merging
       if (ickkw.eq.3) then
          if (.not. setclscales(p1_cnt(0,1,0))) then
@@ -896,7 +896,7 @@ c driver_mintFO.f
 c     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
-
+         
          if (dsig.ne.dsig) then
             write (*,*) 'ERROR #51 in dsig:',dsig,'skipping event'
 c Set dsig (and the other variables that go into the integrator) to zero
@@ -2672,8 +2672,8 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
 
-      logical softtest,colltest
-      common/sctests/softtest,colltest
+      logical softtest,colltest,fix_granny_test
+      common/sctests/softtest,colltest,fix_granny_test
 
       double precision zero,tiny
       parameter (zero=0d0)
@@ -5338,8 +5338,8 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       double precision beta0,ren_group_coeff
       common/cbeta0/beta0,ren_group_coeff
 
-      logical softtest,colltest
-      common/sctests/softtest,colltest
+      logical softtest,colltest,fix_granny_test
+      common/sctests/softtest,colltest,fix_granny_test
 
       integer config_fks,i,j,iconfig,fac1,fac2
 
@@ -5418,6 +5418,7 @@ c parametrization allows it
 
       softtest=.false.
       colltest=.false.
+      fix_granny_test=.false.
       fold=0
 
       if (j_fks.gt.nincoming)then
