@@ -9,6 +9,11 @@
       common /pborn/   p_born
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
       if (f_b.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
       call sborn(p_born,wgt_c)
@@ -30,6 +35,11 @@
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
       if (f_nb.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
@@ -46,12 +56,13 @@
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
+      include 'reweight0.inc'
       double precision x,dot,f_damp,ffact,s_ev,fks_Sij,p(0:3,nexternal)
      $     ,wgt1,fx_ev
       external dot,f_damp,fks_Sij
       double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      integer i_fks,j_fks
+      integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
      $                    ,p_i_fks_cnt(0:3,-2:2)
@@ -74,7 +85,9 @@
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
-      double precision wgt1,s_s,fks_Sij,fx_s
+      include 'reweight0.inc'
+      double precision wgt1,s_s,fks_Sij,fx_s,zero
+      parameter (zero=0d0)
       external fks_Sij
       double precision     p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -104,7 +117,8 @@
       include 'coupl.inc'
       include 'fks_powers.inc'
       include 'reweight.inc'
-      double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi,c
+      double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi_c,wgt1
+     &     ,wgt3
       external fks_Sij
       parameter (zero=0d0,one=1d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -119,6 +133,7 @@
       common /cxiifkscnt/xi_i_fks_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      double precision pmass(nexternal)
       include 'pmass.inc'
       if (f_c.eq.0d0 .and. f_dc.eq.0d0)return
       if (y_ij_fks_ev.le.1d0-deltaS .or. pmass(j_fks).ne.0.d0) return
@@ -138,7 +153,7 @@
       subroutine compute_soft_collinear_counter_term
       implicit none
       include 'nexternal.inc'
-      include 'couple.inc'
+      include 'coupl.inc'
       include 'reweight.inc'
       include 'fks_powers.inc'
       double precision zero,one,s_sc,fks_Sij,fx_sc,wgt1,wgt3,deg_xi_sc
@@ -148,6 +163,9 @@
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision     xiScut_used,xiBSVcut_used
@@ -156,6 +174,7 @@
       common /cxiifkscnt/xi_i_fks_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      double precision pmass(nexternal)
       include 'pmass.inc'
       if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
      $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0) return
@@ -175,19 +194,20 @@
       end
 
 
-      subroutine compute_prefactor_nbody(vegas_wgt)
+      subroutine compute_prefactors_nbody(vegas_wgt)
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
+      include 'reweight0.inc'
       double precision pi,unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
      $     ,bpower,cpower,tiny
       data xnoborn_cnt /0d0/
-      integer inoborn_cnt
+      integer inoborn_cnt,i
       data inoborn_cnt /0/
       double complex wgt_c(2)
       logical firsttime
-      data firsttime /.false.
+      data firsttime /.true./
       parameter (pi=3.1415926535897932385d0)
       parameter (tiny=1d-6)
       double precision p_born(0:3,nexternal-1)
@@ -276,6 +296,7 @@ c Check that things are done consistently
          endif
       endif
       call unweight_function(p_born,unwgtfun)
+      call set_cms_stuff(0)
       f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
      $     *pi**2))*enhance*unwgtfun *fkssymmetryfactorBorn*vegas_wgt
       f_nb=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
@@ -283,22 +304,21 @@ c Check that things are done consistently
       return
       end
 
-      subroutine compute_prefactor_n1body(vegas_wgt,jac_ev)
+      subroutine compute_prefactors_n1body(vegas_wgt,jac_ev)
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
       include 'fks_powers.inc'
       double precision unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
-     $     ,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll
-     $     ,jac_ev,pi
+     &     ,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll
+     &     ,jac_ev,pi,prefact_cnt_ssc_c,prefact_coll_c,prefact_deg_slxi
+     &     ,prefact_deg_sxi
       parameter (pi=3.1415926535897932385d0)
       data xnoborn_cnt /0d0/
-      integer inoborn_cnt
+      integer inoborn_cnt,i
       data inoborn_cnt /0/
       double complex wgt_c(2)
-      logical firsttime
-      data firsttime /.false.
       double precision p_born(0:3,nexternal-1)
       common/pborn/    p_born
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -377,9 +397,9 @@ c Check that things are done consistently
       f_r=prefact*jac_ev*enhance*unwgtfun*fkssymmetryfactor
      $     *vegas_wgt
       if (.not.nocntevents) then
-         prefact_cnt_ssc=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
-     $        *log(xicut_used/min(xiimax_cnt(1),xiScut_used))/
-     $        (1d0-y_ij_fks_ev)
+         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
+     &        log(xicut_used/min(xiimax_ev,xiScut_used))/(1
+     &        -y_ij_fks_ev)
          f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0)*enhance
      $        *unwgtfun*fkssymmetryfactor*vegas_wgt
 
@@ -389,6 +409,7 @@ c Check that things are done consistently
          f_c=(prefact_c+prefact_coll)*jac_cnt(1)
      $        *enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
 
+         call set_cms_stuff(1)
          prefact_deg=xinorm_cnt(1)/xi_i_fks_cnt(1)/deltaS
          f_dc=jac_cnt(1)*prefact_deg/(shat/(32*pi**2))*enhance
      $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
@@ -408,6 +429,7 @@ c Check that things are done consistently
          prefact_deg_slxi=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
      $        *( log(xicut_used)**2-log(min(xiimax_cnt(1),xiScut_used))
      $        **2 )*1/(2.d0*deltaS)
+         call set_cms_stuff(2)
          f_dsc(1)=prefact_deg*jac_cnt(2)/(shat/(32*pi**2))*enhance
      $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
          f_dsc(2)=prefact_deg_sxi*jac_cnt(2)/(shat/(32*pi**2))*enhance
@@ -437,12 +459,16 @@ c Check that things are done consistently
       include 'coupl.inc'
       include 'fks_info.inc'
       include 'c_weight.inc'
+      include 'q_es.inc'
+      include 'reweight0.inc'
       integer type,i,j
       double precision wgt1,wgt2,wgt3
-      integer nFKSprocess
+      integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       double precision p_born(0:3,nexternal-1)
       common/pborn/    p_born
+      double precision p_ev(0:3,nexternal)
+      common/pev/      p_ev
       integer    maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
@@ -450,6 +476,9 @@ c Check that things are done consistently
       common /c_leshouche_inc/idup,mothup,icolup
       double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       icontr=icontr+1
       if (icontr.gt.max_contr) then
          write (*,*) 'ERROR in add_wgt: too many contributions'
@@ -478,15 +507,15 @@ c Born or soft-virtual
                   momenta(j,i,icontr)=p_born(j,i)
                enddo
 c FIXTHIS FIXTHIS FIXTHIS
-               if (i.lt.j_fks_D(nFKSprocess)) then
+               if (i.lt.fks_j_d(nFKSprocess)) then
                   pdg(i,icontr)=idup(i,1)
-               elseif (i.eq.j_fks_D(nFKSprocess)) then
+               elseif (i.eq.fks_j_d(nFKSprocess)) then
 c     should be the 'sum' of the PDG codes. But just take one: particles
 c     are indistinguishable.
                   pdg(i,icontr)=idup(i,1)
-               elseif (i.lt.i_fks_D(nFKSprocess)) then
+               elseif (i.lt.fks_i_d(nFKSprocess)) then
                   pdg(i,icontr)=idup(i,1)
-               elseif (i.ge.i_fks_D(nFKSprocess)) then
+               elseif (i.ge.fks_i_d(nFKSprocess)) then
                   pdg(i,icontr)=idup(i+1,1)
                endif
             else
@@ -501,7 +530,7 @@ c real emission
          QCDpower(icontr)=nint(2*wgtbpower+2)
          do i=1,nexternal
             do j=0,3
-               momenta(j,i,icontr)=pp(j,i)
+               momenta(j,i,icontr)=p_ev(j,i)
             enddo
             pdg(i,icontr)=idup(i,1)
          enddo
@@ -530,34 +559,42 @@ c counter term
       return
       end
 
-      call include_PDF_factor_and_reweight
+      subroutine include_PDF_factor_and_reweight
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'c_weight.inc'
       integer i
+      double precision xlum,dlum,pi
+      parameter (pi=3.1415926535897932385d0)
+      external dlum
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       do i=1,icontr
          nFKSprocess=nFKS(i)
          xbk(1) = bjx(1,i)
          xbk(2) = bjx(2,i)
-         q2fact(1)=scales(3,i)
+         q2fact(1)=scales2(3,i)
          q2fact(2)=q2fact(1)
 c call the PDFs
 c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
          xlum = dlum()
-         weight(i)=xlum*(wgt1 + wgt2**log(scales(2,i)/scales(1,i)) +
-     &        wgt3*log(scales(3,i)/scales(1,i)))
+         weight(i)=xlum * (wgt(1,i) + wgt(2,i)*log(scales2(2,i)
+     &        /scales2(1,i)) + wgt(3,i)*log(scales2(3,i)/scales2(1,i)))
      &        *g_strong(i)**QCDpower(i)
          if (itype(i).eq.4) then
-            virt_wgt_mint=virt_wgt_mint*xlum
-            born_wgt_mint=born_wgt_mint*xlum
+            virt_wgt_mint=virt_wgt_mint*xlum*g_strong(i)**QCDpower(i)
+            born_wgt_mint=born_wgt_mint*xlum*g_strong(i)**QCDpower(i)
+     &           /(8d0*Pi**2)
          endif
       enddo
       
       return
       end
       
-      call get_wgt_nbody(sig)
+      subroutine get_wgt_nbody(sig)
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -572,7 +609,7 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       return
       end
 
-      call get_wgt_no_nbody(sig)
+      subroutine get_wgt_no_nbody(sig)
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -591,10 +628,7 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
-      integer i
-      parameter (iplot_ev=11)
-      parameter (iplot_cnt=12)
-      parameter (iplot_born=20)
+      integer i,iplot
       do i=1,icontr
          if (itype(i).eq.1) then
             iplot=20
@@ -614,6 +648,7 @@ c FIXTHIS FIXTHIS: this should be cached!
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'mint.inc'
+      integer i
       double precision f(nintegrals),sigint
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
@@ -4066,11 +4101,11 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c Do not include this contribution for final-state branchings
          collrem_xi=0.d0
          collrem_lxi=0.d0
-         if(doreweight)then
+c$$$         if(doreweight)then
            wgtdegrem_xi=0.d0
            wgtdegrem_lxi=0.d0
            wgtdegrem_muF=0.d0
-         endif
+c$$$         endif
          return
       endif
 
@@ -4079,11 +4114,11 @@ c Unphysical kinematics: set matrix elements equal to zero
          write (*,*) "No born momenta in sreal_deg"
          collrem_xi=0.d0
          collrem_lxi=0.d0
-         if(doreweight)then
+c$$$         if(doreweight)then
            wgtdegrem_xi=0.d0
            wgtdegrem_lxi=0.d0
            wgtdegrem_muF=0.d0
-         endif
+c$$$         endif
          return
       endif
 
@@ -4123,13 +4158,13 @@ c has to be inserted here
       collrem_xi=oo2pi * born_wgt * collrem_xi * xnorm
       collrem_lxi=oo2pi * born_wgt * collrem_lxi * xnorm
 
-      if(doreweight)then
+c$$$      if(doreweight)then
         wgtdegrem_xi=ap*log(shat*delta_used/(2*QES2)) -
      #               apprime - xkkern 
         wgtdegrem_xi=oo2pi * born_wgt * wgtdegrem_xi * xnorm
         wgtdegrem_lxi=collrem_lxi
         wgtdegrem_muF= - oo2pi * born_wgt * ap * xnorm
-      endif
+c$$$      endif
 
       return
       end
@@ -5212,7 +5247,7 @@ c eq.(MadFKS.C.14)
 
  549     continue
 
-         if(doreweight)then
+c$$$         if(doreweight)then
            wgtwnstmpmuf=0.d0
            if(abrv.ne.'born' .and. abrv.ne.'grid')then
              if(abrv(1:2).eq.'vi')then
@@ -5242,7 +5277,7 @@ c we need the pure NLO terms only
              wgtnstmp=0d0
              wgtwnstmpmur=0.d0
            endif
-         endif
+c$$$         endif
 
 
          if (abrv(1:2).eq.'vi') then

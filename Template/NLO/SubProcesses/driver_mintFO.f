@@ -384,9 +384,9 @@ c timing statistics
       include 'mint.inc'
       include 'nFKSconfigs.inc'
       include 'c_weight.inc'
-      double precision xx(ndimmax),vegas_wgt,f(nintegrals),wgt,p(0:3
-     $     ,nexternal),rwgt,vol,sig
-      integer ifl,nFKS_born,nFKS_picked,nFKS,nFKS_min
+      double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
+     $     ,nexternal),rwgt,vol,sig,x(99)
+      integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min
      $     ,nFKS_max,izero,ione,itwo,mohdr
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum
@@ -405,24 +405,31 @@ c timing statistics
       common /pborn/   p_born
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
-      sigint=0d0
-      icontr=0
-      virt_wgt_mint=0d0
-      born_wgt_mint=0d0
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
+      logical                calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      character*4      abrv
+      common /to_abrv/ abrv
       if (ifl.ne.0) then
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
       endif
+      sigint=0d0
+      icontr=0
+      virt_wgt_mint=0d0
+      born_wgt_mint=0d0
       virtual_over_born=0d0
       call update_vegas_x(xx,x)
       call get_MC_integer(1,fks_configs,nFKS_picked,vol)
 
 c The nbody contributions
       nbody=.true.
+      calculatedBorn=.false.
       call get_born_nFKSprocess(nFKS_picked,nFKS_born)
       call update_fks_dir(nFKS_born,iconfig)
-      wgt=1d0
-      call generate_momenta(ndim,iconfig,wgt,x,p)
+      jac=1d0
+      call generate_momenta(ndim,iconfig,jac,x,p)
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
@@ -434,20 +441,21 @@ c The nbody contributions
       endif
 
 c The n+1-body contributions (including counter terms)
+      if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
       nbody=.false.
       if (sum) then
          nFKS_min=1
          nFKS_max=fks_configs
-         wgt=1d0
+         jac=1d0
       else
          nFKS_min=nFKS_picked
          nFKS_max=nFKS_picked
-         wgt=1d0/vol
+         jac=1d0/vol
       endif
-      do nFKS=nFKS_min,nFKS_max
-         call update_fks_dir(nFKS,iconfig)
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         call compute_prefactors_n1body(vegas_wgt,wgt)
+      do iFKS=nFKS_min,nFKS_max
+         call update_fks_dir(iFKS,iconfig)
+         call generate_momenta(ndim,iconfig,jac,x,p)
+         call compute_prefactors_n1body(vegas_wgt,jac)
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
          passcuts_n1body=passcuts(p,rwgt)
          if (passcuts_n1body) then
@@ -487,8 +495,6 @@ c Finalize PS point
       return
       end
 
-
-
       subroutine update_fks_dir(nFKS,iconfig)
       implicit none
       integer nFKS,iconfig
@@ -504,25 +510,25 @@ c Finalize PS point
       
       subroutine get_born_nFKSprocess(nFKS_in,nFKS_out)
       implicit none
+      include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer nFKS_in,nFKS_out,nFKS,nFKSprocessBorn(2)
+      integer nFKS_in,nFKS_out,iFKS,nFKSprocessBorn(2)
       logical firsttime,foundB(2)
-      data firsttime /.false./
+      data firsttime /.true./
       save nFKSprocessBorn,foundB
       if (firsttime) then
          firsttime=.false.
          foundB(1)=.false.
          foundB(2)=.false.
-         do nFKS=1,fks_configs
-            call fks_inc_chooser()
-            if (particle_type_D(nFKS,i_fks).eq.8) then
-               if (j_fks_D(nFKS).le.nincoming) then
+         do iFKS=1,fks_configs
+            if (particle_type_D(iFKS,fks_i_D(iFKS)).eq.8) then
+               if (fks_j_D(iFKS).le.nincoming) then
                   foundB(1)=.true.
-                  nFKSprocessBorn(1)=nFKS
+                  nFKSprocessBorn(1)=iFKS
                else
                   foundB(2)=.true.
-                  nFKSprocessBorn(2)=nFKS
+                  nFKSprocessBorn(2)=iFKS
                endif
             endif
          enddo
@@ -530,7 +536,7 @@ c Finalize PS point
          write (*,*) 'For the Born we use nFKSprocesses  #',
      $        nFKSprocessBorn
       endif
-      if (j_fks_D(nFKS_in).le.nincoming) then
+      if (fks_j_D(nFKS_in).le.nincoming) then
          if (.not.foundB(1)) then
             write(*,*) 'Trying to generate Born momenta with '/
      &           /'initial state j_fks, but there is no '/
@@ -586,7 +592,7 @@ c From dsample_fks
       implicit none
       include 'nexternal.inc'
       include 'mint.inc'
-      real*8 sigint,peso,xx(ndimmax),f(nintegrals)
+      real*8 sigint_old,sigint,peso,xx(ndimmax),f(nintegrals)
       integer ione
       parameter (ione=1)
       integer ifl
