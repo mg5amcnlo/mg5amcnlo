@@ -387,8 +387,8 @@ c From dsample_fks
       integer ione
       parameter (ione=1)
       integer ifl
-      integer ndim
-      common/tosigint/ndim
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
       integer           iconfig
       common/to_configs/iconfig
       integer i
