@@ -26,10 +26,10 @@
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision      f_b,f_nb
-      common /factor_nbody/ f_b,f_nb
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
       if (f_nb.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
@@ -428,7 +428,7 @@ c Check that things are done consistently
       return
       end
 
-
+      
       subroutine add_wgt(type,wgt1,wgt2,wgt3) 
       implicit none
       include 'nexternal.inc'
@@ -436,6 +436,7 @@ c Check that things are done consistently
       include 'genps.inc'
       include 'coupl.inc'
       include 'fks_info.inc'
+      include 'c_weight.inc'
       integer type,i,j
       double precision wgt1,wgt2,wgt3
       integer nFKSprocess
@@ -447,8 +448,14 @@ c Check that things are done consistently
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      $     icolup(2,nexternal,maxflow)
       common /c_leshouche_inc/idup,mothup,icolup
-
+      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       icontr=icontr+1
+      if (icontr.gt.max_contr) then
+         write (*,*) 'ERROR in add_wgt: too many contributions'
+     &        ,max_contr
+         stop 1
+      endif
       itype(icontr)=type
       wgt(1,icontr)=wgt1
       wgt(2,icontr)=wgt2
@@ -460,6 +467,7 @@ c Check that things are done consistently
       scales2(3,icontr)=q2fact(1)
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
+      y_bst(icontr)=ybst_til_tolab
       if (type.eq.1 .or. type.eq.4) then
 c Born or soft-virtual
          if (type.eq.1) QCDpower(icontr)=nint(2*wgtbpower)
@@ -469,6 +477,7 @@ c Born or soft-virtual
                do j=0,3
                   momenta(j,i,icontr)=p_born(j,i)
                enddo
+c FIXTHIS FIXTHIS FIXTHIS
                if (i.lt.j_fks_D(nFKSprocess)) then
                   pdg(i,icontr)=idup(i,1)
                elseif (i.eq.j_fks_D(nFKSprocess)) then
@@ -501,7 +510,16 @@ c counter term
          QCDpower(icontr)=nint(2*wgtbpower+2)
          do i=1,nexternal
             do j=0,3
-               momenta(j,i,icontr)=p1_cnt(j,i,0)
+               if (p1_cnt(0,1,0).gt.0d0) then
+                  momenta(j,i,icontr)=p1_cnt(j,i,0)
+               elseif (p1_cnt(0,1,1).gt.0d0) then
+                  momenta(j,i,icontr)=p1_cnt(j,i,1)
+               elseif (p1_cnt(0,1,2).gt.0d0) then
+                  momenta(j,i,icontr)=p1_cnt(j,i,2)
+               else
+                  write (*,*) 'ERROR in add_wgt: no counter momenta'
+                  stop 1
+               endif
             enddo
             pdg(i,icontr)=idup(i,1)
          enddo
@@ -511,7 +529,109 @@ c counter term
       endif
       return
       end
-         
+
+      call include_PDF_factor_and_reweight
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'c_weight.inc'
+      integer i
+      do i=1,icontr
+         nFKSprocess=nFKS(i)
+         xbk(1) = bjx(1,i)
+         xbk(2) = bjx(2,i)
+         q2fact(1)=scales(3,i)
+         q2fact(2)=q2fact(1)
+c call the PDFs
+c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
+         xlum = dlum()
+         weight(i)=xlum*(wgt1 + wgt2**log(scales(2,i)/scales(1,i)) +
+     &        wgt3*log(scales(3,i)/scales(1,i)))
+     &        *g_strong(i)**QCDpower(i)
+         if (itype(i).eq.4) then
+            virt_wgt_mint=virt_wgt_mint*xlum
+            born_wgt_mint=born_wgt_mint*xlum
+         endif
+      enddo
+      
+      return
+      end
+      
+      call get_wgt_nbody(sig)
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      double precision sig
+      integer i
+      sig=0d0
+      do i=1,icontr
+         if (itype(i).eq.1 .or. itype(i).eq.4) then
+            sig=sig+weight(i)
+         endif
+      enddo
+      return
+      end
+
+      call get_wgt_no_nbody(sig)
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      double precision sig
+      integer i
+      sig=0d0
+      do i=1,icontr
+         if (itype(i).eq.2 .or. itype(i).eq.3) then
+            sig=sig+weight(i)
+         endif
+      enddo
+      return
+      end
+
+      subroutine fill_plots
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      integer i
+      parameter (iplot_ev=11)
+      parameter (iplot_cnt=12)
+      parameter (iplot_born=20)
+      do i=1,icontr
+         if (itype(i).eq.1) then
+            iplot=20
+         elseif(itype(1).eq.2) then
+            iplot=11
+         else
+            iplot=12
+         endif
+c FIXTHIS FIXTHIS: this should be cached!
+         call outfun(momenta(0,1,i),y_bst(i),weight(i),iplot)
+      enddo
+      return
+      end
+
+      subroutine fill_mint_function(f)
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'mint.inc'
+      double precision f(nintegrals),sigint
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      double precision virtual_over_born
+      common /c_vob/   virtual_over_born
+      sigint=0d0
+      do i=1,icontr
+         sigint=sigint+weight(i)
+      enddo
+      f(1)=abs(sigint)
+      f(2)=sigint
+      f(3)=virt_wgt_mint
+      f(4)=virtual_over_born
+      f(5)=abs(virt_wgt_mint)
+      f(6)=born_wgt_mint
+      return
+      end
+      
 
       subroutine rotate_invar(pin,pout,cth,sth,cphi,sphi)
 c Given the four momentum pin, returns the four momentum pout (in the same

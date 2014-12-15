@@ -383,6 +383,7 @@ c timing statistics
       include 'nexternal.inc'
       include 'mint.inc'
       include 'nFKSconfigs.inc'
+      include 'c_weight.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),wgt,p(0:3
      $     ,nexternal),rwgt,vol,sig
       integer ifl,nFKS_born,nFKS_picked,nFKS,nFKS_min
@@ -402,7 +403,12 @@ c timing statistics
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       sigint=0d0
+      icontr=0
+      virt_wgt_mint=0d0
+      born_wgt_mint=0d0
       if (ifl.ne.0) then
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
@@ -461,10 +467,10 @@ c The n+1-body contributions (including counter terms)
       enddo
 
  12   continue
-c Include PDFs and alpha_S
-      call include_PDF_factor
-      call ckkw_sudakovs
-      call include_rwgt_dep_fac
+c Include PDFs and alpha_S and reweight to include the uncertainties
+      call include_PDF_factor_and_reweight
+c$$$      call ckkw_sudakovs
+c$$$      call include_rwgt_dep_fac
 
 c Importance sampling for FKS configurations
       if (sum) then
@@ -476,7 +482,6 @@ c$$$         call fill_MC_integer(1,nFKS_picked,abs(sig))
       endif
 
 c Finalize PS point
-      call reweigting
       call fill_plots
       call fill_mint_function(f)
       return
