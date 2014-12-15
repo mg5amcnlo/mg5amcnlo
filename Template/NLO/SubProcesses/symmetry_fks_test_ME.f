@@ -42,8 +42,8 @@ c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      double precision fxl,limit(15),wlimit(15)
-      double precision lxp(0:3,nexternal+1),xp(15,0:3,nexternal+1)
+      double precision fxl(15),wfxl(15),limit(15),wlimit(15)
+      double precision lxp(15,0:3,nexternal+1),xp(15,0:3,nexternal+1)
       double precision fks_Sij
       double precision check,tolerance,zh,h_damp
       parameter (tolerance=1.d-4)
@@ -56,13 +56,14 @@ c
       double precision p(0:3,99), wgt, x(99), fx
       double complex wgt1(2)
       double precision p1(0:3,99),xx(maxinvar)
-      integer ninvar, ndim, iconfig, minconfig, maxconfig
+      integer ninvar, iconfig, minconfig, maxconfig
       integer ncall,itmax,nconfigs,ntry, ngraphs
       integer ic(nexternal,maxswitch), jc(12),nswitch
       double precision saveamp(maxamps)
       integer nmatch, ibase
       logical mtc, even
-
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
 
       double precision xi_i_fks_fix_save,y_ij_fks_fix_save
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -313,30 +314,14 @@ c x_to_f_arg subroutine
             ntry=ntry+1
          enddo
          if(nsofttests.le.10)write (*,*) 'ntry',ntry
-         calculatedBorn=.false.
-         call set_cms_stuff(0)
-         call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl) 
-         fxl=fxl*jac_cnt(0)
-         call set_cms_stuff(-100)
-         call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-         limit(1)=fx*wgt
-         wlimit(1)=wgt
-
-         do k=1,nexternal
-            do l=0,3
-               lxp(l,k)=p1_cnt(l,k,0)
-               xp(1,l,k)=p(l,k)
-            enddo
-         enddo
-         do l=0,3
-            lxp(l,nexternal+1)=p_i_fks_cnt(l,0)
-            xp(1,l,nexternal+1)=p_i_fks_ev(l)
-         enddo
-
-         do i=2,imax
-            xi_i_fks_fix=xi_i_fks_fix/10d0
+         do i=1,imax
             wgt=1d0
             call generate_momenta(ndim,iconfig,wgt,x,p)
+            calculatedBorn=.false.
+            call set_cms_stuff(0)
+            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+            fxl(i)=fx*wgt
+            wfxl(i)=jac_cnt(0)
             calculatedBorn=.false.
             call set_cms_stuff(-100)
             call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
@@ -345,17 +330,20 @@ c x_to_f_arg subroutine
             do k=1,nexternal
                do l=0,3
                   xp(i,l,k)=p(l,k)
+                  lxp(i,l,k)=p1_cnt(l,k,0)
                enddo
             enddo
             do l=0,3
                xp(i,l,nexternal+1)=p_i_fks_ev(l)
+               lxp(i,l,nexternal+1)=p_i_fks_cnt(l,0)
             enddo
+            xi_i_fks_fix=xi_i_fks_fix/10d0
          enddo
 
          if(nsofttests.le.10)then
            write (*,*) 'Soft limit:'
            do i=1,imax
-              call xprintout(6,limit(i),fxl)
+              call xprintout(6,limit(i),fxl(i))
            enddo
 c
            write(80,*)'  '
@@ -367,13 +355,13 @@ c
               do l=0,3
                  write(80,*)'comp:',l
                  do i=1,10
-                    call xprintout(80,xp(i,l,k),lxp(l,k))
+                    call xprintout(80,xp(i,l,k),lxp(i,l,k))
                  enddo
               enddo
            enddo
         else
            iflag=0
-           call checkres(limit,fxl,wlimit,jac_cnt(0),xp,lxp,
+           call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
            nerr=nerr+iret
         endif
@@ -438,29 +426,15 @@ c in genps_fks_test.f
             ntry=ntry+1
          enddo
          if(ncolltests.le.10)write (*,*) 'ntry',ntry
-         calculatedBorn=.false.
-         call set_cms_stuff(1)
-         call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl) 
-         fxl=fxl*jac_cnt(1)
-         call set_cms_stuff(-100)
-         call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-         limit(1)=fx*wgt
-         wlimit(1)=wgt
-         do k=1,nexternal
-            do l=0,3
-               lxp(l,k)=p1_cnt(l,k,1)
-               xp(1,l,k)=p(l,k)
-            enddo
-         enddo
-         do l=0,3
-            lxp(l,nexternal+1)=p_i_fks_cnt(l,1)
-            xp(1,l,nexternal+1)=p_i_fks_ev(l)
-         enddo
-
-         do i=2,imax
+         do i=1,imax
             y_ij_fks_fix=1-0.1d0**i
             wgt=1d0
             call generate_momenta(ndim,iconfig,wgt,x,p)
+            calculatedBorn=.false.
+            call set_cms_stuff(1)
+            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx) 
+            fxl(i)=fx*jac_cnt(1)
+            wfxl(i)=jac_cnt(1)
             calculatedBorn=.false.
             call set_cms_stuff(-100)
             call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
@@ -468,17 +442,19 @@ c in genps_fks_test.f
             wlimit(i)=wgt
             do k=1,nexternal
                do l=0,3
+                  lxp(i,l,k)=p1_cnt(l,k,1)
                   xp(i,l,k)=p(l,k)
                enddo
             enddo
             do l=0,3
+               lxp(i,l,nexternal+1)=p_i_fks_cnt(l,1)
                xp(i,l,nexternal+1)=p_i_fks_ev(l)
             enddo
          enddo
          if(ncolltests.le.10)then
             write (*,*) 'Collinear limit:'
             do i=1,imax
-               call xprintout(6,limit(i),fxl)
+               call xprintout(6,limit(i),fxl(i))
             enddo
 c
             write(80,*)'  '
@@ -490,14 +466,14 @@ c
                do l=0,3
                   write(80,*)'comp:',l
                   do i=1,10
-                     call xprintout(80,xp(i,l,k),lxp(l,k))
+                     call xprintout(80,xp(i,l,k),lxp(i,l,k))
                   enddo
                enddo
             enddo
          else
             iflag=1
-            call checkres(limit,fxl,wlimit,jac_cnt(1),xp,lxp,
-     &                    iflag,imax,j,nexternal,i_fks,j_fks,iret)
+           call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
             nerr=nerr+iret
          endif
       enddo

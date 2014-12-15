@@ -743,6 +743,7 @@ c the xi ranges to negative values to force crash if something
 c goes wrong. The jacobian of the counterevents are set negative
 c to prevent using those skipped because e.g. m(j_fks)#0
       if (skip_event_phsp) then
+         xi_i_hat=xi_i_hat_ev
          if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
             icountevts=-2
          else
@@ -850,7 +851,7 @@ c case 3: j_fks is initial state
      &           ,p_born_l(0,imother),shat,sqrtshat,x(ixEi),xmrec2
      &           ,input_granny_m2,xp,phi_i_fks,xiimax,xinorm,xi_i_fks
      &           ,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,pass)
-            if (.not.pass) goto 112
+      if (.not.pass) goto 112
          elseif(m_j_fks.gt.0d0) then
             call generate_momenta_massive_final(icountevts,isolsign
      &           ,i_fks,j_fks,p_born_l(0,imother),shat,sqrtshat ,m_j_fks
@@ -1128,6 +1129,8 @@ c in the case of counter events, xi_i_hat is an input to this function
       elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
      &        (.not.softtest)  )then
+c This is to keep xi_i_hat, rather than xi_i, fixed in the tests.
+c Changed in the context of granny stuff       
          if(xi_i_fks_fix.lt.xiimax)then
             xi_i_fks=xi_i_fks_fix*xiimax
          else
@@ -1135,8 +1138,15 @@ c in the case of counter events, xi_i_hat is an input to this function
          endif
       elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &        softtest )then
-         if(xi_i_fks_fix.lt.xiimax)then
-            xi_i_fks=xi_i_fks_fix
+c$$$         if(xi_i_fks_fix.lt.xiimax)then
+c$$$            xi_i_fks=xi_i_fks_fix
+c$$$         else
+c$$$            xjac=-102
+c$$$            pass=.false.
+c$$$            return
+c$$$         endif
+         if(xi_i_fks_fix.lt.1d0)then
+            xi_i_fks=xi_i_fks_fix*xiimax
          else
             xjac=-102
             pass=.false.
