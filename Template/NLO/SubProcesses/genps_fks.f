@@ -885,8 +885,7 @@ c All done, so check four-momentum conservation
       endif
 c      
       if(nincoming.eq.2)then
-c$$$         flux  = 1d0 /(2.D0*SQRT(LAMBDA(shat,m(1)**2,m(2)**2)))
-         flux  = 1d0
+         flux  = 1d0 /(2.D0*SQRT(LAMBDA(shat,m(1)**2,m(2)**2)))
       else                      ! Decays
          flux = 1d0/(2d0*sqrtshat)
       endif
