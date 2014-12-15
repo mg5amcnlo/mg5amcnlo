@@ -213,8 +213,7 @@ c
       external derivative,ran2,virtgranny
 c     granny stuff
       double precision tiny,granny_m2(-1:1),step,granny_m2_red_local(
-     &     -1:1),granny_m2_save(-1:1)
-      save granny_m2_save
+     &     -1:1)
       double precision granny_m2_red(-1:1)
       common /to_virtgranny/granny_m2_red
       logical input_granny_m2,compute_mapped,compute_non_shifted
@@ -253,8 +252,8 @@ c     debug stuff
       common /cxiifkscnt/xi_i_fks_cnt
       logical do_mapping_granny
       common /cdo_mapping_granny/do_mapping_granny
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
 c     
       do i=-1,1
          granny_m2_red(i)=-99d99
@@ -388,12 +387,7 @@ c the grandmother.
             input_granny_m2=.true.
             skip_event_phsp=.true.
             only_event_phsp=.false.
-            if (fix_granny_test) then
-               granny_m2_red(0)=granny_m2_save(0)
-            else
-               granny_m2_red(0)=granny_m2(0)
-               granny_m2_save(0)=granny_m2(0)
-            endif
+            granny_m2_red(0)=granny_m2(0)
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,itree,qmass,qwidth,p)
 c multiply the weights by the numerically computed jacobian
@@ -402,14 +396,9 @@ c multiply the weights by the numerically computed jacobian
             enddo
 c event kinematics: even though it shouldn't change from above, better
 c compute it again to set all the common blocks correctly.
-            input_granny_m2=fix_granny_test
+            input_granny_m2=.false.
             only_event_phsp=.true.
             skip_event_phsp=.false.
-            if (fix_granny_test) then
-               granny_m2_red( 0)=granny_m2_red_local( 0)
-               granny_m2_red(-1)=granny_m2_red_local(-1)
-               granny_m2_red( 1)=granny_m2_red_local( 1)
-            endif
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,itree,qmass,qwidth,p)
          endif
@@ -487,8 +476,8 @@ c     2 soft-collinear
       common/cbjrk12_cnt/tau_cnt,ycm_cnt
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       logical nocntevents
       common/cnocntevents/nocntevents
       double precision xiimax_ev
@@ -1048,8 +1037,8 @@ c common blocks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       double complex xij_aor
       common/cxij_aor/xij_aor
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
       common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
 c local
@@ -1305,8 +1294,8 @@ c arguments
 c common blocks
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
       common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
 c local
@@ -1625,8 +1614,8 @@ c common blocks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       double complex xij_aor
       common/cxij_aor/xij_aor
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
       common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
 c local

@@ -399,8 +399,8 @@ c Main routine for MC counterterms
       integer fksfather
       common/cfksfather/fksfather
 
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
 
       double precision emsca
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax

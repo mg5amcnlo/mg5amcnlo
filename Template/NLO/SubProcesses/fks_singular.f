@@ -2672,8 +2672,8 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
 
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
 
       double precision zero,tiny
       parameter (zero=0d0)
@@ -5338,8 +5338,8 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       double precision beta0,ren_group_coeff
       common/cbeta0/beta0,ren_group_coeff
 
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
 
       integer config_fks,i,j,iconfig,fac1,fac2
 
@@ -5418,7 +5418,6 @@ c parametrization allows it
 
       softtest=.false.
       colltest=.false.
-      fix_granny_test=.false.
       fold=0
 
       if (j_fks.gt.nincoming)then

@@ -99,8 +99,8 @@ c
       logical rotategranny
       common/crotategranny/rotategranny
 
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       
       logical xexternal
       common /toxexternal/ xexternal
@@ -295,7 +295,6 @@ c x_to_f_arg subroutine
            write (*,*) ' '
            write (*,*) ' '
          endif
-         fix_granny_test=.false.
 
          y_ij_fks_fix=y_ij_fks_fix_save
          xi_i_fks_fix=0.1d0
@@ -334,7 +333,6 @@ c x_to_f_arg subroutine
             xp(1,l,nexternal+1)=p_i_fks_ev(l)
          enddo
 
-         fix_granny_test=.true.
          do i=2,imax
             xi_i_fks_fix=xi_i_fks_fix/10d0
             wgt=1d0
@@ -422,7 +420,6 @@ c in genps_fks_test.f
             write (*,*) ' '
             write (*,*) ' '
          endif
-         fix_granny_test=.false.
 
          y_ij_fks_fix=0.9d0
          xi_i_fks_fix=xi_i_fks_fix_save
@@ -460,7 +457,6 @@ c in genps_fks_test.f
             xp(1,l,nexternal+1)=p_i_fks_ev(l)
          enddo
 
-         fix_granny_test=.true.
          do i=2,imax
             y_ij_fks_fix=1-0.1d0**i
             wgt=1d0

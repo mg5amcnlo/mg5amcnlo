@@ -108,8 +108,8 @@ c
       logical rotategranny
       common/crotategranny/rotategranny
 
-      logical softtest,colltest,fix_granny_test
-      common/sctests/softtest,colltest,fix_granny_test
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       
       logical xexternal
       common /toxexternal/ xexternal
