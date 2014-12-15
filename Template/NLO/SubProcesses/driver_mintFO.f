@@ -378,7 +378,205 @@ c timing statistics
       end
 
 
-      function sigint(xx,peso,ifl,f)
+      double precision function sigint(xx,vegas_wgt,ifl,f)
+      implicit none
+      include 'nexternal.inc'
+      include 'mint.inc'
+      include 'nFKSconfigs.inc'
+      double precision xx(ndimmax),vegas_wgt,f(nintegrals),wgt,p(0:3
+     $     ,nexternal),rwgt,vol,sig
+      integer ifl,nFKS_born,nFKS_picked,nFKS,nFKS_min
+     $     ,nFKS_max,izero,ione,itwo,mohdr
+      parameter (izero=0,ione=1,itwo=2,mohdr=-100)
+      logical passcuts,passcuts_nbody,passcuts_n1body,sum
+      external passcuts
+      parameter (sum=.false.)
+      integer         ndim,ipole
+      common/tosigint/ndim,ipole
+      logical       nbody
+      common/cnbody/nbody
+      integer           iconfig
+      common/to_configs/iconfig
+      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      sigint=0d0
+      if (ifl.ne.0) then
+         write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
+         stop 1
+      endif
+      virtual_over_born=0d0
+      call update_vegas_x(xx,x)
+      call get_MC_integer(1,fks_configs,nFKS_picked,vol)
+
+c The nbody contributions
+      nbody=.true.
+      call get_born_nFKSprocess(nFKS_picked,nFKS_born)
+      call update_fks_dir(nFKS_born,iconfig)
+      wgt=1d0
+      call generate_momenta(ndim,iconfig,wgt,x,p)
+      if (p_born(0,1).lt.0d0) goto 12
+      call compute_prefactors_nbody(vegas_wgt)
+      passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+      if (passcuts_nbody) then
+         call set_cms_stuff(izero)
+         call set_alphaS(p1_cnt(0,1,0))
+         call compute_born
+         call compute_nbody_noborn
+      endif
+
+c The n+1-body contributions (including counter terms)
+      nbody=.false.
+      if (sum) then
+         nFKS_min=1
+         nFKS_max=fks_configs
+         wgt=1d0
+      else
+         nFKS_min=nFKS_picked
+         nFKS_max=nFKS_picked
+         wgt=1d0/vol
+      endif
+      do nFKS=nFKS_min,nFKS_max
+         call update_fks_dir(nFKS,iconfig)
+         call generate_momenta(ndim,iconfig,wgt,x,p)
+         call compute_prefactors_n1body(vegas_wgt,wgt)
+         passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
+         passcuts_n1body=passcuts(p,rwgt)
+         if (passcuts_n1body) then
+            call set_cms_stuff(mohdr)
+            call set_alphaS(p)
+            call compute_real_emission(p)
+         endif
+         if (passcuts_nbody) then
+            call set_cms_stuff(izero)
+            call set_alphaS(p1_cnt(0,1,0))
+            call compute_soft_counter_term
+            call set_cms_stuff(ione)
+            call compute_collinear_counter_term
+            call set_cms_stuff(itwo)
+            call compute_soft_collinear_counter_term
+         endif
+      enddo
+
+ 12   continue
+c Include PDFs and alpha_S
+      call include_PDF_factor
+      call ckkw_sudakovs
+      call include_rwgt_dep_fac
+
+c Importance sampling for FKS configurations
+      if (sum) then
+         call get_wgt_nbody(sig)
+c$$$         call fill_MC_integer(1,nFKS_picked,abs(sig))
+      else
+         call get_wgt_no_nbody(sig)
+         call fill_MC_integer(1,nFKS_picked,abs(sig)*vol)
+      endif
+
+c Finalize PS point
+      call reweigting
+      call fill_plots
+      call fill_mint_function(f)
+      return
+      end
+
+
+
+      subroutine update_fks_dir(nFKS,iconfig)
+      implicit none
+      integer nFKS,iconfig
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      nFKSprocess=nFKS
+      call fks_inc_chooser()
+      call leshouche_inc_chooser()
+      call setcuts
+      call setfksfactor(iconfig)
+      return
+      end
+      
+      subroutine get_born_nFKSprocess(nFKS_in,nFKS_out)
+      implicit none
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      integer nFKS_in,nFKS_out,nFKS,nFKSprocessBorn(2)
+      logical firsttime,foundB(2)
+      data firsttime /.false./
+      save nFKSprocessBorn,foundB
+      if (firsttime) then
+         firsttime=.false.
+         foundB(1)=.false.
+         foundB(2)=.false.
+         do nFKS=1,fks_configs
+            call fks_inc_chooser()
+            if (particle_type_D(nFKS,i_fks).eq.8) then
+               if (j_fks_D(nFKS).le.nincoming) then
+                  foundB(1)=.true.
+                  nFKSprocessBorn(1)=nFKS
+               else
+                  foundB(2)=.true.
+                  nFKSprocessBorn(2)=nFKS
+               endif
+            endif
+         enddo
+         write (*,*) 'Total number of FKS directories is', fks_configs
+         write (*,*) 'For the Born we use nFKSprocesses  #',
+     $        nFKSprocessBorn
+      endif
+      if (j_fks_D(nFKS_in).le.nincoming) then
+         if (.not.foundB(1)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'initial state j_fks, but there is no '/
+     &           /'configuration with i_fks a gluon and j_fks '/
+     &           /'initial state'
+            stop 1
+         endif
+         nFKS_out=nFKSprocessBorn(1)
+      else
+         if (.not.foundB(2)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'final state j_fks, but there is no configuration'/
+     &           /' with i_fks a gluon and j_fks final state'
+            stop 1
+         endif
+         nFKS_out=nFKSprocessBorn(2)
+      endif
+      return
+      end
+
+      subroutine update_vegas_x(xx,x)
+      implicit none
+      include 'mint.inc'
+      integer i
+      double precision xx(ndimmax),x(99),ran2
+      external ran2
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
+      character*4 abrv
+      common /to_abrv/ abrv
+      do i=1,99
+         if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi') then
+            if(i.le.ndim-3)then
+               x(i)=xx(i)
+            elseif(i.le.ndim) then
+               x(i)=ran2()      ! Choose them flat when not including real-emision
+            else
+               x(i)=0.d0
+            endif
+         else
+            if(i.le.ndim)then
+               x(i)=xx(i)
+            else
+               x(i)=0.d0
+            endif
+         endif
+      enddo
+      return
+      end
+
+      function sigint_old(xx,peso,ifl,f)
 c From dsample_fks
       implicit none
       include 'nexternal.inc'
@@ -387,8 +585,8 @@ c From dsample_fks
       integer ione
       parameter (ione=1)
       integer ifl
-      integer ndim
-      common/tosigint/ndim
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
       integer           iconfig
       common/to_configs/iconfig
       integer i

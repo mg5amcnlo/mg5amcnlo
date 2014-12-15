@@ -1,3 +1,518 @@
+      subroutine compute_born
+      implicit none
+      include 'nexternal.inc'
+      include 'reweight0.inc'
+      include 'coupl.inc'
+      double complex wgt_c(2)
+      double precision wgt1
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
+      if (f_b.eq.0d0) return
+      if (xi_i_fks_ev .gt. xiBSVcut_used) return
+      call sborn(p_born,wgt_c)
+      wgt1=dble(wgt_c(1))*f_b/g**(nint(2*wgtbpower))
+      call add_wgt(1,wgt1,0d0,0d0)
+      return
+      end
+
+      subroutine compute_nbody_noborn
+      implicit none
+      include 'nexternal.inc'
+      include 'reweight.inc'
+      include 'coupl.inc'
+      double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      if (f_nb.eq.0d0) return
+      if (xi_i_fks_ev .gt. xiBSVcut_used) return
+      call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
+      wgt1=wgtnstmp*f_nb/g**(nint(2*wgtbpower+2))
+      wgt2=wgtwnstmpmuf*f_nb/g**(nint(2*wgtbpower+2))
+      wgt3=wgtwnstmpmur*f_nb/g**(nint(2*wgtbpower+2))
+      call add_wgt(4,wgt1,wgt2,wgt3)
+      virt_wgt_mint=virt_wgt*f_nb/g**(nint(2*wgtbpower+2))
+      born_wgt_mint=born_wgt*f_b/g**(nint(2*wgtbpower))
+      return
+      end
+
+      subroutine compute_real_emission(p)
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      double precision x,dot,f_damp,ffact,s_ev,fks_Sij,p(0:3,nexternal)
+     $     ,wgt1,fx_ev
+      external dot,f_damp,fks_Sij
+      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      if (f_r.eq.0d0) return
+      x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
+      ffact = f_damp(x)
+      if (ffact.le.0d0) return
+      s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+      if (s_ev.le.0.d0) return
+      call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
+      wgt1=fx_ev*s_ev*f_r/g**(nint(2*wgtbpower+2))
+      call add_wgt(2,wgt1,0d0,0d0)
+      return
+      end
+
+      subroutine compute_soft_counter_term
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      double precision wgt1,s_s,fks_Sij,fx_s
+      external fks_Sij
+      double precision     p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/ p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision    xi_i_fks_ev,y_ij_fks_ev
+      double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      if (f_s.eq.0d0) return
+      if (xi_i_fks_ev .gt. xiScut_used) return
+      s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
+      if (s_s.le.0d0) return
+      call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s)
+      wgt1=-fx_s*s_s*f_s/g**(nint(2*wgtbpower+2))
+      call add_wgt(3,wgt1,0d0,0d0)
+      return
+      end
+
+      subroutine compute_collinear_counter_term
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      include 'fks_powers.inc'
+      include 'reweight.inc'
+      double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi,c
+      external fks_Sij
+      parameter (zero=0d0,one=1d0)
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision   xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      include 'pmass.inc'
+      if (f_c.eq.0d0 .and. f_dc.eq.0d0)return
+      if (y_ij_fks_ev.le.1d0-deltaS .or. pmass(j_fks).ne.0.d0) return
+      s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(1),one)
+      if (s_c.le.0d0) return
+      call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c)
+      wgt1=-fx_c*s_c*f_c/g**(nint(2*wgtbpower+2))
+      call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
+     $     ,deg_lxi_c)
+      wgt1=wgt1+ ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)) )*
+     $     f_dc/g**(nint(2*wgtbpower+2))
+      wgt3=wgtdegrem_muF*f_dc/g**(nint(2*wgtbpower+2))
+      call add_wgt(3,wgt1,0d0,wgt3)
+      return
+      end
+
+      subroutine compute_soft_collinear_counter_term
+      implicit none
+      include 'nexternal.inc'
+      include 'couple.inc'
+      include 'reweight.inc'
+      include 'fks_powers.inc'
+      double precision zero,one,s_sc,fks_Sij,fx_sc,wgt1,wgt3,deg_xi_sc
+     $     ,deg_lxi_sc
+      external fks_Sij
+      parameter (zero=0d0,one=1d0)
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision   xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      include 'pmass.inc'
+      if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
+     $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0) return
+      if (xi_i_fks_cnt(1).ge.xiScut_used .or. y_ij_fks_ev.le.1d0-deltaS
+     $     .or. pmass(j_fks).ne.0.d0 ) return
+      s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
+      if (s_sc.le.0d0) return
+      call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
+      wgt1=fx_sc*s_sc*f_sc/g**(nint(2*wgtbpower+2))
+      call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
+      wgt1=wgt1+(-(wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)))
+     $     *f_dsc(1)-(wgtdegrem_xi*f_dsc(2)+wgtdegrem_lxi*f_dsc(3)))/g
+     $     **(nint(2*wgtbpower+2.d0))
+      wgt3=-wgtdegrem_muF*f_dsc(4)/g**(nint(2*wgtbpower+2.d0))
+      call add_wgt(3,wgt1,0d0,wgt3)
+      return
+      end
+
+
+      subroutine compute_prefactor_nbody(vegas_wgt)
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      double precision pi,unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
+     $     ,bpower,cpower,tiny
+      data xnoborn_cnt /0d0/
+      integer inoborn_cnt
+      data inoborn_cnt /0/
+      double complex wgt_c(2)
+      logical firsttime
+      data firsttime /.false.
+      parameter (pi=3.1415926535897932385d0)
+      parameter (tiny=1d-6)
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/    p_born
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision  xinorm_ev
+      common /cxinormev/xinorm_ev
+      double precision  xiimax_ev
+      common /cxiimaxev/xiimax_ev
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
+     $                         fkssymmetryfactorDeg
+      integer                  ngluons,nquarks(-6:6)
+      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
+     &                         fkssymmetryfactorDeg,ngluons,nquarks
+      integer            mapconfig(0:lmaxconfigs), iconfig
+      common/to_mconfigs/mapconfig,                iconfig
+      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      common/to_amps/  amp2,          jamp2
+      double precision   diagramsymmetryfactor
+      common /dsymfactor/diagramsymmetryfactor
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
+      integer iappl
+      common /for_applgrid/ iappl
+      include "appl_common.inc" 
+      if (firsttime) then
+c Put here call to compute bpower
+         call compute_bpower(p_born,bpower)
+         wgtbpower=bpower
+c Store the power of alphas of the Born events in the appl common block.
+         if(iappl.ne.0) appl_bpower = wgtbpower
+c Initialize hiostograms
+         call initplot
+c Compute cpower done for bottom Yukawa, routine needs to be adopted
+c for other muR-dependendent factors
+         call compute_cpower(p_born,cpower)
+         if(dabs(cpower+1d0).lt.tiny) then
+            wgtcpower=0d0
+         else
+            wgtcpower=cpower
+         endif
+c Check that things are done consistently
+         if(wgtcpower.ne.cpowerinput.and.dabs(cpower+1d0).gt.tiny)then
+           write(*,*)'Inconsistency in the computation of cpower',
+     #               wgtcpower,cpowerinput
+           write(*,*)'Check value in reweight0.inc'
+           stop
+         endif
+         firsttime=.false.
+      endif
+      enhance=1.d0
+      if (p_born(0,1).gt.0d0) then
+         call sborn(p_born,wgt_c)
+      elseif(p_born(0,1).lt.0d0)then
+         enhance=0d0
+      endif
+      if (enhance.eq.0d0)then
+         xnoborn_cnt=xnoborn_cnt+1.d0
+         if(log10(xnoborn_cnt).gt.inoborn_cnt)then
+            write (*,*) 'Function dsig: no Born momenta more than 10**',
+     $           inoborn_cnt,'times'
+            inoborn_cnt=inoborn_cnt+1
+         endif
+      else
+         xtot=0d0
+         if (mapconfig(0).eq.0) then
+            write (*,*) 'Fatal error in dsig, no Born diagrams '
+     $           ,mapconfig,'. Check bornfromreal.inc'
+            write (*,*) 'Is fks_singular compiled correctly?'
+            stop 1
+         endif
+         do i=1, mapconfig(0)
+            xtot=xtot+amp2(mapconfig(i))
+         enddo
+         if (xtot.ne.0d0) then
+            enhance=amp2(mapconfig(iconfig))/xtot
+            enhance=enhance*diagramsymmetryfactor
+         else
+            enhance=0d0
+         endif
+      endif
+      call unweight_function(p_born,unwgtfun)
+      f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
+     $     *pi**2))*enhance*unwgtfun *fkssymmetryfactorBorn*vegas_wgt
+      f_nb=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
+     $     *pi**2))*enhance*unwgtfun *fkssymmetryfactorBorn*vegas_wgt
+      return
+      end
+
+      subroutine compute_prefactor_n1body(vegas_wgt,jac_ev)
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      include 'fks_powers.inc'
+      double precision unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
+     $     ,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll
+     $     ,jac_ev,pi
+      parameter (pi=3.1415926535897932385d0)
+      data xnoborn_cnt /0d0/
+      integer inoborn_cnt
+      data inoborn_cnt /0/
+      double complex wgt_c(2)
+      logical firsttime
+      data firsttime /.false.
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/    p_born
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision    xi_i_fks_ev,y_ij_fks_ev
+      double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision   xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+      double precision  xinorm_ev
+      common /cxinormev/xinorm_ev
+      double precision  xiimax_ev
+      common /cxiimaxev/xiimax_ev
+      double precision   xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+      double precision   xinorm_cnt(-2:2)
+      common /cxinormcnt/xinorm_cnt
+      double precision    delta_used
+      common /cdelta_used/delta_used
+      double precision    xicut_used
+      common /cxicut_used/xicut_used
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
+     &                         fkssymmetryfactorDeg
+      integer                  ngluons,nquarks(-6:6)
+      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
+     &                         fkssymmetryfactorDeg,ngluons,nquarks
+      integer            mapconfig(0:lmaxconfigs), iconfig
+      common/to_mconfigs/mapconfig,                iconfig
+      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      common/to_amps/  amp2,          jamp2
+      double precision   diagramsymmetryfactor
+      common /dsymfactor/diagramsymmetryfactor
+      logical nocntevents
+      common/cnocntevents/nocntevents
+      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      enhance=1.d0
+      if (p_born(0,1).gt.0d0) then
+         call sborn(p_born,wgt_c)
+      elseif(p_born(0,1).lt.0d0)then
+         enhance=0d0
+      endif
+      if (enhance.eq.0d0)then
+         xnoborn_cnt=xnoborn_cnt+1.d0
+         if(log10(xnoborn_cnt).gt.inoborn_cnt)then
+            write (*,*) 'Function dsig: no Born momenta more than 10**',
+     $           inoborn_cnt,'times'
+            inoborn_cnt=inoborn_cnt+1
+         endif
+      else
+         xtot=0d0
+         if (mapconfig(0).eq.0) then
+            write (*,*) 'Fatal error in dsig, no Born diagrams '
+     $           ,mapconfig,'. Check bornfromreal.inc'
+            write (*,*) 'Is fks_singular compiled correctly?'
+            stop 1
+         endif
+         do i=1, mapconfig(0)
+            xtot=xtot+amp2(mapconfig(i))
+         enddo
+         if (xtot.ne.0d0) then
+            enhance=amp2(mapconfig(iconfig))/xtot
+            enhance=enhance*diagramsymmetryfactor
+         else
+            enhance=0d0
+         endif
+      endif
+      call unweight_function(p_born,unwgtfun)
+      prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
+
+      f_r=prefact*jac_ev*enhance*unwgtfun*fkssymmetryfactor
+     $     *vegas_wgt
+      if (.not.nocntevents) then
+         prefact_cnt_ssc=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
+     $        *log(xicut_used/min(xiimax_cnt(1),xiScut_used))/
+     $        (1d0-y_ij_fks_ev)
+         f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0)*enhance
+     $        *unwgtfun*fkssymmetryfactor*vegas_wgt
+
+         prefact_c=xinorm_cnt(1)/xi_i_fks_cnt(1)/(1-y_ij_fks_ev)
+         prefact_coll=xinorm_cnt(1)/xi_i_fks_cnt(1)*log(delta_used
+     $        /deltaS)/deltaS
+         f_c=(prefact_c+prefact_coll)*jac_cnt(1)
+     $        *enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
+
+         prefact_deg=xinorm_cnt(1)/xi_i_fks_cnt(1)/deltaS
+         f_dc=jac_cnt(1)*prefact_deg/(shat/(32*pi**2))*enhance
+     $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+
+         prefact_cnt_ssc_c=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
+     $        *log(xicut_used/min(xiimax_cnt(1),xiScut_used))*1/(1
+     $        -y_ij_fks_ev)
+         prefact_coll_c=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
+     $        *log(xicut_used/min(xiimax_cnt(1),xiScut_used))
+     $        *log(delta_used/deltaS)/deltaS
+         f_sc=(prefact_c+prefact_coll+prefact_cnt_ssc_c+prefact_coll_c)
+     $        *jac_cnt(2)*enhance*unwgtfun*fkssymmetryfactorDeg
+     $        *vegas_wgt
+
+         prefact_deg_sxi=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
+     $        *log(xicut_used/min(xiimax_cnt(1),xiScut_used))*1/deltaS
+         prefact_deg_slxi=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
+     $        *( log(xicut_used)**2-log(min(xiimax_cnt(1),xiScut_used))
+     $        **2 )*1/(2.d0*deltaS)
+         f_dsc(1)=prefact_deg*jac_cnt(2)/(shat/(32*pi**2))*enhance
+     $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+         f_dsc(2)=prefact_deg_sxi*jac_cnt(2)/(shat/(32*pi**2))*enhance
+     $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+         f_dsc(3)=prefact_deg_slxi*jac_cnt(2)/(shat/(32*pi**2))*enhance
+     $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+         f_dsc(4)=( prefact_deg+prefact_deg_sxi )*jac_cnt(2)/(shat/(32
+     $        *pi**2))*enhance*unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+      else
+         f_s=0d0
+         f_c=0d0
+         f_dc=0d0
+         f_sc=0d0
+         do i=1,4
+            f_dsc(i)=0d0
+         enddo
+      endif
+      return
+      end
+
+
+      subroutine add_wgt(type,wgt1,wgt2,wgt3) 
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      include 'coupl.inc'
+      include 'fks_info.inc'
+      integer type,i,j
+      double precision wgt1,wgt2,wgt3
+      integer nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/    p_born
+      integer    maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     $     icolup(2,nexternal,maxflow)
+      common /c_leshouche_inc/idup,mothup,icolup
+
+      icontr=icontr+1
+      itype(icontr)=type
+      wgt(1,icontr)=wgt1
+      wgt(2,icontr)=wgt2
+      wgt(3,icontr)=wgt3
+      bjx(1,icontr)=xbk(1)
+      bjx(2,icontr)=xbk(2)
+      scales2(1,icontr)=QES2
+      scales2(2,icontr)=scale**2
+      scales2(3,icontr)=q2fact(1)
+      g_strong(icontr)=g
+      nFKS(icontr)=nFKSprocess
+      if (type.eq.1 .or. type.eq.4) then
+c Born or soft-virtual
+         if (type.eq.1) QCDpower(icontr)=nint(2*wgtbpower)
+         if (type.eq.4) QCDpower(icontr)=nint(2*wgtbpower+2)
+         do i=1,nexternal
+            if (i.lt.nexternal) then
+               do j=0,3
+                  momenta(j,i,icontr)=p_born(j,i)
+               enddo
+               if (i.lt.j_fks_D(nFKSprocess)) then
+                  pdg(i,icontr)=idup(i,1)
+               elseif (i.eq.j_fks_D(nFKSprocess)) then
+c     should be the 'sum' of the PDG codes. But just take one: particles
+c     are indistinguishable.
+                  pdg(i,icontr)=idup(i,1)
+               elseif (i.lt.i_fks_D(nFKSprocess)) then
+                  pdg(i,icontr)=idup(i,1)
+               elseif (i.ge.i_fks_D(nFKSprocess)) then
+                  pdg(i,icontr)=idup(i+1,1)
+               endif
+            else
+               do j=0,3
+                  momenta(j,i,icontr)=0d0
+               enddo
+               pdg(i,icontr)=0
+            endif
+         enddo
+      elseif(type.eq.2) then
+c real emission
+         QCDpower(icontr)=nint(2*wgtbpower+2)
+         do i=1,nexternal
+            do j=0,3
+               momenta(j,i,icontr)=pp(j,i)
+            enddo
+            pdg(i,icontr)=idup(i,1)
+         enddo
+      elseif(type.eq.3) then
+c counter term         
+         QCDpower(icontr)=nint(2*wgtbpower+2)
+         do i=1,nexternal
+            do j=0,3
+               momenta(j,i,icontr)=p1_cnt(j,i,0)
+            enddo
+            pdg(i,icontr)=idup(i,1)
+         enddo
+      else
+         write (*,*) 'ERROR: unknown type in add_wgt',type
+         stop 1
+      endif
+      return
+      end
+         
+
       subroutine rotate_invar(pin,pout,cth,sth,cphi,sphi)
 c Given the four momentum pin, returns the four momentum pout (in the same
 c Lorentz frame) by performing a three-rotation of an angle theta 
