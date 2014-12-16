@@ -18,7 +18,7 @@
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
       call sborn(p_born,wgt_c)
       wgt1=dble(wgt_c(1))*f_b/g**(nint(2*wgtbpower))
-      call add_wgt(1,wgt1,0d0,0d0)
+      call add_wgt(2,wgt1,0d0,0d0)
       return
       end
 
@@ -46,7 +46,7 @@
       wgt1=wgtnstmp*f_nb/g**(nint(2*wgtbpower+2))
       wgt2=wgtwnstmpmur*f_nb/g**(nint(2*wgtbpower+2))
       wgt3=wgtwnstmpmuf*f_nb/g**(nint(2*wgtbpower+2))
-      call add_wgt(4,wgt1,wgt2,wgt3)
+      call add_wgt(3,wgt1,wgt2,wgt3)
       virt_wgt_mint=virt_wgt*f_nb/g**(nint(2*wgtbpower+2))
       born_wgt_mint=born_wgt*f_b/g**(nint(2*wgtbpower))
       return
@@ -77,7 +77,7 @@
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
       wgt1=fx_ev*s_ev*f_r/g**(nint(2*wgtbpower+2))
-      call add_wgt(2,wgt1,0d0,0d0)
+      call add_wgt(1,wgt1,0d0,0d0)
       return
       end
 
@@ -107,7 +107,7 @@
       if (s_s.le.0d0) return
       call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s)
       wgt1=-fx_s*s_s*f_s/g**(nint(2*wgtbpower+2))
-      call add_wgt(3,wgt1,0d0,0d0)
+      call add_wgt(4,wgt1,0d0,0d0)
       return
       end
 
@@ -146,7 +146,7 @@
       wgt1=wgt1+ ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)) )*
      $     f_dc/g**(nint(2*wgtbpower+2))
       wgt3=wgtdegrem_muF*f_dc/g**(nint(2*wgtbpower+2))
-      call add_wgt(3,wgt1,0d0,wgt3)
+      call add_wgt(5,wgt1,0d0,wgt3)
       return
       end
 
@@ -189,7 +189,7 @@
      $     *f_dsc(1)-(wgtdegrem_xi*f_dsc(2)+wgtdegrem_lxi*f_dsc(3)))/g
      $     **(nint(2*wgtbpower+2.d0))
       wgt3=-wgtdegrem_muF*f_dsc(4)/g**(nint(2*wgtbpower+2.d0))
-      call add_wgt(3,wgt1,0d0,wgt3)
+      call add_wgt(6,wgt1,0d0,wgt3)
       return
       end
 
@@ -498,7 +498,7 @@ c Check that things are done consistently
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
-      if(type.eq.2) then
+      if(type.eq.1) then
 c real emission
          QCDpower(icontr)=nint(2*wgtbpower+2)
          do i=1,nexternal
@@ -507,11 +507,13 @@ c real emission
             enddo
             pdg(i,icontr)=idup(i,1)
          enddo
-      elseif(type.eq.1 .or. type.eq.3 .or. type.eq.4) then
+      elseif(type.ge.2 .and. type.le.6) then
 c Born, counter term, or soft-virtual
-         if (type.eq.1) QCDpower(icontr)=nint(2*wgtbpower)
-         if (type.eq.3) QCDpower(icontr)=nint(2*wgtbpower+2)
-         if (type.eq.4) QCDpower(icontr)=nint(2*wgtbpower+2)
+         if (type.eq.2) then
+            QCDpower(icontr)=nint(2*wgtbpower)
+         else
+            QCDpower(icontr)=nint(2*wgtbpower+2)
+         endif
          do i=1,nexternal
             do j=0,3
                if (p1_cnt(0,1,0).gt.0d0) then
@@ -521,7 +523,7 @@ c Born, counter term, or soft-virtual
                elseif (p1_cnt(0,1,2).gt.0d0) then
                   momenta(j,i,icontr)=p1_cnt(j,i,2)
                else
-                  write (*,*) 'ERROR in add_wgt: no counter momenta'
+                  write (*,*) 'ERROR in add_wgt: no valid momenta'
                   stop 1
                endif
             enddo
@@ -563,7 +565,7 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
          iwgt=1
          wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
      &        wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
-         if (itype(i).eq.4) then
+         if (itype(i).eq.3) then
             virt_wgt_mint=virt_wgt_mint*xlum*g_strong(i)**QCDpower(i)
             born_wgt_mint=born_wgt_mint*xlum*g_strong(i)**QCDpower(i)
      &           /(8d0*Pi**2)
@@ -655,6 +657,97 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       enddo
       return
       end
+
+      subroutine fill_applgrid_weights(vegas_wgt)
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'appl_common.inc'
+      include 'nFKSconfigs.inc'
+      include 'genps.inc'
+      integer i
+      double precision final_state_rescaling,vegas_wgt
+      integer              flavour_map(fks_configs)
+      common/c_flavour_map/flavour_map
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs),
+     &     etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      if (icontr.gt.6) then
+         write (*,*) 'ERROR: too many applgrid weights. '/
+     &        /'Should have at most one of each itype.',icontr
+         stop 1
+      endif
+      do i=1,4
+         appl_w0(i)=0d0
+         appl_wR(i)=0d0
+         appl_wF(i)=0d0
+         appl_wB(i)=0d0
+         appl_x1(i)=0d0
+         appl_x2(i)=0d0
+         appl_QES2(i)=0d0
+         appl_muR2(i)=0d0
+         appl_muF2(i)=0d0
+      enddo
+      appl_event_weight = 0d0
+      do i=1,icontr
+         appl_event_weight=appl_event_weight+wgts(1,i)
+         final_state_rescaling = dble(iproc_save(nFKS(i))) /
+     &        dble(appl_nproc(flavour_map(nFKS(i))))
+         if (itype(i).eq.1) then
+c     real
+            appl_w0(1)=appl_w0(1)+wgt(1,i)*final_state_rescaling
+            appl_x1(1)=bjx(1,i)
+            appl_x2(1)=bjx(2,i)
+            appl_flavmap(1) = flavour_map(nFKS(i))
+            appl_QES2(1)=scales2(1,i)
+            appl_muR2(1)=scales2(2,i)
+            appl_muF2(1)=scales2(3,i)
+         elseif (itype(i).eq.2) then
+c     born
+            appl_wB(2)=appl_wB(2)+wgt(1,i)*final_state_rescaling
+            appl_x1(2)=bjx(1,i)
+            appl_x2(2)=bjx(2,i)
+            appl_flavmap(2) = flavour_map(nFKS(i))
+            appl_QES2(2)=scales2(1,i)
+            appl_muR2(2)=scales2(2,i)
+            appl_muF2(2)=scales2(3,i)
+         elseif (itype(i).eq.3 .or. itype(i).eq.4) then
+c     soft-virtual or soft-counter
+            appl_w0(2)=appl_w0(2)+wgt(1,i)*final_state_rescaling
+            appl_wR(2)=appl_wR(2)+wgt(2,i)*final_state_rescaling
+            appl_wF(2)=appl_wF(2)+wgt(3,i)*final_state_rescaling
+            appl_x1(2)=bjx(1,i)
+            appl_x2(2)=bjx(2,i)
+            appl_flavmap(2) = flavour_map(nFKS(i))
+            appl_QES2(2)=scales2(1,i)
+            appl_muR2(2)=scales2(2,i)
+            appl_muF2(2)=scales2(3,i)
+         elseif (itype(i).eq.5) then
+c     collinear counter            
+            appl_w0(3)=appl_w0(3)+wgt(1,i)*final_state_rescaling
+            appl_wF(3)=appl_wF(3)+wgt(3,i)*final_state_rescaling
+            appl_x1(3)=bjx(1,i)
+            appl_x2(3)=bjx(2,i)
+            appl_flavmap(3) = flavour_map(nFKS(i))
+            appl_QES2(3)=scales2(1,i)
+            appl_muR2(3)=scales2(2,i)
+            appl_muF2(3)=scales2(3,i)
+         elseif (itype(i).eq.6) then
+c     soft-collinear counter            
+            appl_w0(4)=appl_w0(4)+wgt(1,i)*final_state_rescaling
+            appl_wF(4)=appl_wF(4)+wgt(3,i)*final_state_rescaling
+            appl_x1(4)=bjx(1,i)
+            appl_x2(4)=bjx(2,i)
+            appl_flavmap(4) = flavour_map(nFKS(i))
+            appl_QES2(4)=scales2(1,i)
+            appl_muR2(4)=scales2(2,i)
+            appl_muF2(4)=scales2(3,i)
+         endif
+      enddo
+      appl_vegaswgt = vegas_wgt
+      return
+      end
+      
       
       subroutine get_wgt_nbody(sig)
       implicit none
@@ -664,7 +757,7 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       integer i
       sig=0d0
       do i=1,icontr
-         if (itype(i).eq.1 .or. itype(i).eq.4) then
+         if (itype(i).eq.2 .or. itype(i).eq.3) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -679,7 +772,8 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       integer i
       sig=0d0
       do i=1,icontr
-         if (itype(i).eq.2 .or. itype(i).eq.3) then
+         if (itype(i).eq.1 .or. itype(i).eq.4 .or. itype(i).eq.5 .or.
+     &        itype(i).eq.6) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -695,9 +789,9 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       double precision www(max_weight)
       do i=1,icontr
-         if (itype(i).eq.1) then
+         if (itype(i).eq.2) then
             iplot=20
-         elseif(itype(1).eq.2) then
+         elseif(itype(1).eq.1) then
             iplot=11
          else
             iplot=12

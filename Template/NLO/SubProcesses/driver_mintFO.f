@@ -413,6 +413,8 @@ c timing statistics
       common/ccalculatedBorn/calculatedBorn
       character*4      abrv
       common /to_abrv/ abrv
+      integer iappl
+      common /for_applgrid/ iappl
       if (ifl.ne.0) then
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
@@ -485,7 +487,14 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
       endif
 c$$$      call ckkw_sudakovs
 c$$$      call include_rwgt_dep_fac
-c$$$      call appl_grid_stuff
+      if (iappl.ne.0) then
+         if (sum) then
+            write (*,*) 'ERROR: applgrid only possible '/
+     &           /'with MC over FKS directories',iappl,sum
+            stop 1
+         endif
+         call fill_applgrid_weights(vegas_wgt)
+      endif
 
 c Importance sampling for FKS configurations
       if (sum) then
