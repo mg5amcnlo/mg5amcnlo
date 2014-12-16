@@ -424,10 +424,12 @@ c timing statistics
       virt_wgt_mint=0d0
       born_wgt_mint=0d0
       virtual_over_born=0d0
+      if (ickkw.eq.3) call set_FxFx_scale(-1,p)
       call update_vegas_x(xx,x)
       call get_MC_integer(1,fks_configs,nFKS_picked,vol)
 
 c The nbody contributions
+      if (abrv.eq.'real') goto 11
       nbody=.true.
       calculatedBorn=.false.
       call get_born_nFKSprocess(nFKS_picked,nFKS_born)
@@ -439,13 +441,15 @@ c The nbody contributions
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
       if (passcuts_nbody) then
          call set_cms_stuff(izero)
+         if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
          call set_alphaS(p1_cnt(0,1,0))
-         call compute_born
-         call compute_nbody_noborn
+         if (abrv(1:2).ne.'vi') call compute_born
+         if (abrv.ne.'born')    call compute_nbody_noborn
       endif
 
+ 11   continue
 c The n+1-body contributions (including counter terms)
-      if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
+      if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
       nbody=.false.
       if (sum) then
          nFKS_min=1
@@ -459,22 +463,25 @@ c The n+1-body contributions (including counter terms)
       do iFKS=nFKS_min,nFKS_max
          call update_fks_dir(iFKS,iconfig)
          call generate_momenta(ndim,iconfig,jac,x,p)
+         if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
          passcuts_n1body=passcuts(p,rwgt)
-         if (passcuts_n1body) then
-            call set_cms_stuff(mohdr)
-            call set_alphaS(p)
-            call compute_real_emission(p)
-         endif
-         if (passcuts_nbody) then
+         if (passcuts_nbody .and. abrv.ne.'real') then
             call set_cms_stuff(izero)
+            if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             call compute_soft_counter_term
             call set_cms_stuff(ione)
             call compute_collinear_counter_term
             call set_cms_stuff(itwo)
             call compute_soft_collinear_counter_term
+         endif
+         if (passcuts_n1body) then
+            call set_cms_stuff(mohdr)
+            if (ickkw.eq.3) call set_FxFx_scale(mohdr,p)
+            call set_alphaS(p)
+            call compute_real_emission(p)
          endif
       enddo
 
@@ -485,7 +492,6 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          if (do_rwgt_scale) call reweight_scale
          if (do_rwgt_pdf) call reweight_pdf
       endif
-c$$$      call ckkw_sudakovs
 c$$$      call include_rwgt_dep_fac
       if (iappl.ne.0) then
          if (sum) then
@@ -584,7 +590,7 @@ c Finalize PS point
       character*4 abrv
       common /to_abrv/ abrv
       do i=1,99
-         if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi') then
+         if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') then
             if(i.le.ndim-3)then
                x(i)=xx(i)
             elseif(i.le.ndim) then
@@ -944,7 +950,7 @@ c
       abrv=abrvinput(1:4)
 c Options are way too many: make sure we understand all of them
       if ( abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
-     &     abrv.ne.'virt'.and.abrv.ne.'novi'.and.abrv.ne.'grid'.and.
+     &     abrv.ne.'virt'.and.
      &     abrv.ne.'viSC'.and.abrv.ne.'viLC'.and.abrv.ne.'novA'.and.
      &     abrv.ne.'novB'.and.abrv.ne.'viSA'.and.abrv.ne.'viSB') then
         write(*,*)'Error in input: abrv is:',abrv

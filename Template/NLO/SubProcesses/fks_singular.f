@@ -27,7 +27,9 @@
       include 'nexternal.inc'
       include 'reweight.inc'
       include 'coupl.inc'
-      double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt
+      include 'run.inc'
+      double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi
+      parameter (pi=3.1415926535897932385d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
@@ -40,10 +42,16 @@
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision fxfx_exp_rewgt
+      common /c_fxfx_exp_regt/ fxfx_exp_rewgt
       if (f_nb.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
       wgt1=wgtnstmp*f_nb/g**(nint(2*wgtbpower+2))
+      if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0) then
+         wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g**(nint(2*wgtbpower))
+     &        /(4d0*pi)
+      endif
       wgt2=wgtwnstmpmur*f_nb/g**(nint(2*wgtbpower+2))
       wgt3=wgtwnstmpmuf*f_nb/g**(nint(2*wgtbpower+2))
       call add_wgt(3,wgt1,wgt2,wgt3)
@@ -193,8 +201,130 @@
       return
       end
 
-
+      logical function momenta_equal(p1,p2)
+c Returns .true. only if the momenta p1 and p2 are equal. To save time,
+c it only checks the 0th and 3rd components (energy and z-direction).
+      implicit none
+      include 'nexternal.inc'
+      integer i,j
+      double precision p1(0:3,nexternal),p2(0:3,nexternal),vtiny
+      parameter (vtiny=1d-8)
+      momenta_equal=.true.
+      do i=1,nexternal
+         do j=0,3,3
+            if (p1(j,i).eq.0d0 .or. p2(j,i).eq.0d0) then
+               if (abs(p1(j,i)-p2(j,i)).gt.vtiny) then
+                  momenta_equal=.false.
+                  return
+               endif
+            else
+               if (abs((p1(j,i)-p2(j,i))/max(p1(j,i),p2(j,i))).gt.vtiny)
+     &              then
+                  momenta_equal=.false.
+                  return
+               endif
+            endif
+         enddo
+      enddo
+      end
+      
+      subroutine set_FxFx_scale(iterm,p)
+c Set the FxFx merging scale and mutliplies the f_* factors by the
+c Sudakov suppression. If called more than once with the same momenta
+c and iterm, skip setting of the scales, and multiply the f_* factors by
+c the cached Sudakovs.
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      integer iterm,iterm_last,i,j
+      double precision p(0:3,nexternal),p_last(0:3,nexternal),rewgt
+     &     ,rewgt_izero,rewgt_mohdr,rewgt_exp_izero,rewgt_exp_mohdr
+      logical setclscales,rewgt_izero_calculated,rewgt_mohdr_calculated
+     &     ,momenta_equal,already_set
+      external setclscales,rewgt,momenta_equal
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
+      double precision fxfx_exp_rewgt
+      common /c_fxfx_exp_regt/ fxfx_exp_rewgt
+      ktscheme=1
+      if (iterm.eq.-1) then
+         rewgt_mohdr_calculated=.false.
+         rewgt_izero_calculated=.false.
+         fxfx_exp_rewgt=0d0
+         return
+      endif
+      already_set=.false.
+      if (iterm.eq.0) then
+         if (rewgt_izero_calculated) then
+            if (iterm.eq.iterm_last) then
+               if (momenta_equal(p1_cnt(0,1,0),p_last)) then
+                  already_set=.true.
+               endif
+            endif
+         endif
+         if (.not.already_set) then
+            if (.not. setclscales(p1_cnt(0,1,0))) then
+               write (*,*) 'ERROR in setclscales izero'
+               stop 1
+            endif
+            rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
+            fxfx_exp_rewgt=rewgt_exp_izero
+         endif
+         rewgt_izero_calculated=.true.
+         iterm_last=iterm
+         do i=1,nexternal
+            do j=0,3
+               p_last(j,i)=p1_cnt(j,i,0)
+            enddo
+         enddo
+         f_b =f_b *rewgt_izero
+         f_nb=f_nb*rewgt_izero
+         f_s =f_s *rewgt_izero
+         f_c =f_c *rewgt_izero
+         f_dc=f_dc*rewgt_izero
+         f_sc=f_sc*rewgt_izero
+         do i=1,4
+            f_dsc(i)=f_dsc(i)*rewgt_izero
+         enddo
+         return
+      endif
+      if (iterm.eq.-100) then
+         if (rewgt_mohdr_calculated) then
+            if (iterm.eq.iterm_last) then
+               if (momenta_equal(p,p_last)) then
+                  already_set=.true.
+               endif
+            endif
+         endif
+         if (.not. already_set) then
+            if (.not. setclscales(p)) then
+               write (*,*) 'ERROR in setclscales mohdr'
+               stop 1
+            endif
+            rewgt_mohdr=rewgt(p,rewgt_exp_mohdr)
+         endif
+         rewgt_mohdr_calculated=.true.
+         iterm_last=iterm
+         do i=1,nexternal
+            do j=0,3
+               p_last(j,i)=p(j,i)
+            enddo
+         enddo
+         f_r=f_r*rewgt_mohdr
+         return
+      endif
+      end
+      
+      
       subroutine compute_prefactors_nbody(vegas_wgt)
+c Compute all the relevant prefactors for the Born and the soft-virtual,
+c i.e. all the nbody contributions. Also initialises the plots and
+c bpower.
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -238,7 +368,19 @@
       common /factor_nbody/ f_b,f_nb
       integer iappl
       common /for_applgrid/ iappl
+      logical needrndec
+      parameter (needrndec=.true.)
+      real*8 ran2
+      external ran2
+      real*8 rndec(10)
+      common/crndec/rndec
       include "appl_common.inc" 
+c Random numbers to be used in the plotting routine
+      if(needrndec)then
+         do i=1,10
+            rndec(i)=ran2()
+         enddo
+      endif
       if (firsttime) then
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
@@ -273,15 +415,16 @@ c Check that things are done consistently
       if (enhance.eq.0d0)then
          xnoborn_cnt=xnoborn_cnt+1.d0
          if(log10(xnoborn_cnt).gt.inoborn_cnt)then
-            write (*,*) 'Function dsig: no Born momenta more than 10**',
+            write (*,*) 'WARNING: no Born momenta more than 10**',
      $           inoborn_cnt,'times'
             inoborn_cnt=inoborn_cnt+1
          endif
       else
          xtot=0d0
          if (mapconfig(0).eq.0) then
-            write (*,*) 'Fatal error in dsig, no Born diagrams '
-     $           ,mapconfig,'. Check bornfromreal.inc'
+            write (*,*) 'Fatal error in compute_prefactor_nbody:'/
+     &           /' no Born diagrams ',mapconfig,
+     &           '. Check bornfromreal.inc'
             write (*,*) 'Is fks_singular compiled correctly?'
             stop 1
          endif
@@ -299,22 +442,24 @@ c Check that things are done consistently
       call set_cms_stuff(0)
       f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
      $     *pi**2))*enhance*unwgtfun *fkssymmetryfactorBorn*vegas_wgt
-      f_nb=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
-     $     *pi**2))*enhance*unwgtfun *fkssymmetryfactorBorn*vegas_wgt
+      f_nb=f_b
       return
       end
 
       subroutine compute_prefactors_n1body(vegas_wgt,jac_ev)
+c Compute all relevant prefactors for the real emission and counter
+c terms.
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
       include 'fks_powers.inc'
+      include 'coupl.inc'
       double precision unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
      &     ,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll
      &     ,jac_ev,pi,prefact_cnt_ssc_c,prefact_coll_c,prefact_deg_slxi
-     &     ,prefact_deg_sxi
-      parameter (pi=3.1415926535897932385d0)
+     &     ,prefact_deg_sxi,zero
+      parameter (pi=3.1415926535897932385d0, zero=0d0)
       data xnoborn_cnt /0d0/
       integer inoborn_cnt,i
       data inoborn_cnt /0/
@@ -327,6 +472,8 @@ c Check that things are done consistently
       double precision    xi_i_fks_ev,y_ij_fks_ev
       double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       double precision   xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
       double precision  xinorm_ev
@@ -360,6 +507,8 @@ c Check that things are done consistently
       common/cnocntevents/nocntevents
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      double precision pmass(nexternal)
+      include 'pmass.inc'
       enhance=1.d0
       if (p_born(0,1).gt.0d0) then
          call sborn(p_born,wgt_c)
@@ -369,15 +518,16 @@ c Check that things are done consistently
       if (enhance.eq.0d0)then
          xnoborn_cnt=xnoborn_cnt+1.d0
          if(log10(xnoborn_cnt).gt.inoborn_cnt)then
-            write (*,*) 'Function dsig: no Born momenta more than 10**',
+            write (*,*) 'WARNING: no Born momenta more than 10**',
      $           inoborn_cnt,'times'
             inoborn_cnt=inoborn_cnt+1
          endif
       else
          xtot=0d0
          if (mapconfig(0).eq.0) then
-            write (*,*) 'Fatal error in dsig, no Born diagrams '
-     $           ,mapconfig,'. Check bornfromreal.inc'
+            write (*,*) 'Fatal error in compute_prefactor_n1body,'/
+     &           /' no Born diagrams ',mapconfig
+     &           ,'. Check bornfromreal.inc'
             write (*,*) 'Is fks_singular compiled correctly?'
             stop 1
          endif
@@ -394,50 +544,60 @@ c Check that things are done consistently
       call unweight_function(p_born,unwgtfun)
       prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
 
-      f_r=prefact*jac_ev*enhance*unwgtfun*fkssymmetryfactor
-     $     *vegas_wgt
+      f_r=prefact*jac_ev*enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
       if (.not.nocntevents) then
          prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      &        log(xicut_used/min(xiimax_ev,xiScut_used))/(1
      &        -y_ij_fks_ev)
          f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0)*enhance
      $        *unwgtfun*fkssymmetryfactor*vegas_wgt
+         
+         if (pmass(j_fks).eq.0d0) then
+            prefact_c=xinorm_cnt(1)/xi_i_fks_cnt(1)/(1-y_ij_fks_ev)
+            prefact_coll=xinorm_cnt(1)/xi_i_fks_cnt(1)*log(delta_used
+     $           /deltaS)/deltaS
+            f_c=(prefact_c+prefact_coll)*jac_cnt(1)
+     $           *enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
 
-         prefact_c=xinorm_cnt(1)/xi_i_fks_cnt(1)/(1-y_ij_fks_ev)
-         prefact_coll=xinorm_cnt(1)/xi_i_fks_cnt(1)*log(delta_used
-     $        /deltaS)/deltaS
-         f_c=(prefact_c+prefact_coll)*jac_cnt(1)
-     $        *enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
+            call set_cms_stuff(1)
+            prefact_deg=xinorm_cnt(1)/xi_i_fks_cnt(1)/deltaS
+            prefact_cnt_ssc_c=xinorm_cnt(1)/min(xiimax_cnt(1)
+     &           ,xiScut_used)*log(xicut_used/min(xiimax_cnt(1)
+     &           ,xiScut_used))*1/(1-y_ij_fks_ev)
+            prefact_coll_c=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
+     $           *log(xicut_used/min(xiimax_cnt(1),xiScut_used))
+     $           *log(delta_used/deltaS)/deltaS
+            f_dc=jac_cnt(1)*prefact_deg/(shat/(32*pi**2))*enhance
+     $           *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+            f_sc=(prefact_c+prefact_coll+prefact_cnt_ssc_c
+     &           +prefact_coll_c)*jac_cnt(2)*enhance*unwgtfun
+     &           *fkssymmetryfactorDeg*vegas_wgt
 
-         call set_cms_stuff(1)
-         prefact_deg=xinorm_cnt(1)/xi_i_fks_cnt(1)/deltaS
-         f_dc=jac_cnt(1)*prefact_deg/(shat/(32*pi**2))*enhance
-     $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
-
-         prefact_cnt_ssc_c=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
-     $        *log(xicut_used/min(xiimax_cnt(1),xiScut_used))*1/(1
-     $        -y_ij_fks_ev)
-         prefact_coll_c=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
-     $        *log(xicut_used/min(xiimax_cnt(1),xiScut_used))
-     $        *log(delta_used/deltaS)/deltaS
-         f_sc=(prefact_c+prefact_coll+prefact_cnt_ssc_c+prefact_coll_c)
-     $        *jac_cnt(2)*enhance*unwgtfun*fkssymmetryfactorDeg
-     $        *vegas_wgt
-
-         prefact_deg_sxi=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
-     $        *log(xicut_used/min(xiimax_cnt(1),xiScut_used))*1/deltaS
-         prefact_deg_slxi=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
-     $        *( log(xicut_used)**2-log(min(xiimax_cnt(1),xiScut_used))
-     $        **2 )*1/(2.d0*deltaS)
-         call set_cms_stuff(2)
-         f_dsc(1)=prefact_deg*jac_cnt(2)/(shat/(32*pi**2))*enhance
-     $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
-         f_dsc(2)=prefact_deg_sxi*jac_cnt(2)/(shat/(32*pi**2))*enhance
-     $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
-         f_dsc(3)=prefact_deg_slxi*jac_cnt(2)/(shat/(32*pi**2))*enhance
-     $        *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
-         f_dsc(4)=( prefact_deg+prefact_deg_sxi )*jac_cnt(2)/(shat/(32
-     $        *pi**2))*enhance*unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+            call set_cms_stuff(2)
+            prefact_deg_sxi=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
+     &           *log(xicut_used/min(xiimax_cnt(1),xiScut_used))*1
+     &           /deltaS
+            prefact_deg_slxi=xinorm_cnt(1)/min(xiimax_cnt(1)
+     &           ,xiScut_used)*( log(xicut_used)**2
+     &           -log(min(xiimax_cnt(1),xiScut_used))**2 )*1/(2.d0
+     &           *deltaS)
+            f_dsc(1)=prefact_deg*jac_cnt(2)/(shat/(32*pi**2))*enhance
+     &           *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+            f_dsc(2)=prefact_deg_sxi*jac_cnt(2)/(shat/(32*pi**2))
+     &           *enhance*unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+            f_dsc(3)=prefact_deg_slxi*jac_cnt(2)/(shat/(32*pi**2))
+     &           *enhance*unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+            f_dsc(4)=( prefact_deg+prefact_deg_sxi )*jac_cnt(2)/(shat
+     &           /(32*pi**2))*enhance*unwgtfun*fkssymmetryfactorDeg
+     &           *vegas_wgt
+         else
+            f_c=0d0
+            f_dc=0d0
+            f_sc=0d0
+            do i=1,4
+               f_dsc(i)=0d0
+            enddo
+         endif
       else
          f_s=0d0
          f_c=0d0
@@ -451,7 +611,8 @@ c Check that things are done consistently
       end
 
       
-      subroutine add_wgt(type,wgt1,wgt2,wgt3) 
+      subroutine add_wgt(type,wgt1,wgt2,wgt3)
+c Adds a contribution to the list in c_weight.inc.
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -537,6 +698,10 @@ c Born, counter term, or soft-virtual
       end
 
       subroutine include_PDF_and_alphas
+c Multiply the saved wgt() info by the PDFs, alpha_S and the scale
+c dependence and saves the weights in the wgts() array. The weights in
+c this array should now be correctly normalised to compute the cross
+c section or to fill histograms.
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -550,6 +715,7 @@ c Born, counter term, or soft-virtual
       common/c_nFKSprocess/nFKSprocess
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      if (icontr.eq.0) return
       do i=1,icontr
          nFKSprocess=nFKS(i)
          xbk(1) = bjx(1,i)
@@ -575,6 +741,8 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       end
 
       subroutine reweight_scale
+c Use the saved c_weight info to perform scale reweighting. Extends the
+c wgts() array to include the weights.
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -589,6 +757,7 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       common/c_nFKSprocess/nFKSprocess
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      if (icontr.eq.0) return
       iwgt_save=iwgt
       do i=1,icontr
          iwgt=iwgt_save
@@ -619,6 +788,8 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       end
 
       subroutine reweight_pdf
+c Use the saved c_weight info to perform PDF reweighting. Extends the
+c wgts() array to include the weights.
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -632,6 +803,7 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       external dlum,alphas
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
+      if (icontr.eq.0) return
       do n=1,numPDFs-1
          iwgt=iwgt+1
          if (iwgt.gt.max_wgt) then
@@ -659,6 +831,10 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       end
 
       subroutine fill_applgrid_weights(vegas_wgt)
+c Fills the ApplGrid weights of appl_common.inc. This subroutine assumes
+c that there is an unique PS configuration: at most one Born, one real
+c and one set of counter terms. Among other things, this means that one
+c must do MC over FKS directories.
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -689,6 +865,8 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
          appl_muF2(i)=0d0
       enddo
       appl_event_weight = 0d0
+      appl_vegaswgt = vegas_wgt
+      if (icontr.eq.0) return
       do i=1,icontr
          appl_event_weight=appl_event_weight+wgts(1,i)
          final_state_rescaling = dble(iproc_save(nFKS(i))) /
@@ -744,7 +922,6 @@ c     soft-collinear counter
             appl_muF2(4)=scales2(3,i)
          endif
       enddo
-      appl_vegaswgt = vegas_wgt
       return
       end
       
@@ -756,6 +933,7 @@ c     soft-collinear counter
       double precision sig
       integer i
       sig=0d0
+      if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).eq.2 .or. itype(i).eq.3) then
             sig=sig+wgts(1,i)
@@ -771,6 +949,7 @@ c     soft-collinear counter
       double precision sig
       integer i
       sig=0d0
+      if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).eq.1 .or. itype(i).eq.4 .or. itype(i).eq.5 .or.
      &        itype(i).eq.6) then
@@ -788,6 +967,7 @@ c     soft-collinear counter
       integer i,j,iplot,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       double precision www(max_weight)
+      if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).eq.2) then
             iplot=20
