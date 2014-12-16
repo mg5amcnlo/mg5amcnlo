@@ -44,8 +44,8 @@
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
       wgt1=wgtnstmp*f_nb/g**(nint(2*wgtbpower+2))
-      wgt2=wgtwnstmpmuf*f_nb/g**(nint(2*wgtbpower+2))
-      wgt3=wgtwnstmpmur*f_nb/g**(nint(2*wgtbpower+2))
+      wgt2=wgtwnstmpmur*f_nb/g**(nint(2*wgtbpower+2))
+      wgt3=wgtwnstmpmuf*f_nb/g**(nint(2*wgtbpower+2))
       call add_wgt(4,wgt1,wgt2,wgt3)
       virt_wgt_mint=virt_wgt*f_nb/g**(nint(2*wgtbpower+2))
       born_wgt_mint=born_wgt*f_b/g**(nint(2*wgtbpower))
@@ -479,6 +479,7 @@ c Check that things are done consistently
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
       icontr=icontr+1
       if (icontr.gt.max_contr) then
          write (*,*) 'ERROR in add_wgt: too many contributions'
@@ -497,35 +498,7 @@ c Check that things are done consistently
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
-      if (type.eq.1 .or. type.eq.4) then
-c Born or soft-virtual
-         if (type.eq.1) QCDpower(icontr)=nint(2*wgtbpower)
-         if (type.eq.4) QCDpower(icontr)=nint(2*wgtbpower+2)
-         do i=1,nexternal
-            if (i.lt.nexternal) then
-               do j=0,3
-                  momenta(j,i,icontr)=p_born(j,i)
-               enddo
-c FIXTHIS FIXTHIS FIXTHIS
-               if (i.lt.fks_j_d(nFKSprocess)) then
-                  pdg(i,icontr)=idup(i,1)
-               elseif (i.eq.fks_j_d(nFKSprocess)) then
-c     should be the 'sum' of the PDG codes. But just take one: particles
-c     are indistinguishable.
-                  pdg(i,icontr)=idup(i,1)
-               elseif (i.lt.fks_i_d(nFKSprocess)) then
-                  pdg(i,icontr)=idup(i,1)
-               elseif (i.ge.fks_i_d(nFKSprocess)) then
-                  pdg(i,icontr)=idup(i+1,1)
-               endif
-            else
-               do j=0,3
-                  momenta(j,i,icontr)=0d0
-               enddo
-               pdg(i,icontr)=0
-            endif
-         enddo
-      elseif(type.eq.2) then
+      if(type.eq.2) then
 c real emission
          QCDpower(icontr)=nint(2*wgtbpower+2)
          do i=1,nexternal
@@ -534,9 +507,11 @@ c real emission
             enddo
             pdg(i,icontr)=idup(i,1)
          enddo
-      elseif(type.eq.3) then
-c counter term         
-         QCDpower(icontr)=nint(2*wgtbpower+2)
+      elseif(type.eq.1 .or. type.eq.3 .or. type.eq.4) then
+c Born, counter term, or soft-virtual
+         if (type.eq.1) QCDpower(icontr)=nint(2*wgtbpower)
+         if (type.eq.3) QCDpower(icontr)=nint(2*wgtbpower+2)
+         if (type.eq.4) QCDpower(icontr)=nint(2*wgtbpower+2)
          do i=1,nexternal
             do j=0,3
                if (p1_cnt(0,1,0).gt.0d0) then
@@ -559,13 +534,14 @@ c counter term
       return
       end
 
-      subroutine include_PDF_factor_and_reweight
+      subroutine include_PDF_and_alphas
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'c_weight.inc'
+      include 'coupl.inc'
       integer i
-      double precision xlum,dlum,pi
+      double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q
       parameter (pi=3.1415926535897932385d0)
       external dlum
       integer              nFKSprocess
@@ -576,21 +552,107 @@ c counter term
          nFKSprocess=nFKS(i)
          xbk(1) = bjx(1,i)
          xbk(2) = bjx(2,i)
-         q2fact(1)=scales2(3,i)
-         q2fact(2)=q2fact(1)
+         mu2_q=scales2(1,i)
+         mu2_r=scales2(2,i)
+         mu2_f=scales2(3,i)
+         q2fact(1)=mu2_f
+         q2fact(2)=mu2_f
 c call the PDFs
 c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
          xlum = dlum()
-         weight(i)=xlum * (wgt(1,i) + wgt(2,i)*log(scales2(2,i)
-     &        /scales2(1,i)) + wgt(3,i)*log(scales2(3,i)/scales2(1,i)))
-     &        *g_strong(i)**QCDpower(i)
+         iwgt=1
+         wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
+     &        wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
          if (itype(i).eq.4) then
             virt_wgt_mint=virt_wgt_mint*xlum*g_strong(i)**QCDpower(i)
             born_wgt_mint=born_wgt_mint*xlum*g_strong(i)**QCDpower(i)
      &           /(8d0*Pi**2)
          endif
       enddo
-      
+      return
+      end
+
+      subroutine reweight_scale
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'c_weight.inc'
+      include 'reweight.inc'
+      include 'reweightNLO.inc'
+      integer i,kr,kf,iwgt_save
+      double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,alphas,g
+      parameter (pi=3.1415926535897932385d0)
+      external dlum,alphas
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      iwgt_save=iwgt
+      do i=1,icontr
+         iwgt=iwgt_save
+         nFKSprocess=nFKS(i)
+         xbk(1) = bjx(1,i)
+         xbk(2) = bjx(2,i)
+         mu2_q=scales2(1,i)
+         do kr=1,numscales
+            do kf=1,numscales
+               iwgt=iwgt+1
+               if (iwgt.gt.max_wgt) then
+                  write (*,*) 'ERROR too many weights in reweight_scale'
+     &                 ,iwgt,max_wgt
+                  stop 1
+               endif
+               mu2_r=scales2(2,i)*yfactR(kr)**2
+               mu2_f=scales2(3,i)*yfactF(kf)**2
+               q2fact(1)=mu2_f
+               q2fact(2)=mu2_f
+               xlum = dlum()
+               g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
+               wgts(iwgt,i)=xlum * (wgt(1,i)+wgt(2,i)*log(mu2_r
+     &              /mu2_q)+wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+            enddo
+         enddo
+      enddo
+      return
+      end
+
+      subroutine reweight_pdf
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'c_weight.inc'
+      include 'reweight.inc'
+      include 'reweightNLO.inc'
+      integer n,izero,i
+      parameter (izero=0)
+      double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q
+      parameter (pi=3.1415926535897932385d0)
+      external dlum,alphas
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      do n=1,numPDFs-1
+         iwgt=iwgt+1
+         if (iwgt.gt.max_wgt) then
+            write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
+     &           ,max_wgt
+            stop 1
+         endif
+         call InitPDF(n)
+         do i=1,icontr
+            nFKSprocess=nFKS(i)
+            xbk(1) = bjx(1,i)
+            xbk(2) = bjx(2,i)
+            mu2_q=scales2(1,i)
+            mu2_r=scales2(2,i)
+            mu2_f=scales2(3,i)
+            q2fact(1)=mu2_f
+            q2fact(2)=mu2_f
+            xlum = dlum()
+            wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
+     &           wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
+         enddo
+         call InitPDF(izero)
+      enddo
       return
       end
       
@@ -603,7 +665,7 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       sig=0d0
       do i=1,icontr
          if (itype(i).eq.1 .or. itype(i).eq.4) then
-            sig=sig+weight(i)
+            sig=sig+wgts(1,i)
          endif
       enddo
       return
@@ -618,7 +680,7 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       sig=0d0
       do i=1,icontr
          if (itype(i).eq.2 .or. itype(i).eq.3) then
-            sig=sig+weight(i)
+            sig=sig+wgts(1,i)
          endif
       enddo
       return
@@ -628,7 +690,10 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
-      integer i,iplot
+      include 'reweight0.inc'
+      integer i,j,iplot,max_weight
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision www(max_weight)
       do i=1,icontr
          if (itype(i).eq.1) then
             iplot=20
@@ -637,8 +702,16 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
          else
             iplot=12
          endif
-c FIXTHIS FIXTHIS: this should be cached!
-         call outfun(momenta(0,1,i),y_bst(i),weight(i),iplot)
+         if (iwgt.gt.max_weight) then
+            write (*,*) 'ERROR too many weights in fill_plots',iwgt
+     &           ,max_weight
+            stop 1
+         endif
+         do j=1,iwgt
+            www(j)=wgts(j,i)
+         enddo
+c FIXTHIS FIXTHIS: this should be cached if momenta are the same!
+         call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),iplot)
       enddo
       return
       end
@@ -656,7 +729,7 @@ c FIXTHIS FIXTHIS: this should be cached!
       common /c_vob/   virtual_over_born
       sigint=0d0
       do i=1,icontr
-         sigint=sigint+weight(i)
+         sigint=sigint+wgts(1,i)
       enddo
       f(1)=abs(sigint)
       f(2)=sigint

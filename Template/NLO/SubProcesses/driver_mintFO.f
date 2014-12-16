@@ -384,6 +384,8 @@ c timing statistics
       include 'mint.inc'
       include 'nFKSconfigs.inc'
       include 'c_weight.inc'
+      include 'reweight.inc'
+      include 'run.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99)
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min
@@ -476,9 +478,14 @@ c The n+1-body contributions (including counter terms)
 
  12   continue
 c Include PDFs and alpha_S and reweight to include the uncertainties
-      call include_PDF_factor_and_reweight
+      call include_PDF_and_alphas
+      if (doreweight) then
+         if (do_rwgt_scale) call reweight_scale
+         if (do_rwgt_pdf) call reweight_pdf
+      endif
 c$$$      call ckkw_sudakovs
 c$$$      call include_rwgt_dep_fac
+c$$$      call appl_grid_stuff
 
 c Importance sampling for FKS configurations
       if (sum) then
