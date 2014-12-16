@@ -201,6 +201,19 @@
       return
       end
 
+      logical function pdg_equal(pdg1,pdg2)
+      implicit none
+      include 'nexternal.inc'
+      integer i,pdg1(nexternal),pdg2(nexternal)
+      pdg_equal=.true.
+      do i=1,nexternal
+         if (pdg1(i).ne.pdg2(i)) then
+            pdg_equal=.false.
+            return
+         endif
+      enddo
+      end
+      
       logical function momenta_equal(p1,p2)
 c Returns .true. only if the momenta p1 and p2 are equal. To save time,
 c it only checks the 0th and 3rd components (energy and z-direction).
@@ -964,28 +977,51 @@ c     soft-collinear counter
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'reweight0.inc'
-      integer i,j,iplot,max_weight
+      integer i,ii,j,max_weight
+      logical momenta_equal,pdg_equal
+      external momenta_equal,pdg_equal
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       double precision www(max_weight)
       if (icontr.eq.0) return
+c fill the plots_wgts. Check if we can sum weights together before
+c calling the analysis routines. This is the case if the PDG codes and
+c the momenta are identical
       do i=1,icontr
-         if (itype(i).eq.2) then
-            iplot=20
-         elseif(itype(1).eq.1) then
-            iplot=11
-         else
-            iplot=12
-         endif
-         if (iwgt.gt.max_weight) then
-            write (*,*) 'ERROR too many weights in fill_plots',iwgt
-     &           ,max_weight
-            stop 1
-         endif
          do j=1,iwgt
-            www(j)=wgts(j,i)
+            plot_wgts(j,i)=0d0
          enddo
-c FIXTHIS FIXTHIS: this should be cached if momenta are the same!
-         call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),iplot)
+         if (itype(i).eq.2) then
+            plot_id(i)=20
+         elseif(itype(1).eq.1) then
+            plot_id(i)=11
+         else
+            plot_id(i)=12
+         endif
+         do ii=1,i
+            if (plot_id(ii).eq.plot_id(i)) then
+               if (pdg_equal(pdg(1,ii),pdg(1,i))) then
+                  if (momenta_equal(momenta(0,1,ii),momenta(0,1,i)))then
+                     do j=1,iwgt
+                        plot_wgts(j,ii)=plot_wgts(j,ii)+wgts(j,i)
+                     enddo
+                     exit
+                  endif
+               endif
+            endif
+         enddo
+      enddo
+      do i=1,icontr
+         if (plot_wgts(1,i).ne.0d0) then
+            if (iwgt.gt.max_weight) then
+               write (*,*) 'ERROR too many weights in fill_plots',iwgt
+     &              ,max_weight
+               stop 1
+            endif
+            do j=1,iwgt
+               www(j)=plot_wgts(j,i)
+            enddo
+            call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),plot_id(i))
+         endif
       enddo
       return
       end
