@@ -347,13 +347,21 @@ c to save grids:
 
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
-      tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR
-      write(*,*) 'Time spent in clustering : ',tFastJet      
-      write(*,*) 'Time spent in PDF_Engine : ',tPDF
+      tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
+     &     +t_as+tr_s+tr_pdf+t_plot)
+      write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
-      write(*,*) 'Time spent in Reals_evaluation: ',tDSigR
-      write(*,*) 'Time spent in IS_evaluation : ',tDSigI
-      write(*,*) 'Time spent in OneLoop_Engine : ',tOLP      
+      write(*,*) 'Time spent in Reals_evaluation: ',tReal
+      write(*,*) 'Time spent in Counter_terms : ',tCount
+      write(*,*) 'Time spent in Integrated_CT : ',tIS-tOLP
+      write(*,*) 'Time spent in Virtuals : ',tOLP      
+      write(*,*) 'Time spent in FxFx_cluster : ',tFxFx
+      write(*,*) 'Time spent in nbody_prefact : ',tf_nb
+      write(*,*) 'Time spent in n1body_prefact : ',tf_all
+      write(*,*) 'Time spent in adding_as_pdf : ',t_as
+      write(*,*) 'Time spent in reweight_scale : ',tr_s
+      write(*,*) 'Time spent in reweight_pdf : ',tr_pdf
+      write(*,*) 'Time spent in filling_plots : ',t_plot
       write(*,*) 'Time spent in other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
@@ -375,6 +383,17 @@ c timing statistics
       data tDSigI/0.0/
       data tDSigR/0.0/
       data tGenPS/0.0/
+      data tBorn/0.0/
+      data tIS/0.0/
+      data tReal/0.0/
+      data tCount/0.0/
+      data tFxFx/0.0/
+      data tf_nb/0.0/
+      data tf_all/0.0/
+      data t_as/0.0/
+      data tr_s/0.0/
+      data tr_pdf/0.0/
+      data t_plot/0.0/
       end
 
 
@@ -443,8 +462,12 @@ c The nbody contributions
          call set_cms_stuff(izero)
          if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
          call set_alphaS(p1_cnt(0,1,0))
-         if (abrv(1:2).ne.'vi') call compute_born
-         if (abrv.ne.'born')    call compute_nbody_noborn
+         if (abrv(1:2).ne.'vi') then
+            call compute_born
+         endif
+         if (abrv.ne.'born') then
+            call compute_nbody_noborn
+         endif
       endif
 
  11   continue
@@ -492,7 +515,6 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          if (do_rwgt_scale) call reweight_scale
          if (do_rwgt_pdf) call reweight_pdf
       endif
-c$$$      setup_CPU_timings
       
       if (iappl.ne.0) then
          if (sum) then
