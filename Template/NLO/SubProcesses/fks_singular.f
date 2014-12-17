@@ -721,7 +721,8 @@ c section or to fill histograms.
       include 'c_weight.inc'
       include 'coupl.inc'
       integer i
-      double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q
+      double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
+      external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum
       integer              nFKSprocess
@@ -744,10 +745,12 @@ c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
          iwgt=1
          wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
      &        wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
+         wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
          if (itype(i).eq.3) then
             virt_wgt_mint=virt_wgt_mint*xlum*g_strong(i)**QCDpower(i)
+     &           *rwgt_muR_dep_fac(sqrt(scales2(2,i)))
             born_wgt_mint=born_wgt_mint*xlum*g_strong(i)**QCDpower(i)
-     &           /(8d0*Pi**2)
+     &           /(8d0*Pi**2)*rwgt_muR_dep_fac(sqrt(mu2_r))
          endif
       enddo
       return
@@ -764,6 +767,8 @@ c wgts() array to include the weights.
       include 'reweightNLO.inc'
       integer i,kr,kf,iwgt_save
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,alphas,g
+     &     ,rwgt_muR_dep_fac
+      external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum,alphas
       integer              nFKSprocess
@@ -794,6 +799,7 @@ c wgts() array to include the weights.
                g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
                wgts(iwgt,i)=xlum * (wgt(1,i)+wgt(2,i)*log(mu2_r
      &              /mu2_q)+wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+               wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
             enddo
          enddo
       enddo
@@ -811,7 +817,8 @@ c wgts() array to include the weights.
       include 'reweightNLO.inc'
       integer n,izero,i
       parameter (izero=0)
-      double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q
+      double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
+      external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum,alphas
       integer              nFKSprocess
@@ -837,6 +844,7 @@ c wgts() array to include the weights.
             xlum = dlum()
             wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
      &           wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
+            wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
          enddo
          call InitPDF(izero)
       enddo

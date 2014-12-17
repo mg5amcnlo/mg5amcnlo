@@ -492,8 +492,6 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          if (do_rwgt_scale) call reweight_scale
          if (do_rwgt_pdf) call reweight_pdf
       endif
-
-c$$$      call include_rwgt_dep_fac
 c$$$      setup_CPU_timings
       
       if (iappl.ne.0) then
