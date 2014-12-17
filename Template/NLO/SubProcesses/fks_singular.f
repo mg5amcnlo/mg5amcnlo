@@ -15,9 +15,9 @@
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
+      call cpu_time(tBefore)
       if (f_b.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
-      call cpu_time(tBefore)
       call sborn(p_born,wgt_c)
       wgt1=dble(wgt_c(1))*f_b/g**(nint(2*wgtbpower))
       call add_wgt(2,wgt1,0d0,0d0)
@@ -33,7 +33,7 @@
       include 'coupl.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi
+      double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2,g22
       parameter (pi=3.1415926535897932385d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -49,20 +49,21 @@
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision fxfx_exp_rewgt
       common /c_fxfx_exp_regt/ fxfx_exp_rewgt
+      call cpu_time(tBefore)
       if (f_nb.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
-      call cpu_time(tBefore)
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
-      wgt1=wgtnstmp*f_nb/g**(nint(2*wgtbpower+2))
+      g2=g**(nint(2*wgtbpower))
+      g22=g**(nint(2*wgtbpower+2))
+      wgt1=wgtnstmp*f_nb/g22
       if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0) then
-         wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g**(nint(2*wgtbpower))
-     &        /(4d0*pi)
+         wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
       endif
-      wgt2=wgtwnstmpmur*f_nb/g**(nint(2*wgtbpower+2))
-      wgt3=wgtwnstmpmuf*f_nb/g**(nint(2*wgtbpower+2))
+      wgt2=wgtwnstmpmur*f_nb/g22
+      wgt3=wgtwnstmpmuf*f_nb/g22
       call add_wgt(3,wgt1,wgt2,wgt3)
-      virt_wgt_mint=virt_wgt*f_nb/g**(nint(2*wgtbpower+2))
-      born_wgt_mint=born_wgt*f_b/g**(nint(2*wgtbpower))
+      virt_wgt_mint=virt_wgt*f_nb/g22
+      born_wgt_mint=born_wgt*f_b/g2
       call cpu_time(tAfter)
       tIS=tIS+(tAfter-tBefore)
       return
@@ -86,13 +87,13 @@
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      call cpu_time(tBefore)
       if (f_r.eq.0d0) return
       x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
       ffact = f_damp(x)
       if (ffact.le.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
-      call cpu_time(tBefore)
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
       wgt1=fx_ev*s_ev*f_r/g**(nint(2*wgtbpower+2))
       call add_wgt(1,wgt1,0d0,0d0)
@@ -122,11 +123,11 @@
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      call cpu_time(tBefore)
       if (f_s.eq.0d0) return
       if (xi_i_fks_ev .gt. xiScut_used) return
       s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
       if (s_s.le.0d0) return
-      call cpu_time(tBefore)
       call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s)
       wgt1=-fx_s*s_s*f_s/g**(nint(2*wgtbpower+2))
       call add_wgt(4,wgt1,0d0,0d0)
@@ -143,7 +144,7 @@
       include 'reweight.inc'
       include 'timing_variables.inc'
       double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi_c,wgt1
-     &     ,wgt3
+     &     ,wgt3,g22
       external fks_Sij
       parameter (zero=0d0,one=1d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -159,19 +160,20 @@
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision pmass(nexternal)
+      call cpu_time(tBefore)
       include 'pmass.inc'
       if (f_c.eq.0d0 .and. f_dc.eq.0d0)return
       if (y_ij_fks_ev.le.1d0-deltaS .or. pmass(j_fks).ne.0.d0) return
       s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(1),one)
       if (s_c.le.0d0) return
-      call cpu_time(tBefore)
+      g22=g**(nint(2*wgtbpower+2))
       call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c)
-      wgt1=-fx_c*s_c*f_c/g**(nint(2*wgtbpower+2))
+      wgt1=-fx_c*s_c*f_c/g22
       call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
      $     ,deg_lxi_c)
       wgt1=wgt1+ ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)) )*
-     $     f_dc/g**(nint(2*wgtbpower+2))
-      wgt3=wgtdegrem_muF*f_dc/g**(nint(2*wgtbpower+2))
+     $     f_dc/g22
+      wgt3=wgtdegrem_muF*f_dc/g22
       call add_wgt(5,wgt1,0d0,wgt3)
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
@@ -186,7 +188,7 @@
       include 'fks_powers.inc'
       include 'timing_variables.inc'
       double precision zero,one,s_sc,fks_Sij,fx_sc,wgt1,wgt3,deg_xi_sc
-     $     ,deg_lxi_sc
+     $     ,deg_lxi_sc,g22
       external fks_Sij
       parameter (zero=0d0,one=1d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -205,20 +207,20 @@
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision pmass(nexternal)
       include 'pmass.inc'
+      call cpu_time(tBefore)
       if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
      $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0) return
       if (xi_i_fks_cnt(1).ge.xiScut_used .or. y_ij_fks_ev.le.1d0-deltaS
      $     .or. pmass(j_fks).ne.0.d0 ) return
       s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
       if (s_sc.le.0d0) return
-      call cpu_time(tBefore)
+      g22=g**(nint(2*wgtbpower+2.d0))
       call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
-      wgt1=fx_sc*s_sc*f_sc/g**(nint(2*wgtbpower+2))
+      wgt1=fx_sc*s_sc*f_sc/g22
       call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
       wgt1=wgt1+(-(wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)))
-     $     *f_dsc(1)-(wgtdegrem_xi*f_dsc(2)+wgtdegrem_lxi*f_dsc(3)))/g
-     $     **(nint(2*wgtbpower+2.d0))
-      wgt3=-wgtdegrem_muF*f_dsc(4)/g**(nint(2*wgtbpower+2.d0))
+     &     *f_dsc(1)-(wgtdegrem_xi*f_dsc(2)+wgtdegrem_lxi*f_dsc(3)))/g22
+      wgt3=-wgtdegrem_muF*f_dsc(4)/g22
       call add_wgt(6,wgt1,0d0,wgt3)
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
@@ -780,7 +782,8 @@ c section or to fill histograms.
          q2fact(1)=mu2_f
          q2fact(2)=mu2_f
 c call the PDFs
-c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the PDFs
+c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the
+c PDFs. Here, but also in reweight_scale and reweight_pdf
          xlum = dlum()
          iwgt=1
          wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
