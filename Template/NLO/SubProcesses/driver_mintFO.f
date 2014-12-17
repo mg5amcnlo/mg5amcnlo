@@ -348,7 +348,7 @@ c to save grids:
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
-     &     +t_as+tr_s+tr_pdf+t_plot)
+     &     +t_as+tr_s+tr_pdf+t_plot+t_cuts)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
@@ -362,6 +362,7 @@ c to save grids:
       write(*,*) 'Time spent in reweight_scale : ',tr_s
       write(*,*) 'Time spent in reweight_pdf : ',tr_pdf
       write(*,*) 'Time spent in filling_plots : ',t_plot
+      write(*,*) 'Time spent in cuts : ',t_cuts
       write(*,*) 'Time spent in other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
