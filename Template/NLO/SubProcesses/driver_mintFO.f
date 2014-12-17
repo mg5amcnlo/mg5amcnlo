@@ -407,7 +407,7 @@ c timing statistics
       include 'reweight.inc'
       include 'run.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
-     $     ,nexternal),rwgt,vol,sig,x(99)
+     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min
      $     ,nFKS_max,izero,ione,itwo,mohdr
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
@@ -478,13 +478,14 @@ c The n+1-body contributions (including counter terms)
       if (sum) then
          nFKS_min=1
          nFKS_max=fks_configs
-         jac=1d0
+         MC_int_wgt=1d0
       else
          nFKS_min=nFKS_picked
          nFKS_max=nFKS_picked
-         jac=1d0/vol
+         MC_int_wgt=1d0/vol
       endif
       do iFKS=nFKS_min,nFKS_max
+         jac=MC_int_wgt
          call update_fks_dir(iFKS,iconfig)
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) cycle
@@ -509,6 +510,10 @@ c The n+1-body contributions (including counter terms)
          endif
       enddo
 
+c     FIXTHIS FIXTHIS FIXTHIS:
+c     problem in ttbar+j @NLO
+
+      
  12   continue
 c Include PDFs and alpha_S and reweight to include the uncertainties
       call include_PDF_and_alphas

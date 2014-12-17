@@ -34,14 +34,16 @@ C     Include
 C
       include 'pdf.inc'
 C      
-      integer i,j,ihlast(2),ipart,iporg,ireuse,imemlast(2),iset,imem
-      double precision xlast(2),xmulast(2),pdflast(-7:7,2)
+      integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
+     &     ,i_replace
+      double precision xlast(20),xmulast(20),pdflast(-7:7,20)
       save ihlast,xlast,xmulast,pdflast,imemlast
-      data ihlast/2*-99/
-      data xlast/2*-99d9/
-      data xmulast/2*-99d9/
-      data pdflast/30*-99d9/
-      data imemlast/2*-99/
+      data ihlast/20*-99/
+      data xlast/20*-99d9/
+      data xmulast/20*-99d9/
+      data pdflast/300*-99d9/
+      data imemlast/20*-99/
+      data i_replace/0/
 
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
@@ -100,44 +102,46 @@ c     Reuse previous result, if possible
          endif
       endif
 
-c     Bjorken x and/or facrorization scale and/or PDF set are not
-c     identical to the saved values: this means a new event and we
-c     should reset everything to compute new PDF values. Also, determine
-c     if we should fill ireuse=1 or ireuse=2.
-      if (ireuse.eq.0.and.xlast(1).ne.-99d9.and.xlast(2).ne.-99d9)then
-         do i=1,2
-            xlast(i)=-99d9
-            xmulast(i)=-99d9
-            do j=-7,7
-               pdflast(j,i)=-99d9
-            enddo
-            imemlast(i)=-99
-            ihlast(i)=-99
-         enddo
-c     everything has been reset. Now set ireuse=1 to fill the first
-c     arrays of saved values below
-         ireuse=1
-      else if(ireuse.eq.0.and.xlast(1).ne.-99d9)then
-c     This is first call after everything has been reset, so the first
-c     arrays are already filled with the saved values (hence
-c     xlast(1).ne.-99d9). Fill the second arrays of saved values (done
-c     below) by setting ireuse=2
-         ireuse=2
-      else if(ireuse.eq.0)then
-c     Special: only used for the very first call to this function:
-c     xlast(i) are initialized as data statements to be equal to -99d9
-         ireuse=1
-      endif
+      i_replace=mod(i_replace,20)+1
+      
+c$$$c     Bjorken x and/or facrorization scale and/or PDF set are not
+c$$$c     identical to the saved values: this means a new event and we
+c$$$c     should reset everything to compute new PDF values. Also, determine
+c$$$c     if we should fill ireuse=1 or ireuse=2.
+c$$$      if (ireuse.eq.0.and.xlast(1).ne.-99d9.and.xlast(2).ne.-99d9)then
+c$$$         do i=1,2
+c$$$            xlast(i)=-99d9
+c$$$            xmulast(i)=-99d9
+c$$$            do j=-7,7
+c$$$               pdflast(j,i)=-99d9
+c$$$            enddo
+c$$$            imemlast(i)=-99
+c$$$            ihlast(i)=-99
+c$$$         enddo
+c$$$c     everything has been reset. Now set ireuse=1 to fill the first
+c$$$c     arrays of saved values below
+c$$$         ireuse=1
+c$$$      else if(ireuse.eq.0.and.xlast(1).ne.-99d9)then
+c$$$c     This is first call after everything has been reset, so the first
+c$$$c     arrays are already filled with the saved values (hence
+c$$$c     xlast(1).ne.-99d9). Fill the second arrays of saved values (done
+c$$$c     below) by setting ireuse=2
+c$$$         ireuse=2
+c$$$      else if(ireuse.eq.0)then
+c$$$c     Special: only used for the very first call to this function:
+c$$$c     xlast(i) are initialized as data statements to be equal to -99d9
+c$$$         ireuse=1
+c$$$      endif
 
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
-      call pftopdglha(ih,x,xmu,pdflast(-7,ireuse))
-      xlast(ireuse)=x
-      xmulast(ireuse)=xmu
-      ihlast(ireuse)=ih
-      imemlast(ireuse)=imem
+      call pftopdglha(ih,x,xmu,pdflast(-7,i_replace))
+      xlast(i_replace)=x
+      xmulast(i_replace)=xmu
+      ihlast(i_replace)=ih
+      imemlast(i_replace)=imem
 c
-      pdg2pdf=pdflast(ipart,ireuse);
+      pdg2pdf=pdflast(ipart,i_replace)
       return
       end
 
