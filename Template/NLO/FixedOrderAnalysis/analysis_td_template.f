@@ -48,11 +48,23 @@ c parameters do_rwgt_scale and do_rwgt_pdf):
       do kk=1,nwgt_analysis
 c make sure that there is a separate histogram initialized for each
 c weight
-         l=(kk-1)*2
+         l=(kk-1)*8
 c declare (i.e. book) the histograms
          call bookup(l+1,'total rate      '//weights_info(kk),
      &        1.0d0,0.5d0,5.5d0)
          call bookup(l+2,'total rate Born '//weights_info(kk),
+     &        1.0d0,0.5d0,5.5d0)
+         call bookup(l+3,'total gg      '//weights_info(kk),
+     &        1.0d0,0.5d0,5.5d0)
+         call bookup(l+4,'total gq      '//weights_info(kk),
+     &        1.0d0,0.5d0,5.5d0)
+         call bookup(l+5,'total qq      '//weights_info(kk),
+     &        1.0d0,0.5d0,5.5d0)
+         call bookup(l+6,'total aa      '//weights_info(kk),
+     &        1.0d0,0.5d0,5.5d0)
+         call bookup(l+7,'total ga      '//weights_info(kk),
+     &        1.0d0,0.5d0,5.5d0)
+         call bookup(l+8,'total qa      '//weights_info(kk),
      &        1.0d0,0.5d0,5.5d0)
       enddo
       return
@@ -102,8 +114,8 @@ c (in pb) per bin.
       ytit='sigma per bin '
 c Loop over the plots that are declared with bookup
       do kk=1,nwgt_analysis
-         l=(kk-1)*2
-         do i=1,2
+         l=(kk-1)*8
+         do i=1,8
 c convert them to a format suitable for writing
             call multitop(l+i,3,2,'total rate',ytit,'LIN')
          enddo
@@ -170,11 +182,18 @@ c loop over all the weights that are computed (depends on run_card
 c parameters do_rwgt_scale and do_rwgt_pdf):
       do kk=1,nwgt_analysis
          wgt=wgts(kk)
-         l=(kk-1)*2
+         l=(kk-1)*8
 c always fill the total rate
          call mfill(l+1,var,wgt)
 c only fill the total rate for the Born when ibody=3
          if (ibody.eq.3) call mfill(l+2,var,wgt)
+C fill the different partonic subchannels         
+         if (ipdg(1).eq.21.and.ipdg(2).eq.21) call mfill(l+3,var,wgt)
+         if ((ipdg(1).eq.21.and.abs(ipdg(2)).le.5).or.(ipdg(2).eq.21.and.abs(ipdg(1)).le.5)) call mfill(l+4,var,wgt)
+         if (abs(ipdg(1)).le.5.and.abs(ipdg(2)).le.5) call mfill(l+5,var,wgt)
+         if (ipdg(1).eq.22.and.ipdg(2).eq.22) call mfill(l+6,var,wgt)
+         if ((ipdg(1).eq.22.and.ipdg(2).eq.21).or.(ipdg(2).eq.22.and.ipdg(1).eq.21)) call mfill(l+7,var,wgt)
+         if ((ipdg(1).eq.22.and.abs(ipdg(2)).le.5).or.(ipdg(2).eq.22.and.abs(ipdg(1)).le.5)) call mfill(l+8,var,wgt)
       enddo
       return
       end
