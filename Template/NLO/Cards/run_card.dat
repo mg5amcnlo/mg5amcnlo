@@ -91,7 +91,7 @@
 # For scale dependence: factor rw_scale_up/down around central scale   *
 # For PDF uncertainty: use LHAPDF with supported set                   *
 #***********************************************************************
- .true.   = reweight_scale   ! reweight to get scale dependence
+ .false.   = reweight_scale   ! reweight to get scale dependence
   0.5     = rw_Rscale_down   ! lower bound for ren scale variations
   2.0     = rw_Rscale_up     ! upper bound for ren scale variations
   0.5     = rw_Fscale_down   ! lower bound for fact scale variations
