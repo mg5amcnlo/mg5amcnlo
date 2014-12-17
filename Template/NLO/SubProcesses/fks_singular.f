@@ -3550,6 +3550,7 @@ c Calculate the eikonal factor
       integer iord, iap
       double precision p(0:3,nexternal),collrem_xi,collrem_lxi
       double precision xi_i_fks,y_ij_fks
+      double precision collrem_xi_tmp, collrem_lxi_tmp
 
       double precision p_born(0:3,nexternal-1), wgt_born
       common/pborn/p_born
@@ -3581,6 +3582,10 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       parameter (one=1.d0)
       parameter (pi=3.1415926535897932385d0)
 
+      double complex ans_extra_cnt(2,nsplitorders)
+      integer iextra_cnt, isplitorder_born, isplitorder_cnt
+      common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
+
       if(j_fks.gt.nincoming)then
 c Do not include this contribution for final-state branchings
          collrem_xi=0.d0
@@ -3606,6 +3611,9 @@ c Unphysical kinematics: set matrix elements equal to zero
          return
       endif
 
+
+      collrem_xi=0.d0
+      collrem_lxi=0.d0
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
       shattmp=2d0*dot(p(0,1),p(0,2))
@@ -3616,6 +3624,7 @@ c entering this function
       endif
 
       call sborn(p_born,wgt_born)
+      if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
 
 c A factor gS^2 is included in the Altarelli-Parisi kernels
       oo2pi=one/(8d0*PI**2)
@@ -3627,27 +3636,43 @@ c A factor gS^2 is included in the Altarelli-Parisi kernels
 
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
-        wgt1(1) = ans_cnt(1,iord)
-        wgt1(2) = ans_cnt(2,iord)
-        
 
+C check if any extra_cnt is needed
+        if (iextra_cnt.gt.0) then
+            if (iord.eq.isplitorder_born) then
+            ! this is the contribution from the born ME
+               wgt1(1) = ans_cnt(1,iord)
+               wgt1(2) = ans_cnt(2,iord)
+            else if (iord.eq.isplitorder_cnt) then
+            ! this is the contribution from the extra cnt
+               wgt1(1) = ans_extra_cnt(1,iord)
+               wgt1(2) = ans_extra_cnt(2,iord)
+            else
+               write(*,*) 'ERROR in sreal_deg', iord
+               stop
+            endif
+        else
+           wgt1(1) = ans_cnt(1,iord)
+           wgt1(2) = ans_cnt(2,iord)
+        endif
+        
 c Insert here proper functions for PDF change of scheme. With xkkern=0.d0
 c one assumes MSbar
         xkkern=0.d0
 
         if (iord.eq.qcd_pos) iap = 1
         if (iord.eq.qed_pos) iap = 2
-        collrem_xi=ap(iap)*log(shat*delta_used/(2*q2fact(j_fks))) -
+        collrem_xi_tmp=ap(iap)*log(shat*delta_used/(2*q2fact(j_fks))) -
      #           apprime(iap) - xkkern 
-        collrem_lxi=2*ap(iap)
+        collrem_lxi_tmp=2*ap(iap)
 
 c The partonic flux 1/(2*s) is inserted in genps. Thus, an extra 
 c factor z (implicit in the flux of the reduced Born in FKS) 
 c has to be inserted here
         xnorm=1.d0/z
 
-        collrem_xi=oo2pi * dble(wgt1(1)) * collrem_xi * xnorm
-        collrem_lxi=oo2pi * dble(wgt1(1)) * collrem_lxi * xnorm
+        collrem_xi=collrem_xi + oo2pi * dble(wgt1(1)) * collrem_xi_tmp * xnorm
+        collrem_lxi=collrem_lxi + oo2pi * dble(wgt1(1)) * collrem_lxi_tmp * xnorm
 
         if(doreweight)then
 c$$$          write(*,*) 'FIX REWEIGHT'
