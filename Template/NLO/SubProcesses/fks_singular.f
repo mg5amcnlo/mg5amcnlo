@@ -214,7 +214,7 @@
      $     .or. pmass(j_fks).ne.0.d0 ) return
       s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
       if (s_sc.le.0d0) return
-      g22=g**(nint(2*wgtbpower+2.d0))
+      g22=g**(nint(2*wgtbpower+2))
       call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
       wgt1=fx_sc*s_sc*f_sc/g22
       call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
@@ -832,7 +832,7 @@ c wgts() array to include the weights.
          mu2_q=scales2(1,i)
          do kr=1,numscales
             mu2_r(kr)=scales2(2,i)*yfactR(kr)**2
-            g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
+            g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
          enddo
          do kf=1,numscales
             mu2_f(kf)=scales2(3,i)*yfactF(kf)**2
