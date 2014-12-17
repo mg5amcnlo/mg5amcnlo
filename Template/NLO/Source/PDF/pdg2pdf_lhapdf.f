@@ -86,11 +86,17 @@ c     Determine the member of the set (function of lhapdf)
       call getnmem(iset,imem)
 
       ireuse = 0
-      do i=1,2
-c     Check if result can be reused since any of last two calls
-         if (x.eq.xlast(i) .and. xmu.eq.xmulast(i) .and.
-     $        imem.eq.imemlast(i) .and. ih.eq.ihlast(i)) then
-            ireuse = i
+      do i=1,20
+c     Check if result can be reused since any of last twenty calls
+         if (ih.eq.ihlast(i)) then
+            if (x.eq.xlast(i)) then
+               if (xmu.eq.xmulast(i)) then
+                  if (imem.eq.imemlast(i)) then
+                     ireuse = i
+                     exit
+                  endif
+               endif
+            endif
          endif
       enddo
 
@@ -102,36 +108,8 @@ c     Reuse previous result, if possible
          endif
       endif
 
+c Calculated a new value: replace the value computed longest ago
       i_replace=mod(i_replace,20)+1
-      
-c$$$c     Bjorken x and/or facrorization scale and/or PDF set are not
-c$$$c     identical to the saved values: this means a new event and we
-c$$$c     should reset everything to compute new PDF values. Also, determine
-c$$$c     if we should fill ireuse=1 or ireuse=2.
-c$$$      if (ireuse.eq.0.and.xlast(1).ne.-99d9.and.xlast(2).ne.-99d9)then
-c$$$         do i=1,2
-c$$$            xlast(i)=-99d9
-c$$$            xmulast(i)=-99d9
-c$$$            do j=-7,7
-c$$$               pdflast(j,i)=-99d9
-c$$$            enddo
-c$$$            imemlast(i)=-99
-c$$$            ihlast(i)=-99
-c$$$         enddo
-c$$$c     everything has been reset. Now set ireuse=1 to fill the first
-c$$$c     arrays of saved values below
-c$$$         ireuse=1
-c$$$      else if(ireuse.eq.0.and.xlast(1).ne.-99d9)then
-c$$$c     This is first call after everything has been reset, so the first
-c$$$c     arrays are already filled with the saved values (hence
-c$$$c     xlast(1).ne.-99d9). Fill the second arrays of saved values (done
-c$$$c     below) by setting ireuse=2
-c$$$         ireuse=2
-c$$$      else if(ireuse.eq.0)then
-c$$$c     Special: only used for the very first call to this function:
-c$$$c     xlast(i) are initialized as data statements to be equal to -99d9
-c$$$         ireuse=1
-c$$$      endif
 
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
