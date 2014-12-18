@@ -3140,7 +3140,7 @@ c g->gg splitting
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).gt.0d0)) then
 c g/a->qqbar splitting
          ap(1) = TR * ( z**2 + (1d0-z)**2 )*(1d0-z)
-         ap(2) = 3d0 * ch1**2 * ( z**2 + (1d0-z)**2 )*(1d0-z)
+         ap(2) = dble(abs(col1)) * ch1**2 * ( z**2 + (1d0-z)**2 )*(1d0-z)
 
       elseif ((abs(col1).eq.3 .and. col2.eq.8) .or.
      &       (dabs(ch1).gt.0d0 .and. dabs(ch2).eq.0d0)) then
@@ -3585,6 +3585,8 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
 
       if(j_fks.gt.nincoming)then
 c Do not include this contribution for final-state branchings
@@ -3611,9 +3613,6 @@ c Unphysical kinematics: set matrix elements equal to zero
          return
       endif
 
-
-      collrem_xi=0.d0
-      collrem_lxi=0.d0
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
       shattmp=2d0*dot(p(0,1),p(0,2))
@@ -3623,8 +3622,10 @@ c entering this function
         stop
       endif
 
+      calculatedborn=.false.
       call sborn(p_born,wgt_born)
       if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
+      calculatedborn=.false.
 
 c A factor gS^2 is included in the Altarelli-Parisi kernels
       oo2pi=one/(8d0*PI**2)
@@ -3634,6 +3635,9 @@ c A factor gS^2 is included in the Altarelli-Parisi kernels
       call AP_reduced(m_type,i_type,ch_m,ch_i,t,z,ap)
       call AP_reduced_prime(m_type,i_type,ch_m,ch_i,t,z,apprime)
 
+
+      collrem_xi=0.d0
+      collrem_lxi=0.d0
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
 
