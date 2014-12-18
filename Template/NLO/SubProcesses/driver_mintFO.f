@@ -458,9 +458,9 @@ c The nbody contributions
       call generate_momenta(ndim,iconfig,jac,x,p)
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
+      call set_cms_stuff(izero)
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
       if (passcuts_nbody) then
-         call set_cms_stuff(izero)
          if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
          call set_alphaS(p1_cnt(0,1,0))
          if (abrv(1:2).ne.'vi') then
@@ -490,7 +490,9 @@ c The n+1-body contributions (including counter terms)
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
+         call set_cms_stuff(izero)
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
+         call set_cms_stuff(mohdr)
          passcuts_n1body=passcuts(p,rwgt)
          if (passcuts_nbody .and. abrv.ne.'real') then
             call set_cms_stuff(izero)
