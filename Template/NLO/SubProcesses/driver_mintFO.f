@@ -511,10 +511,6 @@ c The n+1-body contributions (including counter terms)
             call compute_real_emission(p)
          endif
       enddo
-
-c     FIXTHIS FIXTHIS FIXTHIS:
-c     problem in ttbar+j @NLO
-
       
  12   continue
 c Include PDFs and alpha_S and reweight to include the uncertainties
