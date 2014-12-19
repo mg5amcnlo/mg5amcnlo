@@ -226,7 +226,7 @@ c Fill the accumulated results
          enddo
       endif
       if (do_rwgt_pdf) then
-         xsecPDFr_acc(0)=xsecPDFr_acc(0)+www(i_wgt)
+         xsecPDFr_acc(0)=xsecPDFr_acc(0)+www(1)
          do i=1,numPDFs-1
             i_wgt=i_wgt+1
             xsecPDFr_acc(i)=xsecPDFr_acc(i)+www(i_wgt)

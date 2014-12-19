@@ -356,14 +356,14 @@ c to save grids:
       write(*,*) 'Time spent in Integrated_CT : ',tIS-tOLP
       write(*,*) 'Time spent in Virtuals : ',tOLP      
       write(*,*) 'Time spent in FxFx_cluster : ',tFxFx
-      write(*,*) 'Time spent in nbody_prefact : ',tf_nb
-      write(*,*) 'Time spent in n1body_prefact : ',tf_all
-      write(*,*) 'Time spent in adding_as_pdf : ',t_as
-      write(*,*) 'Time spent in reweight_scale : ',tr_s
-      write(*,*) 'Time spent in reweight_pdf : ',tr_pdf
-      write(*,*) 'Time spent in filling_plots : ',t_plot
-      write(*,*) 'Time spent in cuts : ',t_cuts
-      write(*,*) 'Time spent in other_tasks : ',tOther
+      write(*,*) 'Time spent in Nbody_prefactor : ',tf_nb
+      write(*,*) 'Time spent in N1body_prefactor : ',tf_all
+      write(*,*) 'Time spent in Adding_alphas_pdf : ',t_as
+      write(*,*) 'Time spent in Reweight_scale : ',tr_s
+      write(*,*) 'Time spent in Reweight_pdf : ',tr_pdf
+      write(*,*) 'Time spent in Filling_plots : ',t_plot
+      write(*,*) 'Time spent in Applying_cuts : ',t_cuts
+      write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
       if(i_momcmp_count.ne.0)then
