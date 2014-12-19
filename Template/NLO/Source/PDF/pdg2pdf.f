@@ -35,7 +35,7 @@ C
       include 'pdf.inc'
 C      
       double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L
-      integer mode,Irt,i,j,i_replace
+      integer mode,Irt,i,j,i_replace,ii
       double precision xlast(20),xmulast(20),pdflast(-7:7,20),q2max
       character*7 pdlabellast(20)
       double precision epa_electron,epa_proton
@@ -46,7 +46,7 @@ C
       data pdflast/300*-99d9/
       data pdlabellast/20*'abcdefg'/
       data ihlast/20*-99/
-      data i_replace/0/
+      data i_replace/20/
 
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
@@ -77,18 +77,22 @@ c     This will be called for any PDG code, but we only support up to 7
       endif
 
       ireuse = 0
+      ii=i_replace
       do i=1,20
-c     Check if result can be reused since any of last twenty calls
-         if (ih.eq.ihlast(i)) then
-            if (x.eq.xlast(i)) then
-               if (xmu.eq.xmulast(i)) then
-                  if (pdlabel.eq.pdlabellast(i)) then
-                     ireuse = i
+c     Check if result can be reused since any of last twenty
+c     calls. Start checking with the last call and move back in time
+         if (ih.eq.ihlast(ii)) then
+            if (x.eq.xlast(ii)) then
+               if (xmu.eq.xmulast(ii)) then
+                  if (pdlabel.eq.pdlabellast(ii)) then
+                     ireuse = ii
                      exit
                   endif
                endif
             endif
          endif
+         ii=ii-1
+         if (ii.eq.0) ii=ii+20
       enddo
 
 c     Reuse previous result, if possible

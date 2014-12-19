@@ -782,8 +782,6 @@ c section or to fill histograms.
          q2fact(1)=mu2_f
          q2fact(2)=mu2_f
 c call the PDFs
-c FIXTHIS FIXTHIS: to reduce time, we should cache the values of the
-c PDFs. Here, but also in reweight_scale and reweight_pdf
          xlum = dlum()
          iwgt=1
          wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +

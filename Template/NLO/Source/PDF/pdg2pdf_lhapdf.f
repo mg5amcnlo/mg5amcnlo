@@ -35,7 +35,7 @@ C
       include 'pdf.inc'
 C      
       integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
-     &     ,i_replace
+     &     ,i_replace,ii
       double precision xlast(20),xmulast(20),pdflast(-7:7,20)
       save ihlast,xlast,xmulast,pdflast,imemlast
       data ihlast/20*-99/
@@ -43,7 +43,7 @@ C
       data xmulast/20*-99d9/
       data pdflast/300*-99d9/
       data imemlast/20*-99/
-      data i_replace/0/
+      data i_replace/20/
 
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
@@ -86,18 +86,22 @@ c     Determine the member of the set (function of lhapdf)
       call getnmem(iset,imem)
 
       ireuse = 0
+      ii=i_replace
       do i=1,20
-c     Check if result can be reused since any of last twenty calls
-         if (ih.eq.ihlast(i)) then
-            if (x.eq.xlast(i)) then
-               if (xmu.eq.xmulast(i)) then
-                  if (imem.eq.imemlast(i)) then
-                     ireuse = i
+c     Check if result can be reused since any of last twenty
+c     calls. Start checking with the last call and move back in time
+         if (ih.eq.ihlast(ii)) then
+            if (x.eq.xlast(ii)) then
+               if (xmu.eq.xmulast(ii)) then
+                  if (imem.eq.imemlast(ii)) then
+                     ireuse = ii
                      exit
                   endif
                endif
             endif
          endif
+         ii=ii-1
+         if (ii.eq.0) ii=ii+20
       enddo
 
 c     Reuse previous result, if possible
