@@ -381,8 +381,8 @@ c*************************************************************
       elseif(imode.eq.2) then
 c Mass-shell stuff. This is MC-dependent
          call fill_MC_mshell()
-c$$$         putonshell=.true.
-         putonshell=.false.
+         putonshell=.true.
+         if (ickkw.eq.-1) putonshell=.false.
          unwgt=.true.
          open (unit=99,file='nevts',status='old',err=999)
          read (99,*) nevts

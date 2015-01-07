@@ -5,22 +5,7 @@ some parameters used in the files are included.
 
 To use:
 
-[These are now defaults in this branch (need to replace them by
-switches before merging this with the main package):
-
-* in SubProcesses/driver_mintMC.f
-   putonshell=.true.  -> putonshell=.true.
-
-* in SubProcesses/write_event.f
-   scale = shower_scale   -> scale = mu_r
-
-* in the run_card.dat, set the ES scale equal to the Ren. scale.
-
-* in madgraph/various/lhe_parser.py add
-   self.parse_reweight()
-below the "self.parse(text)" call
-
-]
+* set the ickkw parameter to -1 in the run_card.
 
 * Generate a LO event file (but using the NLO process generation),
 and unzip it once it is done
