@@ -630,7 +630,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../Source', log=False)
-        ln('leshouche_decl.inc', '../../Source', log=False)
+        ln('born_leshouche.inc', '../../Source', log=False)
 
 
         # Return to SubProcesses dir
