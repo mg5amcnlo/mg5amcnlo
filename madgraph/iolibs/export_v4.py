@@ -4830,11 +4830,11 @@ class UFO_model_to_mg4(object):
                 text = text.replace('madevent','aMCatNLO')
                 open(path, 'w').writelines(text)
         elif self.opt['export_format'] in ['standalone', 'standalone_msP','standalone_msF',
-                                  'madloop','madloop_optimized', 'standalone_rw', 'madweight']:
+                                  'madloop','madloop_optimized', 'standalone_rw', 'madweight','matchbox','madloop_matchbox']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
-        elif self.opt['export_format'] in ['matchbox','madloop_matchbox']:
-            pass
+        #elif self.opt['export_format'] in []:
+            #pass
         else:
             raise MadGraph5Error('Unknown format')
 
