@@ -6,6 +6,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		RF: When requiring more than 1M events for (N)LO+PS runs, do not go to higher precision than 0.001
                     for the grids and cross section (can be overwritten with the req_acc run_card parameter).
 		RF: Make sure that reweight info (for PDF and scale uncertainties) also works for UNLOPS events.
+		RF: When setting the B's stable in the shower_card, also set the eta_b (PDG=551) stable.
+		OM: Change the Breit-Wigner splitting for the multi-channel integration, use the bwcutoff instead of
+                    the hardcoded value 5.
 
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.

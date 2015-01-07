@@ -2406,6 +2406,18 @@ Integrated cross-section
                     '\n'.join(fjwrapper_lines) + '\n')
 
         extrapaths = self.shower_card['extrapaths'].split()
+
+        # check that the path needed by HW++ and PY8 are set if one uses these shower
+        if shower in ['HERWIGPP', 'PYTHIA8']:
+            path_dict = {'HERWIGPP': ['hepmc_path',
+                                      'thepeg_path',
+                                      'hwpp_path'],
+                         'PYTHIA8': ['pythia8_path']}
+
+            if not all([self.options[ppath] for ppath in path_dict[shower]]):
+                raise aMCatNLOError('Some paths are missing in the configuration file.\n' + \
+                        ('Please make sure you have set these variables: %s' % ', '.join(path_dict[shower])))
+
         if shower == 'HERWIGPP':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
 
@@ -3096,12 +3108,16 @@ Integrated cross-section
         scale_upp=0.0
         scale_low=0.0
         if numofscales>0:
+            if cntrl_val != 0.0:
             # max and min of the full envelope
-            scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
-            scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
+                scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
+                scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
             # ren and fac scale dependence added in quadrature
-            scale_pdf_info['scale_upp_quad'] = ((cntrl_val+math.sqrt(math.pow(max(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(max(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val-1)*100
-            scale_pdf_info['scale_low_quad'] = (1-(cntrl_val-math.sqrt(math.pow(min(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(min(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val)*100
+                scale_pdf_info['scale_upp_quad'] = ((cntrl_val+math.sqrt(math.pow(max(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(max(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val-1)*100
+                scale_pdf_info['scale_low_quad'] = (1-(cntrl_val-math.sqrt(math.pow(min(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(min(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val)*100
+            else:
+                scale_pdf_info['scale_upp'] = 0.0
+                scale_pdf_info['scale_low'] = 0.0
 
         # get the pdf uncertainty in percent (according to the Hessian method)
         lhaid=int(self.run_card['lhaid'])
@@ -3113,15 +3129,23 @@ Integrated cross-section
                 for i in range(int(numofpdf/2)):
                     pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
                     pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
-                scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
-                scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+                if cntrl_val != 0.0:
+                    scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
+                    scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+                else:
+                    scale_pdf_info['pdf_upp'] = 0.0
+                    scale_pdf_info['pdf_low'] = 0.0
+
         else:
             # use Gaussian method (NNPDF)
             pdf_stdev=0.0
             for i in range(int(numofpdf-1)):
                 pdf_stdev = pdf_stdev + pow(pdfs[i+1] - cntrl_val,2)
             pdf_stdev = math.sqrt(pdf_stdev/int(numofpdf-2))
-            scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            if cntrl_val != 0.0:
+                scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            else:
+                scale_pdf_info['pdf_upp'] = 0.0
             scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
         return scale_pdf_info
 
@@ -3631,8 +3655,8 @@ Integrated cross-section
                                              +' You are using %s',output)
                 
             # set-up the Source/make_opts with the correct applgrid-config file
-            appllibs="  APPLLIBS=$(shell %s --ldcflags) $(shell %s --ldflags) \n" \
-                             % (self.options['applgrid'],self.options['amcfast'])
+            appllibs="  APPLLIBS=$(shell %s --ldflags) $(shell %s --ldcflags) \n" \
+                             % (self.options['amcfast'],self.options['applgrid'])
             text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
             text_out=[]
             for line in text:
