@@ -489,6 +489,7 @@ c s-channel masses
                sum_all_s=0d0
                do i=t_channel,-(nexternal-3),-1
 c Breit-wigner can never go on-shell:
+                  if (itree(2,i).gt.0) cycle
                   if ( pmass(itree(2,i),iconfig).gt.sqrt(stot) .and.
      $                 pwidth(itree(2,i),iconfig).gt.0d0) then
                      cBW_FKS(iFKS,itree(2,i))=2
@@ -499,6 +500,7 @@ c     s-channel is always 2nd argument of itree, sum it to sum_all_s
                if (sum_all_s.gt.sqrt(stot)) then
 c     conflicting BWs: set all s-channels as conflicting
                   do i=t_channel,-(nexternal-3),-1
+                     if (itree(2,i).gt.0) cycle
                      if (cBW_FKS(iFKS,itree(2,i)).ne.2) then
                         cBW_FKS(iFKS,itree(2,i))=1
                         cBW_FKS_mass(iFKS,itree(2,i),-1)=sqrt(stot)/2d0
