@@ -2024,7 +2024,7 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
         replace_dict = super(ProcessExporterFortranMatchBox, self).write_matrix_element_v4(
                               writer, matrix_element, fortran_model, write=False)
         # need to add the matchbox dedicated output:
-        replace_dict["proc_prefix"] = 'ML5_%i_' % matrix_element.get('processes')[0].get('id')
+        replace_dict["proc_prefix"] = 'MG5_%i_' % matrix_element.get('processes')[0].get('id')
         replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
         
         if write:
