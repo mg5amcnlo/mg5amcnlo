@@ -1024,8 +1024,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         return res_list
 
 
-    def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", split=-1,
-                       JAMP_formatLC=None):
+    def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", 
+                       split=-1):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
         defined as a matrix element or directly as a color_amplitudes dictionary,
         Jamp_formatLC should be define to allow to add LeadingColor computation 
@@ -1064,9 +1064,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 coeff_list=coeff_list[n:]
                 res = ((JAMP_format+"=") % str(i + 1)) + \
                       ((JAMP_format % str(i + 1)) if not first and split>0 else '')
-                if JAMP_formatLC:
-                    resLC = ((JAMP_formatLC+"=") % str(i + 1)) + \
-                      ((JAMP_formatLC % str(i + 1)) if not first and split>0 else '')
 
                 first=False
                 # Optimization: if all contributions to that color basis element have
@@ -1078,11 +1075,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     common_factor = True
                     global_factor = diff_fracs[0]
                     res = res + '%s(' % self.coeff(1, global_factor, False, 0)
-                    if JAMP_formatLC:
-                        resLC = resLC + '%s(' % self.coeff(1, global_factor, False, 0)
                 
                 # loop for JAMP
                 for (coefficient, amp_number) in coefs:
+                    if not coefficient:
+                        continue
                     if common_factor:
                         res = (res + "%s" + AMP_format) % \
                                                    (self.coeff(coefficient[0],
@@ -1096,37 +1093,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                    coefficient[2],
                                                    coefficient[3]),
                                                    str(amp_number))
-                # loop for Leading color JAMP
-                if JAMP_formatLC:
-                    for (coefficient, amp_number) in coefs:
-                        if common_factor:
-                            if coefficient[3]==0:
-                                resLC = (resLC + "%s" + AMP_format) % \
-                                                   (self.coeff(coefficient[0],
-                                                   coefficient[1] / abs(coefficient[1]),
-                                                   coefficient[2],
-                                                   coefficient[3]),
-                                                   str(amp_number))
-                            else:
-                                resLC=  resLC + "+0D0" 
-                        else:
-                            if(coefficient[3]==0):
-                                resLC = (resLC + "%s" + AMP_format) % (self.coeff(coefficient[0],
-                                                   coefficient[1],
-                                                   coefficient[2],
-                                                   coefficient[3]),
-                                                   str(amp_number))
-                            else:
-                                resLC =  resLC + "+0D0" 
     
                 if common_factor:
                     res = res + ')'
-                    if JAMP_formatLC:
-                        resLC = resLC + ')'
     
                 res_list.append(res)
-                if JAMP_formatLC:
-                    res_list.append(resLC)
+                    
         return res_list
 
     def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False):
@@ -2123,11 +2095,28 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
         if not JAMP_formatLC:
             JAMP_formatLC= "LN%s" % JAMP_format
         
-        return super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
+        text = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
                                             JAMP_format=JAMP_format,
                                             AMP_format=AMP_format,
-                                            split=-1,
-                                            JAMP_formatLC=JAMP_formatLC)
+                                            split=-1)
+        
+        # Filter the col_ampls to generate only those without any 1/NC terms
+        col_amps = col_amps.get_color_amplitudes()
+        LC_col_amps = []
+        for coeff_list in col_amps:
+            to_add = []
+            for (coefficient, amp_number) in coeff_list:
+                if coefficient[3]==0:
+                    to_add.append( (coefficient, amp_number) )
+            LC_col_amps.append(to_add)
+           
+        text += super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
+                                            JAMP_format=JAMP_formatLC,
+                                            AMP_format=AMP_format,
+                                            split=-1)
+        
+        
+        return text
 
 
 
