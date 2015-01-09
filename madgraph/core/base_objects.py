@@ -2594,7 +2594,7 @@ class Process(PhysicsObject):
                         "%s is not a valid ProcessList" % str(value)
 
         if name == 'NLO_mode':
-            if value not in ['real','all','virt','tree']:
+            if value not in ['real','all','virt','tree','LOonly']:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid NLO_mode" % str(value)
         return True

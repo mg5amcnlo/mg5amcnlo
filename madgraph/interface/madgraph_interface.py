@@ -2406,7 +2406,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge']
-    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=']
     _OLP_supported = ['MadLoop', 'GoSam']
@@ -3726,7 +3726,7 @@ This implies that with decay chains:
             # then empty the perturbation_couplings_list at this stage.
             if LoopOption=='tree':
                 perturbation_couplings_list = []
-            if perturbation_couplings_list and LoopOption!='real':
+            if perturbation_couplings_list and LoopOption not in ['real', 'LOonly']:
                 if not isinstance(self._curr_model,loop_base_objects.LoopModel):
                     raise self.InvalidCmd(\
                       "The current model does not allow for loop computations.")
@@ -3736,7 +3736,6 @@ This implies that with decay chains:
                             raise self.InvalidCmd(\
                                 "Perturbation order %s is not among" % pert_order + \
                                 " the perturbation orders allowed for by the loop model.")
-
             if not self.options['loop_optimized_output'] and \
                          LoopOption not in ['tree','real'] and split_orders!=[]:
                 logger.info('The default output mode (loop_optimized_output'+\
@@ -3779,8 +3778,7 @@ This implies that with decay chains:
                   "At most one negative squared order constraint can be specified.")
             
             sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
-            
-            
+                        
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,

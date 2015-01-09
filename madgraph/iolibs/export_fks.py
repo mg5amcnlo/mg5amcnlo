@@ -291,8 +291,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def write_maxparticles_file(self, writer, matrix_elements):
         """Write the maxparticles.inc file for MadEvent"""
 
-        maxparticles = max([me.get_nexternal_ninitial()[0] \
-                              for me in matrix_elements])
+        try:
+            maxparticles = max([me.get_nexternal_ninitial()[0] \
+                              for me in matrix_elements['real_matrix_elements']])
+        except ValueError:
+            maxparticles = max([me.born_matrix_element.get_nexternal_ninitial()[0] \
+                              for me in matrix_elements['matrix_elements'] ])+ 1
 
         lines = "integer max_particles, max_branch\n"
         lines += "parameter (max_particles=%d) \n" % maxparticles
@@ -310,7 +314,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def write_maxconfigs_file(self, writer, matrix_elements):
         """Write the maxconfigs.inc file for MadEvent"""
 
-        maxconfigs = max([me.get_num_configs() for me in matrix_elements])
+        try:
+            maxconfigs = max([me.get_num_configs() \
+                            for me in matrix_elements['real_matrix_elements']])
+        except ValueError:
+            maxconfigs = max([me.born_matrix_element.get_num_configs() \
+                            for me in matrix_elements['matrix_elements']])
 
         lines = "integer lmaxconfigs\n"
         lines += "parameter (lmaxconfigs=%d)" % maxconfigs
@@ -516,14 +525,21 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                matrix_element)
 
         filename = 'nexternal.inc'
-        (nexternal, ninitial) = \
-                matrix_element.real_processes[0].get_nexternal_ninitial()
+        try:
+            (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
+        except IndexError:
+            (nexternal, ninitial) = matrix_element.born_matrix_element.get_nexternal_ninitial()
+            nexternal+= 1
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
     
         filename = 'pmass.inc'
-        self.write_pmass_file(writers.FortranWriter(filename),
+        try:
+            self.write_pmass_file(writers.FortranWriter(filename),
                              matrix_element.real_processes[0].matrix_element)
+        except IndexError:
+            self.write_pmass_file(writers.FortranWriter(filename),
+                             matrix_element.born_matrix_element)
 
         #draw the diagrams
         self.draw_feynman_diagrams(matrix_element)
@@ -672,12 +688,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 #        # Write maxconfigs.inc based on max of ME's/subprocess groups
         filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
         self.write_maxconfigs_file(writers.FortranWriter(filename),
-                                   matrix_elements['real_matrix_elements'])
+                                   matrix_elements)
         
 #        # Write maxparticles.inc based on max of ME's/subprocess groups
         filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
         self.write_maxparticles_file(writers.FortranWriter(filename),
-                                     matrix_elements['real_matrix_elements'])
+                                     matrix_elements)
 
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
@@ -930,7 +946,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         lines.append("# P -> POW_D") 
         lines2 = []
         nconfs = len(matrix_element.get_fks_info_list())
-        (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
+        try:
+            (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
+        except IndexError:
+            (nexternal, ninitial) = matrix_element.born_matrix_element.get_nexternal_ninitial()
+            nexternal+= 1
 
         max_iconfig=0
         max_leg_number=0
@@ -1050,7 +1070,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         lines.append("# M -> MOTHUP_D")
         lines.append("# C -> ICOLUP_D")
         nfksconfs = len(matrix_element.get_fks_info_list())
-        (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
+        try:
+            (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
+        except IndexError:
+            (nexternal, ninitial) = matrix_element.born_matrix_element.get_nexternal_ninitial()
+            nexternal+= 1
 
         maxproc = 0
         maxflow = 0
@@ -1079,12 +1103,13 @@ integer nfksprocess
 common/c_nfksprocess/nfksprocess
 call cpu_time(tbefore)
 """
-        for n, info in enumerate(matrix_element.get_fks_info_list()):
-            file += \
+        if matrix_element.get_fks_info_list():
+            for n, info in enumerate(matrix_element.get_fks_info_list()):
+                file += \
 """if (nfksprocess.eq.%(n)d) then
 call dlum_%(n_me)d(dlum)
 else""" % {'n': n + 1, 'n_me' : info['n_me']}
-        file += \
+            file += \
 """
 write(*,*) 'ERROR: invalid n in dlum :', nfksprocess
 stop
@@ -1094,6 +1119,15 @@ tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """
+        else:
+            file+= \
+"""call dlum_0(dlum)
+call cpu_time(tAfter)
+tPDF = tPDF + (tAfter-tBefore)
+return
+end
+"""
+
         # Write the file
         writer.writelines(file)
         return 0
@@ -1116,11 +1150,20 @@ common/c_nfksprocess/nfksprocess
 """if (nfksprocess.eq.%(n)d) then
 call smatrix_%(n_me)d(p, wgt)
 else""" % {'n': n + 1, 'n_me' : info['n_me']}
-        file += \
+
+        if matrix_element.get_fks_info_list():
+            file += \
 """
 write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
 stop
 endif
+return
+end
+"""
+        else:
+            file += \
+"""
+wgt=0d0
 return
 end
 """
@@ -1163,12 +1206,20 @@ end
                                             fortran_model)
 
     def write_pdf_calls(self, matrix_element, fortran_model):
-        """writes the parton_lum_i.f files which contain the real matrix elements""" 
-        for n, fksreal in enumerate(matrix_element.real_processes):
-            filename = 'parton_lum_%d.f' % (n + 1)
-            self.write_pdf_file(writers.FortranWriter(filename),
-                                            fksreal.matrix_element, n + 1, 
-                                            fortran_model)
+        """writes the parton_lum_i.f files which contain the real matrix elements.
+        If no real emission existst, write the one for the born""" 
+
+        if matrix_element.real_processes:
+            for n, fksreal in enumerate(matrix_element.real_processes):
+                filename = 'parton_lum_%d.f' % (n + 1)
+                self.write_pdf_file(writers.FortranWriter(filename),
+                                                fksreal.matrix_element, n + 1, 
+                                                fortran_model)
+        else:
+                filename = 'parton_lum_0.f'
+                self.write_pdf_file(writers.FortranWriter(filename),
+                                                matrix_element.born_matrix_element, 0, 
+                                                fortran_model)
 
 
     def generate_born_fks_files(self, matrix_element, fortran_model, me_number, path):
@@ -1984,10 +2035,19 @@ c     this subdir has no soft singularities
         replace_dict = {}
         fks_info_list = fksborn.get_fks_info_list()
         replace_dict['nconfs'] = len(fks_info_list)
-        replace_dict['fks_i_values'] = ', '.join(['%d' % info['fks_info']['i'] \
+        fks_i_values = ', '.join(['%d' % info['fks_info']['i'] \
                                                  for info in fks_info_list]) 
-        replace_dict['fks_j_values'] = ', '.join(['%d' % info['fks_info']['j'] \
+        fks_j_values = ', '.join(['%d' % info['fks_info']['j'] \
                                                  for info in fks_info_list]) 
+        if fks_i_values:
+            replace_dict['fks_i_line'] = "data fks_i_D / %s /" % fks_i_values
+        else:
+            replace_dict['fks_i_line'] = ''
+
+        if fks_j_values:
+            replace_dict['fks_j_line'] = "data fks_j_D / %s /" % fks_j_values
+        else:
+            replace_dict['fks_j_line'] = ''
 
         col_lines = []
         pdg_lines = []
@@ -2019,8 +2079,8 @@ c     this subdir has no soft singularities
       INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
       REAL*8 PARTICLE_CHARGE_D(%(nconfs)d, NEXTERNAL)
       
-data fks_i_D / %(fks_i_values)s /
-data fks_j_D / %(fks_j_values)s /
+ %(fks_i_line)s 
+ %(fks_j_line)s 
 
 %(fks_j_from_i_lines)s
 
@@ -2498,13 +2558,20 @@ C     charge is set 0. with QCD corrections, which is irrelevant
     
         lines = []
         info_list = fks_born.get_fks_info_list()
-        lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
-        lines.append('DATA IDEN_VALUES /' + \
-                     ', '.join(['%d' % ( 
-                     fks_born.born_matrix_element.get_denominator_factor() / \
-                     fks_born.born_matrix_element['identical_particle_factor'] * \
-                     fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
-                     for info in info_list]) + '/')
+        if info_list:
+            # if the reals have been generated, fill with the corresponding average factor
+            lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
+            lines.append('DATA IDEN_VALUES /' + \
+                         ', '.join(['%d' % ( 
+                         fks_born.born_matrix_element.get_denominator_factor() / \
+                         fks_born.born_matrix_element['identical_particle_factor'] * \
+                         fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
+                         for info in info_list]) + '/')
+        else:
+            # otherwise use the born
+            lines.append('INTEGER IDEN_VALUES(1)')
+            lines.append('DATA IDEN_VALUES / %d /' \
+                    % fks_born.born_matrix_element.get_denominator_factor())
 
         return lines
 
@@ -2517,9 +2584,15 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         that splits"""
         info_list = fks_born.get_fks_info_list()
         lines = []
-        lines.append('INTEGER IJ_VALUES(%d)' % len(info_list))
-        lines.append('DATA IJ_VALUES /' + \
-                     ', '.join(['%d' % info['fks_info']['ij'] for info in info_list]) + '/')
+        if info_list:
+            # if the reals have been generated, fill with the corresponding value of ij
+            lines.append('INTEGER IJ_VALUES(%d)' % len(info_list))
+            lines.append('DATA IJ_VALUES /' + \
+                         ', '.join(['%d' % info['fks_info']['ij'] for info in info_list]) + '/')
+        else:
+            #otherwise just put the first leg
+            lines.append('INTEGER IJ_VALUES(1)')
+            lines.append('DATA IJ_VALUES / 1 /')
 
         return lines
 
@@ -2733,7 +2806,10 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         """Write the get_color.f file for MadEvent, which returns color
         for all particles used in the matrix element."""
 
-        matrix_elements=matrix_element.real_processes[0].matrix_element
+        try:
+            matrix_elements=matrix_element.real_processes[0].matrix_element
+        except IndexError:
+            matrix_elements=[matrix_element.born_matrix_element]
 
         if isinstance(matrix_elements, helas_objects.HelasMatrixElement):
             matrix_elements = [matrix_elements]
@@ -2742,16 +2818,27 @@ C     charge is set 0. with QCD corrections, which is irrelevant
 
         # We need the both particle and antiparticle wf_ids, since the identity
         # depends on the direction of the wf.
+        # loop on the real emissions
         wf_ids = set(sum([sum([sum([sum([[wf.get_pdg_code(),wf.get_anti_pdg_code()] \
                               for wf in d.get('wavefunctions')],[]) \
                               for d in me.get('diagrams')],[]) \
                               for me in [real_proc.matrix_element]],[])\
                               for real_proc in matrix_element.real_processes],[]))
+        # and also on the born
+        wf_ids = wf_ids.union(set(sum([sum([[wf.get_pdg_code(),wf.get_anti_pdg_code()] \
+                              for wf in d.get('wavefunctions')],[]) \
+                              for d in matrix_element.born_matrix_element.get('diagrams')],[])))
+
+        # loop on the real emissions
         leg_ids = set(sum([sum([sum([[l.get('id') for l in \
                                 p.get_legs_with_decays()] for p in \
                                 me.get('processes')], []) for me in \
                                 [real_proc.matrix_element]], []) for real_proc in \
                                 matrix_element.real_processes],[]))
+        # and also on the born
+        leg_ids = leg_ids.union(set(sum([[l.get('id') for l in \
+                                p.get_legs_with_decays()] for p in \
+                                matrix_element.born_matrix_element.get('processes')], [])))
         particle_ids = sorted(list(wf_ids.union(leg_ids)))
 
         lines = """function get_color(ipdg)

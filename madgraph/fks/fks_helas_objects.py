@@ -61,9 +61,14 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         self.loop_optimized = loop_optimized
 
-        logger.info('Generating real emission matrix-elements...')
-        self['real_matrix_elements'] = self.generate_matrix_elements(
-                copy.copy(fksmulti['real_amplitudes']), combine_matrix_elements = False)
+        # generate the real ME's if they are needed.
+        # note that it may not be always the case, e.g. it the NLO_mode is LOonly
+        if fksmulti['real_amplitudes']:
+            logger.info('Generating real emission matrix-elements...')
+            self['real_matrix_elements'] = self.generate_matrix_elements(
+                    copy.copy(fksmulti['real_amplitudes']), combine_matrix_elements = False)
+        else:
+            self['real_matrix_elements'] = helas_objects.HelasMatrixElementList()
 
         self['matrix_elements'] = self.generate_matrix_elements_fks(
                                 fksmulti, 

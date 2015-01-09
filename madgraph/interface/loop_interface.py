@@ -279,7 +279,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
               (coupling_type not in self._curr_model['perturbation_couplings']):
-            if loop_type.startswith('real'):
+            if loop_type.startswith('real') or loop_type == 'LOonly':
                 if loop_type == 'real':
                     logger.info(\
                       "Beware that real corrections are generated from a tree-level model.")

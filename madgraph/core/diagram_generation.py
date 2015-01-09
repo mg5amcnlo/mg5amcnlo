@@ -1665,6 +1665,7 @@ class MultiProcess(base_objects.PhysicsObject):
                               'model':process_definition.get('model'),
                               'id': process_definition.get('id'),
                               'orders': process_definition.get('orders'),
+                              'NLO_mode': process_definition.get('NLO_mode'),
                               'required_s_channels': \
                                  process_definition.get('required_s_channels'),
                               'forbidden_onsh_s_channels': \

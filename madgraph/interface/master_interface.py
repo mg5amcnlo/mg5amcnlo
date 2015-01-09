@@ -200,11 +200,9 @@ class Switcher(object):
                 if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD( \
                     'The NLO mode %s is not valid. Please choose one among: %s' \
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
-                elif nlo_mode == 'all':
+                elif nlo_mode in ['all', 'real', 'LOonly']:
                     self.change_principal_cmd('aMC@NLO')
-                elif nlo_mode == 'real':
-                    self.change_principal_cmd('aMC@NLO')
-                elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
+                elif nlo_mode in ['virt', 'sqrvirt']:
                     self.change_principal_cmd('MadLoop')
                     
         return self.cmd.do_add(self, line, *args, **opts)

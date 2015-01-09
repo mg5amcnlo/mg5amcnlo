@@ -157,12 +157,11 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             for real in born.real_amps:
                 real.find_fks_j_from_i(born_pdg_list)
 
-
         if amps:
             if self['process_definitions'][0].get('NLO_mode') == 'all':
                 self.generate_virtuals()
             
-            elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
+            elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real','LOonly']:
                 raise fks_common.FKSProcessError(\
                    "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
                    self['process_definitions'][0].get('NLO_mode'))
@@ -175,7 +174,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             n_diag_virt = sum([len(amp.get('loop_diagrams')) 
                      for amp in self.get_virt_amplitudes()])
 
-            if n_diag_virt == 0 and n_diag_real ==0:
+            if n_diag_virt == 0 and n_diag_real ==0 and \
+                    not self['process_definitions'][0].get('NLO_mode') == 'LOonly':
                 raise fks_common.FKSProcessError(
                         'This process does not have any correction up to NLO in %s'\
                         %','.join(perturbation))
@@ -455,8 +455,12 @@ class FKSProcess(object):
                 self.orders = fks_common.find_orders(self.born_amp)
                 
             self.ndirs = 0
-            for order in self.born_proc.get('perturbation_couplings'):
-                self.find_reals(order)
+            # generate reals, when the mode is not LOonly
+            # when is LOonly it is supposed to be a 'fake' NLO process
+            # e.g. to be used in merged sampels at high multiplicities
+            if self.born_proc['NLO_mode'] != 'LOonly':
+                for order in self.born_proc.get('perturbation_couplings'):
+                    self.find_reals(order)
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):

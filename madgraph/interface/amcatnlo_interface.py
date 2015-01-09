@@ -403,7 +403,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             line = ' '.join(args[1:])
             
         proc_type=self.extract_process_type(line)
-        if proc_type[1] != 'real':
+        if proc_type[1] not in ['real', 'LOonly']:
             run_interface.check_compiler(self.options, block=False)
         self.validate_model(proc_type[1])
 
@@ -417,6 +417,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 raise MadGraph5Error("Decay processes cannot be perturbed")
         else:
             myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
+
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
         if myprocdef['perturbation_couplings']!=['QCD']:
