@@ -251,7 +251,6 @@ c     debug stuff
       double precision xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
       logical do_mapping_granny
-      common /cdo_mapping_granny/do_mapping_granny
       logical softtest,colltest
       common/sctests/softtest,colltest
 c     
@@ -279,17 +278,17 @@ c physical range of the invariant mass in the event!)
             granny_m2_red_local( 0)=granny_m2_red( 0)
             granny_m2_red_local(-1)=granny_m2_red(-1)
             granny_m2_red_local( 1)=granny_m2_red( 1)
-            granny_m2(0) =virtgranny_red(granny_m2_red_local( 0))+
-     &           granny_m2_red_local(0) ! central value
-            granny_m2(1) =virtgranny_red(granny_m2_red_local( 1)-tiny)+
-     &           granny_m2_red_local(0) ! upper limit
-            granny_m2(-1)=virtgranny_red(granny_m2_red_local(-1)+tiny)+
-     &           granny_m2_red_local(0) ! lower limit
+            granny_m2(0) =virtgranny_red(granny_m2_red_local( 0))
+     &              +granny_m2_red_local(0) ! central value
+            granny_m2(1) =virtgranny_red(granny_m2_red_local( 1)-tiny)
+     &              +granny_m2_red_local(1) ! upper limit
+            granny_m2(-1)=virtgranny_red(granny_m2_red_local(-1)+tiny)
+     &              +granny_m2_red_local(-1) ! lower limit
             if (debug_granny) then
                temp =virtgranny(granny_m2_red_local( 0))
                if (abs((temp-granny_m2(0))/temp).gt.1d-3)then
                   write (*,*) 'DEBUG error: virtgranny,virtgranny_red'
-     &                 ,granny_m2(0),temp,granny_m2_red_local(0)
+     &                 ,temp,granny_m2(0),granny_m2_red_local(0)
 c$$$                  stop
                endif
             endif
@@ -374,16 +373,16 @@ c compute the derivative numerically (to compute the Jacobian)
                temp =derivative(virtgranny,granny_m2_red_local(0)
      &              ,step,idir,granny_m2_red_local(-1)
      &              ,granny_m2_red_local(1),errder)
-               if (abs((temp-1d0)-der).gt.1d-3) then
+               if (abs(temp-der).gt.1d-3) then
                   write (*,*) 'DEBUG derivative error: '/
-     &                 /'virtgranny,virtgranny_red',der,1d0+temp
+     &                 /'virtgranny,virtgranny_red',temp,der
                endif
             endif
             if(abs(der).lt.1.d-8) der=0.d0
             if (errder.gt.0.1d0) then
-               write (*,*) 'error is large in the computation of the'/
+               write (*,*) 'ERROR is large in the computation of the'/
      $              /' derivative',errder,der
-               stop
+c$$$               stop
             endif
 c compute the counter event kinematics using granny_m2(0) as mass for
 c the grandmother.
