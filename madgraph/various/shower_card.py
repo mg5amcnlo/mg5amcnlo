@@ -86,13 +86,16 @@ class ShowerCard(dict):
             content = open(card_path).read()
         else:
             content = card_path
-        lines = [l for l in content.split('\n') \
-                    if '=' in l and not l.startswith('#')] 
+        lines = content.split('\n')
         for l in lines:
-            args =  l.split('#')[0].split('=')
-            key = args[0].strip().lower()
-            value = args[1].strip()
-            self.set_param(key, value)
+          if '#' in l:
+             l = l.split('#',1)[0]
+          if '=' not in l:
+             continue
+          args = l.split('=',1) # here the 1 is important in case of string passed
+          key = args[0].strip().lower()
+          value = args[1].strip()
+          self.set_param(key, value)
         for i in range(1,100):
             self['dm_'+str(i)] = ''
 
