@@ -581,6 +581,7 @@ cat <<EOF >> $ifile
 521:maydecay = false               ! stable B hadrons
 531:maydecay = false               ! stable B hadrons
 541:maydecay = false               ! stable B hadrons
+551:maydecay = false               ! stable B hadrons
 553:maydecay = false               ! stable B hadrons
 5112:maydecay = false              ! stable B hadrons
 5122:maydecay = false              ! stable B hadrons

@@ -14,8 +14,8 @@ mw_run  pretrained_tf    logical   T                    # if we pre-trained the 
 mw_run  use_sobol        logical   F                    # don t use sobol generator by default
 mw_run  inputfile        string   './Events/input.lhco' # path to the inputfile
 
-mw_parameter mode logical 1                         
-mw_parameter 1    logical mw_parameter@@mode # choose the mode for the generation of the param_card.dat
+mw_parameter mode integer 1                         
+mw_parameter 1    integer mw_parameter@@mode # choose the mode for the generation of the param_card.dat
 mw_parameter 2    logical 0                  # put on 1 to add new param_card.dat (for step 1) creates the corresponding new events dir if step 5 already performs
 
 mw_perm  permutation    logical T                       # make the permutation between identical particles/jets

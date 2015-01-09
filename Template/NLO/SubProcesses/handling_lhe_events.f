@@ -483,7 +483,7 @@ c
       integer event_id
       common /c_event_id/ event_id
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
       include 'reweight_all.inc'
@@ -616,9 +616,6 @@ c
                  do i=1,mexternal
                     write(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
                  enddo
-c$$$                 do i=1,mexternal
-c$$$                    write(ifile,405)(wgtkin_all(j,i,2,iFKS),j=0,3)
-c$$$                 enddo
                  write(ifile,402)
      &                wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
      &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
@@ -746,7 +743,7 @@ c
       integer ii,j,nps,nng,iFKS,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
       include 'reweight_all.inc'
@@ -976,7 +973,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       integer ii,j,nps,nng,iFKS,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
       include 'reweight_all.inc'
