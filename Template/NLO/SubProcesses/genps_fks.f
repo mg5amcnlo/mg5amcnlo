@@ -258,7 +258,7 @@ c
       do i=-1,1
          granny_m2_red(i)=-99d99
       enddo
-cFIXTHIS FIXTHIS
+c     FIXTHIS FIXTHIS
       do_mapping_granny=.true.
 
       if (granny_is_res) then
@@ -279,12 +279,14 @@ c physical range of the invariant mass in the event!)
             granny_m2_red_local( 0)=granny_m2_red( 0)
             granny_m2_red_local(-1)=granny_m2_red(-1)
             granny_m2_red_local( 1)=granny_m2_red( 1)
-            granny_m2(0) =virtgranny(granny_m2_red_local( 0)) ! central value
-            granny_m2(1) =virtgranny(granny_m2_red_local( 1)-tiny) ! upper limit
-            granny_m2(-1)=virtgranny(granny_m2_red_local(-1)+tiny) ! lower limit
+            granny_m2(0) =virtgranny_red(granny_m2_red_local( 0))+
+     &           granny_m2_red_local(0) ! central value
+            granny_m2(1) =virtgranny_red(granny_m2_red_local( 1)-tiny)+
+     &           granny_m2_red_local(0) ! upper limit
+            granny_m2(-1)=virtgranny_red(granny_m2_red_local(-1)+tiny)+
+     &           granny_m2_red_local(0) ! lower limit
             if (debug_granny) then
-               temp =virtgranny_red(granny_m2_red_local( 0))
-     &              +granny_m2_red_local(0)
+               temp =virtgranny(granny_m2_red_local( 0))
                if (abs((temp-granny_m2(0))/temp).gt.1d-3)then
                   write (*,*) 'DEBUG error: virtgranny,virtgranny_red'
      &                 ,granny_m2(0),temp,granny_m2_red_local(0)
@@ -365,13 +367,14 @@ c corresponding granny_m2.
 c compute the derivative numerically (to compute the Jacobian)
             only_event_phsp=.true.
             skip_event_phsp=.false.
-            der=derivative(virtgranny,granny_m2_red_local(0),step,idir,
-     &           granny_m2_red_local(-1),granny_m2_red_local(1),errder)
+            der=1d0+derivative(virtgranny_red,granny_m2_red_local(0)
+     &           ,step,idir,granny_m2_red_local(-1)
+     &           ,granny_m2_red_local(1),errder)
             if (debug_granny) then
-               temp =derivative(virtgranny_red,granny_m2_red_local(0)
+               temp =derivative(virtgranny,granny_m2_red_local(0)
      &              ,step,idir,granny_m2_red_local(-1)
      &              ,granny_m2_red_local(1),errder)
-               if (abs(1d0+temp-der).gt.1d-3) then
+               if (abs((temp-1d0)-der).gt.1d-3) then
                   write (*,*) 'DEBUG derivative error: '/
      &                 /'virtgranny,virtgranny_red',der,1d0+temp
                endif
