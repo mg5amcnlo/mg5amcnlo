@@ -144,7 +144,7 @@ class ShowerCard(dict):
             newlines = []
             for line in self.text.split('\n'):
                 key_match = key_re.match(line)
-                if key_match and str(key)[0:2].upper() != 'DM':
+                if key_match and not str(key).upper().startswith('DM'):
                     try:
                         comment = line.split('#')[1]
                     except:
@@ -156,12 +156,12 @@ class ShowerCard(dict):
                             newlines.append('%s = %s #%s' % (key, 'T', comment))
                         else:
                             newlines.append('%s = %s #%s' % (key, 'F', comment))
-                elif key_match and str(key)[0:2].upper() == 'DM':
-                    del line
-                else: 
+                elif key_match and str(key).upper().startswith('DM'):
+                    pass
+                else:
                     newlines.append(line)
 
-            if str(key)[0:2].upper() == 'DM':
+            if str(key).upper().startswith('DM'):
                 newlines.append('%s = %s' % (str(key).upper(), value[1:len(value)-1]))
 
             self.text = '\n'.join(newlines) + '\n'

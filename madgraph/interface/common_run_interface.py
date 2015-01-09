@@ -2504,10 +2504,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 args[start] = [l for l in self.run_set if l.lower() == args[start]][0]
 
             if args[start] in self.conflict and card == '':
-                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
-                text += ' in the format < set card parameter value>'
+                text  = 'Ambiguous name (present in more than one card). Will assume it to be referred to run_card.\n'
+                text += 'If this is not intended, please reset it in the run_card and specify the relevant card to \n'
+                text += 'edit, in the format < set card parameter value >'
                 logger.warning(text)
-                return
 
             if args[start+1] == 'default':
                 default = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
