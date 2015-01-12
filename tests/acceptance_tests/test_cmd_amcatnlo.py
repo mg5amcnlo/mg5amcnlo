@@ -823,7 +823,32 @@ class TestMECmdShell(unittest.TestCase):
 
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])
-        
+
+
+    def test_jet_veto_xsec(self):
+        """tests the jet-veto cross section at NNLL+NLO"""
+        self.generate_production()
+        cmd = """generate_events NLO
+                 set ickkw -1
+                 set ptj 10
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        self.assertFalse(self.cmd_line.options['automatic_html_opening'])
+        self.cmd_line.import_command_file('/tmp/mg5_cmd')
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        text=open('%s/Events/run_01/summary.txt' % self.path,'r').read()
+        data=text.split('\n')
+        for i,line in enumerate(data):
+            if 'Process' in line:
+                break
+        #      Run at p-p collider (6500 + 6500 GeV)
+        self.assertTrue('Run at p-p collider (6500 + 6500 GeV)' in data[i+1])
+        cross_section = data[i+2]
+        cross_section = float(cross_section.split(':')[1].split('+-')[0])
+        try:
+            self.assertAlmostEqual(6011.0, cross_section,delta=50)
+        except TypeError:
+            self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 
     def load_result(self, run_name):
         

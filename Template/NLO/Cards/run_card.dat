@@ -100,11 +100,16 @@
  244601   = PDF_set_min      ! First of the error PDF sets 
  244700   = PDF_set_max      ! Last of the error PDF sets
 #***********************************************************************
-# Merging - WARNING! Applies merging only at the hard-event level.     *
-# After showering an MLM-type merging should be applied as well.       *
-# See http://amcatnlo.cern.ch/FxFx_merging.htm for more details.       *
+# ickkw parameter:                                                     *
+#   0: No merging                                                      *
+#   3: FxFx Merging - WARNING! Applies merging only at the hard-event  *
+#      level. After showering an MLM-type merging should be applied as *
+#      well. See http://amcatnlo.cern.ch/FxFx_merging.htm for details. *
+#   4: UNLOPS merging (with pythia8 only). No interface from within    *
+#      MG5_aMC available, but available in Pythia8.                    *
+#  -1: NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph].    *
 #***********************************************************************
- 0        = ickkw            ! 0 no merging, 3 FxFx merging, 4 UNLOPS
+ 0        = ickkw
 #***********************************************************************
 #
 #***********************************************************************

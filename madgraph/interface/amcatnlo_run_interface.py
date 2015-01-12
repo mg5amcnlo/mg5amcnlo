@@ -4153,6 +4153,10 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)
     #                    raise aMCatNLOError(error)
+                elif int(self.run_card['ickkw']) == -1 and mode in ['aMC@NLO', 'noshower', 'LO', 'noshowerLO']:
+                    # NNLL+NLO jet-veto only possible for LO event generation or fNLO runs.
+                    logger.error("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO.""")
+                    raise self.InvalidCmd(error)
         if 'aMC@' in mode or mode == 'onlyshower':
             self.shower_card = self.banner.charge_card('shower_card')
             
