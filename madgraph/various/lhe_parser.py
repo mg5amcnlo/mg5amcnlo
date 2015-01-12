@@ -1,10 +1,12 @@
 import collections
 import re
-import misc
+import math
+import time
+
 if '__main__' == __name__:
     import sys
     sys.path.append('../../')
-
+import misc
 import logging
 logger = logging.getLogger("madgraph.lhe_parser")
 
@@ -31,6 +33,13 @@ class Particle(object):
     
     def __init__(self, line=None, event=None):
         """ """
+        
+        if isinstance(line, Particle):
+            for key in line.__dict__:
+                setattr(self, key, getattr(line, key))
+            if event:
+                self.event = event
+            return
         
         self.event = event
         self.event_id = len(event) #not yet in the event
@@ -99,7 +108,9 @@ class Particle(object):
                self.helicity)
             
     def __eq__(self, other):
-        
+
+        if not isinstance(other, Particle):
+            return False        
         if self.pid == other.pid and \
            self.status == other.status and \
            self.mother1 == other.mother1 and \
@@ -116,8 +127,17 @@ class Particle(object):
             return True
         return False
         
+    def set_momentum(self, momentum):
         
+        self.E = momentum.E
+        self.px = momentum.px 
+        self.py = momentum.py
+        self.pz = momentum.pz
+
+    def add_decay(self, decay_event):
+        """associate to this particle the decay in the associate event"""
         
+        return self.event.add_decay_to_particle(self.event_id, decay_event)
             
     def __repr__(self):
         return 'Particle("%s", event=%s)' % (str(self), self.event)
@@ -233,7 +253,162 @@ class Event(list):
             except ValueError, error:
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]
+
+
+    def add_decay_to_particle(self, position, decay_event):
+        """define the decay of the particle id by the event pass in argument"""
+        
+        this_particle = self[position]
+        #change the status to internal particle
+        this_particle.status = 2
+        this_particle.helicity = 0
+        
+        # some usefull information
+        decay_particle = decay_event[0]
+        this_4mom = FourMomentum(this_particle)
+        nb_part = len(self) #original number of particle
+        
+        thres = decay_particle.E*1e-10
+        assert max(decay_particle.px, decay_particle.py, decay_particle.pz) < thres,\
+            "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
+        
+        self.nexternal += decay_event.nexternal -2
+        
+        # add the particle with only handling the 4-momenta/mother
+        # color information will be corrected later.
+        for particle in decay_event[1:]:
+            # duplicate particle to avoid border effect
+            new_particle = Particle(particle, self)
+            new_particle.event_id = len(self)
+            self.append(new_particle)
+            # compute and assign the new four_momenta
+            new_momentum = this_4mom.boost(FourMomentum(new_particle))
+            new_particle.set_momentum(new_momentum)
+            # compute the new mother
+            for tag in ['mother1', 'mother2']:
+                mother = getattr(particle, tag)
+                if isinstance(mother, Particle):
+                    mother_id = getattr(particle, tag).event_id
+                    if mother_id == 0:
+                        setattr(new_particle, tag, this_particle)
+                    else:
+                        setattr(new_particle, tag, self[nb_part + mother_id -1]) 
+
+            
+        # Need to correct the color information of the particle
+        # first find the first available color index
+        max_color=501
+        for particle in self[:nb_part]:
+            max_color=max(max_color, particle.color1, particle.color2)
+        
+        # define a color mapping and assign it:
+        color_mapping = {}
+        color_mapping[decay_particle.color1] = this_particle.color1
+        color_mapping[decay_particle.color2] = this_particle.color2
+        for particle in self[nb_part:]:
+            if particle.color1:
+                if particle.color1 not in color_mapping:
+                    max_color +=1
+                    color_mapping[particle.color1] = max_color
+                    particle.color1 = max_color
+                else:
+                    particle.color1 = color_mapping[particle.color1]
+            if particle.color2:
+                if particle.color2 not in color_mapping:
+                    max_color +=1
+                    color_mapping[particle.color2] = max_color
+                    particle.color2 = max_color
+                else:
+                    particle.color2 = color_mapping[particle.color2]                
+
+    def remove_decay(self, pdg_code=0, event_id=None):
+        
+        to_remove = []
+        if event_id is not None:
+            to_remove.append(self[event_id])
     
+        if pdg_code:
+            for particle in self:
+                if particle.pid == pdg_code:
+                    to_remove.append(particle) 
+                    
+        new_event = Event()
+        # copy first line information + ...
+        for tag in ['nexternal', 'ievent', 'wgt', 'aqcd', 'scale', 'aqed','tag','comment']:
+            setattr(new_event, tag, getattr(self, tag))
+            
+        for particle in self:
+            if isinstance(particle.mother1, Particle) and particle.mother1 in to_remove:
+                to_remove.append(particle)
+                if particle.status == 1:
+                    new_event.nexternal -= 1
+                continue
+            elif isinstance(particle.mother2, Particle) and particle.mother2 in to_remove:
+                to_remove.append(particle)
+                if particle.status == 1:
+                    new_event.nexternal -= 1
+                continue
+            else:
+                new_event.append(Particle(particle))
+                
+        #ensure that the event_id is correct for all_particle
+        # and put the status to 1 for removed particle
+        for pos, particle in enumerate(new_event):
+            particle.event_id = pos
+            if particle in to_remove:
+                particle.status = 1
+                new_event.nexternal += 1
+        return new_event
+
+    def get_decay(self, pdg_code=0, event_id=None):
+        
+        to_start = []
+        if event_id is not None:
+            to_start.append(self[event_id])
+    
+        elif pdg_code:
+            for particle in self:
+                if particle.pid == pdg_code:
+                    to_start.append(particle)
+                    break 
+
+        new_event = Event()
+        # copy first line information + ...
+        for tag in ['ievent', 'wgt', 'aqcd', 'scale', 'aqed','tag','comment']:
+            setattr(new_event, tag, getattr(self, tag))
+        
+        # Add the decaying particle
+        old2new = {}            
+        new_decay_part = Particle(to_start[0])
+        new_decay_part.mother1 = None
+        new_decay_part.mother2 = None
+        new_decay_part.status =  -1
+        old2new[new_decay_part.event_id] = len(old2new) 
+        new_event.append(new_decay_part)
+        
+        # add the other particle   
+        for particle in self:
+            if isinstance(particle.mother1, Particle) and particle.mother1.event_id in old2new\
+            or isinstance(particle.mother2, Particle) and particle.mother2.event_id in old2new:
+                old2new[particle.event_id] = len(old2new) 
+                new_event.append(Particle(particle))
+
+        #ensure that the event_id is correct for all_particle
+        # and correct the mother1/mother2 by the new reference
+        nexternal = 0
+        for pos, particle in enumerate(new_event):
+            particle.event_id = pos
+            if particle.mother1:
+                particle.mother1 = new_event[old2new[particle.mother1.event_id]]
+            if particle.mother2:
+                particle.mother2 = new_event[old2new[particle.mother2.event_id]]
+            if particle.status in [-1,1]:
+                nexternal +=1
+        new_event.nexternal = nexternal
+        
+        return new_event
+
+            
     def check(self):
         """check various property of the events"""
         
@@ -270,30 +445,8 @@ class Event(list):
             raise Exception, "Do not conserve Pz %s, %s" % (pz/abspz, pz)
             
         #2. check the color of the event
-        self.check_color_structure()
-            
-            
-            
-            
-            
-            
-            
-            
-        
-
-        
-
-        
-
-        
-        
-        
-        
-           
-           
-           
-           
-            
+        self.check_color_structure()            
+         
     def assign_scale_line(self, line):
         """read the line corresponding to global event line
         format of the line is:
@@ -323,6 +476,8 @@ class Event(list):
         initial.sort(), final.sort()
         tag = (tuple(initial), tuple(final))
         return tag, order
+    
+
     
     def check_color_structure(self):
         """check the validity of the color structure"""
@@ -501,22 +656,230 @@ class Event(list):
         return out    
 
 
+class FourMomentum(object):
+    """a convenient object for 4-momenta operation"""
+    
+    def __init__(self, obj=0, px=0, py=0, pz=0, E=0):
+        """initialize the four momenta"""
 
-if '__main__' == __name__:    
-    lhe = EventFile('unweighted_events.lhe')
-    output = open('output_events.lhe', 'w')
-    #write the banner to the output file
-    output.write(lhe.banner)
-    # Loop over all events
-    for event in lhe:
-        for particle in event:
-            # modify particle attribute: here remove the mass
-            particle.mass = 0
-            particle.vtim = 2 # The one associate to distance travelled by the particle.
+        if obj is 0 and E:
+            obj = E
+         
+        if isinstance(obj, (FourMomentum, Particle)):
+            px = obj.px
+            py = obj.py
+            pz = obj.pz
+            E = obj.E
+        else:
+            E =obj
 
-        #write this modify event
-        output.write(str(event))
+            
+        self.E = E
+        self.px = px
+        self.py = py
+        self.pz =pz
+        
+    def mass(self):
+        """return the mass"""    
+        return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
 
+    def mass_sqr(self):
+        """return the mass square"""    
+        return self.E**2 - self.px**2 - self.py**2 - self.pz**2
+    
+    def pt2(self):
+        """ return the pt square """
+        
+        return  self.px**2 + self.py**2 + self.pz**2
+    
+    def __add__(self, obj):
+        
+        assert isinstance(obj, FourMomentum)
+        new = FourMomentum(self.E+obj.E,
+                           self.px + obj.px,
+                           self.py + obj.py,
+                           self.pz + obj.pz)
+        return new
+    
+    def __iadd__(self, obj):
+        """update the object with the sum"""
+        self.E += obj.E
+        self.px += obj.px
+        self.py += obj.py
+        self.pz += obj.pz
+        return self
+    
+    def __pow__(self, power):
+        assert power in [1,2]
+        
+        if power == 1:
+            return FourMomentum(self)
+        elif power == 2:
+            return self.mass_sqr()
+        
+    def boost(self, mom):
+        """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
+        the output is the 4-momenta in the frame of this 4-momenta
+        function copied from HELAS routine."""
+
+        
+        pt = self.pt2()
+        if pt:
+            s3product = self.px * mom.px + self.py * mom.py + self.pz * mom.pz
+            mass = self.mass()
+            lf = (self.E + (self.E - mass) * s3product / pt ) / mass
+            return FourMomentum(E=(self.E*mom.E+s3product)/mass,
+                           px=mom.px + self.px * lf,
+                           py=mom.py + self.py * lf,
+                           pz=mom.pz + self.pz * lf)
+        else:
+            return FourMomentum(mom)
+                
+
+if '__main__' == __name__:   
+    
+    # Example 1: adding some missing information to the event (here distance travelled)
+    if False: 
+        lhe = EventFile('unweighted_events.lhe')
+        output = open('output_events.lhe', 'w')
+        #write the banner to the output file
+        output.write(lhe.banner)
+        # Loop over all events
+        for event in lhe:
+            for particle in event:
+                # modify particle attribute: here remove the mass
+                particle.mass = 0
+                particle.vtim = 2 # The one associate to distance travelled by the particle.
+    
+            #write this modify event
+            output.write(str(event))
+        output.write('</LesHouchesEvent>\n')
+    
+    # Example 2: Adding the decay of one particle (Bridge Method).
+    if False:
+        orig_lhe = EventFile('unweighted_events.lhe')
+        decay_lhe = EventFile('unweighted_decay.lhe')
+        output = open('output_events.lhe', 'w')
+        output.write(orig_lhe.banner) #need to be modified by hand!
+        pid_to_decay  = 15 #which particle to decay
+        bypassed_decay = {} # not yet use decay due to wrong helicity
+        
+        counter = 0
+        start = time.time()
+        for event in orig_lhe:
+            if counter % 1000 == 1:
+                print "decaying event number %s [%s s]" % (counter, time.time()-start)
+            counter +=1
+            for particle in event:
+                if particle.pid == pid_to_decay:
+                    #ok we have to decay this particle!
+                    helicity = particle.helicity
+                    # use the already parsed_event if any
+                    done = False
+                    if helicity in bypassed_decay and bypassed_decay[helicity]:
+                        # use one of the already parsed (but not used) decay event
+                        for decay in bypassed_decay[helicity]:
+                            if decay[0].helicity == helicity:
+                                particle.add_decay(decay)
+                                bypassed_decay[helicity].remove(decay)
+                                done = True
+                                break
+                    # read the decay event up to find one valid decay
+                    while not done:
+                        try:
+                            decay = decay_lhe.next()
+                        except StopIteration:
+                            raise Exception, "not enoug event in the decay file"
+                        
+                        if helicity == decay[0].helicity or helicity==9:
+                            particle.add_decay(decay)
+                            done=True
+                        elif decay[0].helicity in bypassed_decay:
+                            if len(bypassed_decay[decay[0].helicity]) < 100:
+                                bypassed_decay[decay[0].helicity].append(decay)
+                            #limit to 100 to avoid huge increase of memory if only 
+                            #one helicity is present in the production sample.
+                        else:
+                            bypassed_decay[decay[0].helicity] = [decay]
+
+            output.write(str(event))
+        output.write('</LesHouchesEvent>\n')
+        
+    # Example 3: Plotting some variable
+    if True:
+        lhe = EventFile('unweighted_events.lhe')
+        import matplotlib.pyplot as plt
+        import matplotlib.gridspec as gridspec
+        nbins = 100
+        
+        #mtau, wtau = 45, 5.1785e-06
+        mtau, wtau = 1.777, 4.027000e-13
+        nb_pass = 0
+        data, data2, data3 = [], [], []
+        for event in lhe:
+            nb_pass +=1
+            if nb_pass > 10000:
+                break
+            tau1 = FourMomentum()
+            tau2 = FourMomentum()
+            for part in event:
+                if part.pid in [-12,11,16]:
+                    momenta = FourMomentum(part)
+                    tau1 += momenta
+                elif part.pid == 15:
+                    tau2 += FourMomentum(part)
+
+            if abs((mtau-tau2.mass())/wtau)<1e6 and tau2.mass() >1:               
+                data.append((tau1.mass()-mtau)/wtau)
+                data2.append((tau2.mass()-mtau)/wtau)  
+
+        gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
+        gs1.update(wspace=0, hspace=0) # set the spacing between axes. 
+        ax = plt.subplot(gs1[0])
+        
+        n, bins, patches = ax.hist(data2, nbins, histtype='step', label='original')
+        n2, bins2, patches2 = ax.hist(data, bins=bins, histtype='step',label='reconstructed')
+        import cmath
+        
+        breit = lambda m : math.sqrt(4*math.pi)*1/(((m)**2-mtau**2)**2+(mtau*wtau)**2)*wtau
+        
+        data3 = [breit(mtau + x*wtau)*wtau*16867622.6624*50 for x in bins]
+
+        ax.plot(bins, data3,label='breit-wigner')
+        # add the legend
+        ax.legend()
+        # add on the right program tag
+        ax_c = ax.twinx()
+        ax_c.set_ylabel('MadGraph5_aMC@NLO')
+        ax_c.yaxis.set_label_coords(1.01, 0.25)
+        ax_c.set_yticks(ax.get_yticks())
+        ax_c.set_yticklabels([])
+        
+        plt.title('invariant mass of tau LHE/reconstructed')
+        plt.axis('on')
+        ax.set_xticklabels([])
+        # ratio plot
+        ax = plt.subplot(gs1[1])
+        data4 = [n[i]/(data3[i]) for i in range(nbins)]
+        ax.plot(bins, data4 + [0] , 'b')
+        data4 = [n2[i]/(data3[i]) for i in range(nbins)]
+        ax.plot(bins, data4 + [0] , 'g')
+        ax.set_ylim([0,2])
+        #remove last y tick to avoid overlap with above plot:
+        tick = ax.get_yticks()
+        ax.set_yticks(tick[:-1])
+        
+        
+
+
+        plt.axis('on')
+        plt.xlabel('(M - Mtau)/Wtau')                                                                                                                                 
+        plt.show()
+
+        
+
+                            
+                            
     
     
     

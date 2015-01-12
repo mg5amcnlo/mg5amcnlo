@@ -50,13 +50,14 @@ class one_plot:
         self.histo[tag] = {}
         self.histo[tag]["values"] = string_values
         old_max = self.max
+
         for line in string_values.split('\n'):
             split = line.split()
-            if len(split) ==3:
+            if len(split) in [2,3]:
                 self.max = max(self.max, float(line.split()[1]))
         if self.max != old_max:
             self.max_file = tag
-            
+        
     def get_histo(self, tag, norm):
         """return a string with the histogram values, and the normalization """
         if tag not in self.histo or self.histo[tag]["values"] == '':
@@ -100,6 +101,7 @@ class load_data:
         for index, tag_plot in enumerate(self.order_plots):
             norm1 = 1 
             norm2 = 1
+            
             if self.plots[tag_plot].max_file == file1:
                 color1, color2 = 'WHITE','BLUE'
                 histtype1, histtype2 = 'HIST SOLID\n', 'SET PATTERN .05 .07\n' 
@@ -254,6 +256,7 @@ def merge_all_plots(path1, path2, outputpath='/tmp', td='../../td/td', MA=None):
             continue
         if title not in all_plot1:
             continue
+        print "DEALING with", title
         my_data = load_data()
         my_data.import_data(pjoin(path1, all_plot1[title]), 1)
         my_data.import_data(pjoin(path2, filename), 2)

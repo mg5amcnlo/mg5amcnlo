@@ -383,6 +383,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 event.reweight_data[tag_name] = weight
                 #write this event with weight
                 output.write(str(event))
+                if self.mother:
+                    event.wgt = weight
+                    event.reweight_data = {}
+                    output2.write(str(event))
+
             else:
                 event.wgt = weight
                 event.reweight_data = {}
@@ -409,10 +414,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 results.add_detail('nb_event', event_nb+1)
                 results.add_detail('cross', cross)
                 results.add_detail('error', 'nan')
-                self.mother.create_plot(mode='reweight', event_path=output2.name,
+                if False:
+                    self.mother.create_plot(mode='reweight', event_path=output2.name,
                                         tag=self.run_card['run_tag'])
                 #modify the html output to add the original run
-                if 'plot' in results.current.reweight:
+                if False and 'plot' in results.current.reweight:
                     html_dir = pjoin(self.mother.me_dir, 'HTML', run_name)
                     td = pjoin(self.mother.options['td_path'], 'td') 
                     MA = pjoin(self.mother.options['madanalysis_path'])
@@ -454,10 +460,20 @@ class ReweightInterface(extended_cmd.Cmd):
     def calculate_weight(self, event):
         
         event.parse_reweight()
-        w_orig = self.calculate_matrix_element(event, 0)
-        w_new =  self.calculate_matrix_element(event, 1)
         
-        return w_new/w_orig*event.wgt
+        no_decay_event = event.remove_decay(15)
+        decay_event = event.get_decay(15)
+        
+        w_orig = self.calculate_matrix_element(no_decay_event, 0)
+        w_new =  self.calculate_matrix_element(event, 1)
+        w_decay = self.calculate_matrix_element(decay_event, 1)
+        
+        assert len(no_decay_event) != len(event)
+        assert len(decay_event) != len(event)
+#        print w_new/w_orig*event.wgt*4.0014e-13*1.777/math.pi*0.1349567E-17
+        return w_new/w_orig*event.wgt/w_decay*0.1349567E-17*3
+    
+        # last factor to compensate NWA
     
     
     def calculate_matrix_element(self, event, hypp_id):
@@ -516,12 +532,13 @@ class ReweightInterface(extended_cmd.Cmd):
         stdin_text = event.get_momenta_str(orig_order)
         external.stdin.write(stdin_text)
         me_value = external.stdout.readline()
-        if start:
+        if True or start:
             while 1:
                 try: 
                     me_value = float(me_value)
                     break
                 except Exception:
+                    misc.sprint(me_value)
                     me_value = external.stdout.readline()             
         else:
             try: 
@@ -790,6 +807,22 @@ class ReweightInterface(extended_cmd.Cmd):
                     else:
                         continue
                 self.id_to_path_second[tag] = [order, Pdir]
+        
+        # 4. Check MadLoopParam
+        if os.path.exists(pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat')):
+            MLCard = banner.MadLoopParam(pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat'))
+            MLCard.set('WriteOutFilters', False)
+            MLCard.set('UseLoopFilter', False)
+            MLCard.set("DoubleCheckHelicityFilter", False)
+            MLCard.set("HelicityFilterLevel", 0)
+            MLCard.write(pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat'),
+                         pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat'), 
+                         commentdefault=False)
+            
+            
+            
+        
+        
 
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
