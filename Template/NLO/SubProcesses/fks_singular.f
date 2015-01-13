@@ -3754,11 +3754,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c Do not include this contribution for final-state branchings
          collrem_xi=0.d0
          collrem_lxi=0.d0
-c$$$         if(doreweight)then
-           wgtdegrem_xi=0.d0
-           wgtdegrem_lxi=0.d0
-           wgtdegrem_muF=0.d0
-c$$$         endif
+         wgtdegrem_xi=0.d0
+         wgtdegrem_lxi=0.d0
+         wgtdegrem_muF=0.d0
          return
       endif
 
@@ -3767,11 +3765,9 @@ c Unphysical kinematics: set matrix elements equal to zero
          write (*,*) "No born momenta in sreal_deg"
          collrem_xi=0.d0
          collrem_lxi=0.d0
-c$$$         if(doreweight)then
-           wgtdegrem_xi=0.d0
-           wgtdegrem_lxi=0.d0
-           wgtdegrem_muF=0.d0
-c$$$         endif
+         wgtdegrem_xi=0.d0
+         wgtdegrem_lxi=0.d0
+         wgtdegrem_muF=0.d0
          return
       endif
 
@@ -3811,13 +3807,11 @@ c has to be inserted here
       collrem_xi=oo2pi * born_wgt * collrem_xi * xnorm
       collrem_lxi=oo2pi * born_wgt * collrem_lxi * xnorm
 
-c$$$      if(doreweight)then
-        wgtdegrem_xi=ap*log(shat*delta_used/(2*QES2)) -
+      wgtdegrem_xi=ap*log(shat*delta_used/(2*QES2)) -
      #               apprime - xkkern 
-        wgtdegrem_xi=oo2pi * born_wgt * wgtdegrem_xi * xnorm
-        wgtdegrem_lxi=collrem_lxi
-        wgtdegrem_muF= - oo2pi * born_wgt * ap * xnorm
-c$$$      endif
+      wgtdegrem_xi=oo2pi * born_wgt * wgtdegrem_xi * xnorm
+      wgtdegrem_lxi=collrem_lxi
+      wgtdegrem_muF= - oo2pi * born_wgt * ap * xnorm
 
       return
       end
@@ -4900,38 +4894,35 @@ c eq.(MadFKS.C.14)
 
  549     continue
 
-c$$$         if(doreweight)then
-           wgtwnstmpmuf=0.d0
-           if(abrv.ne.'born' .and. abrv.ne.'grid')then
-             if(abrv(1:2).eq.'vi')then
+         wgtwnstmpmuf=0.d0
+         if(abrv.ne.'born' .and. abrv.ne.'grid')then
+            if(abrv(1:2).eq.'vi')then
                wgtwnstmpmur=0.d0
-             else
+            else
                do i=1,nincoming
-                 if (particle_type(i).ne.1)then
-                   if (particle_type(i).eq.8) then
-                     aj=0
-                   elseif(abs(particle_type(i)).eq.3) then
-                     aj=1
-                   endif
-                   wgtwnstmpmuf=wgtwnstmpmuf-
+                  if (particle_type(i).ne.1)then
+                     if (particle_type(i).eq.8) then
+                        aj=0
+                     elseif(abs(particle_type(i)).eq.3) then
+                        aj=1
+                     endif
+                     wgtwnstmpmuf=wgtwnstmpmuf-
      #                   ( gamma(aj)+2d0*c(aj)*dlog(xicut_used) )
-                 endif
+                  endif
                enddo
                wgtwnstmpmuf=ao2pi*wgtwnstmpmuf*dble(wgt1(1))
                wgtwnstmpmur=2*pi*(beta0*wgtbpower
-     #      +ren_group_coeff*wgtcpower)*ao2pi*dble(wgt1(1))
-             endif
+     #         +ren_group_coeff*wgtcpower)*ao2pi*dble(wgt1(1))
+            endif
 c bsv_wgt here always contains the Born; must subtract it, since 
 c we need the pure NLO terms only
-             wgtnstmp=bsv_wgt+virt_wgt-born_wgt-
+            wgtnstmp=bsv_wgt+virt_wgt-born_wgt-
      #                wgtwnstmpmuf*log(q2fact(1)/QES2)-
      #                wgtwnstmpmur*log(scale**2/QES2)
-           else
-             wgtnstmp=0d0
-             wgtwnstmpmur=0.d0
-           endif
-c$$$         endif
-
+         else
+            wgtnstmp=0d0
+            wgtwnstmpmur=0.d0
+         endif
 
          if (abrv(1:2).eq.'vi') then
             bsv_wgt=bsv_wgt-born_wgt
