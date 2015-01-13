@@ -140,6 +140,8 @@ def check_compiler(options, block=False):
         compiler = options['fortran_compiler']
     elif misc.which('gfortran'):
         compiler = 'gfortran'
+    else: 
+        compiler = ''
         
     if 'gfortran' not in compiler:
         if block:
