@@ -139,7 +139,11 @@ class UFOModel(object):
                         value = 1e-99
                     elif value == 1:
                         value = 9.999999e-1
-                    param_card.add_param(block.lower(), lhaid, value, 'from addon')
+                    try:    
+                        param_card.add_param(block.lower(), lhaid, value, 'from addon')
+                    except check_param_card.InvalidParamCard:
+                        logger.warning("%s will not acting for %s %s" % (p, block, lhaid))
+                        param_card[block.lower()].get(lhaid).value = value
                 # all added -> write it
                 param_card.write(pjoin(outputdir, p))
 

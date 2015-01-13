@@ -6063,8 +6063,8 @@ This implies that with decay chains:
                 logger.info('The value for lhapdf in the current configuration does not ' + \
                         'correspond to a valid executable.\nPlease set it correctly either in ' + \
                         'input/mg5_configuration or with "set lhapdf /path/to/lhapdf-config" ' + \
-                        'and regenrate the process. \nTo avoid regeneration, manually edit the ' + \
-                        ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
+                        'and regenrate the process. \nTo avoid regeneration, edit the ' + \
+                        ('%s/Cards/amcatnlo_configuration.txt file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
             compiler_dict = {'fortran': self.options['fortran_compiler'],
