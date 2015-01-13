@@ -167,11 +167,10 @@ class ShowerCard(dict):
                     newlines.append(line)
 
             if str(key).upper().startswith('DM') and not value.lower() in ['','none','default']:
-                newlines.append('%s = %s' % (str(key).upper(), value[1:len(value)-1]))
+                newlines.append('%s = %s' % (str(key).upper(), value[0:len(value)]))
                 print ''
-                print '\033[1m' + 'INFO: a decay mode is modified through set dm_1 "M > D1 D2 @ BR @ ME"'
-                print '\033[1m' + 'INFO: quotes are necessary; see Cards/shower_card.dat for more details' + '\033[0;0m'
-
+                print '\033[1m' + 'INFO: please specify a decay through set dm_1 M > D1 D2 @ BR @ ME; see shower_card.dat for details' + '\033[0;0m'
+                
             self.text = '\n'.join(newlines) + '\n'
 
             if self.testing:
