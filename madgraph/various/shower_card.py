@@ -87,6 +87,7 @@ class ShowerCard(dict):
         else:
             content = card_path
         lines = content.split('\n')
+        list_dm = []
         for l in lines:
           if '#' in l:
              l = l.split('#',1)[0]
@@ -96,8 +97,12 @@ class ShowerCard(dict):
           key = args[0].strip().lower()
           value = args[1].strip()
           self.set_param(key, value)
-        for i in range(1,100):
-            self['dm_'+str(i)] = ''
+          if str(key).upper().startswith('DM'):
+              list_dm.append(int(key.split('_',1)[1]))
+          #special case for DM_*
+          for i in range(1,100):
+              if not i in list_dm: 
+                  self['dm_'+str(i)] = ''
 
         self.text=content
 
@@ -109,9 +114,9 @@ class ShowerCard(dict):
         returned by the function
         """
         if key in self.logical_vars:
-            if value.lower() in self.true:
+            if str(value).lower() in self.true:
                 self[key] = True
-            elif value.lower() in self.false:
+            elif str(value).lower() in self.false:
                 self[key] = False
             else:
                 raise ShowerCardError('%s is not a valid value for %s' % \
@@ -126,13 +131,13 @@ class ShowerCard(dict):
                 self[key] = int(value)
             except ValueError:
                 raise ShowerCardError('%s is not a valid value for %s. An integer number is expected' % \
-                        (key, value))
+                        (value, key))
         elif key in self.float_vars:
             try:
                 self[key] = float(value)
             except ValueError:
                 raise ShowerCardError('%s is not a valid value for %s. A floating point number is expected' % \
-                        (key, value))
+                        (value, key))
         else:
             raise ShowerCardError('Unknown entry: %s = %s' % (key, value))
         self.keylist.append(key)
@@ -161,8 +166,11 @@ class ShowerCard(dict):
                 else:
                     newlines.append(line)
 
-            if str(key).upper().startswith('DM'):
+            if str(key).upper().startswith('DM') and not value.lower() in ['','none','default']:
                 newlines.append('%s = %s' % (str(key).upper(), value[1:len(value)-1]))
+                print ''
+                print '\033[1m' + 'INFO: a decay mode is modified through set dm_1 "M > D1 D2 @ BR @ ME"'
+                print '\033[1m' + 'INFO: quotes are necessary; see Cards/shower_card.dat for more details' + '\033[0;0m'
 
             self.text = '\n'.join(newlines) + '\n'
 
@@ -188,6 +196,7 @@ class ShowerCard(dict):
         lines = []
         bool_dict = {True: '.true.', False: '.false.'}
         bool_dict_num = {True: '1', False: '0'}
+        
         for key in self.keylist:
             value = self[key]
             if key in self.logical_vars:

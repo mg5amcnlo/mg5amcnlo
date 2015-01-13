@@ -58,6 +58,7 @@ try:
     # import from madgraph directory
     import madgraph.interface.extended_cmd as cmd
     import madgraph.various.banner as banner_mod
+    import madgraph.various.shower_card as shower_card_mod
     import madgraph.various.misc as misc
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
@@ -70,6 +71,7 @@ except Exception, error:
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.banner as banner_mod
+    import internal.shower_card as shower_card_mod
     import internal.misc as misc
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
@@ -2490,6 +2492,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
                 elif args[0] == 'run_card':
                     self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+                elif args[0] == 'shower_card':
+                    self.shower_card = shower_card_mod.ShowerCard(pjoin(self.me_dir,'Cards','shower_card.dat'))
                 return
             else:
                 card = args[0]
@@ -2671,24 +2675,28 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning(text)
                 return
 
-            if args[start+1] == 'default':
-                default = madgraph.various.shower_card.ShowerCard(pjoin(self.me_dir,'Cards','shower_card_default.dat'))
+            if args[start+1].lower() == 'default':
+                default = shower_card_mod.ShowerCard(pjoin(self.me_dir,'Cards','shower_card_default.dat'))
                 if args[start] in default.keys():
                     self.shower_card.set_param(args[start],default[args[start]],pjoin(self.me_dir,'Cards','shower_card.dat'))
                 else:
                     logger.info('remove information %s from the shower_card' % args[start])
                     del self.shower_card[args[start]]
-            elif  args[start+1].lower() in ['t','.true.','true']:
+            elif args[start+1].lower() in ['t','.true.','true']:
                 self.shower_card.set_param(args[start],'.true.',pjoin(self.me_dir,'Cards','shower_card.dat'))
-            elif  args[start+1].lower() in ['f','.false.','false']:
+            elif args[start+1].lower() in ['f','.false.','false']:
                 self.shower_card.set_param(args[start],'.false.',pjoin(self.me_dir,'Cards','shower_card.dat'))
+            elif str(args[start]).upper().startswith('DM'):
+                args_str = ' '.join(str(a) for a in args[1:len(args)])
+                self.shower_card.set_param(args[start],args_str,pjoin(self.me_dir,'Cards','shower_card.dat'))
             else:
                 try:
-                    val = eval(args[start+1])
+                    val = args[start+1]
                 except:
                     args_str = ' '.join(str(a) for a in args[1:len(args)])
                     val = args_str
                 self.shower_card.set_param(args[start],val,pjoin(self.me_dir,'Cards','shower_card.dat'))
+                
 
         #INVALID --------------------------------------------------------------
         else:
