@@ -64,12 +64,6 @@ c
       common /event_normalisation/event_norm
       integer iappl
       common /for_applgrid/ iappl
-C      
-      integer    maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
       include 'born_leshouche.inc'
 c
 c----------
