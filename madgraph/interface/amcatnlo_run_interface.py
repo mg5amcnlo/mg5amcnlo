@@ -4134,16 +4134,14 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.run_name += '_LO' 
             self.set_run_name(self.run_name, self.run_tag, 'parton')
             if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
-                logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
-                raise self.InvalidCmd(error)
+                raise self.InvalidCmd("""FxFx merging (ickkw=3) not allowed at LO""")
             elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
                 logger.warning("""You are running with FxFx merging enabled.  To be able to merge
     samples of various multiplicities without double counting, you
     have to remove some events after showering 'by hand'.  Please
     read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
-                    logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
-                    raise self.InvalidCmd(error)
+                    raise self.InvalidCmd("""FxFx merging does not work with Q-squared ordered showers.""")
                 elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8':
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
@@ -4153,10 +4151,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)
     #                    raise aMCatNLOError(error)
-                elif int(self.run_card['ickkw']) == -1 and mode in ['aMC@NLO', 'noshower', 'LO', 'noshowerLO']:
+            elif int(self.run_card['ickkw']) == -1 and mode in ['aMC@NLO', 'noshower', 'LO', 'noshowerLO']:
                     # NNLL+NLO jet-veto only possible for LO event generation or fNLO runs.
-                    logger.error("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO.""")
-                    raise self.InvalidCmd(error)
+                raise self.InvalidCmd("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO.""")
         if 'aMC@' in mode or mode == 'onlyshower':
             self.shower_card = self.banner.charge_card('shower_card')
             
