@@ -6,7 +6,7 @@ c to the list of weights using the add_wgt subroutine
       include 'reweight0.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
-      double complex wgt_c(2)
+      double precision wgt_c
       double precision wgt1
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
@@ -21,7 +21,7 @@ c to the list of weights using the add_wgt subroutine
       if (f_b.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
       call sborn(p_born,wgt_c)
-      wgt1=dble(wgt_c(1))*f_b/g**(nint(2*wgtbpower))
+      wgt1=wgt_c*f_b/g**(nint(2*wgtbpower))
       call add_wgt(2,wgt1,0d0,0d0)
       call cpu_time(tAfter)
       tBorn=tBorn+(tAfter-tBefore)
@@ -402,7 +402,7 @@ c bpower.
       data xnoborn_cnt /0d0/
       integer inoborn_cnt,i
       data inoborn_cnt /0/
-      double complex wgt_c(2)
+      double precision wgt_c
       logical firsttime
       data firsttime /.true./
       parameter (pi=3.1415926535897932385d0)
@@ -436,7 +436,7 @@ c bpower.
       integer iappl
       common /for_applgrid/ iappl
       logical needrndec
-      parameter (needrndec=.true.)
+      parameter (needrndec=.false.)
       real*8 ran2
       external ran2
       real*8 rndec(10)
@@ -451,7 +451,7 @@ c Random numbers to be used in the plotting routine
       endif
       if (firsttime) then
 c Put here call to compute bpower
-         call compute_bpower(p_born,bpower)
+CCCMZ         call compute_bpower(p_born,bpower)
          wgtbpower=bpower
 c Store the power of alphas of the Born events in the appl common block.
          if(iappl.ne.0) appl_bpower = wgtbpower
@@ -536,7 +536,7 @@ c terms.
       data xnoborn_cnt /0d0/
       integer inoborn_cnt,i
       data inoborn_cnt /0/
-      double complex wgt_c(2)
+      double precision wgt_c
       double precision p_born(0:3,nexternal-1)
       common/pborn/    p_born
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -1789,7 +1789,7 @@ c
          fksmaxwgt=0.d0
          firsttime=.false.
 c Put here call to compute bpower
-         call compute_bpower(p_born,bpower)
+CCCMZ         call compute_bpower(p_born,bpower)
          wgtbpower=bpower
 
 c Compute cpower done for bottom Yukawa, routine needs to be adopted
@@ -4035,14 +4035,14 @@ c factor z (implicit in the flux of the reduced Born in FKS)
 c has to be inserted here
         xnorm=1.d0/z
 
-        collrem_xi=oo2pi * born_wgt * collrem_xi * xnorm
-        collrem_lxi=oo2pi * born_wgt * collrem_lxi * xnorm
+        collrem_xi=oo2pi * dble(wgt1(1)) * collrem_xi * xnorm
+        collrem_lxi=oo2pi *dble(wgt1(1)) * collrem_lxi * xnorm
 
-        wgtdegrem_xi=ap*log(shat*delta_used/(2*QES2)) -
-     #               apprime - xkkern 
-        wgtdegrem_xi=oo2pi * born_wgt * wgtdegrem_xi * xnorm
+        wgtdegrem_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
+     #               apprime(iap) - xkkern 
+        wgtdegrem_xi=oo2pi * dble(wgt1(1)) * wgtdegrem_xi * xnorm
         wgtdegrem_lxi=collrem_lxi
-        wgtdegrem_muF= - oo2pi * born_wgt * ap * xnorm
+        wgtdegrem_muF= - oo2pi * dble(wgt1(1)) * ap(iap) * xnorm
       enddo
 
       return
@@ -5254,9 +5254,9 @@ CMZ     #      +ren_group_coeff*wgtcpower)*log(q2fact(1)/scale**2)*ao2pi*dble(wg
 CMZ         endif
 
 
- 549     continue
+ 549  continue
 
-         wgtwnstmpmuf=0.d0
+      wgtwnstmpmuf=0.d0
 CMZ         if(abrv.ne.'born' .and. abrv.ne.'grid')then
 CMZ            if(abrv(1:2).eq.'vi')then
 CMZ               wgtwnstmpmur=0.d0
@@ -5286,50 +5286,26 @@ CMZ            wgtnstmp=0d0
 CMZ            wgtwnstmpmur=0.d0
 CMZ         endif
 
-         if (abrv(1:2).eq.'vi') then
-            bsv_wgt=bsv_wgt-born_wgt
+      if (abrv(1:2).eq.'vi') then
+        bsv_wgt=bsv_wgt-born_wgt
 
-            if(doVirtTest .and. iminmax.eq.0)then
-              if(born_wgt.ne.0.d0)then
-                vrat=bsv_wgt/(ao2pi*born_wgt)
-                if(vrat.gt.vobmax)vobmax=vrat
-                if(vrat.lt.vobmin)vobmin=vrat
-                vNsumw=vNsumw+xnormsv
-                vAsumw=vAsumw+vrat*xnormsv
-                vSsumw=vSsumw+vrat**2*xnormsv
-                vNsumf=vNsumf+1.d0
-                vAsumf=vAsumf+vrat
-                vSsumf=vSsumf+vrat**2
-              else
-                if(bsv_wgt.ne.0.d0)nvtozero=nvtozero+1
-              endif
-            endif
+        if(doVirtTest .and. iminmax.eq.0)then
+          if(born_wgt.ne.0.d0)then
+            vrat=bsv_wgt/(aso2pi*born_wgt)
+            if(vrat.gt.vobmax)vobmax=vrat
+            if(vrat.lt.vobmin)vobmin=vrat
+            vNsumw=vNsumw+xnormsv
+            vAsumw=vAsumw+vrat*xnormsv
+            vSsumw=vSsumw+vrat**2*xnormsv
+            vNsumf=vNsumf+1.d0
+            vAsumf=vAsumf+vrat
+            vSsumf=vSsumf+vrat**2
+          else
+            if(bsv_wgt.ne.0.d0)nvtozero=nvtozero+1
+          endif
+        endif
 
-            born_wgt=0d0
-         endif
-
-         if (ComputePoles) then
-            call sborn(p_born,wgt1)
-            born_wgt=dble(wgt1(1))
-
-            print*,"           "
-            write(*,123)((p(i,j),i=0,3),j=1,nexternal)
-            xmu2=q2fact(1)
-            call getpoles(p,xmu2,double,single,fksprefact)
-            print*,"BORN",born_wgt!/conv
-            print*,"DOUBLE",double/born_wgt/ao2pi
-            print*,"SINGLE",single/born_wgt/ao2pi
-c            print*,"LOOP",virt_wgt!/born_wgt/ao2pi*2d0
-c            print*,"LOOP2",(virtcor+born_wgt*4d0/3d0-double*pi**2/6d0)
-c            stop
- 123        format(4(1x,d22.16))
-         endif
-
-
-      else
-         bsv_wgt=0d0
-         virt_wgt=0d0
-         born_wgt=0d0
+        born_wgt=0d0
       endif
 
       if (ComputePoles) then

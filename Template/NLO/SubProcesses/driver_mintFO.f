@@ -616,7 +616,7 @@ c
                 stop
             endif
          endif
-         nFKSprocess=nFKSprocessBorn(2)
+         nFKS_out=nFKSprocessBorn(2)
       endif
       return
       end
