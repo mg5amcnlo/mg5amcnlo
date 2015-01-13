@@ -586,6 +586,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_powers.inc',
                      'fks_singular.f',
                      'chooser_functions.f',
+                     'c_weight.inc',
                      'genps.inc',
                      'genps_fks.f',
                      'boostwdir2.f',

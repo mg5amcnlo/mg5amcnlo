@@ -400,6 +400,7 @@ C***************************************************************
       include "nexternal.inc"
       include 'run.inc'
       include 'genps.inc'
+      include 'timing_variables.inc'
       REAL*8 P(0:3,nexternal),rwgt
       integer i,j,istatus(nexternal),iPDG(nexternal)
 c For boosts
@@ -422,6 +423,7 @@ c PDG codes of particles
       common /c_leshouche_inc/idup,mothup,icolup
       logical passcuts_user
       external passcuts_user
+      call cpu_time(tBefore)
 c Make sure have reasonable 4-momenta
       if (p(0,1) .le. 0d0) then
          passcuts=.false.
@@ -460,6 +462,8 @@ c Fill the arrays (momenta, status and PDG):
       enddo
 c Call the actual cuts function  
       passcuts = passcuts_user(pp,istatus,ipdg)
+      call cpu_time(tAfter)
+      t_cuts=t_cuts+(tAfter-tBefore)
       RETURN
       END
 

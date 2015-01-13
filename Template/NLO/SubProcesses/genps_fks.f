@@ -101,6 +101,8 @@ c     2 soft-collinear
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+      double precision p_ev(0:3,nexternal)
+      common/pev/p_ev
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
@@ -531,6 +533,7 @@ c Fill common blocks
          do i=1,nexternal
             do j=0,3
                p(j,i)=xp(j,i)
+               p_ev(j,i)=xp(j,i)
             enddo
          enddo
          jac=xjac
