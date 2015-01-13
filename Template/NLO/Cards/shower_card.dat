@@ -103,6 +103,7 @@ njmax      = 0        # Maximal multiplicity in the merging
 #***********************************************************************
 EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
                                  # Default: "stdhep Fmcfio"
+                                 # PYTHIA > 8.200 may require library dl
 EXTRAPATHS   = ../lib            # Path to the extra-libraries
                                  # Default: "../lib"
 INCLUDEPATHS =                   # Path to header files needed by c++
