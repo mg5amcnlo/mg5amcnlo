@@ -18,7 +18,8 @@ if [[ "$NFILE" != "" ]]; then
     cd run_$NFILE
     cp -H ../events_$NFILE.lhe events.lhe
     if [ $SHOWER == "PYTHIA8" ] ; then
-        cp ../Pythia8.exe ../Pythia8.cmd ../config.sh .
+        cp ../Pythia8.exe ../Pythia8.cmd .
+        if [ -f ../config.sh ] ; then cp ../config.sh . ; fi
     else
         if [ $SHOWER == "HERWIGPP" ] ; then
             cp ../Herwig++ ../HepMCFortran.so .

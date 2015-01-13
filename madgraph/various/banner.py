@@ -833,7 +833,7 @@ class RunCard(dict):
                     logger.warning('Since use_syst=T, We change the value of \'alpsfact\' to 1')
                     self['alpsfact'] = 1.0
             if int(self['maxjetflavor']) == 6:
-                raise InvalidRUnCard, 'maxjetflavor at 6 is NOT supported for matching!'
+                raise InvalidRunCard, 'maxjetflavor at 6 is NOT supported for matching!'
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
             self.add_line('clusinfo', 'bool', False)
@@ -925,9 +925,9 @@ class RunCardNLO(RunCard):
         self.get_default('iappl', '0', log_level=10)
         # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
         if self['iappl'] != '0' and self['pdlabel'].lower() != 'lhapdf':
-            raise self.InvalidCmd('APPLgrid generation only possible with the use of LHAPDF')
+            raise self.InvalidRunCard('APPLgrid generation only possible with the use of LHAPDF')
         if self['iappl'] != '0' and self['reweight_scale'] not in true:
-            raise self.InvalidCmd('APPLgrid generation only possible with including' +\
+            raise self.InvalidRunCard('APPLgrid generation only possible with including' +\
                                       ' the reweighting to get scale dependence')
 
         self.fsock = file_writers.FortranWriter(output_path)    

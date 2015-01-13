@@ -588,14 +588,11 @@ c
          xwidth(-i)=prwidth(-i,iconfig)
          if (xwidth(-i) .gt. 0d0) then
             nbw=nbw+1
-            if (iarray(nbw) .eq. 1) then
-               if(xmass(-i).gt.prmass(-i,iconfig)+5d0*xwidth(-i)) then
+            if(forcebw(-i) .eq. 1) then
+               if (iarray(nbw) .ne. 1) then
                   failConfig=.true.
                   return
-               else
-                  xmass(-i)=max(xmass(-i),prmass(-i,iconfig)-5d0*xwidth(-i))
                endif
-            else if(forcebw(-i) .eq. 1) then
                if(xmass(-i).gt.prmass(-i,iconfig)+bwcutoff*xwidth(-i)) then
                   failConfig=.true.
                   return
@@ -603,6 +600,14 @@ c
                   xmass(-i)=max(xmass(-i),prmass(-i,iconfig)-
      $                 bwcutoff*xwidth(-i))
                endif
+            else if (iarray(nbw) .eq. 1) then
+               if(xmass(-i).gt.prmass(-i,iconfig)+5d0*xwidth(-i)) then
+                  failConfig=.true.
+                  return
+               else
+                  xmass(-i)=max(xmass(-i),prmass(-i,iconfig)-5d0*xwidth(-i))
+               endif
+
             endif
          endif
          mtot=mtot+xmass(-i)

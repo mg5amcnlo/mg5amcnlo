@@ -164,6 +164,7 @@ class AllResults(dict):
                 self.current = self[run]
             else:
                 logger.warning("Previous runs exists but they will not be present in the html output.")
+    
     def readd_old_run(self, run_name):
         """ re-create the data-base from scratch if the db was remove """
         
