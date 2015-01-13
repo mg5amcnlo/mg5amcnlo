@@ -1,4 +1,6 @@
       subroutine compute_born
+c This subroutine computes the Born matrix elements and adds its value
+c to the list of weights using the add_wgt subroutine
       implicit none
       include 'nexternal.inc'
       include 'reweight0.inc'
@@ -27,6 +29,8 @@
       end
 
       subroutine compute_nbody_noborn
+c This subroutine computes the soft-virtual matrix elements and adds its
+c value to the list of weights using the add_wgt subroutine
       implicit none
       include 'nexternal.inc'
       include 'reweight.inc'
@@ -62,6 +66,9 @@
       wgt2=wgtwnstmpmur*f_nb/g22
       wgt3=wgtwnstmpmuf*f_nb/g22
       call add_wgt(3,wgt1,wgt2,wgt3)
+c Special for the soft-virtual needed for the virt-tricks. The
+c *_wgt_mint variable should be directly passed to the mint-integrator
+c and not be part of the plots nor computation of the cross section.
       virt_wgt_mint=virt_wgt*f_nb/g22
       born_wgt_mint=born_wgt*f_b/g2
       call cpu_time(tAfter)
@@ -70,6 +77,8 @@
       end
 
       subroutine compute_real_emission(p)
+c This subroutine computes the real-emission matrix elements and adds
+c its value to the list of weights using the add_wgt subroutine
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -103,6 +112,8 @@
       end
 
       subroutine compute_soft_counter_term
+c This subroutine computes the soft counter term and adds its value to
+c the list of weights using the add_wgt subroutine
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -137,6 +148,8 @@
       end
 
       subroutine compute_collinear_counter_term
+c This subroutine computes the collinear counter term and adds its value
+c to the list of weights using the add_wgt subroutine
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -181,6 +194,8 @@
       end
 
       subroutine compute_soft_collinear_counter_term
+c This subroutine computes the soft-collinear counter term and adds its
+c value to the list of weights using the add_wgt subroutine
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -228,6 +243,8 @@
       end
 
       logical function pdg_equal(pdg1,pdg2)
+c Returns .true. if the lists of PDG codes --'pdg1' and 'pdg2'-- are
+c equal.
       implicit none
       include 'nexternal.inc'
       integer i,pdg1(nexternal),pdg2(nexternal)
@@ -268,10 +285,14 @@ c it only checks the 0th and 3rd components (energy and z-direction).
       end
       
       subroutine set_FxFx_scale(iterm,p)
-c Set the FxFx merging scale and mutliplies the f_* factors by the
+c Sets the FxFx cluster scale and multiplies the f_* factors (computed
+c by 'compute_prefactors_nbody' and 'compute_prefactors_n1body') by the
 c Sudakov suppression. If called more than once with the same momenta
 c and iterm, skip setting of the scales, and multiply the f_* factors by
 c the cached Sudakovs.
+c     iterm= -1: reset the computation of the Sudakovs
+c     iterm=  0: Sudakov for n-body kinematics
+c     iterm=100: Sudakov for n+1-body kinematics
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -453,6 +474,7 @@ c Check that things are done consistently
          endif
          firsttime=.false.
       endif
+c Compute the multi-channel enhancement factor 'enhance'.
       enhance=1.d0
       if (p_born(0,1).gt.0d0) then
          call sborn(p_born,wgt_c)
@@ -487,6 +509,7 @@ c Check that things are done consistently
       endif
       call unweight_function(p_born,unwgtfun)
       call set_cms_stuff(0)
+c f_* multiplication factors for Born and nbody
       f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
      $     *pi**2))*enhance*unwgtfun *fkssymmetryfactorBorn*vegas_wgt
       f_nb=f_b
@@ -566,6 +589,7 @@ c terms.
       elseif(p_born(0,1).lt.0d0)then
          enhance=0d0
       endif
+c Compute the multi-channel enhancement factor 'enhance'.
       if (enhance.eq.0d0)then
          xnoborn_cnt=xnoborn_cnt+1.d0
          if(log10(xnoborn_cnt).gt.inoborn_cnt)then
@@ -595,6 +619,7 @@ c terms.
       call unweight_function(p_born,unwgtfun)
       prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
 
+c f_* multiplication factors for real-emission, soft counter, ... etc.       
       f_r=prefact*jac_ev*enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
       if (.not.nocntevents) then
          prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
@@ -665,7 +690,58 @@ c terms.
 
       
       subroutine add_wgt(type,wgt1,wgt2,wgt3)
-c Adds a contribution to the list in c_weight.inc.
+c Adds a contribution to the list in c_weight.inc. 'type' sets the type
+c of the contribution and wgt1..wgt3 are the coefficients multiplying
+c the logs. The arguments are:
+c     type=1 : real-emission
+c     type=2 : Born
+c     type=3 : soft-virtual
+c     type=4 : soft counter-term
+c     type=5 : collinear counter-term
+c     type=6 : soft-collinear counter-term
+c     wgt1 : weight of the contribution not multiplying a scale log
+c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
+c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
+c
+c This subroutine increments the 'icontr' counter: each new call to this
+c function makes sure that it's considered a new contribution. For each
+c contribution, we save the
+c     The type: itype(icontr)
+c     The weights: wgt(1,icontr),wgt(2,icontr) and wgt(3,icontr) for
+c         wgt1, wgt2 and wgt3, respectively.
+c     The Bjorken x's: bjx(1,icontr), bjx(2,icontr)
+c     The Ellis-Sexton scale squared used to compute the weight:
+c        scales2(1,icontr)
+c     The renormalisation scale squared used to compute the weight:
+c        scales2(2,icontr)
+c     The factorisation scale squared used to compute the weight:
+c       scales2(3,icontr)
+c     The value of the strong coupling: g_strong(icontr)
+c     The FKS configuration: nFKS(icontr)
+c     The boost to go from the momenta in the C.o.M. frame to the
+c         laboratory frame: y_bst(icontr)      
+c     The power of the strong coupling (g_strong) for the current
+c       weight: QCDpower(icontr)
+c     The momenta: momenta(j,i,icontr). For the Born contribution, the
+c        counter-term momenta are used. This is okay for any IR-safe
+c        observables.
+c     The PDG codes: pdg(i,icontr). Always the ones with length
+c        'nexternal' are used, because the momenta are also the 
+c        'nexternal' ones. This is okay for IR-safe observables.
+c
+c Not set in this subroutine, but included in the c_weights common block
+c are the
+c     wgts(iwgt,icontr) : weights including scale/PDFs/logs. These are
+c        normalised so that they can be used directly to compute cross
+c        sections and fill plots. 'iwgt' goes from 1 to the maximum
+c        number of weights obtained from scale and PDF reweighting, with
+c        the iwgt=1 element being the central value.
+c     plot_id(icontr) : =20 for Born, 11 for real-emission and 12 for
+c        anything else.
+c     plot_wgts(iwgt,icontr) : same as wgts(), but only non-zero for
+c        unique contributions and non-unique are added to the unique
+c        ones. 'Unique' here is defined that they would be identical in
+c        an analysis routine (i.e. same momenta and PDG codes)
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -753,8 +829,8 @@ c Born, counter term, or soft-virtual
       subroutine include_PDF_and_alphas
 c Multiply the saved wgt() info by the PDFs, alpha_S and the scale
 c dependence and saves the weights in the wgts() array. The weights in
-c this array should now be correctly normalised to compute the cross
-c section or to fill histograms.
+c this array are now correctly normalised to compute the cross section
+c or to fill histograms.
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -783,11 +859,15 @@ c section or to fill histograms.
          q2fact(2)=mu2_f
 c call the PDFs
          xlum = dlum()
+c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          iwgt=1
          wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
      &        wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
          wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
          if (itype(i).eq.3) then
+c Special for the soft-virtual needed for the virt-tricks. The
+c *_wgt_mint variable should be directly passed to the mint-integrator
+c and not be part of the plots nor computation of the cross section.
             virt_wgt_mint=virt_wgt_mint*xlum*g_strong(i)**QCDpower(i)
      &           *rwgt_muR_dep_fac(sqrt(scales2(2,i)))
             born_wgt_mint=born_wgt_mint*xlum*g_strong(i)**QCDpower(i)
@@ -821,17 +901,22 @@ c wgts() array to include the weights.
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       call cpu_time(tBefore)
       if (icontr.eq.0) return
+c currently we have 'iwgt' weights in the wgts() array.
       iwgt_save=iwgt
+c loop over all the contributions in the c_weights common block
       do i=1,icontr
          iwgt=iwgt_save
          nFKSprocess=nFKS(i)
          xbk(1) = bjx(1,i)
          xbk(2) = bjx(2,i)
          mu2_q=scales2(1,i)
+c renormalisation scale variation (requires recomputation of the strong
+c coupling)
          do kr=1,numscales
             mu2_r(kr)=scales2(2,i)*yfactR(kr)**2
             g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
          enddo
+c factorisation scale variation (require recomputation of the PDFs)
          do kf=1,numscales
             mu2_f(kf)=scales2(3,i)*yfactF(kf)**2
             q2fact(1)=mu2_f(kf)
@@ -840,12 +925,13 @@ c wgts() array to include the weights.
          enddo
          do kr=1,numscales
             do kf=1,numscales
-               iwgt=iwgt+1
+               iwgt=iwgt+1 ! increment the iwgt for the wgts() array
                if (iwgt.gt.max_wgt) then
                   write (*,*) 'ERROR too many weights in reweight_scale'
      &                 ,iwgt,max_wgt
                   stop 1
                endif
+c add the weights to the array
                wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)*log(mu2_r(kr)
      &              /mu2_q)+wgt(3,i)*log(mu2_f(kf)/mu2_q))*g(kr)
      &              **QCDpower(i)
@@ -879,6 +965,9 @@ c wgts() array to include the weights.
       common/c_nFKSprocess/nFKSprocess
       call cpu_time(tBefore)
       if (icontr.eq.0) return
+c Use as external loop the one over the PDF sets and as internal the one
+c over the icontr. This reduces the number of calls to InitPDF and
+c allows for better caching of the PDFs
       do n=1,numPDFs-1
          iwgt=iwgt+1
          if (iwgt.gt.max_wgt) then
@@ -897,6 +986,7 @@ c wgts() array to include the weights.
             q2fact(1)=mu2_f
             q2fact(2)=mu2_f
             xlum = dlum()
+c add the weights to the array
             wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
      &           wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
             wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
@@ -1005,6 +1095,8 @@ c     soft-collinear counter
       
       
       subroutine get_wgt_nbody(sig)
+c Sums all the central weights that contribution to the nbody cross
+c section
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -1021,6 +1113,8 @@ c     soft-collinear counter
       end
 
       subroutine get_wgt_no_nbody(sig)
+c Sums all the central weights that contribution to the cross section
+c excluding the nbody contributions.
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -1038,6 +1132,11 @@ c     soft-collinear counter
       end
 
       subroutine fill_plots
+c Calls the analysis routine (which fill plots) for all the
+c contributions in the c_weight common block. Instead of really calling
+c it for all, it first checks if weights can be summed (i.e. they have
+c the same PDG codes and the same momenta) before calling the analysis
+c to greatly reduce the calls to the analysis routines.
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -1052,18 +1151,23 @@ c     soft-collinear counter
       if (icontr.eq.0) return
 c fill the plots_wgts. Check if we can sum weights together before
 c calling the analysis routines. This is the case if the PDG codes and
-c the momenta are identical
+c the momenta are identical.
       do i=1,icontr
          do j=1,iwgt
             plot_wgts(j,i)=0d0
          enddo
          if (itype(i).eq.2) then
-            plot_id(i)=20
+            plot_id(i)=20 ! Born
          elseif(itype(1).eq.1) then
-            plot_id(i)=11
+            plot_id(i)=11 ! real-emission
          else
-            plot_id(i)=12
+            plot_id(i)=12 ! soft-virtual and counter terms
          endif
+c Loop over all previous icontr. If the plot_id, PDGs and momenta are
+c equal to a previous icountr, add the current weight to the plot_wgts
+c of that contribution and exit the do-loop. This loop extends to 'i',
+c so if the current weight cannot be summed to a previous one, the ii=i
+c contribution makes sure that it is added as a new element.
          do ii=1,i
             if (plot_id(ii).eq.plot_id(i)) then
                if (pdg_equal(pdg(1,ii),pdg(1,i))) then
@@ -1087,6 +1191,7 @@ c the momenta are identical
             do j=1,iwgt
                www(j)=plot_wgts(j,i)
             enddo
+c call the analysis/histogramming routines
             call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),plot_id(i))
          endif
       enddo
@@ -2640,22 +2745,6 @@ c For tests
             xisave=xi_i_fks_ev
             ysave=y_ij_fks_ev
          endif
-c Plot observables for counterevents and Born
-         if (.not.unwgt) then
-            plot_wgt=( (Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
-     &           cnt_swgt*fkssymmetryfactor +
-     &           (bsv_wgt-born_wgt)*fkssymmetryfactorBorn +
-     &           virt_wgt*fkssymmetryfactorBorn +
-     &           deg_wgt*fkssymmetryfactorDeg +
-     &           deg_swgt*fkssymmetryfactorDeg )*vegaswgt
-            if( abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,0).ne.-99d0 .and.
-     &           (plotEv.or.plotKin) )
-     &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
-            plot_wgt=(born_wgt*fkssymmetryfactorBorn)*vegaswgt
-            if( abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,0).ne.-99d0 .and.
-     &           (plotEv.or.plotKin) )
-     &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_born)
-         endif
 
          dsigH = totH_wgt*fkssymmetryfactor
          call unweight_function(p_born,unwgtfun)
@@ -2746,15 +2835,6 @@ c For tests
             xisave=xi_i_fks_ev
             ysave=y_ij_fks_ev
          endif
-
-c Plot observables for event
-         if (.not.unwgt) then
-            plot_wgt=totH_wgt*fkssymmetryfactor*vegaswgt 
-            if( abs(plot_wgt).gt.1.d-20.and.pp(0,1).ne.-99d0. and.
-     &           (plotEv.or.plotKin) )
-     &           call outfun(pp,ybst_til_tolab,plot_wgt,iplot_ev)
-         endif
-
 
       elseif (iminmax.eq.1 .and. ExceptPSpoint) then
 c for except PS points, this is the maximal approx for the virtual         
