@@ -35,17 +35,18 @@ C
       include 'pdf.inc'
 C      
       double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L
-      integer mode,Irt,i,j
-      double precision xlast(2),xmulast(2),pdflast(-7:7,2),q2max
-      character*7 pdlabellast(2)
+      integer mode,Irt,i,j,i_replace,ii
+      double precision xlast(20),xmulast(20),pdflast(-7:7,20),q2max
+      character*7 pdlabellast(20)
       double precision epa_electron,epa_proton
-      integer ipart,ireuse,iporg,ihlast(2)
+      integer ipart,ireuse,iporg,ihlast(20)
       save xlast,xmulast,pdflast,pdlabellast,ihlast
-      data xlast/2*-99d9/
-      data xmulast/2*-99d9/
-      data pdflast/30*-99d9/
-      data pdlabellast/2*'abcdefg'/
-      data ihlast/2*-99/
+      data xlast/20*-99d9/
+      data xmulast/20*-99d9/
+      data pdflast/300*-99d9/
+      data pdlabellast/20*'abcdefg'/
+      data ihlast/20*-99/
+      data i_replace/20/
 
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
@@ -76,12 +77,22 @@ c     This will be called for any PDG code, but we only support up to 7
       endif
 
       ireuse = 0
-      do i=1,2
-c     Check if result can be reused since any of last two calls
-         if (x.eq.xlast(i) .and. xmu.eq.xmulast(i) .and.
-     $        pdlabel.eq.pdlabellast(i) .and. ih.eq.ihlast(i)) then
-            ireuse = i
+      ii=i_replace
+      do i=1,20
+c     Check if result can be reused since any of last twenty
+c     calls. Start checking with the last call and move back in time
+         if (ih.eq.ihlast(ii)) then
+            if (x.eq.xlast(ii)) then
+               if (xmu.eq.xmulast(ii)) then
+                  if (pdlabel.eq.pdlabellast(ii)) then
+                     ireuse = ii
+                     exit
+                  endif
+               endif
+            endif
          endif
+         ii=ii-1
+         if (ii.eq.0) ii=ii+20
       enddo
 
 c     Reuse previous result, if possible
@@ -92,41 +103,15 @@ c     Reuse previous result, if possible
          endif
       endif
 
-c     Bjorken x and/or facrorization scale and/or PDF set are not
-c     identical to the saved values: this means a new event and we
-c     should reset everything to compute new PDF values. Also, determine
-c     if we should fill ireuse=1 or ireuse=2.
-      if (ireuse.eq.0.and.xlast(1).ne.-99d9.and.xlast(2).ne.-99d9)then
-         do i=1,2
-            xlast(i)=-99d9
-            xmulast(i)=-99d9
-            do j=-7,7
-               pdflast(j,i)=-99d9
-            enddo
-            pdlabellast(i)='abcdefg'
-            ihlast(i)=-99
-         enddo
-c     everything has been reset. Now set ireuse=1 to fill the first
-c     arrays of saved values below
-         ireuse=1
-      else if(ireuse.eq.0.and.xlast(1).ne.-99d9)then
-c     This is first call after everything has been reset, so the first
-c     arrays are already filled with the saved values (hence
-c     xlast(1).ne.-99d9). Fill the second arrays of saved values (done
-c     below) by setting ireuse=2
-         ireuse=2
-      else if(ireuse.eq.0)then
-c     Special: only used for the very first call to this function:
-c     xlast(i) are initialized as data statements to be equal to -99d9
-         ireuse=1
-      endif
-
+c Calculated a new value: replace the value computed longest ago.
+      i_replace=mod(i_replace,20)+1
+      
 c     Give the current values to the arrays that should be
 c     saved. 'pdflast' is filled below.
-      xlast(ireuse)=x
-      xmulast(ireuse)=xmu
-      pdlabellast(ireuse)=pdlabel
-      ihlast(ireuse)=ih
+      xlast(i_replace)=x
+      xmulast(i_replace)=xmu
+      pdlabellast(i_replace)=pdlabel
+      ihlast(i_replace)=ih
 
       if(iabs(ipart).eq.7.and.ih.gt.1) then
          q2max=xmu*xmu
@@ -135,7 +120,7 @@ c     saved. 'pdflast' is filled below.
          elseif(ih .eq. 2) then !from a proton without breaking
             pdg2pdf=epa_proton(x,q2max)
          endif 
-         pdflast(iporg,ireuse)=pdg2pdf
+         pdflast(iporg,i_replace)=pdg2pdf
          return
       endif
       
@@ -210,11 +195,11 @@ C
 
          pdg2pdf=Ctq6Pdf(ipart,x,xmu)
       else
-         call pftopdg(ih,x,xmu,pdflast(-7,ireuse))
-         pdg2pdf=pdflast(iporg,ireuse)
+         call pftopdg(ih,x,xmu,pdflast(-7,i_replace))
+         pdg2pdf=pdflast(iporg,i_replace)
       endif      
 
-      pdflast(iporg,ireuse)=pdg2pdf
+      pdflast(iporg,i_replace)=pdg2pdf
       return
       end
 
