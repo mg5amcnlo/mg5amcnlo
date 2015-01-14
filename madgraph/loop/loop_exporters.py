@@ -2387,13 +2387,7 @@ ENDDO""")
 #===============================================================================
 # LoopProcessExporterFortranSA
 #===============================================================================
-class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
-					 #,export_v4.ProcessExporterFortranMatchBox):
-                                         
-                                         
-#                                         LoopExporterFortran,
-#                                   export_v4.ProcessExporterFortranSA):
-                                   
+class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):                                  
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
 
@@ -2409,6 +2403,9 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
     def get_color_string_lines(self, matrix_element):
         """Return the color matrix definition lines for this matrix element. Split
         rows in chunks of size n."""
+
+        return export_v4.ProcessExporterFortranMatchBox.get_color_string_lines(self, matrix_element)
+
 
         if not matrix_element.get('color_matrix'):
             return "\n".join(["out = 1"])
@@ -2438,18 +2435,18 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
                     output[(i_color,j)] = v
 
             for i,key in enumerate(output):
-              if matrix_strings == []:
-                #first entry
-                matrix_strings.append(""" 
-                if (in1.eq.%s.and.in2.eq.%s)then
-                out = %s
-                """  % (key[0], key[1], output[key]))
-              else:
-                #first entry
-                matrix_strings.append(""" 
-                elseif (in1.eq.%s.and.in2.eq.%s)then
-                out = %s
-                """  % (key[0], key[1], output[key]))                
+                if matrix_strings == []:
+                    #first entry
+                    matrix_strings.append(""" 
+                    if (in1.eq.%s.and.in2.eq.%s)then
+                    out = %s
+                    """  % (key[0], key[1], output[key]))
+                else:
+                    #not first entry
+                    matrix_strings.append(""" 
+                    elseif (in1.eq.%s.and.in2.eq.%s)then
+                    out = %s
+                    """  % (key[0], key[1], output[key]))                
         matrix_strings.append(" else \n out = - 1 \n endif")
         return "\n".join(matrix_strings)
     

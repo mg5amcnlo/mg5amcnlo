@@ -2036,8 +2036,9 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
             return replace_dict['return_value']
         else:
             return replace_dict # for subclass update   
-        
-    def get_color_string_lines(self, matrix_element):
+
+    @staticmethod    
+    def get_color_string_lines(matrix_element):
         """Return the color matrix definition lines for this matrix element. Split
         rows in chunks of size n."""
 
@@ -2059,28 +2060,28 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
             all_matches = t_match.findall(t_str)
             output = {}
             arg=[]
-            for i,match in enumerate(all_matches):
+            for match in all_matches:
                 ctype, tmparg = match[0], [m.strip() for m in match[1].split(',')]
                 if ctype not in ['T', 'Tr']:
-                    raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
+                    raise MadGraph5Error, 'Color Structure not handle by Matchbox'
                 tmparg += ['0']
                 arg +=tmparg
             for j, v in enumerate(arg):
                     output[(i_color,j)] = v
 
-            for i,key in enumerate(output):
-              if matrix_strings == []:
-                #first entry
-                matrix_strings.append(""" 
-                if (in1.eq.%s.and.in2.eq.%s)then
-                out = %s
-                """  % (key[0], key[1], output[key]))
-              else:
-                #first entry
-                matrix_strings.append(""" 
-                elseif (in1.eq.%s.and.in2.eq.%s)then
-                out = %s
-                """  % (key[0], key[1], output[key]))                
+            for key in output:
+                if matrix_strings == []:
+                    #first entry
+                    matrix_strings.append(""" 
+                    if (in1.eq.%s.and.in2.eq.%s)then
+                    out = %s
+                    """  % (key[0], key[1], output[key]))
+                else:
+                    #not first entry
+                    matrix_strings.append(""" 
+                    elseif (in1.eq.%s.and.in2.eq.%s)then
+                    out = %s
+                    """  % (key[0], key[1], output[key]))                
         matrix_strings.append(" else \n out = - 1 \n endif")
         return "\n".join(matrix_strings)
     
