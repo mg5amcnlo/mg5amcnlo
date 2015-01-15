@@ -10,6 +10,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		OM: Change the Breit-Wigner splitting for the multi-channel integration, use the bwcutoff instead of
                     the hardcoded value 5.
 		RF: Re-factoring of the structure of the code for fNLO computations.
+                MZ: Fix to bug 1406000 (segfault appearing when doing FxFx merging). Thanks to Josh Bendavid for
+                    having reported it
+                MZ: Fix to a bug occurring when generating event in the "split" mode: the required output was 
+                    not correctly specified
+                MZ: Fixes to different small bugs / improvement in the error and warning messages
 
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.
