@@ -256,7 +256,6 @@ def merge_all_plots(path1, path2, outputpath='/tmp', td='../../td/td', MA=None):
             continue
         if title not in all_plot1:
             continue
-        print "DEALING with", title
         my_data = load_data()
         my_data.import_data(pjoin(path1, all_plot1[title]), 1)
         my_data.import_data(pjoin(path2, filename), 2)

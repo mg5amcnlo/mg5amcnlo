@@ -596,7 +596,6 @@ class Event(list):
                 self.reweight_order += [k for k in self.reweight_data.keys() \
                                                 if k not in self.reweight_order]
                 
-                
             reweight_str = '<rwgt>\n%s\n</rwgt>' % '\n'.join(
                         '<wgt id=\'%s\'> %+13.7e </wgt>' % (i, float(self.reweight_data[i]))
                         for i in self.reweight_order)
@@ -812,6 +811,44 @@ if '__main__' == __name__:
         import matplotlib.gridspec as gridspec
         nbins = 100
         
+        nb_pass = 0
+        data = []
+        for event in lhe:
+            if nb_pass > 10000:
+                break
+            E=0
+            for particle in event:
+                if particle.status<0:
+                    E+=particle.E
+            if 360 < E < 400:
+                event.parse_reweight()
+                data.append(event.reweight_data["mg_reweight_1"]/event.wgt)
+                if 0.8 < event.reweight_data["mg_reweight_1"]/event.wgt < 1.2:            
+                    nb_pass +=1
+            
+        print nb_pass
+        gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
+        gs1.update(wspace=0, hspace=0) # set the spacing between axes. 
+        ax = plt.subplot(gs1[0])
+        
+        n, bins, patches = ax.hist(data, nbins, histtype='step', label='original')
+        ax_c = ax.twinx()
+        ax_c.set_ylabel('MadGraph5_aMC@NLO')
+        ax_c.yaxis.set_label_coords(1.01, 0.25)
+        ax_c.set_yticks(ax.get_yticks())
+        ax_c.set_yticklabels([])
+        plt.axis('on')
+        plt.xlabel('weight ratio')
+        plt.show()
+
+
+    # Example 4: More complex plotting example (with ratio plot)
+    if False:
+        lhe = EventFile('unweighted_events.lhe')
+        import matplotlib.pyplot as plt
+        import matplotlib.gridspec as gridspec
+        nbins = 100
+        
         #mtau, wtau = 45, 5.1785e-06
         mtau, wtau = 1.777, 4.027000e-13
         nb_pass = 0
@@ -831,8 +868,7 @@ if '__main__' == __name__:
 
             if abs((mtau-tau2.mass())/wtau)<1e6 and tau2.mass() >1:               
                 data.append((tau1.mass()-mtau)/wtau)
-                data2.append((tau2.mass()-mtau)/wtau)  
-
+                data2.append((tau2.mass()-mtau)/wtau)   
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
         gs1.update(wspace=0, hspace=0) # set the spacing between axes. 
         ax = plt.subplot(gs1[0])
@@ -870,8 +906,6 @@ if '__main__' == __name__:
         ax.set_yticks(tick[:-1])
         
         
-
-
         plt.axis('on')
         plt.xlabel('(M - Mtau)/Wtau')                                                                                                                                 
         plt.show()

@@ -993,6 +993,30 @@ class chdir:
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
 
+################################################################################
+# Timeout FUNCTION
+################################################################################
+
+def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
+    '''This function will spwan a thread and run the given function using the args, kwargs and 
+    return the given default value if the timeout_duration is exceeded 
+    ''' 
+    import threading
+    class InterruptableThread(threading.Thread):
+        def __init__(self):
+            threading.Thread.__init__(self)
+            self.result = default
+        def run(self):
+            try:
+                self.result = func(*args, **kwargs)
+            except Exception,error:
+                print error
+                self.result = default
+    it = InterruptableThread()
+    it.start()
+    it.join(timeout_duration)
+    print "return ", it.result
+    return it.result
 
 
 ################################################################################

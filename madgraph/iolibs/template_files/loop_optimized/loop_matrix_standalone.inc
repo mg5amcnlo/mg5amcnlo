@@ -419,15 +419,15 @@ IF(ML_INIT) THEN
   CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
 ## if(LoopInduced){
   IF(.NOT.LoopInitStartOver) THEN
-    WRITE(*,*) 'INFO: For loop-induced processes it is preferable to always set the parameter LoopInitStartOver to True, so it is hard-set here to True.'
+    WRITE(*,*) '##INFO: For loop-induced processes it is preferable to always set the parameter LoopInitStartOver to True, so it is hard-set here to True.'
     LoopInitStartOver=.TRUE.
   ENDIF
   IF(.NOT.HelInitStartOver) THEN
-    WRITE(*,*) "INFO: For loop-induced processes it is preferable to always set the parameter HelInitStartOver to True, so it is hard-set here to True.'
+    WRITE(*,*) "##INFO: For loop-induced processes it is preferable to always set the parameter HelInitStartOver to True, so it is hard-set here to True.'
     HelInitStartOver=.TRUE.
   ENDIF
   IF (CheckCycle.LT.5) THEN
-    WRITE(*,*) "INFO: Due to the dynamic setting of the reference scale for contributions comparisons, it is preferable to set the parameter CheckCycle to a value larger than 4, so it is hard-set here to 5.'
+    WRITE(*,*) "##INFO: Due to the dynamic setting of the reference scale for contributions comparisons, it is preferable to set the parameter CheckCycle to a value larger than 4, so it is hard-set here to 5.'
     CheckCycle=5
   ENDIF
 ## }
@@ -435,7 +435,7 @@ IF(ML_INIT) THEN
 C Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
   if(.NOT.AUTOMATIC_TIR_CACHE_CLEARING) THEN
     IF(NROTATIONS_DP.NE.0.or.NROTATIONS_QP.NE.0) THEN
-      WRITE(*,*) 'INFO: AUTOMATIC_TIR_CACHE_CLEARING is disabled, so MadLoop automatically resets NROTATIONS_DP and NROTATIONS_QP to 0.'
+      WRITE(*,*) '##INFO: AUTOMATIC_TIR_CACHE_CLEARING is disabled, so MadLoop automatically resets NROTATIONS_DP and NROTATIONS_QP to 0.'
       NROTATIONS_QP=0
       NROTATIONS_DP=0
     ENDIF
@@ -523,7 +523,7 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
 	ENDDO
   ENDDO
   IF(BOOTANDSTOP) THEN
-    WRITE(*,*) 'Stopped by user request.'
+    WRITE(*,*) '##Stopped by user request.'
     stop
   ENDIF
 
@@ -1274,8 +1274,8 @@ C   DOUBLE CHECK THE HELICITY FILTER
     IF (GOODHEL(HELPICKED).EQ.-HELOFFSET) THEN
 	  IF (.NOT.%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
-	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected what are the zero helicity configurations.'
-	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
+	    write(*,*) '##One reason for this is that you might have changed sensible parameters which affected what are the zero helicity configurations.'
+	    write(*,*) '##MadLoop will try to reset the Helicity filter with the next PS points it receives.'
 	    NTRY=0
 	    OPEN(29,FILE=HelFilterFN,err=348)
 348     CONTINUE
@@ -1285,8 +1285,8 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
 	  IF(%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
-	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
-	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
+	    write(*,*) '##One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
+	    write(*,*) '##MadLoop will try to reset the Helicity filter with the next PS points it receives.'
 	    NTRY=0
 	    OPEN(30,FILE=HelFilterFN,err=349)
 349     CONTINUE
@@ -1503,12 +1503,12 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  IF(NEPS.LE.10) THEN	  
         WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
 		IF (NSQUAREDSO.NE.1) THEN
-		  WRITE(*,*) 'Accuracies for each split order, starting with the summed case'
-	      WRITE(*,*) 'DP accuracies (for each split order): ',(TEMP1(I),I=0,NSQUAREDSO)
-	      WRITE(*,*) 'QP accuracies (for each split order): ',(ACC(I),I=0,NSQUAREDSO)
+		  WRITE(*,*) '##Accuracies for each split order, starting with the summed case'
+	      WRITE(*,*) '##DP accuracies (for each split order): ',(TEMP1(I),I=0,NSQUAREDSO)
+	      WRITE(*,*) '##QP accuracies (for each split order): ',(ACC(I),I=0,NSQUAREDSO)
 		ELSE
-	      WRITE(*,*) 'DP accuracy: ',TEMP1(1)
-	      WRITE(*,*) 'QP accuracy: ',ACC(1)
+	      WRITE(*,*) '##DP accuracy: ',TEMP1(1)
+	      WRITE(*,*) '##QP accuracy: ',ACC(1)
 		ENDIF
 	    DO J=0,NSQUAREDSO
 		  IF (NSQUAREDSO.NE.1.OR.J.NE.0) THEN

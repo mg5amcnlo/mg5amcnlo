@@ -228,10 +228,10 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                                   "will come out with the next release.")                           
 
         if isinstance(proc, base_objects.ProcessDefinition) and mode.startswith('ML5'):
-            if proc.has_multiparticle_label():
-                raise self.InvalidCmd(
+            if proc.has_multiparticle_label():        
+                logger.warning(
                   "When running ML5 standalone, multiparticle labels cannot be"+\
-                  " employed. Please use the FKS5 interface instead.")
+                  " employed. This is currently in test (=no guarantee).")
         
         if proc['decay_chains']:
             raise self.InvalidCmd(
@@ -531,12 +531,16 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             if self.options['loop_optimized_output'] and len(matrix_elements)>1:
                 max_lwfspins = [m.get_max_loop_particle_spin() for m in \
                                                                 matrix_elements]
-                max_loop_vert_ranks = [me.get_max_loop_vertex_rank() for me in \
+                try:
+                    max_loop_vert_ranks = [me.get_max_loop_vertex_rank() for me in \
                                                                 matrix_elements]
-                if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
-                    self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
+                except MadGraph5Error:
+                    pass
+                else:
+                    if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
+                        self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
                                                        max(max_loop_vert_ranks))
-                    logger.warning('ML5 has just output processes which do not'+\
+                        logger.warning('ML5 has just output processes which do not'+\
                       ' share the same maximum loop wavefunction size or the '+\
                       ' same maximum loop vertex rank. This is potentially '+\
                       ' dangerous. Please prefer to output them separately.')

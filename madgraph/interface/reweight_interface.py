@@ -37,6 +37,7 @@ import madgraph.various.misc as misc
 import madgraph.various.banner as banner
 import madgraph.various.lhe_parser as lhe_parser
 import madgraph.various.combine_plots as combine_plots
+import madgraph.various.cluster as cluster
 
 import models.import_ufo as import_ufo
 import models.check_param_card as check_param_card 
@@ -369,33 +370,50 @@ class ReweightInterface(extended_cmd.Cmd):
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
+        nb_core = 1
+        if nb_core >1:
+            multicore = cluster.MultiCore(nb_core)
+
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
-            if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),1000)==0): 
+            if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
                     running_time = misc.format_timer(time.time()-start)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
-
-            weight = self.calculate_weight(event)
-            cross += weight
-            if self.output_type == "default":
-                event.reweight_data[tag_name] = weight
-                #write this event with weight
-                output.write(str(event))
-                if self.mother:
+            if nb_core > 1:
+                while 1:
+                    if multicore.queue.qsize() < 100 * nb_core:
+                        multicore.submit(self.write_reweighted_event, argument=[event, tag_name])
+                        break
+                    #else:
+                    #    time.sleep(0.001)
+                continue
+            else:
+                weight = self.calculate_weight(event)
+                cross += weight
+                if self.output_type == "default":
+                    event.reweight_data[tag_name] = weight
+                    #write this event with weight
+                    output.write(str(event))
+                    if self.mother:
+                        event.wgt = weight
+                        event.reweight_data = {}
+                        output2.write(str(event))
+    
+                else:
                     event.wgt = weight
                     event.reweight_data = {}
-                    output2.write(str(event))
+                    if self.mother:
+                        output2.write(str(event))
+                    else:
+                        output.write(str(event))
 
-            else:
-                event.wgt = weight
-                event.reweight_data = {}
-                if self.mother:
-                    output2.write(str(event))
-                else:
-                    output.write(str(event))
-
+        if nb_core >1:
+            multicore.wait_time = 1
+            multicore.wait(rw_dir,lambda *x:misc.sprint(x))
+            for t in multicore.demons:
+                cross += t.local.cross
                 
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
@@ -414,11 +432,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 results.add_detail('nb_event', event_nb+1)
                 results.add_detail('cross', cross)
                 results.add_detail('error', 'nan')
-                if False:
-                    self.mother.create_plot(mode='reweight', event_path=output2.name,
+                self.mother.create_plot(mode='reweight', event_path=output2.name,
                                         tag=self.run_card['run_tag'])
                 #modify the html output to add the original run
-                if False and 'plot' in results.current.reweight:
+                if 'plot' in results.current.reweight:
                     html_dir = pjoin(self.mother.me_dir, 'HTML', run_name)
                     td = pjoin(self.mother.options['td_path'], 'td') 
                     MA = pjoin(self.mother.options['madanalysis_path'])
@@ -455,28 +472,52 @@ class ReweightInterface(extended_cmd.Cmd):
         self.all_cross_section[rewgtid] = cross
         
 
-
-            
-    def calculate_weight(self, event):
+    def write_reweighted_event(self, event, tag_name, **opt):
+        """a function for running in multicore"""
+        
+        if not hasattr(opt['thread_space'], "calculator"):
+            opt['thread_space'].calculator = {}
+            opt['thread_space'].calculator_nbcall = {}
+            opt['thread_space'].cross = 0
+            opt['thread_space'].output = open( self.lhe_input.name +'rw.%s' % opt['thread_id'], 'w')
+            if self.mother:
+                out_path = pjoin(self.mother.me_dir, 'Events', 'reweight.lhe.%s' % opt['thread_id'])
+                opt['thread_space'].output2 = open(out_path, 'w')
+                
+        weight = self.calculate_weight(event, space=opt['thread_space'])
+        opt['thread_space'].cross += weight
+        if self.output_type == "default":
+            event.reweight_data[tag_name] = weight
+            #write this event with weight
+            opt['thread_space'].output.write(str(event))
+            if self.mother:
+                event.wgt = weight
+                event.reweight_data = {}
+                opt['thread_space'].output2.write(str(event))
+        else:
+            event.wgt = weight
+            event.reweight_data = {}
+            if self.mother:
+                opt['thread_space'].output2.write(str(event))
+            else:
+                opt['thread_space'].output.write(str(event))
+        
+        return 0
+    
+    def calculate_weight(self, event, space=None):
+        """space defines where to find the calculator (in multicore)"""
+        
+        if not space: 
+            space = self
         
         event.parse_reweight()
         
-        no_decay_event = event.remove_decay(15)
-        decay_event = event.get_decay(15)
+        w_orig = self.calculate_matrix_element(event, 0, space)
+        w_new =  self.calculate_matrix_element(event, 1, space)
+        return w_new/w_orig*event.wgt
         
-        w_orig = self.calculate_matrix_element(no_decay_event, 0)
-        w_new =  self.calculate_matrix_element(event, 1)
-        w_decay = self.calculate_matrix_element(decay_event, 1)
-        
-        assert len(no_decay_event) != len(event)
-        assert len(decay_event) != len(event)
-#        print w_new/w_orig*event.wgt*4.0014e-13*1.777/math.pi*0.1349567E-17
-        return w_new/w_orig*event.wgt/w_decay*0.1349567E-17*3
     
-        # last factor to compensate NWA
-    
-    
-    def calculate_matrix_element(self, event, hypp_id):
+    def calculate_matrix_element(self, event, hypp_id, space):
         """routine to return the matrix element"""
 
         tag, order = event.get_tag_and_order()
@@ -489,24 +530,43 @@ class ReweightInterface(extended_cmd.Cmd):
         run_id = (tag, hypp_id)
 
         start = False
-        if run_id in self.calculator:
-            external = self.calculator[run_id]
-            self.calculator_nbcall[run_id] += 1
+        if run_id in space.calculator:
+            external = space.calculator[run_id]
+            space.calculator_nbcall[run_id] += 1
         elif (not self.second_model and not self.second_process) or hypp_id==0:
             # create the executable for this param_card            
             tmpdir = pjoin(self.me_dir,'rw_me', 'SubProcesses', Pdir)
+            time.sleep(0.1)
             executable_prod="./check"
             if not os.path.exists(pjoin(tmpdir, 'check')):
                 misc.compile( cwd=tmpdir)
-            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
+            try:
+                external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
                                                       stderr=STDOUT, cwd=tmpdir)
-            self.calculator[run_id] = external 
-            self.calculator_nbcall[run_id] = 1       
+            except OSError:
+                time.sleep(0.1)
+                external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
+                                                      stderr=STDOUT, cwd=tmpdir)                
+            space.calculator[run_id] = external 
+            space.calculator_nbcall[run_id] = 1
+            time.sleep(0.2)
             # set the param_card
+            #external.stdin.write('\x1a')
             if hypp_id == 1:
-                external.stdin.write('param_card.dat\n')
+                out = misc.timeout(external.stdin.write, ('param_card.dat\n',), default=-1,timeout_duration=1)
+                #external.stdin.write('param_card.dat\n')
             elif hypp_id == 0:
-                external.stdin.write('param_card_orig.dat\n')
+                out = misc.timeout(external.stdin.write, ('param_card_orig.dat\n',), default=-1,timeout_duration=1)
+            if out == -1:
+                #fail resubmit
+                logger.warning("fail stdin, resubmit")
+                external.stdin.close()
+                external.stdout.close()
+                external.terminate()
+                del external
+                del space.calculator[run_id]
+                return self.calculate_matrix_element(event, hypp_id, space)
+                
         else:
             # create the executable for this param_card            
             tmpdir = pjoin(self.me_dir,'rw_me_second', 'SubProcesses', Pdir)
@@ -518,8 +578,8 @@ class ReweightInterface(extended_cmd.Cmd):
                     misc.compile(['check'], cwd=tmpdir)
             external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
                                                       stderr=STDOUT, cwd=tmpdir)
-            self.calculator[run_id] = external 
-            self.calculator_nbcall[run_id] = 1       
+            space.calculator[run_id] = external 
+            space.calculator_nbcall[run_id] = 1       
             # set the param_card
             if hypp_id == 1:
                 external.stdin.write('param_card.dat\n')
@@ -532,42 +592,60 @@ class ReweightInterface(extended_cmd.Cmd):
         stdin_text = event.get_momenta_str(orig_order)
         external.stdin.write(stdin_text)
         me_value = external.stdout.readline()
-        if True or start:
+        if start:
             while 1:
                 try: 
                     me_value = float(me_value)
                     break
                 except Exception:
-                    misc.sprint(me_value)
                     me_value = external.stdout.readline()             
         else:
-            try: 
-                if 'nan' in me_value.lower():
+            while 1:
+                try: 
+                    if 'nan' in me_value.lower():
+                        raise Exception
+                    if 'warning' in me_value.lower():
+                        logger.debug(me_value)
+                        me_value = external.stdout.readline()
+                        continue
+                    if me_value.strip().startswith("#"):
+                        logger.debug(me_value)
+                        me_value = external.stdout.readline()
+                        continue
+                    if me_value.strip().lower().startswith('stop'):
+                        logger.warning("fail PS point! Retry")
+                        me_value = 0
+                        external.stdin.close()
+                        external.stdout.close()
+                        external.terminate()
+                        del space.calculator[run_id]
+                        del space.calculator_nbcall[run_id]
+                        return self.calculate_matrix_element(event, hypp_id, space)
+                    me_value = float(me_value)
+                    break
+                except Exception:
+                    print 'ZERO DETECTED for hypp', hypp_id
+                    print stdin_text
+                    print "RETURN VALUE IS", [me_value]
+                    #os.system('lsof -p %s' % external.pid)
+                    me_value = 0
                     raise Exception
-                me_value = float(me_value)
-            except Exception:
-                print 'ZERO DETECTED for hypp', hypp_id
-                print stdin_text
-                print "RETURN VALUE IS", me_value
-                #os.system('lsof -p %s' % external.pid)
-                me_value = 0
-                raise Exception
         
-        if len(self.calculator) > 100:
-            logger.debug('more than 100 calculator. Perform cleaning')
-            nb_calls = self.calculator_nbcall.values()
+        if len(space.calculator) > 50:
+            logger.debug('more than 50 calculator. Perform cleaning')
+            nb_calls = space.calculator_nbcall.values()
             nb_calls.sort()
             cut = max([nb_calls[len(nb_calls)//2], 0.001 * nb_calls[-1]])
-            for key, external in list(self.calculator.items()):
-                nb = self.calculator_nbcall[key]
+            for key, external in list(space.calculator.items()):
+                nb = space.calculator_nbcall[key]
                 if nb < cut:
                     external.stdin.close()
                     external.stdout.close()
                     external.terminate()
-                    del self.calculator[key]
-                    del self.calculator_nbcall[key]
+                    del space.calculator[key]
+                    del space.calculator_nbcall[key]
                 else:
-                    self.calculator_nbcall[key] = self.calculator_nbcall[key] //10
+                    space.calculator_nbcall[key] = self.calculator_nbcall[key] //10
         
         return me_value
     
@@ -784,6 +862,7 @@ class ReweightInterface(extended_cmd.Cmd):
         matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
         
         self.id_to_path_second = {}
+        to_check = [] # list of tag that do not have a Pdir at creation time. 
         for me in matrix_elements:
             for proc in me.get('processes'):
                 initial = []    #filled in the next line
@@ -799,23 +878,31 @@ class ReweightInterface(extended_cmd.Cmd):
                     tag = (tag[0], tuple(decay_finals))
                 Pdir = pjoin(path_me, 'rw_me_second', 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
-                assert os.path.exists(Pdir), "Pdir %s do not exists" % Pdir                        
+                if not os.path.exists(Pdir):
+                    to_check.append(tag)
+                    continue
                 if tag in self.id_to_path_second:
                     if not Pdir == self.id_to_path_second[tag][1]:
                         misc.sprint(tag, Pdir, self.id_to_path_second[tag][1])
                         raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
                     else:
                         continue
+                    
                 self.id_to_path_second[tag] = [order, Pdir]
+
+        for tag in to_check:
+            if tag not in self.id_to_path:
+                raise self.InvalidCmd, "no valid path for %s" % (tag,)
         
         # 4. Check MadLoopParam
         if os.path.exists(pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat')):
+            misc.sprint("Modify ML param")
             MLCard = banner.MadLoopParam(pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat'))
             MLCard.set('WriteOutFilters', False)
             MLCard.set('UseLoopFilter', False)
             MLCard.set("DoubleCheckHelicityFilter", False)
             MLCard.set("HelicityFilterLevel", 0)
-            MLCard.write(pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat'),
+            MLCard.write(pjoin(path_me, 'rw_me_second', 'SubProcesses', 'MadLoopParams.dat'),
                          pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat'), 
                          commentdefault=False)
             

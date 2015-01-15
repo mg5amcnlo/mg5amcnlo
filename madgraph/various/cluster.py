@@ -517,7 +517,8 @@ class MultiCore(Cluster):
     """class for dealing with the submission in multiple node"""
 
     job_id = "$"
-
+    wait_time = 300
+    
     def __init__(self, *args, **opt):
         """Init the cluster """
         
@@ -548,21 +549,23 @@ class MultiCore(Cluster):
         self.fail_msg = None
 
         # starting the worker node
-        for _ in range(self.nb_core):
-            self.start_demon()
+        for i in range(self.nb_core):
+            self.start_demon(i)
 
         
-    def start_demon(self):
+    def start_demon(self,i):
         import threading
-        t = threading.Thread(target=self.worker)
+        t = threading.Thread(target=self.worker, args=(i,))
         t.daemon = True
         t.start()
         self.demons.append(t)
 
 
-    def worker(self):
+    def worker(self, thread_id):
         import Queue
         import thread
+        import threading
+        thread_space = threading.local()
         while not self.stoprequest.isSet():
             try:
                 args = self.queue.get()
@@ -594,7 +597,11 @@ class MultiCore(Cluster):
                         self.pids.put(pid)
                         # the function should return 0 if everything is fine
                         # the error message otherwise
-                        returncode = exe(*arg, **opt)
+                        local_opt = dict(opt)
+                        local_opt['thread_id'] = thread_id 
+                        local_opt['thread_space'] = thread_space
+                        thread_space.thread_id = thread_id
+                        returncode = exe(*arg, **local_opt)
                         if returncode != 0:
                             logger.warning("fct %s does not return 0", exe)
                             self.stoprequest.set()
@@ -615,8 +622,9 @@ class MultiCore(Cluster):
                 except thread.error:
                     continue
             except Queue.Empty:
+                self.demons[thread_id].local = thread_space
                 continue
-            
+         
             
             
     
@@ -717,6 +725,7 @@ class MultiCore(Cluster):
                 update_status(Idle, Running, Done)
                 # Going the quit since everything is done
                 # Fully Ensure that everything is indeed done.
+                print "in join waiting"
                 self.queue.join()
                 break
             
@@ -738,13 +747,15 @@ class MultiCore(Cluster):
             # Define how to wait for the next iteration
             if use_lock:
                 # simply wait that a worker release the lock
-                use_lock = self.lock.wait(300)
+                print "wait for worker"
+                use_lock = self.lock.wait(self.wait_time)
                 self.lock.clear()
                 if not use_lock and Idle > 0:
                     use_lock = True
             else:
                 # to be sure that we will never fully lock at the end pass to 
                 # a simple time.sleep()
+                print "wait N sec",Idle,Running,Done
                 time.sleep(sleep_time)
                 sleep_time = min(sleep_time + 2, 180)
         if update_first:
