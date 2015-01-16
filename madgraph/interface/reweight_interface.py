@@ -603,7 +603,6 @@ class ReweightInterface(extended_cmd.Cmd):
         external.stdin.write('%i\n' % hel_dict[tuple(event.get_helicity(orig_order))])
         me_value = external.stdout.readline()
         
-        print hypp_id, me_value
         if start:
             while 1:
                 try: 
@@ -644,9 +643,9 @@ class ReweightInterface(extended_cmd.Cmd):
                     raise Exception
         
         if me_value == 0:
-            print '%g' % event.aqcd
-            print event.get_momenta_str(orig_order)
-            print '%i' % hel_dict[tuple(event.get_helicity(orig_order))]
+            #print '%g' % event.aqcd
+            #print event.get_momenta_str(orig_order)
+            #print '%i' % hel_dict[tuple(event.get_helicity(orig_order))]
             external.stdin.close()
             external.stdout.close()
             external.terminate()

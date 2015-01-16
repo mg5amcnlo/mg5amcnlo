@@ -76,14 +76,14 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      NTRY=NTRY+1
+      IF(USERHEL.EQ.-1) NTRY=NTRY+1
       DO IHEL=1,NEXTERNAL
          JC(IHEL) = +1
       ENDDO
       ANS = 0D0
           DO IHEL=1,NCOMB
 	         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN		  
-                IF (GOODHEL(IHEL) .OR. NTRY .LT. 20) THEN
+                IF (GOODHEL(IHEL) .OR. NTRY .LT. 20.OR.USERHEL.NE.-1) THEN
                     T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
                     ANS=ANS+T
                     IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
