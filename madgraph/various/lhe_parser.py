@@ -477,6 +477,48 @@ class Event(list):
         tag = (tuple(initial), tuple(final))
         return tag, order
     
+    def get_helicity(self, get_order, allow_reversed=True):
+        """return a list with the helicities in the order asked for"""
+
+        
+        
+        #avoid to modify the input
+        order = [list(get_order[0]), list(get_order[1])] 
+        out = [9] *(len(order[0])+len(order[1]))
+        for i, part in enumerate(self):
+            if part.status == 1: #final
+                try:
+                    ind = order[1].index(part.pid)
+                except ValueError, error:
+                    if not allow_reversed:
+                        raise error
+                    else:
+                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
+                        try:
+                            return self.get_helicity(order, False)
+                        except ValueError:
+                            raise error     
+                position = len(order[0]) + ind
+                order[1][ind] = 0   
+            elif part.status == -1:
+                try:
+                    ind = order[0].index(part.pid)
+                except ValueError, error:
+                    if not allow_reversed:
+                        raise error
+                    else:
+                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
+                        try:
+                            return self.get_helicity(order, False)
+                        except ValueError:
+                            raise error
+                 
+                position =  ind
+                order[0][ind] = 0
+            else: #intermediate
+                continue
+            out[position] = int(part.helicity)
+        return out  
 
     
     def check_color_structure(self):

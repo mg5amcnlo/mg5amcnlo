@@ -725,7 +725,6 @@ class MultiCore(Cluster):
                 update_status(Idle, Running, Done)
                 # Going the quit since everything is done
                 # Fully Ensure that everything is indeed done.
-                print "in join waiting"
                 self.queue.join()
                 break
             
@@ -747,7 +746,6 @@ class MultiCore(Cluster):
             # Define how to wait for the next iteration
             if use_lock:
                 # simply wait that a worker release the lock
-                print "wait for worker"
                 use_lock = self.lock.wait(self.wait_time)
                 self.lock.clear()
                 if not use_lock and Idle > 0:
@@ -755,7 +753,6 @@ class MultiCore(Cluster):
             else:
                 # to be sure that we will never fully lock at the end pass to 
                 # a simple time.sleep()
-                print "wait N sec",Idle,Running,Done
                 time.sleep(sleep_time)
                 sleep_time = min(sleep_time + 2, 180)
         if update_first:

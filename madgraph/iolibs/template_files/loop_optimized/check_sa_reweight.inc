@@ -41,6 +41,7 @@ C
 C     LOCAL
 C     
       INTEGER I,J,K
+      INTEGER NHEL
 C four momenta. Energy is the zeroth component.
       REAL*8 P(0:3,NEXTERNAL)
 	  INTEGER MATELEM_ARRAY_DIM
@@ -135,6 +136,8 @@ C     READ THE POINT
       do i=1,nexternal
          read (*,*) P(0,i),P(1,i),P(2,i),P(3,i)
       enddo
+C     READ THE HELICITY INFORMATION
+	read(*,*) NHEL
       G = 2* DSQRT(new_alphas*pi)
       do i=0,3
         PIN(i)=0.0d0
@@ -151,8 +154,11 @@ C     Update the couplings with the new MU_R
 C
 C     Now we can call the matrix element
 C
-      CALL %(proc_prefix)sSLOOPMATRIX_THRES(P,MATELEM,-1.0d0,PREC_FOUND,RETURNCODE)
-
+      if (NHEL.eq.0) then
+	CALL %(proc_prefix)sSLOOPMATRIX_THRES(P,MATELEM,-1.0d0,PREC_FOUND,RETURNCODE)
+      else
+        CALL %(proc_prefix)sSLOOPMATRIXHEL_THRES(P,NHEL, MATELEM,-1.0d0,PREC_FOUND,RETURNCODE)
+      endif	 
       write(*,*) MATELEM(1,0)
       call flush()
 

@@ -1015,7 +1015,6 @@ def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
     it = InterruptableThread()
     it.start()
     it.join(timeout_duration)
-    print "return ", it.result
     return it.result
 
 

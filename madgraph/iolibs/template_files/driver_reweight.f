@@ -38,6 +38,7 @@ C
       CHARACTER*200 param_card
       real*8 new_alphas
       real*8 pi
+      integer NHEL
 C     
 C     EXTERNAL
 C     
@@ -70,14 +71,17 @@ c      read phase-space point (main loop)
       do i=1,nexternal
          read (*,*) P(0,i),P(1,i),P(2,i),P(3,i) 
       enddo
-
+      read(*,*) NHEL
 
 
 c     
 c     Now we can call the matrix element!
 c
-
-      CALL SMATRIX(P,MATELEM)
+      if (NHEL.ne.0) then
+        CALL SMATRIXHEL(P, NHEL, MATELEM)
+      else
+        CALL SMATRIX(P, MATELEM)
+      endif
 c
 
 c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	

@@ -514,6 +514,14 @@ class ReweightInterface(extended_cmd.Cmd):
         
         w_orig = self.calculate_matrix_element(event, 0, space)
         w_new =  self.calculate_matrix_element(event, 1, space)
+        if w_orig == 0:
+            tag, order = event.get_tag_and_order()
+            orig_order, Pdir, hel_dict = self.id_to_path[tag]
+            print w_orig, w_new
+            print event
+            print event.aqcd
+            print event.get_momenta_str(orig_order)
+            print tuple(event.get_helicity(orig_order)), hel_dict[tuple(event.get_helicity(orig_order))]
         return w_new/w_orig*event.wgt
         
     
@@ -523,9 +531,9 @@ class ReweightInterface(extended_cmd.Cmd):
         tag, order = event.get_tag_and_order()
         
         if (not self.second_model and not self.second_process) or hypp_id==0:
-            orig_order, Pdir = self.id_to_path[tag]
+            orig_order, Pdir, hel_dict = self.id_to_path[tag]
         else:
-            orig_order, Pdir = self.id_to_path_second[tag]
+            orig_order, Pdir, hel_dict = self.id_to_path_second[tag]
 
         run_id = (tag, hypp_id)
 
@@ -586,12 +594,16 @@ class ReweightInterface(extended_cmd.Cmd):
             elif hypp_id == 0:
                 external.stdin.write('param_card_orig.dat\n')
             start = True                
-                
+        
         #import the value of alphas
         external.stdin.write('%g\n' % event.aqcd)
         stdin_text = event.get_momenta_str(orig_order)
         external.stdin.write(stdin_text)
+        # add helicity information
+        external.stdin.write('%i\n' % hel_dict[tuple(event.get_helicity(orig_order))])
         me_value = external.stdout.readline()
+        
+        print hypp_id, me_value
         if start:
             while 1:
                 try: 
@@ -630,6 +642,19 @@ class ReweightInterface(extended_cmd.Cmd):
                     #os.system('lsof -p %s' % external.pid)
                     me_value = 0
                     raise Exception
+        
+        if me_value == 0:
+            print '%g' % event.aqcd
+            print event.get_momenta_str(orig_order)
+            print '%i' % hel_dict[tuple(event.get_helicity(orig_order))]
+            external.stdin.close()
+            external.stdout.close()
+            external.terminate()
+            del space.calculator[run_id]
+            del space.calculator_nbcall[run_id]
+            print "recalculate"
+            return self.calculate_matrix_element(event, hypp_id, space)            
+        
         
         if len(space.calculator) > 50:
             logger.debug('more than 50 calculator. Perform cleaning')
@@ -761,8 +786,8 @@ class ReweightInterface(extended_cmd.Cmd):
         mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))
         self.has_standalone_dir = True
-
         
+
         # 3. Store id to directory information ---------------------------------
         matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
         
@@ -789,8 +814,14 @@ class ReweightInterface(extended_cmd.Cmd):
                         raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
                     else:
                         continue
-                self.id_to_path[tag] = [order, Pdir]
-        
+                # build the helicity dictionary
+                hel_nb = 0
+                hel_dict = {9:0} # unknown helicity -> use full ME
+                for helicities in me.get_helicity_matrix():
+                    hel_nb +=1 #fortran starts at 1
+                    hel_dict[tuple(helicities)] = hel_nb
+
+                self.id_to_path[tag] = [order, Pdir, hel_dict]        
         
         # 3. If we need a new model/process-------------------------------------
         if self.second_model or self.second_process:
@@ -887,8 +918,14 @@ class ReweightInterface(extended_cmd.Cmd):
                         raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
                     else:
                         continue
-                    
-                self.id_to_path_second[tag] = [order, Pdir]
+                
+                # build the helicity dictionary
+                hel_nb = 0
+                hel_dict = {9:0} # unknown helicity -> use full ME
+                for helicities in me.get_helicity_matrix():
+                    hel_nb +=1 #fortran starts at 1
+                    hel_dict[tuple(helicities)] = hel_nb    
+                self.id_to_path_second[tag] = [order, Pdir, hel_dict]
 
         for tag in to_check:
             if tag not in self.id_to_path:
