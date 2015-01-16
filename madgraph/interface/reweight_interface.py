@@ -80,6 +80,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.mg5cmd = master_interface.MasterCmd()
         self.seed = None
         self.output_type = "default"
+        self.helicity_reweighting = True
         
         if event_path:
             logger.info("Extracting the banner ...")
@@ -219,7 +220,8 @@ class ReweightInterface(extended_cmd.Cmd):
         """allow to define a second model/processes"""
         
         args = self.split_arg(line)
-        
+        if len(args)<2:
+            logger.critical("not enough argument (need at least two). Discard line")
         if args[0] == "model":
             self.second_model = " ".join(args[1:])
         elif args[0] == "process":
@@ -230,8 +232,12 @@ class ReweightInterface(extended_cmd.Cmd):
         elif args[0] == "output":
             if args[1] in ['default', '2.0']:
                 self.output_type = args[1]
-            
-                 
+        elif args[0] == "helicity":
+            self.helicity_reweighting = banner.ConfigFile.format_variable(args[1], bool, "helicity")
+        else:
+            logger.critical("unknown option! %s.  Discard line." % args[0])
+        
+             
     def check_launch(self, args):
         """check the validity of the launch command"""
         
@@ -600,7 +606,10 @@ class ReweightInterface(extended_cmd.Cmd):
         stdin_text = event.get_momenta_str(orig_order)
         external.stdin.write(stdin_text)
         # add helicity information
-        external.stdin.write('%i\n' % hel_dict[tuple(event.get_helicity(orig_order))])
+        if self.helicity_reweighting:
+            external.stdin.write('%i\n' % hel_dict[tuple(event.get_helicity(orig_order))])
+        else:
+            external.stdin.write('%i\n' % 0)
         me_value = external.stdout.readline()
         
         if start:
