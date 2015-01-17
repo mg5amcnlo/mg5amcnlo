@@ -136,6 +136,7 @@ class OneResult(object):
         if name in ['xsec', 'xerru','xerrc']:
             return getattr(self, name) * self.mfactor
         elif name in ['luminosity']:
+            misc.sprint("use unsafe luminosity definition")
             return getattr(self, name) / self.mfactor
         elif (name == 'eff'):
             return self.xerr*math.sqrt(self.nevents/(self.xsec+1e-99))

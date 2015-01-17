@@ -2421,6 +2421,7 @@ zeor by MadLoop.""")
         # Check if all or only some fails
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
+                Pdir = pjoin(self.me_dir, 'SubProcesses',subproc[0].strip())
                 raise ZeroResult, '%s' % \
                     open(pjoin(Pdir,'ajob.no_ps.log')).read()
             else:

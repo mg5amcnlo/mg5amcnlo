@@ -542,9 +542,14 @@ class gensym(object):
             nexternal = self.cmd.proc_characteristics['nexternal']
             self.splitted_grid = max(2, (nexternal-2)**3)
         
+        if isinstance(cmd.cluster, cluster.MultiCore) and self.splitted_grid > 1:
+            self.splitted_grid = 2
+        
         #if the user defines it in the run_card:
         if self.run_card['survey_splitting'] != -1:
             self.splitted_grid = self.run_card['survey_splitting']
+
+
         
         self.splitted_for_Pdir = lambda x: self.splitted_grid
         self.combining_job_for_Pdir = lambda x: self.combining_job
@@ -782,12 +787,15 @@ class gensym(object):
                 grid_calculator.results.compute_values()
                 abscross = self.abscross[(Pdir,G)]/self.sigma[(Pdir,G)]
                 nw = grid_calculator.results.nw
-                luminosity = sum([R.luminosity for R in grid_calculator.results])
                 wgt = grid_calculator.results.wgt
                 maxit = step
                 nunwgt = grid_calculator.results.nunwgt 
                 wgt = 0
-                nevents = grid_calculator.results.nevents 
+                nevents = grid_calculator.results.nevents
+                luminosity = nunwgt/cross
+                misc.sprint(sum([R.luminosity for R in grid_calculator.results], nunwgt/cross,nunwgt, cross, sum([R.nunwgt for R in grid_calculator.results])  )
+                
+                 
             #format the results.dat
             def fstr(nb):
                 data = '%E' % nb
@@ -829,7 +837,8 @@ class gensym(object):
         
         for Gdir in Gdirs:
             self.write_parameter_file(pjoin(Gdir, 'input_app.txt'), options)   
-        
+            
+        misc.sprint(Gdirs[0], options['event'], self.splitted_grid, options['helicity'])
         
         #2. resubmit the new jobs
         packet = cluster.Packet((Pdir, G, step+1), self.combine_grid, \
@@ -878,13 +887,14 @@ class gensym(object):
                    }
         
         if int(options['helicity'])== 1:
+            misc.sprint(options['event'], 2**(self.cmd.proc_characteristics['nexternal']//3))
             options['event'] = options['event'] * 2**(self.cmd.proc_characteristics['nexternal']//3)
         
         if parralelization:
             options['gridmode'] = -2
             options['maxiter'] = 1 #this is automatic in dsample anyway
             options['miniter'] = 1 #this is automatic in dsample anyway
-            options['event'] /= self.splitted_grid 
+            options['event'] /= self.splitted_grid
         
         if not Pdirs:
             Pdirs = self.subproc
@@ -892,8 +902,8 @@ class gensym(object):
         for Pdir in Pdirs:
             path =pjoin(self.me_dir, 'SubProcesses', Pdir, 'input_app.txt') 
             self.write_parameter_file(path, options)
-        
-            
+            misc.sprint(Pdir, options['event'], self.splitted_grid, options['helicity'])
+
         
         
             
