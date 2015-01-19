@@ -568,9 +568,6 @@ from object_library import all_propagators, Propagator
         if parameter.lhablock.lower() in ['mass', 'decay']:
             if int(parameter.lhacode[0]) in identify_pid:
                 lhacode = [identify_pid[int(parameter.lhacode[0])]]
-                misc.sprint("use %s instead of %s for block %s" % (lhacode, parameter.lhacode, parameter.lhablock))
-        else:
-            misc.sprint(parameter.lhablock)
         
         
         old_param = next((p for p in self.parameters if p.lhacode==lhacode \
@@ -840,7 +837,6 @@ from object_library import all_propagators, Propagator
             old= [p for p in self.particles if p.name==value][0]
             new = [p for p in model.all_particles if p.name==key][0]
             identify_pid[new.pdg_code] = old.pdg_code
-        misc.sprint(identify_pid)
             
         for parameter in model.all_parameters:
             self.add_parameter(parameter, identify_pid)
