@@ -562,13 +562,11 @@ from object_library import all_propagators, Propagator
                 #
                 #self.parameters.append(parameter)
                 #return
-        
         #check if a parameter already has this lhablock/code information
         lhacode = parameter.lhacode
         if parameter.lhablock.lower() in ['mass', 'decay']:
             if int(parameter.lhacode[0]) in identify_pid:
                 lhacode = [identify_pid[int(parameter.lhacode[0])]]
-        
         
         old_param = next((p for p in self.parameters if p.lhacode==lhacode \
                           and p.lhablock==parameter.lhablock), None)
@@ -832,12 +830,27 @@ from object_library import all_propagators, Propagator
         for order in model.all_orders:
             self.add_coupling_order(order)
         
-        identify_pid = {}
-        for key, value in identify_particles.items():
-            old= [p for p in self.particles if p.name==value][0]
-            new = [p for p in model.all_particles if p.name==key][0]
-            identify_pid[new.pdg_code] = old.pdg_code
-            
+        # Adding automatically identification for anti-particle if needed
+        # + define identify_pid which keep tracks of the pdg_code identified
+        if identify_particles:
+            identify_pid = {}
+            for new, old in identify_particles.items():
+                new_part = next((p for p in model.all_particles if p.name==new), None)
+                old_part = next((p for p in self.particles if p.name==old), None)
+                identify_pid[new_part.pdg_code] = old_part.pdg_code
+                
+                if new_part is None:
+                    raise USRMODERROR, "particle %s not in added model" % new
+                if old_part is None:
+                    raise USRMODERROR, "particle %s not in original model" % old
+                if old_part.antiname not in identify_particles:
+                    new_anti = new_part.antiname
+                    old_anti = old_part.antiname
+                    if old_anti == old:
+                        raise USRMODERROR, "failed identification (one particle is self-conjugate and not the other)"
+                    logger.info("adding identification for anti-particle: %s=%s" % (new_anti, old_anti))
+                    identify_particles[new_anti] = old_anti
+        
         for parameter in model.all_parameters:
             self.add_parameter(parameter, identify_pid)
         for coupling in model.all_couplings:
