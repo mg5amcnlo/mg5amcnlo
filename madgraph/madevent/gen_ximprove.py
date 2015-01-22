@@ -201,6 +201,7 @@ class gen_ximprove(object):
             if C.get('xsec') == 0:
                 continue
             if goal_lum/C.get('luminosity') >=1:
+                logger.debug("channel %s is at %s (%s)", C.name, goal_lum/C.get('luminosity'), C.get('luminosity'))
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('xsec'), 0.01*all_channels[0].get('xsec')):
                 to_refine.append(C)
@@ -245,7 +246,7 @@ class gen_ximprove(object):
                 nb_split = 1
             if nb_split > self.max_splitting:
                 nb_split = self.max_splitting
-            self.write_multijob(C, nb_split)
+
             
             #2. estimate how many points we need in each iteration
             if C.get('nunwgt') > 0:
@@ -254,10 +255,19 @@ class gen_ximprove(object):
                 nevents = int(nevents / (2**self.min_iter-1))
             else:
                 nevents = self.max_event_in_iter
+            logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_split, nevents)
+            if nevents < self.min_event_in_iter:
+                nb_split = int(nb_split * nevents / self.min_event_in_iter) + 1
+                nevents = self.min_event_in_iter
+            logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_split, nevents)
             #
             # forbid too low/too large value
             nevents = min(self.min_event_in_iter, max(self.max_event_in_iter, nevents))
-
+            misc.sprint(nevents)
+            
+            # write the multi-job information
+            self.write_multijob(C, nb_split)
+            
             #create the  info dict  assume no splitting for the default
             info = {'name': self.cmd.results.current['run_name'],
                     'script_name': 'unknown',
@@ -553,6 +563,7 @@ class gensym(object):
         
         self.splitted_for_Pdir = lambda x: self.splitted_grid
         self.combining_job_for_Pdir = lambda x: self.combining_job
+        self.twgt_by_job = {} 
     
     def launch(self):
         """ """
@@ -606,6 +617,7 @@ class gensym(object):
     def submit_to_cluster(self, job_list):
         """ """
 
+        self.twgt_by_job = {} 
         if self.run_card['job_strategy'] > 0:
             if len(job_list) >1:
                 for path, dirs in job_list.items():
@@ -676,12 +688,12 @@ class gensym(object):
         """ submit the version of the survey with splitted grid creation 
         """ 
         
-        if self.splitted_grid <= 1:
-            return self.submit_to_cluster_no_splitting(job_list)
+        #if self.splitted_grid <= 1:
+        #    return self.submit_to_cluster_no_splitting(job_list)
 
         for Pdir, jobs in job_list.items():
-            if self.splitted_for_Pdir(Pdir) <= 1:
-                return self.submit_to_cluster_no_splitting({Pdir:jobs})
+            #if self.splitted_for_Pdir(Pdir) <= 1:
+            #    return self.submit_to_cluster_no_splitting({Pdir:jobs})
 
             self.write_parameter(parralelization=True, Pdirs=[Pdir])
             # launch the job with the appropriate grouping
@@ -718,6 +730,7 @@ class gensym(object):
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory
         cross, across, sigma = grid_calculator.get_cross_section()
+        misc.sprint(cross,sigma)
         if cross !=0:
             self.cross[(Pdir,G)] += cross**3/sigma
             self.abscross[(Pdir,G)] += across * cross**2/sigma
@@ -730,12 +743,28 @@ class gensym(object):
             else:
                 error = sigma
         
-            # 3. create the new grid and put it in all directory   
-            grid_calculator.write_associate_grid(pjoin(Gdirs[0],'ftn25'))
+            # 3. create the new grid and put it in all directory  
+            if step == 1:
+                twgt = -1 * self.cmd.opts['iterations']
+            else:
+                twgt = self.twgt_by_job[Gdirs[0]]
+             
+            grid_calculator.write_associate_grid(pjoin(Gdirs[0],'ftn25'),
+                                                 max_it=self.cmd.opts['iterations'],
+                                                 curr_it=step)
+            self.twgt_by_job[Gdirs[0]] = twgt
             for Gdir in Gdirs[1:]:
                 files.ln(pjoin(Gdirs[0], 'ftn25'),  Gdir)
 
-        
+        if __debug__:
+            # make the unweighting to compute the number of events:
+            maxwgt = max([0]+[R.xsec/R.nunwgt for R in grid_calculator.results if R.nunwgt])
+            if maxwgt:
+                nunwgt = sum([R.xsec/maxwgt for R in grid_calculator.results if R.nunwgt])
+                luminosity = nunwgt/cross
+                misc.sprint(luminosity, cross, error, nunwgt)
+            else:
+                misc.sprint("luminosity is 0", cross, error)
         # 4. make the submission of the next iteration
         #   Three cases - less than 3 iteration -> continue
         #               - more than 3 and less than 5 -> check error
@@ -789,12 +818,14 @@ class gensym(object):
                 nw = grid_calculator.results.nw
                 wgt = grid_calculator.results.wgt
                 maxit = step
-                nunwgt = grid_calculator.results.nunwgt 
                 wgt = 0
                 nevents = grid_calculator.results.nevents
+                # make the unweighting to compute the number of events:
+                maxwgt = max([R.xsec/R.nunwgt for R in grid_calculator.results if R.nunwgt])
+                nunwgt = sum([R.xsec/maxwgt for R in grid_calculator.results if R.nunwgt])
                 luminosity = nunwgt/cross
-                misc.sprint(sum([R.luminosity for R in grid_calculator.results], nunwgt/cross,nunwgt, cross, sum([R.nunwgt for R in grid_calculator.results])  )
-                
+                misc.sprint(luminosity)
+
                  
             #format the results.dat
             def fstr(nb):
@@ -834,11 +865,11 @@ class gensym(object):
         if int(options['helicity']) == 1:
             options['event'] = options['event'] * 2**(self.cmd.proc_characteristics['nexternal']//3)
             
+        misc.sprint(step, options['event'])
         
         for Gdir in Gdirs:
             self.write_parameter_file(pjoin(Gdir, 'input_app.txt'), options)   
             
-        misc.sprint(Gdirs[0], options['event'], self.splitted_grid, options['helicity'])
         
         #2. resubmit the new jobs
         packet = cluster.Packet((Pdir, G, step+1), self.combine_grid, \

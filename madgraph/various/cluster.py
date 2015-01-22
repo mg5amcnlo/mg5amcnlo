@@ -161,6 +161,7 @@ class Cluster(object):
         done
         rm -rf $MYTMP
         """
+        
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
                 'cwd': cwd, 'job_id': self.job_id,
                 'input_files': ' '.join(input_files + [prog]),

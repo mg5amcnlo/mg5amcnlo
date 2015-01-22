@@ -2353,6 +2353,13 @@ C       Due to the initialization of the helicity sum.
       common/to_grid2/grid2,inon_zero, non_zero
       double precision    grid(2, ng, 0:maxinvar)
       common /data_grid/ grid
+
+      double precision tmean, trmean, tsigma
+      integer             dim, events, itm, kn, cur_it, invar, configs
+      common /sample_common/
+     .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
+
+
 C     LOCAL
       integer i,j
 
@@ -2365,6 +2372,10 @@ C     LOCAL
             grid(1,i,j) = 0
          enddo
       enddo
+      tmean = 0.0
+      trmean = 0.0
+      tsigma = 0.0
+      kn = 0
       return 
       end
 

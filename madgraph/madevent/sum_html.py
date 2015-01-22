@@ -85,8 +85,6 @@ class OneResult(object):
                          self.xsec = data[:10]
                 if self.mfactor > 1:
                     self.luminosity /= self.mfactor
-                    #self.ysec_iter.append(self.axsec)
-                    #self.yerr_iter.append(0)
                 continue
             try:
                 l, sec, err, eff, maxwgt, asec = line.split()
@@ -136,8 +134,9 @@ class OneResult(object):
         if name in ['xsec', 'xerru','xerrc']:
             return getattr(self, name) * self.mfactor
         elif name in ['luminosity']:
-            misc.sprint("use unsafe luminosity definition")
-            return getattr(self, name) / self.mfactor
+            #misc.sprint("use unsafe luminosity definition")
+            #raise Exception
+            return getattr(self, name) #/ self.mfactor
         elif (name == 'eff'):
             return self.xerr*math.sqrt(self.nevents/(self.xsec+1e-99))
         elif name == 'xerr':

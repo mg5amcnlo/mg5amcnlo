@@ -35,6 +35,7 @@ class grid_information(object):
         self.max_wgt = 0
         self.nb_ps_point = 0
         self.target_evt = 0
+        self.nb_sample = 0
         
         #
         self.results = sum_html.Combine_results('combined')
@@ -48,6 +49,7 @@ class grid_information(object):
 
     def add_one_grid_information(self, path):
 
+        self.nb_sample += 1 
         if isinstance(path, str):
             finput = open(path)
         elif isinstance(path, file):
@@ -138,7 +140,7 @@ class grid_information(object):
         self.results.add_results(fname,finput)
 
     
-    def write_associate_grid(self, path):
+    def write_associate_grid(self, path, max_it, curr_it):
         """use the grid information to create the grid associate"""
 
         new_grid = self.get_new_grid()
@@ -160,12 +162,17 @@ class grid_information(object):
         if  data:
             fsock.write('\n')
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
-        fsock.write('%s\n' %(mean*self.target_evt/self.nb_ps_point**2))            
+        
+        #means that this the max number of iteration
+        twgt = mean / max_it /2**curr_it / self.target_evt
+        fsock.write('%s\n' %(twgt))
         
         if not self.mc_hel:
             fsock.write(self.helicity_line)
         
         self.discrete_grid.write(fsock)
+        
+        return twgt
                     
     def get_cross_section(self):
         """return the cross-section error"""
@@ -174,6 +181,7 @@ class grid_information(object):
             return 0, 0, 0
                 
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
+        misc.sprint(self.target_evt, self.nb_ps_point)
         rmean =  self.sum_abs_wgt*self.target_evt/self.nb_ps_point
         
         vol = 1/self.target_evt
@@ -202,7 +210,7 @@ class grid_information(object):
 
     def get_new_grid_for_var(self, var):
         
-        #1. biais the grid to allow more points where the fct is zero.    
+        #1. biais the grid to allow more points where the fct is zero.   
         grid = collections.defaultdict(int)
         for i in range(self.ng):
             if self.non_zero_grid[(i, var)] != 0:
