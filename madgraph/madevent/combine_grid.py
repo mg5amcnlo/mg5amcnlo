@@ -75,7 +75,7 @@ class grid_information(object):
         data = [self.convert_to_number(i) for i in line.split()]
         for j in range(self.maxinvar):
             for i in range(self.ng): 
-                self.grid_base[(i,j)] = data.pop(0)
+                self.grid_base[(i,j)] += data.pop(0)
 
         line = finput.readline()
         data = [self.convert_to_number(i) for i in line.split()]
@@ -87,7 +87,7 @@ class grid_information(object):
         data = [self.convert_to_number(i) for i in line.split()]
         for j in range(self.maxinvar):
             for i in range(self.ng): 
-                self.non_zero_grid[(i,j)] = int(data.pop(0))
+                self.non_zero_grid[(i,j)] += int(data.pop(0))
 
         #minimal value for each variable of integraion
         line = finput.readline()
@@ -151,6 +151,9 @@ class grid_information(object):
             for i in range(self.ng):
                 data.append(new_grid[(i,var)])
         
+#        misc.sprint("plotting grid")
+#        self.plot_grid(new_grid, 1)
+        
         while len(data) >= 4:
             v1, v2, v3, v4 = data[:4]
             data = data[4:]
@@ -173,7 +176,37 @@ class grid_information(object):
         self.discrete_grid.write(fsock)
         
         return twgt
-                    
+            
+    def plot_grid(self, grid, var=0):
+        """make a plot of the grid."""
+            
+        try:
+            import matplotlib
+        except Exception:
+            return
+        else:
+            import matplotlib.pyplot as plt
+            import matplotlib.gridspec as gridspec
+        
+        gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
+        gs1.update(wspace=0, hspace=0) # set the spacing between axes.                                                                                                                                          
+        ax = plt.subplot(gs1[0])
+        data = []
+        for i in range(self.ng):
+            data.append(grid[(i,var)])
+        ftnvalues = [(i+1)/len(data)for i in range(len(data)) if i < len(data)]
+        
+        ax.plot(data, ftnvalues, label="ftn26")
+        ax.legend()
+        plt.title('grid')
+        ax.set_ylim([0,1])
+        plt.axis('on')
+        i=0
+        while os.path.exists("matplotlib%s.png" % i):
+            i+=1
+        plt.savefig("matplotlib%s.png" % i)
+        misc.sprint("file save in matplotlib%s.png" % i)
+        
     def get_cross_section(self):
         """return the cross-section error"""
 
@@ -181,7 +214,6 @@ class grid_information(object):
             return 0, 0, 0
                 
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
-        misc.sprint(self.target_evt, self.nb_ps_point)
         rmean =  self.sum_abs_wgt*self.target_evt/self.nb_ps_point
         
         vol = 1/self.target_evt
@@ -209,6 +241,7 @@ class grid_information(object):
 
 
     def get_new_grid_for_var(self, var):
+        """return the combine grid for a given variable"""
         
         #1. biais the grid to allow more points where the fct is zero.   
         grid = collections.defaultdict(int)

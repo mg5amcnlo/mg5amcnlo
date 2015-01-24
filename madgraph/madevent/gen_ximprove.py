@@ -553,14 +553,14 @@ class gensym(object):
             self.splitted_grid = max(2, (nexternal-2)**3)
         
         if isinstance(cmd.cluster, cluster.MultiCore) and self.splitted_grid > 1:
-            self.splitted_grid = 2
+            self.splitted_grid = int(cmd.cluster.nb_core**0.5)
+            if self.splitted_grid == 1 and cmd.cluster.nb_core >1:
+                self.splitted_grid = 2
         
         #if the user defines it in the run_card:
         if self.run_card['survey_splitting'] != -1:
             self.splitted_grid = self.run_card['survey_splitting']
 
-
-        
         self.splitted_for_Pdir = lambda x: self.splitted_grid
         self.combining_job_for_Pdir = lambda x: self.combining_job
         self.twgt_by_job = {} 
@@ -591,6 +591,8 @@ class gensym(object):
             for match in glob.glob(pjoin(Pdir, 'G*')):
                 if os.path.exists(pjoin(match,'results.dat')):
                     os.remove(pjoin(match, 'results.dat')) 
+                if os.path.exists(pjoin(match, 'ftn25')):
+                    os.remove(pjoin(match, 'ftn25')) 
                     
             #compile gensym
             self.cmd.compile(['gensym'], cwd=Pdir)
@@ -730,18 +732,19 @@ class gensym(object):
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory
         cross, across, sigma = grid_calculator.get_cross_section()
-        misc.sprint(cross,sigma)
+        misc.sprint(G, cross,sigma)
         if cross !=0:
-            self.cross[(Pdir,G)] += cross**3/sigma
-            self.abscross[(Pdir,G)] += across * cross**2/sigma
-            self.sigma[(Pdir,G)] += cross**2/ sigma
-            self.chi2[(Pdir,G)] += cross**4/sigma
+            self.cross[(Pdir,G)] += cross**3/sigma**2
+            self.abscross[(Pdir,G)] += across * cross**2/sigma**2
+            self.sigma[(Pdir,G)] += cross**2/ sigma**2
+            self.chi2[(Pdir,G)] += cross**4/sigma**2
             # and use those iteration to get the current estimator
             cross = self.cross[(Pdir,G)]/self.sigma[(Pdir,G)]
             if step > 1:
-                error = math.sqrt(abs((self.chi2[(Pdir,G)]/cross**2 - self.sigma[(Pdir,G)])/step-1)/self.sigma[(Pdir,G)])
+                error = math.sqrt(abs((self.chi2[(Pdir,G)]/cross**2 - \
+                             self.sigma[(Pdir,G)])/(step-1))/self.sigma[(Pdir,G)])
             else:
-                error = sigma
+                error = sigma/cross
         
             # 3. create the new grid and put it in all directory  
             if step == 1:
@@ -755,16 +758,13 @@ class gensym(object):
             self.twgt_by_job[Gdirs[0]] = twgt
             for Gdir in Gdirs[1:]:
                 files.ln(pjoin(Gdirs[0], 'ftn25'),  Gdir)
-
         if __debug__:
             # make the unweighting to compute the number of events:
             maxwgt = max([0]+[R.xsec/R.nunwgt for R in grid_calculator.results if R.nunwgt])
             if maxwgt:
                 nunwgt = sum([R.xsec/maxwgt for R in grid_calculator.results if R.nunwgt])
                 luminosity = nunwgt/cross
-                misc.sprint(luminosity, cross, error, nunwgt)
-            else:
-                misc.sprint("luminosity is 0", cross, error)
+                misc.sprint(G, cross, error*cross, nunwgt, luminosity)
         # 4. make the submission of the next iteration
         #   Three cases - less than 3 iteration -> continue
         #               - more than 3 and less than 5 -> check error
@@ -780,7 +780,7 @@ class gensym(object):
         else:   
             if cross == 0:
                 need_submit = False
-            elif cross/error >  self.cmd.opts['accuracy']:
+            elif error >  self.cmd.opts['accuracy']:
                 need_submit = True
             else:
                 need_submit = False
@@ -824,7 +824,6 @@ class gensym(object):
                 maxwgt = max([R.xsec/R.nunwgt for R in grid_calculator.results if R.nunwgt])
                 nunwgt = sum([R.xsec/maxwgt for R in grid_calculator.results if R.nunwgt])
                 luminosity = nunwgt/cross
-                misc.sprint(luminosity)
 
                  
             #format the results.dat
@@ -835,7 +834,7 @@ class gensym(object):
                 power = int(power) + 1
                 return '%.5fE%+03i' %(nb,power)
             line = '%s %s %s %i %i %i %i %s %s %s\n' % \
-                (fstr(cross), fstr(error), fstr(error), 
+                (fstr(cross), fstr(error*cross), fstr(error*cross), 
                  nevents, nw, maxit,nunwgt,
                  fstr(luminosity), fstr(wgt), fstr(abscross))
                         
@@ -865,8 +864,6 @@ class gensym(object):
         if int(options['helicity']) == 1:
             options['event'] = options['event'] * 2**(self.cmd.proc_characteristics['nexternal']//3)
             
-        misc.sprint(step, options['event'])
-        
         for Gdir in Gdirs:
             self.write_parameter_file(pjoin(Gdir, 'input_app.txt'), options)   
             
@@ -918,7 +915,6 @@ class gensym(object):
                    }
         
         if int(options['helicity'])== 1:
-            misc.sprint(options['event'], 2**(self.cmd.proc_characteristics['nexternal']//3))
             options['event'] = options['event'] * 2**(self.cmd.proc_characteristics['nexternal']//3)
         
         if parralelization:
@@ -933,7 +929,6 @@ class gensym(object):
         for Pdir in Pdirs:
             path =pjoin(self.me_dir, 'SubProcesses', Pdir, 'input_app.txt') 
             self.write_parameter_file(path, options)
-            misc.sprint(Pdir, options['event'], self.splitted_grid, options['helicity'])
 
         
         

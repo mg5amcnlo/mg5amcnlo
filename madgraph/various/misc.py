@@ -947,6 +947,8 @@ def sprint(*args, **opt):
         if line.startswith("'") and line.endswith("'") and line.count(",") ==0:
             line= ''
         elif line.startswith("\"") and line.endswith("\"") and line.count(",") ==0:
+            line= ''
+        elif line.startswith(("\"","'")) and len(args)+len(opts)==1 and "%" in line:
             line= ''        
     except Exception:
         line=''
