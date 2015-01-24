@@ -454,7 +454,7 @@ from object_library import all_propagators, Propagator
         
         raise USRMODERROR, 'no particle %s in the model' % name
 
-    def add_parameter(self, parameter, identify_pid):
+    def add_parameter(self, parameter, identify_pid={}):
         """wrapper to call the correct function"""
         
         if parameter.nature == 'internal':

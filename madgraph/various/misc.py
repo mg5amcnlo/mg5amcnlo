@@ -736,6 +736,8 @@ def gzip(path, stdout=None, error=True, forceexternal=False):
     if os.path.getsize(path) > 1e9:
         call(['gzip', '-f', path])
         if stdout:
+            if not stdout.endswith(".gz"):
+                stdout = "%s.gz" % stdout
             shutil.move('%s.gz' % path, stdout)
         return
     
