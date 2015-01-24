@@ -3444,14 +3444,12 @@ zeor by MadLoop.""")
             self.pdffile = None
             
         # set random number
-        if self.run_card['iseed'] != '0':
+        if self.run_card['iseed'] != 0:
             self.random = int(self.run_card['iseed'])
-            self.run_card['iseed'] = '0'
+            self.run_card['iseed'] = 0
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
-            text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
-            (t,n) = re.subn(r'\d+\s*= iseed','0 = iseed',text)
-            open(pjoin(self.me_dir, 'Cards','run_card.dat'),'w').write(t)
+            self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
         elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
@@ -3642,7 +3640,7 @@ zeor by MadLoop.""")
     ############################################################################
     def save_random(self):
         """save random number in appropirate file"""
-        
+
         fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
         fsock.writelines('r=%s\n' % self.random)
 
