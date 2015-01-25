@@ -550,7 +550,9 @@ class gensym(object):
         self.splitted_grid = False
         if self.cmd.proc_characteristics['loop_induced']:
             nexternal = self.cmd.proc_characteristics['nexternal']
-            self.splitted_grid = max(2, (nexternal-2)**3)
+            self.splitted_grid = max(2, (nexternal-2)**2)
+            if self.cmd.opts['accuracy'] == 0.1:
+                self.cmd.opts['accuracy'] = 0.02
         
         if isinstance(cmd.cluster, cluster.MultiCore) and self.splitted_grid > 1:
             self.splitted_grid = int(cmd.cluster.nb_core**0.5)

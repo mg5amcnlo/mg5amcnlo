@@ -2406,7 +2406,8 @@ zeor by MadLoop.""")
         if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources')):
             tf=tarfile.open(pjoin(self.me_dir, 'SubProcesses', 'MadLoop5_resources.tar'),'w',
                                                                dereference=True)
-            tf.add(pjoin(self.me_dir,'SubProcesses','MadLoop5_resources'),arcname='MadLoop5_resources')
+            tf.add(pjoin(self.me_dir,'SubProcesses','MadLoop5_resources'),
+                                                   arcname='MadLoop5_resources')
             tf.close()
 
         logger.info('Working on SubProcesses')

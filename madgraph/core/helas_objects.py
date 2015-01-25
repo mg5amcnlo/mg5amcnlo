@@ -4552,7 +4552,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                             get_helicity_states())\
                         for wf in self.get_external_wavefunctions() ], 1)
 
-    def get_helicity_matrix(self):
+    def get_helicity_matrix(self, allow_reverse=True):
         """Gives the helicity matrix for external wavefunctions"""
 
         if not self.get('processes'):
@@ -4562,7 +4562,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         model = process.get('model')
 
         return apply(itertools.product, [ model.get('particle_dict')[\
-                                  wf.get('pdg_code')].get_helicity_states()\
+                                  wf.get('pdg_code')].get_helicity_states(allow_reverse)\
                                   for wf in self.get_external_wavefunctions()])
 
     def get_hel_avg_factor(self):

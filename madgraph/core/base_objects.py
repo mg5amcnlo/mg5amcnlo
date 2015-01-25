@@ -421,7 +421,7 @@ class Particle(PhysicsObject):
         else:
             return self['name']
 
-    def get_helicity_states(self):
+    def get_helicity_states(self, allow_reverse=True):
         """Return a list of the helicity states for the onshell particle"""
 
         spin = self.get('spin')
@@ -453,9 +453,10 @@ class Particle(PhysicsObject):
             raise self.PhysicsObjectError, \
               "No helicity state assignment for spin %d particles" % spin
                   
-        if not self.get('is_part'):
+        if allow_reverse and not self.get('is_part'):
             res.reverse()
-        
+
+
         return res
 
     def is_fermion(self):

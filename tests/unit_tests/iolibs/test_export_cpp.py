@@ -1292,7 +1292,7 @@ double Sigma_sm_qq_six::matrix_uu_six()
         text = exporter.get_process_function_definitions()
         my_writer = writers.CPPWriter(pjoin(
                                  self.IOpath,'write_dec_multiprocess_files.cc'))  
-        my_writer.write_lines(text)
+        my_writer.write(text)
 
     @IOTests.createIOTest()
     def testIO_write_cpp_go_process_cc_file(self):
