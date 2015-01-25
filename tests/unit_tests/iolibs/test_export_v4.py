@@ -974,38 +974,38 @@ C
       COMMON/HELUSERCHOICE/USERHEL
       DATA USERHEL/-1/
 
-      DATA (NHEL(I,   1),I=1,5) /-1,-1,-1,-1,-1/
-      DATA (NHEL(I,   2),I=1,5) /-1,-1,-1,-1, 1/
-      DATA (NHEL(I,   3),I=1,5) /-1,-1,-1, 1,-1/
-      DATA (NHEL(I,   4),I=1,5) /-1,-1,-1, 1, 1/
-      DATA (NHEL(I,   5),I=1,5) /-1,-1, 1,-1,-1/
-      DATA (NHEL(I,   6),I=1,5) /-1,-1, 1,-1, 1/
-      DATA (NHEL(I,   7),I=1,5) /-1,-1, 1, 1,-1/
-      DATA (NHEL(I,   8),I=1,5) /-1,-1, 1, 1, 1/
-      DATA (NHEL(I,   9),I=1,5) /-1, 1,-1,-1,-1/
-      DATA (NHEL(I,  10),I=1,5) /-1, 1,-1,-1, 1/
-      DATA (NHEL(I,  11),I=1,5) /-1, 1,-1, 1,-1/
-      DATA (NHEL(I,  12),I=1,5) /-1, 1,-1, 1, 1/
-      DATA (NHEL(I,  13),I=1,5) /-1, 1, 1,-1,-1/
-      DATA (NHEL(I,  14),I=1,5) /-1, 1, 1,-1, 1/
-      DATA (NHEL(I,  15),I=1,5) /-1, 1, 1, 1,-1/
-      DATA (NHEL(I,  16),I=1,5) /-1, 1, 1, 1, 1/
-      DATA (NHEL(I,  17),I=1,5) / 1,-1,-1,-1,-1/
-      DATA (NHEL(I,  18),I=1,5) / 1,-1,-1,-1, 1/
-      DATA (NHEL(I,  19),I=1,5) / 1,-1,-1, 1,-1/
-      DATA (NHEL(I,  20),I=1,5) / 1,-1,-1, 1, 1/
-      DATA (NHEL(I,  21),I=1,5) / 1,-1, 1,-1,-1/
-      DATA (NHEL(I,  22),I=1,5) / 1,-1, 1,-1, 1/
-      DATA (NHEL(I,  23),I=1,5) / 1,-1, 1, 1,-1/
-      DATA (NHEL(I,  24),I=1,5) / 1,-1, 1, 1, 1/
-      DATA (NHEL(I,  25),I=1,5) / 1, 1,-1,-1,-1/
-      DATA (NHEL(I,  26),I=1,5) / 1, 1,-1,-1, 1/
-      DATA (NHEL(I,  27),I=1,5) / 1, 1,-1, 1,-1/
-      DATA (NHEL(I,  28),I=1,5) / 1, 1,-1, 1, 1/
-      DATA (NHEL(I,  29),I=1,5) / 1, 1, 1,-1,-1/
-      DATA (NHEL(I,  30),I=1,5) / 1, 1, 1,-1, 1/
-      DATA (NHEL(I,  31),I=1,5) / 1, 1, 1, 1,-1/
-      DATA (NHEL(I,  32),I=1,5) / 1, 1, 1, 1, 1/
+      DATA (NHEL(I,   1),I=1,5) /-1, 1,-1,-1,-1/
+      DATA (NHEL(I,   2),I=1,5) /-1, 1,-1,-1, 1/
+      DATA (NHEL(I,   3),I=1,5) /-1, 1,-1, 1,-1/
+      DATA (NHEL(I,   4),I=1,5) /-1, 1,-1, 1, 1/
+      DATA (NHEL(I,   5),I=1,5) /-1, 1, 1,-1,-1/
+      DATA (NHEL(I,   6),I=1,5) /-1, 1, 1,-1, 1/
+      DATA (NHEL(I,   7),I=1,5) /-1, 1, 1, 1,-1/
+      DATA (NHEL(I,   8),I=1,5) /-1, 1, 1, 1, 1/
+      DATA (NHEL(I,   9),I=1,5) /-1,-1,-1,-1,-1/
+      DATA (NHEL(I,  10),I=1,5) /-1,-1,-1,-1, 1/
+      DATA (NHEL(I,  11),I=1,5) /-1,-1,-1, 1,-1/
+      DATA (NHEL(I,  12),I=1,5) /-1,-1,-1, 1, 1/
+      DATA (NHEL(I,  13),I=1,5) /-1,-1, 1,-1,-1/
+      DATA (NHEL(I,  14),I=1,5) /-1,-1, 1,-1, 1/
+      DATA (NHEL(I,  15),I=1,5) /-1,-1, 1, 1,-1/
+      DATA (NHEL(I,  16),I=1,5) /-1,-1, 1, 1, 1/
+      DATA (NHEL(I,  17),I=1,5) / 1, 1,-1,-1,-1/
+      DATA (NHEL(I,  18),I=1,5) / 1, 1,-1,-1, 1/
+      DATA (NHEL(I,  19),I=1,5) / 1, 1,-1, 1,-1/
+      DATA (NHEL(I,  20),I=1,5) / 1, 1,-1, 1, 1/
+      DATA (NHEL(I,  21),I=1,5) / 1, 1, 1,-1,-1/
+      DATA (NHEL(I,  22),I=1,5) / 1, 1, 1,-1, 1/
+      DATA (NHEL(I,  23),I=1,5) / 1, 1, 1, 1,-1/
+      DATA (NHEL(I,  24),I=1,5) / 1, 1, 1, 1, 1/
+      DATA (NHEL(I,  25),I=1,5) / 1,-1,-1,-1,-1/
+      DATA (NHEL(I,  26),I=1,5) / 1,-1,-1,-1, 1/
+      DATA (NHEL(I,  27),I=1,5) / 1,-1,-1, 1,-1/
+      DATA (NHEL(I,  28),I=1,5) / 1,-1,-1, 1, 1/
+      DATA (NHEL(I,  29),I=1,5) / 1,-1, 1,-1,-1/
+      DATA (NHEL(I,  30),I=1,5) / 1,-1, 1,-1, 1/
+      DATA (NHEL(I,  31),I=1,5) / 1,-1, 1, 1,-1/
+      DATA (NHEL(I,  32),I=1,5) / 1,-1, 1, 1, 1/
       DATA IDEN/24/
 C     ----------
 C     BEGIN CODE
@@ -1131,7 +1131,7 @@ C     Amplitude(s) for diagram number 6
             self.mymatrixelement,
             self.myfortranmodel)
 
-        #print open(self.give_pos('test')).read()
+#        print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_matrix_f)
 
     def test_coeff_string(self):

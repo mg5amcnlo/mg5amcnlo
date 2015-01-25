@@ -63,11 +63,11 @@ void CPPProcess::sigmaKin()
   std::complex<double> * * wfs; 
   double t[nprocesses]; 
   // Helicities for the process
-  static const int helicities[ncomb][nexternal] = {{1, -1, -1, -1}, {1, -1, -1,
-      1}, {1, -1, 1, -1}, {1, -1, 1, 1}, {1, 1, -1, -1}, {1, 1, -1, 1}, {1, 1,
-      1, -1}, {1, 1, 1, 1}, {-1, -1, -1, -1}, {-1, -1, -1, 1}, {-1, -1, 1, -1},
-      {-1, -1, 1, 1}, {-1, 1, -1, -1}, {-1, 1, -1, 1}, {-1, 1, 1, -1}, {-1, 1,
-      1, 1}};
+  static const int helicities[ncomb][nexternal] = {{-1, -1, -1, -1}, {-1, -1,
+      -1, 1}, {-1, -1, 1, -1}, {-1, -1, 1, 1}, {-1, 1, -1, -1}, {-1, 1, -1, 1},
+      {-1, 1, 1, -1}, {-1, 1, 1, 1}, {1, -1, -1, -1}, {1, -1, -1, 1}, {1, -1,
+      1, -1}, {1, -1, 1, 1}, {1, 1, -1, -1}, {1, 1, -1, 1}, {1, 1, 1, -1}, {1,
+      1, 1, 1}};
   // Denominators: spins, colors and identical particles
   const int denominators[nprocesses] = {72, 72}; 
 
