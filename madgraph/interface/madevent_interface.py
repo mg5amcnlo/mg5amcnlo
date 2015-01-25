@@ -2330,7 +2330,7 @@ Beware that this can be dangerous for local multicore runs.""")
                         
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
             # processes, so that we place OPP last.
-            if self.run_card['nhel'] == '0':
+            if self.run_card['nhel'] == 0:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
                             self.MadLoopparam.get('MLReductionLib').startswith('1'):
                     logger.warning(
@@ -3460,7 +3460,7 @@ zeor by MadLoop.""")
         else:
             self.random = random.randint(1, 30107)
                                                                
-        if self.run_card['ickkw'] == '2':
+        if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_CKKW_matching()
             

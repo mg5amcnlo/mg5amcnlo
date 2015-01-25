@@ -496,17 +496,17 @@ class RunResults(list):
         data = process.split('>',1)[0].split()
         if len(data) == 2:
             name1,name2 = data
-            if run_card['lpp1'] == '-1':
+            if run_card['lpp1'] == -1:
                 name1 = ' p~'
-            elif run_card['lpp1']  == '1':
+            elif run_card['lpp1']  == 1:
                 name1 = ' p'   
-            elif run_card['lpp1'] == '2':
+            elif run_card['lpp1'] in [2,3]:
                 name1 = ' a'
-            if run_card['lpp2'] == '-1':
+            if run_card['lpp2'] == -1:
                 name2 = 'p~'
-            elif run_card['lpp2']  == '1':
+            elif run_card['lpp2']  == 1:
                 name2 = ' p' 
-            elif run_card['lpp2'] == '2':
+            elif run_card['lpp2'] == [2,3]:
                 name2 = ' a'                
             self.info['collider'] = '''%s %s <br> %s x %s  GeV''' % \
                     (name1, name2, run_card['ebeam1'], run_card['ebeam2'])
