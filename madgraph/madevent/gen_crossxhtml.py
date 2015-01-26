@@ -611,7 +611,7 @@ class RunResults(list):
                 tagresult = self.return_tag(tag)
             tagresult['nb_event'] = nb_event
             tagresult['cross'] = cross
-            if run_card['ickkw'] != '0':
+            if run_card['ickkw'] != 0:
                 #parse the file to have back the information
                 pythia_log = misc.BackRead(pjoin(path, '%s_pythia.log' % tag))
                 pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            

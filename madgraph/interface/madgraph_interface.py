@@ -3039,7 +3039,10 @@ This implies that with decay chains:
         elif args[0] == 'options':
             outstr = "                          MadGraph5_aMC@NLO Options    \n"
             outstr += "                          ----------------    \n"
-            for key, default in self.options_madgraph.items():
+            keys = self.options_madgraph.keys()
+            keys.sort()
+            for key in keys:
+                default = self.options_madgraph[key] 
                 value = self.options[key]
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)
@@ -3048,7 +3051,10 @@ This implies that with decay chains:
             outstr += "\n"
             outstr += "                         MadEvent Options    \n"
             outstr += "                          ----------------    \n"
-            for key, default in self.options_madevent.items():
+            keys = self.options_madevent.keys()
+            keys.sort()
+            for key in keys:
+                default = self.options_madevent[key]
                 value = self.options[key]
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)
@@ -3057,7 +3063,10 @@ This implies that with decay chains:
             outstr += "\n"
             outstr += "                      Configuration Options    \n"
             outstr += "                      ---------------------    \n"
-            for key, default in self.options_configuration.items():
+            keys = self.options_configuration.keys()
+            keys.sort()
+            for key in keys:
+                default = self.options_configuration[key]
                 value = self.options[key]
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)

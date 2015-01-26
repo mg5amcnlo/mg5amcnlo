@@ -3618,7 +3618,6 @@ c           This is dummy particle used in multiparticle vertices
         """return the code to read/write the good_hel common_block"""    
 
         convert = {'ncomb' : ncomb}
-        misc.sprint("pass here")
         output = """
         subroutine write_good_hel(stream_id)
         implicit none

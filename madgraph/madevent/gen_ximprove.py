@@ -255,15 +255,15 @@ class gen_ximprove(object):
                 nevents = int(nevents / (2**self.min_iter-1))
             else:
                 nevents = self.max_event_in_iter
-            logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_split, nevents)
+
             if nevents < self.min_event_in_iter:
                 nb_split = int(nb_split * nevents / self.min_event_in_iter) + 1
                 nevents = self.min_event_in_iter
-            logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_split, nevents)
             #
             # forbid too low/too large value
-            nevents = min(self.min_event_in_iter, max(self.max_event_in_iter, nevents))
-            misc.sprint(nevents)
+            nevents = max(self.min_event_in_iter, min(self.max_event_in_iter, nevents))
+            logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_split, nevents)
+
             
             # write the multi-job information
             self.write_multijob(C, nb_split)
