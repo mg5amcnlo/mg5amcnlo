@@ -110,7 +110,6 @@ c
 c     setup masses for the final-state particles
 c
       include 'pmass.inc'
-      include 'qmass.inc'
 
 C-----
 C  BEGIN CODE

@@ -97,7 +97,6 @@ c     in first iteration for gridpacks
       call setrun                !Sets up run parameters
       call setpara(param_card_name %(secondparam)s)   !Sets up couplings and masses
       include 'pmass.inc'        !Sets up particle masses
-      include 'qmass.inc'        !Sets up particle masses inside onium state
       call setcuts               !Sets up cuts 
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings

@@ -60,7 +60,7 @@ C
 C Prec_found ans ans_ml are saved so that they don't have to be re-allocated everytime
 	SAVE ML_ANS_DIMENSION,ANS_ML,PREC_FOUND
 
-    DATA IDUM /0,-1/
+    DATA IDUM /-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
 
 	LOGICAL INIT_MADLOOP

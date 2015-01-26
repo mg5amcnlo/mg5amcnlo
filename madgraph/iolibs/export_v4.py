@@ -3496,7 +3496,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         file = file % replace_dict
 
         # Write the file
-        writer.writelines(file, {'read_write_good_hel':replace_dict['read_write_good_hel']})
+        writer.writelines(file, context={'read_write_good_hel':True})
 
     #===========================================================================
     # write_coloramps_file
@@ -3618,8 +3618,7 @@ c           This is dummy particle used in multiparticle vertices
         """return the code to read/write the good_hel common_block"""    
 
         convert = {'ncomb' : ncomb}
-
-
+        misc.sprint("pass here")
         output = """
         subroutine write_good_hel(stream_id)
         implicit none

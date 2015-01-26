@@ -65,7 +65,7 @@ C
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 %(define_iconfigs_lines)s
-    DATA IDUM /0,-1/
+    DATA IDUM /-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
     SAVE YFRAC, IGOOD, JHEL
 %(helicity_lines)s
