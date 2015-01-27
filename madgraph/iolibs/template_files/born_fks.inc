@@ -65,7 +65,7 @@ C ----------
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
       if (NTRY(nFKSprocess).lt.2) then
          skip(nFKSprocess)=1			 
-         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.1)
+         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.-NHEL(GLU_IJ ,1))
             skip(nFKSprocess)=skip(nFKSprocess)+1
          enddo
          skip(nFKSprocess)=skip(nFKSprocess)-1
@@ -100,7 +100,7 @@ C ----------
       ANS(2) = 0D0
       hel_fac=1d0
       DO IHEL=1,NCOMB
-        if (nhel(glu_ij,ihel).le.0) then
+        if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,borns)
             ANS(2)=ANS(2)+BORNTILDE
@@ -186,8 +186,8 @@ C ----------
       back_hel = nhel(glu_ij)
       borns(1) = 0d0
       borns(2) = 0d0
-      do ihel=-1,1,2
-        if (ihel.eq.-1.or.nhel(glu_ij).ne.0) then
+      DO IHEL=back_hel,-back_hel,(-2*back_hel)
+         IF (IHEL.EQ.back_hel.OR.NHEL(GLU_IJ).NE.0) THEN
         if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         if (.not. calculatedBorn) then
 %(helas_calls)s
