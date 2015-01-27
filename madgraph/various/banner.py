@@ -1801,6 +1801,8 @@ class MadLoopParam(ConfigFile):
             else:
                 template = pjoin(MEDIR, 'SubProcesses', 'MadLoop5_resources',
                                                            'MadLoopParams.dat' )
+                if not os.path.exists(template):
+                    template = pjoin(MEDIR, 'Cards', 'MadLoopParams.dat')
         fsock = open(template, 'r')
         template = fsock.readlines()
         fsock.close()
