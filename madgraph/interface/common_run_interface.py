@@ -731,6 +731,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            delphes_card.dat
            delphes_trigger.dat
            shower_card.dat [aMCatNLO]
+           FO_analyse_card.dat [aMCatNLO]
            madspin_card.dat [MS]
            transfer_card.dat [MW]
            madweight_card.dat [MW]
@@ -740,7 +741,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if text == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -769,6 +770,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'param_card.dat'
         elif 'b_stable' in text:
             return 'shower_card.dat'
+        elif 'fo_analysis_format' in text:
+            return 'FO_analyse_card.dat'
         elif 'decay' in text and 'launch' in text and 'madspin' in text:
             return 'madspin_card.dat'
         elif 'launch' in text and 'set' in text:
