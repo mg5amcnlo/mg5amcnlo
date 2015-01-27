@@ -2431,11 +2431,13 @@ zeor by MadLoop.""")
                 
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
-        if 'survey' in self.history[-1] or self.run_card['gridpack'] in self.true:
+        if 'survey' in self.history[-1] or self.ninitial ==1  or \
+           self.run_card['gridpack']:
             #will be done during the refine (more precisely in gen_ximprove)
             cross, error = sum_html.make_all_html_results(self)
             self.results.add_detail('cross', cross)
-            self.results.add_detail('error', error) 
+            self.results.add_detail('error', error)            
+              
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################

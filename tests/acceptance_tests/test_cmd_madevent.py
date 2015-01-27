@@ -54,12 +54,20 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        self.path = tempfile.mkdtemp(prefix='acc_test_mg5')
+        debugging = False
+        if debugging:
+            self.path = pjoin(MG5DIR, "tmp_test")
+            if os.path.exists(self.path):
+                shutil.rmtree(self.path)
+            os.mkdir(pjoin(MG5DIR, "tmp_test"))
+        else:
+            tempfile.mkdtemp(prefix='acc_test_mg5')
         self.run_dir = pjoin(self.path, 'MGPROC') 
     
     def tearDown(self):
 
-        shutil.rmtree(self.path)
+        if self.path != pjoin(MG5DIR, "tmp_test"):
+            shutil.rmtree(self.path)
     
     def generate(self, process, model):
         """Create a process"""
@@ -85,12 +93,14 @@ class TestMECmdShell(unittest.TestCase):
             stderr=devnull
 
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
+            print "install pythia-pgs"
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
+            print "install MadAnalysis"
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
@@ -104,6 +114,7 @@ class TestMECmdShell(unittest.TestCase):
         interface.onecmd('output madevent %s -f' % self.run_dir)            
         
         if not os.path.exists(pjoin(interface.options['syscalc_path'],'sys_calc')):
+            print "install SysCalc"
             interface.onecmd('install SysCalc')
         
         
@@ -120,7 +131,7 @@ class TestMECmdShell(unittest.TestCase):
     
     def do(self, line):
         """ exec a line in the cmd under test """        
-        self.cmd_line.exec_cmd(line)
+        self.cmd_line.run_cmd(line)
         
   
     def test_madspin_gridpack(self):
@@ -171,16 +182,37 @@ class TestMECmdShell(unittest.TestCase):
         
         text = open('%s/Events/run_01/param_card.dat' % self.run_dir).read()
         data = text.split('DECAY  23')[1].split('DECAY',1)[0]
-        self.assertEqual("""1.492240e+00
-#  BR             NDA  ID1    ID2   ...
-   2.493165e-01   2    3  -3 # 0.37204
-   2.493165e-01   2    1  -1 # 0.37204
-   1.944158e-01   2    4  -4 # 0.290115
-   1.944158e-01   2    2  -2 # 0.290115
-   5.626776e-02   2    -11  11 # 0.083965
-   5.626776e-02   2    -13  13 # 0.083965
-#
-#      PDG        Width""".split('\n'), data.strip().split('\n'))
+        data = data.split('\n')
+        width = float(data[0])
+        self.assertAlmostEqual(width, 1.492240e+00, delta=1e-4)
+        values = {(3,-3): 2.493165e-01,
+                  (1,-1): 2.493165e-01,
+                  (4,-4): 1.944158e-01,
+                  (2,-2): 1.944158e-01,
+                  (-11,11): 5.626776e-02,
+                  (-13,13): 5.626776e-02}
+        for l in data[1:]:
+            if l.startswith("#"):
+                continue
+            l = l.strip()
+            if not l:
+                continue
+            #2.493165e-01   2    3  -3 # 0.37204
+            br, _, id1,id2,_,_ = l.split()
+            
+            self.assertAlmostEqual(float(br), values[(int(id1),int(id2))],delta=1e-3)
+        
+        
+#         self.assertEqual("""1.492240e+00
+# #  BR             NDA  ID1    ID2   ...
+#    2.493165e-01   2    3  -3 # 0.37204
+#    2.493165e-01   2    1  -1 # 0.37204
+#    1.944158e-01   2    4  -4 # 0.290115
+#    1.944158e-01   2    2  -2 # 0.290115
+#    5.626776e-02   2    -11  11 # 0.083965
+#    5.626776e-02   2    -13  13 # 0.083965
+# #
+# #      PDG        Width""".split('\n'), data.strip().split('\n'))
         
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works and the systematics as well"""
