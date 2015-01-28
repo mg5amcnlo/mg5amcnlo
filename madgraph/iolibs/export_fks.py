@@ -598,6 +598,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'reweight_xsec_events_pdf_dummy.f',
                      'iproc_map.f',
                      'run.inc',
+                     'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
                      'symmetry_fks_test_MC.f',

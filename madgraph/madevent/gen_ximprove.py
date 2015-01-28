@@ -729,8 +729,6 @@ class gensym(object):
             fsock.close()
             
          
-
-
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory
         cross, across, sigma = grid_calculator.get_cross_section()

@@ -2282,7 +2282,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if (self.run_card['reweight_scale'] or self.run_card['reweight_PDF']) and int(self.run_card['ickkw']) != 4 :
+        if (self.run_card['reweight_scale'] or self.run_card['reweight_PDF']) and self.run_card['ickkw'] != 4 :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton', update_results=True)
@@ -3569,7 +3569,7 @@ Integrated cross-section
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf' and \
                 (self.banner.get_detail('run_card', 'lpp1') != 0 or \
-                 self.banner.get_detail('run_card', 'lpp1') != 0):
+                 self.banner.get_detail('run_card', 'lpp2') != 0):
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()

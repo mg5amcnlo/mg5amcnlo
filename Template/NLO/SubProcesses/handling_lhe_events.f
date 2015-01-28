@@ -57,10 +57,16 @@ c
 
       subroutine write_lhef_header_banner(ifile,nevents,MonteCarlo,path)
       implicit none 
-      integer ifile,nevents,iseed,i,pdf_set_min,pdf_set_max,idwgt
-      double precision mcmass(-16:21),rw_Rscale_down,rw_Rscale_up
-     $     ,rw_Fscale_down,rw_Fscale_up
-c Scales
+      integer ifile, i, idwgt, nevents,iseed
+      double precision mcmass(-16:21)
+c     parameter to allow to include run_card.inc 
+      include './run.inc'
+      include './cuts.inc'
+      integer lhaid
+      character*20 pdlabel
+      integer iappl
+      character*7 event_norm
+c     other parameter
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
@@ -73,6 +79,7 @@ c Scales
       integer event_id
       common /c_event_id/ event_id
       include 'reweight_all.inc'
+
 c     Set the event_id to 0. If 0 or positive, this value will be update
 c     in write_lhe_event. It is set to -99 through a block data
 c     statement.
@@ -99,26 +106,41 @@ c
  88   close(92)
       write(ifile,'(a)') '  </slha>'
       write(ifile,'(a)') '  <MGRunCard>'
-      open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'
-     &     ,err=97)
       rwgt_skip_pdf=.true.
       rwgt_skip_scales=.true.
       rwgt_skip=.true.
       pdf_set_min=-1
       pdf_set_max=-1
       numscales=0
+c     import the parameter from the run_card      
+      include './run_card.inc'
+c Replace the random number seed with the one used...
+      open (unit=93,file="randinit",status="old",err=96)
+      read(93,'(a)') buffer2
+      if (index(buffer2,'=').eq.0) goto 96
+      buffer2=buffer2(index(buffer2,'=')+1:)
+      read(buffer2,*) iseed
+      close(93)
+      goto 95
+ 96      write (*,*) '"randinit" file not found in write_lhef_header_'/
+     &        /'banner: not overwriting iseed in event file header.'
+c Scale variation
+ 95   if (do_rwgt_scale.or.do_rwgt_pdf) rwgt_skip=.false.
+      if (do_rwgt_scale) then
+         rwgt_skip_scales = .false.
+         numscales=3         
+      endif
+      if (do_rwgt_pdf) rwgt_skip_pdf=.false.
+
+c     copy the run_card as part of the banner.
+      open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'
+     &     ,err=97)
       do
          read(92,'(a)',err=87,end=87) buffer
          buffer_lc=buffer
          call case_trap3(72,buffer_lc)
 c Replace the random number seed with the one used...
          if(index(buffer_lc,'iseed').ne.0 .and. buffer(1:1).ne.'#')then
-            open (unit=93,file="randinit",status="old",err=96)
-            read(93,'(a)') buffer2
-            if (index(buffer2,'=').eq.0) goto 96
-            buffer2=buffer2(index(buffer2,'=')+1:)
-            read(buffer2,*) iseed
-            close(93)
             write(buffer,'(i11,a)')iseed,' =  iseed'
 c Update the number of events
          elseif (index(buffer_lc,'nevents').ne.0 .and.
@@ -127,40 +149,8 @@ c Update the number of events
      &             index(buffer_lc,'!').gt.index(buffer_lc,'nevents')
      &           )) then
             write(buffer,'(i11,a)')nevents,' = nevents'
-         elseif (index(buffer_lc,'reweight_pdf').ne.0 .and.
-     $           index(buffer_lc,'.true.').ne.0 .and.
-     $           buffer(1:1).ne.'#') then
-            rwgt_skip=.false.
-            rwgt_skip_pdf=.false.
-         elseif (index(buffer_lc,'pdf_set_min').ne.0 .and.
-     &           buffer(1:1).ne.'#') then
-            read(buffer(1:index(buffer,'=')-1),*) pdf_set_min
-         elseif (index(buffer_lc,'pdf_set_max').ne.0 .and.
-     &           buffer(1:1).ne.'#') then
-            read(buffer(1:index(buffer,'=')-1),*) pdf_set_max
-         elseif (index(buffer_lc,'reweight_scale').ne.0 .and.
-     $           index(buffer_lc,'.true.').ne.0 .and.
-     $           buffer(1:1).ne.'#') then
-            rwgt_skip=.false.
-            rwgt_skip_scales=.false.
-            numscales=3
-         elseif (index(buffer_lc,'rw_rscale_down').ne.0 .and.
-     &           buffer(1:1).ne.'#') then
-            read(buffer(1:index(buffer,'=')-1),*) rw_Rscale_down
-         elseif (index(buffer_lc,'rw_rscale_up').ne.0 .and.
-     &           buffer(1:1).ne.'#') then
-            read(buffer(1:index(buffer,'=')-1),*) rw_Rscale_up
-         elseif (index(buffer_lc,'rw_fscale_down').ne.0 .and.
-     &           buffer(1:1).ne.'#') then
-            read(buffer(1:index(buffer,'=')-1),*) rw_Fscale_down
-         elseif (index(buffer_lc,'rw_fscale_up').ne.0 .and.
-     &           buffer(1:1).ne.'#') then
-            read(buffer(1:index(buffer,'=')-1),*) rw_Fscale_up
          endif
-         goto 95
- 96      write (*,*) '"randinit" file not found in write_lhef_header_'/
-     &        /'banner: not overwriting iseed in event file header.'
- 95      write(ifile,'(a)') buffer
+         write(ifile,'(a)') buffer
       enddo
  87   close(92)
       if ( (pdf_set_min.ne.-1 .and. pdf_set_max.eq.-1) .or.
@@ -778,6 +768,7 @@ c
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+
         if(jwgtinfo.ge.1.and.jwgtinfo.le.4)then
           read(ifile,'(a)')string
           read(ifile,401)wgtref,wgtqes2(2)
