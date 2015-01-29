@@ -15,6 +15,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 MZ: Fix to a bug occurring when generating event in the "split" mode: the required output was 
                     not correctly specified
                 MZ: Fixes to different small bugs / improvement in the error and warning messages
+                OM: The built-in pdf "nn23lo" and "nn23lo1" where associate to the wrong lhapdfid in the lhe file
+                    This was creating bias in using SysCalc. (Thanks Alexis)
 
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.
