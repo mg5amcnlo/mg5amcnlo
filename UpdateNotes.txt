@@ -17,6 +17,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 MZ: Fixes to different small bugs / improvement in the error and warning messages
                 OM: The built-in pdf "nn23lo" and "nn23lo1" where associate to the wrong lhapdfid in the lhe file
                     This was creating bias in using SysCalc. (Thanks Alexis)
+                OM: Fix a bug in the re-weighing which was removing the SysCalc weight from the lhe file (thanks Shin-Shan)
 
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.
