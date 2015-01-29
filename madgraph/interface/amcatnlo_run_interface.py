@@ -1403,7 +1403,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], -1, npoints, niters) 
             # collect the results and logs
             self.collect_log_files(folder_names[mode], 0)
-            p = misc.Popen(['./combine_results_FO.sh', req_acc, '%s_G*' % mode_dict[mode]], \
+            p = misc.Popen(['./combine_results_FO.sh', str(req_acc), '%s_G*' % mode_dict[mode]], \
                                stdout=subprocess.PIPE, \
                                cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
@@ -1527,7 +1527,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     if split:
                         # split the event generation
                         misc.call([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
-                                   [self.run_card['nevt_job']],
+                                   [str(self.run_card['nevt_job'])],
                                    stdout = devnull,
                                    cwd = pjoin(self.me_dir, 'SubProcesses'))
                         assert os.path.exists(pjoin(self.me_dir, 'SubProcesses', 

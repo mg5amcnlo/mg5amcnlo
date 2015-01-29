@@ -67,6 +67,7 @@ c     parameter to allow to include run_card.inc
       integer iappl
       character*7 event_norm
 c     other parameter
+      integer nevents_old
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
@@ -112,8 +113,10 @@ c
       pdf_set_min=-1
       pdf_set_max=-1
       numscales=0
-c     import the parameter from the run_card      
+c     import the parameter from the run_card 
+      nevents_old = nevents
       include './run_card.inc'
+      nevents = nevents_old
 c Replace the random number seed with the one used...
       open (unit=93,file="randinit",status="old",err=96)
       read(93,'(a)') buffer2

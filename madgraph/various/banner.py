@@ -883,7 +883,7 @@ class ConfigFile(dict):
                         if value == new_value:
                             value = new_value
                         else:
-                            raise Exception, "incorect input: %s need an integer" % value
+                            raise Exception, "incorect input: %s need an integer for %s" % (value,name)
             elif targettype == float:
                 value = value.replace('d','e') # pass from Fortran formatting
                 try:
@@ -1625,7 +1625,7 @@ class RunCardNLO(RunCard):
         
         self.add_param('run_tag', 'tag_1', include=False)
         self.add_param('nevents', 10000)
-        self.add_param('req_acc', -1, include=False)
+        self.add_param('req_acc', -1.0, include=False)
         self.add_param('nevt_job', -1, include=False)
         self.add_param('event_norm', 'average')
         #FO parameter

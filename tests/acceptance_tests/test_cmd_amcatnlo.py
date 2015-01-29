@@ -52,17 +52,26 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
+    debugging = False
     
     def setUp(self):
         
-        self.tmpdir = tempfile.mkdtemp(prefix='amc')
-        #if os.path.exists(self.tmpdir):
-        #    shutil.rmtree(self.tmpdir)
-        #os.mkdir(self.tmpdir)
+        if not self.debugging:
+            self.tmpdir = tempfile.mkdtemp(prefix='amc')
+            #if os.path.exists(self.tmpdir):
+            #    shutil.rmtree(self.tmpdir)
+            #os.mkdir(self.tmpdir)
+            self.path = pjoin(self.tmpdir,'MGProcess')
+        else:
+            if os.path.exists(pjoin(MG5DIR, 'TEST_AMC')):
+                shutil.rmtree(pjoin(MG5DIR, 'TEST_AMC'))
+            os.mkdir(pjoin(MG5DIR, 'TEST_AMC'))
+            self.tmpdir = pjoin(MG5DIR, 'TEST_AMC')
+            
         self.path = pjoin(self.tmpdir,'MGProcess')
-
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        if not self.debugging:
+            shutil.rmtree(self.tmpdir)
     
     
     def generate(self, process, model, multiparticles=[]):
@@ -252,9 +261,9 @@ class MECmdShell(IOTests.IOTestManager):
         cmd = os.getcwd()
         self.generate(['p p > e+ e- [real=QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( ' -1 = nevt_job' in card)
+        self.assertTrue( '-1 = nevt_job' in card)
         self.assertTrue( '10000 = nevents' in card)
-        self.assertTrue( ' -1 = req_acc' in card)
+        self.assertTrue( '-1.0 = req_acc' in card)
         card = card.replace(' -1 = nevt_job', '1 = nevt_job')
         card = card.replace('10000 = nevents', '6 = nevents')
         card = card.replace(' -1 = req_acc', '0.1 = req_acc')

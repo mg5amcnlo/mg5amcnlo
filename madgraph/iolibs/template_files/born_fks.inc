@@ -192,9 +192,9 @@ C ----------
         if (.not. calculatedBorn) then
 %(helas_calls)s
         do i=1,ngraphs
-          if(ihel.eq.-1)then
+          if(ihel.eq.BACK_HEL)then
             saveamp(i,hell)=amp(i)
-          elseif(ihel.eq.1)then
+          elseif(ihel.eq.-BACK_HEL)then
             saveamp(i,hell+skip(nFKSprocess))=amp(i)
           else
             write(*,*) "ERROR #1 in born.f"
@@ -203,9 +203,9 @@ C ----------
         enddo
         elseif (calculatedBorn) then
         do i=1,ngraphs
-          if(ihel.eq.-1)then
+          if(ihel.eq.BACK_HEL)then
             amp(i)=saveamp(i,hell)
-          elseif(ihel.eq.1)then
+          elseif(ihel.eq.-BACK_HEL)then
             amp(i)=saveamp(i,hell+skip(nFKSprocess))
           else
             write(*,*) "ERROR #1 in born.f"
@@ -219,14 +219,14 @@ C ----------
           DO J = 1, NCOLOR
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          BORNS(2-(1-ihel)/2)=BORNS(2-(1-ihel)/2)+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+          BORNS(2-(1+back_hel*ihel)/2)=BORNS(2-(1+back_hel*ihel)/2)+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
         ENDDO
         Do I = 1, NGRAPHS
           amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
         Enddo
         Do I = 1, NCOLOR
           Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
-          Jamph(2-(1-ihel)/2,i)=Jamp(i)
+          Jamph(2-(1+back_hel*ihel)/2,i)=Jamp(i)
         Enddo
       endif
       Enddo
