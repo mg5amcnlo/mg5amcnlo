@@ -36,6 +36,7 @@ import madgraph.interface.amcatnlo_run_interface as NLOCmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
+import madgraph.various.banner as banner
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -201,13 +202,18 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertEqual(cmd, os.getcwd())
 
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue('    1   = lpp' in card)
-        self.assertTrue('6500   = ebeam' in card)
-        self.assertTrue('nn23nlo   = pdlabel' in card)
-        card = card.replace('    1   = lpp', '    0   = lpp')
-        card = card.replace('6500   = ebeam', ' 500   = ebeam')
-        card = card.replace('nn23nlo   = pdlabel', '\'lhapdf\' = pdlabel')
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        # this check that the value of lpp/beam are change automatically
+        self.assertTrue('0   = lpp1' in card)
+        self.assertTrue('500   = ebeam' in card)
+        # pass to the object
+        card = banner.RunCardNLO(card)
+        card['pdlabel'] = "lhapdf"
+        self.assertEqual(card['lpp1'], 0)
+        self.assertEqual(card['lpp2'], 0)
+        self.assertEqual(card['ebeam1'], 500)
+        self.assertEqual(card['ebeam2'], 500)
+        card.write('%s/Cards/run_card.dat' % self.path)
+        
 
         self.do('calculate_xsect -f LO')
         self.do('quit')

@@ -741,6 +741,8 @@ class ConfigFile(dict):
             for key in finput.__dict__:
                 setattr(self, key, copy.copy(getattr(finput, key)) )
             return
+        else:
+            dict.__init__(self)
         
         # Initialize it with all the default value
         self.user_set = set()
@@ -752,6 +754,7 @@ class ConfigFile(dict):
         # if input is define read that input
         if isinstance(finput, (file, str)):
             self.read(finput)
+    
 
     def default_setup(self):
         pass
@@ -791,7 +794,7 @@ class ConfigFile(dict):
         """set the attribute and set correctly the type if the value is a string"""
         if  not len(self):
             #Should never happen but when deepcopy/pickle
-            self.default_setup()
+            self.__init__()
             
         name = name.strip() 
         # 1. Find the type of the attribute that we want
@@ -1133,16 +1136,11 @@ class RunCard(ConfigFile):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
-        to_write = set(self.user_set)
+        to_write = set(self.user_set) 
         if not template:
-            if not MADEVENT:
-                template = pjoin(MG5DIR, 'Template', 'LO', 'Cards', 
-                                                        'run_card.dat')
-                python_template = True
-            else:
-                template = pjoin(MEDIR, 'Cards', 'run_card_default.dat')
-                python_template = False
-        
+            raise Exception
+
+       
         if python_template:
             text = file(template,'r').read() % self
         else:
@@ -1613,7 +1611,21 @@ class RunCardLO(RunCard):
             else:
                 self[name] = 0
             
-            
+    def write(self, output_file, template=None, python_template=False):
+        """Write the run_card in output_file according to template 
+           (a path to a valid run_card)"""
+
+        if not template:
+            if not MADEVENT:
+                template = pjoin(MG5DIR, 'Template', 'LO', 'Cards', 
+                                                        'run_card.dat')
+                python_template = True
+            else:
+                template = pjoin(MEDIR, 'Cards', 'run_card_default.dat')
+                python_template = False
+       
+        super(RunCardLO, self).write(output_file, template=template,
+                                    python_template=python_template)            
 
 
 class RunCardNLO(RunCard):
@@ -1737,6 +1749,30 @@ class RunCardNLO(RunCard):
                                     python_template=python_template)
 
 
+    def create_default_for_process(self, proc_characteristic, history, proc_def):
+        """Rules
+          e+ e- beam -> lpp:0 ebeam:500  
+          p p beam -> set maxjetflavor automatically
+         """
+
+        # check for beam_id
+        beam_id = set()
+        for proc in proc_def:
+            for leg in proc[0]['legs']:
+                if not leg['state']:
+                    beam_id.add(leg['id'])
+        if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21]):
+            maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
+            self['maxjetflavor'] = maxjetflavor
+            pass
+        elif 11 in beam_id or -11 in beam_id:
+            self['lpp1'] = 0
+            self['lpp2'] = 0
+            self['ebeam1'] = 500
+            self['ebeam2'] = 500
+        else:
+            self['lpp1'] = 0
+            self['lpp2'] = 0  
         
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat

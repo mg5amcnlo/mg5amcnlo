@@ -664,7 +664,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """ """
  
         run_card = banner_mod.RunCardNLO()
-                
+        
+        processes = [me.get('processes') 
+                                 for me in matrix_elements['matrix_elements']]
+        
+        run_card.create_default_for_process(self.proc_characteristic, 
+                                            history,
+                                            processes)
+        
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
 

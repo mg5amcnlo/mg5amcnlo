@@ -3,7 +3,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.3.0(XX/XX/XX) OM+VH: Adding the possibility to compute cross-section for loop-induced process
                 OM: New MultiCore class with better thread support
                 OM+VH: Change the handling of the run_card.
-                      - The default value depends now of your running process.
+                      - The default value depends now of your running process
                       - cut_decays is now on False by default
                       - nhel can only take 0/1 value. 1 is a real MC over helicity (with importance sampling)
                       - use_syst is set on by default (but for matching)                      

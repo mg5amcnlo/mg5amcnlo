@@ -54,14 +54,14 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        debugging = False
+        debugging = True
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
                 shutil.rmtree(self.path)
             os.mkdir(pjoin(MG5DIR, "tmp_test"))
         else:
-            tempfile.mkdtemp(prefix='acc_test_mg5')
+            self.path = tempfile.mkdtemp(prefix='acc_test_mg5')
         self.run_dir = pjoin(self.path, 'MGPROC') 
     
     def tearDown(self):
@@ -329,7 +329,7 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 155.9
-        self.assertTrue(abs(val1 - target) / err1 < 1.)
+        self.assertTrue(abs(val1 - target) / err1 < 2.)
         
     def load_result(self, run_name):
         
