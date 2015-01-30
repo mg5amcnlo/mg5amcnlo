@@ -112,6 +112,7 @@ class ProcessExporterFortran(object):
  
         run_card = banner_mod.RunCard()
         
+        
         default=True
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):            
             processes = [me.get('processes')  for megroup in matrix_elements 
@@ -121,6 +122,9 @@ class ProcessExporterFortran(object):
                                  for me in matrix_elements['matrix_elements']]
         else:
             default =False
+
+        misc.sprint(type(self), history, default)
+
     
         if default:
             run_card.create_default_for_process(self.proc_characteristic, 
@@ -2304,6 +2308,29 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             history.write(output_file)
 
         ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+
+
+    #===========================================================================
+    # create the run_card for MW
+    #=========================================================================== 
+    def create_run_card(self, matrix_elements, history):
+        """ """
+ 
+        run_card = banner_mod.RunCard()
+    
+        # pass to default for MW
+        run_card["run_tag"] = "\'not_use\'"
+        run_card["fixed_ren_scale"] = "T"
+        run_card["fixed_fac_scale"] = "T"
+        run_card.remove_all_cut()
+                  
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'),
+                       template=pjoin(MG5DIR, 'Template', 'MadWeight', 'Cards', 'run_card.dat'),
+                       python_template=True)
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'),
+                       template=pjoin(MG5DIR, 'Template', 'MadWeight', 'Cards', 'run_card.dat'),
+                       python_template=True)
+
 
     #===========================================================================
     # export model files
