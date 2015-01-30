@@ -2137,7 +2137,7 @@ class decay_all_events(object):
         self.write_banner_information()
         
         
-        event_nb = 0
+        event_nb, fail_nb = 0, 0
         nb_skip = 0 
         trial_nb_all_events=0
         starttime = time.time()
@@ -2164,8 +2164,12 @@ class decay_all_events(object):
                 mepath = self.all_ME[production_tag]['path']
                 mepath = mepath.replace('production_me','full_me');
                                 
-                trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = self.loadfortran( 'unweighting', mepath, stdin_text)
-                                
+                output = self.loadfortran( 'unweighting', mepath, stdin_text)
+                if not output:
+                    # Event fail
+                    fail_nb+=1
+                    continue
+                trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = output                
                 self.reset_helicityonly_in_prod_event(event_map, helicities)
                 event_nb+=1
                 decayed_event = self.curr_event
@@ -2211,7 +2215,12 @@ class decay_all_events(object):
                 stdin_text+='%s  \n' % str(values_for_mc_masses).strip('[]').replace(',', ' ')
             
 #            here apply the reweighting procedure in fortran
-            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
+            output = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
+            if not output:
+                fail_nb +=1
+                continue
+            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = output 
+            
             # next: need to fill all intermediate momenta
             if nb_mc_masses>0 and use_mc_masses==0:nb_fail_mc_mass+=1
             
@@ -2312,6 +2321,8 @@ class decay_all_events(object):
         logger.info('Number of events with weights larger than max_weight: %s' % report['over_weight'])
         logger.info('Number of subprocesses '+str(len(self.calculator)))
         logger.info('Number of failures when restoring the Monte Carlo masses: %s ' % nb_fail_mc_mass)
+        if fail_nb:
+            logger.info('Number of failures in reshuffling (event skipped): %s ' % fail_nb)
         
         return  event_nb/(event_nb+nb_skip)       
 
@@ -3212,25 +3223,38 @@ class decay_all_events(object):
             output = me_value
         elif mode == 'unweighting':
             firstline=external.stdout.readline().split()
-            nexternal=int(firstline[0])
-            trials= int(firstline[1])
-            BWvalue= float(firstline[2])
-            weight= float(firstline[3])
-            failed= float(firstline[4])
-            use_mc_masses=int(firstline[5])
+            try:
+                nexternal=int(firstline[0])
+                trials= int(firstline[1])
+                BWvalue= float(firstline[2])
+                weight= float(firstline[3])
+                failed= float(firstline[4])
+                use_mc_masses=int(firstline[5])
+            except ValueError:
+                logger.debug(firstline)
+                return
             momenta=[external.stdout.readline() for i in range(nexternal)]
             lastline=external.stdout.readline().split()
             helicities=[lastline[i] for i in range(len(lastline))]
             output = trials, BWvalue, weight, momenta, failed, use_mc_masses, helicities
 
-        if len(self.calculator) > 100:
-            logger.debug('more than 100 calculator. Perform cleaning')
+        if len(self.calculator) > self.options['max_running_process']:
+            logger.debug('more than %s calculators. Perform cleaning' % self.options['max_running_process'])
             nb_calls = self.calculator_nbcall.values()
             nb_calls.sort()
             cut = max([nb_calls[len(nb_calls)//2], 0.001 * nb_calls[-1]])
             for key, external in list(self.calculator.items()):
                 nb = self.calculator_nbcall[key]
                 if nb < cut:
+                    if key[0]=='full':
+                        path=key[1]
+                        end_signal="5 0 0 0 \n"  # before closing, write down the seed 
+                        external.stdin.write(end_signal)
+                        ranmar_state=external.stdout.readline()
+                        ranmar_file=pjoin(path,'ranmar_state.dat')
+                        ranmar=open(ranmar_file, 'w')
+                        ranmar.write(ranmar_state)
+                        ranmar.close()
                     external.stdin.close()
                     external.stdout.close()
                     external.terminate()
@@ -3243,6 +3267,9 @@ class decay_all_events(object):
     
     def calculate_matrix_element(self, mode, production, stdin_text):
         """routine to return the matrix element"""
+
+        if mode != "decay":
+            raise Exception, "This function is only secure in mode decay."
 
         tmpdir = ''
         if (mode, production) in self.calculator:

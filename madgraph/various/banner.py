@@ -535,11 +535,8 @@ def recover_banner(results_object, level, run=None, tag=None):
                 del banner[tag]
     return banner
     
-
-
 class InvalidRunCard(InvalidCmd):
     pass
-
 
 class ProcCard(list):
     """Basic Proccard object"""

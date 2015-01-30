@@ -49,7 +49,7 @@ c Compile with makefile_rwgt
       external compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
      &     ,compute_rwgt_wgt_Hev
       integer i_process
-      common/c_addwrite/i_process
+      common/c_i_process/i_process
 c
       call setrun                !Sets up run parameters
 

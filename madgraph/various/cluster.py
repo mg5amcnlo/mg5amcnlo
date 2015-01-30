@@ -77,6 +77,7 @@ def store_input(arg=''):
 class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
+    identifier_length = 14
 
     def __init__(self,*args, **opts):
         """Init the cluster"""
@@ -154,12 +155,16 @@ class Cluster(object):
         echo '%(arguments)s' > arguments
         chmod +x ./%(script)s
         %(program)s ./%(script)s %(arguments)s
+        exit=$?
         output_files=( %(output_files)s )
         for i in ${output_files[@]}
         do
             cp -r $MYTMP/$i $MYPWD
         done
-        rm -rf $MYTMP
+#        if [ "$exit" -eq "0" ] 
+#        then
+            rm -rf $MYTMP
+#        fi
         """
         
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
@@ -225,6 +230,35 @@ class Cluster(object):
     def control_one_job(self, pid):
         """ control the status of a single job with it's cluster id """
         raise NotImplemented, 'No implementation of how to control the job status to cluster \'%s\'' % self.name
+
+    def get_jobs_identifier(self, path, second_path=None):
+        """get a unique run_name for all the jobs helps to identify the runs 
+        in the controller for some cluster."""
+        
+        if second_path:
+            path = os.path.realpath(pjoin(path, second_path))
+        elif not os.path.exists(path):
+            return path # job already done
+        
+        if 'SubProcesses' in path:
+            target = path.rsplit('/SubProcesses',1)[0]
+        elif 'MCatNLO' in path:
+            target = path.rsplit('/MCatNLO',1)[0]
+        elif second_path:
+            target=path
+            logger.warning("cluster.get_job_identifier runs unexpectedly. This should be fine but report this message if you have problem.")
+        else:
+            target = path
+            
+        if target.endswith('/'):
+            target = target[:-1]   
+
+        target = misc.digest(target)[-self.identifier_length:]
+        if not target[0].isalpha():
+            target = 'a' + target[1:]
+
+        return target
+
 
     @check_interupt()
     def wait(self, me_dir, fct, minimal_job=0, update_first=None):
@@ -538,8 +572,7 @@ class MultiCore(Cluster):
             try:
                 args = self.queue.get()
                 tag, exe, arg, opt = args
-                if 1:
-                #try:
+                try:
                     # check for executable case
                     if isinstance(exe,str):
                         if os.path.exists(exe) and not exe.startswith('/'):
@@ -570,12 +603,12 @@ class MultiCore(Cluster):
                             logger.warning("fct %s does not return 0", exe)
                             self.stoprequest.set()
                             self.remove("fct %s does not return 0" % exe)
-#                 except Exception,error:
-#                     logger.warning(str(error))
-#                     self.stoprequest.set()
-#                     self.remove(error)
-#                     if __debug__:
-#                         raise
+                except Exception,error:
+                     logger.warning(str(error))
+                     self.stoprequest.set()
+                     self.remove(error)
+                     if __debug__:
+                         raise
 
                 self.queue.task_done()
                 self.done.put(tag)
@@ -979,15 +1012,10 @@ class PBSCluster(Cluster):
                required_output=[], nb_submit=0):
         """Submit a job prog to a PBS cluster"""
         
-        
-        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = misc.digest(me_dir)[-14:]
-        if not me_dir[0].isalpha():
-            me_dir = 'a' + me_dir[1:]
+        me_dir = self.get_jobs_identifier(cwd, prog)
 
         if len(self.submitted_ids) > self.maximum_submited_jobs:
             fct = lambda idle, run, finish: logger.info('Waiting for free slot: %s %s %s' % (idle, run, finish))
-            me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
             self.wait(me_dir, fct, self.maximum_submited_jobs)
 
         
@@ -1068,11 +1096,8 @@ class PBSCluster(Cluster):
         cmd = "qstat"
         status = misc.Popen([cmd], stdout=subprocess.PIPE)
 
-        if me_dir.endswith('/'):
-            me_dir = me_dir[:-1]    
-        me_dir = misc.digest(me_dir)[-14:]
-        if not me_dir[0].isalpha():
-            me_dir = 'a' + me_dir[1:]
+        me_dir = self.get_jobs_identifier(me_dir)
+
         ongoing = []
 
         idle, run, fail = 0, 0, 0
@@ -1123,6 +1148,7 @@ class SGECluster(Cluster):
     job_id = 'JOB_ID'
     idle_tag = ['qw', 'hqw','hRqw','w']
     running_tag = ['r','t','Rr','Rt']
+    identifier_length = 10
 
     def def_get_path(self,location):
         """replace string for path issues"""
@@ -1137,10 +1163,8 @@ class SGECluster(Cluster):
                required_output=[], nb_submit=0):
         """Submit a job prog to an SGE cluster"""
 
-        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = misc.digest(me_dir)[-10:]
-        if not me_dir[0].isalpha():
-            me_dir = 'a' + me_dir[1:]
+        me_dir = self.get_jobs_identifier(cwd, prog)
+
 
         if cwd is None:
             #cwd = os.getcwd()
@@ -1230,11 +1254,7 @@ class SGECluster(Cluster):
         cmd = "qstat "
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
 
-        if me_dir.endswith('/'):
-           me_dir = me_dir[:-1]    
-        me_dir = misc.digest(me_dir)[-10:]
-        if not me_dir[0].isalpha():
-            me_dir = 'a' + me_dir[1:]
+        me_dir = self.get_jobs_identifier(me_dir)
 
         finished = list(self.submitted_ids)
 
@@ -1281,10 +1301,8 @@ class LSFCluster(Cluster):
                required_output=[], nb_submit=0):
         """Submit the job prog to an LSF cluster"""
         
-        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = misc.digest(me_dir)[-14:]
-        if not me_dir[0].isalpha():
-            me_dir = 'a' + me_dir[1:]
+        
+        me_dir = self.get_jobs_identifier(cwd, prog)
         
         text = ""
         command = ['bsub', '-C0', '-J', me_dir]
@@ -1543,17 +1561,15 @@ class SLURMCluster(Cluster):
     idle_tag = ['Q','PD','S','CF']
     running_tag = ['R', 'CG']
     complete_tag = ['C']
+    identification_length = 8
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
                required_output=[], nb_submit=0):
         """Submit a job prog to a SLURM cluster"""
         
-        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = misc.digest(me_dir)[-8:]
-
-        if not me_dir[0].isalpha():
-            me_dir = 'a' + me_dir[1:]
+        me_dir = self.get_jobs_identifier(cwd, prog)
+        
         
         if cwd is None:
             cwd = os.getcwd()
@@ -1614,11 +1630,7 @@ class SLURMCluster(Cluster):
         cmd = "squeue"
         status = misc.Popen([cmd], stdout=subprocess.PIPE)
 
-        if me_dir.endswith('/'):
-           me_dir = me_dir[:-1]   
-        me_dir = misc.digest(me_dir)[-8:]
-        if not me_dir[0].isalpha():
-                  me_dir = 'a' + me_dir[1:]
+        me_dir = self.get_jobs_identifier(me_dir)
 
         idle, run, fail = 0, 0, 0
         ongoing=[]

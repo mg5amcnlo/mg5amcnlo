@@ -400,7 +400,7 @@ c     LOCAL
 c
       integer i,k
 
-      do i=1,20
+      do i=1,len(name)
          k=ichar(name(i:i))
          if(k.ge.65.and.k.le.90) then  !upper case A-Z
             k=ichar(name(i:i))+32   

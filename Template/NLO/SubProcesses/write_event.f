@@ -268,16 +268,7 @@ c
             write(*,*)doreweight,iwgtinfo
             stop
           endif
-          if (ickkw.eq.4) then
-             if (iwgtinfo.ne.5) then
-                write (*,*)'if using ickkw=4, iwgtinfo should be 5'
-                stop
-             else
-                kwgtinfo=15
-             endif
-          else
-             kwgtinfo=iwgtinfo
-          endif
+          kwgtinfo=iwgtinfo
           write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
      &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
