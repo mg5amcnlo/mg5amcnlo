@@ -112,20 +112,22 @@ class ProcessExporterFortran(object):
  
         run_card = banner_mod.RunCard()
         
+        default=True
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):            
             processes = [me.get('processes')  for megroup in matrix_elements 
                                         for me in megroup['matrix_elements']]
-        else:
+        elif matrix_elements:
             processes = [me.get('processes') 
                                  for me in matrix_elements['matrix_elements']]
-            
-        run_card.create_default_for_process(self.proc_characteristic, 
+        else:
+            default =False
+    
+        if default:
+            run_card.create_default_for_process(self.proc_characteristic, 
                                             history,
                                             processes)
           
-        
-        
-        
+    
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
         
@@ -283,9 +285,8 @@ class ProcessExporterFortran(object):
     # Create the proc_characteristic file passing information to the run_interface
     #===========================================================================
     def create_proc_charac(self, matrix_elements=None, history= "", **opts):
-                
-        self.proc_characteristic.write(pjoin(self.dir_path, 'SubProcesses', 'proc_characteristics'))
         
+        self.proc_characteristic.write(pjoin(self.dir_path, 'SubProcesses', 'proc_characteristics'))
 
     #===========================================================================
     # write_matrix_element_v4
@@ -3169,7 +3170,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
         # indicate that the output type is not grouped
-        self.proc_characteristic['grouped_matrix'] = False
+        if  not isinstance(self, ProcessExporterFortranMEGroup):
+            self.proc_characteristic['grouped_matrix'] = False
 
         modelname = self.opt['model']
         if modelname == 'mssm' or modelname.startswith('mssm-'):
@@ -3244,6 +3246,15 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
 
+        #crate the proc_characteristic file 
+        self.create_proc_charac(matrix_elements, history)
+
+        # create the run_card
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+
+        misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+                        stdout = devnull)
+        
         # Run "make" to generate madevent.tar.gz file
         if os.path.exists(pjoin(self.dir_path,'SubProcesses', 'subproc.mg')):
             if os.path.exists(pjoin(self.dir_path,'madevent.tar.gz')):
@@ -3251,14 +3262,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             misc.call([os.path.join(self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
                         stdout = devnull, cwd=self.dir_path)
 
-        misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
-                        stdout = devnull)
-
-        #crate the proc_characteristic file 
-        self.create_proc_charac(matrix_elements, history)
 
 
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+
+
+
+
 
         #return to the initial dir
         #os.chdir(old_pos)               
@@ -4683,11 +4692,13 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
 
     def finalize_v4_directory(self,*args, **opts):
+
+
         
         super(ProcessExporterFortranMEGroup, self).finalize_v4_directory(*args, **opts)
-        
         #ensure that the grouping information is on the correct value
-        self.proc_characteristic['grouped_matrix'] = True
+        self.proc_characteristic['grouped_matrix'] = True        
+
         
 #===============================================================================
 # UFO_model_to_mg4

@@ -194,23 +194,24 @@ class TestCmdShell2(unittest.TestCase,
                     test_file_writers.CheckFileCreate):
     """Test all command line related to MG_ME"""
 
+    debugging = False
     def setUp(self):
-        """ basic building of the class to test """
         
         self.cmd = Cmd.MasterCmd()
-        if  MG4DIR:
-            logger.debug("MG_ME dir: " + MG4DIR)
-            self.out_dir = os.path.join(MG4DIR, 'AUTO_TEST_MG5')
+        if not self.debugging:
+            self.tmpdir = tempfile.mkdtemp(prefix='amc')
         else:
-            raise Exception, 'NO MG_ME dir for this test'   
-        if os.path.exists(self.out_dir):
-            shutil.rmtree(self.out_dir)
+            if os.path.exists(pjoin(MG5DIR, 'TEST_AMC')):
+                shutil.rmtree(pjoin(MG5DIR, 'TEST_AMC'))
+            os.mkdir(pjoin(MG5DIR, 'TEST_AMC'))
+            self.tmpdir = pjoin(MG5DIR, 'TEST_AMC')
+            
+        self.out_dir = pjoin(self.tmpdir,'MGProcess')
+        
         
     def tearDown(self):
-        """ basic destruction after have run """
-        if os.path.exists(self.out_dir):
+        if not self.debugging:
             shutil.rmtree(self.out_dir)
-
     
     join_path = TestCmdShell1.join_path
 
