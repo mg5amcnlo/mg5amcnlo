@@ -122,9 +122,6 @@ class ProcessExporterFortran(object):
                                  for me in matrix_elements['matrix_elements']]
         else:
             default =False
-
-        misc.sprint(type(self), history, default)
-
     
         if default:
             run_card.create_default_for_process(self.proc_characteristic, 
@@ -4973,7 +4970,8 @@ class UFO_model_to_mg4(object):
         writer.writelines(file)
         writer.close()
 
-        if self.opt['export_format'] in ['madevent', 'FKS5_default', 'FKS5_optimized']:
+        if self.opt['export_format'] in ['madevent', 'FKS5_default', 'FKS5_optimized'] \
+            or self.opt['loop_induced']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_madevent', 
                 self.dir_path + '/makefile')
             if self.opt['export_format'] in ['FKS5_default', 'FKS5_optimized']:
