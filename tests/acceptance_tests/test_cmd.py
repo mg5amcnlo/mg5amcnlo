@@ -19,6 +19,7 @@ import re
 import shutil
 import sys
 import logging
+import tempfile
 
 pjoin = os.path.join
 
@@ -210,8 +211,8 @@ class TestCmdShell2(unittest.TestCase,
         
         
     def tearDown(self):
-        if not self.debugging:
-            shutil.rmtree(self.out_dir)
+        if not self.debugging and os.path.exists(self.out_dir):
+            shutil.rmtree(self.tmpdir)
     
     join_path = TestCmdShell1.join_path
 
@@ -1490,7 +1491,7 @@ P1_qq_wp_wp_lvl
         """check that the import banner command works"""
         
         cwd = os.getcwd()
-        os.chdir(MG5DIR)
+        os.chdir(self.tmpdir)
         self.do('import banner %s --no_launch' % pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt'))
         
         # check that the output exists:
