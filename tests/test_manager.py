@@ -355,8 +355,24 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         IOTestsFunctions.collect_function(IOTestsClass,prefix='testIO')
         for IOTestFunction in IOTestsFunctions:
             start = time.time()
+            # Add all the tests automatically (i.e. bypass filters) if the 
+            # specified test is the name of the IOtest. the [7:] is to
+            # skip the testIO prefix
+            name_filer_bu = None         
+            if IOTestFunction.split('.')[-1][7:] in \
+                                                 IOTestManager.testNames_filter:
+                name_filer_bu = IOTestManager.testNames_filter
+                IOTestManager.testNames_filter = ['ALL']
+                existing_tests = IOTestManager.all_tests.keys()
+                
             eval('IOTestsInstances[-1].'+IOTestFunction.split('.')[-1]+\
                                                              '(load_only=True)')
+            if name_filer_bu:
+                new_tests = [test[0] for test in IOTestManager.all_tests.keys() \
+                                                  if test not in existing_tests]
+                IOTestManager.testNames_filter = name_filer_bu + new_tests
+                name_filer_bu = None
+            
             setUp_time = time.time() - start
             if setUp_time > 0.5:                
                 print colored%(34,"Loading IOtest %s is slow (%s)"%
@@ -1001,7 +1017,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         elif options.semiForce:
             force = 1
         else:
-            force = 0                        
+            force = 0 
+
         runIOTests(args,update=options.IOTests=='U',force=force,
                                                 synchronize=options.synchronize)
     

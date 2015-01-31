@@ -98,22 +98,22 @@ C
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
-      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
-      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1, 1/
-      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1,-1/
-      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1, 1/
-      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1,-1/
-      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1, 1/
-      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1,-1/
-      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1, 1/
-      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1,-1/
-      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1, 1/
-      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1,-1/
-      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1, 1/
-      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1,-1/
-      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
-      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
-      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
+      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1, 1/
+      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1,-1/
+      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1, 1/
+      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1,-1/
+      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1, 1/
+      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1,-1/
+      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1, 1/
+      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1,-1/
+      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1, 1/
+      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1,-1/
+      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1, 1/
+      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1,-1/
+      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1, 1/
+      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1,-1/
+      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1, 1/
+      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1,-1/
       DATA IDEN/256/
 C     
 C     GLOBAL VARIABLES

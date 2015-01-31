@@ -73,7 +73,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g g > h h QED=2 QCD=2 [ virt = QCD ]
+C     Process: g g > h h QED=2 QCD=2 [ sqrvirt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -311,19 +311,57 @@ C     ----------
         ML_INIT = .FALSE.
       ENDIF
 
+C     Setup the file paths
+      CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+      CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
+      CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
+      CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
+      CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
+      CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
+      CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
+
+      OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
+     $  ACTION='READ')
+      DO I=1,NLOOPAMPS
+        READ(1,*,END=105) (CF_N(I,J),J=1,NLOOPAMPS)
+      ENDDO
+      GOTO 105
+ 104  CONTINUE
+      STOP 'Color factors could not be initialized from file ML5_0_Col'
+     $ //'orNumFactors.dat. File not found'
+ 105  CONTINUE
+      CLOSE(1)
+      OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
+     $  ACTION='READ')
+      DO I=1,NLOOPAMPS
+        READ(1,*,END=107) (CF_D(I,J),J=1,NLOOPAMPS)
+      ENDDO
+      GOTO 107
+ 106  CONTINUE
+      STOP 'Color factors could not be initialized from file ML5_0_Col'
+     $ //'orDenomFactors.dat. File not found'
+ 107  CONTINUE
+      CLOSE(1)
+      OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',                
+     $   ACTION='READ')
+      DO H=1,NCOMB
+        READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
+      ENDDO
+      GOTO 109
+ 108  CONTINUE
+      STOP 'Color helictiy configurations could not be initialize'
+     $ //'d from file ML5_0_HelConfigs.dat. File not found'
+ 109  CONTINUE
+      CLOSE(1)
+      IF(BOOTANDSTOP) THEN
+        WRITE(*,*) 'Stopped by user request.'
+        STOP
+      ENDIF
+
       IF(NTRY.EQ.0) THEN
-
-C       Setup the file paths
-        CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
-        CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
-        CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
-        CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
-        CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
-        CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
-        CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
-
         CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
-        HELDOUBLECHECKED=.NOT.DOUBLECHECKHELICITYFILTER
+        HELDOUBLECHECKED=(.NOT.DOUBLECHECKHELICITYFILTER).OR.(HELICITYF
+     $   ILTERLEVEL.EQ.0)
         DO J=1,NCOMB
           DO I=1,NCTAMPS
             GOODAMP(I,J)=.TRUE.
@@ -344,6 +382,13 @@ C       Setup the file paths
         ENDDO
  101    CONTINUE
         CLOSE(1)
+        IF (HELICITYFILTERLEVEL.EQ.0) THEN
+          FOUNDHELFILTER=.TRUE.
+          DO J=1,NCOMB
+            GOODHEL(J)=.TRUE.
+          ENDDO
+          GOTO 122
+        ENDIF
         OPEN(1, FILE=HELFILTERFN, ERR=102, STATUS='OLD',          
      $    ACTION='READ')
         READ(1,*,END=103) (GOODHEL(I),I=1,NCOMB)
@@ -355,43 +400,7 @@ C       Setup the file paths
         ENDDO
  103    CONTINUE
         CLOSE(1)
-        OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
-     $    ACTION='READ')
-        DO I=1,NLOOPAMPS
-          READ(1,*,END=105) (CF_N(I,J),J=1,NLOOPAMPS)
-        ENDDO
-        GOTO 105
- 104    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorNumFactors.dat. File not found'
- 105    CONTINUE
-        CLOSE(1)
-        OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
-     $    ACTION='READ')
-        DO I=1,NLOOPAMPS
-          READ(1,*,END=107) (CF_D(I,J),J=1,NLOOPAMPS)
-        ENDDO
-        GOTO 107
- 106    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorDenomFactors.dat. File not found'
- 107    CONTINUE
-        CLOSE(1)
-        OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',              
-     $       ACTION='READ')
-        DO H=1,NCOMB
-          READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
-        ENDDO
-        GOTO 109
- 108    CONTINUE
-        STOP 'Color helictiy configurations could not be initialize'
-     $   //'d from file ML5_0_HelConfigs.dat. File not found'
- 109    CONTINUE
-        CLOSE(1)
-        IF(BOOTANDSTOP) THEN
-          WRITE(*,*) 'Stopped by user request.'
-          STOP
-        ENDIF
+ 122    CONTINUE
       ENDIF
 
       MP_DONE=.FALSE.

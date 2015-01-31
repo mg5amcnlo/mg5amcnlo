@@ -113,6 +113,7 @@ C
       COMPLEX*32 LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
       COMMON/ML5_0_MP_LCOEFS/LOOPCOEFS
 
+
       COMPLEX*32 AMPL(3,NCTAMPS)
       COMMON/ML5_0_MP_AMPL/AMPL
 
@@ -167,6 +168,7 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
         ENDDO
       ENDDO
 
+
       DO I=1, NBORNAMPS
         DP_AMP(I) = (0.0D0,0.0D0)
         AMP(I) = (ZERO, ZERO)
@@ -199,6 +201,13 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
           MP_UVCT_REQ_SO_DONE=.FALSE.
           MP_CT_REQ_SO_DONE=.FALSE.
           MP_LOOP_REQ_SO_DONE=.FALSE.
+
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
+     $     -1) THEN
+            HEL_MULT=GOODHEL(H)
+          ELSE
+            HEL_MULT=1
+          ENDIF
 
 
           CALL MP_IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
@@ -256,14 +265,6 @@ C         Amplitude(s) for UVCT diagram with ID 14
           AMPL(2,29)=AMPL(2,29)*(2.0D0*UVWFCT_B_0_1EPS)
  3000     CONTINUE
           MP_UVCT_REQ_SO_DONE=.TRUE.
-
-
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
-            HEL_MULT=GOODHEL(H)
-          ELSE
-            HEL_MULT=1
-          ENDIF
 
           DO I=1,NCTAMPS
             DO J=1,NBORNAMPS
@@ -409,6 +410,7 @@ C         Coefficient construction for loop diagram with ID 12
  4000     CONTINUE
           MP_LOOP_REQ_SO_DONE=.TRUE.
 
+
 C         Copy the qp wfs to the dp ones as they are used to setup the
 C          CT calls.
 C         This needs to be done once since only the momenta of these
@@ -421,6 +423,8 @@ C          WF matters.
             ENDDO
             DPW_COPIED=.TRUE.
           ENDIF
+
+
 
 
 

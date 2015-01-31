@@ -460,7 +460,6 @@ class IOTestManager(unittest.TestCase):
             all modified file and if 1 you will monitor each modified file of
             a given name only once.
         """
-        
         # First make sure that the tarball need not be untarred
         # Extract the tarball for hardcoded in all cases to make sure the 
         # IOTestComparison folder is synchronized with it.
