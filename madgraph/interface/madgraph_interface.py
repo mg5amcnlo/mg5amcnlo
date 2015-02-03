@@ -1399,6 +1399,7 @@ This will take effect only in a NEW terminal
                    'min_br':None, 'body_decay':4.0025, 'precision_channel':0.01,
                    'nlo':False}
         # check that the firsts argument is valid
+        
         for i,arg in enumerate(args):
             if arg.startswith('--'):
                 if arg.startswith('--nlo'):
@@ -6169,17 +6170,17 @@ This implies that with decay chains:
     ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             logger.warning(warning_text)
             
-            if not model:
-                modelname = self._curr_model['name']
-                with misc.MuteLogger(['madgraph'], ['INFO']):
-                    model = import_ufo.import_model(modelname, decay=True)
-            else:
-                self._curr_model = model
-                self._curr_fortran_model = \
-                          helas_call_writers.FortranUFOHelasCallWriter(\
-                                                                   self._curr_model)
-            if not isinstance(model, model_reader.ModelReader):
-                model = model_reader.ModelReader(model)
+        if not model:
+            modelname = self._curr_model['name']
+            with misc.MuteLogger(['madgraph'], ['INFO']):
+                model = import_ufo.import_model(modelname, decay=True)
+        else:
+            self._curr_model = model
+            self._curr_fortran_model = \
+                helas_call_writers.FortranUFOHelasCallWriter(\
+                self._curr_model)
+        if not isinstance(model, model_reader.ModelReader):
+            model = model_reader.ModelReader(model)
 
         # check the argument and return those in a dictionary format
         particles, opts = self.check_compute_widths(self.split_arg(line))
