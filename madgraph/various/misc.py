@@ -729,11 +729,9 @@ def gunzip(path, keep=False, stdout=None):
 
 def gzip(path, stdout=None, error=True, forceexternal=False):
     """ a standard replacement for os.system('gzip %s ' % path)"""
-
-
-    
+ 
     #for large file (>1G) it is faster and safer to use a separate thread
-    if os.path.getsize(path) > 1e9:
+    if os.path.getsize(path) > 1e9 or forceexternal:
         call(['gzip', '-f', path])
         if stdout:
             if not stdout.endswith(".gz"):
