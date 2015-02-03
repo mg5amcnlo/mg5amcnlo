@@ -843,9 +843,10 @@ from object_library import all_propagators, Propagator
                     raise USRMODERROR, "particle %s not in added model" % new
                 if old_part is None:
                     raise USRMODERROR, "particle %s not in original model" % old
-                if old_part.antiname not in identify_particles:
+                if new_part.antiname not in identify_particles:
                     new_anti = new_part.antiname
                     old_anti = old_part.antiname
+                    misc.sprint(old, new, new_anti, old_anti, old_part.antiname)
                     if old_anti == old:
                         raise USRMODERROR, "failed identification (one particle is self-conjugate and not the other)"
                     logger.info("adding identification for anti-particle: %s=%s" % (new_anti, old_anti))
