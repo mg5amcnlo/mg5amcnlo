@@ -2,12 +2,12 @@ FC=gfortran
 onelooppath=$(PWD)/oneloop
 hdecaypath=$(PWD)/hdecay
 FFLAGS=-O -fPIC -I$(onelooppath)
-PROG = test
-PROCESS = ReadParam.o lha_read.o ParamModule.o use_func.o mis_warp.o Func_PSI.o alfas_functions.o WDecay_EW.o WDecay.o ZDecay_EW.o ZDecay.o tDecay_EW.o tDecay.o H0Decay.o test.o
+PROG = smwidth
+PROCESS = ReadParam.o lha_read.o ParamModule.o use_func.o mis_warp.o Func_PSI.o alfas_functions.o WDecay_EW.o WDecay.o ZDecay_EW.o ZDecay.o tDecay_EW.o tDecay.o H0Decay.o smwidth.o
 $(PROG): make_oneloop make_hdecay $(PROCESS)
 	$(FC) -L$(onelooppath) -L$(hdecaypath) -o $(PROG) $(PROCESS) -lavh_olo -lhdecay
 
-test.o : test.f90 ReadParam.mod Func_PSI.mod WDecay.mod ZDecay.mod tDecay.mod H0Decay.mod
+smwidth.o : smwidth.f90 ReadParam.mod Func_PSI.mod WDecay.mod ZDecay.mod tDecay.mod H0Decay.mod
 	$(FC) -c $< $(FFLAGS)
 
 ReadParam.o ReadParam.mod : ReadParam.f90 ParamModule.mod

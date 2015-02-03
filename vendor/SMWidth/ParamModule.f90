@@ -21,6 +21,7 @@ MODULE ParamModule
   INTEGER::NLOOP
   REAL(KIND(1d0))::alphaQCD2
   LOGICAL::print_banner=.FALSE.
+  LOGICAL::Skip_scheme=.FALSE.
   ! For the finite mass effect
   ! On shell masses
   ! in the PDG, the quark masses are MSbar masses

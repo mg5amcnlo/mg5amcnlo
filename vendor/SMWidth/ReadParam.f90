@@ -65,20 +65,26 @@ CONTAINS
     INTEGER::iunit=432
     LOGICAL::lexist
     !INTEGER::decay_scheme
-    INQUIRE(FILE="scheme.dat",EXIST=lexist)
-    IF(.NOT.lexist)THEN
-       WRITE(*,*)"ERROR:Cannot open scheme.dat ! Don't know which scheme !"
-       STOP
+    IF(.NOT.Skip_scheme)THEN
+       INQUIRE(FILE="scheme.dat",EXIST=lexist)
+       IF(.NOT.lexist)THEN
+          WRITE(*,*)"ERROR:Cannot open scheme.dat ! Don't know which scheme !"
+          STOP
+       ENDIF
+       OPEN(UNIT=iunit,FILE="scheme.dat",ACTION="READ",STATUS="OLD")
+       READ(iunit,*)Decay_scheme
     ENDIF
-    OPEN(UNIT=iunit,FILE="scheme.dat",ACTION="READ",STATUS="OLD")
-    READ(iunit,*)Decay_scheme
     IF(Decay_scheme.NE.1.AND.Decay_scheme.NE.2)THEN
        WRITE(*,*)"ERROR:Ilegal scheme in scheme.dat:",Decay_scheme
        WRITE(*,*)"Specify 1(alpha(MZ)-scheme) or 2(Gmu-scheme)"
-       CLOSE(iunit)
+       IF(.NOT.Skip_scheme)THEN
+          CLOSE(iunit)
+       ENDIF
        STOP
     ENDIF
-    CLOSE(iunit)
+    IF(.NOT.Skip_scheme)THEN
+       CLOSE(iunit)
+    ENDIF
     OPEN(UNIT=iunit,FILE="ident_card.dat")
     WRITE(iunit,*)" "
     WRITE(iunit,*)"loop 666 MU_R"

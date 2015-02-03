@@ -6200,14 +6200,15 @@ This implies that with decay chains:
                     param_card.write(opts['path'])
 
         if opts['nlo']:
-            raise Exception, "Need to call external code"
+            #raise Exception, "Need to call external code"
             if not os.path.exists(pjoin(model.get('modelpath'), 'SMWidth')):
                 raise Exception, "Model not valid for NLO width"
             #compile the code
             misc.compile(cwd=pjoin(model.get('modelpath'), 'SMWidth'))
             #run the code
-            misc.Popen([ pjoin(model.get('modelpath'), 'SMWidth', 'smwidth'),
+            ext = misc.Popen([ pjoin(model.get('modelpath'), 'SMWidth', 'smwidth'),
                         opts['path'], arg2, arg3])
+            output, error = ext.communication()
             
             for pid in particles:
                 width = -99 # you need to implement this.
