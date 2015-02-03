@@ -1,0 +1,309 @@
+!!
+!! Copyright (C) 2014 Andreas van Hameren. 
+!!
+!! This file is part of OneLOop-3.4.
+!!
+!! OneLOop-3.4 is free software: you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation, either version 3 of the License, or
+!! (at your option) any later version.
+!!
+!! OneLOop-3.4 is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with OneLOop-3.4.  If not, see <http://www.gnu.org/licenses/>.
+!!
+  use avh_olo_box
+  use avh_olo_boxc
+!
+  include 'avh_olo_complex.h90'
+    ,intent(out) :: rslt(0:2)
+  include 'avh_olo_complex.h90' !|momenta=complex
+!#  include 'avh_olo_real.h90'    !|momenta=real
+    ,intent(in)  :: p1,p2,p3,p4,p12,p23
+  include 'avh_olo_complex.h90' !|masses=complex
+!#  include 'avh_olo_real.h90'    !|masses=real
+    ,intent(in)  :: m1,m2,m3,m4
+!#  include 'avh_olo_real.h90' !|mulocal=rmu
+!#    ,intent(in)  :: rmu      !|mulocal=rmu
+!
+  include 'avh_olo_complex.h90' !|momenta=complex
+!#  include 'avh_olo_real.h90'    !|momenta=real
+    :: pp(6)
+  include 'avh_olo_complex.h90' !|masses=complex
+!#  include 'avh_olo_real.h90'    !|masses=real
+    :: mm(4)
+  include 'avh_olo_complex.h90'
+    :: ss(6),rr(4)
+  include 'avh_olo_real.h90'
+    :: smax,ap(6),am(4),as(6),ar(4),s1r2,s2r2,s2r3,s3r4,s4r4
+  include 'avh_olo_real.h90'
+    :: mulocal,mulocal2,small,hh,min13,min24,min56
+  integer :: icase,ii,jj
+  logical :: useboxc
+  integer ,parameter :: lp(6,3)=&
+           reshape((/1,2,3,4,5,6 ,5,2,6,4,1,3 ,1,6,3,5,4,2/),(/6,3/))
+  integer ,parameter :: lm(4,3)=&
+           reshape((/1,2,3,4     ,1,3,2,4     ,1,2,4,3    /),(/4,3/))
+  character(25+99) ,parameter :: warning=&
+                 'WARNING from OneLOop d0: '//warnonshell
+  if (initz) call init
+  pp(1) = p1
+  pp(2) = p2
+  pp(3) = p3
+  pp(4) = p4
+  pp(5) = p12
+  pp(6) = p23
+  mm(1) = m1
+  mm(2) = m2
+  mm(3) = m3
+  mm(4) = m4
+  smax = 0
+!
+!{momenta=complex
+  do ii=1,6
+    ap(ii) = areal(pp(ii))
+    if (aimag(pp(ii)).ne.RZRO) then
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop d0: ' &
+        ,'momentum with non-zero imaginary part, putting it to zero.'
+      pp(ii) = acmplx( ap(ii) ,0 )
+    endif
+    ap(ii) = abs(ap(ii))
+    if (ap(ii).gt.smax) smax = ap(ii)
+  enddo
+!}momenta=complex
+!{momenta=real
+!#  do ii=1,6
+!#    ap(ii) = abs(pp(ii))
+!#    if (ap(ii).gt.smax) smax = ap(ii)
+!#  enddo
+!}momenta=real
+!
+!{masses=complex
+  do ii=1,4
+    am(ii) = areal(mm(ii))
+    hh = aimag(mm(ii))
+    if (hh.gt.RZRO) then
+      if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop d0: ' &
+        ,'mass-squared has positive imaginary part, switching its sign.'
+      mm(ii) = acmplx( am(ii) ,-hh )
+    endif
+    am(ii) = abs(am(ii)) + abs(hh)
+    if (am(ii).gt.smax) smax = am(ii)
+  enddo
+!}masses=complex
+!{masses=real
+!#  do ii=1,4
+!#    am(ii) = abs(mm(ii))
+!#    if (am(ii).gt.smax) smax = am(ii)
+!#  enddo
+!}masses=real
+!
+  small = 0
+  do ii=1,6
+    hh = abs(ap(ii))
+    if (hh.gt.small) small=hh
+  enddo
+  small = small*neglig(prcpar)
+!
+  mulocal = muscale !|mulocal=muscale
+!#  mulocal = rmu     !|mulocal=rmu
+!
+  mulocal2 = mulocal*mulocal
+!
+  if (smax.eq.RZRO) then
+    if (eunit.gt.0) write(eunit,*) 'ERROR in OneLOop d0: ' &
+      ,'all input equal zero, returning 0'
+    rslt(0)=0 ;rslt(1)=0 ;rslt(2)=0
+    return
+  endif
+!
+  if (mulocal2.gt.smax) smax = mulocal2
+!
+  if (nonzerothrs) then
+    hh = onshellthrs
+    do ii=1,4
+      if (ap(ii).lt.hh) ap(ii) = 0
+      if (am(ii).lt.hh) am(ii) = 0
+    enddo
+  else
+    hh = onshellthrs*smax
+    if (wunit.gt.0) then
+    do ii=1,4
+      if (RZRO.lt.ap(ii).and.ap(ii).lt.hh) write(wunit,*) warning
+      if (RZRO.lt.am(ii).and.am(ii).lt.hh) write(wunit,*) warning
+    enddo
+    endif
+  endif
+!
+  jj = 1
+  min56 = min(ap(5),ap(6))
+  if (min56.lt.hh) then
+    if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+      ,'input does not seem to represent hard kinematics, '&
+      ,'trying to permutate'
+    min13=min(ap(1),ap(3))
+    min24=min(ap(2),ap(4))
+    if     (min13.gt.min24.and.min13.gt.min56) then ;jj=2
+    elseif (min24.gt.min13.and.min24.gt.min56) then ;jj=3
+    else
+      if (wunit.gt.0) write(wunit,*) 'WARNING from OneLOop d0: ' &
+        ,'no permutation helps, errors might follow'
+    endif
+  endif
+!
+  icase = 0
+  do ii=1,4
+    if (am(lm(ii,jj)).gt.RZRO) icase = icase + base(ii)
+  enddo
+  ss(1)=pp(lp(permtable(1,icase),jj)) ;as(1)=ap(lp(permtable(1,icase),jj))
+  ss(2)=pp(lp(permtable(2,icase),jj)) ;as(2)=ap(lp(permtable(2,icase),jj))
+  ss(3)=pp(lp(permtable(3,icase),jj)) ;as(3)=ap(lp(permtable(3,icase),jj))
+  ss(4)=pp(lp(permtable(4,icase),jj)) ;as(4)=ap(lp(permtable(4,icase),jj))
+  ss(5)=pp(lp(permtable(5,icase),jj)) ;as(5)=ap(lp(permtable(5,icase),jj))
+  ss(6)=pp(lp(permtable(6,icase),jj)) ;as(6)=ap(lp(permtable(6,icase),jj))
+  rr(1)=mm(lm(permtable(1,icase),jj)) ;ar(1)=am(lm(permtable(1,icase),jj))
+  rr(2)=mm(lm(permtable(2,icase),jj)) ;ar(2)=am(lm(permtable(2,icase),jj))
+  rr(3)=mm(lm(permtable(3,icase),jj)) ;ar(3)=am(lm(permtable(3,icase),jj))
+  rr(4)=mm(lm(permtable(4,icase),jj)) ;ar(4)=am(lm(permtable(4,icase),jj))
+  icase = casetable(icase)
+!
+  s1r2 = abs(areal(ss(1)-rr(2))) + abs(aimag(ss(1)-rr(2)))
+  s2r2 = abs(areal(ss(2)-rr(2))) + abs(aimag(ss(2)-rr(2)))
+  s2r3 = abs(areal(ss(2)-rr(3))) + abs(aimag(ss(2)-rr(3)))
+  s3r4 = abs(areal(ss(3)-rr(4))) + abs(aimag(ss(3)-rr(4)))
+  s4r4 = abs(areal(ss(4)-rr(4))) + abs(aimag(ss(4)-rr(4)))
+  if (nonzerothrs) then
+    if (s1r2.lt.hh) s1r2 = 0
+    if (s2r2.lt.hh) s2r2 = 0
+    if (s2r3.lt.hh) s2r3 = 0
+    if (s3r4.lt.hh) s3r4 = 0
+    if (s4r4.lt.hh) s4r4 = 0
+  elseif (wunit.gt.0) then
+    if (RZRO.lt.s1r2.and.s1r2.lt.hh) write(wunit,*) warning
+    if (RZRO.lt.s2r2.and.s2r2.lt.hh) write(wunit,*) warning
+    if (RZRO.lt.s2r3.and.s2r3.lt.hh) write(wunit,*) warning
+    if (RZRO.lt.s3r4.and.s3r4.lt.hh) write(wunit,*) warning
+    if (RZRO.lt.s4r4.and.s4r4.lt.hh) write(wunit,*) warning
+  endif
+!
+  if     (icase.eq.4) then
+!4 non-zero internal masses
+    useboxc = (    (ar(1).ne.RZRO.and.aimag(rr(1)).ne.RZRO) &
+               .or.(ar(2).ne.RZRO.and.aimag(rr(2)).ne.RZRO) &
+               .or.(ar(3).ne.RZRO.and.aimag(rr(3)).ne.RZRO) &
+               .or.(ar(4).ne.RZRO.and.aimag(rr(4)).ne.RZRO) &
+               .or.(     areal(ss(1)).ge.-small  &
+                    .and.areal(ss(2)).ge.-small  &
+                    .and.areal(ss(3)).ge.-small  &
+                    .and.areal(ss(4)).ge.-small) )
+    if (useboxc) then
+      call boxc( rslt ,ss,rr ,as ,smax )
+    else
+      call boxf4( rslt ,ss(1),ss(2),ss(3),ss(4),ss(5),ss(6) ,rr(1),rr(2),rr(3),rr(4) )
+    endif
+  elseif (icase.eq.3) then
+!3 non-zero internal masses
+    if (s1r2.ne.RZRO.or.s4r4.ne.RZRO) then
+      useboxc = (    (ar(1).ne.RZRO.and.aimag(rr(1)).ne.RZRO) &
+                 .or.(ar(2).ne.RZRO.and.aimag(rr(2)).ne.RZRO) &
+                 .or.(ar(3).ne.RZRO.and.aimag(rr(3)).ne.RZRO) &
+                 .or.(ar(4).ne.RZRO.and.aimag(rr(4)).ne.RZRO) &
+                 .or.(     areal(ss(1)).ge.-small  &
+                      .and.areal(ss(2)).ge.-small  &
+                      .and.areal(ss(3)).ge.-small  &
+                      .and.areal(ss(4)).ge.-small) )
+      if (useboxc) then
+        call boxc( rslt ,ss,rr ,as ,smax )
+      else
+        call boxf3( rslt, ss,rr )
+      endif
+    else
+      call box16( rslt ,ss(2),ss(3),ss(5),ss(6) ,rr(2),rr(3),rr(4) ,mulocal )
+    endif
+  elseif (icase.eq.5) then
+!2 non-zero internal masses, opposite case
+    if     (s1r2.ne.RZRO.or.s4r4.ne.RZRO) then
+      if     (s2r2.ne.RZRO.or.s3r4.ne.RZRO) then
+        call boxf5( rslt ,ss(1),ss(2),ss(3),ss(4),ss(5),ss(6) ,rr(2),rr(4) )
+      else
+        call box15( rslt ,ss(1),ss(4),ss(5),ss(6) ,rr(2),rr(4) ,mulocal )
+      endif
+    elseif (s2r2.ne.RZRO.or.s3r4.ne.RZRO) then
+      call box15( rslt ,ss(2),ss(3),ss(5),ss(6) ,rr(2),rr(4) ,mulocal )
+    else
+      call box14( rslt ,ss(5),ss(6) ,rr(2),rr(4) ,mulocal )
+    endif
+  elseif (icase.eq.2) then
+!2 non-zero internal masses, adjacent case
+    if     (as(1).ne.RZRO) then
+      call boxf2( rslt ,ss(1),ss(2),ss(3),ss(4),ss(5),ss(6) ,rr(3),rr(4) )
+    elseif (s2r3.ne.RZRO) then
+      if     (s4r4.ne.RZRO) then
+        call box13( rslt ,ss(2),ss(3),ss(4),ss(5),ss(6) ,rr(3),rr(4) ,mulocal )
+      else
+        call box12( rslt ,ss(3),ss(2),ss(6),ss(5) ,rr(4),rr(3) ,mulocal )
+      endif
+    elseif (s4r4.ne.RZRO) then
+      call box12( rslt ,ss(3),ss(4),ss(5),ss(6) ,rr(3),rr(4) ,mulocal )
+    else
+      call box11( rslt ,ss(3),ss(5),ss(6) ,rr(3),rr(4) ,mulocal )
+    endif
+  elseif (icase.eq.1) then
+!1 non-zero internal mass
+    if     (as(1).ne.RZRO) then
+      if      (as(2).ne.RZRO) then
+        call boxf1( rslt ,ss(1),ss(2),ss(3),ss(4),ss(5),ss(6) ,rr(4) )
+      else
+        if     (s3r4.ne.RZRO) then
+          call box10( rslt ,ss(1),ss(4),ss(3),ss(5),ss(6) ,rr(4) ,mulocal )
+        else
+          call box09( rslt ,ss(1),ss(4),ss(5),ss(6) ,rr(4) ,mulocal )
+        endif
+      endif
+    elseif (as(2).ne.RZRO) then
+      if      (s4r4.ne.RZRO) then
+        call box10( rslt ,ss(2),ss(3),ss(4),ss(5),ss(6) ,rr(4) ,mulocal )
+      else
+        call box09( rslt ,ss(2),ss(3),ss(5),ss(6) ,rr(4) ,mulocal )
+      endif
+    else
+      if     (s3r4.ne.RZRO) then
+        if     (s4r4.ne.RZRO) then
+          call box08( rslt ,ss(3),ss(4),ss(5),ss(6) ,rr(4) ,mulocal )
+        else
+          call box07( rslt ,ss(3),ss(5),ss(6) ,rr(4) ,mulocal )
+        endif
+      elseif (s4r4.ne.RZRO) then
+        call box07( rslt ,ss(4),ss(5),ss(6) ,rr(4) ,mulocal )
+      else
+        call box06( rslt ,ss(5),ss(6) ,rr(4) ,mulocal )
+      endif
+    endif
+  else
+!0 non-zero internal mass
+    call box00( rslt ,ss ,as ,mulocal )
+  endif
+!exp(eps*gamma_EULER) -> GAMMA(1-2*eps)/GAMMA(1-eps)^2/GAMMA(1+eps)
+  rslt(0) = rslt(0) + 2*PISQo24*rslt(2)
+!
+  if (punit.gt.0) then
+    if (nonzerothrs) write(punit,*) 'onshell:',trim(myprint(onshellthrs))
+    write(punit,*) 'muscale:',trim(myprint(mulocal))
+    write(punit,*) ' p1:',trim(myprint(p1))
+    write(punit,*) ' p2:',trim(myprint(p2))
+    write(punit,*) ' p3:',trim(myprint(p3))
+    write(punit,*) ' p4:',trim(myprint(p4))
+    write(punit,*) 'p12:',trim(myprint(p12))
+    write(punit,*) 'p23:',trim(myprint(p23))
+    write(punit,*) ' m1:',trim(myprint(m1))
+    write(punit,*) ' m2:',trim(myprint(m2))
+    write(punit,*) ' m3:',trim(myprint(m3))
+    write(punit,*) ' m4:',trim(myprint(m4))
+    write(punit,*) 'd0(2):',trim(myprint(rslt(2)))
+    write(punit,*) 'd0(1):',trim(myprint(rslt(1)))
+    write(punit,*) 'd0(0):',trim(myprint(rslt(0)))
+  endif

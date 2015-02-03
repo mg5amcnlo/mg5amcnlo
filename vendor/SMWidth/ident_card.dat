@@ -1,0 +1,16 @@
+  
+ loop 666 MU_R
+  
+ sminputs 1 Gf
+  
+ sminputs 2 aS
+  
+ mass 6 MT
+  
+ mass 23 MZ
+  
+ mass 24 MW
+  
+ mass 25 MH
+  
+ mass 6 MT
