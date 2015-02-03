@@ -6201,22 +6201,70 @@ This implies that with decay chains:
 
         if opts['nlo']:
             #raise Exception, "Need to call external code"
-            if not os.path.exists(pjoin(model.get('modelpath'), 'SMWidth')):
+            if not model:
+                model_path = self._curr_model.get('modelpath')
+                model_name = self._curr_model.get('name')
+            else:
+                model_path = model.get('modelpath')
+                model_name = model.get('name')
+
+            if not os.path.exists(pjoin(model_path, 'SMWidth')):
                 raise Exception, "Model not valid for NLO width"
+
+            if model_name in ['loop_qcd_qed_sm_Gmu']:
+                # Gmu scheme
+                arg2 = "2"
+            else:
+                # alpha(MZ) scheme
+                arg2 = "1"
+
+            file=open(pjoin(model_path,'SMWidth','input.dat'), 'w')
+            file.write('"'+opts['path']+'"\n')
+            file.write(arg2)
+            file.close()
+
             #compile the code
-            misc.compile(cwd=pjoin(model.get('modelpath'), 'SMWidth'))
+            if not os.path.exists(pjoin(model_path, 'SMWidth','smwidth')):
+                logger.info('Compiling SMWidth. This has to be done only once and'+\
+                                  ' can take a couple of minutes.','$MG:color:BLACK')
+                current = misc.detect_current_compiler(pjoin(model_path, 'SMWidth',
+                                                             'makefile_MW5'))
+                new = 'gfortran' if self.options_configuration['fortran_compiler'] is None else \
+                    self.options_configuration['fortran_compiler']
+                if current != new:
+                    misc.mod_compilator(pjoin(model_path, 'SMWidth'), new, current)
+                    misc.mod_compilator(pjoin(model_path, 'SMWidth','oneloop'), new, current)
+                    misc.mod_compilator(pjoin(model_path, 'SMWidth','hdecay'), new, current)
+                misc.compile(cwd=pjoin(model_path, 'SMWidth'))
+            cwd=os.getcwd()
+            os.chdir(pjoin(model_path, 'SMWidth'))
             #run the code
-            ext = misc.Popen([ pjoin(model.get('modelpath'), 'SMWidth', 'smwidth'),
-                        opts['path'], arg2, arg3])
-            output, error = ext.communication()
-            
+            output,error = misc.Popen(['./smwidth'],
+                             stdout=subprocess.PIPE,
+                             stdin=subprocess.PIPE).communicate()
+            os.chdir(cwd)
+            pattern = re.compile(r'''  decay\s+(\+?\-?\d+)\s+(\+?\-?\d+\.\d+E\+?\-?\d+)''',re.I)
+            width_list = pattern.findall(output)
+            width_dict = {}
+            for pid,width in width_list:
+                width_dict[int(pid)] = float(width)
+
             for pid in particles:
-                width = -99 # you need to implement this.
-                misc.sprint()
-                param_card['decay'].get((pid,)).value = width
-                param['decay'].decay_table[pid] = {} #reset the BR
-            # write the output file. (the new param_card
-            param_card.write(opts['outpath'])
+                if not pid in width_dict:
+                    width = 0
+                else:
+                    width = width_dict[pid]
+                param = param_card['decay'].get((pid,))
+                param.value = width
+                param.format = 'float'
+                #param['decay'].decay_table[pid] = {} #reset the BR
+            # write the output file. (the new param_card)
+            if opts['output']:
+                param_card.write(opts['output'])
+                logger.info('Results are in %s' % opts['output'])
+            else:
+                param_card.write(opts['path'])
+                logger.info('Results are in %s' % opts['path'])
             return
 
         data = model.set_parameters_and_couplings(opts['path'])

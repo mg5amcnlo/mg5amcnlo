@@ -10,19 +10,22 @@ PROGRAM smwidth
   CHARACTER(len=100)::paramcard
   INTEGER,PARAMETER::PID_Z=23,PID_W=24,PID_H=25,PID_t=6
   Skip_scheme=.TRUE.
-  READ(*,*)paramcard,Decay_scheme  
+  OPEN(UNIT=5123,FILE="./input.dat")
+  READ(5123,*)paramcard
+  READ(5123,*)Decay_scheme
+  CLOSE(UNIT=5123)
   CALL ReadParamCard(paramcard)
   resqcdqed=SMWWidth(1,1)
   WRITE(*,*)" --------------------------"
   WRITE(*,*)" Decay Widths (GeV) in SM: "
-  WRITE(*,100)PID_W,resqcdqed
+  WRITE(*,100)'decay',PID_W,resqcdqed
   resqcdqed=SMZWidth(1,1)
-  WRITE(*,100)PID_Z,resqcdqed
+  WRITE(*,100)'decay',PID_Z,resqcdqed
   resqcdqed=SMtWidth(1,1)
-  WRITE(*,100)PID_t,resqcdqed
+  WRITE(*,100)'decay',PID_t,resqcdqed
   resqcdqed=SMHWidth(0)
-  WRITE(*,100)PID_H,resqcdqed
+  WRITE(*,100)'decay',PID_H,resqcdqed
   WRITE(*,*)" --------------------------"
   RETURN
-100 FORMAT(2X,I2,2X,E12.6)
+100 FORMAT(2X,A5,2X,I2,2X,E12.6)
 END PROGRAM smwidth

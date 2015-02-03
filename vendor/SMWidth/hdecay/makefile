@@ -2,7 +2,7 @@ OBJS = hdecay.o haber.o feynhiggs.o hsqsq.o susylha.o hgaga.o dmb.o elw.o hgg.o
 OBJS0 = hdecay0.o haber.o feynhiggs.o hsqsq.o susylha.o hgaga.o dmb.o elw.o hgg.o
 #OBJS = hdecay.o haber.o hsqsq.o
 
-FFLAGS = -std=gnu
+#FFLAGS = -std=gnu
 
 FC=gfortran
 
