@@ -254,12 +254,15 @@ class CheckValidForCmd(object):
                     raise self.InvalidCmd , '%s is not a valid param_card.' % arg
                 output['path'] = arg
             elif arg.startswith('--'):
-                name, value = arg.split('=',1)
-                try:
-                    value = float(value)
-                except Exception:
-                    raise self.InvalidCmd, '--%s requires integer or a float' % name
-                output[name[2:]] = float(value)                
+                if "=" in arg:
+                    name, value = arg.split('=',1)
+                    try:
+                        value = float(value)
+                    except Exception:
+                        raise self.InvalidCmd, '--%s requires integer or a float' % name
+                    output[name[2:]] = float(value)
+                elif arg == "--nlo":
+                    output["nlo"] = True
             elif arg in particles_name:
                 # should be a particles
                 output['particles'].add(particles_name[arg])
@@ -1089,10 +1092,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
+
+
         args = self.split_arg(line)
         opts = self.check_compute_widths(args)
-        
-        
+
         from madgraph.interface.master_interface import MasterCmd
         cmd = MasterCmd()
         self.define_child_cmd_interface(cmd, interface=False)
@@ -1107,7 +1111,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        
         cmd.exec_cmd(line, model=opts['model'])
         self.child = None
         del cmd
@@ -1468,13 +1471,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""
         
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        pdg = pattern.findall(text)
-        if pdg:
+        pdg_info = pattern.findall(text)
+        if pdg_info:
             if run:
                 logger.info('Computing the width set on auto in the param_card.dat')
-                self.do_compute_widths('%s %s' % (' '.join(pdg), path))
+                has_nlo = any(nlo.lower()=="@nlo" for _,nlo in pdg_info)
+                pdg = [pdg for pdg,nlo in pdg_info]
+                if not has_nlo:
+                    self.do_compute_widths('%s %s' % (' '.join(pdg), path))
+                else:
+                    self.do_compute_widths('%s %s --nlo' % (' '.join(pdg), path))
             else:
                 logger.info('''Some width are on Auto in the card. 
     Those will be computed as soon as you have finish the edition of the cards.
@@ -2739,12 +2747,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
         path = pjoin(self.me_dir,'Cards','param_card.dat')
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        pdg = pattern.findall(text)
+        pdg_info = pattern.findall(text)
+        has_nlo = any("@nlo"==nlo.lower() for _, nlo in pdg_info)
+        pdg = [p for p,_ in pdg_info]
+        
+        
         line = '%s %s' % (line, ' '.join(pdg))
         if not '--path' in line:
             line += ' --path=%s' % path
+        if has_nlo:
+            line += ' --nlo'
+
         try:
             return self.mother_interface.do_compute_widths(line)
         except InvalidCmd, error:

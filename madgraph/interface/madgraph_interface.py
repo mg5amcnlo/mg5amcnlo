@@ -1396,11 +1396,15 @@ This will take effect only in a NEW terminal
 
         particles = set()
         options = {'path':None, 'output':None,
-                   'min_br':None, 'body_decay':4.0025, 'precision_channel':0.01}
+                   'min_br':None, 'body_decay':4.0025, 'precision_channel':0.01,
+                   'nlo':False}
         # check that the firsts argument is valid
         for i,arg in enumerate(args):
             if arg.startswith('--'):
-                if not '=' in arg:
+                if arg.startswith('--nlo'):
+                    options['nlo'] =True  
+                    continue
+                elif not '=' in arg:
                     raise self.InvalidCmd('Options required an equal (and then the value)')
                 arg, value = arg.split('=')
                 if arg[2:] not in options:
@@ -6157,22 +6161,25 @@ This implies that with decay chains:
 
         """
 
-        warning_text = """Be carefull automatic computation of the width is
-ONLY valid in Narrow-Width Approximation and at Tree-Level."""
-        logger.warning(warning_text)
-        self.change_principal_cmd('MadGraph')
-        if not model:
-            modelname = self._curr_model['name']
-            with misc.MuteLogger(['madgraph'], ['INFO']):
-                model = import_ufo.import_model(modelname, decay=True)
-        else:
-            self._curr_model = model
-            self._curr_fortran_model = \
-                      helas_call_writers.FortranUFOHelasCallWriter(\
-                                                               self._curr_model)
-        if not isinstance(model, model_reader.ModelReader):
-            model = model_reader.ModelReader(model)
 
+
+        self.change_principal_cmd('MadGraph')
+        if '--nlo' not in line:
+            warning_text = """Be carefull automatic computation of the width is
+    ONLY valid in Narrow-Width Approximation and at Tree-Level."""
+            logger.warning(warning_text)
+            
+            if not model:
+                modelname = self._curr_model['name']
+                with misc.MuteLogger(['madgraph'], ['INFO']):
+                    model = import_ufo.import_model(modelname, decay=True)
+            else:
+                self._curr_model = model
+                self._curr_fortran_model = \
+                          helas_call_writers.FortranUFOHelasCallWriter(\
+                                                                   self._curr_model)
+            if not isinstance(model, model_reader.ModelReader):
+                model = model_reader.ModelReader(model)
 
         # check the argument and return those in a dictionary format
         particles, opts = self.check_compute_widths(self.split_arg(line))
@@ -6191,6 +6198,25 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     opts['path'] = opts['output']
                 else:
                     param_card.write(opts['path'])
+
+        if opts['nlo']:
+            raise Exception, "Need to call external code"
+            if not os.path.exists(pjoin(model.get('modelpath'), 'SMWidth')):
+                raise Exception, "Model not valid for NLO width"
+            #compile the code
+            misc.compile(cwd=pjoin(model.get('modelpath'), 'SMWidth'))
+            #run the code
+            misc.Popen([ pjoin(model.get('modelpath'), 'SMWidth', 'smwidth'),
+                        opts['path'], arg2, arg3])
+            
+            for pid in particles:
+                width = -99 # you need to implement this.
+                misc.sprint()
+                param_card['decay'].get((pid,)).value = width
+                param['decay'].decay_table[pid] = {} #reset the BR
+            # write the output file. (the new param_card
+            param_card.write(opts['outpath'])
+            return
 
         data = model.set_parameters_and_couplings(opts['path'])
 
