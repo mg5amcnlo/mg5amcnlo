@@ -1,5 +1,6 @@
 	subroutine Anomaly(Q2, alpha, alphah, mu, muh, ptjmax,
      $ 		JETRADIUS, Efull)
+c This is Eq.(8) of arXiv:1412.8408
 	implicit none
 c Q2 denotes the momentum squared (q1+q2)^2
 	DOUBLE PRECISION, intent(in)  :: Q2, ptjmax, JETRADIUS
@@ -63,6 +64,7 @@ c
 
 
 	subroutine AnomalyExp(Q2, alpha, mu, ptjmax, E1)
+c This is the O(alphaS) expansion of Eq.(8) of arXiv:1412.8408
 	implicit none
 	DOUBLE PRECISION, intent(in)  :: Q2, alpha, mu, ptjmax        	
   	DOUBLE PRECISION, intent(out) :: E1  
@@ -83,6 +85,7 @@ C-----
       
       subroutine compute_veto_compensating_factor(H1_factor_virt,
      $     born_wgt,muSoft,muHard,veto_compensating_factor)
+c 2nd term on 3rd line of eq.(20) of arXiv:1412.8408
       implicit none
       include 'q_es.inc'
       include 'coupl.inc'
@@ -124,6 +127,7 @@ c compensating factor for difference between muMad and the soft scale mu
 
       subroutine compute_veto_multiplier(H1_factor_virt,muSoft,muHard
      &     ,veto_multiplier)
+c 2nd line of eq.(20) of arXiv:1412.8408
       implicit none
       include 'nexternal.inc'
       include 'q_es.inc'

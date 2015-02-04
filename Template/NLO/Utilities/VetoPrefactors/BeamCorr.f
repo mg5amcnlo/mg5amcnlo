@@ -1,6 +1,7 @@
        subroutine BeamCorr(x1, x2, mu, muMad, f1, f2, 
      $           ptjmax, alpha, BCorr)
-       IMPLICIT NONE
+c Eq.(12) of arXiv:1412.8408
+      IMPLICIT NONE
 c 
       DOUBLE PRECISION, intent(in)  :: x1, x2, ptjmax
       DOUBLE PRECISION, intent(in)  :: mu, muMad,alpha  
