@@ -23,13 +23,6 @@ PROGRAM smwidth
   ELSE
      Decay_scheme=1
   ENDIF
-  PRINT *, paramcard
-  PRINT *, identcard
-  PRINT *, Decay_scheme
-  !OPEN(UNIT=5123,FILE="./input.dat")
-  !READ(5123,*)paramcard
-  !READ(5123,*)Decay_scheme
-  !CLOSE(UNIT=5123)
   CALL ReadParamCard(paramcard)
   resqcdqed=SMWWidth(1,1)
   WRITE(*,*)" --------------------------"
