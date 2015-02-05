@@ -731,6 +731,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            delphes_card.dat
            delphes_trigger.dat
            shower_card.dat [aMCatNLO]
+           FO_analyse_card.dat [aMCatNLO]
            madspin_card.dat [MS]
            transfer_card.dat [MW]
            madweight_card.dat [MW]
@@ -740,7 +741,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if text == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -769,6 +770,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'param_card.dat'
         elif 'b_stable' in text:
             return 'shower_card.dat'
+        elif 'fo_analysis_format' in text:
+            return 'FO_analyse_card.dat'
         elif 'decay' in text and 'launch' in text and 'madspin' in text:
             return 'madspin_card.dat'
         elif 'launch' in text and 'set' in text:
@@ -1701,8 +1704,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """ find a valid run_name for the current job """
 
         name = 'run_%02d'
-        data = [int(s[4:]) for s in os.listdir(pjoin(me_dir,'Events')) if
-                        s.startswith('run_') and len(s)>5 and s[4:].isdigit()]
+        data = [int(s[4:j]) for s in os.listdir(pjoin(me_dir,'Events')) for 
+                j in range(4,len(s)+1) if \
+                s.startswith('run_') and s[4:j].isdigit()]
         return name % (max(data+[0])+1)
 
 

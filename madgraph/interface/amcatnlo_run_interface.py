@@ -140,6 +140,8 @@ def check_compiler(options, block=False):
         compiler = options['fortran_compiler']
     elif misc.which('gfortran'):
         compiler = 'gfortran'
+    else: 
+        compiler = ''
         
     if 'gfortran' not in compiler:
         if block:
@@ -1487,6 +1489,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 raise aMCatNLOError('Required accuracy ("req_acc" in the run_card) should '\
                                         'be between larger than 0 and smaller than 1, '\
                                         'or set to -1 for automatic determination. Current value is %s' % req_acc)
+# For more than 1M events, set req_acc to 0.001 (except when it was explicitly set in the run_card)
+            elif float(req_acc) < 0 and nevents > 1000000 :
+                req_acc='0.001'
 
             shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
 
@@ -1518,9 +1523,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     nevents_unweighted = []
 
                 split = i == 2 and \
-                        int(self.run_card['nevt_job']) > 0 and \
-                        any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
-                            for l in nevents_unweighted if l])
+                        int(self.run_card['nevt_job']) > 0 
 
                 if i == 2 or not options['only_generation']:
                     # if the number of events requested is zero,
@@ -1787,11 +1790,11 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.' and int(self.run_card['ickkw']) != 4:
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.' and int(self.run_card['ickkw']) != 4:
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.':
                    message = message + \
                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -2287,7 +2290,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') and int(self.run_card['ickkw']) != 4 :
+        if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton', update_results=True)
@@ -2398,6 +2401,18 @@ Integrated cross-section
                     '\n'.join(fjwrapper_lines) + '\n')
 
         extrapaths = self.shower_card['extrapaths'].split()
+
+        # check that the path needed by HW++ and PY8 are set if one uses these shower
+        if shower in ['HERWIGPP', 'PYTHIA8']:
+            path_dict = {'HERWIGPP': ['hepmc_path',
+                                      'thepeg_path',
+                                      'hwpp_path'],
+                         'PYTHIA8': ['pythia8_path']}
+
+            if not all([self.options[ppath] for ppath in path_dict[shower]]):
+                raise aMCatNLOError('Some paths are missing in the configuration file.\n' + \
+                        ('Please make sure you have set these variables: %s' % ', '.join(path_dict[shower])))
+
         if shower == 'HERWIGPP':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
 
@@ -3088,8 +3103,13 @@ Integrated cross-section
         scale_upp=0.0
         scale_low=0.0
         if numofscales>0:
-            scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
-            scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
+            if cntrl_val != 0.0:
+                scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
+                scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
+            else:
+                scale_pdf_info['scale_upp'] = 0.0
+                scale_pdf_info['scale_low'] = 0.0
+
 
         # get the pdf uncertainty in percent (according to the Hessian method)
         lhaid=int(self.run_card['lhaid'])
@@ -3101,15 +3121,23 @@ Integrated cross-section
                 for i in range(int(numofpdf/2)):
                     pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
                     pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
-                scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
-                scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+                if cntrl_val != 0.0:
+                    scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
+                    scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+                else:
+                    scale_pdf_info['pdf_upp'] = 0.0
+                    scale_pdf_info['pdf_low'] = 0.0
+
         else:
             # use Gaussian method (NNPDF)
             pdf_stdev=0.0
             for i in range(int(numofpdf-1)):
                 pdf_stdev = pdf_stdev + pow(pdfs[i+1] - cntrl_val,2)
             pdf_stdev = math.sqrt(pdf_stdev/int(numofpdf-2))
-            scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            if cntrl_val != 0.0:
+                scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            else:
+                scale_pdf_info['pdf_upp'] = 0.0
             scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
         return scale_pdf_info
 
@@ -3286,8 +3314,8 @@ Integrated cross-section
             if shower == 'PYTHIA8':
                 input_files.append(pjoin(cwd, 'Pythia8.exe'))
                 input_files.append(pjoin(cwd, 'Pythia8.cmd'))
-                input_files.append(pjoin(cwd, 'config.sh'))
                 if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+                    input_files.append(pjoin(cwd, 'config.sh'))
                     input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
                 else:
                     input_files.append(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'))
@@ -3437,7 +3465,10 @@ Integrated cross-section
                     keep_fourth_arg = True
                     # this is for the split event generation
                     output_files.append('G%s%s_%s' % (args[1], i, args[3]))
-                required_output.append('%s/log_MINT%s.txt' % (current,args[2]))
+                    required_output.append('G%s%s_%s/log_MINT%s.txt' % (args[1], i, args[3],args[2]))
+
+                else:
+                    required_output.append('%s/log_MINT%s.txt' % (current,args[2]))
                 if args[2] in ['0','1']:
                     required_output.append('%s/results.dat' % current)
                 if args[2] == '1':
@@ -3601,21 +3632,23 @@ Integrated cross-section
             for code in ['applgrid','amcfast']:
                 try:
                     p = subprocess.Popen([self.options[code], '--version'], \
-                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    output, error = p.communicate()
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                except OSError:
+                    raise aMCatNLOError(('No valid %s installation found. \n' + \
+                       'Please set the path to %s-config by using \n' + \
+                       'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+                else:
+                    output, _ = p.communicate()
                     if code is 'applgrid' and output < '1.4.63':
                         raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
-                                                +' You are using %s',output)
+                                             +' You are using %s',output)
                     if code is 'amcfast' and output < '1.1.1':
                         raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
-                                                +' You are using %s',output)
-                except Exception:
-                    raise aMCatNLOError(('No valid %s installation found. \n' + \
-                          'Please set the path to %s-config by using \n' + \
-                          'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+                                             +' You are using %s',output)
+                
             # set-up the Source/make_opts with the correct applgrid-config file
-            appllibs="  APPLLIBS=$(shell %s --ldcflags) $(shell %s --ldflags) \n" \
-                             % (self.options['applgrid'],self.options['amcfast'])
+            appllibs="  APPLLIBS=$(shell %s --ldflags) $(shell %s --ldcflags) \n" \
+                             % (self.options['amcfast'],self.options['applgrid'])
             text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
             text_out=[]
             for line in text:

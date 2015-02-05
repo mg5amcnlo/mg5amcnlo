@@ -17,10 +17,8 @@ int main() {
   pythia.readFile(inputname.c_str());
 
   //Create UserHooks pointer for the FxFX matching. Stop if it failed. Pass pointer to Pythia.
-  CombineMatchingInput combined;
-  UserHooks* matching = combined.getHook(pythia);
-  if (!matching) return 1;
-  pythia.setUserHooksPtr(matching);
+  CombineMatchingInput* combined = NULL;
+  UserHooks* matching            = NULL;
 
   pythia.init();
 
@@ -35,6 +33,13 @@ int main() {
   //FxFx merging
   bool isFxFx=pythia.flag("JetMatching:doFxFx");
   if (isFxFx) {
+    matching = combined->getHook(pythia);
+    if (!matching) {
+      std::cout << " Failed to initialise jet matching structures.\n"
+                << " Program stopped.";
+      return 1;
+    }
+    pythia.setUserHooksPtr(matching);
     int nJmax=pythia.mode("JetMatching:nJetMax");
     double Qcut=pythia.parm("JetMatching:qCut");
     double PTcut=pythia.parm("JetMatching:qCutME");
@@ -83,6 +88,7 @@ int main() {
     } else {
       normhepmc = double(iEventtot) / double(iEventshower);
     }
+    sigmaTotal += evtweight*normhepmc;
     hepmcevt->weights().push_back(evtweight*normhepmc);
     ToHepMC.fill_next_event( pythia, hepmcevt );
     // Add the weight of the current event to the cross section.
@@ -105,8 +111,6 @@ int main() {
     std::cout << "*********************************************************************** \n";
     std::cout << "*********************************************************************** \n";
   }
-
-  delete matching;
 
   return 0;
 }

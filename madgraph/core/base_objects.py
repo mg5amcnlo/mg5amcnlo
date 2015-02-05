@@ -1513,7 +1513,8 @@ class Model(PhysicsObject):
                 if str(part.get('width')) in one_change:
                     part.set('width', rep_pattern.sub(replace, str(part.get('width'))))  
                 if  hasattr(part, 'partial_widths'):
-                    for key, value in part.partial_widths.items():                        part.partial_widths[key] = rep_pattern.sub(replace, value)
+                    for key, value in part.partial_widths.items():    
+                        part.partial_widths[key] = rep_pattern.sub(replace, value)
                 
         #ensure that the particle_dict is up-to-date
         self['particle_dict'] =''
