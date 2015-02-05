@@ -126,10 +126,13 @@ c applgrid
       integer iappl
       common /for_applgrid/ iappl
 c stats for granny_is_res
+      double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
+     &     ,y_ij_fks_ev_der_max
       integer ntot_granny,n0_granny,ncover_granny,nlim_granny
-     &     ,del3_granny
+     &     ,del3_granny,derntot
       common /c_granny_counters/ ntot_granny,n0_granny,ncover_granny
-     &     ,nlim_granny,del3_granny
+     &     ,nlim_granny,del3_granny,derntot,deravg,derstd,dermax
+     &     ,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
 
 C-----
 C  BEGIN CODE
@@ -152,6 +155,10 @@ c
       ncover_granny=0
       nlim_granny=0
       del3_granny=0
+      derntot=0
+      derstd=0d0
+      deravg=0d0
+      dermax=-99d99
       ntot=0
       nsun=0
       nsps=0
@@ -361,6 +368,11 @@ c to save grids:
       write (*,*) '% ncover ',ncover_granny/dble(ntot_granny)
       write (*,*) '% nlim   ',nlim_granny/dble(ntot_granny)
       write (*,*) '% del3   ',del3_granny/dble(ntot_granny)
+      write (*,*) 'average,std dev. and max of derivative:',deravg
+     &     ,sqrt(abs(derstd-deravg**2)),dermax
+      write (*,*)
+     &     'and xi_i_fks and y_ij_fks corresponding to max of der.',
+     &     xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
       
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
@@ -497,6 +509,8 @@ c Compute the Born-like contributions with nbody=.true.
 c THIS CAN BE OPTIMIZED
 c
       call get_MC_integer(1,fks_configs,nFKSprocess,vol)
+c$$$      nFKSprocess=3
+c$$$      vol=1d0
       nFKSprocess_all=nFKSprocess
       call fks_inc_chooser()
       if (j_fks.le.nincoming) then

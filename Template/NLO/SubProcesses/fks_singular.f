@@ -411,6 +411,10 @@ c FxFx merging
       double precision rewgt
       external setclscales,rewgt
 
+      logical fill_plot
+      double precision massdiff
+      common /fill_plot_massdiff/fill_plot,massdiff
+      
       double precision pmass(nexternal)
       double precision rwgt_muR_dep_fac
       include "pmass.inc"
@@ -972,6 +976,19 @@ c Plot observables for counterevents and Born
                write(*,*)'Error #1 in dsig'
                stop
             elseif (p1_cnt(0,1,iplot).ne.-99d0)then
+
+               if (ev_wgt.ne.0d0) then
+                  fill_plot=.true.
+                  massdiff=sqrt((pp(0,3)+pp(0,4)+pp(0,6))**2-(pp(1,3)
+     &                 +pp(1,4)+pp(1,6))**2-(pp(2,3)+pp(2,4)+pp(2,6))**2
+     &                 -(pp(3,3)+pp(3,4)+pp(3,6))**2)-sqrt((p1_cnt(0,3
+     &                 ,0) +p1_cnt(0,4,0)+p1_cnt(0,6,0))**2-(p1_cnt(1,3
+     &                 ,0) +p1_cnt(1,4,0)+p1_cnt(1,6,0))**2-(p1_cnt(2,3
+     &                 ,0) +p1_cnt(2,4,0)+p1_cnt(2,6,0))**2-(p1_cnt(3,3
+     &                 ,0) +p1_cnt(3,4,0)+p1_cnt(3,6,0))**2)
+               else
+                  fill_plot=.false.
+               endif
                call outfun(p1_cnt(0,1,iplot),ybst_til_tolab,plot_wgt,
      &              iplot_cnt)
             endif

@@ -239,10 +239,13 @@ c     debug stuff
       double precision temp
       logical debug_granny
       parameter (debug_granny=.true.)
+      double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
+     &     ,y_ij_fks_ev_der_max
       integer ntot_granny,n0_granny,ncover_granny,nlim_granny
-     &     ,del3_granny
+     &     ,del3_granny,derntot
       common /c_granny_counters/ ntot_granny,n0_granny,ncover_granny
-     &     ,nlim_granny,del3_granny
+     &     ,nlim_granny,del3_granny,derntot,deravg,derstd,dermax
+     &     ,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
       logical nocntevents
       common/cnocntevents/nocntevents
       double precision xi_i_fks_ev,y_ij_fks_ev
@@ -369,6 +372,16 @@ c compute the derivative numerically (to compute the Jacobian)
             der=1d0+derivative(virtgranny_red,granny_m2_red_local(0)
      &           ,step,idir,granny_m2_red_local(-1)
      &           ,granny_m2_red_local(1),errder)
+c$$$            if (abs(der).gt.10d0) write (*,*) 'der',der
+c$$$     &           ,granny_m2_red_local(0),granny_m2(0),xi_i_fks_ev,y_ij_fks_ev
+            derntot=derntot+1
+            deravg=(deravg*(derntot-1)+abs(der))/dfloat(derntot)
+            derstd=(derstd*(derntot-1)+der**2)/dfloat(derntot)
+            if (abs(der).gt.dermax) then
+               dermax=abs(der)
+               xi_i_fks_ev_der_max=xi_i_fks_ev
+               y_ij_fks_ev_der_max=y_ij_fks_ev
+            endif
             if (debug_granny) then
                temp =derivative(virtgranny,granny_m2_red_local(0)
      &              ,step,idir,granny_m2_red_local(-1)
@@ -2615,7 +2628,14 @@ c     is smaller than granny mass.
       integer j,nsamp,cBW
       double precision fract
       parameter (nsamp=1,fract=0.1d0)
-c Choose the appropriate s given our constraints smin,smax
+
+      double precision tbound
+      integer n,gammax
+      double precision upper,lower,mass_orig
+      common /fill_plot_bw/upper,lower,mass_orig
+      
+
+c     Choose the appropriate s given our constraints smin,smax
       if(qwidth.ne.0.d0 .and. cBW.ne.2)then
 c Breit Wigner
          if (cBW.eq.1 .and. cBW_width(1).gt.0d0 .and.
@@ -2696,8 +2716,25 @@ c     normal BW
             bwfmpl=atan(bwmdpl/(qmass*qwidth))
             bwfmmn=atan(bwmdmn/(qmass*qwidth))
             bwdelf=(bwfmpl+bwfmmn)/pi
-            s=xbwmass3(x,xm02,qwidth,bwdelf,bwfmmn)
-            xjac0=xjac0*bwdelf/bwfunc(s,xm02,qwidth)
+
+            gammax=2 ! (1, 2, or 3, ...)
+            tbound= (atan( ((qmass-gammax*qwidth)**2 - xm02)/(qmass
+     &           *qwidth) )+bwfmmn)/(pi*bwdelf)
+
+            if(x.ge.tbound .or. bwmdpl.le.0d0 .or. bwmdmn.le.0d0)then
+               s=xbwmass3(x,xm02,qwidth,bwdelf,bwfmmn)
+               xjac0=xjac0*bwdelf/bwfunc(s,xm02,qwidth)
+            else
+               n = 1 ! (1, 2, or 3, ...)
+               s = smin+((qmass-gammax*qwidth)**2-smin)*(x/tbound)**n
+               xjac0=xjac0*
+     &              ((qmass-gammax*qwidth)**2-smin)*n*(x/tbound)**(n-1)/tbound
+              endif
+            
+            upper=sqrt(smax)
+            lower=sqrt(smin)
+            mass_orig=sqrt(s)
+            
          endif
       else
 c not a Breit Wigner
