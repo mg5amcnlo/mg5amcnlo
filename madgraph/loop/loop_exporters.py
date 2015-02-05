@@ -2404,74 +2404,7 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
         """Return the color matrix definition lines for this matrix element. Split
         rows in chunks of size n."""
 
-        return export_v4.ProcessExporterFortranMatchBox.get_color_string_lines(self, matrix_element)
-
-
-        if not matrix_element.get('color_matrix'):
-            return "\n".join(["out = 1"])
-        
-        #start the real work
-        color_denominators = matrix_element.get('color_matrix').\
-                                                         get_line_denominators()
-        matrix_strings = []
-        my_cs = color.ColorString()
-        for i_color in xrange(len(color_denominators)):
-            # Then write the numerators for the matrix elements
-            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
-            t_str=repr(my_cs)
-            t_match=re.compile(r"(\w+)\(([\s\d+\,]*)\)")
-            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2,1) T(1,2)' returns with findall:
-            # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
-            all_matches = t_match.findall(t_str)
-            output = {}
-            arg=[]
-            for i,match in enumerate(all_matches):
-                ctype, tmparg = match[0], [m.strip() for m in match[1].split(',')]
-                if ctype not in ['T', 'Tr']:
-                    raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
-                tmparg += ['0']
-                arg +=tmparg
-            for j, v in enumerate(arg):
-                    output[(i_color,j)] = v
-
-            for i,key in enumerate(output):
-                if matrix_strings == []:
-                    #first entry
-                    matrix_strings.append(""" 
-                    if (in1.eq.%s.and.in2.eq.%s)then
-                    out = %s
-                    """  % (key[0], key[1], output[key]))
-                else:
-                    #not first entry
-                    matrix_strings.append(""" 
-                    elseif (in1.eq.%s.and.in2.eq.%s)then
-                    out = %s
-                    """  % (key[0], key[1], output[key]))                
-        matrix_strings.append(" else \n out = - 1 \n endif")
-        return "\n".join(matrix_strings)
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return export_v4.ProcessExporterFortranMatchBox.get_color_string_lines(matrix_element)
 
 
 
