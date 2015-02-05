@@ -114,6 +114,7 @@ c ++
 c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
       subroutine LHA_blockread(blockname,buff,par,val,found)
+      USE ParamModule
 
       implicit none
       character*132 buff,buffer,curr_ref,curr_buff
@@ -128,7 +129,7 @@ c     *********************************************************************
 c     Try to find a correspondance in ident_card
 c
       ref_file = 20
-      call LHA_open_file(ref_file,'ident_card.dat',fopened)
+      call LHA_open_file(ref_file,identcard,fopened)
       if(.not. fopened) goto 99 ! If the file does not exist -> no matter, use default!
         
       islast=.false.

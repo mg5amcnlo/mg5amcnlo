@@ -22,7 +22,7 @@ Func_PSI.o Func_PSI.mod : Func_PSI.f90 use_func.mod ParamModule.mod
 use_func.o use_func.mod : use_func.f90
 	$(FC) -c $< $(FFLAGS)
 
-lha_read.o : lha_read.f
+lha_read.o : lha_read.f ParamModule.mod
 	$(FC) -c $< $(FFLAGS)
 
 WDecay_EW.o : WDecay_EW.f ParamModule.mod Func_PSI.mod mis_warp.mod

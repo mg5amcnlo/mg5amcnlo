@@ -9,11 +9,27 @@ PROGRAM smwidth
   REAL(KIND(1d0))::reslo,resqcd,resqed,resqcdqed,argarg,resmass
   CHARACTER(len=100)::paramcard
   INTEGER,PARAMETER::PID_Z=23,PID_W=24,PID_H=25,PID_t=6
+  CHARACTER(len=1)::cscheme
   Skip_scheme=.TRUE.
-  OPEN(UNIT=5123,FILE="./input.dat")
-  READ(5123,*)paramcard
-  READ(5123,*)Decay_scheme
-  CLOSE(UNIT=5123)
+  IF(iargc().NE.3)THEN
+     WRITE(*,*)"ERROR: Please input three arguments"
+     STOP
+  ENDIF
+  CALL getarg(1,paramcard)
+  CALL getarg(2,identcard)
+  CALL getarg(3,cscheme)
+  IF(cscheme.EQ."2")THEN
+     Decay_scheme=2
+  ELSE
+     Decay_scheme=1
+  ENDIF
+  PRINT *, paramcard
+  PRINT *, identcard
+  PRINT *, Decay_scheme
+  !OPEN(UNIT=5123,FILE="./input.dat")
+  !READ(5123,*)paramcard
+  !READ(5123,*)Decay_scheme
+  !CLOSE(UNIT=5123)
   CALL ReadParamCard(paramcard)
   resqcdqed=SMWWidth(1,1)
   WRITE(*,*)" --------------------------"

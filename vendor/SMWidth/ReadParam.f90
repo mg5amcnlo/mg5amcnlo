@@ -8,12 +8,17 @@ CONTAINS
     INTEGER,PARAMETER::maxpara=1000
     CHARACTER*20,DIMENSION(maxpara)::param,value
     INTEGER::i
+    LOGICAL::lexist
 !    REAL(KIND(1d0)),PARAMETER::pi=3.1415926535897932384626433832795d0
     IF(.NOT.print_banner)THEN
        INCLUDE "banner.inc"
        print_banner=.TRUE.
     ENDIF
-    CALL WriteIdenCard
+    INQUIRE(FILE=identcard,EXIST=lexist)
+    IF(.NOT.lexist)THEN
+       CALL WriteIdenCard
+       identcard="ident_card.dat"
+    ENDIF
     CALL LHA_loadcard(paramcard,npara,param,value)
     CALL LHA_get_real(npara,param,value,'mu_r',Decay_MU_R,9.118800D+01)
     CALL LHA_get_real(npara,param,value,'mt',Decay_MT,173.3d0)
@@ -86,6 +91,7 @@ CONTAINS
        CLOSE(iunit)
     ENDIF
     OPEN(UNIT=iunit,FILE="ident_card.dat")
+    WRITE(iunit,*)" "
     WRITE(iunit,*)" "
     WRITE(iunit,*)"loop 666 MU_R"
     WRITE(iunit,*)" "
