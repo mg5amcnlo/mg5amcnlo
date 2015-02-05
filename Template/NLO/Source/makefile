@@ -13,7 +13,7 @@ PROCESS= hfill.o matrix.o myamp.o
 HBOOK = hfill.o hcurve.o hbook1.o hbook2.o
 
 GENERIC = $(alfas_functions).o invarients.o hfill.o pawgraphs.o ran1.o rw_events.o rw_routines.o kin_functions.o \
-	  open_file.o basecode.o setrun.o run_printout.o dgauss.o ranmar.o getissud.o derivative.o
+	  open_file.o basecode.o setrun.o run_printout.o dgauss.o ranmar.o getissud.o derivative.o zerox64_cernlib.o
 
 INCLUDEF= coupl.inc genps.inc hbook.inc psample.inc pmass.inc nexternal.inc cluster.inc
 

@@ -199,6 +199,85 @@ c
       return
       end
 
+      function xinv_virtgranny(valxmbe2)
+c Any call to this function must be preceded by a call to fillcblk
+      implicit none
+      real*8 xinv_virtgranny,valxmbe2
+      real*8 tmp,tolerance
+      parameter (tolerance=1.d-15)
+      integer ierr,mxf,mode
+      parameter (mxf=500)
+      parameter (mode=2)
+      real*8 xmbemin2,xmbemax2
+      common/cgrannyrange/xmbemin2,xmbemax2
+      real*8 offset
+      common/coffset/offset
+      real*8 dzerox,off_virtgranny
+      external off_virtgranny
+c
+      offset=valxmbe2
+      tmp=dzerox(xmbemin2,xmbemax2,tolerance,mxf,
+     #           off_virtgranny,mode,ierr)
+      if(ierr.ne.0)tmp=0.d0
+      xinv_virtgranny=tmp
+      return
+      end
+
+
+      function xinv_redvirtgranny(valxmbe2)
+c Any call to this function must be preceded by a call to fillcblk
+      implicit none
+      real*8 xinv_redvirtgranny,valxmbe2
+      real*8 tmp,tolerance
+      parameter (tolerance=1.d-15)
+      integer ierr,mxf,mode
+      parameter (mxf=500)
+      parameter (mode=2)
+      real*8 xmbemin2,xmbemax2
+      common/cgrannyrange/xmbemin2,xmbemax2
+      real*8 offset
+      common/coffset/offset
+      real*8 dzerox,off_redvirtgranny
+      external off_redvirtgranny
+c
+      offset=valxmbe2
+      tmp=dzerox(xmbemin2,xmbemax2,tolerance,mxf,
+     #           off_redvirtgranny,mode,ierr)
+      if(ierr.ne.0)tmp=0.d0
+      xinv_redvirtgranny=tmp
+      return
+      end
+
+
+      function off_virtgranny(virtgrannybar)
+c Any call to this function must be preceded by a call to fillcblk
+      implicit none
+      real*8 off_virtgranny,virtgrannybar
+      real*8 tmp,virtgranny,offset
+      common/coffset/offset
+      external virtgranny
+c
+      tmp=virtgranny(virtgrannybar)-offset
+      off_virtgranny=tmp
+      return
+      end
+
+
+      function off_redvirtgranny(virtgrannybar)
+c Any call to this function must be preceded by a call to fillcblk
+      implicit none
+      real*8 off_redvirtgranny,virtgrannybar
+      real*8 tmp,virtgranny_red,offset
+      common/coffset/offset
+      external virtgranny_red
+c
+      tmp=virtgranny_red(virtgrannybar)+virtgrannybar-offset
+      off_redvirtgranny=tmp
+      return
+      end
+
+
+      
       subroutine generate_momenta_conf_wrapper(ndim,jac,x,itree,qmass
      $     ,qwidth,p)
       implicit none
@@ -209,13 +288,17 @@ c
       integer itree(2,-max_branch:-1),i,j
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),del1
      &     ,del2,del3,del30,der,derivative,errder,random,ran2,virtgranny
-     &     ,virtgranny_red,MC_sum_factor
-      external derivative,ran2,virtgranny
+     &     ,virtgranny_red,MC_sum_factor,xmbe2hatlow,xmbe2hatupp
+     &     ,xmbe2inv,xmbe2inv_temp,xinv_redvirtgranny,xinv_virtgranny
+      external derivative,ran2,virtgranny,xinv_redvirtgranny
+     &     ,xinv_virtgranny
 c     granny stuff
       double precision tiny,granny_m2(-1:1),step,granny_m2_red_local(
      &     -1:1)
       double precision granny_m2_red(-1:1)
       common /to_virtgranny/granny_m2_red
+      real*8 xmbemin2,xmbemax2
+      common/cgrannyrange/xmbemin2,xmbemax2
       logical input_granny_m2,compute_mapped,compute_non_shifted
       parameter (tiny=1d-3)
       integer irange,idir
@@ -286,7 +369,9 @@ c physical range of the invariant mass in the event!)
             granny_m2(1) =virtgranny_red(granny_m2_red_local( 1)-tiny)
      &              +granny_m2_red_local(1) ! upper limit
             granny_m2(-1)=virtgranny_red(granny_m2_red_local(-1)+tiny)
-     &              +granny_m2_red_local(-1) ! lower limit
+     &           +granny_m2_red_local(-1) ! lower limit
+            xmbemin2=granny_m2(-1)
+            xmbemax2=granny_m2(1)
             if (debug_granny) then
                temp =virtgranny(granny_m2_red_local( 0))
                if (abs((temp-granny_m2(0))/temp).gt.1d-3)then
@@ -302,21 +387,31 @@ c     Check that we have a function that is always increasing
             del30=granny_m2_red_local(1)-granny_m2_red_local(-1)
             del3=del30-del1-del2
             if (del3.lt.0d0) del3_granny=del3_granny+1
+            if (del1.gt.0d0) then
+               xmbe2hatlow=xmbemin2
+            else
+               xmbe2hatlow=xinv_redvirtgranny(xmbemin2)
+            endif
+            if(del2.gt.0.d0)then
+               xmbe2hatupp=xmbemax2
+            else
+               xmbe2hatupp=xinv_redvirtgranny(xmbemax2)
+            endif
             if (del1.gt.0d0 .or. del2.gt.0d0) 
      &           ncover_granny = ncover_granny+1
 c Check that granny_m2_red_local is convering the whole integration range
 c of granny_m2. If that's the case, we do the special granny trick, if
 c not, integrate as normal.
-            if ( granny_m2_red_local(0).lt.granny_m2(-1) .or.
-     $           granny_m2_red_local(0).gt.granny_m2( 1)) then
-c     3rd term in eq.43 of the note
+            if ( granny_m2_red_local(0).lt.xmbe2hatlow .or.
+     $           granny_m2_red_local(0).gt.xmbe2hatupp ) then
+c     2nd term in eq.70 of the note
                compute_non_shifted=.true.
             else
                compute_non_shifted=.false.
             endif
-            if ( granny_m2(0).ge.granny_m2_red_local(-1)+tiny .and.
-     $           granny_m2(0).le.granny_m2_red_local( 1)-tiny ) then
-c     2nd term in eq.43 of the note
+            if ( granny_m2_red_local(0).ge.granny_m2(-1)+tiny .and.
+     $           granny_m2_red_local(0).le.granny_m2(1)-tiny ) then
+c     1st term in eq.70 of the note
                compute_mapped=.true.
             else
                compute_mapped=.false.
@@ -335,23 +430,18 @@ c     Could add importance sampling here
             endif
          endif
          if (.not. compute_mapped .and. .not. compute_non_shifted) then
-c only event exists.
+c only counter-event exists.
             input_granny_m2=.false.
-            only_event_phsp=.true.
-            skip_event_phsp=.false.
+            only_event_phsp=.false.
+            skip_event_phsp=.true.
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,itree,qmass,qwidth,p)
-            jac_cnt(0)=-222
-            jac_cnt(1)=-222
-            jac_cnt(2)=-222
-            do i=-2,2
-               p1_cnt(0,1,i)=-99
-            enddo
-            nocntevents=.true.
+            jac=-222
+            p(0,1)=-99
             return
          endif
          if (compute_non_shifted) then
-c integrate as normal (can skip event)
+c integrate as normal
             input_granny_m2=.false.
             only_event_phsp=.false.
             skip_event_phsp=.false.
@@ -369,11 +459,11 @@ c corresponding granny_m2.
 c compute the derivative numerically (to compute the Jacobian)
             only_event_phsp=.true.
             skip_event_phsp=.false.
-            der=1d0+derivative(virtgranny_red,granny_m2_red_local(0)
-     &           ,step,idir,granny_m2_red_local(-1)
-     &           ,granny_m2_red_local(1),errder)
-c$$$            if (abs(der).gt.10d0) write (*,*) 'der',der
-c$$$     &           ,granny_m2_red_local(0),granny_m2(0),xi_i_fks_ev,y_ij_fks_ev
+            xmbe2inv=xinv_redvirtgranny(granny_m2_red_local(0))
+            der=derivative(virtgranny_red,xmbe2inv,step,idir,xmbemin2
+     &           ,xmbemax2,errder)
+            if(abs(der).lt.1.d-8)der=0.d0
+            der=1.d0/(1.d0+der)
             derntot=derntot+1
             deravg=(deravg*(derntot-1)+abs(der))/dfloat(derntot)
             derstd=(derstd*(derntot-1)+der**2)/dfloat(derntot)
@@ -382,38 +472,42 @@ c$$$     &           ,granny_m2_red_local(0),granny_m2(0),xi_i_fks_ev,y_ij_fks_e
                xi_i_fks_ev_der_max=xi_i_fks_ev
                y_ij_fks_ev_der_max=y_ij_fks_ev
             endif
-            if (debug_granny) then
-               temp =derivative(virtgranny,granny_m2_red_local(0)
-     &              ,step,idir,granny_m2_red_local(-1)
-     &              ,granny_m2_red_local(1),errder)
-               if (abs(temp-der).gt.1d-3) then
-                  write (*,*) 'DEBUG derivative error: '/
-     &                 /'virtgranny,virtgranny_red',temp,der
-               endif
-            endif
-            if(abs(der).lt.1.d-8) der=0.d0
             if (errder.gt.0.1d0) then
                write (*,*) 'ERROR is large in the computation of the'/
      $              /' derivative',errder,der
 c$$$               stop
             endif
-c compute the counter event kinematics using granny_m2(0) as mass for
-c the grandmother.
+c$$$            if (debug_granny) then
+c$$$               xmbe2inv_temp=xinv_virtgranny(granny_m2_red_local(0))
+c$$$               temp =derivative(virtgranny,xmbe2inv_temp,step,idir
+c$$$     &              ,xmbemin2,xmbemax2,errder)
+c$$$               if(abs(temp).lt.1.d-8)then
+c$$$                  temp=0.d0
+c$$$               else
+c$$$                  temp=1.d0/temp
+c$$$               endif
+c$$$               if (abs(temp-der).gt.1d-3) then
+c$$$                  write (*,*) 'DEBUG derivative error: '/
+c$$$     &                 /'virtgranny,virtgranny_red',temp,der
+c$$$               endif
+c$$$            endif
+c compute the event kinematics using xmbe2inv as mass for the
+c grandmother of the Born (this will give granny_m2_red_local(0) mass to
+c the event).
             input_granny_m2=.true.
-            skip_event_phsp=.true.
-            only_event_phsp=.false.
-            granny_m2_red(0)=granny_m2(0)
+            skip_event_phsp=.false.
+            only_event_phsp=.true.
+            granny_m2_red(0)=xmbe2inv
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,itree,qmass,qwidth,p)
-c multiply the weights by the numerically computed jacobian
-            do i=-2,2
-               jac_cnt(i)=jac_cnt(i)*abs(der)
-            enddo
-c event kinematics: even though it shouldn't change from above, better
-c compute it again to set all the common blocks correctly.
+c multiply event jacobian by the numerically computed jacobian for the
+c derivative
+            jac=jac*abs(der)
+c counter-event kinematics: even though it shouldn't change from above,
+c better compute it again to set all the common blocks correctly.
             input_granny_m2=.false.
-            only_event_phsp=.true.
-            skip_event_phsp=.false.
+            only_event_phsp=.false.
+            skip_event_phsp=.true.
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,itree,qmass,qwidth,p)
          endif
@@ -2717,19 +2811,19 @@ c     normal BW
             bwfmmn=atan(bwmdmn/(qmass*qwidth))
             bwdelf=(bwfmpl+bwfmmn)/pi
 
-            gammax=2 ! (1, 2, or 3, ...)
-            tbound= (atan( ((qmass-gammax*qwidth)**2 - xm02)/(qmass
-     &           *qwidth) )+bwfmmn)/(pi*bwdelf)
-
-            if(x.ge.tbound .or. bwmdpl.le.0d0 .or. bwmdmn.le.0d0)then
+c$$$            gammax=2 ! (1, 2, or 3, ...)
+c$$$            tbound= (atan( ((qmass-gammax*qwidth)**2 - xm02)/(qmass
+c$$$     &           *qwidth) )+bwfmmn)/(pi*bwdelf)
+c$$$
+c$$$            if(x.ge.tbound .or. bwmdpl.le.0d0 .or. bwmdmn.le.0d0)then
                s=xbwmass3(x,xm02,qwidth,bwdelf,bwfmmn)
                xjac0=xjac0*bwdelf/bwfunc(s,xm02,qwidth)
-            else
-               n = 1 ! (1, 2, or 3, ...)
-               s = smin+((qmass-gammax*qwidth)**2-smin)*(x/tbound)**n
-               xjac0=xjac0*
-     &              ((qmass-gammax*qwidth)**2-smin)*n*(x/tbound)**(n-1)/tbound
-              endif
+c$$$            else
+c$$$               n = 1 ! (1, 2, or 3, ...)
+c$$$               s = smin+((qmass-gammax*qwidth)**2-smin)*(x/tbound)**n
+c$$$               xjac0=xjac0*
+c$$$     &              ((qmass-gammax*qwidth)**2-smin)*n*(x/tbound)**(n-1)/tbound
+c$$$            endif
             
             upper=sqrt(smax)
             lower=sqrt(smin)
