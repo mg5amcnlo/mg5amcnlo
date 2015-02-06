@@ -151,12 +151,16 @@ class Cluster(object):
         echo '%(arguments)s' > arguments
         chmod +x ./%(script)s
         %(program)s ./%(script)s %(arguments)s
+        exit=$?
         output_files=( %(output_files)s )
         for i in ${output_files[@]}
         do
             cp -r $MYTMP/$i $MYPWD
         done
-        rm -rf $MYTMP
+#        if [ "$exit" -eq "0" ] 
+#        then
+            rm -rf $MYTMP
+#        fi
         """
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
                 'cwd': cwd, 'job_id': self.job_id,

@@ -2323,7 +2323,7 @@ c Recomputes the NLO+NNLL jet veto cross section using the weights saved
       double precision muSoft,muHard
       double precision xsec,xlum,dlum,xlgmuf,xlgmur,xsec11,xsec12
      $     ,xsec20,QES2_local,save_veto_multiplier,born_wgt,virt_wgt
-     $     ,alphaMad,veto_compensating_factor,veto_multiplier_new
+     $     ,alphaMad,veto_compensating_factor_new,veto_multiplier_new
       double precision alphas
       external alphas
       integer k,izero,mohdr
@@ -2412,8 +2412,8 @@ c
      $           wgtwnsmur(k)*xlgmur)*g**(2*wgtbpower+2)
 c include the veto_compensating factor
             call compute_veto_compensating_factor(H1_factor_virt
-     $           ,wgtwborn(2),muSoft,muHard,veto_compensating_factor)
-            xsec12=xsec12-xlum*veto_compensating_factor
+     $           ,wgtwborn(2),muSoft,muHard,veto_compensating_factor_new)
+            xsec12=xsec12-xlum*veto_compensating_factor_new
          endif
       enddo
 

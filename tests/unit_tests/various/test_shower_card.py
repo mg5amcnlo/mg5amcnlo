@@ -127,6 +127,7 @@ is_bbar      = F    # T if bb~ production             !ONLY FOR HERWIG6!
 #***********************************************************************
 EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
                                  # Default: "stdhep Fmcfio"
+                                 # PYTHIA > 8.200 may require library dl
 EXTRAPATHS   = ../lib            # Path to the extra-libraries
                                  # Default: "../lib"
 INCLUDEPATHS =                   # Path to header files needed by c++
@@ -241,6 +242,7 @@ is_bbar      = F    # T if bb~ production             !ONLY FOR HERWIG6!
 #***********************************************************************
 EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
                                  # Default: "stdhep Fmcfio"
+                                 # PYTHIA > 8.200 may require library dl
 EXTRAPATHS   = ../lib            # Path to the extra-libraries
                                  # Default: "../lib"
 INCLUDEPATHS =                   # Path to header files needed by c++
