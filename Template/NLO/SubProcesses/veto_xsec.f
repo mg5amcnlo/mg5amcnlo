@@ -119,8 +119,8 @@ c 2nd term on 3rd line of eq.(20) of arXiv:1412.8408
 c compensating factor for difference between muMad and the soft scale mu
       H1_comp=(2d0*(Pi**2 + 24d0*Log(muMad/mu)**2 + Log(muMad/mu)*(36d0
      $     - 48d0*Log(Q/mu))))/9d0
-      veto_compensating_factor=(H1_factor_virt*alpha + H1_comp*alpha
-     $     /(2d0*pi) + E1) * born_wgt
+      veto_compensating_factor=(H1_factor_virt + H1_comp
+     $     /(2d0*pi) + E1/alpha) * born_wgt / (4d0*pi)
 
       return
       end

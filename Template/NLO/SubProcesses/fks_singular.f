@@ -70,10 +70,10 @@ c value to the list of weights using the add_wgt subroutine
      $           /' Born allowed)', wgtbpower
          endif
          H1_factor_virt=virt_wgt/(g22/(4d0*pi))/born_wgt
-         born_wgt_veto=born_wgt
+         born_wgt_veto=born_wgt/g2
          call compute_veto_compensating_factor(H1_factor_virt
      $        ,born_wgt_veto,1d0,1d0,veto_compensating_factor)
-         call add_wgt(7,-veto_compensating_factor*f_nb/g22,0d0,0d0)
+         call add_wgt(7,-veto_compensating_factor*f_nb,0d0,0d0)
       endif
       wgt2=wgtwnstmpmur*f_nb/g22
       wgt3=wgtwnstmpmuf*f_nb/g22
