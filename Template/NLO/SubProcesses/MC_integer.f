@@ -131,9 +131,6 @@ c Safety
       endif
 c Compute the volume 'vol'
       vol=(grid(iint,this_dim)-grid(iint-1,this_dim))
-c Increase the array that keeps track of the number of times this iint
-c (for 'this_dim') has been picked.
-      ncall(iint,this_dim)=ncall(iint,this_dim)+1
       return
       end
 
@@ -173,6 +170,9 @@ c (for 'this_dim') has been picked.
      &     ,maxdim)
       common/integration_integer/grid,acc,ncall,nintervals
       acc(iint,this_dim)=acc(iint,this_dim)+f_abs
+c Increase the array that keeps track of the number of times this iint
+c (for 'this_dim') has been picked.
+      ncall(iint,this_dim)=ncall(iint,this_dim)+1
       return
       end
 
