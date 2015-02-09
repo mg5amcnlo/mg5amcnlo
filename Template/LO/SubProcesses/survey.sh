@@ -1,4 +1,5 @@
 #!/bin/bash
+
 if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then
 tar -xf MadLoop5_resources.tar;
 fi

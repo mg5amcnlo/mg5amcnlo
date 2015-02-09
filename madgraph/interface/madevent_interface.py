@@ -2508,7 +2508,7 @@ zeor by MadLoop.""")
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(match)
 
-        x_improve = gen_ximprove.get_ximprove(self, refine_opt)
+        x_improve = gen_ximprove.gen_ximprove(self, refine_opt)
         x_improve.launch() # create the ajob for the refinment.
         if 'refine' not in self.history[-1]:
             cross, error = x_improve.update_html() #update html results for survey
@@ -2554,7 +2554,7 @@ zeor by MadLoop.""")
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
-
+        raise Exception
         combine_runs.CombineRuns(self.me_dir)
         
         cross, error = sum_html.make_all_html_results(self)
@@ -3366,6 +3366,28 @@ zeor by MadLoop.""")
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
                              input_files=input_files, output_files=output_files,
                              required_output=required_output, **opt)
+            elif "refine_splitted.sh" in exe:
+                input_files = ['madevent','symfact.dat','iproc.dat',
+                               pjoin(self.me_dir, 'SubProcesses','randinit')]                 
+                
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar')):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar'))
+
+                #Find the correct PDF input file
+                input_files.append(self.get_pdf_input_filename())
+
+
+                output_files = [argument[0]]
+                required_output = []
+                for G in output_files:
+                    required_output.append('%s/results.dat' % G)                
+                input_files.append(pjoin(argument[1], "input_app.txt"))
+                input_files.append(pjoin(argument[1], "ftn25"))
+                
+                #submitting
+                self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output, **opt)                
 
                 
             

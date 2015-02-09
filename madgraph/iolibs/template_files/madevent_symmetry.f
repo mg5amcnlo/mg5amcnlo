@@ -554,10 +554,11 @@ c-----
       done = .not. found
       end
 
-      subroutine store_events()
+      subroutine store_events(grid)
 c**********************************************************************
 c     Dummy routine
 c**********************************************************************
+      integer grid
       end
 
       double precision function dsig(pp,wgt,imode)

@@ -133,7 +133,7 @@ c-----
 c  Begin Code
 c-----
 c      write(*,*) 'storing Events'
-      call store_events
+      call store_events(1)
       rewind(lun)
       nw = 0
       maxwgt = 0d0
@@ -213,10 +213,12 @@ c $E$ S-COMMENT_C $E$
       endif
       end
 
-      subroutine store_events()
+      subroutine store_events(grid_strategy)
 C**************************************************************************
 C     Takes events from scratch file (lun) and writes them to a permanent
 c     file  events.dat
+c     If grid_strategy =-2 (splitted generation on different node)
+c     do not normalise the sum of weight to cross-section
 C**************************************************************************
       IMPLICIT NONE
 c
@@ -228,6 +230,7 @@ c
 c
 c     Arguments
 c
+      integer grid_strategy
 c
 c     Local
 c
@@ -314,7 +317,11 @@ c
             store_event(i) = .false.
          endif
       enddo
-      xscale = xsecabs/xsum
+      if (grid_strategy.eq.-2) then
+         xscale = 1d0
+      else
+         xscale = xsecabs/xsum
+      endif
       target_wgt = target_wgt*xscale
       rewind(lun)
 c     JA 8/17/2011 Don't check for previously stored events
@@ -357,7 +364,10 @@ c      endif
       write(*,*) 'Events wgts > 1: ', nover
       write(*,*) '% Cross section > 1: ',xover, xover/xtot*100.
       neventswritten = i
+c     save the value of target_wgt      
+      maxwgt = target_wgt
  99   close(lunw)
+      
 c      close(lun)
       end
 

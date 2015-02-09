@@ -203,12 +203,14 @@ c      nun = n_unwgted()
       if (chi2 .gt. 1) tsigma=tsigma*sqrt(chi2)
 c     JA 02/2011 Added twgt to results.dat to allow event generation in
 c     first iteration for gridpack runs
+C     OM 02/2015 Added maxwgt (target of the secondary unweight) to allow splitted
+C        generation of event.
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,tsigma, 0.0,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,2e13.5)')tmean,tsigma, 0.0,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean, maxwgt
       else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,0.0,tsigma,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,2e13.5)')tmean,0.0,tsigma,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean, maxwgt
       endif
 c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
@@ -218,8 +220,8 @@ c      do i=1,cur_it-1
       close(66, status='KEEP')
       else
          open(unit=66,file='results.dat',status='unknown')
-         write(66,'(3e12.5,2i9,i5,i9,3e10.3)')0.,0.,0.,kevent,nw,
-     &     1,0,0.,0.,0.
+         write(66,'(3e12.5,2i9,i5,i9,4e10.3)')0.,0.,0.,kevent,nw,
+     &     1,0,0.,0.,0.,0.
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
          flush(66)
          close(66, status='KEEP')
@@ -364,13 +366,13 @@ c
       if (nun .lt. 0) nun=-nun   !Case when wrote maximun number allowed
       if (chi2 .gt. 1) tsigma=tsigma*sqrt(chi2)
 c     JA 02/2011 Added twgt to results.dat to allow event generation in
-c     first iteration for gridpack runs
+c     first iteration for gridpack runs +02/2015 maxwgt 
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,tsigma,0.0,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,2e13.5)')tmean,tsigma,0.0,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean, maxwgt
       else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,e13.5)')tmean,0.0,tsigma,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,2e13.5)')tmean,0.0,tsigma,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean,maxwgt
       endif
 c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
@@ -380,8 +382,8 @@ c      do i=1,cur_it-1
       close(66, status='KEEP')
       else
          open(unit=66,file='results.dat',status='unknown')
-         write(66,'(3e12.5,2i9,i5,i9,3e10.3)')0.,0.,0.,kevent,nw,
-     &     1,0,0.,0.,0.
+         write(66,'(3e12.5,2i9,i5,i9,4e10.3)')0.,0.,0.,kevent,nw,
+     &     1,0,0.,0.,0.,0.
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
          flush(66)
          close(66, status='KEEP')
@@ -1980,7 +1982,7 @@ c     $                 access='append',err=122)
 c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 122              close(22)
                   tsigma = tsigma*sqrt(chi2)  !This gives the 68% confidence cross section
-                  call store_events
+                  call store_events(use_cut)
                   cur_it = itm+2
                   return
                endif
@@ -1995,7 +1997,7 @@ c             tjs 5/22/2007
 c
 c               nun = n_unwgted()
 c               write(*,*) 'Estimated events',nun, accur
-               call store_events
+               call store_events(use_cut)
                nun = neventswritten
 c               tmp1 = tmean / tsigma
 c               chi2tmp = (chi2/tmp1/tmp1-tsigma)/dble(cur_it-2)
@@ -2049,7 +2051,7 @@ c 129              close(22)
 
 
             if (cur_it .gt. itm) then               
-               call store_events
+               call store_events(use_cut)
                tmean = tmean / tsigma
                trmean = trmean / tsigma
                chi2 = (chi2 / tmean / tmean - tsigma) / dble(itm - 1)
@@ -2124,8 +2126,8 @@ c 23   close(22)
  222  format(a10,I3,3x,a6,e10.4,a16,e10.3,e12.3,3x,f5.1,a1)
 
       open(unit=66,file='results.dat',status='unknown')
-      write(66,'(3e12.5,2i9,i5,i9,3e10.3)')0.,0.,0.,0,0,
-     &     0,1,0.,0.,0.
+      write(66,'(3e12.5,2i9,i5,i9,4e10.3)')0.,0.,0.,0,0,
+     &     0,1,0.,0.,0.,0.
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
       flush(66)
       close(66, status='KEEP')

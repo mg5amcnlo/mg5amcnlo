@@ -51,6 +51,7 @@ class OneResult(object):
         self.yasec_iter = []
         self.eff_iter = []
         self.maxwgt_iter = []
+        self.maxwgt = 0 # weight used for the secondary unweighting.
         return
     
     @cluster.multiple_try(nb_try=5,sleep=20)
@@ -83,6 +84,8 @@ class OneResult(object):
                 self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
                          self.maxit, self.nunwgt, self.luminosity, self.wgt, \
                          self.xsec = data[:10]
+                if len(data) > 10:
+                    self.maxwgt = data[10]
                 if self.mfactor > 1:
                     self.luminosity /= self.mfactor
                 continue

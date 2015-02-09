@@ -491,6 +491,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'cluster_time':None,
+                         'cluster_size':0,
                          'cluster_memory':None,
                          'nb_core': None,
                          'cluster_temp_path':None}
@@ -1396,7 +1397,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.options[args[0]] = args[1]
             # cluster (re)-initialization done later
             # self.cluster update at the end of the routine
-        elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait']:
+        elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait', 'cluster_size']:
             self.options[args[0]] = int(args[1])
             # self.cluster update at the end of the routine
         elif args[0] == 'nb_core':

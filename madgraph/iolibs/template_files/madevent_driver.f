@@ -163,7 +163,6 @@ c
       if (twgt .gt. 0d0) maxwgt=maxwgt/twgt
       write(lun,'(a,f20.5)') 'Summary', maxwgt
       
-c      call store_events
 
 c      write(*,'(a34,20I7)'),'Color flows originally chosen:   ',
 c     &     (ncolflow(i),i=1,ncols)
