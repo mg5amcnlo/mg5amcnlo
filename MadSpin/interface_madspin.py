@@ -532,6 +532,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 new block:
                 %s""" \
                 % (self.options['ms_dir'], name, orig_block, block)
+
+        #replace init information
+        generate_all.banner['init'] = self.banner['init']
         
         # NOW we have all the information available for RUNNING
         

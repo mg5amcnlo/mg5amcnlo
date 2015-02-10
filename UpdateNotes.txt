@@ -1,5 +1,27 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.2.3(10/02/15) RF: Re-factoring of the structure of the code for fNLO computations.
+                OM: Fix a bug in MadWeight (correlated param_card was not creating the correct input file)
+		RF: When requiring more than 1M events for (N)LO+PS runs, do not go to higher precision than 0.001
+                    for the grids and cross section (can be overwritten with the req_acc run_card parameter).
+		RF: Make sure that reweight info (for PDF and scale uncertainties) also works for UNLOPS events.
+		RF: When setting the B's stable in the shower_card, also set the eta_b (PDG=551) stable.
+		OM: Change the Breit-Wigner splitting for the multi-channel integration, use the bwcutoff instead of
+                    the hardcoded value 5.
+                MZ: Fix to bug 1406000 (segfault appearing when doing FxFx merging). Thanks to Josh Bendavid for
+                    having reported it
+                MZ: Fix to a bug occurring when generating event in the "split" mode: the required output was 
+                    not correctly specified
+                OM: The built-in pdf "nn23lo" and "nn23lo1" where associate to the wrong lhapdfid in the lhef file
+                    This was creating bias in using SysCalc. (Thanks Alexis)
+                OM: Fix a bug in the LO re-weighing  module which was removing the 
+                    SysCalc weight from the lhe file (thanks Shin-Shan)
+                Team: Fixes to different small bugs / improvement in the error and warning messages
+		RF: For aMC runs, If a NAN is found, the code now skips that PS point and continues instead of leading to NAN.
+                RF: For fNLO runs the virtuals were included twice in the setting of the integration grids. This was not
+                    leading to any biais  in previous version of the code.
+
+
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.
                     For LHC processes no sizeable effect have been observe so far.

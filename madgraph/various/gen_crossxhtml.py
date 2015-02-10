@@ -164,6 +164,7 @@ class AllResults(dict):
                 self.current = self[run]
             else:
                 logger.warning("Previous runs exists but they will not be present in the html output.")
+    
     def readd_old_run(self, run_name):
         """ re-create the data-base from scratch if the db was remove """
         
@@ -173,6 +174,8 @@ class AllResults(dict):
         
         if os.path.exists("%s.gz" % event_path):
             misc.gunzip(event_path, keep=True)
+        if not os.path.exists(event_path):
+            return
         banner = bannerlib.Banner(event_path)
         
         # load the information to add a new Run:
@@ -593,10 +596,10 @@ class RunResults(list):
         tags = [os.path.basename(name[:-11]) for name in files]
 
      
-        # No pythia only a single run:}
+        # No pythia only a single run:
         if not tags:
-            self.current['nb_event'] = nb_event
-            self.current['cross'] = cross
+            self[0]['nb_event'] = nb_event
+            self[0]['cross'] = cross
           
         #Loop over pythia run
         for tag in tags:

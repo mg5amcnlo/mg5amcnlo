@@ -62,24 +62,12 @@ class Particle(object):
         for key, value in obj.groupdict().items():
             if key not in  ['comment','pid']:
                 setattr(self, key, float(value))
-            elif key in ['pid']:
+            elif key in ['pid', 'mother1', 'mother2']:
                 setattr(self, key, int(value))
             else:
                 self.comment = value
-        # assign the mother:
-        if self.mother1:
-            try:
-                self.mother1 = self.event[int(self.mother1) -1]
-            except KeyError:
-                raise Exception, 'Wrong Events format: a daughter appears before it\'s mother'
-        if self.mother2:
-            try:
-                self.mother2 = self.event[int(self.mother2) -1]
-            except KeyError:
-                raise Exception, 'Wrong Events format: a daughter appears before it\'s mother'
-    
-    
-    
+        # Note that mother1/mother2 will be modified by the Event parse function to replace the
+        # integer by a pointer to the actual particle object.
     
     def __str__(self):
         """string representing the particles"""
@@ -171,6 +159,8 @@ class EventFile(file):
 class Event(list):
     """Class storing a single event information (list of particles + global information)"""
 
+    warning_order = True # raise a warning if the order of the particle are not in accordance of child/mother
+
     def __init__(self, text=None):
         """The initialization of an empty Event (or one associate to a text file)"""
         list.__init__(self)
@@ -215,7 +205,20 @@ class Event(list):
                 self.append(Particle(line, event=self))
             else:
                 self.tag += '%s\n' % line
-                
+
+        # assign the mother:
+        for i,particle in enumerate(self):
+            if self.warning_order:
+                if i < particle.mother1 or i < particle.mother2:
+                    logger.warning("Order of particle in the event did not agree with parent/child order. This might be problematic for some code.")
+                    Event.warning_order = False
+                                   
+            if particle.mother1:
+                particle.mother1 = self[int(particle.mother1) -1]
+            if particle.mother2:
+                particle.mother2 = self[int(particle.mother2) -1]
+
+   
     def parse_reweight(self):
         """Parse the re-weight information in order to return a dictionary
            {key: value}. If no group is define group should be '' """
@@ -224,12 +227,12 @@ class Event(list):
         self.reweight_order = []
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
         if start != -1 != stop :
-            pattern = re.compile(r'''<\s*wgt id=\'(?P<id>[^\']+)\'\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
+            pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
             data = pattern.findall(self.tag)
             try:
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
                                            if not self.reweight_order.append(pid)])
-                      # the if is to create the order file on the flight
+                             # the if is to create the order file on the flight
             except ValueError, error:
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]
@@ -440,8 +443,7 @@ class Event(list):
             if set(self.reweight_data.keys()) != set(self.reweight_order):
                 self.reweight_order += [k for k in self.reweight_data.keys() \
                                                 if k not in self.reweight_order]
-                
-                
+
             reweight_str = '<rwgt>\n%s\n</rwgt>' % '\n'.join(
                         '<wgt id=\'%s\'> %+13.7e </wgt>' % (i, float(self.reweight_data[i]))
                         for i in self.reweight_order)

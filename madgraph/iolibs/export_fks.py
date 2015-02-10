@@ -562,6 +562,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_Sij.f',
                      'fks_powers.inc',
                      'fks_singular.f',
+                     'c_weight.inc',
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
                      'configs_and_props_inc_chooser.f',
@@ -630,7 +631,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../Source', log=False)
-        ln('leshouche_decl.inc', '../../Source', log=False)
+        ln('born_leshouche.inc', '../../Source', log=False)
 
 
         # Return to SubProcesses dir
@@ -2599,19 +2600,34 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 for initial_state in init_states:
                     if initial_state in pdf_codes.keys():
                         if subproc_group:
-                            pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
+                            if abs(pdgtopdf[initial_state]) <= 7:  
+                                pdf_lines = pdf_lines + \
+                                    ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, ibeam, pdgtopdf[initial_state],
                                           ibeam, ibeam)
+                            else:
+                                # setting other partons flavours outside quark, gluon, photon to be 0d0
+                                pdf_lines = pdf_lines + \
+                                    ("c settings other partons flavours outside quark, gluon, photon to 0d0\n" + \
+                                     "%s%d=0d0\n") % \
+                                         (pdf_codes[initial_state],i + 1)                                
                         else:
-                            pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
+                            if abs(pdgtopdf[initial_state]) <= 7:  
+                                pdf_lines = pdf_lines + \
+                                    ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, ibeam, pdgtopdf[initial_state],
                                           ibeam, ibeam)
+                            else:
+                                # setting other partons flavours outside quark, gluon, photon to be 0d0
+                                pdf_lines = pdf_lines + \
+                                    ("c settings other partons flavours outside quark, gluon, photon to 0d0\n" + \
+                                     "%s%d=0d0\n") % \
+                                         (pdf_codes[initial_state],i + 1)                                
+
                 pdf_lines = pdf_lines + "ENDIF\n"
 
             # Add up PDFs for the different initial state particles

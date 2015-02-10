@@ -1610,6 +1610,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             model = self.find_model_name()
             process = self.process # define in find_model_name
             self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+            self.results.resetall(self.me_dir)
         self.results.def_web_mode(self.web)
         
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
@@ -2508,7 +2509,15 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
         except Exception:
             pass
-        self.cluster.launch_and_wait('../bin/internal/run_combine', 
+        
+        if self.options['run_mode'] ==1 and self.options['cluster_tmp_path']:
+            tmpcluster = cluster.MultiCore(nb_core=1)
+            tmpcluster.launch_and_wait('../bin/internal/run_combine', 
+                                        cwd=pjoin(self.me_dir,'SubProcesses'),
+                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
+                                        required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
+        else:
+            self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
                                         stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
                                         required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
@@ -2573,6 +2582,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.check_combine_events(args)
         self.update_status('Storing parton level results', level='parton')
 
+
+
         run = self.run_name
         tag = self.run_card['run_tag']
         devnull = open(os.devnull, 'w')
@@ -2588,36 +2599,54 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         files.cp(input, output) 
 
         # 2) Treat the files present in the P directory
-        for P_path in SubProcesses.get_subP(self.me_dir):
-            G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
-                                                os.path.isdir(pjoin(P_path,G))]
-            for G in G_dir:
-                G_path = pjoin(P_path,G)
-                # Remove events file (if present)
-                if os.path.exists(pjoin(G_path, 'events.lhe')):
-                    os.remove(pjoin(G_path, 'events.lhe'))
-                # Store results.dat
-                if os.path.exists(pjoin(G_path, 'results.dat')):
-                    input = pjoin(G_path, 'results.dat')
-                    output = pjoin(G_path, '%s_results.dat' % run)
-                    files.cp(input, output) 
-                # Store log
-                if os.path.exists(pjoin(G_path, 'log.txt')):
-                    input = pjoin(G_path, 'log.txt')
-                    output = pjoin(G_path, '%s_log.txt' % run)
-                    files.mv(input, output) 
-                # Grid
-                for name in ['ftn26']:
-                    if os.path.exists(pjoin(G_path, name)):
-                        if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
-                            os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
-                        input = pjoin(G_path, name)
-                        output = pjoin(G_path, '%s_%s' % (run,name))
-                        files.mv(input, output)
-                        misc.gzip(pjoin(G_path, output), error=None) 
-                # Delete ftn25 to ensure reproducible runs
-                if os.path.exists(pjoin(G_path, 'ftn25')):
-                    os.remove(pjoin(G_path, 'ftn25'))
+        # Ensure that the number of events is different of 0 
+        if self.results.current['nb_event'] == 0:
+            logger.warning("No event detected. No cleaning performed! This should allow to run:\n" +
+                           "    cd Subprocesses; ../bin/internal/combine_events\n"+
+                           "  to have your events if those one are missing.")
+        else:
+            for P_path in SubProcesses.get_subP(self.me_dir):
+                G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
+                                                    os.path.isdir(pjoin(P_path,G))]
+                for G in G_dir:
+                    G_path = pjoin(P_path,G)
+                    try:
+                        # Remove events file (if present)
+                        if os.path.exists(pjoin(G_path, 'events.lhe')):
+                            os.remove(pjoin(G_path, 'events.lhe'))
+                    except Exception:
+                        continue
+                    try:
+                        # Store results.dat
+                        if os.path.exists(pjoin(G_path, 'results.dat')):
+                            input = pjoin(G_path, 'results.dat')
+                            output = pjoin(G_path, '%s_results.dat' % run)
+                            files.cp(input, output) 
+                    except Exception:
+                        continue                    
+                    # Store log
+                    try:
+                        if os.path.exists(pjoin(G_path, 'log.txt')):
+                            input = pjoin(G_path, 'log.txt')
+                            output = pjoin(G_path, '%s_log.txt' % run)
+                            files.mv(input, output) 
+                    except Exception:
+                        continue
+                    try:   
+                        # Grid
+                        for name in ['ftn26']:
+                            if os.path.exists(pjoin(G_path, name)):
+                                if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
+                                    os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
+                                input = pjoin(G_path, name)
+                                output = pjoin(G_path, '%s_%s' % (run,name))
+                                files.mv(input, output)
+                                misc.gzip(pjoin(G_path, output), error=None) 
+                    except Exception:
+                        continue
+                    # Delete ftn25 to ensure reproducible runs
+                    if os.path.exists(pjoin(G_path, 'ftn25')):
+                        os.remove(pjoin(G_path, 'ftn25'))
 
         # 3) Update the index.html
         misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
