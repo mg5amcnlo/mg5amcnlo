@@ -529,7 +529,7 @@ c
       integer i, j, nbw, ic, icode
       integer iarray(imax)
       logical lconflict(-max_branch:nexternal)
-      logical done,j_fks_ini,j_fks_fin,two_jobs
+      logical done,j_fks_ini,j_fks_fin,two_jobs,first
       logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'born_decayBW.inc'
       integer lname
@@ -549,20 +549,22 @@ c-----
       fname='ajob'
       lname=4
       call open_bash_file(26,fname,lname)
+      first=.true.
       do i=1,mapconfig(0)
-         if (two_jobs) then
-            postfix='.1'
-         else
-            postfix='.0'
-         endif
- 100     continue
-         if ( .not. (i.eq.1 .and. postfix.ne.'.2') ) then
-            call close_bash_file(26)
-            fname='ajob'
-            lname=4
-            call open_bash_file(26,fname,lname)
-         endif
          if (use_config(i) .gt. 0) then
+            if (two_jobs) then
+               postfix='.1'
+            else
+               postfix='.0'
+            endif
+ 100        continue
+            if ( .not. first ) then
+               call close_bash_file(26)
+               fname='ajob'
+               lname=4
+               call open_bash_file(26,fname,lname)
+            endif
+            first=.false.
             if (mapconfig(i) .lt. 10) then
                write(26,'(x,i1,a2$)') mapconfig(i),postfix
             elseif (mapconfig(i) .lt. 100) then
@@ -572,10 +574,10 @@ c-----
             elseif (mapconfig(i) .lt. 10000) then
                write(26,'(x,i4,a2$)') mapconfig(i),postfix
             endif
-         endif
-         if (postfix.eq.'.1') then
-            postfix='.2'
-            goto 100
+            if (postfix.eq.'.1') then
+               postfix='.2'
+               goto 100
+            endif
          endif
       enddo
       call close_bash_file(26)
