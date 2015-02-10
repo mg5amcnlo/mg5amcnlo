@@ -950,6 +950,7 @@ c$$$         f1(2) = f1(2)+result(0,2)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
+         call set_shower_scale_noshape(pp,nFKSprocess*2-1)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
             if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
@@ -1003,6 +1004,12 @@ c$$$            result(nFKSprocess,2)= w*dsigH
 c$$$            f1(1) = f1(1)+result(nFKSprocess,1)
 c$$$            f1(2) = f1(2)+result(nFKSprocess,2)
             if (p_born(0,1).lt.0d0) cycle
+
+            call set_cms_stuff(izero)
+            call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+            call set_cms_stuff(mohdr)
+            call set_shower_scale_noshape(pp,nFKSprocess*2)
+
             call compute_prefactors_n1body(vegas_wgt,jac)
             call set_cms_stuff(izero)
             passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)

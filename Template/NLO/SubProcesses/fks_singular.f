@@ -324,7 +324,8 @@ c respectively.
      $             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
       MCcntcalled=.true.
       if(ileg.gt.4 .or. ileg.lt.1)then
-         write(*,*)'Error: unrecognized ileg in dsigF', ileg
+         write(*,*)'Error: unrecognized ileg in compute_MC_subt_term',
+     $        ileg
          stop
       endif
       if (flagmc) then
@@ -342,7 +343,7 @@ c respectively.
       endif
       if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
      $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
-         write(*,*)'Error in dsigF: will diverge'
+         write(*,*)'Error in compute_MC_subt_term: will diverge'
          stop
       endif
       call cpu_time(tAfter)
@@ -3025,7 +3026,8 @@ c S events
      &      dampMCsubt.and.emsca.ne.0d0)then
             SCALUP(iFKS)=min(emsca,scalemax)
          else
-            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin,scalemax,ileg,xm12)
+            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin
+     $           ,scalemax,ileg,xm12)
             SCALUP(iFKS)=scalemax
          endif
          SCALUP(iFKS)=min(SCALUP(iFKS),shower_S_scale(iFKS))
@@ -3034,7 +3036,8 @@ c H events
          if(dampMCsubt.and.emsca.ne.0d0)then
             SCALUP(iFKS)=scalemax
          else
-            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin,scalemax,ileg,xm12)
+            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin
+     $           ,scalemax,ileg,xm12)
             SCALUP(iFKS)=scalemax
          endif
          SCALUP(iFKS)=min(SCALUP(iFKS),max(shower_H_scale(iFKS),
