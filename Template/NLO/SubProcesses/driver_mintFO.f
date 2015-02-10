@@ -498,17 +498,17 @@ c The n+1-body contributions (including counter terms)
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
-            call compute_soft_counter_term
+            call compute_soft_counter_term(0d0)
             call set_cms_stuff(ione)
-            call compute_collinear_counter_term
+            call compute_collinear_counter_term(0d0)
             call set_cms_stuff(itwo)
-            call compute_soft_collinear_counter_term
+            call compute_soft_collinear_counter_term(0d0)
          endif
          if (passcuts_n1body) then
             call set_cms_stuff(mohdr)
             if (ickkw.eq.3) call set_FxFx_scale(mohdr,p)
             call set_alphaS(p)
-            call compute_real_emission(p)
+            call compute_real_emission(p,1d0)
          endif
       enddo
       

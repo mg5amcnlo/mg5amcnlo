@@ -524,15 +524,25 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
       endif
 
       call cpu_time(tAfter)
-      tTot = tAfter - tBefore
-      tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR
-      write(*,*) 'Time spent in clustering : ',tFastJet      
-      write(*,*) 'Time spent in PDF_Engine : ',tPDF
-      write(*,*) 'Time spent in Reals_evaluation: ',tDSigR
-      write(*,*) 'Time spent in IS_evaluation : ',tDSigI
-      write(*,*) 'Time spent in OneLoop_Engine : ',tOLP
-      write(*,*) 'Time spent in PS_Generation : ',tGenPS      
-      write(*,*) 'Time spent in other_tasks : ',tOther
+      tTot = tAfter-tBefore
+      tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
+     &     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt)
+      write(*,*) 'Time spent in Born : ',tBorn
+      write(*,*) 'Time spent in PS_Generation : ',tGenPS
+      write(*,*) 'Time spent in Reals_evaluation: ',tReal
+      write(*,*) 'Time spent in MCsubtraction : ',t_MC_subt
+      write(*,*) 'Time spent in Counter_terms : ',tCount
+      write(*,*) 'Time spent in Integrated_CT : ',tIS-tOLP
+      write(*,*) 'Time spent in Virtuals : ',tOLP      
+      write(*,*) 'Time spent in FxFx_cluster : ',tFxFx
+      write(*,*) 'Time spent in Nbody_prefactor : ',tf_nb
+      write(*,*) 'Time spent in N1body_prefactor : ',tf_all
+      write(*,*) 'Time spent in Adding_alphas_pdf : ',t_as
+      write(*,*) 'Time spent in Reweight_scale : ',tr_s
+      write(*,*) 'Time spent in Reweight_pdf : ',tr_pdf
+      write(*,*) 'Time spent in Filling_plots : ',t_plot
+      write(*,*) 'Time spent in Applying_cuts : ',t_cuts
+      write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
       return
@@ -767,7 +777,7 @@ c
 
 
 
-      function sigintF(xx,w,ifl,f)
+      function sigintF(xx,vegas_wgt,ifl,f)
 c From dsample_fks
       implicit none
       include 'mint.inc'
@@ -859,367 +869,180 @@ c PDG codes of particles
       common/ccalculatedBorn/calculatedBorn
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
-         if (ickkw.eq.4) then
-            sum=0
-            write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
-     $           /' Born PS point (sum=0)'
-         endif
          firsttime=.false.
-         maxproc_save=0
-         foundB(1)=.false.
-         foundB(2)=.false.
-         do nFKSprocess=1,fks_configs
-            call fks_inc_chooser()
-c Set Bjorken x's to some random value before calling the dlum() function
-            xbk(1)=0.5d0
-            xbk(2)=0.5d0
-            lum=dlum()
-            maxproc_save=max(maxproc_save,IPROC)
-            if (doreweight) then
-               call reweight_settozero()
-               call reweight_settozero_all(nFKSprocess*2,.true.)
-               call reweight_settozero_all(nFKSprocess*2-1,.true.)
-            endif
-            if (sum.eq.0) then
-               if (particle_type(i_fks).eq.8) then
-                  if (j_fks.le.nincoming) then
-                     foundB(1)=.true.
-                     nFKSprocessBorn(1)=nFKSprocess
-                  else
-                     foundB(2)=.true.
-                     nFKSprocessBorn(2)=nFKSprocess
-                  endif
-               endif
-            endif
-         enddo
-         write (*,*) 'Total number of FKS directories is', fks_configs
-c For sum over identical FKS pairs, need to find the identical structures
-         if (sum.eq.3) then
-c MC over FKS pairs that have soft singularity
-            proc_map(0,0)=0
-            do i=1,fks_configs
-               proc_map(i,0)=0
-               i_fks_pdg_proc(i)=0
-               j_fks_pdg_proc(i)=0
-               j_fks_proc(i)=0
-            enddo
-c First find all the nFKSprocesses that have a soft singularity and put
-c them in the process map
-            do nFKSprocess=1,fks_configs
-               call fks_inc_chooser()
-               if (PDG_type(i_fks).eq.21) then
-                  proc_map(0,0)=proc_map(0,0)+1
-                  proc_map(proc_map(0,0),0)=proc_map(proc_map(0,0),0)+1
-                  proc_map(proc_map(0,0),proc_map(proc_map(0,0),0))
-     $                 =nFKSprocess
-                  i_fks_pdg_proc(proc_map(0,0))=PDG_type(i_fks)
-                  j_fks_pdg_proc(proc_map(0,0))=PDG_type(j_fks)
-                  j_fks_proc(proc_map(0,0))=j_fks
-               endif
-            enddo
-c Check to make sure that there is at most two initial and one final
-c state all gluon
-            found_ini1=.false.
-            found_ini2=.false.
-            found_fnl=.false.
-            do i=1,proc_map(0,0)
-               if (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.1
-     $              .and. .not.found_ini1) then
-                  found_ini1=.true.
-               elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.1
-     $                 .and. found_ini1) then
-                  write (*,*)'Initial state 1 g->gg already'/
-     $                 /' found in driver_mintMC'
-                  write (*,*) i_fks_pdg_proc
-                  write (*,*) j_fks_pdg_proc
-                  write (*,*) j_fks_proc
-                  stop
-               elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.2
-     $                 .and. .not.found_ini2) then
-                  found_ini2=.true.
-               elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.2
-     $                 .and. found_ini2) then
-                  write (*,*)'Initial state 2 g->gg already'/
-     $                 /' found in driver_mintMC'
-                  write (*,*) i_fks_pdg_proc
-                  write (*,*) j_fks_pdg_proc
-                  write (*,*) j_fks_proc
-                  stop
-               elseif (i_fks_pdg_proc(i).eq.21 .and.
-     $                 j_fks_pdg_proc(i).eq.21 .and.
-     $                 j_fks_proc(i).gt.nincoming .and. .not.found_fnl)
-     $                 then
-                  found_fnl=.true.
-               elseif (i_fks_pdg_proc(i).eq.21 .and.
-     $                 j_fks_pdg_proc(i).eq.21 .and.
-     $                 j_fks_proc(i).gt.nincoming .and. found_fnl) then
-                  write (*,*)
-     &              'Final state g->gg already found in driver_mintMC'
-                  write (*,*) i_fks_pdg_proc
-                  write (*,*) j_fks_pdg_proc
-                  write (*,*) j_fks_proc
-                  stop
-               endif
-            enddo
-c Loop again, and identify the nFKSprocesses that do not have a soft
-c singularity and put them together with the corresponding gluon to
-c gluons splitting
-            do nFKSprocess=1,fks_configs
-               call fks_inc_chooser()
-               if (PDG_type(i_fks).ne.21) then
-                  if (j_fks.eq.1 .and. found_ini1) then
-                     do i=1,proc_map(0,0)
-                        if (i_fks_pdg_proc(i).eq.21 .and.
-     $                       j_fks_proc(i).eq.1) then
-                           proc_map(i,0)=proc_map(i,0)+1
-                           proc_map(i,proc_map(i,0))=nFKSprocess
-                           exit
-                        endif
-                     enddo
-                  elseif (j_fks.eq.2 .and. found_ini2) then
-                     do i=1,proc_map(0,0)
-                        if (i_fks_pdg_proc(i).eq.21 .and.
-     $                       j_fks_proc(i).eq.2) then
-                           proc_map(i,0)=proc_map(i,0)+1
-                           proc_map(i,proc_map(i,0))=nFKSprocess
-                           exit
-                        endif
-                     enddo
-                  elseif (j_fks.gt.nincoming .and. found_fnl) then
-                     do i=1,proc_map(0,0)
-                        if (i_fks_pdg_proc(i).eq.21 .and.
-     $                       j_fks_pdg_proc(i).eq.21.and.
-     $                       j_fks_proc(i).gt.nincoming) then
-                           proc_map(i,0)=proc_map(i,0)+1
-                           proc_map(i,proc_map(i,0))=nFKSprocess
-                           exit
-                        endif
-                     enddo
-                  else
-                     write (*,*) 'Driver_mintMC: inconsistent process'
-                     write (*,*) 'This process has nFKSprocesses'/
-     $                    /' without soft singularities, but not a'/
-     $                    /' corresponding g->gg splitting that has a'/
-     $                    /' soft singularity.',found_ini1,found_ini2
-     $                    ,found_fnl
-                     do i=1,proc_map(0,0)
-                        write (*,*) i,'-->',proc_map(i,0),':',
-     &                       (proc_map(i,j),j=1,proc_map(i,0))
-                     enddo
-                     stop
-                  endif
-               endif
-            enddo
-         elseif (sum.eq.0 .and. ickkw.eq.4) then
-c MC over FKS directories (1 FKS directory per nbody PS point)
-            proc_map(0,0)=fks_configs
-            do i=1,fks_configs
-               proc_map(i,0)=1
-               proc_map(i,1)=i
-            enddo
-         else
-            write (*,*) 'sum not known in driver_mintMC.f',sum
-            stop
-         endif
-         write (*,*) 'FKS process map (sum=',sum,') :'
-         do i=1,proc_map(0,0)
-            write (*,*) i,'-->',proc_map(i,0),':',
-     &           (proc_map(i,j),j=1,proc_map(i,0))
-         enddo
+c Determines the proc_map that sets which FKS configuration can be
+c summed explicitly and which by MC-ing.
+         call setup_proc_map(sum,proc_map)
 c For the S-events, we can combine processes when they give identical
 c processes at the Born. Make sure we check that we get indeed identical
 c IRPOC's
          call find_iproc_map()
-c
 c For FxFx or UNLOPS matching with pythia8, set the correct attributes
 c for the <event> tag in the LHEF file. "npNLO" are the number of Born
 c partons in this multiplicity when running the code at NLO accuracy
 c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
 c "npNLO".
-         if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIGPP') .and.
-     $        (ickkw.eq.3.or.ickkw.eq.4))then
-            nattr=2
-            nFKSprocess=1 ! just pick the first nFKSprocess
-            call fks_inc_chooser()
-            call leshouche_inc_chooser()
-            npNLO=0
-            npLO=-1
-            do i=nincoming+1,nexternal
-c include all quarks (except top quark) and the gluon.
-               if(abs(idup(i,1)).le.5 .or. idup(i,1).eq.21)
-     &              npNLO=npNLO+1
-            enddo
-            npNLO=npNLO-1
-            if (npNLO.gt.99) then
-               write (*,*) 'Too many partons',npNLO
-               stop
-            endif
-            if (abrv.eq.'born') then
-               npLO=npNLO
-               npNLO=-1
-            endif
-         endif
+         call setup_event_attributes
       endif
 
       fold=ifl
       if (ifl.eq.0) then
-         do k=1,maxproc_save
-            do j=1,3
-               do i=0,fks_configs
-                  unwgt_table(i,j,k)=0d0
-               enddo
-            enddo
-         enddo
-         f1(1)=0d0
-         f1(2)=0d0
+         icontr=0
+         sigintF=0d0
+         virt_wgt_mint=0d0
+         born_wgt_mint=0d0
          virtual_over_born=0d0
-         do i=0,fks_configs
-            result(i,1)=0d0
-            result(i,2)=0d0
-         enddo
-         dsigS=0d0
-         dsigH=0d0
-         do i=1,nintegrals
-            f(i)=0d0
-         enddo
-      endif
+         if (ickkw.eq.3) call set_FxFx_scale(-1,p)
+         call update_vegas_x(xx,x)
 
-      if (ifl.eq.0)then
-         do i=1,nintegrals
-            double_check(i)=0d0
-         enddo
-         do i=1,99
-            if (abrv.eq.'grid'.or.abrv.eq.'born')
-     &           then
-               if(i.le.ndim-3)then
-                  x(i)=xx(i)
-               elseif(i.le.ndim) then
-                  x(i)=ran2()   ! Choose them flat when not including real-emision
-               else
-                  x(i)=0.d0
-               endif
-            else
-               if(i.le.ndim)then
-                  x(i)=xx(i)
-               else
-                  x(i)=0.d0
-               endif
-            endif
-         enddo
-c
-c Compute the Born-like contributions with nbody=.true.
-c     
+c$$$      fold=ifl
+c$$$      if (ifl.eq.0) then
+c$$$         do k=1,maxproc_save
+c$$$            do j=1,3
+c$$$               do i=0,fks_configs
+c$$$                  unwgt_table(i,j,k)=0d0
+c$$$               enddo
+c$$$            enddo
+c$$$         enddo
+c$$$         f1(1)=0d0
+c$$$         f1(2)=0d0
+c$$$         virtual_over_born=0d0
+c$$$         do i=0,fks_configs
+c$$$            result(i,1)=0d0
+c$$$            result(i,2)=0d0
+c$$$         enddo
+c$$$         dsigS=0d0
+c$$$         dsigH=0d0
+c$$$         do i=1,nintegrals
+c$$$            f(i)=0d0
+c$$$         enddo
+c$$$      endif
+
+c$$$         do i=1,nintegrals
+c$$$            double_check(i)=0d0
+c$$$         enddo
+
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-c Pick the first one because that's the one with the soft singularity.
-         nFKSprocess=proc_map(proc_map(0,1),1)
-         nFKSprocess_all=nFKSprocess
-         call fks_inc_chooser()
+
+
+c The nbody contributions
+         if (abrv.eq.'real') goto 11
+         nbody=.true.
+         calculatedBorn=.false.
+c Pick the first one because that's the one with the soft singularity
+         nFKS_picked=proc_map(proc_map(0,1),1)
          if (sum.eq.0) then
 c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
-            if (j_fks.le.nincoming) then
-               if (.not.foundB(1)) then
-                  write(*,*) 'Trying to generate Born momenta with '/
-     &                 /'initial state j_fks, but there is no '/
-     &                 /'configuration with i_fks a gluon and j_fks '/
-     &                 /'initial state'
-                  stop
-               endif
-               nFKSprocess=nFKSprocessBorn(1)
-            else
-               if (.not.foundB(2)) then
-                  write(*,*) 'Trying to generate Born momenta with '/
-     &              /'final state j_fks, but there is no configuration'/
-     &              /' with i_fks a gluon and j_fks final state'
-                  stop
-               endif
-               nFKSprocess=nFKSprocessBorn(2)
+            nFKS_in=nFKS_picked
+            call get_born_nFKSprocess(nFKS_in,nFKS_out)
+            nFKS_picked=nFKS_out
+         endif
+         call update_fks_dir(nFKS_picked,iconfig)
+         jac=1d0
+         call generate_momenta(ndim,iconfig,jac,x,p)
+
+c$$$         call dsigF(p,wgt,w,dsigS,dsigH)
+c$$$         result(0,1)= w*dsigS
+c$$$         result(0,2)= w*dsigH
+c$$$         f1(1) = f1(1)+result(0,1)
+c$$$         f1(2) = f1(2)+result(0,2)
+
+         if (p_born(0,1).lt.0d0) goto 12
+         call compute_prefactors_nbody(vegas_wgt)
+         call set_cms_stuff(izero)
+         passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         if (passcuts_nbody) then
+            if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
+            call set_alphaS(p1_cnt(0,1,0))
+            if (abrv(1:2).ne.'vi') then
+               call compute_born
             endif
-c$$$            if (abs(particle_type(i_fks)).eq.3) then
-c$$$               do nFKSprocess=1,fks_configs
-c$$$                  if ( j_fks.eq.fks_j_D(nFKSprocess) .and.
-c$$$     $                 particle_type_D(nFKSprocess
-c$$$     $                 ,fks_i_D(nFKSprocess)).eq.8) exit
-c$$$               enddo
-c$$$            endif
-c$$$            if (nFKSprocess.gt.fks_configs) then
-c$$$               write (*,*) 'Trying the generate Born momenta, '/
-c$$$     $              /'but no FKS dir with soft singularity found'
-c$$$     $              ,nFKSprocess ,i_fks,j_fks
-c$$$               stop
-c$$$            endif
+            if (abrv.ne.'born') then
+               call compute_nbody_noborn
+            endif
          endif
-         nbody=.true.
-         fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
-         nFKSprocess_used=nFKSprocess
-         nFKSprocess_used_Born=nFKSprocess
-         call fks_inc_chooser()
-         call leshouche_inc_chooser()
-c THIS CAN BE OPTIMIZED
-         call setcuts
-         call setfksfactor(iconfig)
-         wgt=1d0
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         call dsigF(p,wgt,w,dsigS,dsigH)
-         result(0,1)= w*dsigS
-         result(0,2)= w*dsigH
-         f1(1) = f1(1)+result(0,1)
-         f1(2) = f1(2)+result(0,2)
-         if (mc_hel.ne.0 .and. fillh) then
-c Fill the importance sampling array
-            call fill_MC_integer(2,ihel,(abs(f1(1))+abs(f1(2)))*volh)
-         endif
+
+ 11      continue
+c The n+1-body contributions (including counter terms)
+         if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
+
 c Set calculated Born to zero to prevent numerical inaccuracies: not
 c always exactly the same momenta in computation of Born when computed
 c for different nFKSprocess.
          if(sum.eq.0) calculatedBorn=.false.
-c
-c Compute the subtracted real-emission corrections either as an explicit
-c sum or a Monte Carlo sum or a combination
-c      
-         if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &        abrv(1:2).eq.'vi') ) then
-            nbody=.false.
-            if (sum.eq.1 .or. sum.eq.2) then
-               write (*,*) 'This option # 1322 has not been implemented'
-     $              ,sum
-               stop
-            endif
-            sigintR=0d0
-            do i=1,proc_map(proc_map(0,1),0)
-               nFKSprocess=proc_map(proc_map(0,1),i)
-               nFKSprocess_used=nFKSprocess
-               call fks_inc_chooser()
-               call leshouche_inc_chooser()
-c THIS CAN BE OPTIMIZED
-               call setcuts
-               call setfksfactor(iconfig)
-               wgt=1d0/vol1
-c When sum=3, we can compute the nFKSprocesses without soft
-c singularities fewer number of PS points, because their contribution is
-c small. This should save some time, without degrading the uncertainty
-c much. Do this by overwrite the 'wgt' variable
-               if (sum.eq.3 .and. PDG_type(i_fks).ne.21) then
-                  rnd=ran2()
-                  rfract=1.0d0  ! fraction of PS points to include
-                                ! them. This could be determined
-                                ! dynamically, based on the relative
-                                ! importance of this contribution.
-                  if (rnd.gt.rfract) then
-                     wgt=0d0    ! fks_singular will not compute anything
-                  else
-                     wgt=wgt/rfract
-                  endif
+         nbody=.false.
+         sigintR=0d0
+         do i=1,proc_map(proc_map(0,1),0)
+            iFKS=proc_map(proc_map(0,1),i)
+            call update_fks_dir(iFKS,iconfig)
+            jac=1d0/vol1
+            probne=1d0
+            gfactsf=1.d0
+            gfactcl=1.d0
+c$$$c When sum=3, we can compute the nFKSprocesses without soft
+c$$$c singularities fewer number of PS points, because their contribution is
+c$$$c small. This should save some time, without degrading the uncertainty
+c$$$c much. Do this by overwrite the 'wgt' variable
+c$$$               if (sum.eq.3 .and. PDG_type(i_fks).ne.21) then
+c$$$                  rnd=ran2()
+c$$$                  rfract=1.0d0  ! fraction of PS points to include
+c$$$                                ! them. This could be determined
+c$$$                                ! dynamically, based on the relative
+c$$$                                ! importance of this contribution.
+c$$$                  if (rnd.gt.rfract) then
+c$$$                     wgt=0d0    ! fks_singular will not compute anything
+c$$$                  else
+c$$$                     wgt=wgt/rfract
+c$$$                  endif
+c$$$               endif
+            call generate_momenta(ndim,iconfig,jac,x,p)
+c$$$            call dsigF(p,wgt,w,dsigS,dsigH)
+c$$$            sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*w
+c$$$            result(nFKSprocess,1)= w*dsigS
+c$$$            result(nFKSprocess,2)= w*dsigH
+c$$$            f1(1) = f1(1)+result(nFKSprocess,1)
+c$$$            f1(2) = f1(2)+result(nFKSprocess,2)
+            if (p_born(0,1).lt.0d0) cycle
+            call compute_prefactors_n1body(vegas_wgt,jac)
+            call set_cms_stuff(izero)
+            passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
+            call set_cms_stuff(mohdr)
+            passcuts_n1body=passcuts(p,rwgt)
+            if (passcuts_nbody .and. abrv.ne.'real') then
+               call set_cms_stuff(izero)
+               if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
+               if (ickkw.ne.4) then
+                  call set_cms_stuff(mohdr)
+                  call set_alphaS(p)
+                  call compute_MC_subtr_term(p,gfactsf,gfactcl,probne)
+                  call set_cms_stuff(izero)
+               else
+c For UNLOPS all real-emission contributions need to be added to the
+c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
+c events are called, so this will remain 0.
+                  probne=0d0
                endif
-               call generate_momenta(ndim,iconfig,wgt,x,p)
-               call dsigF(p,wgt,w,dsigS,dsigH)
-               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*w
-               result(nFKSprocess,1)= w*dsigS
-               result(nFKSprocess,2)= w*dsigH
-               f1(1) = f1(1)+result(nFKSprocess,1)
-               f1(2) = f1(2)+result(nFKSprocess,2)
-            enddo
-            call fill_MC_integer(1,proc_map(0,1),sigintR)
-         endif
+               call set_alphaS(p1_cnt(0,1,0))
+               replace_MC_subt=(1d0-gfactsf)*probne
+               call compute_soft_counter_term(replace_MC_subt)
+               call set_cms_stuff(ione)
+               replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+               call compute_collinear_counter_term(replace_MC_subt)
+               call set_cms_stuff(itwo)
+               replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+               call compute_soft_collinear_counter_term(replace_MC_subt)
+            endif
+            if (passcuts_n1body) then
+               call set_cms_stuff(mohdr)
+               if (ickkw.eq.3) call set_FxFx_scale(mohdr,p)
+               call set_alphaS(p)
+               sudakov_damp=probne
+               call compute_real_emission(p,sudakov_damp)
+            endif
+         enddo
+         call fill_MC_integer(1,proc_map(0,1),sigintR)
+ 12      continue
+
          f(2)=f1(1)+f1(2)
          sigintF=f(2)
          unwgt=.false.
@@ -1737,6 +1560,344 @@ c you find one (and the return statement above is found).
                return
             endif
          endif
+      endif
+      return
+      end
+
+
+
+
+
+
+
+
+
+
+
+
+
+      subroutine setup_proc_map(sum,proc_map)
+c Determines the proc_map that sets which FKS configuration can be
+c summed explicitly and which by MC-ing.
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      include 'reweight_all.inc'
+      include 'nFKSconfigs.inc'
+      double precision lum,dlum
+      external dlum
+      logical found_ini1,found_ini2,found_fnl
+      integer proc_map(0:fks_configs,0:fks_configs)
+     $     ,j_fks_proc(fks_configs),i_fks_pdg_proc(fks_configs)
+     $     ,j_fks_pdg_proc(fks_configs),i
+      integer sum
+      data    sum /3/
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      if (ickkw.eq.4) then
+         sum=0
+         write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
+     $        /' Born PS point (sum=0)'
+      endif
+      maxproc_save=0
+      do nFKSprocess=1,fks_configs
+         call fks_inc_chooser()
+c Set Bjorken x's to some random value before calling the dlum() function
+         xbk(1)=0.5d0
+         xbk(2)=0.5d0
+         lum=dlum()  ! updates IPROC
+         maxproc_save=max(maxproc_save,IPROC)
+         if (doreweight) then
+            call reweight_settozero()
+            call reweight_settozero_all(nFKSprocess*2,.true.)
+            call reweight_settozero_all(nFKSprocess*2-1,.true.)
+         endif
+      enddo
+      write (*,*) 'Total number of FKS directories is', fks_configs
+c For sum over identical FKS pairs, need to find the identical structures
+      if (sum.eq.3) then
+c MC over FKS pairs that have soft singularity
+         proc_map(0,0)=0
+         do i=1,fks_configs
+            proc_map(i,0)=0
+            i_fks_pdg_proc(i)=0
+            j_fks_pdg_proc(i)=0
+            j_fks_proc(i)=0
+         enddo
+c First find all the nFKSprocesses that have a soft singularity and put
+c them in the process map
+         do nFKSprocess=1,fks_configs
+            call fks_inc_chooser()
+            if (PDG_type(i_fks).eq.21) then
+               proc_map(0,0)=proc_map(0,0)+1
+               proc_map(proc_map(0,0),0)=proc_map(proc_map(0,0),0)+1
+               proc_map(proc_map(0,0),proc_map(proc_map(0,0),0))
+     $              =nFKSprocess
+               i_fks_pdg_proc(proc_map(0,0))=PDG_type(i_fks)
+               j_fks_pdg_proc(proc_map(0,0))=PDG_type(j_fks)
+               j_fks_proc(proc_map(0,0))=j_fks
+            endif
+         enddo
+c Check to make sure that there is at most two initial and one final
+c state all gluon
+         found_ini1=.false.
+         found_ini2=.false.
+         found_fnl=.false.
+         do i=1,proc_map(0,0)
+            if (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.1 .and.
+     $           .not.found_ini1) then
+               found_ini1=.true.
+            elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.1
+     $              .and. found_ini1) then
+               write (*,*)'Initial state 1 g->gg already'/
+     $              /' found in driver_mintMC'
+               write (*,*) i_fks_pdg_proc
+               write (*,*) j_fks_pdg_proc
+               write (*,*) j_fks_proc
+               stop
+            elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.2
+     $              .and. .not.found_ini2) then
+               found_ini2=.true.
+            elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.2
+     $              .and. found_ini2) then
+               write (*,*)'Initial state 2 g->gg already'/
+     $              /' found in driver_mintMC'
+               write (*,*) i_fks_pdg_proc
+               write (*,*) j_fks_pdg_proc
+               write (*,*) j_fks_proc
+               stop
+            elseif (i_fks_pdg_proc(i).eq.21 .and.
+     $              j_fks_pdg_proc(i).eq.21 .and.
+     $              j_fks_proc(i).gt.nincoming .and. .not.found_fnl)
+     $              then
+               found_fnl=.true.
+            elseif (i_fks_pdg_proc(i).eq.21 .and.
+     $              j_fks_pdg_proc(i).eq.21 .and.
+     $              j_fks_proc(i).gt.nincoming .and. found_fnl) then
+               write (*,*)
+     &              'Final state g->gg already found in driver_mintMC'
+               write (*,*) i_fks_pdg_proc
+               write (*,*) j_fks_pdg_proc
+               write (*,*) j_fks_proc
+               stop
+            endif
+         enddo
+c Loop again, and identify the nFKSprocesses that do not have a soft
+c singularity and put them together with the corresponding gluon to
+c gluons splitting
+         do nFKSprocess=1,fks_configs
+            call fks_inc_chooser()
+            if (PDG_type(i_fks).ne.21) then
+               if (j_fks.eq.1 .and. found_ini1) then
+                  do i=1,proc_map(0,0)
+                     if (i_fks_pdg_proc(i).eq.21 .and.
+     $                    j_fks_proc(i).eq.1) then
+                        proc_map(i,0)=proc_map(i,0)+1
+                        proc_map(i,proc_map(i,0))=nFKSprocess
+                        exit
+                     endif
+                  enddo
+               elseif (j_fks.eq.2 .and. found_ini2) then
+                  do i=1,proc_map(0,0)
+                     if (i_fks_pdg_proc(i).eq.21 .and.
+     $                    j_fks_proc(i).eq.2) then
+                        proc_map(i,0)=proc_map(i,0)+1
+                        proc_map(i,proc_map(i,0))=nFKSprocess
+                        exit
+                     endif
+                  enddo
+               elseif (j_fks.gt.nincoming .and. found_fnl) then
+                  do i=1,proc_map(0,0)
+                     if (i_fks_pdg_proc(i).eq.21 .and.
+     $                    j_fks_pdg_proc(i).eq.21.and.
+     $                    j_fks_proc(i).gt.nincoming) then
+                        proc_map(i,0)=proc_map(i,0)+1
+                        proc_map(i,proc_map(i,0))=nFKSprocess
+                        exit
+                     endif
+                  enddo
+               else
+                  write (*,*) 'Driver_mintMC: inconsistent process'
+                  write (*,*) 'This process has nFKSprocesses'/
+     $                 /' without soft singularities, but not a'/
+     $                 /' corresponding g->gg splitting that has a'/
+     $                 /' soft singularity.',found_ini1,found_ini2
+     $                 ,found_fnl
+                  do i=1,proc_map(0,0)
+                     write (*,*) i,'-->',proc_map(i,0),':',
+     &                    (proc_map(i,j),j=1,proc_map(i,0))
+                  enddo
+                  stop
+               endif
+            endif
+         enddo
+      elseif (sum.eq.0 .and. ickkw.eq.4) then
+c MC over FKS directories (1 FKS directory per nbody PS point)
+         proc_map(0,0)=fks_configs
+         do i=1,fks_configs
+            proc_map(i,0)=1
+            proc_map(i,1)=i
+         enddo
+      else
+         write (*,*) 'sum not known in driver_mintMC.f',sum
+         stop
+      endif
+      write (*,*) 'FKS process map (sum=',sum,') :'
+      do i=1,proc_map(0,0)
+         write (*,*) i,'-->',proc_map(i,0),':',
+     &        (proc_map(i,j),j=1,proc_map(i,0))
+      enddo
+      return
+      end
+c
+
+
+      subroutine setup_event_attributes
+c For FxFx or UNLOPS matching with pythia8, set the correct attributes
+c for the <event> tag in the LHEF file. "npNLO" are the number of Born
+c partons in this multiplicity when running the code at NLO accuracy
+c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
+c "npNLO".
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      integer nattr,npNLO,npLO
+      common/event_attributes/nattr,npNLO,npLO
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      integer    maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+      common /c_leshouche_inc/idup,mothup,icolup
+      if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIGPP') .and.
+     $     (ickkw.eq.3.or.ickkw.eq.4))then
+         nattr=2
+         nFKSprocess=1          ! just pick one
+         call fks_inc_chooser()
+         call leshouche_inc_chooser()
+         npNLO=0
+         npLO=-1
+         do i=nincoming+1,nexternal
+c     include all quarks (except top quark) and the gluon.
+            if(abs(idup(i,1)).le.5 .or. idup(i,1).eq.21)
+     &           npNLO=npNLO+1
+         enddo
+         npNLO=npNLO-1
+         if (npNLO.gt.99) then
+            write (*,*) 'Too many partons',npNLO
+            stop
+         endif
+         if (abrv.eq.'born') then
+            npLO=npNLO
+            npNLO=-1
+         endif
+      else
+         nattr=0
+      endif
+      return
+      end
+
+
+      subroutine update_fks_dir(nFKS,iconfig)
+      implicit none
+      integer nFKS,iconfig
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      nFKSprocess=nFKS
+      call fks_inc_chooser()
+      call leshouche_inc_chooser()
+      call setcuts
+      call setfksfactor(iconfig)
+      return
+      end
+
+      subroutine update_vegas_x(xx,x)
+      implicit none
+      include 'mint.inc'
+      integer i
+      double precision xx(ndimmax),x(99),ran2
+      external ran2
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
+      character*4 abrv
+      common /to_abrv/ abrv
+      do i=1,99
+         if (abrv.eq.'born') then
+            if(i.le.ndim-3)then
+               x(i)=xx(i)
+            elseif(i.le.ndim) then
+               x(i)=ran2()      ! Choose them flat when not including real-emision
+            else
+               x(i)=0.d0
+            endif
+         else
+            if(i.le.ndim)then
+               x(i)=xx(i)
+            else
+               x(i)=0.d0
+            endif
+         endif
+      enddo
+      return
+      end
+
+
+
+      subroutine get_born_nFKSprocess(nFKS_in,nFKS_out)
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      integer nFKS_in,nFKS_out,iFKS,nFKSprocessBorn(2)
+      logical firsttime,foundB(2)
+      data firsttime /.true./
+      save nFKSprocessBorn,foundB
+      if (firsttime) then
+         firsttime=.false.
+         foundB(1)=.false.
+         foundB(2)=.false.
+         do iFKS=1,fks_configs
+            if (particle_type_D(iFKS,fks_i_D(iFKS)).eq.8) then
+               if (fks_j_D(iFKS).le.nincoming) then
+                  foundB(1)=.true.
+                  nFKSprocessBorn(1)=iFKS
+               else
+                  foundB(2)=.true.
+                  nFKSprocessBorn(2)=iFKS
+               endif
+            endif
+         enddo
+         write (*,*) 'Total number of FKS directories is', fks_configs
+         write (*,*) 'For the Born we use nFKSprocesses  #',
+     $        nFKSprocessBorn
+      endif
+      if (fks_j_D(nFKS_in).le.nincoming) then
+         if (.not.foundB(1)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'initial state j_fks, but there is no '/
+     &           /'configuration with i_fks a gluon and j_fks '/
+     &           /'initial state'
+            stop 1
+         endif
+         nFKS_out=nFKSprocessBorn(1)
+      else
+         if (.not.foundB(2)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'final state j_fks, but there is no configuration'/
+     &           /' with i_fks a gluon and j_fks final state'
+            stop 1
+         endif
+         nFKS_out=nFKSprocessBorn(2)
       endif
       return
       end

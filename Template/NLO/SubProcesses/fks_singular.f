@@ -76,7 +76,7 @@ c and not be part of the plots nor computation of the cross section.
       return
       end
 
-      subroutine compute_real_emission(p)
+      subroutine compute_real_emission(p,sudakov_damp)
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
       implicit none
@@ -85,7 +85,7 @@ c its value to the list of weights using the add_wgt subroutine
       include 'reweight0.inc'
       include 'timing_variables.inc'
       double precision x,dot,f_damp,ffact,s_ev,fks_Sij,p(0:3,nexternal)
-     $     ,wgt1,fx_ev
+     $     ,wgt1,fx_ev,sudakov_damp
       external dot,f_damp,fks_Sij
       double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
@@ -105,13 +105,18 @@ c its value to the list of weights using the add_wgt subroutine
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
       wgt1=fx_ev*s_ev*f_r/g**(nint(2*wgtbpower+2))
-      call add_wgt(1,wgt1,0d0,0d0)
+      if (sudakov_damp.gt.0d0) then
+         call add_wgt(1,wgt1*sudakov_damp,0d0,0d0)
+      endif
+      if (sudakov_damp.lt.1d0) then
+         call add_wgt(11,wgt1*(1d0-sudakov_damp),0d0,0d0)
+      endif
       call cpu_time(tAfter)
       tReal=tReal+(tAfter-tBefore)
       return
       end
 
-      subroutine compute_soft_counter_term
+      subroutine compute_soft_counter_term(replace_MC_subt)
 c This subroutine computes the soft counter term and adds its value to
 c the list of weights using the add_wgt subroutine
       implicit none
@@ -119,7 +124,7 @@ c the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'reweight0.inc'
       include 'timing_variables.inc'
-      double precision wgt1,s_s,fks_Sij,fx_s,zero
+      double precision wgt1,s_s,fks_Sij,fx_s,zero,replace_MC_subt
       parameter (zero=0d0)
       external fks_Sij
       double precision     p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -135,19 +140,28 @@ c the list of weights using the add_wgt subroutine
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       call cpu_time(tBefore)
-      if (f_s.eq.0d0) return
-      if (xi_i_fks_ev .gt. xiScut_used) return
+      if (f_s.eq.0d0 .and. f_s_MC.eq.0d0) return
+      if (xi_i_fks_ev.gt.xiScut_used .and. replace_MC_subt.eq.0d0)
+     $     return
       s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
       if (s_s.le.0d0) return
       call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s)
-      wgt1=-fx_s*s_s*f_s/g**(nint(2*wgtbpower+2))
-      call add_wgt(4,wgt1,0d0,0d0)
+      if (replace_MC_subt.gt.0d0) then
+         wgt1=fx_s*s_s*f_s_MC/g22*replace_MC_subt
+         call add_wgt(8,-wgt1,0d0,0d0)
+      else
+         wgt1=0d0
+      endif
+      if (xi_i_fks_ev.le.xiScut_used) then
+         wgt1=wgt1-fx_s*s_s*f_s/g**(nint(2*wgtbpower+2))
+      endif
+      if (wgt1.ne.0d0) call add_wgt(4,wgt1,0d0,0d0)
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
       return
       end
 
-      subroutine compute_collinear_counter_term
+      subroutine compute_collinear_counter_term(replace_MC_subt)
 c This subroutine computes the collinear counter term and adds its value
 c to the list of weights using the add_wgt subroutine
       implicit none
@@ -157,7 +171,7 @@ c to the list of weights using the add_wgt subroutine
       include 'reweight.inc'
       include 'timing_variables.inc'
       double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi_c,wgt1
-     &     ,wgt3,g22
+     &     ,wgt3,g22,replace_MC_subt
       external fks_Sij
       parameter (zero=0d0,one=1d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -175,25 +189,34 @@ c to the list of weights using the add_wgt subroutine
       double precision pmass(nexternal)
       call cpu_time(tBefore)
       include 'pmass.inc'
-      if (f_c.eq.0d0 .and. f_dc.eq.0d0)return
-      if (y_ij_fks_ev.le.1d0-deltaS .or. pmass(j_fks).ne.0.d0) return
+      if (f_c.eq.0d0 .and. f_dc.eq.0d0 .and. f_c_MC.eq.0d0)return
+      if ( (y_ij_fks_ev.le.1d0-deltaS .and. replace_MC_subt.eq.0d0) .or.
+     $     pmass(j_fks).ne.0.d0 ) return
       s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(1),one)
       if (s_c.le.0d0) return
       g22=g**(nint(2*wgtbpower+2))
       call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c)
-      wgt1=-fx_c*s_c*f_c/g22
-      call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
-     $     ,deg_lxi_c)
-      wgt1=wgt1+ ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)) )*
-     $     f_dc/g22
-      wgt3=wgtdegrem_muF*f_dc/g22
-      call add_wgt(5,wgt1,0d0,wgt3)
+      if (replace_MC_subt.gt.0d0) then
+         wgt1=fx_c*s_c*f_c_MC/g22*replace_MC_subt
+         call add_wgt(9,-wgt1,0d0,0d0)
+      else
+         wgt1=0d0
+      endif
+      if (y_ij_fks_ev.gt.1d0-deltaS) then
+         wgt1=wgt1-fx_c*s_c*f_c/g22
+         call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
+     $        ,deg_lxi_c)
+         wgt1=wgt1+ ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)) )*
+     $        f_dc/g22
+         wgt3=wgtdegrem_muF*f_dc/g22
+      endif
+      if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,wgt1,0d0,wgt3)
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
       return
       end
 
-      subroutine compute_soft_collinear_counter_term
+      subroutine compute_soft_collinear_counter_term(replace_MC_subt)
 c This subroutine computes the soft-collinear counter term and adds its
 c value to the list of weights using the add_wgt subroutine
       implicit none
@@ -203,7 +226,7 @@ c value to the list of weights using the add_wgt subroutine
       include 'fks_powers.inc'
       include 'timing_variables.inc'
       double precision zero,one,s_sc,fks_Sij,fx_sc,wgt1,wgt3,deg_xi_sc
-     $     ,deg_lxi_sc,g22
+     $     ,deg_lxi_sc,g22,replace_MC_subt
       external fks_Sij
       parameter (zero=0d0,one=1d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -224,23 +247,109 @@ c value to the list of weights using the add_wgt subroutine
       include 'pmass.inc'
       call cpu_time(tBefore)
       if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
-     $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0) return
-      if (xi_i_fks_cnt(1).ge.xiScut_used .or. y_ij_fks_ev.le.1d0-deltaS
-     $     .or. pmass(j_fks).ne.0.d0 ) return
+     $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0 .and. f_sc_MC.eq.0d0)
+     $     return
+      if ( ((xi_i_fks_cnt(1).ge.xiScut_used .or. y_ij_fks_ev.le.1d0
+     $     -deltaS) .and. replace_MC_subt.eq.0d0).or.
+     $     pmass(j_fks).ne.0.d0 ) return
       s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
       if (s_sc.le.0d0) return
       g22=g**(nint(2*wgtbpower+2))
       call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
-      wgt1=fx_sc*s_sc*f_sc/g22
-      call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
-      wgt1=wgt1+(-(wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)))
-     &     *f_dsc(1)-(wgtdegrem_xi*f_dsc(2)+wgtdegrem_lxi*f_dsc(3)))/g22
-      wgt3=-wgtdegrem_muF*f_dsc(4)/g22
-      call add_wgt(6,wgt1,0d0,wgt3)
+      if (replace_MC_subt.gt.0d0) then
+         wgt1=-fx_sc*s_sc*f_sc_MC/g22*replace_MC_subt
+         call add_wgt(10,-wgt1,0d0,0d0)
+      else
+         wgt1=0d0
+      endif
+      if (xi_i_fks_cnt(1).lt.xiScut_used .and. 
+     $     y_ij_fks_ev.gt.1d0-deltaS) then
+         wgt1=wgt1+fx_sc*s_sc*f_sc/g22
+         call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
+         wgt1=wgt1+(-(wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)))
+     $        *f_dsc(1)-(wgtdegrem_xi*f_dsc(2)+wgtdegrem_lxi*f_dsc(3)))
+     $        /g22
+         wgt3=-wgtdegrem_muF*f_dsc(4)/g22
+      endif
+      if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,wgt1,0d0,wgt3)
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
       return
       end
+
+
+      subroutine compute_MC_subt_term(p,gfactsf,gfactcl,probne)
+      implicit none
+c This subroutine computes the MonteCarlo subtraction terms and adds
+c their values to the list of weights using the add_wgt subroutine. It
+c returns the values for the gfactsf, gfactcl and probne to check if we
+c need to include the FKS subtraction terms as replacements in the soft
+c and collinear limits and the Sudakov damping for the real-emission,
+c respectively.
+      include 'nexternal.inc'
+      include 'madfks_mcatnlo.inc'
+      integer nofpartners,i
+      double precision p(0:3,nexternal),gfactsf,gfactcl,probne,x,dot
+     $     ,fks_Sij,f_damp,ffact,sevmc,dummy,zhw(nexternal)
+     $     ,xmcxsec(nexternal)
+      external dot,fks_Sij,f_damp
+      logical lzone(nexternal),flagmc,MCcntcalled
+      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision    xm12
+      integer                  ileg
+      common/cscaleminmax/xm12,ileg
+      integer           fks_j_from_i(nexternal,0:nexternal)
+     &                  ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      call cpu_time(tBefore)
+      if(UseSfun)then
+         x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
+         ffact = f_damp(x)
+         sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+         sevmc = sevmc*ffact
+      else
+         x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
+         ffact = f_damp(x)
+         sevmc = fks_Hij(p,i_fks,j_fks)
+         sevmc = sevmc*ffact
+      endif
+      if (sevmc.eq.0d0) return
+      call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
+     $             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
+      MCcntcalled=.true.
+      if(ileg.gt.4 .or. ileg.lt.1)then
+         write(*,*)'Error: unrecognized ileg in dsigF', ileg
+         stop
+      endif
+      if (flagmc) then
+         g22=g**(nint(2*wgtbpower+2))
+         do i=1,nofpartners
+            if(lzone(i))then
+               zhw_used=zhw(i)
+               call get_mc_lum_v2(j_fks,zhw_used,xi_i_fks_ev
+     $              ,xlum_mc_fact)
+               wgt1=sevmc*f_MC*xlum_mc_fact*xmcxsec(i)/g22
+               call add_wgt(12,wgt1,0d0,0d0)
+               call add_wgt(13,-wgt1,0d0,0d0)
+            endif
+         enddo
+      endif
+      if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
+     $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
+         write(*,*)'Error in dsigF: will diverge'
+         stop
+      endif
+      call cpu_time(tAfter)
+      t_MC_subt=t_MC_subt+(tAfter-tBefore)
+      return
+      end
+
 
       logical function pdg_equal(pdg1,pdg2)
 c Returns .true. if the lists of PDG codes --'pdg1' and 'pdg2'-- are
@@ -699,6 +808,12 @@ c     type=3 : soft-virtual
 c     type=4 : soft counter-term
 c     type=5 : collinear counter-term
 c     type=6 : soft-collinear counter-term
+c     type=8 : soft counter-term (with n+1-body kin.)
+c     type=9 : collinear counter-term (with n+1-body kin.)
+c     type=10: soft-collinear counter-term (with n+1-body kin.)
+c     type=11: real-emission (with n-body kin.)
+c     type=12: MC subtraction with n-body kin.
+c     type=13: MC subtraction with n+1-body kin.
 c     wgt1 : weight of the contribution not multiplying a scale log
 c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
@@ -4007,6 +4122,60 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
           xlum_mc = dlum()
           xlum_mc_fact = (1-xi_i_fks)/zhw_used
           xlum_mc = xlum_mc * xlum_mc_fact
+        endif
+      else
+        write(*,*)'Error in get_mc_lum: unknown j_fks',j_fks
+        stop
+      endif
+      if( xbk(1).le.0.d0.or.xbk(2).le.0.d0.or.
+     #    ( (xbk(1).gt.1.d0.or.xbk(2).gt.1.d0).and.
+     #      j_fks.gt.nincoming ) .or.
+     #    (xbk(2).gt.1.d0.and.j_fks.eq.1) .or.
+     #    (xbk(1).gt.1.d0.and.j_fks.eq.2) )then
+        write(*,*)'Error in get_mc_lum: x_i',xbk(1),xbk(2)
+        stop
+      endif
+      return
+      end
+
+
+      subroutine get_mc_lum_v2(j_fks,zhw_used,xi_i_fks,xlum_mc_fact)
+      implicit none
+      include "run.inc"
+      include "nexternal.inc"
+      integer j_fks
+      double precision dlum
+      external dlum
+      double precision zhw_used,xi_i_fks,xlum_mc_fact
+      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
+      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+      if(zhw_used.lt.0.d0.or.zhw_used.gt.1.d0)then
+        write(*,*)'Error #1 in get_mc_lum',zhw_used
+        stop
+      endif
+      if(j_fks.gt.nincoming)then
+        xbk(1)=xbjrk_cnt(1,0)
+        xbk(2)=xbjrk_cnt(2,0)
+        xlum_mc_fact=1.d0
+      elseif(j_fks.eq.1)then
+        xbk(1)=xbjrk_cnt(1,0)/zhw_used
+        xbk(2)=xbjrk_cnt(2,0)
+c Note that this is true for Pythia since, due to event projection and to
+c the definition of the shower variable x = zhw_used, the Bjorken x's for
+c the event (to be used in H events) are the ones for the counterevent
+c multiplied by 1/x (by 1) for the emitting (non emitting) leg 
+        if(xbk(1).gt.1.d0)then
+          xlum_mc_fact = 0.d0
+        else
+          xlum_mc_fact = (1-xi_i_fks)/zhw_used
+        endif
+      elseif(j_fks.eq.2)then
+        xbk(1)=xbjrk_cnt(1,0)
+        xbk(2)=xbjrk_cnt(2,0)/zhw_used
+        if(xbk(2).gt.1.d0)then
+          xlum_mc_fact = 0.d0
+        else
+          xlum_mc_fact = (1-xi_i_fks)/zhw_used
         endif
       else
         write(*,*)'Error in get_mc_lum: unknown j_fks',j_fks
