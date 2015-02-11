@@ -16,6 +16,17 @@ C     Process: g g > t t~ [ virt = QCD ]
 C     
       IMPLICIT NONE
 C     
+C     USER CUSTOMIZABLE OPTIONS
+C     
+C     This parameter is designed for the check timing command of MG5.
+C      It skips the loop reduction.
+      LOGICAL SKIPLOOPEVAL
+      PARAMETER (SKIPLOOPEVAL=.FALSE.)
+C     For timing checks. Stops the code after having only initialized
+C      its arrays from the external data files 
+      LOGICAL BOOTANDSTOP
+      PARAMETER (BOOTANDSTOP=.FALSE.)
+C     
 C     CONSTANTS
 C     
       CHARACTER*512 PARAMFNAME,HELCONFIGFNAME,LOOPFILTERFNAME
@@ -70,15 +81,9 @@ C     At present, there are only CutTools,PJFry++,IREGI,Golem95
 C     Only CutTools provides QP
       INTEGER QP_NLOOPLIB
       PARAMETER (QP_NLOOPLIB=1)
-C     This parameter is designed for the check timing command of MG5
-      LOGICAL SKIPLOOPEVAL
-      PARAMETER (SKIPLOOPEVAL=.FALSE.)
-      LOGICAL BOOTANDSTOP
-      PARAMETER (BOOTANDSTOP=.FALSE.)
       INTEGER MAXSTABILITYLENGTH
       DATA MAXSTABILITYLENGTH/20/
       COMMON/ML5_0_STABILITY_TESTS/MAXSTABILITYLENGTH
-
 
 C     
 C     ARGUMENTS 
@@ -138,9 +143,7 @@ C      I+20.
       LOGICAL EVAL_DONE(MAXSTABILITYLENGTH)
       LOGICAL DOING_QP_EVALS
       INTEGER STAB_INDEX,BASIC_CT_MODE
-      INTEGER N_DP_EVAL, N_QP_EVAL
-      DATA N_DP_EVAL/1/
-      DATA N_QP_EVAL/1/
+
 
       REAL*8 ACC(0:NSQUAREDSO)
       REAL*8 DP_RES(3,0:NSQUAREDSO,MAXSTABILITYLENGTH)
@@ -158,7 +161,6 @@ C      DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
       REAL*8 BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3
      $ ,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO)
       REAL*8 TEMP2
-
       COMPLEX*16 COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 CFTOT
       LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
@@ -167,6 +169,10 @@ C      DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
       LOGICAL LOOPFILTERBUFF(NSQUAREDSO,NLOOPGROUPS)
       DATA ((LOOPFILTERBUFF(J,I),J=1,NSQUAREDSO),I=1,NLOOPGROUPS)
      $ /NSQSOXNLG*.FALSE./
+
+      LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
+      DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
+      COMMON/ML5_0_RUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
 
       INTEGER IDEN
       DATA IDEN/256/
@@ -186,6 +192,7 @@ C      stability check to take place
 C     
 C     FUNCTIONS
 C     
+      INTEGER ML5_0_TIRCACHE_INDEX
       INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP
       INTEGER ML5_0_ML5SOINDEX_FOR_LOOP_AMP
       INTEGER ML5_0_ML5SQSOINDEX
@@ -199,9 +206,15 @@ C
       INCLUDE 'mp_coupl.inc'
       INCLUDE 'MadLoopParams.inc'
 
+
       LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
       DATA CHOSEN_SO_CONFIGS/.TRUE./
       COMMON/ML5_0_CHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
+
+      INTEGER N_DP_EVAL, N_QP_EVAL
+      DATA N_DP_EVAL/1/
+      DATA N_QP_EVAL/1/
+      COMMON/ML5_0_N_EVALS/N_DP_EVAL,N_QP_EVAL
 
       LOGICAL CHECKPHASE
       DATA CHECKPHASE/.TRUE./
@@ -219,13 +232,13 @@ C
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE
 C      AVAILABLE OR NOT
       LOGICAL LOOPLIBS_AVAILABLE(4)
-      DATA LOOPLIBS_AVAILABLE /.TRUE.,.FALSE.,.TRUE.,.FALSE./
+      DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.TRUE.,.TRUE./
       COMMON/ML5_0_LOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS
 C      AVAILABLE OR NOT IN THE LOOPLIBS
 C     PJFry++ and Golem95 do not support direction test
       LOGICAL LOOPLIBS_DIRECTEST(4)
-      DATA LOOPLIBS_DIRECTEST /.TRUE.,.FALSE.,.TRUE.,.FALSE./
+      DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE./
 
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
@@ -323,6 +336,7 @@ C     TILL NOW, ONLY CUTTOOLS PROVIDE QP
       COMMON/ML5_0_LCOEFS/LOOPCOEFS
 
 
+
       COMPLEX*16 AMPL(3,NCTAMPS)
       COMMON/ML5_0_AMPL/AMPL
 
@@ -366,54 +380,121 @@ C     BEGIN CODE
 C     ----------
 
       IF(ML_INIT) THEN
+        ML_INIT = .FALSE.
         CALL PRINT_MADLOOP_BANNER()
         TMP = 'auto'
         CALL SETMADLOOPPATH(TMP)
         CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
         CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
-        ML_INIT = .FALSE.
+
+C       Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero
+C        if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
+        IF(.NOT.AUTOMATIC_TIR_CACHE_CLEARING) THEN
+          IF(NROTATIONS_DP.NE.0.OR.NROTATIONS_QP.NE.0) THEN
+            WRITE(*,*) 'INFO: AUTOMATIC_TIR_CACHE_CLEARING is disable'
+     $       //'d, so MadLoop automatically resets NROTATIONS_DP an'
+     $       //'d NROTATIONS_QP to 0.'
+            NROTATIONS_QP=0
+            NROTATIONS_DP=0
+          ENDIF
+        ENDIF
+      ENDIF
+
+      QP_TOOLS_AVAILABLE=.FALSE.
+      INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
+C     SKIP THE ONES THAT NOT AVAILABLE
+      J=1
+      DO I=1,NLOOPLIB
+        IF(MLREDUCTIONLIB(J).EQ.0)EXIT
+        IF(.NOT.LOOPLIBS_AVAILABLE(MLREDUCTIONLIB(J)))THEN
+          MLREDUCTIONLIB(J:NLOOPLIB-1)=MLREDUCTIONLIB(J+1:NLOOPLIB)
+          MLREDUCTIONLIB(NLOOPLIB)=0
+        ELSE
+          J=J+1
+        ENDIF
+      ENDDO
+      IF(MLREDUCTIONLIB(1).EQ.0)THEN
+        STOP 'No available loop reduction lib is provided. Make sur'
+     $   //'e MLReductionLib is correct.'
+      ENDIF
+      J=0
+      DO I=1,NLOOPLIB
+        IF(MLREDUCTIONLIB(I).EQ.1)THEN
+          J=J+1
+          IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
+          INDEX_QP_TOOLS(J)=I
+        ENDIF
+      ENDDO
+
+C     Setup the file paths
+      CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+      CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
+      CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
+      CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
+      CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
+      CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
+      CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
+
+      CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
+
+      OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
+     $  ACTION='READ')
+      DO I=1,NCOLORROWS
+        READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
+      ENDDO
+      GOTO 105
+ 104  CONTINUE
+      STOP 'Color factors could not be initialized from file ML5_0_Col'
+     $ //'orNumFactors.dat. File not found'
+ 105  CONTINUE
+      CLOSE(1)
+      OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
+     $  ACTION='READ')
+      DO I=1,NCOLORROWS
+        READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
+      ENDDO
+      GOTO 107
+ 106  CONTINUE
+      STOP 'Color factors could not be initialized from file ML5_0_Col'
+     $ //'orDenomFactors.dat. File not found'
+ 107  CONTINUE
+      CLOSE(1)
+      OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',                
+     $   ACTION='READ')
+      DO H=1,NCOMB
+        READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
+      ENDDO
+      GOTO 109
+ 108  CONTINUE
+      STOP 'Color helictiy configurations could not be initialize'
+     $ //'d from file ML5_0_HelConfigs.dat. File not found'
+ 109  CONTINUE
+      CLOSE(1)
+
+C     SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
+C     IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
+      DO I=0,3
+        PL(I,0)=(0.0D0,0.0D0)
+      ENDDO
+      DO I=1,MAXLWFSIZE
+        DO J=0,LOOPMAXCOEFS-1
+          DO K=1,MAXLWFSIZE
+            IF(I.EQ.K.AND.J.EQ.0) THEN
+              WL(I,J,K,0)=(1.0D0,0.0D0)
+            ELSE
+              WL(I,J,K,0)=(0.0D0,0.0D0)
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+      IF(BOOTANDSTOP) THEN
+        WRITE(*,*) 'Stopped by user request.'
+        STOP
       ENDIF
 
       IF(NTRY.EQ.0) THEN
-C       CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
-        QP_TOOLS_AVAILABLE=.FALSE.
-        INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
-C       SKIP THE ONES THAT NOT AVAILABLE
-        J=1
-        DO I=1,NLOOPLIB
-          IF(MLREDUCTIONLIB(J).EQ.0)EXIT
-          IF(.NOT.LOOPLIBS_AVAILABLE(MLREDUCTIONLIB(J)))THEN
-            MLREDUCTIONLIB(J:NLOOPLIB-1)=MLREDUCTIONLIB(J+1:NLOOPLIB)
-            MLREDUCTIONLIB(NLOOPLIB)=0
-          ELSE
-            J=J+1
-          ENDIF
-        ENDDO
-        IF(MLREDUCTIONLIB(1).EQ.0)THEN
-          STOP 'No available loop reduction lib is provided. Make sur'
-     $     //'e MLReductionLib is correct.'
-        ENDIF
-        J=0
-        DO I=1,NLOOPLIB
-          IF(MLREDUCTIONLIB(I).EQ.1)THEN
-            J=J+1
-            IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
-            INDEX_QP_TOOLS(J)=I
-          ENDIF
-        ENDDO
-
-C       Setup the file paths
-        CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
-        CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
-        CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
-        CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
-        CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
-        CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
-        CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
-
-        CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
-
-        HELDOUBLECHECKED=.NOT.DOUBLECHECKHELICITYFILTER
+        HELDOUBLECHECKED=(.NOT.DOUBLECHECKHELICITYFILTER).OR.(HELICITYF
+     $   ILTERLEVEL.EQ.0)
         OPEN(1, FILE=LOOPFILTERFN, ERR=100, STATUS='OLD',          
      $    ACTION='READ')
         DO J=1,NLOOPGROUPS
@@ -430,6 +511,13 @@ C       Setup the file paths
  101    CONTINUE
         CLOSE(1)
 
+        IF (HELICITYFILTERLEVEL.EQ.0) THEN
+          FOUNDHELFILTER=.TRUE.
+          DO J=1,NCOMB
+            GOODHEL(J)=1
+          ENDDO
+          GOTO 122
+        ENDIF
         OPEN(1, FILE=HELFILTERFN, ERR=102, STATUS='OLD',          
      $    ACTION='READ')
         DO I=1,NCOMB
@@ -443,61 +531,16 @@ C       Setup the file paths
         ENDDO
  103    CONTINUE
         CLOSE(1)
-
-        OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
-     $    ACTION='READ')
-        DO I=1,NCOLORROWS
-          READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
-        ENDDO
-        GOTO 105
- 104    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorNumFactors.dat. File not found'
- 105    CONTINUE
-        CLOSE(1)
-        OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
-     $    ACTION='READ')
-        DO I=1,NCOLORROWS
-          READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
-        ENDDO
-        GOTO 107
- 106    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorDenomFactors.dat. File not found'
- 107    CONTINUE
-        CLOSE(1)
-        OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',              
-     $       ACTION='READ')
-        DO H=1,NCOMB
-          READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
-        ENDDO
-        GOTO 109
- 108    CONTINUE
-        STOP 'Color helictiy configurations could not be initialize'
-     $   //'d from file ML5_0_HelConfigs.dat. File not found'
- 109    CONTINUE
-        CLOSE(1)
-
-C       SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
-C       IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
-        DO I=0,3
-          PL(I,0)=(0.0D0,0.0D0)
-        ENDDO
-        DO I=1,MAXLWFSIZE
-          DO J=0,LOOPMAXCOEFS-1
-            DO K=1,MAXLWFSIZE
-              IF(I.EQ.K.AND.J.EQ.0) THEN
-                WL(I,J,K,0)=(1.0D0,0.0D0)
-              ELSE
-                WL(I,J,K,0)=(0.0D0,0.0D0)
-              ENDIF
-            ENDDO
+        IF (HELICITYFILTERLEVEL.EQ.1) THEN
+C         We must make sure to remove the matching-helicity optimisatio
+C         n, as requested by the user.
+          DO J=1,NCOMB
+            IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.HELOFFSET)) THEN
+              GOODHEL(J)=1
+            ENDIF
           ENDDO
-        ENDDO
-        IF(BOOTANDSTOP) THEN
-          WRITE(*,*) 'Stopped by user request.'
-          STOP
         ENDIF
+ 122    CONTINUE
       ENDIF
 
 C     First compute the borns, it will store them in ANS(0,I)
@@ -563,8 +606,8 @@ C        trust the evaluation for checks.
      $ ).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
       IF (WRITEOUTFILTERS) THEN
-        IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
-
+        IF ((HELICITYFILTERLEVEL.NE.0).AND.(.NOT. CHECKPHASE).AND.(.NOT
+     $   .FOUNDHELFILTER)) THEN
           OPEN(1, FILE=HELFILTERFN, ERR=110, STATUS='NEW',ACTION='WRIT'
      $     //'E')
           DO I=1,NCOMB
@@ -633,6 +676,7 @@ C        trust the evaluation for checks.
         ENDDO
       ENDDO
 
+
       IF (IMPROVEPSPOINT.GE.0) THEN
 C       Make the input PS more precise (exact onshell and energy-moment
 C       um conservation)
@@ -654,16 +698,24 @@ C       um conservation)
         ENDDO
       ENDDO
 
-
 C     Start by using the first available loop reduction library and qp
 C      library.
       I_LIB=1
       I_QP_LIB=1
 
+      GOTO 208
+C     MadLoop jumps to this label during stability checks when it
+C      recomputes a rotated PS point
  200  CONTINUE
+C     For the computation of a rotated version of this PS point we
+C      must reset the TIR cache since this changes the definition of
+C      the loop denominators.
+      CALL ML5_0_CLEAR_TIR_CACHE()
+ 208  CONTINUE
 
-
-
+C     MadLoop jumps to this label during initialization when it goes
+C      to the computation of the next helicity.
+ 205  CONTINUE
 
       IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
         CALL ML5_0_SET_MP_PS(P_USER)
@@ -724,6 +776,13 @@ C       computed in quadruple precision.
           UVCT_REQ_SO_DONE=.FALSE.
           CT_REQ_SO_DONE=.FALSE.
           LOOP_REQ_SO_DONE=.FALSE.
+
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
+     $     -1) THEN
+            HEL_MULT=GOODHEL(H)
+          ELSE
+            HEL_MULT=1
+          ENDIF
 
 
 C         Helas calls for the born amplitudes and counterterms
@@ -885,12 +944,6 @@ C          split order ID=1, are computed.
  3000     CONTINUE
           UVCT_REQ_SO_DONE=.TRUE.
 
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
-            HEL_MULT=GOODHEL(H)
-          ELSE
-            HEL_MULT=1
-          ENDIF
           DO I=1,NCTAMPS
             DO J=1,NBORNAMPS
               CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0D0)
@@ -1334,7 +1387,6 @@ C          i.e. of split order ID=1, are computed.
 
 
 
-
         ENDIF
       ENDDO
 
@@ -1347,16 +1399,24 @@ C      LOOPCOEFS.
         ENDDO
       ENDDO
 
+
+C     MadLoop jumps to this label during stability checks when it
+C      recomputes the same PS point with a different CTMode
  300  CONTINUE
 
 C     Free cache when using IREGI
-      IF(IREGIRECY.AND.MLREDUCTIONLIB(I_LIB).EQ.3)CALL IREGI_FREE_PS
+      IF(IREGIRECY.AND.MLREDUCTIONLIB(I_LIB).EQ.3) THEN
+        CALL IREGI_FREE_PS()
+      ENDIF
+
+
 
       DO I=0,NSQUAREDSO
         DO J=1,3
           ANS(J,I)=BUFFR_BIS(J,I)
         ENDDO
       ENDDO
+
 
       IF(SKIPLOOPEVAL) THEN
         GOTO 1226
@@ -1492,8 +1552,8 @@ C         SET THE HELICITY FILTER
               IF(NTRY.EQ.1) THEN
                 GOODHEL(HELPICKED)=-HELOFFSET
               ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
-                WRITE(*,*) '##W02A WARNING Inconsistent helicity '
-     $           ,HELPICKED
+                WRITE(*,*) '##W02A WARNING Inconsistent zero helicit'
+     $           //'y ',HELPICKED
                 IF(HELINITSTARTOVER) THEN
                   WRITE(*,*) '##I01 INFO Initialization starting ove'
      $             //'r because of inconsistency in the helicit'
@@ -1503,7 +1563,7 @@ C         SET THE HELICITY FILTER
                   HEL_INCONSISTENT=.TRUE.
                 ENDIF
               ENDIF
-            ELSE
+            ELSEIF(HELICITYFILTERLEVEL.GT.1) THEN
               DO H=1,HELPICKED-1
                 IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C                 Be looser for helicity check, bring a factor 100
@@ -1520,8 +1580,8 @@ C                      other one and to avoid overlap
 C                     Make sure we have paired this hel config to the
 C                      same one last PS point
                     ELSEIF(GOODHEL(HELPICKED).NE.(-H-HELOFFSET)) THEN
-                      WRITE(*,*) '##W02B WARNING Inconsistent helicit'
-     $                 //'y ',HELPICKED
+                      WRITE(*,*) '##W02B WARNING Inconsistent matchin'
+     $                 //'g helicity ',HELPICKED
                       IF(HELINITSTARTOVER) THEN
                         WRITE(*,*) '##I01 INFO Initialization startin'
      $                   //'g over because of inconsistency in th'
@@ -1644,7 +1704,7 @@ C       GOTO NEXT HELICITY OR FINISH
         IF(HELPICKED.NE.NCOMB) THEN
           HELPICKED=HELPICKED+1
           MP_DONE=.FALSE.
-          GOTO 200
+          GOTO 205
         ELSE
 C         Useful printout
 C         do I=1,NCOMB
@@ -1712,7 +1772,9 @@ C        METHODS
             CTMODE=BASIC_CT_MODE+1
             GOTO 300
           ELSE
-C           NO DIRECTION TEST LIBRARIES: e.g. PJFry++ and Golem95
+C           If some TIR library would not support the loop direction
+C            test (they all do for now), then we would just copy the
+C            answer from mode 1 and carry on.
             STAB_INDEX=STAB_INDEX+1
             IF(DOING_QP_EVALS)THEN
               DO I=0,NSQUAREDSO
@@ -2561,7 +2623,30 @@ C
 
       ALWAYS_TEST_STABILITY = ONOFF
 
-      END
+      END SUBROUTINE
+
+      SUBROUTINE ML5_0_SET_AUTOMATIC_TIR_CACHE_CLEARING(ONOFF)
+C     
+C     This function can be called by the MadLoop user so as to
+C      manually chose when
+C     to reset the TIR cache.
+C     
+      IMPLICIT NONE
+
+      INCLUDE 'MadLoopParams.inc'
+
+      LOGICAL ONOFF
+
+      LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
+      DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
+      COMMON/ML5_0_RUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
+
+      INTEGER N_DP_EVAL, N_QP_EVAL
+      COMMON/ML5_0_N_EVALS/N_DP_EVAL,N_QP_EVAL
+
+      WRITE(*,*) 'Warning: No TIR caching implemented. Call t'
+     $ //'o SET_AUTOMATIC_TIR_CACHE_CLEARING did nothing.'
+      END SUBROUTINE
 
       SUBROUTINE ML5_0_SET_COUPLINGORDERS_TARGET(SOTARGET)
       IMPLICIT NONE
@@ -2788,4 +2873,5 @@ C     arrays
       SUBROUTINE ML5_0_EXIT_MADLOOP()
       CONTINUE
       END
+
 
