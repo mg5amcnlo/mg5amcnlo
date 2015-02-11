@@ -2407,6 +2407,50 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA):
         return export_v4.ProcessExporterFortranMatchBox.get_color_string_lines(matrix_element)
 
 
+    def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", split=-1,
+                       JAMP_formatLC=None):
 
-
-
+        """Adding leading color part of the colorflow"""
+        
+        if not JAMP_formatLC:
+            JAMP_formatLC= "LN%s" % JAMP_format
+        
+        text = super(LoopProcessOptimizedExporterFortranSA, self).get_JAMP_lines(col_amps,
+                                            JAMP_format=JAMP_format,
+                                            AMP_format=AMP_format,
+                                            split=-1)
+        if(isinstance(col_amps,helas_objects.HelasMatrixElement)):
+            col_amps=col_amps.get_color_amplitudes()
+        elif(isinstance(col_amps,list)):
+            if(col_amps and isinstance(col_amps[0],list)):
+                col_amps=col_amps
+            else:
+                raise MadGraph5Error, error_msg%'col_amps'
+        else:
+            raise MadGraph5Error, error_msg%'col_amps'
+        
+        
+        # Filter the col_ampls to generate only those without any 1/NC terms
+        
+        LC_col_amps = []
+        for coeff_list in col_amps:
+            to_add = []
+            for (coefficient, amp_number) in coeff_list:
+                if coefficient[3]==0:
+                    to_add.append( (coefficient, amp_number) )
+            LC_col_amps.append(to_add)
+           
+        text += super(LoopProcessOptimizedExporterFortranSA, self).get_JAMP_lines(LC_col_amps,
+                                            JAMP_format=JAMP_formatLC,
+                                            AMP_format=AMP_format,
+                                            split=-1)
+        
+        
+        return text
+      
+      
+    def get_ME_identifier(self, matrix_element):
+        """ To not mix notations between borns and virtuals we call it here also MG5 """
+        return 'MG5_%d_'%matrix_element.get('processes')[0].get('id')         
+      
+      

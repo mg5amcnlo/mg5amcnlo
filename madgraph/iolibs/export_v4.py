@@ -2100,9 +2100,19 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                                             JAMP_format=JAMP_format,
                                             AMP_format=AMP_format,
                                             split=-1)
+        if(isinstance(col_amps,helas_objects.HelasMatrixElement)):
+            col_amps=col_amps.get_color_amplitudes()
+        elif(isinstance(col_amps,list)):
+            if(col_amps and isinstance(col_amps[0],list)):
+                col_amps=col_amps
+            else:
+                raise MadGraph5Error, error_msg%'col_amps'
+        else:
+            raise MadGraph5Error, error_msg%'col_amps'
+        
         
         # Filter the col_ampls to generate only those without any 1/NC terms
-        col_amps = col_amps.get_color_amplitudes()
+        
         LC_col_amps = []
         for coeff_list in col_amps:
             to_add = []
