@@ -214,6 +214,42 @@ class EventFile(object):
                 text += line
         return Event(text)
     
+    def initialize_unweighting(self, get_wgt, trunc_error):
+        """ scan once the file to return 
+            - the list of the hightest weight (of size trunc_error*NB_EVENT
+            - the cross-section by type of process
+            - the total number of events in the file
+            """
+            
+        # We need to loop over the event file to get some information about the 
+        # new cross-section/ wgt of event.
+        self.seek(0)
+        all_wgt = []
+        cross = collections.defaultdict(int)
+        nb_event = 0
+        for event in self:
+            nb_event +=1
+            wgt = get_wgt(event)
+            cross['all'] += wgt
+            cross[event.ievent] += wgt
+            all_wgt.append(abs(wgt))
+            # avoid all_wgt to be too large
+            if nb_event % 20000 == 0:
+                all_wgt.sort()
+                # drop the lowest weight
+                nb_keep = max(20, int(nb_event*trunc_error*15))
+                all_wgt = all_wgt[-nb_keep:]
+        
+        #final selection of the interesting weight to keep
+        all_wgt.sort()
+        # drop the lowest weight
+        misc.sprint( nb_event, trunc_error)
+        nb_keep = max(20, int(nb_event*trunc_error*10))
+        all_wgt = all_wgt[-nb_keep:] 
+        self.seek(0)
+        return all_wgt, cross, nb_event
+            
+    
     def unweight(self, outputpath, wgt, max_wgt=0, trunc_error=0, event_target=0, 
                  log_level=logging.DEBUG):
         """unweight the current file according to wgt information wgt.
@@ -232,43 +268,22 @@ class EventFile(object):
         else:
             unwgt_name = wgt.func_name
             get_wgt = wgt
-                    
-        # We need to loop over the event file to get some information about the 
-        # new cross-section/ wgt of event.
-        all_wgt = []
-        cross = collections.defaultdict(int)
-        nb_event = 0
-        for event in self:
-            nb_event +=1
-            wgt = get_wgt(event)
-            cross['all'] += wgt
-            cross[event.ievent] += wgt
-            all_wgt.append(abs(wgt))
-            # avoid all_wgt to be too large
-            if nb_event % 5000 == 0:
-                all_wgt.sort()
-                # drop the lowest weight
-                nb_keep = max(1, int(nb_event*trunc_error))
-                all_wgt = all_wgt[-nb_keep:]
-        
-        #final selection of the interesting weight to keep
-        all_wgt.sort()
-        # drop the lowest weight
-        nb_keep = max(1, int(nb_event*trunc_error))
-        all_wgt = all_wgt[-nb_keep:]        
-        
+        misc.sprint(trunc_error)
+        all_wgt, cross, nb_event = self.initialize_unweighting(get_wgt, trunc_error)
+        misc.sprint(trunc_error)
+
         def max_wgt_for_trunc(trunc):
             """find the weight with the maximal truncation."""
             
             xsum = 0
-            i=1
+            i=1 
             while (xsum - all_wgt[-i] * (i-1) <= cross['all'] * trunc):
                 max_wgt = all_wgt[-i]
                 xsum += all_wgt[-i]
                 i +=1
                 if i == len(all_wgt):
                     break
-            print i, all_wgt[-i], xsum - all_wgt[-i] * (i-1), cross['all'] * trunc
+
             return max_wgt
                 
         # choose the max_weight
@@ -294,6 +309,8 @@ class EventFile(object):
         
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
+        nb_keep = 0
+        misc.sprint(trunc_error)
         for i in range(nb_try):
             self.seek(0)
             outfile = EventFile(outputpath, "w")
@@ -304,23 +321,30 @@ class EventFile(object):
                         
             if event_target:
                 if i==0:
-                    max_wgt = max_wgt_for_trunc(trunc_error*i/nb_try)
+                    max_wgt = max_wgt_for_trunc(0)
+                    misc.sprint(trunc_error)
                 else:
                     #guess the correct max_wgt based on last iteration
                     efficiency = nb_keep/nb_event
                     needed_efficiency = event_target/nb_event
                     last_max_wgt = max_wgt
                     needed_max_wgt = last_max_wgt * efficiency / needed_efficiency
+                    
                     min_max_wgt = max_wgt_for_trunc(trunc_error)
                     max_wgt = max(min_max_wgt, needed_max_wgt)
+                    max_wgt = min(max_wgt, all_wgt[-1])
                     if max_wgt == last_max_wgt:
-                        logger.warning("fail to reach target")
-                        break
-                    
-                logger.log(log_level, "Max_wgt use is %s", max_wgt)
+                        if nb_keep < event_target:
+                            logger.warning("fail to reach target")
+                            break
+                        else:
+                            logger.info("Job Done! %s", nb_keep)
+                            break     
+                logger.log(log_level, "Max_wgt use is %s previous nb_keep was %s" %( max_wgt, nb_keep))
             
             # scan the file
             nb_keep = 0
+            trunc_cross = 0
             for event in self:
                 r = random.random()
                 wgt = get_wgt(event)
@@ -328,12 +352,18 @@ class EventFile(object):
                     continue
                 elif wgt > 0:
                     nb_keep += 1
-                    event.wgt = max(event.wgt, max_wgt)
-                    outfile.write(str(event))
+                    event.wgt = max(wgt, max_wgt)
+                    if abs(wgt) != max_wgt:
+                        trunc_cross += event.wgt - max_wgt 
+                    if event_target ==0 or nb_keep < event_target: 
+                        outfile.write(str(event))
                 elif wgt < 0:
                     nb_keep += 1
-                    event.wgt = -1 * max(event.wgt, max_wgt)
-                    outfile.write(event)
+                    event.wgt = -1 * max(abs(wgt), max_wgt)
+                    if abs(wgt) != max_wgt:
+                        trunc_cross += event.wgt - max_wgt
+                    if event_target ==0 or nb_keep < event_target: 
+                        outfile.write(event)
             
             if nb_keep >= event_target:
                 if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
@@ -343,9 +373,6 @@ class EventFile(object):
                 else:
                     outfile.write("</LesHouchesEvents>\n")
                     outfile.close()
-                    misc.sprint(nb_event)
-                    logger.log(log_level, "write %i event in %s (efficiency %.2g %%)" % 
-                           (nb_keep, outputpath, nb_keep/nb_event*100))
                 break
             else:
                 outfile.close()
@@ -353,6 +380,14 @@ class EventFile(object):
         else:
             # pass here if event_target > 0 and all the attempt fail.
             logger.warning("fail to reach target event")
+            
+        if event_target:
+            nb_keep = min( event_target, nb_keep)
+
+        logger.log(log_level, "write %i event in %s (efficiency %.2g %%, truncation %s %%)" % 
+                           (nb_keep, outputpath, nb_keep/nb_event*100, trunc_cross/cross['all']*100))
+     
+        return nb_keep
         
     
 class EventFileGzip(EventFile, gzip.GzipFile):
@@ -371,32 +406,44 @@ class MultiEventFile(EventFile):
         return object.__new__(MultiEventFile)
     
     def __init__(self, start_list=[]):
-        
+        """if trunc_error is define here then this allow
+        to only read all the files twice and not three times."""
         self.files = []
         self.banner = ''
         self.initial_nb_events = []
+        self.total_event_in_files = 0
         self.curr_nb_events = []
+        self.cross = []
+        self.scales = []
         if start_list:
             for p in start_list:
                 self.add(p)
+        self.configure = False
         
-    def add(self, path, nb_event=0):
+    def add(self, path, cross=0):
+        """ add a file to the pool, cross allow to reweight the sum of weight 
+        in the file to the given cross-section 
+        """
         
         obj = EventFile(path)
-        if nb_event:
-            obj.len = nb_event
-        else:
-            nb_event = len(obj)
-        self.initial_nb_events.append(nb_event)
+        if len(self.files) == 0:
+            self.banner = obj.banner
         self.curr_nb_events.append(0)
+        self.initial_nb_events.append(0)
+        self.cross.append(cross)
+        self.scales.append(1)
         self.files.append(obj)
+        self.configure = False
         
     def __iter__(self):
         return self
-        
+    
     def next(self):
 
-        remaining_event = sum(self.initial_nb_events) - sum(self.curr_nb_events)
+        if not self.configure:
+            self.configure()
+
+        remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
         if remaining_event == 0:
             raise StopIteration
         # determine which file need to be read
@@ -407,10 +454,77 @@ class MultiEventFile(EventFile):
             if nb_event <= sum_nb:
                 self.curr_nb_events[i] += 1
                 event = obj.next()
+                event.sample_scale = self.scales[i] # for file reweighting
                 return event
         else:
             raise Exception
+    
+    def initialize_unweighting(self, getwgt, trunc_error):
+        """ scan once the file to return 
+            - the list of the hightest weight (of size trunc_error*NB_EVENT
+            - the cross-section by type of process
+            - the total number of events in the files
+            In top of that it initialise the information for the next routine
+            to determine how to choose which file to read 
+            """
+        self.seek(0)
+        all_wgt = []
+        total_event = 0
+        sum_cross = collections.defaultdict(int)
+        for i,f in enumerate(self.files):
+            nb_event = 0 
+            # We need to loop over the event file to get some information about the 
+            # new cross-section/ wgt of event.
+            cross = collections.defaultdict(int)
+            new_wgt =[]
+            for event in f:
+                nb_event += 1
+                total_event += 1
+                event.sample_scale = 1
+                wgt = getwgt(event)
+                if nb_event % 2000 ==0:
+                    misc.sprint(nb_event, wgt)
+                cross['all'] += wgt
+                cross[event.ievent] += wgt
+                new_wgt.append(abs(wgt))
+                # avoid all_wgt to be too large
+                if nb_event % 20000 == 0:
+                    new_wgt.sort()
+                    # drop the lowest weight
+                    nb_keep = max(20, int(nb_event*trunc_error*15))
+                    new_wgt = new_wgt[-nb_keep:]
+            if nb_event == 0:
+                raise Exception
+            # store the information
+            self.initial_nb_events[i] = nb_event
+            self.scales[i] = self.cross[i]/cross['all'] if self.cross[i] else 1
+            misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
+                        % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
+            for key in cross:
+                sum_cross[key] += cross[key]* self.scales[i]
+            all_wgt += [self.scales[i] * w for w in new_wgt]
+            all_wgt.sort()
+            nb_keep = max(20, int(total_event*trunc_error*10))
+            all_wgt = all_wgt[-nb_keep:] 
+            misc.sprint(all_wgt[0], all_wgt[-1])
+            
+        self.total_event_in_files = total_event
+        #final selection of the interesting weight to keep
+        all_wgt.sort()
+        # drop the lowest weight
+        nb_keep = max(20, int(total_event*trunc_error*10))
+        all_wgt = all_wgt[-nb_keep:]  
+        self.seek(0)
+        self.configure = True
+        return all_wgt, sum_cross, total_event
+    
+    def configure(self):
         
+        self.configure = True
+        for i,f in enumerate(self.files):
+            self.initial_nb_events = len(f)
+    
+    
     def __len__(self):
         
         return len(self.files)
@@ -424,6 +538,27 @@ class MultiEventFile(EventFile):
             self.curr_nb_events[i] = 0         
         for f in self.files:
             f.seek(pos)
+            
+    def unweight(self, outputpath, wgt, **opts):
+        """unweight the current file according to wgt information wgt.
+        which can either be a fct of the event or a tag in the rwgt list.
+        max_wgt allow to do partial unweighting. 
+        trunc_error allow for dynamical partial unweighting
+        event_target reweight for that many event with maximal trunc_error.
+        (stop to write event when target is reached)
+        """
+        
+        if isinstance(wgt, str):
+            unwgt_name =wgt 
+            def get_wgt(event):
+                event.parse_reweight()
+                return event.reweight_data[unwgt_name] * event.sample_scale
+        else:
+            unwgt_name = wgt.func_name
+            get_wgt = lambda event: wgt(event) * event.sample_scale
+        #define the weighting such that we have built-in the scaling
+           
+        return super(MultiEventFile, self).unweight(outputpath, get_wgt, **opts)
 
            
 class Event(list):

@@ -72,6 +72,7 @@ except ImportError:
     import internal.check_param_card as check_param_card
     import internal.sum_html as sum_html
     import internal.combine_runs as combine_runs
+    import internal.lhe_parser as lhe_parser
 else:
     # import from madgraph directory
     MADEVENT = False
@@ -85,7 +86,8 @@ else:
     import madgraph.various.banner as banner_mod
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
-    import madgraph.various.combine_runs as combine_runs
+    import madgraph.madevent.combine_runs as combine_runs
+    import madgraph.various.lhe_parser as lhe_parser
 
     import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
@@ -2515,34 +2517,36 @@ zeor by MadLoop.""")
             if  cross == 0:
                 return
 
-        for nb_proc,subdir in enumerate(subproc):
-            subdir = subdir.strip()
-            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
-            bindir = pjoin(os.path.relpath(self.dirbin, Pdir))
-                           
-            logger.info('    %s ' % subdir)
-
-            if os.path.exists(pjoin(Pdir, 'ajob1')):
-                self.compile(['madevent'], cwd=Pdir)
-                
-                alljobs = glob.glob(pjoin(Pdir,'ajob*'))
-                
-                #remove associated results.dat (ensure to not mix with all data)
-                Gre = re.compile("\s*j=(G[\d\.\w]+)")
-                for job in alljobs:
-                    Gdirs = Gre.findall(open(job).read())
-                    for Gdir in Gdirs:
-                        if os.path.exists(pjoin(Pdir, Gdir, 'results.dat')):
-                            os.remove(pjoin(Pdir, Gdir,'results.dat'))
-                
-                nb_tot = len(alljobs)            
-                self.total_jobs += nb_tot
-                for i, job in enumerate(alljobs):
-                    job = os.path.basename(job)
-                    self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
-                             run_type='Refine number %s on %s (%s/%s)' % 
-                             (self.nb_refine, subdir, nb_proc+1, len(subproc)))
-
+        if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
+            # Non splitted mode is based on writting ajob so need to track them
+            # Splitted mode handle the cluster submition internally.
+            for nb_proc,subdir in enumerate(subproc):
+                subdir = subdir.strip()
+                Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
+                bindir = pjoin(os.path.relpath(self.dirbin, Pdir))
+                               
+                logger.info('    %s ' % subdir)
+    
+                if os.path.exists(pjoin(Pdir, 'ajob1')):
+                    self.compile(['madevent'], cwd=Pdir)
+                    
+                    alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                    
+                    #remove associated results.dat (ensure to not mix with all data)
+                    Gre = re.compile("\s*j=(G[\d\.\w]+)")
+                    for job in alljobs:
+                        Gdirs = Gre.findall(open(job).read())
+                        for Gdir in Gdirs:
+                            if os.path.exists(pjoin(Pdir, Gdir, 'results.dat')):
+                                os.remove(pjoin(Pdir, Gdir,'results.dat'))
+                    
+                    nb_tot = len(alljobs)            
+                    self.total_jobs += nb_tot
+                    for i, job in enumerate(alljobs):
+                        job = os.path.basename(job)
+                        self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
+                                 run_type='Refine number %s on %s (%s/%s)' % 
+                                 (self.nb_refine, subdir, nb_proc+1, len(subproc)))
 
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
                      html=True)
@@ -2553,10 +2557,14 @@ zeor by MadLoop.""")
         except Exception:
             pass
         
-        bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
-        raise Exception
-        combine_runs.CombineRuns(self.me_dir)
-        
+        if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
+            # the merge of the events.lhe is handle in the x_improve class
+            # for splitted runs. (and partly in store_events).        
+            combine_runs.CombineRuns(self.me_dir)
+            self.refine_mode = "old"
+        else:
+            self.refine_mode = "new"
+            
         cross, error = sum_html.make_all_html_results(self)
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)   
@@ -2573,58 +2581,97 @@ zeor by MadLoop.""")
         self.check_combine_events(args)
 
         self.update_status('Combining Events', level='parton')
-        try:
-            os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
-        except Exception:
-            pass
+
         
-        if self.options['run_mode'] ==1 and self.options['cluster_tmp_path']:
-            tmpcluster = cluster.MultiCore(nb_core=1)
-            tmpcluster.launch_and_wait('../bin/internal/run_combine', 
-                                        cwd=pjoin(self.me_dir,'SubProcesses'),
-                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-                                        required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-        else:
-            self.cluster.launch_and_wait('../bin/internal/run_combine', 
-                                        cwd=pjoin(self.me_dir,'SubProcesses'),
-                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-                                        required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-        
-        output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-        # Store the number of unweighted events for the results object
-        pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
-        try:      
-            nb_event = pat.search(output).groups()[0]
-        except AttributeError:
-            time.sleep(10)
-            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
+        if self.refine_mode == "old":
             try:
+                os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
+            except Exception:
+                pass
+            if self.options['run_mode'] ==1 and self.options['cluster_tmp_path']:
+                tmpcluster = cluster.MultiCore(nb_core=1)
+                tmpcluster.launch_and_wait('../bin/internal/run_combine', 
+                                            cwd=pjoin(self.me_dir,'SubProcesses'),
+                                            stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
+                                            required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
+            else:
+                self.cluster.launch_and_wait('../bin/internal/run_combine', 
+                                            cwd=pjoin(self.me_dir,'SubProcesses'),
+                                            stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
+                                            required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
+            
+            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
+            # Store the number of unweighted events for the results object
+            pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
+            try:      
                 nb_event = pat.search(output).groups()[0]
             except AttributeError:
-                logger.warning('Fail to read the number of unweighted events in the combine.log file')
-                nb_event = 0
+                time.sleep(10)
+                output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
+                try:
+                    nb_event = pat.search(output).groups()[0]
+                except AttributeError:
+                    logger.warning('Fail to read the number of unweighted events in the combine.log file')
+                    nb_event = 0
+
+            self.results.add_detail('nb_event', nb_event)
+            
+            
+            # Define The Banner
+            tag = self.run_card['run_tag']
+            # Update the banner with the pythia card
+            if not self.banner:
+                self.banner = banner_mod.recover_banner(self.results, 'parton')
+            self.banner.load_basic(self.me_dir)
+            # Add cross-section/event information
+            self.banner.add_generation_info(self.results.current['cross'], nb_event)
+            if not hasattr(self, 'random_orig'): self.random_orig = 0
+            self.banner.change_seed(self.random_orig)
+            if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+                os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                         '%s_%s_banner.txt' % (self.run_name, tag)))
+            
+            
+            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'))
+            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'))        
+
+                    
+        elif self.refine_mode == "new":
+            # Define The Banner
+            tag = self.run_card['run_tag']
+            # Update the banner with the pythia card
+            if not self.banner:
+                self.banner = banner_mod.recover_banner(self.results, 'parton')
+            self.banner.load_basic(self.me_dir)
+            # Add cross-section/event information
+            self.banner.add_generation_info(self.results.current['cross'], self.run_card['nevents'])
+            if not hasattr(self, 'random_orig'): self.random_orig = 0
+            self.banner.change_seed(self.random_orig)
+            if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+                os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                    '%s_%s_banner.txt' % (self.run_name, tag)))
+            
+            
+            AllEvent = lhe_parser.MultiEventFile()
+            AllEvent.banner = self.banner
+            
+            for Gdir,mfactor in self.get_Gdir():
+                if os.path.exists(pjoin(Gdir, 'events.lhe')):
+                    result = sum_html.OneResult('')
+                    result.read_results(pjoin(Gdir, 'results.dat'))
+                    AllEvent.add(pjoin(Gdir, 'events.lhe'), mfactor * result.get('xsec'))
+            get_wgt = lambda event: event.wgt
+            nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+                              get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
+                              log_level=logging.DEBUG)
+            
+            misc.sprint(nb_event)
+            self.results.add_detail('nb_event', nb_event)
+
+                        
                 
-        self.results.add_detail('nb_event', nb_event)
-        
-        
-        # Define The Banner
-        tag = self.run_card['run_tag']
-        # Update the banner with the pythia card
-        if not self.banner:
-            self.banner = banner_mod.recover_banner(self.results, 'parton')
-        self.banner.load_basic(self.me_dir)
-        # Add cross-section/event information
-        self.banner.add_generation_info(self.results.current['cross'], nb_event)
-        if not hasattr(self, 'random_orig'): self.random_orig = 0
-        self.banner.change_seed(self.random_orig)
-        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                                     '%s_%s_banner.txt' % (self.run_name, tag)))
-        
-        
-        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'))
-        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'))        
 
         
         eradir = self.options['exrootanalysis_path']
@@ -3538,7 +3585,37 @@ zeor by MadLoop.""")
             return path
         else:
             return default
+
+    ############################################################################
+    def get_Pdir(self):
+        """get the list of Pdirectory if not yet saved."""
         
+        if hasattr(self, "Pdirs"):
+            if self.me_dir in self.Pdirs[0]:
+                return self.Pdir
+        self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
+        return self.Pdirs
+        
+    ############################################################################
+    def get_Gdir(self):
+        """get the list of Gdirectory if not yet saved."""
+        
+        if hasattr(self, "Gdirs"):
+            if self.me_dir in self.Gdirs[0]:
+                return self.Gdirs
+
+        Pdirs = self.get_Pdir()
+        Gdirs = []        
+        for P in Pdirs:
+            for line in open(pjoin(P, "symfact.dat")):
+                tag, mfactor = line.split()
+                Gdirs.append( (pjoin(P, "G%s" % tag), int(mfactor)) )
+            
+        
+        self.Gdirs = Gdirs
+        return self.Gdirs
+                
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False,
                      allow_new_tag=True):

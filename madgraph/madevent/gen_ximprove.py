@@ -37,6 +37,7 @@ except ImportError:
     import internal.files as files
     import internal.cluster as cluster
     import internal.combine_grid as combine_grid
+    import internal.combine_runs as combine_runs
 else:
     MADEVENT= False
     import madgraph.madevent.sum_html as sum_html
@@ -45,6 +46,7 @@ else:
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
     import madgraph.madevent.combine_grid as combine_grid
+    import madgraph.madevent.combine_runs as combine_runs
 
 logger = logging.getLogger('madgraph.madevent.gen_ximprove')
 pjoin = os.path.join
@@ -1120,7 +1122,7 @@ class gen_ximprove(object):
         for C in all_channels:
             if C.get('xsec') == 0:
                 continue
-            if goal_lum/C.get('luminosity') >=1:
+            if goal_lum/C.get('luminosity') >= 1 + (self.gen_events_security-1)/2:
                 logger.debug("channel %s is at %s (%s) (%s pb)", C.name,  C.get('luminosity'), goal_lum/C.get('luminosity'), C.get('xsec'))
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('xsec'), 0.01*all_channels[0].get('xsec')):
@@ -1276,6 +1278,12 @@ class gen_ximprove_v4(gen_ximprove):
             # write the multi-job information
             self.write_multijob(C, nb_split)
             
+            packet = cluster.Packet((C.parent_name, C.name),
+                                    combine_runs.CombineRuns,
+                                    (pjoin(self.me_dir, 'SubProcesses', C.parent_name)),
+                                    {"subproc": C.name, "nb_split":nb_split})
+                                     
+            
             #create the  info dict  assume no splitting for the default
             info = {'name': self.cmd.results.current['run_name'],
                     'script_name': 'unknown',
@@ -1289,7 +1297,8 @@ class gen_ximprove_v4(gen_ximprove):
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
                     'grid_refinment' : 0,    #no refinment of the grid
-                    'base_directory': ''   #should be change in splitted job if want to keep the grid 
+                    'base_directory': '',   #should be change in splitted job if want to keep the grid
+                    'packet': packet, 
                     }
 
             if nb_split == 1:
@@ -1539,6 +1548,12 @@ class gen_ximprove_share(gen_ximprove, gensym):
         total_ps_points = 0
         channel_to_ps_point = []
         for C in to_refine:
+            #0. remove previous events files
+            try:
+                os.remove(pjoin(self.me_dir, "SubProcesses",C.parent_name, C.name, "events.lhe"))
+            except:
+                raise
+            
             #1. Compute the number of points are needed to reach target
             needed_event = goal_lum*C.get('xsec')
             #2. estimate how many points we need in each iteration
@@ -1606,6 +1621,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
         else:
             old_nunwgt, old_maxwgt = 0, 0  
         
+        misc.sprint([R.maxwgt for R in grid_calculator.results if R.nunwgt])
         maxwgt = max([old_maxwgt]+[R.maxwgt for R in grid_calculator.results if R.nunwgt])
         nunwgt = old_nunwgt * old_maxwgt / maxwgt 
         new_evt = sum([R.nunwgt*R.maxwgt/maxwgt for R in grid_calculator.results if R.nunwgt])
@@ -1650,8 +1666,11 @@ class gen_ximprove_share(gen_ximprove, gensym):
             need_ps_point = (needed_event - nunwgt)/efficiency
             nevents = grid_calculator.results[0].nevents
             need_job = need_ps_point // nevents + 1
+            
+            if step + 1 == self.max_iter:
+                need_job = 1.20 * need_job # avoid to have just too few event.
 
-            need_job = int(min(need_job, nb_split_before*1.05))
+            need_job = int(min(need_job, nb_split_before*1.5))
             self.create_resubmit_one_iter(Pdir, G, nevents, need_job, step)
         else:
             logger.debug("fail to find enough event")
