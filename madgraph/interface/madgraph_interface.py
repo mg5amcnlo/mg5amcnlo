@@ -2456,6 +2456,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
+                       'cluster_size':100,
                        'output_dependencies':'external'
                        }
 
@@ -5715,7 +5716,7 @@ This implies that with decay chains:
                         ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
-                         'cluster_retry_wait']:
+                         'cluster_retry_wait', 'cluster_size']:
                 self.options[args[0]] = int(args[1])
 
         elif args[0] == 'cluster_status_update':

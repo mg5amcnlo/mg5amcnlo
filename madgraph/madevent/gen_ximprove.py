@@ -1583,7 +1583,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
             else:
                 nb_ps_by_job = self.nb_ps_by_job
         elif self.cmd.options["run_mode"] == 2:
-            nb_ps_by_job = total_ps_points / (self.cmd.options["nb_core"]-1)
+            nb_ps_by_job = total_ps_points / self.cmd.options["nb_core"]
         else:
             nb_ps_by_job = self.nb_ps_by_job
 

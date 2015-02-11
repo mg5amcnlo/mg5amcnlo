@@ -491,7 +491,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'cluster_time':None,
-                         'cluster_size':0,
+                         'cluster_size':100,
                          'cluster_memory':None,
                          'nb_core': None,
                          'cluster_temp_path':None}
