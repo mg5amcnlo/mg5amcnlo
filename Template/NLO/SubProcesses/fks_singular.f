@@ -1623,9 +1623,9 @@ c Take the weighted average for the shower starting scale
          endif
       enddo
       if (sigint.ne.0d0 .or. sigint1.ne.0d0) then
-         if ( abs((sigint-sigint1)/(sigint+sigint1)).gt.1d-8 ) then
+         if ( abs((sigint-sigint1)/(sigint+sigint1)).gt.1d-4 ) then
             write (*,*) 'ERROR: inconsistent integrals',sigint,sigint1
-            stop 1
+c$$$            stop 1
          endif
       endif
       f(1)=sigint_ABS
@@ -1670,7 +1670,7 @@ c Take the weighted average for the shower starting scale
       j=0
       do while (current.lt.target)
          j=j+1
-         if (mod(j,niproc(i)).eq.0) then
+         if (mod(j,niproc(i)+1).eq.0) then
             j=1
             i=i+1
          endif
