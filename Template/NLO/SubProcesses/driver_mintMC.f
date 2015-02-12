@@ -560,7 +560,19 @@ c timing statistics
       data tDSigI/0.0/
       data tDSigR/0.0/
       data tGenPS/0.0/
-
+      data tBorn/0.0/
+      data tIS/0.0/
+      data tReal/0.0/
+      data tCount/0.0/
+      data tFxFx/0.0/
+      data tf_nb/0.0/
+      data tf_all/0.0/
+      data t_as/0.0/
+      data tr_s/0.0/
+      data tr_pdf/0.0/
+      data t_plot/0.0/
+      data t_cuts/0.0/
+      data t_MC_subt/0.0/
       end
 
 
@@ -782,93 +794,45 @@ c From dsample_fks
       implicit none
       include 'mint.inc'
       include 'nexternal.inc'
-      include 'genps.inc'
       include 'nFKSconfigs.inc'
-      include 'reweight_all.inc'
+      include 'c_weight.inc'
       include 'run.inc'
-      include 'cuts.inc'
-      include 'fks_info.inc'
-      double precision zero
-      parameter       (ZERO = 0d0)
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
+      integer i,ifl,proc_map(0:fks_configs,0:fks_configs),nFKS_picked
+     $     ,nFKS_in,nFKS_out,izero,ione,itwo,mohdr,iFKS,sum
+      double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
+     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
+     $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF
+      external passcuts
+      parameter (izero=0,ione=1,itwo=2,mohdr=-100)
+      data firsttime/.true./
       integer           iconfig
       common/to_configs/iconfig
-      integer i,j,k
-      integer ifl
-      integer fold
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      integer     fold
       common /cfl/fold
-      real*8 sigintF,xx(ndimmax),w
-      integer ione
-      parameter (ione=1)
-      double precision wgt,dsigS,dsigH,f(nintegrals),lum,dlum
-      external dlum
-      logical unwgt
-      double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
-      logical Hevents
-      common/SHevents/Hevents
-      double precision result1,result2,ran2,rnd
-      external ran2
-      double precision p(0:3,nexternal)
-      double precision f_check
-      double precision x(99),sigintF_without_w,f_abs_without_w
-      common /c_sigint/ x,sigintF_without_w,f_abs_without_w
-      double precision f1(2),result(0:fks_configs,2)
-      save f1,result
-      INTEGER NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
-      character*4 abrv
-      common /to_abrv/ abrv
-      logical nbody
-      common/cnbody/nbody
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      logical firsttime
-      integer sum
-      data sum/3/
-      data firsttime /.true./
-      logical j_fks_initial(fks_configs),found_ini1,found_ini2
-     $     ,found_fnl,j_fks_initial_found,j_fks_final_found
-      double precision vol1,sigintR,res,f_tot,rfract
-      integer proc_map(0:fks_configs,0:fks_configs)
-     $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
-     $     ,nFKSprocess_all,i_fks_pdg_proc(fks_configs)
-     $     ,j_fks_pdg_proc(fks_configs)
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
-      INTEGER              IPROC
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SUBPROC/ PD, IPROC
-      double precision unwgt_table(0:fks_configs,3,maxproc)
-      common/c_unwgt_table/unwgt_table
-      save proc_map
-      double precision virtual_over_born
-      common/c_vob/virtual_over_born
-      logical fillh
-      integer mc_hel,ihel
-      double precision volh
-      common/mc_int2/volh,mc_hel,ihel,fillh
-      double precision double_check(nintegrals)
-      save double_check
-      logical foundB(2)
-      integer nFKSprocessBorn(2)
-      save nFKSprocessBorn,foundB
-      integer nattr,npNLO,npLO
-      common/event_attributes/nattr,npNLO,npLO
-c PDG codes of particles
-      integer maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       logical              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      double precision virtual_over_born
+      common /c_vob/   virtual_over_born
+      logical       nbody
+      common/cnbody/nbody
+      integer         ndim,ipole
+      common/tosigint/ndim,ipole
+      character*4      abrv
+      common /to_abrv/ abrv
+      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      logical               only_virt
+      integer         imode
+      common /c_imode/imode,only_virt
+      sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
@@ -890,7 +854,6 @@ c "npNLO".
       fold=ifl
       if (ifl.eq.0) then
          icontr=0
-         sigintF=0d0
          virt_wgt_mint=0d0
          born_wgt_mint=0d0
          virtual_over_born=0d0
@@ -917,7 +880,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
-         call set_shower_scale_noshape(pp,nFKS_picked*2-1)
+         call set_shower_scale_noshape(p,nFKS_picked*2-1)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
             if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
@@ -942,7 +905,6 @@ c always exactly the same momenta in computation of Born when computed
 c for different nFKSprocess.
          if(sum.eq.0) calculatedBorn=.false.
          nbody=.false.
-         sigintR=0d0
          do i=1,proc_map(proc_map(0,1),0)
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS,iconfig)
@@ -954,9 +916,9 @@ c for different nFKSprocess.
             if (p_born(0,1).lt.0d0) cycle
 c Set the shower scales            
             call set_cms_stuff(izero)
-            call set_shower_scale_noshape(pp,iFKS*2-1)
+            call set_shower_scale_noshape(p,iFKS*2-1)
             call set_cms_stuff(mohdr)
-            call set_shower_scale_noshape(pp,iFKS*2)
+            call set_shower_scale_noshape(p,iFKS*2)
             call compute_prefactors_n1body(vegas_wgt,jac)
             call set_cms_stuff(izero)
             passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
@@ -968,7 +930,7 @@ c Set the shower scales
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
                   call set_alphaS(p)
-                  call compute_MC_subtr_term(p,gfactsf,gfactcl,probne)
+                  call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
                   call set_cms_stuff(izero)
                else
 c For UNLOPS all real-emission contributions need to be added to the
@@ -997,106 +959,28 @@ c Update the shower starting scale. This might be updated again below if
 c the nFKSprocess is the same.
             call include_shape_in_shower_scale(p,iFKS)
          enddo
-         call fill_MC_integer(1,proc_map(0,1),sigintR)
  12      continue
 
 c Include PDFs and alpha_S and reweight to include the uncertainties
-      call include_PDF_and_alphas
-
-      call sum_identical_contributions
-
-      call unweight
-
-
-
-      
-      
-      if (doreweight) then
-         if (do_rwgt_scale) call reweight_scale
-         if (do_rwgt_pdf) call reweight_pdf
-      endif
-      
-      if (iappl.ne.0) then
-         if (sum) then
-            write (*,*) 'ERROR: applgrid only possible '/
-     &           /'with MC over FKS directories',iappl,sum
-            stop 1
-         endif
-         call fill_applgrid_weights(vegas_wgt)
-      endif
-
-c Importance sampling for FKS configurations
-      if (sum) then
-         call get_wgt_nbody(sig)
-         call fill_MC_integer(1,nFKS_picked,abs(sig))
-      else
-         call get_wgt_no_nbody(sig)
-         call fill_MC_integer(1,nFKS_picked,abs(sig)*vol)
-      endif
-
-c Finalize PS point
-      call fill_plots
-      call fill_mint_function(f)
-         
-
-
-
-
-
-         
-         f(2)=f1(1)+f1(2)
-         sigintF=f(2)
-         unwgt=.false.
-         call update_unwgt_table(unwgt_table,proc_map,unwgt,f)
-         f_check=f(2)
-         if (f_check.ne.0d0.or.sigintF.ne.0d0) then
-            if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d0) then
-               write (*,*) 'Error inaccuracy in unweight table 1'
-     $              ,sigintF,f_check
-               stop
-            elseif (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-4) then
-               write (*,*) 'Warning inaccuracy in unweight table 1'
-     $              ,sigintF,f_check
-            endif
-         endif
-         if (f(1).ne.0d0) itotalpoints=itotalpoints+1
-         do i=1,nintegrals
-            double_check(i)=f(i)
-         enddo
+         call include_PDF_and_alphas
+c Sum the contributions that can be summed before taking the ABS value
+         call sum_identical_contributions
+         call fill_mint_function_NLOPS(f)
+         call fill_MC_integer(1,proc_map(0,1),f(1)*vol1)
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
-         stop
+         stop 1
       elseif(ifl.eq.2) then
-         unwgt=.true.
-         call update_unwgt_table(unwgt_table,proc_map,unwgt,f)
-         f_check=f(2)
-         sigintF=f_check
-c The following two are needed when writing events to do NLO/Born
-c reweighting
-         sigintF_without_w=sigintF/w
-         f_abs_without_w=f(1)/w
-c Double check the consistency. This check will fail when folding is
-c used.
-         do i=1,nintegrals
-            if (double_check(i).ne.0d0) then
-               if (abs(1d0-f(i)/double_check(i)).gt.1d-12) then
-                  write (*,*) "Not consistent numbers in driver_mintMC"
-                  write (*,*) f
-                  write (*,*) double_check
-                  stop 1
-               endif
-            elseif (f(i).ne.0d0) then
-               write (*,*) "Not consistent numbers in driver_mintMC"
-               write (*,*) f
-               write (*,*) double_check
-               stop 1
-            endif
-         enddo
+         call fill_mint_function_NLOPS(f)
+c Randomly pick the contribution that will be written in the event file
+         if (imode.eq.2) call pick_unweight_contr
       endif
       return
       end
+
+      
+
+
 
       subroutine update_unwgt_table(unwgt_table,proc_map,unweight,f)
       implicit none
@@ -1591,9 +1475,7 @@ c summed explicitly and which by MC-ing.
       logical found_ini1,found_ini2,found_fnl
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,j_fks_proc(fks_configs),i_fks_pdg_proc(fks_configs)
-     $     ,j_fks_pdg_proc(fks_configs),i
-      integer sum
-      data    sum /3/
+     $     ,j_fks_pdg_proc(fks_configs),i,sum,j
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       INTEGER              IPROC
@@ -1604,6 +1486,7 @@ c summed explicitly and which by MC-ing.
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      sum=3
       if (ickkw.eq.4) then
          sum=0
          write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
@@ -1771,7 +1654,9 @@ c "npNLO".
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      integer nattr,npNLO,npLO
+      include 'genps.inc'
+      integer i
+      integer                 nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
@@ -1780,6 +1665,8 @@ c "npNLO".
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow)
       common /c_leshouche_inc/idup,mothup,icolup
+      character*4      abrv
+      common /to_abrv/ abrv
       if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIGPP') .and.
      $     (ickkw.eq.3.or.ickkw.eq.4))then
          nattr=2

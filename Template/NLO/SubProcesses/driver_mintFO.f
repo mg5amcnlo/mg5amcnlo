@@ -395,6 +395,8 @@ c timing statistics
       data tr_s/0.0/
       data tr_pdf/0.0/
       data t_plot/0.0/
+      data t_cuts/0.0/
+      data t_MC_subt/0.0/
       end
 
 
