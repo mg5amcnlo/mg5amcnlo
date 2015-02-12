@@ -293,7 +293,7 @@ c respectively.
      $     ,fks_Sij,f_damp,ffact,sevmc,dummy,zhw(nexternal)
      $     ,xmcxsec(nexternal)
       external dot,fks_Sij,f_damp
-      logical lzone(nexternal),flagmc,MCcntcalled
+      logical lzone(nexternal),flagmc
       double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -307,6 +307,8 @@ c respectively.
       integer           fks_j_from_i(nexternal,0:nexternal)
      &                  ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      logical              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
       call cpu_time(tBefore)
       if(UseSfun)then
          x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
@@ -844,7 +846,9 @@ c        observables.
 c     The PDG codes: pdg(i,icontr). Always the ones with length
 c        'nexternal' are used, because the momenta are also the 
 c        'nexternal' ones. This is okay for IR-safe observables.
-c
+c     If the contribution belongs to an H-event or S-event:
+c        H_event(icontr)
+c     
 c Not set in this subroutine, but included in the c_weights common block
 c are the
 c     wgts(iwgt,icontr) : weights including scale/PDFs/logs. These are
@@ -858,6 +862,13 @@ c     plot_wgts(iwgt,icontr) : same as wgts(), but only non-zero for
 c        unique contributions and non-unique are added to the unique
 c        ones. 'Unique' here is defined that they would be identical in
 c        an analysis routine (i.e. same momenta and PDG codes)
+c     shower_scale(icontr) : The preferred shower starting scale for
+c        this contribution
+c     niproc(icontr) : number of combined subprocesses in parton_lum_*.f
+c     parton_iproc(iproc,icontr) : value of the PDF for the iproc
+c        contribution
+c     parton_pdg(nexternal,iproc,icontr) : value of the PDG codes for
+c        the iproc contribution
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -904,17 +915,24 @@ c        an analysis routine (i.e. same momenta and PDG codes)
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
-      if(type.eq.1) then
-c real emission
+      do i=1,nexternal
+         pdg(i,icontr)=idup(i,1)
+      enddo
+      if(type.eq.1 .or. type.eq. 8 .or. type.eq.9 .or. type.eq.10 .or.
+     &     type.eq.13) then
+c real emission and n+1-body kin. contributions to counter terms and MC
+c subtr term
          QCDpower(icontr)=nint(2*wgtbpower+2)
          do i=1,nexternal
             do j=0,3
                momenta(j,i,icontr)=p_ev(j,i)
             enddo
-            pdg(i,icontr)=idup(i,1)
          enddo
-      elseif(type.ge.2 .and. type.le.6) then
-c Born, counter term, or soft-virtual
+         H_event(icontr)=.true.
+      elseif(type.ge.2 .and. type.le.6 .or. type.eq.11 .or. type.eq.12)
+     &        then
+c Born, counter term, soft-virtual, or n-body kin. contributions to real
+c and MC subtraction terms.
          if (type.eq.2) then
             QCDpower(icontr)=nint(2*wgtbpower)
          else
@@ -933,8 +951,8 @@ c Born, counter term, or soft-virtual
                   stop 1
                endif
             enddo
-            pdg(i,icontr)=idup(i,1)
          enddo
+         H_event(icontr)=.false.
       else
          write (*,*) 'ERROR: unknown type in add_wgt',type
          stop 1
@@ -953,7 +971,8 @@ c or to fill histograms.
       include 'c_weight.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
-      integer i
+      include 'genps.inc'
+      integer i,j,k
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
       external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
@@ -962,6 +981,9 @@ c or to fill histograms.
       common/c_nFKSprocess/nFKSprocess
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       do i=1,icontr
@@ -975,11 +997,21 @@ c or to fill histograms.
          q2fact(2)=mu2_f
 c call the PDFs
          xlum = dlum()
+         if (iproc.gt.max_iproc) then
+            write (*,*) 'ERROR iproc too large',iproc,max_iproc
+            stop 1
+         endif
+c set_pdg_codes fills the niproc, parton_iproc, parton_pdg and parton_pdg_uborn
+         call setup_pdg_codes(iproc,pd,nFKSprocess,i)
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          iwgt=1
-         wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
-     &        wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
-         wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
+         wgt_wo_pdf=(wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) + wgt(3,i)
+     &        *log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
+     &        *rwgt_muR_dep_fac(sqrt(mu2_r))
+         wgts(iwgt,i)=xlum * wgt_wo_pdf
+         do j=1,iproc
+            parton_iproc(j,icontr)=parton_iproc(j,icontr) * wgt_wo_pdf
+         enddo
          if (itype(i).eq.3) then
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
@@ -995,6 +1027,52 @@ c and not be part of the plots nor computation of the cross section.
       return
       end
 
+
+      subroutine set_pdg_codes(iproc,pd,iFKS,ict)
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'c_weight.inc'
+      include 'fks_info.inc'
+      integer j,k,iproc
+      double precision  pd(0:maxproc)
+      include 'leshouche_decl.inc'
+      common/c_leshouche_idup_d/ idup_d
+c save also the separate contributions to the PDFs and the corresponding
+c PDG codes
+      niproc(ict)=iproc
+      do j=1,iproc
+         parton_iproc(j,ict)=pd(j)
+         do k=1,nexternal
+            parton_pdg(k,j,ict)=idup_d(iFKS,k,j)
+            if (k.lt.fks_j_d(iFKS)) then
+               parton_pdg_uborn(k,j,ict)=idup_d(iFKS,k,j)
+            elseif(k.eq.fks_j_d(iFKS)) then
+               if (abs(idup_d(iFKS,fks_i_d(iFKS),j)) .eq.
+     &              abs(idup_d(iFKS,fks_j_d(iFKS) ,j))) then
+                 parton_pdg_uborn(k,j,ict)=21
+               elseif (idup_d(iFKS,fks_i_d(iFKS),j).eq.21) then
+                 parton_pdg_uborn(k,j,ict)=idup_d(iFKS,fks_j_d(iFKS),j)
+               elseif (idup_d(iFKS,fks_j_d(iFKS),j).eq.21) then
+                 parton_pdg_uborn(k,j,ict)=-idup_d(iFKS,fks_i_d(iFKS),j)
+               else
+                 write (*,*)
+     &                'ERROR in PDG assigment for underlying Born'
+                 stop 1
+               endif
+            elseif(k.lt.fks_i_d(iFKS)) then
+               parton_pdg_uborn(k,j,ict)=idup_d(iFKS,k,j)
+            elseif(k.eq.nexternal) then
+               parton_pdg_uborn(k,j,ict)=0
+            elseif(k.ge.fks_i_d(iFKS)) then
+               parton_pdg_uborn(k,j,ict)=idup_d(iFKS,k+1,j)
+            endif
+         enddo
+      enddo
+      return
+      end
+      
+      
       subroutine reweight_scale
 c Use the saved c_weight info to perform scale reweighting. Extends the
 c wgts() array to include the weights.
@@ -1239,8 +1317,7 @@ c excluding the nbody contributions.
       sig=0d0
       if (icontr.eq.0) return
       do i=1,icontr
-         if (itype(i).eq.1 .or. itype(i).eq.4 .or. itype(i).eq.5 .or.
-     &        itype(i).eq.6) then
+         if (itype(i).ne.2 .and. itype(i).ne.3) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -1285,16 +1362,13 @@ c of that contribution and exit the do-loop. This loop extends to 'i',
 c so if the current weight cannot be summed to a previous one, the ii=i
 c contribution makes sure that it is added as a new element.
          do ii=1,i
-            if (plot_id(ii).eq.plot_id(i)) then
-               if (pdg_equal(pdg(1,ii),pdg(1,i))) then
-                  if (momenta_equal(momenta(0,1,ii),momenta(0,1,i)))then
-                     do j=1,iwgt
-                        plot_wgts(j,ii)=plot_wgts(j,ii)+wgts(j,i)
-                     enddo
-                     exit
-                  endif
-               endif
-            endif
+            if (plot_id(ii).ne.plot_id(i)) cycle
+            if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
+            if (.not.momenta_equal(momenta(0,1,ii),momenta(0,1,i)))cycle
+            do j=1,iwgt
+               plot_wgts(j,ii)=plot_wgts(j,ii)+wgts(j,i)
+            enddo
+            exit
          enddo
       enddo
       do i=1,icontr
@@ -1341,6 +1415,123 @@ c call the analysis/histogramming routines
       end
       
 
+      subroutine include_shape_in_shower_scale(p,iFKS)
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'c_weight.inc'
+      integer iFKS,Hevents,izero,mohdr
+      double precision ddum(6),p(0:3,nexternal)
+      logical ldum
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     &                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      double precision    xm12
+      integer                  ileg
+      common/cscaleminmax/xm12,ileg
+      character*4      abrv
+      common /to_abrv/ abrv
+      logical              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
+      parameter (izero=0,mohdr=-100)
+c Compute the shower starting scale including the shape function
+      if ( (.not. MCcntcalled) .and.
+     &     abrv.ne.'born' .and. ickkw.ne.4) then
+         if(p(0,1).ne.-99d0)then
+            call set_cms_stuff(mohdr)
+            call assign_emsca(p,xi_i_fks_ev,y_ij_fks_ev)
+            call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat,p,ileg,
+     &           xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5),ddum(6)
+     &           ,ldum)
+         endif
+      endif
+      call set_cms_stuff(izero)
+      call set_shower_scale(iFKS*2-1,.false.)
+      call set_cms_stuff(mohdr)
+      call set_shower_scale(iFKS*2,.true.)
+c loop over all the weights and update the relevant ones
+c (i.e. nFKS(i)=iFKS)
+      do i=1,icontr
+         if (nFKS(i).eq.iFKS) then
+            if (H_event(icontr) then
+c H-event contribution
+               shower_scale(i)=SCALUP(iFKS*2)
+            else
+c S-event contribution
+               shower_scale(i)=SCALUP(iFKS*2-1)
+            endif
+         endif
+      enddo
+      return
+      end
+
+
+      subroutine sum_identical_contributions
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      integer i,j,ii
+      logical momenta_equal,pdg_equal
+      external momenta_equal,pdg_equal
+
+      if (icontr.eq.0) return
+
+      do i=1,icontr
+         do j=1,niproc(i)
+            unwgt(j,i)=0d0
+         enddo
+         unwgt_sum(i)=0d0
+         do ii=1,i
+            if (H_event(i).ne.H_event(ii)) cycle
+            if (H_event(i)) then
+c H-event. If PDG codes and momenta are equal, we can sum them before
+c taking ABS value. Here we assume that if the number of IPROC and the
+c PDG codes of the first iproc are identical that we can sum the
+c contributions.
+               if (niproc(ii).ne.niproc(i)) cycle
+               if (shower_scale(ii).ne.shower_scale(i)) cycle
+               if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
+               if (.not. momenta_equal(momenta(0,1,ii),momenta(0,1,i)))
+     &              cycle
+               unwgt_sum(ii)=0d0
+               do j=1,niproc(ii)
+                  unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
+                  unwgt_sum(ii)=unwgt_sum(ii)+unwgt(j,ii)
+               enddo
+               exit
+            else
+c S-event. If PDG codes *of the underlying Born* and momenta are equal,
+c we can sum them before taking the ABS value.
+               if (.not. pdg_equal(parton_pdg_uborn(1,1,ii)
+     &              ,parton_pdg_uborn(1,1,i))) cycle
+               if (.not. momenta_equal(
+     &              momenta(0,1,ii),momenta(0,1,i))) cycle
+               unwgt_sum_curr=unwgt_sum(ii)
+               unwgt_sum(ii)=0d0
+               do j=1,niproc(ii)
+                  do jj=1,iproc_save(nFKS(icontr))
+                     if (eto(jj,nFKS(icontr)).eq.j) then
+                        unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
+                        unwgt_sum(ii)=unwgt_sum(ii)+unwgt(j,ii)
+                     endif
+                  enddo
+               enddo
+c Take the weighted average for the shower starting scale
+               shower_scale(ii)=( unwgt_sum_curr*shower_scale(ii)
+     &              +(unwgt_sum(ii)-unwgt_sum_curr)*shower_scale(i) )
+     &              /unwgt_sum(ii)
+               exit
+            endif
+         enddo
+      enddo
+      
+      return
+      end
+
+      
+      
       subroutine rotate_invar(pin,pout,cth,sth,cphi,sphi)
 c Given the four momentum pin, returns the four momentum pout (in the same
 c Lorentz frame) by performing a three-rotation of an angle theta 
@@ -2986,7 +3177,6 @@ c based on previous PS points (done in BinothLHA.f)
       if (ExceptPSpoint .and. iminmax.le.1) goto 44
       return
       end
-
 
 
       subroutine set_shower_scale(iFKS,Hevents)

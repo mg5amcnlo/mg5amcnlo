@@ -867,6 +867,8 @@ c PDG codes of particles
       common /c_leshouche_inc/idup,mothup,icolup
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+      logical              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
@@ -892,38 +894,10 @@ c "npNLO".
          virt_wgt_mint=0d0
          born_wgt_mint=0d0
          virtual_over_born=0d0
+         MCcntcalled=.false.
          if (ickkw.eq.3) call set_FxFx_scale(-1,p)
          call update_vegas_x(xx,x)
-
-c$$$      fold=ifl
-c$$$      if (ifl.eq.0) then
-c$$$         do k=1,maxproc_save
-c$$$            do j=1,3
-c$$$               do i=0,fks_configs
-c$$$                  unwgt_table(i,j,k)=0d0
-c$$$               enddo
-c$$$            enddo
-c$$$         enddo
-c$$$         f1(1)=0d0
-c$$$         f1(2)=0d0
-c$$$         virtual_over_born=0d0
-c$$$         do i=0,fks_configs
-c$$$            result(i,1)=0d0
-c$$$            result(i,2)=0d0
-c$$$         enddo
-c$$$         dsigS=0d0
-c$$$         dsigH=0d0
-c$$$         do i=1,nintegrals
-c$$$            f(i)=0d0
-c$$$         enddo
-c$$$      endif
-
-c$$$         do i=1,nintegrals
-c$$$            double_check(i)=0d0
-c$$$         enddo
-
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-
 
 c The nbody contributions
          if (abrv.eq.'real') goto 11
@@ -940,17 +914,10 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call update_fks_dir(nFKS_picked,iconfig)
          jac=1d0
          call generate_momenta(ndim,iconfig,jac,x,p)
-
-c$$$         call dsigF(p,wgt,w,dsigS,dsigH)
-c$$$         result(0,1)= w*dsigS
-c$$$         result(0,2)= w*dsigH
-c$$$         f1(1) = f1(1)+result(0,1)
-c$$$         f1(2) = f1(2)+result(0,2)
-
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
-         call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+         call set_shower_scale_noshape(pp,nFKS_picked*2-1)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
             if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
@@ -962,11 +929,14 @@ c$$$         f1(2) = f1(2)+result(0,2)
                call compute_nbody_noborn
             endif
          endif
-
+c Update the shower starting scale. This might be updated again below if
+c the nFKSprocess is the same.
+         call include_shape_in_shower_scale(p,nFKS_picked)
+            
+         
  11      continue
 c The n+1-body contributions (including counter terms)
          if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
-
 c Set calculated Born to zero to prevent numerical inaccuracies: not
 c always exactly the same momenta in computation of Born when computed
 c for different nFKSprocess.
@@ -980,36 +950,13 @@ c for different nFKSprocess.
             probne=1d0
             gfactsf=1.d0
             gfactcl=1.d0
-c$$$c When sum=3, we can compute the nFKSprocesses without soft
-c$$$c singularities fewer number of PS points, because their contribution is
-c$$$c small. This should save some time, without degrading the uncertainty
-c$$$c much. Do this by overwrite the 'wgt' variable
-c$$$               if (sum.eq.3 .and. PDG_type(i_fks).ne.21) then
-c$$$                  rnd=ran2()
-c$$$                  rfract=1.0d0  ! fraction of PS points to include
-c$$$                                ! them. This could be determined
-c$$$                                ! dynamically, based on the relative
-c$$$                                ! importance of this contribution.
-c$$$                  if (rnd.gt.rfract) then
-c$$$                     wgt=0d0    ! fks_singular will not compute anything
-c$$$                  else
-c$$$                     wgt=wgt/rfract
-c$$$                  endif
-c$$$               endif
             call generate_momenta(ndim,iconfig,jac,x,p)
-c$$$            call dsigF(p,wgt,w,dsigS,dsigH)
-c$$$            sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*w
-c$$$            result(nFKSprocess,1)= w*dsigS
-c$$$            result(nFKSprocess,2)= w*dsigH
-c$$$            f1(1) = f1(1)+result(nFKSprocess,1)
-c$$$            f1(2) = f1(2)+result(nFKSprocess,2)
             if (p_born(0,1).lt.0d0) cycle
-
+c Set the shower scales            
             call set_cms_stuff(izero)
-            call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+            call set_shower_scale_noshape(pp,iFKS*2-1)
             call set_cms_stuff(mohdr)
-            call set_shower_scale_noshape(pp,nFKSprocess*2)
-
+            call set_shower_scale_noshape(pp,iFKS*2)
             call compute_prefactors_n1body(vegas_wgt,jac)
             call set_cms_stuff(izero)
             passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
@@ -1046,10 +993,57 @@ c events are called, so this will remain 0.
                sudakov_damp=probne
                call compute_real_emission(p,sudakov_damp)
             endif
+c Update the shower starting scale. This might be updated again below if
+c the nFKSprocess is the same.
+            call include_shape_in_shower_scale(p,iFKS)
          enddo
          call fill_MC_integer(1,proc_map(0,1),sigintR)
  12      continue
 
+c Include PDFs and alpha_S and reweight to include the uncertainties
+      call include_PDF_and_alphas
+
+      call sum_identical_contributions
+
+      call unweight
+
+
+
+      
+      
+      if (doreweight) then
+         if (do_rwgt_scale) call reweight_scale
+         if (do_rwgt_pdf) call reweight_pdf
+      endif
+      
+      if (iappl.ne.0) then
+         if (sum) then
+            write (*,*) 'ERROR: applgrid only possible '/
+     &           /'with MC over FKS directories',iappl,sum
+            stop 1
+         endif
+         call fill_applgrid_weights(vegas_wgt)
+      endif
+
+c Importance sampling for FKS configurations
+      if (sum) then
+         call get_wgt_nbody(sig)
+         call fill_MC_integer(1,nFKS_picked,abs(sig))
+      else
+         call get_wgt_no_nbody(sig)
+         call fill_MC_integer(1,nFKS_picked,abs(sig)*vol)
+      endif
+
+c Finalize PS point
+      call fill_plots
+      call fill_mint_function(f)
+         
+
+
+
+
+
+         
          f(2)=f1(1)+f1(2)
          sigintF=f(2)
          unwgt=.false.
