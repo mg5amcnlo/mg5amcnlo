@@ -1017,6 +1017,8 @@ c or to fill histograms.
       common/c_nFKSprocess/nFKSprocess
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      double precision            exclude_virt_wgt(max_iproc)
+      common /c_exclude_virt_wgt/ exclude_virt_wgt
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
@@ -1056,6 +1058,10 @@ c and not be part of the plots nor computation of the cross section.
      &           *rwgt_muR_dep_fac(sqrt(scales2(2,i)))
             born_wgt_mint=born_wgt_mint*xlum*g_strong(i)**QCDpower(i)
      &           /(8d0*Pi**2)*rwgt_muR_dep_fac(sqrt(mu2_r))
+            do j=1,iproc
+               exclude_virt_wgt(j)=(virt_wgt_mint/xlum)*(parton_iproc(j
+     $              ,i)/wgt_wo_pdf)
+            enddo
          endif
       enddo
       call cpu_time(tAfter)
@@ -1521,6 +1527,13 @@ c S-event contribution
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      logical               only_virt
+      integer         imode
+      common /c_imode/imode,only_virt
+      double precision            exclude_virt_wgt(max_iproc)
+      common /c_exclude_virt_wgt/ exclude_virt_wgt
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       if (icontr.eq.0) return
       do i=1,icontr
          do j=1,niproc(i)
@@ -1539,10 +1552,9 @@ c contributions.
                if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
                if (.not. momenta_equal(momenta(0,1,ii),momenta(0,1,i)))
      &              cycle
-               unwgt_sum(ii)=0d0
                do j=1,niproc(ii)
                   unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
-                  unwgt_sum(ii)=unwgt_sum(ii)+unwgt(j,ii)
+                  unwgt_sum(ii)=unwgt_sum(ii)+abs(parton_iproc(j,ii))
                enddo
                exit
             else
@@ -1553,19 +1565,32 @@ c we can sum them before taking the ABS value.
                if (.not. momenta_equal(
      &              momenta(0,1,ii),momenta(0,1,i))) cycle
                unwgt_sum_curr=unwgt_sum(ii)
-               unwgt_sum(ii)=0d0
                do j=1,niproc(ii)
                   do jj=1,iproc_save(nFKS(i))
                      if (eto(jj,nFKS(i)).eq.j) then
                         unwgt(j,ii)=unwgt(j,ii)+parton_iproc(jj,i)
-                        unwgt_sum(ii)=unwgt_sum(ii)+unwgt(j,ii)
+                        unwgt_sum(ii)=unwgt_sum(ii)+abs(parton_iproc(j,ii))
                      endif
                   enddo
                enddo
+c When computing upper bounding envelope (imode.eq.1) do not include the
+c virtual corrections, because a separate bound is computed for them.
+c Exception: when computing only the virtual, do include it here!
+               if (imode.eq.1 .and. .not. only_virt .and. itype(i).eq.3)
+     $              then
+                  unwgt_sum(ii)=unwgt_sum(ii)-virt_wgt_mint
+                  do j=1,niproc(ii)
+                     do jj=1,iproc_save(nFKS(i))
+                        if (eto(jj,nFKS(i)).eq.j) then
+                          unwgt(j,ii)=unwgt(j,ii)-exclude_virt_wgt(jj)
+                        endif
+                     enddo
+                  enddo
+               endif
 c Take the weighted average for the shower starting scale
                shower_scale(ii)=( unwgt_sum_curr*shower_scale(ii)
-     &              +(unwgt_sum(ii)-unwgt_sum_curr)*shower_scale(i) )
-     &              /unwgt_sum(ii)
+     $              +(unwgt_sum(ii)-unwgt_sum_curr)
+     $              *shower_scale(i) ) /unwgt_sum(ii)
                exit
             endif
          enddo
