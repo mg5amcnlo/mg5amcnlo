@@ -34,12 +34,21 @@ C check if need color or charge links, and include the gs/w**2 term here
       if (need_color_links) then
 %(iflines_col)s
       wgt = wgt_col * g**2
+C update the amp_split, which has to be set to 0 !!BEFORE!! computing the sum of the color/charge linked borns
+      do i = 1, amp_split_size
+        amp_split_cnt(i,1,qcd_pos) = dble(amp_split_cnt(i,1,qcd_pos)) * g**2
+      enddo
+
       else if (need_charge_links) then
       chargeprod = charges_born(m) * charges_born(n)
       if ((m.le.nincoming.and.n.gt.nincoming) .or. (n.le.nincoming.and.m.gt.nincoming)) chargeprod = - chargeprod
 C add a factor 1/2 for the self-eikonal soft link
       if (m.eq.n) chargeprod = chargeprod / 2d0
       wgt = dble(ans_cnt(1, qed_pos)) * chargeprod * dble(gal(1))**2
+C update the amp_split, which has to be set to 0 !!BEFORE!! computing the sum of the color/charge linked borns
+      do i = 1, amp_split_size
+        amp_split_cnt(i,1,qed_pos) = dble(amp_split_cnt(i,1,qed_pos)) * chargeprod * dble(gal(1))**2
+      enddo
       endif
 
       return 

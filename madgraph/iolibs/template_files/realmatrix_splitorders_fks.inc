@@ -22,12 +22,14 @@ C
       include 'orders.inc'
       data keep_order / NSQAMPSO*.TRUE. /
       data firsttime / .TRUE. /
+      integer amp_orders(nsplitorders)
       double precision ans_max, tiny
       parameter (tiny = 1d-12)
 C
 C     FUNCTIONS
 C
       integer GETORDPOWFROMINDEX%(proc_prefix)s
+      integer orders_to_amp_split_pos
 C
 C BEGIN CODE
 C
@@ -54,9 +56,22 @@ endif
 CALL SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS)
 ans_summed = 0d0
 ans_max = 0d0
+
+C reset the amp_split array
+do i = 1, amp_split_size
+ amp_split(i) = 0d0
+enddo
+
 do i = 1, nsqampso
  ans_max = max(dabs(ans(i)),ans_max)
- if (keep_order(i)) ANS_SUMMED = ANS_SUMMED + ANS(I)
+ if (keep_order(i)) then
+    ANS_SUMMED = ANS_SUMMED + ANS(I)
+C   keep track of the separate pieces correspoinding to different coupling combinations
+    do j = 1, nsplitorders
+      amp_orders(j) = GETORDPOWFROMINDEX%(proc_prefix)s(j, i)
+    enddo
+    amp_split(orders_to_amp_split_pos(amp_orders)) = ans(i)
+ endif
 enddo
 
 C avoid fake non-zeros

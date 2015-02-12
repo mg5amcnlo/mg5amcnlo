@@ -82,8 +82,10 @@ c statistics for MadLoop
       common/mc_int2/volh,mc_hel,ihel,fillh
       logical cpol
       integer getordpowfromindex_ml5
+      integer orders_to_amp_split_pos
       logical, allocatable, save :: keep_order(:)
       include 'orders.inc'
+      integer amp_orders(nsplitorders)
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -96,6 +98,10 @@ c Ellis-Sexton scale)
       virt_wgt= 0d0
       single  = 0d0
       double  = 0d0
+C     reset the amp_split array
+      do i = 1, amp_split_size
+        amp_split(i) = 0d0
+      enddo
       prec_found = 1.0d0
       symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
       if (firsttime_run) then
@@ -139,7 +145,13 @@ C        look for orders which match the nlo order constraint
              single  = single + virt_wgts(2,i) / symfactvirt
              double  = double + virt_wgts(3,i) / symfactvirt
            endif
-         enddo
+C         keep track of the separate pieces correspoinding to
+C          different coupling combinations
+           do j = 1, nsplitorders
+            amp_orders(j) = getordpowfromindex_ML5(j, i)
+           enddo
+           amp_split(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i)
+        enddo
       else
          tolerance=PrecisionVirtualAtRunTime
 c Just set the accuracy found to a positive value as it is not specified
@@ -153,6 +165,12 @@ c once the initial pole check is performed.
                 virt_wgt= virt_wgt + virt_wgts(1,i) / symfactvirt
                 single  = single + virt_wgts(2,i) / symfactvirt
                 double  = double + virt_wgts(3,i) / symfactvirt
+C         keep track of the separate pieces correspoinding to
+C          different coupling combinations
+                do j = 1, nsplitorders
+                 amp_orders(j) = getordpowfromindex_ML5(j, i)
+                enddo
+                amp_split(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i)
               endif
             enddo
          elseif (mc_hel.eq.1) then

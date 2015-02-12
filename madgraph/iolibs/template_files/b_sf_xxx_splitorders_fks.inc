@@ -17,19 +17,42 @@ C
 C
 C VARIABLES
 C
-      INTEGER I
+      INTEGER I,j
       include 'orders.inc'
       REAL*8 ANS(0:NSQAMPSO)
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
+      integer amp_orders(nsplitorders)
+C
+C     FUNCTIONS
+C
+      integer GETORDPOWFROMINDEX_B
+      integer orders_to_amp_split_pos
 C
 C BEGIN CODE
 C
 	  CALL SB_SF_%(ilink)3.3d_SPLITORDERS(P,ANS)
 C color-linked borns are called for QCD-type emissions
       ans_summed = 0d0
+
+C reset the amp_split_cnt array
+      do i = 1, amp_split_size
+       do j = 1, nsplitorders
+        amp_split_cnt(i,1,j) = 0d0
+        amp_split_cnt(i,2,j) = 0d0
+       enddo
+      enddo
+
       do i = 1, nsqampso
-        if (keep_order_cnt(qcd_pos, i)) ANS_SUMMED = ans_summed + ANS(I)
+        if (keep_order_cnt(qcd_pos, i)) then
+         ANS_SUMMED = ans_summed + ANS(I)
+         do j = 1, nsplitorders
+          amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
+C take into account the fact that this is for QCD
+          if (j.eq.qcd_pos) amp_orders(j) = amp_orders(j) + 2
+         enddo
+         amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
+        endif
       enddo
 
 return

@@ -1,3 +1,90 @@
+      integer function orders_to_amp_split_pos(ord)
+C helper function to keep track of the different coupling order combinations
+C given the squared orders ord, return the corresponding position into the amp_split array
+      implicit none
+      include 'orders.inc'
+      integer ord(nsplitorders)
+      integer i
+      integer so_prod
+
+C sanity check
+      do i = 1, nsplitorders
+        if (ord(i).gt.nlo_orders(i).or.ord(i).lt.0) then
+          write(*,*) 'ERROR in orders_to_amp_split_pos'
+          write(*,*) 'Invalid orders', ord, i
+          write(*,*) 'NLO orders', nlo_orders
+          stop 1
+        endif
+      enddo
+
+C split_amp is a one-dimensional array, corresponding to the 
+C  one-dimensional version of the 'cube' of size 
+C  nlo_orders(1) x ... nlo_orders(nsplitorders)
+      orders_to_amp_split_pos = 1
+      so_prod = 1
+      do i = 1, nsplitorders
+        if (i.gt.1) so_prod = so_prod * (nlo_orders(i - 1) + 1)
+        orders_to_amp_split_pos = orders_to_amp_split_pos + ord(i) * so_prod
+      enddo
+      return
+      end
+
+
+      subroutine amp_split_pos_to_orders(pos, orders)
+C helper function to keep track of the different coupling order combinations
+C given the position pos, return the corresponding order powers orders
+C it is the inverse of orders_to_amp_split_pos
+      implicit none
+      include 'orders.inc'
+      integer pos, orders(nsplitorders)
+      integer i
+      integer remainder, prod
+
+C sanity check
+      if (pos.gt.amp_split_size.or.pos.lt.0) then
+        write(*,*) 'ERROR in amp_split_pos_to_orders'
+        write(*,*) 'Invalid pos', pos, amp_split_size
+        stop 1
+      endif
+
+      prod = amp_split_size
+      remainder = pos
+      do i = nsplitorders, 1, -1
+        prod = prod / (nlo_orders(i) + 1)
+        orders(i) = (remainder - 1) / prod 
+        remainder = mod(remainder, prod) 
+        if (remainder.eq.0) remainder = prod
+      enddo
+      return
+      end
+
+
+      subroutine check_amp_split()
+C check that amp_split_pos_to_orders and orders_to_amp_split_pos behave
+C as expected (one the inverse of the other)
+C Stop the code if anything wrong is found
+C Also, print on screen a summary of the orders in amp_split 
+      implicit none
+      include 'orders.inc'
+      integer orders_to_amp_split_pos
+      integer i, pos
+      integer ord(nsplitorders)
+
+      do i = 1, amp_split_size
+        call amp_split_pos_to_orders(i, ord)
+        pos = orders_to_amp_split_pos(ord)
+        if (pos.ne.i) then
+          write(*,*) 'ERROR in check amp_split', pos, i 
+          write(*,*) 'ORD is ', ord
+          stop 1
+        endif
+        write(*,*) 'AMP_SPLIT: ', i, 'correspond to S.O.', ord
+      enddo
+
+      return
+      end
+
+      
       subroutine compute_born
 c This subroutine computes the Born matrix elements and adds its value
 c to the list of weights using the add_wgt subroutine
@@ -3173,7 +3260,7 @@ C
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 
-      integer i,imother_fks,iord
+      integer i,j,imother_fks,iord
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       double precision t,z,ap(2),E_j_fks,E_i_fks,Q(2),cphi_mother,
      # sphi_mother,pi(0:3),pj(0:3),wgt_born
@@ -3192,6 +3279,7 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       parameter (ximag=(0.d0,1.d0))
 
       include 'orders.inc'
+      double precision amp_split_local(amp_split_size)
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
@@ -3199,6 +3287,11 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
+      logical reset_calculated_born
+C  
+      do i = 1, amp_split_size
+        amp_split_local(i) = 0d0
+      enddo
 C  
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
@@ -3219,12 +3312,20 @@ c might flip when rotating the momenta.
           call trp_rotate_invar(p_born(0,i),p_born_rot(0,i),
      #                          cthbe,sthbe,cphibe,sphibe)
         enddo
+        reset_calculated_born=.true.
         CalculatedBorn=.false.
         call sborn(p_born_rot,wgt_born)
         CalculatedBorn=.false.
         if (iextra_cnt.gt.0)
      1    call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
       else
+!    do not rotate momenta
+        do i=1,nexternal-1
+          do j=0,3
+            p_born_rot(j,i)=p_born(j,i)
+          enddo
+        enddo
+        reset_calculated_born=.false.
         call sborn(p_born,wgt_born)
         if (iextra_cnt.gt.0)
      1    call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
@@ -3238,10 +3339,14 @@ C check if any extra_cnt is needed
         if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
             ! this is the contribution from the born ME
+               if (reset_calculated_born) calculatedborn=.false.
+               call sborn(p_born_rot,wgt_born)
+               if (reset_calculated_born) calculatedborn=.false.
                wgt1(1) = ans_cnt(1,iord)
                wgt1(2) = ans_cnt(2,iord)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
+               call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
                wgt1(1) = ans_extra_cnt(1,iord)
                wgt1(2) = ans_extra_cnt(2,iord)
             else
@@ -3249,6 +3354,9 @@ C check if any extra_cnt is needed
                stop
             endif
         else
+           if (reset_calculated_born) calculatedborn=.false.
+           call sborn(p_born_rot,wgt_born)
+           if (reset_calculated_born) calculatedborn=.false.
            wgt1(1) = ans_cnt(1,iord)
            wgt1(2) = ans_cnt(2,iord)
         endif
@@ -3284,21 +3392,37 @@ c Insert <ij>/[ij] which is not included by sborn()
            endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
            imother_fks=min(i_fks,j_fks)
-           if(rotategranny)then
-             call getaziangles(p_born_rot(0,imother_fks),
+           call getaziangles(p_born_rot(0,imother_fks),
      #                       cphi_mother,sphi_mother)
-           else
-             call getaziangles(p_born(0,imother_fks),
-     #                       cphi_mother,sphi_mother)
-           endif
            wgt1(2) = -(cphi_mother-ximag*sphi_mother)**2 *
      #             wgt1(2) * azifact
+           do i = 1, amp_split_size
+              amp_split_cnt(i,2,iord) = -(cphi_mother+ximag*sphi_mother)**2 * 
+     #               amp_split_cnt(i,2,iord) * dconjg(azifact)
+           enddo
         else
            write(*,*) 'FATAL ERROR in sborncol_fsr',i_type,j_type,i_fks,j_fks
            stop
         endif
-        if (iord.eq.qcd_pos) wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
-        if (iord.eq.qed_pos) wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
+        if (iord.eq.qcd_pos) then
+            wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
+            do i = 1, amp_split_size
+              amp_split_local(i) = amp_split_local(i) + 
+     #          dble(amp_split_cnt(i,1,iord)*AP(1)+
+     #               amp_split_cnt(i,2,iord)*Q(1))
+            enddo
+        endif
+        if (iord.eq.qed_pos) then
+            wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
+            do i = 1, amp_split_size
+              amp_split_local(i) = amp_split_local(i) + 
+     #          dble(amp_split_cnt(i,1,iord)*AP(2)+
+     #               amp_split_cnt(i,2,iord)*Q(2))
+            enddo
+        endif
+      enddo
+      do i = 1, amp_split_size
+        amp_split(i) = amp_split_local(i)
       enddo
       return
       end
@@ -3338,7 +3462,7 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
 
       double precision p_born_rot(0:3,nexternal-1)
 
-      integer i, iord
+      integer i, j, iord
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       double precision t,z,ap(2),Q(2),cphi_mother,sphi_mother,
      $ pi(0:3),pj(0:3),wgt_born
@@ -3352,6 +3476,7 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       parameter (ximag=(0.d0,1.d0))
 
       include 'orders.inc'
+      double precision amp_split_local(amp_split_size)
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
@@ -3359,7 +3484,12 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
+      logical reset_calculated_born
 C  
+      do i = 1, amp_split_size
+        amp_split_local(i) = 0d0
+      enddo
+
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
          write (*,*) "No born momenta in sborncol_isr"
@@ -3384,15 +3514,15 @@ c might flip when rotating the momenta.
           p_born_rot(2,i)=p_born(2,i)
           p_born_rot(3,i)=-p_born(3,i)
         enddo
-        CalculatedBorn=.false.
-        call sborn(p_born_rot,wgt_born)
-        CalculatedBorn=.false.
-        if (iextra_cnt.gt.0)
-     1    call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
+        reset_calculated_born=.true.
       else
-        call sborn(p_born,wgt_born)
-        if (iextra_cnt.gt.0)
-     1    call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
+!    do not rotate momenta
+        do i=1,nexternal-1
+          do j=0,3
+            p_born_rot(j,i)=p_born(j,i)
+          enddo
+        enddo
+        reset_calculated_born=.false.
       endif
       call AP_reduced(m_type,i_type,ch_m,ch_i,t,z,ap)
       call Qterms_reduced_spacelike(m_type,i_type,ch_m,ch_i,t,z,Q)
@@ -3402,11 +3532,15 @@ c might flip when rotating the momenta.
 C check if any extra_cnt is needed
         if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
+               if (reset_calculated_born) calculatedborn=.false.
+               call sborn(p_born_rot,wgt_born)
+               if (reset_calculated_born) calculatedborn=.false.
             ! this is the contribution from the born ME
                wgt1(1) = ans_cnt(1,iord)
                wgt1(2) = ans_cnt(2,iord)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
+               call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
                wgt1(1) = ans_extra_cnt(1,iord)
                wgt1(2) = ans_extra_cnt(2,iord)
             else
@@ -3414,6 +3548,9 @@ C check if any extra_cnt is needed
                stop
             endif
         else
+           if (reset_calculated_born) calculatedborn=.false.
+           call sborn(p_born_rot,wgt_born)
+           if (reset_calculated_born) calculatedborn=.false.
            wgt1(1) = ans_cnt(1,iord)
            wgt1(2) = ans_cnt(2,iord)
         endif
@@ -3460,9 +3597,30 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
            endif
            wgt1(2) = -(cphi_mother+ximag*sphi_mother)**2 *
      #             wgt1(2) * dconjg(azifact)
+           do i = 1, amp_split_size
+              amp_split_cnt(i,2,iord) = -(cphi_mother+ximag*sphi_mother)**2 * 
+     #               amp_split_cnt(i,2,iord) * dconjg(azifact)
+           enddo
         endif
-        if (iord.eq.qcd_pos) wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
-        if (iord.eq.qed_pos) wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
+        if (iord.eq.qcd_pos) then
+            wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
+            do i = 1, amp_split_size
+              amp_split_local(i) = amp_split_local(i) + 
+     #          dble(amp_split_cnt(i,1,iord)*AP(1)+
+     #               amp_split_cnt(i,2,iord)*Q(1))
+            enddo
+        endif
+        if (iord.eq.qed_pos) then
+            wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
+            do i = 1, amp_split_size
+              amp_split_local(i) = amp_split_local(i) + 
+     #          dble(amp_split_cnt(i,1,iord)*AP(2)+
+     #               amp_split_cnt(i,2,iord)*Q(2))
+            enddo
+        endif
+      enddo
+      do i = 1, amp_split_size
+        amp_split(i) = amp_split_local(i)
       enddo
       return
       end
@@ -3776,7 +3934,7 @@ c      include "fks.inc"
       double precision softcontr,pp(0:3,nexternal),wgt,eik,xi_i_fks
      &     ,y_ij_fks
       double precision wgt1
-      integer i,j
+      integer i,j,k 
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -3786,6 +3944,12 @@ c      include "fks.inc"
 
       double precision zero,pmass(nexternal)
       parameter(zero=0d0)
+
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
+      integer ipos_ord
+      include 'orders.inc'
+
       include "pmass.inc"
 c
 c Call the Born to be sure that 'CalculatedBorn' is done correctly. This
@@ -3794,6 +3958,11 @@ c because of the caching of the diagrams.
 c
       call sborn(p_born(0,1),wgt1)
 c
+C Reset the amp_split array
+      do i = 1, amp_split_size
+        amp_split(i) = 0d0
+      enddo
+
       softcontr=0d0
       do i=1,fks_j_from_i(i_fks,0)
          do j=1,i
@@ -3807,6 +3976,13 @@ C wgt includes the gs/w^2
                   call eikonal_reduced(pp,m,n,i_fks,j_fks,
      #                                 xi_i_fks,y_ij_fks,eik)
                   softcontr=softcontr+wgt*eik
+                  ! update the amp_split array
+                  if (need_color_links) ipos_ord = qcd_pos
+                  if (need_charge_links) ipos_ord = qed_pos
+                  do k=1,amp_split_size
+                    amp_split(k) = 
+     $                   amp_split(k) - 2d0 * eik * amp_split_cnt(k,1,ipos_ord)
+                  enddo
                endif
             endif
          enddo

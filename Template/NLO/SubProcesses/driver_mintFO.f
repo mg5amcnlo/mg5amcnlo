@@ -174,6 +174,7 @@ c
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
       call initcluster
+      call check_amp_split 
 c     
 c     Get user input
 c

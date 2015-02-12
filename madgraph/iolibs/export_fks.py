@@ -949,6 +949,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         if 'QED' in split_orders:
             qed_pos = split_orders.index('QED') + 1
 
+        # the size of the array that keeps track
+        amp_split_size = 1
+        for o in split_orders:
+            amp_split_size = amp_split_size * (nlo_orders[o]+1)
+
         text = 'C The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
@@ -962,9 +967,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         text += 'integer qcd_pos, qed_pos\n'
         text += 'C if = -1, then it is not in the split_orders\n'
         text += 'parameter (qcd_pos = %d)\n' % qcd_pos
-        text += 'parameter (qed_pos = %d)' % qed_pos
+        text += 'parameter (qed_pos = %d)\n' % qed_pos
+        text += 'C this is to keep track of the various coupling combinations entering each ME\n'
+        text += 'integer amp_split_size\n'
+        text += 'parameter (amp_split_size = %d) ! prod_i (nlo_orders(i)+1)\n' % amp_split_size
+        text += 'double precision amp_split(amp_split_size)\n'
+        text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
+        text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
 
         writer.writelines(text)
+
 
     #===============================================================================
     # write_get_mass_width_file

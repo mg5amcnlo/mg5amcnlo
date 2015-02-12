@@ -28,6 +28,7 @@ C
       common /c_born_cnt/ ans_cnt
       integer ord_subtract
       data firsttime / .TRUE. /
+      integer amp_orders(nsplitorders)
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
@@ -35,6 +36,7 @@ C
 C     FUNCTIONS
 C
       integer GETORDPOWFROMINDEX_B
+      integer orders_to_amp_split_pos
 C
 C BEGIN CODE
 C
@@ -90,8 +92,25 @@ CALL SBORN_SPLITORDERS(P,ANS)
 C the born to be integrated
 ans_summed = 0d0
 max_val = 0d0
+
+C reset the amp_split array
+do i = 1, amp_split_size
+  amp_split(i) = 0d0
+  do j = 1, nsplitorders
+    amp_split_cnt(i,1,j) = 0d0
+    amp_split_cnt(i,2,j) = 0d0
+  enddo
+enddo
+
 do i = 1, nsqampso
- if (keep_order(i)) ANS_SUMMED = ANS_SUMMED + ANS(1,I)
+ if (keep_order(i)) then
+    ANS_SUMMED = ANS_SUMMED + ANS(1,I)
+C   keep track of the separate pieces correspoinding to different coupling combinations
+    do j = 1, nsplitorders
+      amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
+    enddo
+    amp_split(orders_to_amp_split_pos(amp_orders)) = ans(1,i)
+ endif
  max_val = max(max_val, abs(ans(1,I)))
 enddo
 C this is to avoid fake non-zero contributions 
@@ -105,6 +124,15 @@ do j = 1, nsplitorders
   if (keep_order_cnt(j,i)) then 
    ANS_CNT(1,j) = ANS_CNT(1,J) + ANS(1,I)
    ANS_CNT(2,j) = ANS_CNT(2,J) + ANS(2,I)
+C   keep track of the separate pieces also for counterterms
+   do k = 1, nsplitorders
+      amp_orders(k) = GETORDPOWFROMINDEX_B(k, i)
+C take into account the fact that the counterterm for a given split order
+C will be multiplied by the corresponding squared coupling
+      if (k.eq.j) amp_orders(k) = amp_orders(k) + 2
+   enddo
+   amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,j) = ans(1,I)
+   amp_split_cnt(orders_to_amp_split_pos(amp_orders),2,j) = ans(2,I)
   endif
  enddo
 C this is to avoid fake non-zero contributions 
