@@ -958,6 +958,20 @@ c subtr term
          do i=1,nexternal
             do j=0,3
                momenta(j,i,icontr)=p_ev(j,i)
+               if (type.eq.1) then
+                  momenta_m(j,i,icontr)=momenta(j,i,icontr)
+               else
+                  if (p1_cnt(0,1,0).gt.0d0) then
+                     momenta_m(j,i,icontr)=p1_cnt(j,i,0)
+                  elseif (p1_cnt(0,1,1).gt.0d0) then
+                     momenta_m(j,i,icontr)=p1_cnt(j,i,1)
+                  elseif (p1_cnt(0,1,2).gt.0d0) then
+                     momenta_m(j,i,icontr)=p1_cnt(j,i,2)
+                  else
+                     write (*,*) 'ERROR in add_wgt: no valid momenta'
+                     stop 1
+                  endif
+               endif
             enddo
          enddo
          H_event(icontr)=.true.
@@ -981,6 +995,11 @@ c and MC subtraction terms.
                else
                   write (*,*) 'ERROR in add_wgt: no valid momenta'
                   stop 1
+               endif
+               if (type.eq.11) then
+                  momenta_m(j,i,icontr)=p_ev(j,i)
+               else
+                  momenta_m(j,i,icontr)=momenta(j,i,icontr)
                endif
             enddo
          enddo
@@ -1082,7 +1101,7 @@ c save also the separate contributions to the PDFs and the corresponding
 c PDG codes
       niproc(ict)=iproc
       do j=1,iproc
-         parton_iproc(j,ict)=pd(j)*CONV
+         parton_iproc(j,ict)=pd(j)*conv
          do k=1,nexternal
             parton_pdg(k,j,ict)=idup_d(iFKS,k,j)
             if (k.lt.fks_j_d(iFKS)) then
@@ -1225,8 +1244,8 @@ c add the weights to the array
      &           wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
             wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
          enddo
-         call InitPDF(izero)
       enddo
+      call InitPDF(izero)
       call cpu_time(tAfter)
       tr_pdf=tr_pdf+(tAfter-tBefore)
       return
@@ -1757,6 +1776,108 @@ c Take the weighted average for the shower starting scale
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
       return
+      end
+
+
+      subroutine fill_rwgt_lines
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'reweight0.inc'
+      include 'genps.inc'
+      include 'nfksconfigs.inc'
+      integer i,ii,j,jj,ict,ipr,momenta_conf
+      logical momenta_equal,found
+      double precision conv,momenta_str_l(0:3,nexternal,max_n_ctr)
+      external momenta_equal
+      character*512 procid,str_temp
+      parameter (conv=389379660d0) ! conversion to picobarns
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      logical         Hevents
+      common/SHevents/Hevents
+      wgtref=unwgt(iproc_picked,icontr_picked)
+      n_ctr_found=0
+      n_mom_conf=0
+      do i=1,icontr_sum(0,icontr_picked)
+         ict=icontr_sum(i,icontr_picked)
+         found=.false.
+         do j=1,n_mom_conf
+            if (momenta_equal(momenta_str_l(0,1,j),momenta_m(0,1,ict)))
+     &           then
+               momenta_conf=j
+               found=.true.
+               exit
+            endif
+         enddo
+         if (.not. found) then
+            n_mom_conf=n_mom_conf+1
+            do ii=1,nexternal
+               do jj=0,3
+                  momenta_str(jj,ii,n_mom_conf)=momenta_m(jj,ii,ict)
+                  momenta_str_l(jj,ii,n_mom_conf)=momenta_m(jj,ii,ict)
+               enddo
+            enddo
+            momenta_conf=n_mom_conf
+         endif
+         if (.not. Hevents) then
+            ipr=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
+            do ii=1,iproc_save(nFKS(ict))
+               if (eto(ii,nFKS(ict)).ne.ipr) cycle
+               n_ctr_found=n_ctr_found+1
+               write (n_ctr_str(n_ctr_found),'(3(1x,d16.10),1x,i2)')
+     &              (wgt(j,ict)*conv,j=1,3),
+     &              nexternal
+               procid=''
+               do j=1,nexternal
+                  write (str_temp,*) parton_pdg(j,ii,ict)
+                  procid=trim(adjustl(procid))//' '
+     &                 //trim(adjustl(str_temp))
+               enddo
+               n_ctr_str(n_ctr_found) =
+     &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
+     &              //trim(adjustl(procid))
+               write (str_temp,'(i2,5(1x,d14.8),1x,i2,1x,d16.8)')
+     &              QCDpower(ict),
+     &              (bjx(j,ict),j=1,2),
+     &              (scales2(j,ict),j=1,3),
+     &              momenta_conf,
+     &              parton_iproc(ii,ict)
+               n_ctr_str(n_ctr_found) =
+     &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
+     &              //trim(adjustl(str_temp))
+            enddo
+         else
+            ipr=iproc_picked
+            n_ctr_found=n_ctr_found+1
+            write (n_ctr_str(n_ctr_found),'(3(1x,d16.10),1x,i2)')
+     &           (wgt(j,ict)*conv,j=1,3),
+     &           nexternal
+            procid=''
+            do j=1,nexternal
+               write (str_temp,*) parton_pdg(j,ipr,ict)
+               procid=trim(adjustl(procid))//' '
+     &              //trim(adjustl(str_temp))
+            enddo
+            n_ctr_str(n_ctr_found) =
+     &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
+     &           //trim(adjustl(procid))
+            write (str_temp,'(i2,5(1x,d14.8),1x,i2,1x,d16.8)')
+     &           QCDpower(ict),
+     &           (bjx(j,ict),j=1,2),
+     &           (scales2(j,ict),j=1,3),
+     &           momenta_conf,
+     &           parton_iproc(ipr,ict)
+            n_ctr_str(n_ctr_found) =
+     &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
+     &           //trim(adjustl(str_temp))
+         endif
+         if (n_ctr_found.ge.max_n_ctr) then
+            write (*,*) 'ERROR: too many contributions in <rwgt>'
+            stop1
+         endif
+      enddo
       end
       
       

@@ -127,6 +127,7 @@ c For MINT:
       logical Hevents
       common/SHevents/Hevents
       character*10 dum
+      integer iFKS_picked
 c statistics for MadLoop      
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
@@ -462,6 +463,10 @@ c fill the information for the write_header_init common block
                   call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
                endif
             endif
+c Randomly pick the contribution that will be written in the event file
+            call pick_unweight_contr(iFKS_picked)
+            call update_fks_dir(iFKS_picked,iconfig)
+            call fill_rwgt_lines
             call finalize_event(x,weight,lunlhe,plotEv,putonshell)
          enddo
          vn=-1
@@ -799,7 +804,7 @@ c From dsample_fks
       include 'run.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,ifl,proc_map(0:fks_configs,0:fks_configs),nFKS_picked
-     $     ,nFKS_in,nFKS_out,izero,ione,itwo,mohdr,iFKS,sum,iFKS_picked
+     $     ,nFKS_in,nFKS_out,izero,ione,itwo,mohdr,iFKS,sum
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF
@@ -927,9 +932,9 @@ c Set the shower scales
             if (passcuts_nbody .and. abrv.ne.'real') then
                call set_cms_stuff(izero)
                if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
+               call set_alphaS(p1_cnt(0,1,0))
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
-                  call set_alphaS(p)
                   call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
                   call set_cms_stuff(izero)
                else
@@ -938,7 +943,6 @@ c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
 c events are called, so this will remain 0.
                   probne=0d0
                endif
-               call set_alphaS(p1_cnt(0,1,0))
                replace_MC_subt=(1d0-gfactsf)*probne
                call compute_soft_counter_term(replace_MC_subt)
                call set_cms_stuff(ione)
@@ -972,11 +976,6 @@ c Sum the contributions that can be summed before taking the ABS value
          stop 1
       elseif(ifl.eq.2) then
          call fill_mint_function_NLOPS(f)
-c Randomly pick the contribution that will be written in the event file
-         if (imode.eq.2) then
-            call pick_unweight_contr(iFKS_picked)
-            call update_fks_dir(iFKS_picked,iconfig)
-         endif
       endif
       return
       end

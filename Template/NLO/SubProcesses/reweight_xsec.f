@@ -316,6 +316,7 @@ c should not be used if wgtkin(0,1,*)=-99
       subroutine fill_reweight0inc_nbody(iproc)
 c Set all reweight variables equal to zero
       implicit none
+      include "nexternal.inc"
       include "reweight_all.inc"
       integer iproc
       logical debug
@@ -1811,6 +1812,7 @@ c       Change it to the factor you need to reweight.
       implicit none
       double precision scale,vev,mbmb,apimuR,apimZ,apimb,mbmuR,alphas,pi
       parameter (pi=3.14159265358979323846d0)
+      include "nexternal.inc"
       include "genps.inc"
       include "reweight.inc"
       include "coupl.inc"
