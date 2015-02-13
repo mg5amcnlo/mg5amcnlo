@@ -415,7 +415,7 @@ c timing statistics
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum
       external passcuts
-      parameter (sum=.false.)
+      data sum /.false./
       integer         ndim,ipole
       common/tosigint/ndim,ipole
       logical       nbody
@@ -440,6 +440,12 @@ c timing statistics
       if (ifl.ne.0) then
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
+      endif
+      if (iappl.ne.0 .and. sum) then
+         write (*,*) 'WARNING: applgrid only possible '/
+     &        /'with MC over FKS directories',iappl,sum
+         write (*,*) 'Switching to MC over FKS directories'
+         sum=.false.
       endif
       sigint=0d0
       icontr=0
@@ -522,14 +528,7 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          if (do_rwgt_pdf) call reweight_pdf
       endif
       
-      if (iappl.ne.0) then
-         if (sum) then
-            write (*,*) 'ERROR: applgrid only possible '/
-     &           /'with MC over FKS directories',iappl,sum
-            stop 1
-         endif
-         call fill_applgrid_weights(vegas_wgt)
-      endif
+      if (iappl.ne.0) call fill_applgrid_weights(vegas_wgt)
 
 c Importance sampling for FKS configurations
       if (sum) then

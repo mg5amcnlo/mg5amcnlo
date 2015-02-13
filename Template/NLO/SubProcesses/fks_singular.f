@@ -881,9 +881,13 @@ c        observables.
 c     The PDG codes: pdg(i,icontr). Always the ones with length
 c        'nexternal' are used, because the momenta are also the 
 c        'nexternal' ones. This is okay for IR-safe observables.
+c     The PDG codes of the underlying Born process:
+c        pdg_uborn(i,icontr). The PDGs of j_fks and i_fks are combined
+c        to get the PDG code of the mother. The extra parton is given a
+c        PDG=21 (gluon) code.
 c     If the contribution belongs to an H-event or S-event:
 c        H_event(icontr)
-c     
+c
 c Not set in this subroutine, but included in the c_weights common block
 c are the
 c     wgts(iwgt,icontr) : weights including scale/PDFs/logs. These are
@@ -921,11 +925,6 @@ c        the iproc contribution
       common/pborn/    p_born
       double precision p_ev(0:3,nexternal)
       common/pev/      p_ev
-      integer    maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     $     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
       double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -950,9 +949,7 @@ c        the iproc contribution
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
-      do i=1,nexternal
-         pdg(i,icontr)=idup(i,1)
-      enddo
+      call set_pdg(icontr,nFKSprocess)
       if(type.eq.1 .or. type.eq. 8 .or. type.eq.9 .or. type.eq.10 .or.
      &     type.eq.13) then
 c real emission and n+1-body kin. contributions to counter terms and MC
@@ -1268,12 +1265,13 @@ c must do MC over FKS directories.
          appl_QES2(i)=0d0
          appl_muR2(i)=0d0
          appl_muF2(i)=0d0
+         appl_flavmap(i)=0
       enddo
       appl_event_weight = 0d0
       appl_vegaswgt = vegas_wgt
       if (icontr.eq.0) return
       do i=1,icontr
-         appl_event_weight=appl_event_weight+wgts(1,i)
+         appl_event_weight=appl_event_weight+wgts(1,i)/vegas_wgt
          final_state_rescaling = dble(iproc_save(nFKS(i))) /
      &        dble(appl_nproc(flavour_map(nFKS(i))))
          if (itype(i).eq.1) then
@@ -1330,6 +1328,56 @@ c     soft-collinear counter
       return
       end
       
+
+      subroutine set_pdg(ict,iFKS)
+c fills the pdg and pdg_uborn variables. It uses only the 1st IPROC. For
+c the pdg_uborn (the PDG codes for the underlying Born process) the PDG
+c codes of i_fks and j_fks are combined to give the PDG code of the
+c mother and the extra (n+1) parton is given the PDG code of the gluon.
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'fks_info.inc'
+      include 'genps.inc'
+      integer k,ict,iFKS
+      integer    maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     $     icolup(2,nexternal,maxflow)
+      common /c_leshouche_inc/idup,mothup,icolup
+      do k=1,nexternal
+         pdg(k,ict)=idup(k,1)
+      enddo
+      do k=1,nexternal
+         if (k.lt.fks_j_d(iFKS)) then
+            pdg_uborn(k,ict)=pdg(k,ict)
+         elseif(k.eq.fks_j_d(iFKS)) then
+            if (abs(pdg(fks_i_d(iFKS),ict)) .eq.
+     &           abs(pdg(fks_j_d(iFKS),ict))) then
+c gluon splitting:  g -> XX
+               pdg_uborn(k,ict)=21
+            elseif (pdg(fks_i_d(iFKS),ict).eq.21) then
+c final state gluon radiation:  X -> Xg
+               pdg_uborn(k,ict)=pdg(fks_j_d(iFKS),ict)
+            elseif (pdg(fks_j_d(iFKS),ict).eq.21) then
+c initial state gluon splitting (gluon is j_fks):  g -> XX
+               pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
+            else
+               write (*,*)
+     &              'ERROR in PDG assigment for underlying Born'
+               stop 1
+            endif
+         elseif(k.lt.fks_i_d(iFKS)) then
+            pdg_uborn(k,ict)=pdg(k,ict)
+         elseif(k.eq.nexternal) then
+            pdg_uborn(k,ict)=21  ! give the extra particle a gluon PDG code
+         elseif(k.ge.fks_i_d(iFKS)) then
+            pdg_uborn(k,ict)=pdg(k+1,ict)
+         endif
+      enddo
+      return
+      end
+
       
       subroutine get_wgt_nbody(sig)
 c Sums all the central weights that contribution to the nbody cross
@@ -1394,7 +1442,7 @@ c the momenta are identical.
          enddo
          if (itype(i).eq.2) then
             plot_id(i)=20 ! Born
-         elseif(itype(1).eq.1) then
+         elseif(itype(i).eq.1) then
             plot_id(i)=11 ! real-emission
          else
             plot_id(i)=12 ! soft-virtual and counter terms
@@ -1406,7 +1454,11 @@ c so if the current weight cannot be summed to a previous one, the ii=i
 c contribution makes sure that it is added as a new element.
          do ii=1,i
             if (plot_id(ii).ne.plot_id(i)) cycle
-            if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
+            if (plot_id(i).eq.20 .or. plot_id(i).eq.12) then
+               if (.not.pdg_equal(pdg_uborn(1,ii),pdg_uborn(1,i))) cycle
+            else
+               if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
+            endif
             if (.not.momenta_equal(momenta(0,1,ii),momenta(0,1,i)))cycle
             do j=1,iwgt
                plot_wgts(j,ii)=plot_wgts(j,ii)+wgts(j,i)
