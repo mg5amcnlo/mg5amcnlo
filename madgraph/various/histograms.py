@@ -842,7 +842,7 @@ class HwU(Histogram):
             new_wgt_labels  = ['%s_min @aux'%new_wgt_label,
                                                     '%s_max @aux'%new_wgt_label]
             try:
-                position = [isinstance(lab, tuple) for lab in \
+                position = [(not isinstance(lab, str)) for lab in \
                                             self.bins.weight_labels].index(True)
                 self.bins.weight_labels = self.bins.weight_labels[:position]+\
                   new_wgt_labels + self.bins.weight_labels[position:]
