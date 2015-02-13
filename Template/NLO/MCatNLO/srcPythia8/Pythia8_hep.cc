@@ -82,6 +82,7 @@ int main() {
     } else {
       normhepmc = double(iEventtot) / double(iEventshower);
     }
+    sigmaTotal += evtweight*normhepmc;
     hepmcevt->weights().push_back(evtweight*normhepmc);
     ToHepMC.fill_next_event( pythia, hepmcevt );
     // Add the weight of the current event to the cross section.

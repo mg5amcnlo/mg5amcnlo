@@ -93,6 +93,8 @@ c     2 soft-collinear
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+      double precision p_ev(0:3,nexternal)
+      common/pev/p_ev
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
@@ -267,7 +269,12 @@ c Generate the rapditity of the Born system
       else
 c No PDFs (also use fixed energy when performing tests)
          call compute_tau_y_epem(j_fks,one_body,fksmass,stot,
-     &                          tau_born,ycm_born,ycmhat)
+     &        tau_born,ycm_born,ycmhat)
+         if (j_fks.le.nincoming .and. .not.(softtest.or.colltest)) then
+            write (*,*) 'Process has incoming j_fks, but fixed shat: '/
+     &           /'not allowed for processes generated at NLO.'
+            stop 1
+         endif
       endif
 c Compute Bjorken x's from tau and y
       xbjrk_born(1)=sqrt(tau_born)*exp(ycm_born)
@@ -523,6 +530,7 @@ c Fill common blocks
          do i=1,nexternal
             do j=0,3
                p(j,i)=xp(j,i)
+               p_ev(j,i)=xp(j,i)
             enddo
          enddo
          jac=xjac

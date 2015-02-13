@@ -151,12 +151,16 @@ class Cluster(object):
         echo '%(arguments)s' > arguments
         chmod +x ./%(script)s
         %(program)s ./%(script)s %(arguments)s
+        exit=$?
         output_files=( %(output_files)s )
         for i in ${output_files[@]}
         do
             cp -r $MYTMP/$i $MYPWD
         done
-        rm -rf $MYTMP
+#        if [ "$exit" -eq "0" ] 
+#        then
+            rm -rf $MYTMP
+#        fi
         """
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
                 'cwd': cwd, 'job_id': self.job_id,
@@ -531,7 +535,7 @@ class MultiCore(Cluster):
                         log = open(glob.glob(pjoin(cwd,'*','log.txt'))[0]).read()
                         logger.warning('Last 15 lines of logfile %s:\n%s\n' % \
                                 (pjoin(cwd,'*','log.txt'), '\n'.join(log.split('\n')[-15:-1]) + '\n'))
-                    except IOError, AttributeError:
+                    except (IOError, AttributeError, IndexError):
                         logger.warning('Please look for possible logfiles in %s' % cwd)
                         pass
                     self.remove(fail_msg)
