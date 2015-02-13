@@ -253,24 +253,30 @@ c Write the histograms to disk at the end of the run
       include "HwU.inc"
       integer unit,i,j,label
       integer max_length
-      parameter (max_length=(max_wgts+3)*16)
+      parameter (max_length=(max_wgts+3)*17)
       character*(max_length) buffer
+      character*4 str_nbin
 c     column info: x_min, x_max, y (central value), dy, {extra
-c     weights}. Use columns with a width of 16 characters.
-      write (buffer( 1:16),'(a)')'#           xmin'
-      write (buffer(17:32),'(a)')'            xmax'
-      write (buffer(33:48),'(1x,a15)') wgts_info(1)(1:15)
-      write (buffer(49:64),'(a)')'              dy'
+c     weights}. Use columns with a width of 17 characters.
+      write (buffer( 1:17),'(a)')'##&       xmin  &'
+      write (buffer(18:34),'(a)')'            xmax '
+      write (buffer(35:51),'(a2,a15)') ' &',wgts_info(1)(1:15)
+      write (buffer(52:68),'(a)')' &            dy '
       do j=2,nwgts
-         write (buffer((j+2)*16+1:(j+3)*16),'(1x,a15)')
-     $        wgts_info(j)(1:15)
+         write (buffer((j+2)*17+1:(j+3)*17),'(a2,a15)')
+     $        ' &',wgts_info(j)(1:15)
       enddo
-      write (unit,'(a)') buffer(1:(nwgts+3)*16)
+      write (unit,'(a)') buffer(1:(nwgts+3)*17)
       write (unit,'(a)') ''
       do label=1,max_plots
          if (.not. booked(label)) cycle
 c     title
-         write (unit,'(1a,a,1a,1x,i3)') '"',title(label),'"',nbin(label)
+c        For some weird reason, it is no possible to include directly
+c        the integer in two line below with the format '(12a,i4.4,3a,a,2a)'
+c        this is why I have to do it in two steps instead.
+         write (str_nbin,'(i4.4)') nbin(label)
+         write (unit,'(12a,4a,3a,a,2a)') '<histogram> ',str_nbin,
+     &                                       ' " ',title(label),' "'
 c     data
          do i=1,nbin(label)
             write (buffer( 1:16),'(2x,e14.7)') histxl(label,i)
@@ -284,8 +290,9 @@ c     data
             write (unit,'(a)') buffer(1:(nwgts+3)*16)
          enddo
 c     2 empty lines after each plot
+         write (unit,'(12a)') '<\histogram>'
          write (unit,'(a)') ''
-         write (unit,'(a)') ''
+         write (unit,'(a)') ''         
       enddo
       return
       end

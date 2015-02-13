@@ -8,8 +8,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer nwgt
       character*(*) weights_info(*)
       integer i,kk,l
-      character*5 cc(2)
-      data cc/'     ','Born '/
+      character*6 cc(2)
+      data cc/'|T@NLO','|T@LO '/
       call HwU_inithist(nwgt,weights_info)
       do i=1,2
          l=(i-1)*4

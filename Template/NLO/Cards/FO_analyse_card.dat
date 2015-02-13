@@ -31,7 +31,7 @@ FO_INCLUDEPATHS =
 # User's analysis (to be put in the <PROCDIR>/FixedOrderAnalysis/
 # directory). Please use .o as extension and white spaces to separate
 # files.
-FO_ANALYSE = analysis_HwU_template.o
+FO_ANALYSE = analysis_HwU_pp_lvl.o
 #
 #
 ## When linking with root, the following settings are a working

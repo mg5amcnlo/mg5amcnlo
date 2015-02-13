@@ -66,6 +66,7 @@ try:
     import madgraph.various.sum_html as sum_html
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
+    import madgraph.various.histograms as histograms
 
     from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
     aMCatNLO = False
@@ -84,6 +85,7 @@ except ImportError, error:
     import internal.sum_html as sum_html
     import internal.shower_card as shower_card
     import internal.FO_analyse_card as analyse_card
+    import internal.histograms as histograms
     aMCatNLO = True
 
 class aMCatNLOError(Exception):
@@ -1600,130 +1602,54 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
     def combine_plots_HwU(self,folder_names):
-        """Sums all the plots in the HwU format"""
-        logger.debug('Combining plots \n')
-        with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
-            all_jobs=dirf.readlines()
-        with open(pjoin(self.me_dir,'SubProcesses',all_jobs[0].rstrip(),"MADatNLO.HwU")) as first_file:
-            all_lines=first_file.readlines()
-        new_lines=copy.copy(all_lines)
-        for job in all_jobs[1:]:
-            with open(pjoin(self.me_dir,'SubProcesses',job.rstrip(),"MADatNLO.HwU")) as other_file:
-                all_lines=other_file.readlines()
-            for i,line in enumerate(all_lines):
-                 try:
-                     values_to_add  = [float(n) for n in line.split()]
-                     values_already = [float(n) for n in new_lines[i].split()]
-                     current_line=[]
-                     for j,val in enumerate(values_already):
-                         if j == 0 or j == 1:
-                             current_line.append(val)
-                         elif j == 3:
-                             current_line.append(math.sqrt(math.pow(val,2) + math.pow(values_to_add[j],2)))
-                         else:
-                             current_line.append(val + values_to_add[j])
-                     new_lines[i]=('  '+'  '.join(['%+14.7e' % j for j in current_line]) + '\n')
-                 except ValueError:
-                     pass
-        write_lines=[]
-        gnuplot_text_scale_pdf="plot 'MADatNLO.HwU' i %(index)d u (($1+$2)/2):3 ls 1 title columnheader(1), '' i %(index)d u (($1+$2)/2):3:4 w yerrorbar ls 1 title '', '' i %(index)d u (($1+$2)/2):5 ls 11 title 'scale uncertainty', '' i %(index)d u (($1+$2)/2):6 ls 11 title '', '' i %(index)d u (($1+$2)/2):7 ls 21 title 'PDF uncertainty', '' i %(index)d u (($1+$2)/2):8 ls 21 title ''\n\n"
-        i=0
-        replace_dict={}
-        gnuplot_lines=[]
-        for j,line in enumerate(new_lines):
-            try:
-                elements=[float(n) for n in line.split()]
-                scale_pdf_list=self.compute_scale_pdf(elements)
-                split_line=line.split()
-                for number in reversed(scale_pdf_list):
-                    split_line.insert(4,'%+14.7e' % number)
-                write_lines.append('  '+'  '.join(split_line)+'\n')
-            except (IndexError, ValueError):
-                pass
-            if j == 0:
-                line=line[:64]+'     scale upper     scale lower       PDF upper       PDF lower'+line[67:]
-                write_lines.append(line)
-            elif line[0:1]=='"':
-                write_lines.append('\n\n')
-                # remove surrounding white spaces from title
-                write_lines.append('"'+line.split('"')[1].strip()+'"'+line.split('"',2)[2])
-                # compute x-range
-                nbin=int(line.split()[-1])
-                gnuplot_lines.append('set xrange[%s :%s]\n'%(new_lines[j+1].split()[0],new_lines[j+nbin].split()[1]))
-                replace_dict['index']=i
-                gnuplot_lines.append(gnuplot_text_scale_pdf % replace_dict)
-                i=i+1
-                         
-
-        with open(pjoin(self.me_dir,'SubProcesses',"MADatNLO.HwU"),'w') as output_file:
-            output_file.writelines(write_lines)
+        """Sums all the plots in the HwU format."""
         
-        gnuplot_header="reset \n set terminal postscript enhanced mono dashed lw 1 \n set output 'MADatNLO.ps' \n set style line 1 lt 1 lc rgb 'dark-green' lw 1.0 pt -1 \n set style line 11 lt 2 lc rgb 'dark-green' lw 1.0 pt -1 \n set style line 21 lt 3 lc rgb 'dark-green' lw 1.0 pt -1 \n set style data histeps \n set mxtics 5 \n set mytics 10 \n set logscale y \n set format y '%.1t*10^{%+3T}'\n\n"
-        with open(pjoin(self.me_dir,'SubProcesses',"MADatNLO.gnuplot"),'w') as output_file:
-            output_file.write(gnuplot_header)
-            output_file.writelines(gnuplot_lines)
+        logger.debug('Combining HwU plots.')
+        
+        with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
+            all_histo_paths = dirf.readlines()
+        all_histo_paths = [pjoin(self.me_dir,'SubProcesses',
+                      path.rstrip(),"MADatNLO.HwU") for path in all_histo_paths]
+        
+        histogram_list = histograms.HwUList(all_histo_paths[0])
 
-    def compute_scale_pdf(self,elements):
-        """returns a dictionary with upper and lower scale and pdf uncertainties"""
-        scale_pdf=[]
-        cntrl_val=elements[2]
-        if self.run_card['reweight_scale'].lower() == '.true.':
-            scales=elements[4:13]
-            scale_pdf.append(max(scales))
-            scale_pdf.append(min(scales))
-        else:
-            scale_pdf.append(0.)
-            scale_pdf.append(0.)
-
-        if self.run_card['reweight_PDF'].lower() == '.true.':
-            npdfs=int(self.run_card['PDF_set_max'])-int(self.run_card['PDF_set_min'])+1
-            pdfs=elements[-npdfs:]
-            # get the pdf uncertainty in percent (according to the Hessian method)
-            lhaid=int(self.run_card['lhaid'])
-            pdf_upp=0.0
-            pdf_low=0.0
-            if lhaid <= 90000:
-            # use Hessian method (CTEQ & MSTW)
-                if npdfs>1:
-                    for i in range(int(npdfs/2)):
-                        pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
-                        pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
-                    scale_pdf.append(cntrl_val+math.sqrt(pdf_upp))
-                    scale_pdf.append(cntrl_cal-math.sqrt(pdf_low))
-            else:
-            # use Gaussian method (NNPDF)
-                pdf_stdev=0.0
-                for i in range(npdfs-1):
-                    pdf_stdev = pdf_stdev + pow(pdfs[i+1] - cntrl_val,2)
-                pdf_stdev = math.sqrt(pdf_stdev/float(npdfs-2))
-                scale_pdf.append(cntrl_val+pdf_stdev)
-                scale_pdf.append(cntrl_val-pdf_stdev)
-        else:
-            scale_pdf.append(0.)
-            scale_pdf.append(0.)
-        return scale_pdf
-            
+        for histo_path in all_histo_paths[1:]:
+            for i, histo in enumerate(histograms.HwUList(histo_path)):
+                # First make sure the plots have the same weight labels and such
+                histo.test_plot_compability(histogram_list[i])
+                # Now let the histogram module do the magic and add them.
+                histogram_list[i] += histo
+        
+        # And now output the finalized list
+        histogram_list.output(pjoin(self.me_dir,'SubProcesses',"MADatNLO"),
+                                                             format = 'gnuplot')
 
     def applgrid_combine(self,cross,error):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
         logger.debug('Combining APPLgrids \n')
-        applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),'applgrid-combine')
+        applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),
+                                                            'applgrid-combine')
         with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
             all_jobs=dirf.readlines()
         ngrids=len(all_jobs)
-        nobs  =len([name for name in os.listdir(pjoin(self.me_dir,'SubProcesses',all_jobs[0].rstrip())) \
-                        if name.endswith("_out.root")])
+        nobs  =len([name for name in os.listdir(pjoin(self.me_dir,'SubProcesses',
+                          all_jobs[0].rstrip())) if name.endswith("_out.root")])
         for obs in range(0,nobs):
-            gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
+            gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+
+                                     str(obs)+"_out.root") for job in all_jobs]
             # combine APPLgrids from different channels for observable 'obs'
             if self.run_card["iappl"] == "1":
-                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,
+            "aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
             elif self.run_card["iappl"] == "2":
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
-                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",
+                        self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',
+                                  str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
                 for job in all_jobs:
-                    os.remove(pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_in.root"))
+                    os.remove(pjoin(self.me_dir,'SubProcesses',job.rstrip(),
+                                               "grid_obs_"+str(obs)+"_in.root"))
             else:
                 raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
             # after combining, delete the original grids
@@ -1733,56 +1659,66 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         
     def applgrid_distribute(self,options,mode,p_dirs):
         """Distributes the APPLgrids ready to be filled by a second run of the code"""
-        # if no appl_start_grid argument given, guess it from the time stamps of the starting grid files
+        # if no appl_start_grid argument given, guess it from the time stamps 
+        # of the starting grid files
         if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
-            gfiles=glob.glob(pjoin(self.me_dir, 'Events','*','aMCfast_obs_0_starting_grid.root'))
+            gfiles=glob.glob(pjoin(self.me_dir, 'Events','*',
+                                            'aMCfast_obs_0_starting_grid.root'))
             time_stamps={}
             for root_file in gfiles:
                 time_stamps[root_file]=os.path.getmtime(root_file)
             options['appl_start_grid']= \
-                max(time_stamps.iterkeys(), key=(lambda key: time_stamps[key])).split('/')[-2]
-            logger.info('No --appl_start_grid option given. Guessing that start grid from run "%s" should be used.' \
+                max(time_stamps.iterkeys(), key=(lambda key: 
+                                               time_stamps[key])).split('/')[-2]
+            logger.info('No --appl_start_grid option given. '+\
+                    'Guessing that start grid from run "%s" should be used.' \
                             % options['appl_start_grid'])
 
         if 'appl_start_grid' in options.keys() and options['appl_start_grid']:
             self.appl_start_grid = options['appl_start_grid']
             start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_start_grid)
             # check that this dir exists and at least one grid file is there
-            if not os.path.exists(pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root')):
+            if not os.path.exists(pjoin(start_grid_dir,
+                                           'aMCfast_obs_0_starting_grid.root')):
                 raise self.InvalidCmd('APPLgrid file not found: %s' % \
-                                  pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root'))
+                       pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root'))
             else:
-                all_grids=[pjoin(start_grid_dir,name) for name in os.listdir(start_grid_dir) \
-                               if name.endswith("_starting_grid.root")]
+                all_grids=[pjoin(start_grid_dir,name) for name in os.listdir( \
+                        start_grid_dir) if name.endswith("_starting_grid.root")]
                 nobs =len(all_grids)
                 gstring=" ".join(all_grids)
         if not hasattr(self, 'appl_start_grid') or not self.appl_start_grid:
-            raise self.InvalidCmd('No APPLgrid name currently defined. Please provide this information.')             
+            raise self.InvalidCmd('No APPLgrid name currently defined.'+
+                                             'Please provide this information.')             
         if mode == 'NLO':
             gdir='all_G'
         elif mode == 'LO':
             gdir='born_G'
         #copy the grid to all relevant directories
         for pdir in p_dirs:
-            g_dirs = [file for file in os.listdir(pjoin(self.me_dir,"SubProcesses",pdir)) \
-                      if file.startswith(gdir) and os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
+            g_dirs = [file for file in os.listdir(pjoin(self.me_dir,
+              "SubProcesses",pdir)) if file.startswith(gdir) and 
+                   os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
             for g_dir in g_dirs:
                 for grid in all_grids:
                     obs=grid.split('_')[-3]
-                    files.cp(grid,pjoin(self.me_dir,"SubProcesses",pdir,g_dir,'grid_obs_'+obs+'_in.root'))
+                    files.cp(grid,pjoin(self.me_dir,"SubProcesses",pdir,g_dir,
+                                                    'grid_obs_'+obs+'_in.root'))
 
 
     def collect_log_files(self, folders, istep):
-        """collect the log files and put them in a single, html-friendly file inside the run_...
-        directory"""
-        step_list = ['Grid setting', 'Cross-section computation', 'Event generation']
+        """collect the log files and put them in a single, html-friendly file
+        inside the run_... directory"""
+        step_list = ['Grid setting', 'Cross-section computation', 
+                                                             'Event generation']
         log_file = pjoin(self.me_dir, 'Events', self.run_name, 
                 'alllogs_%d.html' % istep)
         # this keeps track of which step has been computed for which channel
         channel_dict = {}
         log_files = []
         for folder in folders:
-            log_files += glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*', folder, 'log.txt'))
+            log_files += glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*', 
+                                                             folder, 'log.txt'))
 
         content = ''
 
@@ -1790,11 +1726,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         for log in log_files:
             channel_dict[os.path.dirname(log)] = [istep]
             # put an anchor
-            content += '<a name=%s></a>\n' % (os.path.dirname(log).replace(pjoin(self.me_dir,'SubProcesses'),''))
+            content += '<a name=%s></a>\n' % (os.path.dirname(log).replace(
+                                          pjoin(self.me_dir,'SubProcesses'),''))
             # and put some nice header
             content += '<font color="red">\n'
             content += '<br>LOG file for integration channel %s, %s <br>' % \
-                    (os.path.dirname(log).replace(pjoin(self.me_dir,'SubProcesses'), ''), 
+                    (os.path.dirname(log).replace(pjoin(self.me_dir,
+                                                           'SubProcesses'), ''), 
                      step_list[istep])
             content += '</font>\n'
             #then just flush the content of the small log inside the big log
