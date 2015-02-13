@@ -1242,7 +1242,6 @@ c contribution makes sure that it is added as a new element.
                www(j)=plot_wgts(j,i)
             enddo
 c call the analysis/histogramming routines
-            write (*,*) i,plot_id(i)
             call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),plot_id(i))
          endif
       enddo
