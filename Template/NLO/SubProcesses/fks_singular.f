@@ -1076,9 +1076,9 @@ c and not be part of the plots nor computation of the cross section.
       include 'genps.inc'
       include 'c_weight.inc'
       include 'fks_info.inc'
-      integer j,k,iproc,ict,iFKS,conv
+      integer j,k,iproc,ict,iFKS
+      double precision  pd(0:maxproc),conv
       parameter (conv=389379660d0) ! conversion to picobarns
-      double precision  pd(0:maxproc)
       include 'leshouche_decl.inc'
       common/c_leshouche_idup_d/ idup_d
 c save also the separate contributions to the PDFs and the corresponding
@@ -1622,12 +1622,6 @@ c Take the weighted average for the shower starting scale
             enddo
          endif
       enddo
-      if (sigint.ne.0d0 .or. sigint1.ne.0d0) then
-         if ( abs((sigint-sigint1)/(sigint+sigint1)).gt.1d-4 ) then
-            write (*,*) 'ERROR: inconsistent integrals',sigint,sigint1
-c$$$            stop 1
-         endif
-      endif
       f(1)=sigint_ABS
       f(2)=sigint1
       f(3)=virt_wgt_mint
