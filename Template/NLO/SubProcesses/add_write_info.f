@@ -251,7 +251,8 @@ c
       if (sumborn.eq.0d0) then
          write (*,*) 'Error #1 in add_write_info:'
          write (*,*) 'in MadFKS, sumborn should always be larger'//
-     &        ' than zero, because always QCD partons around',sumborn,max_bcol
+     $        ' than zero, because always QCD partons around',sumborn
+     $        ,max_bcol
          do i=1,max_bcol
             write (*,*) i,iBornGraph,icolamp(i,iBornGraph,1),jamp2(i)
          enddo

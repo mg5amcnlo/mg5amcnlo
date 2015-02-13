@@ -1573,7 +1573,7 @@ c S-event contribution
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       integer i,j,ii,jj
-      double precision unwgt_sum_curr
+      double precision unwgt_sum_curr,unwgt_sum(max_contr)
       logical momenta_equal,pdg_equal
       external momenta_equal,pdg_equal
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
@@ -1592,6 +1592,7 @@ c S-event contribution
             unwgt(j,i)=0d0
          enddo
          unwgt_sum(i)=0d0
+         icontr_sum(0,i)=0
          do ii=1,i
             if (H_event(i).neqv.H_event(ii)) cycle
             if (H_event(i)) then
@@ -1604,6 +1605,8 @@ c contributions.
                if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
                if (.not. momenta_equal(momenta(0,1,ii),momenta(0,1,i)))
      &              cycle
+               icontr_sum(0,ii)=icontr_sum(0,ii)+1
+               icontr_sum(icontr_sum(0,ii),ii)=i
                do j=1,niproc(ii)
                   unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
                   unwgt_sum(ii)=unwgt_sum(ii)+abs(parton_iproc(j,ii))
@@ -1616,6 +1619,8 @@ c we can sum them before taking the ABS value.
      &              ,parton_pdg_uborn(1,1,i))) cycle
                if (.not. momenta_equal(
      &              momenta(0,1,ii),momenta(0,1,i))) cycle
+               icontr_sum(0,ii)=icontr_sum(0,ii)+1
+               icontr_sum(icontr_sum(0,ii),ii)=i
                unwgt_sum_curr=unwgt_sum(ii)
                do j=1,niproc(ii)
                   do jj=1,iproc_save(nFKS(i))
@@ -1667,7 +1672,7 @@ c Take the weighted average for the shower starting scale
       sigint_ABS=0d0
       do i=1,icontr
          sigint=sigint+wgts(1,i)
-         if (unwgt_sum(i).ne.0d0) then
+         if (icontr_sum(0,i).ne.0) then
             do j=1,niproc(i)
                sigint_ABS=sigint_ABS+abs(unwgt(j,i))
                sigint1=sigint1+unwgt(j,i)
@@ -1684,13 +1689,14 @@ c Take the weighted average for the shower starting scale
       end
 
 
-      subroutine pick_unweight_contr
+      subroutine pick_unweight_contr(iFKS_picked)
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
-      integer i,j
+      include 'fks_info.inc'
+      integer i,j,k,iFKS_picked,ict
       double precision tot_sum,rnd,ran2,current,target
       external ran2
       integer           i_process_addwrite
@@ -1703,6 +1709,10 @@ c Take the weighted average for the shower starting scale
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
      $     ,etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      double precision     SCALUP(fks_configs*2)
+      common /cshowerscale/SCALUP
       tot_sum=0d0
       do i=1,icontr
          do j=1,niproc(i)
@@ -1722,14 +1732,30 @@ c Take the weighted average for the shower starting scale
          endif
          current=current+abs(unwgt(j,i))
       enddo
-      if (H_event(i)) then
+      icontr_picked=i
+      iproc_picked=j
+      if (H_event(icontr_picked)) then
          Hevents=.true.
-         i_process_addwrite=j
+         i_process_addwrite=iproc_picked
+         iFKS_picked=nFKS(icontr_picked)
+         SCALUP(iFKS_picked*2)=shower_scale(icontr_picked)
       else
          Hevents=.false.
-         i_process_addwrite=etoi(j,nFKS(i))
+         i_process_addwrite=etoi(iproc_picked,nFKS(icontr_picked))
+         do k=1,icontr_sum(0,icontr_picked)
+            ict=icontr_sum(k,icontr_picked)
+            if (particle_type_d(nFKS(ict),fks_i_d(nFKS(ict))).eq.8) then
+               iFKS_picked=nFKS(ict)
+               exit
+            endif
+            if (k.eq.icontr_sum(0,icontr_picked)) then
+               write (*,*) 'ERROR: no configuration with i_fks a gluon'
+               stop 1
+            endif
+         enddo
+         SCALUP(iFKS_picked*2-1)=shower_scale(icontr_picked)
       endif
-      evtsgn=sign(1d0,unwgt(j,i))
+      evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
       return
       end
       

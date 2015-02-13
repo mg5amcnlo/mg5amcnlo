@@ -19,7 +19,7 @@ c  iwgtinfo=4 (default) --> same as 3, but also wgtbpower is included
 c  iwgtinfo=5 (new default) --> needed when combining nFKSprocesses
 c If computing parton-level NLO, iwgtinfo=2 must not be used
       integer iwgtinfo
-      parameter (iwgtinfo=5)
+      parameter (iwgtinfo=-5)
 
 c
 c Auxiliary quantities

@@ -488,6 +488,14 @@ c
       common/event_attributes/nattr,npNLO,npLO
       include 'reweight_all.inc'
       include 'unlops.inc'
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'genps.inc'
+      include 'nFKSconfigs.inc'
+      integer ict,ipr
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
@@ -667,6 +675,42 @@ c
               write (*,*) 'Not an S- or H-event in write_lhef_event'
               stop
            endif
+           write(ifile,'(a)')'  </rwgt>'
+         elseif(jwgtinfo.eq.-5) then
+           write(ifile,'(a)')'  <rwgt>'
+           write (ifile,*) unwgt(iproc_picked,icontr_picked)
+           do i=1,icontr_sum(0,icontr_picked)
+              ict=icontr_sum(i,icontr_picked)
+              if (iSorH_lhe.eq.1) then ! S-event
+                 ipr=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
+                 do ii=1,iproc_save(nFKS(ict))
+                    if (eto(ii,nFKS(ict)).ne.ipr) cycle
+                    write (ifile,*)
+     &                   (wgt(j,ict),j=1,3),
+     &                   nexternal,
+     &                   (parton_pdg(j,ii,ict),j=1,nexternal),
+     &                   QCDpower(ict),
+     &                   (bjx(j,ict),j=1,2),
+     &                   (scales2(j,ict),j=1,3),
+     &                   itype(ict),
+     &                   parton_iproc(ii,ict)
+                 enddo
+              elseif (iSorH_lhe.eq.2) then ! H-event
+                 ipr=iproc_picked
+                 write (ifile,*)
+     &                (wgt(j,ict),j=1,3),
+     &                nexternal,
+     &                (parton_pdg(j,ipr,ict),j=1,nexternal),
+     &                QCDpower(ict),
+     &                (bjx(j,ict),j=1,2),
+     &                (scales2(j,ict),j=1,3),
+     &                itype(ict),
+     &                parton_iproc(ipr,ict)
+              else
+                 write (*,*) 'Not an S- or H-event in write_lhef_event'
+                 stop 1
+              endif
+           enddo
            write(ifile,'(a)')'  </rwgt>'
          elseif(jwgtinfo.eq.15) then
            write(ifile,'(a)')'  <unlops>'

@@ -799,7 +799,7 @@ c From dsample_fks
       include 'run.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,ifl,proc_map(0:fks_configs,0:fks_configs),nFKS_picked
-     $     ,nFKS_in,nFKS_out,izero,ione,itwo,mohdr,iFKS,sum
+     $     ,nFKS_in,nFKS_out,izero,ione,itwo,mohdr,iFKS,sum,iFKS_picked
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF
@@ -973,7 +973,10 @@ c Sum the contributions that can be summed before taking the ABS value
       elseif(ifl.eq.2) then
          call fill_mint_function_NLOPS(f)
 c Randomly pick the contribution that will be written in the event file
-         if (imode.eq.2) call pick_unweight_contr
+         if (imode.eq.2) then
+            call pick_unweight_contr(iFKS_picked)
+            call update_fks_dir(iFKS_picked,iconfig)
+         endif
       endif
       return
       end
@@ -997,8 +1000,7 @@ c Randomly pick the contribution that will be written in the event file
      $     ,tot_sum,temp_shower_scale
       external ran2
       external dlum
-      integer i,j,ii,jj,k,kk,is
-     $     ,proc_map(0:fks_configs,0:fks_configs)
+      integer i,j,ii,jj,k,kk,is,proc_map(0:fks_configs,0:fks_configs)
       logical unweight,firsttime
       data firsttime /.true./
       integer nFKSprocess_save,ifound,nFKSprocess_soft
