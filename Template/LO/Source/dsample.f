@@ -492,6 +492,9 @@ c
 c
 c     Global
 c
+      double precision force_max_wgt
+      common/unwgt_secondary_max/force_max_wgt
+
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
@@ -628,7 +631,7 @@ c
       open(unit=25,file='ftn25',status='unknown',err=102)
       read(25,*, err=1011, end=1012)
      .     ((grid(2,i,j),i=1,ng),j=1,invar)
-      read(25,*) twgt
+      read(25,*) twgt, force_max_wgt
       call read_discrete_grids(25)
       write(*,*) 'Grid read from file'
       flat_grid=.false.
@@ -674,6 +677,7 @@ c     Unable to read grid, using uniform grid and equal points in
 c     each configuration
 c
       write(*,*) 'Using Uniform Grid!', maxinvar
+      force_max_wgt = -1d0
       do j = 1, maxinvar
          do i = 1, ng
             grid(2, i, j) = xgmin+ (xgmax-xgmin)*(i / dble(ng))**1
@@ -1413,6 +1417,13 @@ c
 c
 c     Global
 c
+      integer th_nunwgt
+      double precision th_maxwgt
+      common/theoretical_unwgt_max/th_maxwgt, th_nunwgt
+
+      double precision force_max_wgt
+      common/unwgt_secondary_max/force_max_wgt
+
       double precision    accur
       common /to_accuracy/accur
 
@@ -1628,7 +1639,8 @@ c          # special mode where we store information to combine them
                 write(22,*) ((inon_zero(i,j),i=1,ng),j=1,invar)
                 write(22,*) (xmin(j), j=1,invar)
                 write(22,*) (xmax(j), j=1,invar)
-                write(22,*) mean, rmean, sigma, wmax, kn,events
+                write(22,*) mean, rmean, sigma, wmax, kn,events, force_max_wgt
+                write(22,*) th_nunwgt, th_maxwgt
 c               In order not to write out the reference grid but just
 c               the points which were added for this last iteration,
 c               we write out the discrete 'running' grids before the
@@ -1971,7 +1983,7 @@ c               if (1d0/sqrt(tsigma) .lt. accur) then
                   open(26, file='ftn26',status='unknown')
                   write(26,fmt='(4f21.17)')
      $                 ((grid(2,i,j),i=1,ng),j=1,invar)
-                  write(26,*) twgt
+                  write(26,*) twgt, maxwgt
 c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)
                   call write_discrete_grids(26,'ref')
                   close(26)                  
@@ -1983,9 +1995,9 @@ c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 122              close(22)
                   tsigma = tsigma*sqrt(chi2)  !This gives the 68% confidence cross section
                   if (use_cut.eq.-2)then
-                     call store_events(0d0, events/2d0)
+                     call store_events(force_max_wgt, events/2d0)
                   else
-                     call store_events(0d0, 0d0)
+                     call store_events(-1d0, 0d0)
                   endif
                   cur_it = itm+2
                   return
@@ -2002,9 +2014,9 @@ c
 c               nun = n_unwgted()
 c               write(*,*) 'Estimated events',nun, accur
                if (use_cut.eq.-2) then
-                  call store_events(0d0, events/2d0)
+                  call store_events(force_max_wgt, events/2d0)
                else
-                  call store_events(0d0, 0d0)
+                  call store_events(-1d0, 0d0)
                endif
 
                nun = neventswritten
@@ -2061,9 +2073,9 @@ c 129              close(22)
 
             if (cur_it .gt. itm) then               
                if (use_cut.eq.-2)then
-                  call store_events(0d0, events/2d0)
+                  call store_events(force_max_wgt, events/2d0)
                else
-                  call store_events(0d0, 0d0)
+                  call store_events(-1d0, 0d0)
                endif
                tmean = tmean / tsigma
                trmean = trmean / tsigma

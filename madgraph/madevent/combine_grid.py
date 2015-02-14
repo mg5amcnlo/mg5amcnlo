@@ -36,6 +36,10 @@ class grid_information(object):
         self.nb_ps_point = 0
         self.target_evt = 0
         self.nb_sample = 0
+        self.force_max_wgt = [] # list of weight for the secondary unweighting
+        self.th_maxwgt = []     # list of weight that should have been use for it
+        self.th_unwgt = []      # list of the number of unwgt event
+        
         
         #
         self.results = sum_html.Combine_results('combined')
@@ -113,6 +117,14 @@ class grid_information(object):
             assert self.target_evt == data[5], "%s != %s" % (self.target_evt, data[5])
         else: 
             self.target_evt += data[5]  
+        self.force_max_wgt.append(data[6])
+        
+        # theoretical value for the unweighting (if no force_max_wgt was set)
+        line = finput.readline()
+        data = [self.convert_to_number(i) for i in line.split()]       
+        self.th_maxwgt.append(data[0])
+        self.th_nunwgt.append(data[1])
+        
             
         # discrete sampler/helicity information
         if not self.mc_hel:
@@ -168,7 +180,14 @@ class grid_information(object):
         
         #means that this the max number of iteration
         twgt = mean / max_it /2**curr_it / self.target_evt
-        fsock.write('%s\n' %(twgt))
+        
+        
+
+
+        trunc_max = 0.10
+        force_max_wgt = self.get_max_wgt(trunc_max)
+
+        fsock.write('%s %s \n' %(twgt, force_max_wgt))
         
         if not self.mc_hel:
             fsock.write(self.helicity_line)
@@ -176,7 +195,74 @@ class grid_information(object):
         self.discrete_grid.write(fsock)
         
         return twgt
+    
+    def get_max_wgt(self, trunc_max=0.01):
+        """Compute the force max weight for the secondary unweighting
+           This correspond to the weight which allow "trunc_max" (1%) of the event
+           to have a weight larger than one."""
+        
+        nb_data = len(self.th_unwgt)
+        total_sum = sum(self.th_maxwgt[i] * self.th_unwgt[i] for i in xrange(nb_data))
+        info = sorted([ (self.th_maxwgt[i], self.th_unwgt[i]) for i in xrange(nb_data)])
+
+        
+        
+        xsum = 0
+        nb_event = 0
+        i = 0        
+        while (xsum-info[i][0] * nb_event < trunc_max * total_sum or i == len(info)):
+            xsum += info[i][0]*info[i][1]
+            nb_event += info[i][1]
+            i += 1
+        else:
+            old_nb, old_w  = info[i-1]
+            new_nb, new_w  = info[i]
+                
+            return (old_nb * old_w + new_nb * new_w) / (old_nb + new_nb) 
+
+    def get_nunwgt(self, max_wgt=-1):
+        """return an estimate of the number of unweighted events for a given weight"""
+        
+        if max_wgt == -1:
+            max_wgt = self.get_max_wgt()
+        
+        # 1. estimate based on the information in results.dat
+        #estimate1 = sum([max(R.nunwgt*R.maxwgt/max_wgt, R.nunwgt)  
+        #                                     for R in self.results if R.nunwgt])
+        
+        # 2. estimate based on the information of the theoretical information
+        #info = zip(self.th_maxwgt, self.th_unwgt)
+        #estimate2 = sum(max(N, N*W/max_wgt, N) for N,W in info)
+        
+        # 3. 
+        total_nunwgt = 0
+        for i in range(len(self.th_maxwgt)):
+            #take the data
+            maxwgt1 = self.results[i].maxwgt
+            nunwgt1  = self.results[i].nunwgt
+            maxwgt2 = self.th_maxwgt[i]
+            nunwgt2 = self.th_unwgt[i]
             
+            if maxwgt1 > maxwgt2:
+                maxwgt1, maxwgt2 = maxwgt2, maxwgt1
+                nunwgt1, nunwgt2 = nunwgt2, nunwgt1
+            
+            if max_wgt <= maxwgt1:
+                total_nunwgt += nunwgt1
+            elif max_wgt > maxwgt2:
+                total_nunwgt += nunwgt2 * maxwgt2 / max_wgt
+            else:
+                # solve the equation a+b/x=N with the two know point
+                
+                a = (nunwgt1 * maxwgt1 - nunwgt2 * maxwgt2) / (maxwgt1 -maxwgt2)
+                b = maxwgt1 * maxwgt2 / (maxwgt1 -maxwgt2) *(nunwgt2 -nunwgt1)
+                
+                to_add = a + b / max_wgt
+            
+                assert nunwgt2 <= to_add <= nunwgt1
+                total_nunwgt += min(to_add)
+        
+        
     def plot_grid(self, grid, var=0):
         """make a plot of the grid."""
             

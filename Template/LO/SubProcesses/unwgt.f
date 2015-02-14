@@ -133,7 +133,7 @@ c-----
 c  Begin Code
 c-----
 c      write(*,*) 'storing Events'
-      call store_events(0d0, 0d0)
+      call store_events(-1d0, 0d0)
       rewind(lun)
       nw = 0
       maxwgt = 0d0
@@ -213,7 +213,7 @@ c $E$ S-COMMENT_C $E$
       endif
       end
 
-      subroutine store_events(max_wgt, xscale)
+      subroutine store_events(force_max_wgt, xscale)
 C**************************************************************************
 C     Takes events from scratch file (lun) and writes them to a permanent
 c     file  events.dat
@@ -230,7 +230,7 @@ c
 c
 c     Arguments
 c
-      double precision max_wgt, xscale
+      double precision force_max_wgt, xscale
 c
 c     Local
 c
@@ -258,6 +258,11 @@ C
 
       integer                   neventswritten
       common /to_eventswritten/ neventswritten
+      
+      integer th_nunwgt
+      double precision th_maxwgt
+      common/theoretical_unwgt_max/th_maxwgt, th_nunwgt
+
 c      save neventswritten
 
       integer ngroup
@@ -296,16 +301,20 @@ c
          i = i-1
       enddo
       if (i .lt. nw) i=i+1
-      if ( max_wgt.eq.0)then
+      if ( force_max_wgt.lt.0)then
          target_wgt = dabs(swgt(i))
+      else if (xscale.ne.0) then
+         target_wgt = force_max_wgt / xscale
+         th_maxwgt = dabs(swgt(i))
       else
-         target_wgt = max_wgt / xscale
+         stop 1
       endif
 c
 c     Select events which will be written
 c
       xsum = 0d0
       nstore = 0
+      th_nunwgt = 0
       rewind(lun)
       done = .false. 
       do i=1,nw
@@ -315,20 +324,25 @@ c
          else
             wgt = 0d0
          endif
-         if (dabs(wgt)*xscale .gt. target_wgt*xran1(iseed)) then
+         if (dabs(wgt) .gt. target_wgt*xran1(iseed)) then
             xsum=xsum+max(dabs(wgt),target_Wgt)
             store_event(i)=.true.
             nstore=nstore+1
          else
             store_event(i) = .false.
          endif
+         if (force_max_weight.lt.0) then
+            if (dabs(wgt) .gt. th_maxwgt*xran1(iseed)) then
+               th_nunwgt = th_nunwgt +1
+            endif
+         endif
       enddo
       if (xscale.eq.0)then
          xscale = xsecabs/xsum
-         target_wgt = target_wgt*xscale
-      else
-         target_wgt = target_wgt*xscale
       endif
+      target_wgt = target_wgt*xscale
+      th_maxwgt = th_maxwgt*xscale
+
       rewind(lun)
 c     JA 8/17/2011 Don't check for previously stored events
 c      if (nstore .le. neventswritten) then
@@ -364,13 +378,21 @@ c      endif
       enddo
       write(*,*) 'Found ',nw,' events.'
       write(*,*) 'Wrote ',i ,' events.'
-      write(*,*) 'Actual xsec ',xsec
-      write(*,*) 'Correct abs xsec ',xsecabs
-      write(*,*) 'Event xsec ', xtot
+      if (xscale.eq.0)then
+         write(*,*) 'Actual xsec ',xsec
+         write(*,*) 'Correct abs xsec ',xsecabs
+         write(*,*) 'Event xsec ', xtot
+      endif
       write(*,*) 'Events wgts > 1: ', nover
       write(*,*) '% Cross section > 1: ',xover, xover/xtot*100.
       neventswritten = i
       maxwgt = target_wgt
+      if (force_max_wgt.lt.0)then
+         th_maxwgt = target_wgt
+         th_nunwgt = neventswritten
+      else
+
+      endif
  99   close(lunw)
       
 c      close(lun)

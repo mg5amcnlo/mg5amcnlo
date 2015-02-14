@@ -849,9 +849,9 @@ class gensym(object):
                 files.ln(pjoin(Pdir,"G%s" % G, 'ftn25'),  Gdir)
         if True and __debug__:
             # make the unweighting to compute the number of events:
-            maxwgt = max([0]+[R.maxwgt for R in grid_calculator.results if R.nunwgt])
+            maxwgt = grid_calculator.get_max_wgt(0.01)
             if maxwgt:
-                nunwgt = sum([R.nunwgt*R.maxwgt/maxwgt for R in grid_calculator.results if R.nunwgt])
+                nunwgt = grid_calculator.get_nunwgt(maxwgt) 
                 luminosity = nunwgt/cross
                 written_event = sum([R.nunwgt for R in grid_calculator.results])
                 misc.sprint(G, cross, error*cross, nunwgt, written_event,luminosity)
