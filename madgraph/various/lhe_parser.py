@@ -268,10 +268,10 @@ class EventFile(object):
         else:
             unwgt_name = wgt.func_name
             get_wgt = wgt
-        misc.sprint(trunc_error)
-        all_wgt, cross, nb_event = self.initialize_unweighting(get_wgt, trunc_error)
-        misc.sprint(trunc_error)
 
+        all_wgt, cross, nb_event = self.initialize_unweighting(get_wgt, trunc_error)
+
+        # function that need to be define on the flight
         def max_wgt_for_trunc(trunc):
             """find the weight with the maximal truncation."""
             
@@ -285,6 +285,7 @@ class EventFile(object):
                     break
 
             return max_wgt
+        # end of the function
                 
         # choose the max_weight
         if not max_wgt:
@@ -482,8 +483,6 @@ class MultiEventFile(EventFile):
                 total_event += 1
                 event.sample_scale = 1
                 wgt = getwgt(event)
-                if nb_event % 2000 ==0:
-                    misc.sprint(nb_event, wgt)
                 cross['all'] += wgt
                 cross[event.ievent] += wgt
                 new_wgt.append(abs(wgt))
@@ -516,6 +515,7 @@ class MultiEventFile(EventFile):
         all_wgt = all_wgt[-nb_keep:]  
         self.seek(0)
         self.configure = True
+        misc.sprint(total_event)
         return all_wgt, sum_cross, total_event
     
     def configure(self):

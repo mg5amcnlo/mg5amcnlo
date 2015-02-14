@@ -1982,7 +1982,11 @@ c     $                 access='append',err=122)
 c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 122              close(22)
                   tsigma = tsigma*sqrt(chi2)  !This gives the 68% confidence cross section
-                  call store_events(use_cut)
+                  if (use_cut.eq.-2)then
+                     call store_events(0d0, events/2d0)
+                  else
+                     call store_events(0d0, 0d0)
+                  endif
                   cur_it = itm+2
                   return
                endif
@@ -1997,7 +2001,12 @@ c             tjs 5/22/2007
 c
 c               nun = n_unwgted()
 c               write(*,*) 'Estimated events',nun, accur
-               call store_events(use_cut)
+               if (use_cut.eq.-2) then
+                  call store_events(0d0, events/2d0)
+               else
+                  call store_events(0d0, 0d0)
+               endif
+
                nun = neventswritten
 c               tmp1 = tmean / tsigma
 c               chi2tmp = (chi2/tmp1/tmp1-tsigma)/dble(cur_it-2)
@@ -2051,7 +2060,11 @@ c 129              close(22)
 
 
             if (cur_it .gt. itm) then               
-               call store_events(use_cut)
+               if (use_cut.eq.-2)then
+                  call store_events(0d0, events/2d0)
+               else
+                  call store_events(0d0, 0d0)
+               endif
                tmean = tmean / tsigma
                trmean = trmean / tsigma
                chi2 = (chi2 / tmean / tmean - tsigma) / dble(itm - 1)

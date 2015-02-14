@@ -1564,6 +1564,11 @@
      &          d_index)%abs_norm / ref_grid(ref_d_index)%abs_norm)
               ref_bin%abs_weight = ref_bin%abs_weight * (run_grid(
      &          d_index)%abs_norm / ref_grid(ref_d_index)%abs_norm)
+              if (ref_bin%bid%id.eq.2) then
+                write(39,*) 'Problem ',ref_bin%bid%id,
+     &        run_grid(d_index)%abs_norm,
+     &        ref_grid(ref_d_index)%abs_norm
+              endif
               ref_bin%weight_sqr = ref_bin%weight_sqr * (run_grid(
      &          d_index)%norm_sqr / ref_grid(ref_d_index)%norm_sqr)
             endif
@@ -1724,6 +1729,7 @@
         integer                 :: conv_bin_index
         type(SampledDimension)  :: conv_dim
         logical                 :: one_norm_is_zero
+        real*8                  :: small_contrib_thres
 !
 !       Begin code
 !
@@ -1772,6 +1778,7 @@
           chosen_mode = 3
         endif
 
+!       Pick the right norm for the chosen mode
         if (chosen_mode.eq.1) then
           sampling_norm           = mGrid%variance_norm
         elseif (chosen_mode.eq.2) then
@@ -1816,6 +1823,47 @@
           enddo
         endif
 
+!       Pick the right reference bin value for the chosen mode. Note
+!       that this reference value is stored in the %weight attribute
+!       of the reference grid local copy mGrid
+        do i=1,size(mGrid%bins)
+          if (.not.bin_indices_to_fill(i)) then
+            mGrid%bins(i)%weight    = 0.0d0
+          elseif (chosen_mode.eq.1) then
+            mGrid%bins(i)%weight    = DS_bin_variance(mGrid%bins(i))
+          elseif (chosen_mode.eq.2) then
+            mGrid%bins(i)%weight    = mGrid%bins(i)%abs_weight
+          elseif (chosen_mode.eq.3) then
+            mGrid%bins(i)%weight    = 1.0d0
+          endif
+        enddo
+
+
+!
+!       Treat specially contributions worth less than 5% of the
+!       contribution averaged over all bins. For those, we sample
+!       according to the square root (or the specified power 'pow'
+!       of the reference value corresponding to the chosen mode. 
+!       In this way, we are less sensitive to possible large fluctuations 
+!       of very suppressed contributions for which the Jacobian would be 
+!       really big. However, the square-root is such that a really
+!       suppressed contribution at the level of numerical precision
+!       would still never be probed.
+!       
+        small_contrib_threshold      = 10.0e-2
+        damping_power                = 1.0/3.0
+        average_contrib              = sampling_norm / size(mGrid%bins)
+        do i=1,size(mGrid%bins)
+          mBin = mGrid%bins(i)    
+          if ( (mBin%weight/average_contrib) .lt.
+     &                                     small_contrib_threshold) then
+             sampling_norm        = sampling_norm - mGrid%bins(i)%weight
+             mGrid%bins(i)%weight = 
+     &        ((mBin%weight/(small_contrib_threshold*average_contrib))
+     &        **damping_power)*small_contrib_threshold*average_contrib
+             sampling_norm        = sampling_norm + mGrid%bins(i)%weight
+          endif
+        enddo
 !
 !       Now appropriately set the convolution factors
 !
@@ -1852,15 +1900,8 @@
               convolution_factors(i) = convolution_factors(i)*
      &                          conv_dim%bins(conv_bin_index)%abs_weight
             enddo
-            if (chosen_mode.eq.1) then
-              sampling_norm = sampling_norm + 
-     &             convolution_factors(i)*DS_bin_variance(mGrid%bins(i))
-            elseif (chosen_mode.eq.2) then
-              sampling_norm = sampling_norm + 
-     &             convolution_factors(i)*mGrid%bins(i)%abs_weight
-            elseif (chosen_mode.eq.3) then
-              sampling_norm = sampling_norm + convolution_factors(i)
-            endif
+            sampling_norm = sampling_norm + 
+     &        convolution_factors(i)*mGrid%bins(i)%weight
           enddo
         else
           do i=1,size(mGrid%bins)
@@ -1924,14 +1965,7 @@
             cycle
           endif
           mBin = mGrid%bins(i)
-          if (chosen_mode.eq.1) then
-            normalized_bin_bound = DS_bin_variance(mBin)
-          elseif (chosen_mode.eq.2) then
-            normalized_bin_bound = mBin%abs_weight
-          elseif (chosen_mode.eq.3) then
-            normalized_bin_bound = 1.0d0
-          endif
-          normalized_bin_bound = normalized_bin_bound * 
+          normalized_bin_bound = mBin%weight * 
      &                        ( convolution_factors(i) / sampling_norm )
           running_bound = running_bound + normalized_bin_bound
           if (random_variable.le.running_bound) then

@@ -133,7 +133,7 @@ c-----
 c  Begin Code
 c-----
 c      write(*,*) 'storing Events'
-      call store_events(1)
+      call store_events(0d0, 0d0)
       rewind(lun)
       nw = 0
       maxwgt = 0d0
@@ -213,7 +213,7 @@ c $E$ S-COMMENT_C $E$
       endif
       end
 
-      subroutine store_events(grid_strategy)
+      subroutine store_events(max_wgt, xscale)
 C**************************************************************************
 C     Takes events from scratch file (lun) and writes them to a permanent
 c     file  events.dat
@@ -230,16 +230,16 @@ c
 c
 c     Arguments
 c
-      integer grid_strategy
+      double precision max_wgt, xscale
 c
 c     Local
 c
       integer i, lunw, ic(7,2*nexternal-3), n, j
       logical done
       double precision wgt,p(0:4,2*nexternal-3)
-      double precision xsec,xsecabs,xerr,xscale,xtot
-      double precision xsum, xover
-      double precision target_wgt,orig_Wgt(maxevents)
+      double precision xsec,xsecabs,xerr,xtot
+      double precision xsum, xover, target_wgt
+      double precision orig_Wgt(maxevents)
       logical store_event(maxevents)
       integer iseed, nover, nstore
       double precision scale,aqcd,aqed
@@ -277,8 +277,10 @@ c
 c     First scale all of the events to the total cross section
 c
       if (nw .le. 0) return
-      call sample_result(xsecabs,xsec,xerr,itmin)
-      if (xsecabs .le. 0) return   !Fix by TS 12/3/2010
+      if (xscale.eq.0) then
+         call sample_result(xsecabs,xsec,xerr,itmin)
+         if (xsecabs .le. 0) return !Fix by TS 12/3/2010
+      endif
       xtot=0
       call dsort(nw, swgt)
       do i=1,nw
@@ -294,7 +296,11 @@ c
          i = i-1
       enddo
       if (i .lt. nw) i=i+1
-      target_wgt = dabs(swgt(i))
+      if ( max_wgt.eq.0)then
+         target_wgt = dabs(swgt(i))
+      else
+         target_wgt = max_wgt / xscale
+      endif
 c
 c     Select events which will be written
 c
@@ -309,7 +315,7 @@ c
          else
             wgt = 0d0
          endif
-         if (dabs(wgt) .gt. target_wgt*xran1(iseed)) then
+         if (dabs(wgt)*xscale .gt. target_wgt*xran1(iseed)) then
             xsum=xsum+max(dabs(wgt),target_Wgt)
             store_event(i)=.true.
             nstore=nstore+1
@@ -317,12 +323,12 @@ c
             store_event(i) = .false.
          endif
       enddo
-      if (grid_strategy.eq.-2) then
-         xscale = 1d0
-      else
+      if (xscale.eq.0)then
          xscale = xsecabs/xsum
+         target_wgt = target_wgt*xscale
+      else
+         target_wgt = target_wgt*xscale
       endif
-      target_wgt = target_wgt*xscale
       rewind(lun)
 c     JA 8/17/2011 Don't check for previously stored events
 c      if (nstore .le. neventswritten) then
@@ -364,7 +370,6 @@ c      endif
       write(*,*) 'Events wgts > 1: ', nover
       write(*,*) '% Cross section > 1: ',xover, xover/xtot*100.
       neventswritten = i
-c     save the value of target_wgt      
       maxwgt = target_wgt
  99   close(lunw)
       
