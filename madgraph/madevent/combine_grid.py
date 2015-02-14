@@ -247,6 +247,17 @@ class grid_information(object):
                 maxwgt1, maxwgt2 = maxwgt2, maxwgt1
                 nunwgt1, nunwgt2 = nunwgt2, nunwgt1
             
+            if nunwgt2 > nunwgt1:
+                # This should not happen but since those number are statistical
+                # it can be.
+                maxwgt1 = self.results[i].maxwgt
+                nunwgt1  = self.results[i].nunwgt
+                if max_wgt <= maxwgt1:
+                    total_nunwgt += nunwgt1
+                else:
+                    total_nunwgt +=  nunwgt1 * maxwgt1 / max_wgt
+                continue
+            
             if max_wgt <= maxwgt1:
                 total_nunwgt += nunwgt1
             elif max_wgt > maxwgt2:
