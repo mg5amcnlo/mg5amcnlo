@@ -2590,7 +2590,7 @@ zeor by MadLoop.""")
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
                 pass
-            if self.options['run_mode'] ==1 and self.options['cluster_tmp_path']:
+            if self.options['run_mode'] ==1 and self.options['cluster_temp_path']:
                 tmpcluster = cluster.MultiCore(nb_core=1)
                 tmpcluster.launch_and_wait('../bin/internal/run_combine', 
                                             cwd=pjoin(self.me_dir,'SubProcesses'),
