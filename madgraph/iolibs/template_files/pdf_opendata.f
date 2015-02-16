@@ -34,7 +34,10 @@ c--   start
 c
       IU=NextUnopen()
 
-c     first try in the current directory (for cluster use)
+c     First try system wide (for cluster if define)
+      %(pdf_systemwide)s
+
+c     Then try in the current directory (for cluster use)
       tempname=Tablefile
       open(IU,file=tempname,status='old',ERR=10)
       return

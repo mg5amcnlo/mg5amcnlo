@@ -229,6 +229,11 @@ class ProcessExporterFortran(object):
         files.cp(pjoin(MG5DIR,'vendor', 'DiscreteSampler', 'StringCast.f'), 
                  pjoin(self.dir_path, 'Source'))
         
+        # We need to create the correct open_data for the pdf
+        self.write_pdf_opendata()
+        
+        
+        
             
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -296,6 +301,39 @@ class ProcessExporterFortran(object):
         """Function to write a matrix.f file, for inheritance.
         """
         pass
+
+    #===========================================================================
+    # write_pdf_opendata
+    #===========================================================================
+    def write_pdf_opendata(self):
+        """ modify the pdf opendata file, to allow direct access to cluster node
+        repository if configure"""
+        
+        if not self.opt["cluster_local_path"]:
+            changer = {"pdf_systemwide": ""}
+        else: 
+            to_add = """
+            tempname='%(path)s'//Tablefile
+            open(IU,file=tempname,status='old',ERR=1)
+            return
+ 1          tempname='%(path)s/Pdfdata/'//Tablefile
+            open(IU,file=tempname,status='old',ERR=2)
+            return
+ 2          tempname='%(path)s/lhapdf'//Tablefile
+            open(IU,file=tempname,status='old',ERR=10)
+            return            
+            """ % {"path" : self.opt["cluster_local_path"]}
+            
+            changer = {"pdf_systemwide": to_add}
+
+        ff = open(pjoin(self.dir_path, "Source", "PDF", "opendata.f"),"w")
+        template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_opendata.f"),"r").read()
+        
+        
+        ff.write(template % changer)
+        return
+
+
 
     #===========================================================================
     # write_maxparticles_file
@@ -5764,6 +5802,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
 
     group_subprocesses = cmd.options['group_subprocesses']
 
+    opt = cmd.options
+
     # First treat the MadLoop5 standalone case       
     MadLoop_SA_options = {'clean': not noclean, 
       'complex_mass':cmd.options['complex_mass_scheme'],
@@ -5798,7 +5838,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
     elif output_type=='amcatnlo':
         import madgraph.iolibs.export_fks as export_fks
         ExporterClass=None
-        amcatnlo_options = MadLoop_SA_options
+        amcatnlo_options = dict(opt)
+        amcatnlo_options.update(MadLoop_SA_options)
         amcatnlo_options['mp'] = len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0
         if not cmd.options['loop_optimized_output']:
             logger.info("Writing out the aMC@NLO code")
@@ -5822,19 +5863,21 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
 
         assert group_subprocesses in [True, False]
         
-        opt = {'clean': not noclean,
+        opt = dict(opt)
+        opt.update({'clean': not noclean,
                'complex_mass': cmd.options['complex_mass_scheme'],
                'export_format':cmd._export_format,
                'mp': False,  
                'sa_symmetry':False, 
-               'model': cmd._curr_model.get('name') }
+               'model': cmd._curr_model.get('name') })
 
         format = cmd._export_format #shortcut
 
         if format in ['standalone_msP', 'standalone_msF', 'standalone_rw']:
             opt['sa_symmetry'] = True        
     
-        loop_induced_opt = MadLoop_SA_options
+        loop_induced_opt = dict(opt)
+        loop_induced_opt.update(MadLoop_SA_options)
         loop_induced_opt['export_format'] = 'madloop_optimized'
         loop_induced_opt['SubProc_prefix'] = 'PV'
         # For loop_induced output with MadEvent, we must have access to the 
