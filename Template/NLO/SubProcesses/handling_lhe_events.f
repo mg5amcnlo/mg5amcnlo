@@ -670,10 +670,12 @@ c
            write(ifile,'(a)')'  </rwgt>'
          elseif(jwgtinfo.eq.-5) then
            write(ifile,'(a)')'  <rwgt>'
-           write (ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
+           write (ifile,'(1x,d16.10,3(1x,i4))') wgtref,n_ctr_found
+     &          ,n_mom_conf,wgtcpower
            do i=1,n_mom_conf
               do j=1,mexternal
-                 write (ifile,*) (momenta_str(ii,j,i),ii=0,3)
+                 write (ifile,'(4(1x,d16.10))')
+     &                (momenta_str(ii,j,i),ii=0,3)
               enddo
            enddo
            do i=1,n_ctr_found
