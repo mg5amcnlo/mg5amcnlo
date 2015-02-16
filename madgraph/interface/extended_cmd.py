@@ -1222,6 +1222,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             raise self.InvalidCmd, 'display require at least one argument'
         
         if args[0] == "options":
+            misc.sprint("pass here")
             outstr = "Value of current Options:\n" 
             for key, value in self.options.items():
                 outstr += '%25s \t:\t%s\n' %(key,value)

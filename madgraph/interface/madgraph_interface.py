@@ -2453,6 +2453,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
+                       'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/',
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
@@ -5191,7 +5192,6 @@ This implies that with decay chains:
                         self.history.append('set %s %s' % (key, self.options[key]))
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
-
         return self.options
 
     def check_for_export_dir(self, filepath):
@@ -5718,6 +5718,9 @@ This implies that with decay chains:
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
                          'cluster_retry_wait', 'cluster_size']:
                 self.options[args[0]] = int(args[1])
+
+        elif args[0] in ['cluster_local_path']:
+            self.options[args[0]] = args[1].strip()
 
         elif args[0] == 'cluster_status_update':
             if '(' in args[1]:

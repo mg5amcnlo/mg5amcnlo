@@ -483,6 +483,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'cluster_type': 'condor',
                        'cluster_status_update': (600, 30),
                        'cluster_nb_retry':1,
+                       'cluster_local_path': "/cvmfs/cp3.uclouvain.be/madgraph/",
                        'cluster_retry_wait':300}
 
     options_madgraph= {'stdout_level':None}
@@ -1287,6 +1288,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_pdf_input_filename(self):
         """return the name of the file which is used by the pdfset"""
 
+        if self.options["cluster_local_path"] and self.options['run_mode'] ==1:
+            # no need to transfer the pdf.
+            return ''
+
         if hasattr(self, 'pdffile') and self.pdffile:
             return self.pdffile
         else:
@@ -1480,6 +1485,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cluster_name = opt['cluster_type']
             self.cluster = cluster.from_name[cluster_name](**opt)
 
+
     def check_param_card(self, path, run=True):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""
@@ -1640,6 +1646,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # read the file and extract information
         logger.info('load configuration from %s ' % config_file.name)
         for line in config_file:
+            
             if '#' in line:
                 line = line.split('#',1)[0]
             line = line.replace('\n','').replace('\r\n','')
@@ -1650,7 +1657,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 name = name.strip()
                 value = value.strip()
-                if name.endswith('_path'):
+                if name.endswith('_path') and not name.startswith('cluster'):
                     path = value
                     if os.path.isdir(path):
                         self.options[name] = os.path.realpath(path)
@@ -1669,12 +1676,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not final:
             return self.options # the return is usefull for unittest
 
-
         # Treat each expected input
         # delphes/pythia/... path
         for key in self.options:
             # Final cross check for the path
-            if key.endswith('path'):
+            if key.endswith('path') and not key.startswith("cluster"):
                 path = self.options[key]
                 if path is None:
                     continue
@@ -1693,7 +1699,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.options[key] = None
             elif key.startswith('cluster') and key != 'cluster_status_update':
                 if key in ('cluster_nb_retry','cluster_wait_retry'):
-                    self.options[key] = int(self.options[key])
+                    self.options[key] = int(self.options[key]) 
                 if hasattr(self,'cluster'):
                     del self.cluster
                 pass
@@ -1710,9 +1716,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                    % key)
 
         # Configure the way to open a file:
-        misc.open_file.configure(self.options)
         self.configure_run_mode(self.options['run_mode'])
-
         return self.options
 
     @staticmethod
