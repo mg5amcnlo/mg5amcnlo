@@ -803,8 +803,9 @@ c From dsample_fks
       include 'c_weight.inc'
       include 'run.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
-      integer i,ifl,proc_map(0:fks_configs,0:fks_configs),nFKS_picked
-     $     ,nFKS_in,nFKS_out,izero,ione,itwo,mohdr,iFKS,sum
+      integer i,ifl,proc_map(0:fks_configs,0:fks_configs)
+     $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
+     $     ,iFKS,sum
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF
@@ -872,20 +873,20 @@ c The nbody contributions
          nbody=.true.
          calculatedBorn=.false.
 c Pick the first one because that's the one with the soft singularity
-         nFKS_picked=proc_map(proc_map(0,1),1)
+         nFKS_picked_nbody=proc_map(proc_map(0,1),1)
          if (sum.eq.0) then
 c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
-            nFKS_in=nFKS_picked
+            nFKS_in=nFKS_picked_nbody
             call get_born_nFKSprocess(nFKS_in,nFKS_out)
-            nFKS_picked=nFKS_out
+            nFKS_picked_nbody=nFKS_out
          endif
-         call update_fks_dir(nFKS_picked,iconfig)
+         call update_fks_dir(nFKS_picked_nbody,iconfig)
          jac=1d0
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
-         call set_shower_scale_noshape(p,nFKS_picked*2-1)
+         call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
             if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
@@ -899,7 +900,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          endif
 c Update the shower starting scale. This might be updated again below if
 c the nFKSprocess is the same.
-         call include_shape_in_shower_scale(p,nFKS_picked)
+         call include_shape_in_shower_scale(p,nFKS_picked_nbody)
             
          
  11      continue
@@ -917,6 +918,7 @@ c for different nFKSprocess.
             probne=1d0
             gfactsf=1.d0
             gfactcl=1.d0
+            MCcntcalled=.false.
             call generate_momenta(ndim,iconfig,jac,x,p)
             if (p_born(0,1).lt.0d0) cycle
 c Set the shower scales            
@@ -926,15 +928,15 @@ c Set the shower scales
             call set_shower_scale_noshape(p,iFKS*2)
             call compute_prefactors_n1body(vegas_wgt,jac)
             call set_cms_stuff(izero)
-            passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
+            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(mohdr)
             passcuts_n1body=passcuts(p,rwgt)
             if (passcuts_nbody .and. abrv.ne.'real') then
                call set_cms_stuff(izero)
                if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
-               call set_alphaS(p1_cnt(0,1,0))
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
+                  call set_alphaS(p)
                   call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
                   call set_cms_stuff(izero)
                else
@@ -943,6 +945,7 @@ c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
 c events are called, so this will remain 0.
                   probne=0d0
                endif
+               call set_alphaS(p1_cnt(0,1,0))
                replace_MC_subt=(1d0-gfactsf)*probne
                call compute_soft_counter_term(replace_MC_subt)
                call set_cms_stuff(ione)
