@@ -206,9 +206,6 @@
 !       would still never be probed.
 !       Notice that this procedure does *not* change the weight in the
 !       bin, but only how it is used for bin picking.
-!       Finally, notice that if 'damping_power' is negative, then the
-!       contributions lower than the averaged_bin_wgt*small_contrib_threshold
-!       will be pushed up to the value averaged_bin_wgt*small_contrib_threshold.
         real*8                                :: small_contrib_threshold
         real*8                                :: damping_power
 !       Minimum number of points to probe each bin with when the reference
@@ -770,11 +767,12 @@
             stop 1
           endif
 
-          if (in_damping_power.gt.1.0d0) then
+          if (in_damping_power.lt.0.0d0.or.
+     &                                  in_damping_power.gt.1.0d0) then
             write(*,*) "The damping power ("//
      &      toStr_real_with_ndig(in_damping_power,3) 
      &      //") given in argument of the function 'DS_set_damping_"//
-     &      "for_grid' must be <= 1.0."
+     &      "for_grid' must be >= 0.0 and <= 1.0."
             stop 1
           endif
 
@@ -1996,17 +1994,12 @@
           mBin = mGrid%bins(i)    
           if ( (mBin%weight/average_contrib) .lt.
      &                             runGrid%small_contrib_threshold) then
-             sampling_norm        = sampling_norm - mGrid%bins(i)%weight
-             if (runGrid%damping_power.ge.0.0d0) then
-               mGrid%bins(i)%weight = 
-     &          ((mBin%weight/(runGrid%small_contrib_threshold
-     &          *average_contrib))**runGrid%damping_power)*
-     &          runGrid%small_contrib_threshold*average_contrib
-             else
-               mGrid%bins(i)%weight = 
-     &                  runGrid%small_contrib_threshold*average_contrib
-             endif
-             sampling_norm        = sampling_norm + mGrid%bins(i)%weight
+            sampling_norm        = sampling_norm - mGrid%bins(i)%weight
+            mGrid%bins(i)%weight = 
+     &        ((mBin%weight/(runGrid%small_contrib_threshold
+     &        *average_contrib))**runGrid%damping_power)*
+     &        runGrid%small_contrib_threshold*average_contrib
+            sampling_norm        = sampling_norm + mGrid%bins(i)%weight
           endif
         enddo
 !
@@ -2464,8 +2457,8 @@
      &                run_grid(size(run_grid))%grid_mode
                   case(5)
                     read(streamID,*,end=990) small_contrib_threshold
-                    if (small_contrib_threshold.lt.0.0.or.
-     &                              small_contrib_threshold.gt.0.5) then
+                    if (small_contrib_threshold.lt.0.0d0.or.
+     &                              small_contrib_threshold.gt.0.5d0) then
                       write(*,*) 'DiscreteSampler:: The '//
      &                  'small_contrib_threshold must be >= 0.0 and '//
      &                  '< 0.5 to be meaningful.'
@@ -2475,9 +2468,10 @@
      &                                         = small_contrib_threshold
                   case(6)
                     read(streamID,*,end=990) damping_power
-                    if (damping_power.gt.1.0) then
+                    if (damping_power.lt.0.0d0.or.
+     &                                         damping_power.gt.1.0d0) then
                       write(*,*) 'DiscreteSampler:: The damping power'//
-     &                  ' must be < 1.0.'
+     &                  ' must be >= 0.0 and <= 1.0.'
                       stop 1
                     endif
                     run_grid(size(run_grid))%damping_power

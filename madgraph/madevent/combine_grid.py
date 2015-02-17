@@ -189,11 +189,11 @@ class grid_information(object):
         # run.
         for  dimension in self.discrete_grid.values():
             if mode=='survey':
-                # We use the conservative 3% with the third root
+                # For the survey, we use the conservative 3% with the third root
                 dimension.small_contrib_threshold = 0.03
                 dimension.damping_power = 1.0/3.0
             elif mode=='refine':
-                # We use the more aggressive 0.3% with the square root
+                # For the refine, we use the more aggressive 0.3% with the square root
                 dimension.small_contrib_threshold = 0.003
                 dimension.damping_power = 0.5
             else:
