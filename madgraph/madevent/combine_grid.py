@@ -178,6 +178,7 @@ class grid_information(object):
 
         trunc_max = 0.10
         force_max_wgt = self.get_max_wgt(trunc_max)
+        misc.sprint(force_max_wgt)
 
         fsock.write('%s %s \n' %(twgt, force_max_wgt))
         
@@ -218,8 +219,8 @@ class grid_information(object):
             nb_event += info[i][1]
             i += 1
         else:
-            old_nb, old_w  = info[i+1]
-            new_nb, new_w  = info[i]
+            old_w, old_nb  = info[i+1]
+            new_w, new_nb  = info[i]
                 
             return (old_nb * old_w + new_nb * new_w) / (old_nb + new_nb) 
 

@@ -284,6 +284,7 @@ C-----
 c
 c     First scale all of the events to the total cross section
 c
+
       if (nw .le. 0) return
       if (xscale.eq.0) then
          call sample_result(xsecabs,xsec,xerr,itmin)
@@ -304,11 +305,11 @@ c
          i = i-1
       enddo
       if (i .lt. nw) i=i+1
+      th_maxwgt = dabs(swgt(i))
       if ( force_max_wgt.lt.0)then
          target_wgt = dabs(swgt(i))
       else if (xscale.ne.0) then
          target_wgt = force_max_wgt / xscale
-         th_maxwgt = dabs(swgt(i))
       else
          stop 1
       endif
@@ -335,11 +336,9 @@ c
          else
             store_event(i) = .false.
          endif
-         if (force_max_wgt.lt.0) then
 c           we use the same seed for the two evaluation of the unweighting efficiency
-            if (dabs(wgt) .gt. th_maxwgt*random) then
-               th_nunwgt = th_nunwgt +1
-            endif
+         if (dabs(wgt) .gt. th_maxwgt*random) then
+            th_nunwgt = th_nunwgt +1
          endif
       enddo
       if (xscale.eq.0)then
