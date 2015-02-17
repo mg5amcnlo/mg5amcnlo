@@ -531,7 +531,8 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
-     &     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt)
+     $     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
+     $     +t_write)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
@@ -547,6 +548,9 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
       write(*,*) 'Time spent in Reweight_pdf : ',tr_pdf
       write(*,*) 'Time spent in Filling_plots : ',t_plot
       write(*,*) 'Time spent in Applying_cuts : ',t_cuts
+      write(*,*) 'Time spent in Sum_ident_contr : ',t_isum
+      write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
+      write(*,*) 'Time spent in Write_events : ',t_write
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
@@ -578,6 +582,9 @@ c timing statistics
       data t_plot/0.0/
       data t_cuts/0.0/
       data t_MC_subt/0.0/
+      data t_isum/0.0/
+      data t_p_unw/0.0/
+      data t_write/0.0/
       end
 
 
@@ -972,6 +979,7 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
+         call update_shower_scale_Sevents
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
       elseif(ifl.eq.1) then

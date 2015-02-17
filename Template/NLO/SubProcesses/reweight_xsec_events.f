@@ -429,23 +429,6 @@ c Restore default PDFs
 
         endif
 
-c Keep track of the accumulated results:
-        if (numscales.gt.0) then
-           do ii=1,numscales
-              do jj=1,numscales
-                 xsecScale_acc(ii,jj)=xsecScale_acc(ii,jj)+wgtxsecmu(ii
-     $                ,jj)/wgtref*XWGTUP
-              enddo
-           enddo
-        endif
-        if (nsets.gt.0) then
-           do n=0,nsets
-              xsecPDFr_acc(n)=xsecPDFr_acc(n)+wgtxsecPDF(n)/wgtref
-     $             *XWGTUP
-           enddo
-        endif
-
-        
 c renormalize all the scale & PDF weights to have the same normalization
 c as XWGTUP
         if(do_rwgt_scale)then
@@ -458,6 +441,21 @@ c as XWGTUP
         if(do_rwgt_pdf)then
            do n=0,nsets
               wgtxsecPDF(n)=wgtxsecPDF(n)/wgtref*XWGTUP
+           enddo
+        endif
+
+c Keep track of the accumulated results:
+        if (numscales.gt.0) then
+           do ii=1,numscales
+              do jj=1,numscales
+                 xsecScale_acc(ii,jj)=xsecScale_acc(ii,jj)+wgtxsecmu(ii
+     $                ,jj)
+              enddo
+           enddo
+        endif
+        if (nsets.gt.0) then
+           do n=0,nsets
+              xsecPDFr_acc(n)=xsecPDFr_acc(n)+wgtxsecPDF(n)
            enddo
         endif
 

@@ -4,6 +4,7 @@
       include "genps.inc"
       include "unlops.inc"
       include "run.inc"
+      include 'timing_variables.inc'
       integer ndim,ipole
       common/tosigint/ndim,ipole
       integer           iconfig
@@ -43,6 +44,7 @@
       common /to_abrv/ abrv
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+      call cpu_time(tBefore)
 
       do i=1,99
         if(i.le.ndim)then
@@ -125,6 +127,8 @@ c  Write-out the events
          call write_random_numbers(lunlhe)
       endif
       
+      call cpu_time(tAfter)
+      t_write=t_write+(tAfter-tBefore)
       return
       end
 

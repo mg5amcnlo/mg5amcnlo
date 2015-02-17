@@ -348,10 +348,12 @@ c to save grids:
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
-     &     +t_as+tr_s+tr_pdf+t_plot+t_cuts)
+     &     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
+     $     +t_write)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
+      write(*,*) 'Time spent in MCsubtraction : ',t_MC_subt
       write(*,*) 'Time spent in Counter_terms : ',tCount
       write(*,*) 'Time spent in Integrated_CT : ',tIS-tOLP
       write(*,*) 'Time spent in Virtuals : ',tOLP      
@@ -363,6 +365,9 @@ c to save grids:
       write(*,*) 'Time spent in Reweight_pdf : ',tr_pdf
       write(*,*) 'Time spent in Filling_plots : ',t_plot
       write(*,*) 'Time spent in Applying_cuts : ',t_cuts
+      write(*,*) 'Time spent in Sum_ident_contr : ',t_isum
+      write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
+      write(*,*) 'Time spent in Write_events : ',t_write
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
@@ -397,6 +402,9 @@ c timing statistics
       data t_plot/0.0/
       data t_cuts/0.0/
       data t_MC_subt/0.0/
+      data t_isum/0.0/
+      data t_p_unw/0.0/
+      data t_write/0.0/
       end
 
 

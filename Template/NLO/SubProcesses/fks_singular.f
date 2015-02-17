@@ -1622,8 +1622,8 @@ c S-event contribution
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
+      include 'timing_variables.inc'
       integer i,j,ii,jj,i_soft
-      double precision unwgt_sum_curr,unwgt_sum(max_contr)
       logical momenta_equal,pdg_equal,equal,found_S
       external momenta_equal,pdg_equal
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
@@ -1634,6 +1634,7 @@ c S-event contribution
       common /c_imode/imode,only_virt
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      call cpu_time(tBefore)
       if (icontr.eq.0) return
 c Find the contribution to sum all the S-event ones. This should be one
 c that has a soft singularity. We set it to 'i_soft'.
@@ -1662,7 +1663,6 @@ c while for the S-events we can sum it to the 'i_soft' one.
          do j=1,niproc(i)
             unwgt(j,i)=0d0
          enddo
-         unwgt_sum(i)=0d0
          icontr_sum(0,i)=0
          if (H_event(i)) then
             do ii=1,i
@@ -1687,16 +1687,15 @@ c     Identical contributions found: sum the contribution "i" to "ii"
                icontr_sum(icontr_sum(0,ii),ii)=i
                do j=1,niproc(ii)
                   unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
-                  unwgt_sum(ii)=unwgt_sum(ii)+abs(parton_iproc(j,ii))
                enddo
                exit
             enddo
          else
 c S-event: we can sum everything to 'i_soft': all the contributions to
-c the S-events can be summed together.
+c the S-events can be summed together. Ignore the shower_scale: this
+c will be updated later
             icontr_sum(0,i_soft)=icontr_sum(0,i_soft)+1
             icontr_sum(icontr_sum(0,i_soft),i_soft)=i
-            unwgt_sum_curr=unwgt_sum(i_soft)
             do j=1,niproc(i_soft)
                do jj=1,iproc_save(nFKS(i))
                   if (eto(jj,nFKS(i)).eq.j) then
@@ -1706,18 +1705,65 @@ c include it here!
                      if (itype(i).eq.14 .and. imode.eq.1 .and. .not.
      $                    only_virt) exit
                      unwgt(j,i_soft)=unwgt(j,i_soft)+parton_iproc(jj,i)
-                     unwgt_sum(i_soft)=unwgt_sum(i_soft)
-     $                                 +abs(parton_iproc(j,i_soft))
                   endif
                enddo
             enddo
-cFIX THIS: update the shower starting scale:
-c$$$c Take the weighted average for the shower starting scale
-c$$$            shower_scale(i_soft)=( unwgt_sum_curr*shower_scale(i_soft)
-c$$$     $           +(unwgt_sum(i_soft)-unwgt_sum_curr)
-c$$$     $           *shower_scale(i) ) /unwgt_sum(i_soft)
-c$$$            exit
          endif
+      enddo
+      call cpu_time(tAfter)
+      t_isum=t_isum+(tAfter-tBefore)
+      return
+      end
+
+      subroutine update_shower_scale_Sevents
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'nFKSconfigs.inc'
+      integer i,j,ict
+      double precision tmp_wgt(fks_configs),showerscale(fks_configs)
+     $     ,temp_wgt,shsctemp
+      do i=1,fks_configs
+         tmp_wgt(i)=0d0
+         showerscale(i)=-1d0
+      enddo
+c sum the weights that contribute to a single FKS configuration.
+      do i=1,icontr
+         if (H_event(i)) cycle
+         if (icontr_sum(0,i).eq.0) cycle
+         do j=1,icontr_sum(0,i)
+            ict=icontr_sum(j,i)
+            tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+wgts(1,i)
+            if (showerscale(nFKS(ict)).eq.-1d0) then
+               showerscale(nFKS(ict))=shower_scale(ict)
+c check that all the shower starting scales are identical for all the
+c contribution to a given FKS configuration.
+            elseif ( abs((showerscale(nFKS(ict))-shower_scale(ict))
+     $                  /(showerscale(nFKS(ict))+shower_scale(ict)))
+     $                                                  .gt. 1d-6 ) then
+               write (*,*) 'ERROR in update_shower_scale_Sevents'
+     $              ,showerscale(nFKS(ict)),shower_scale(ict)
+               stop 1
+            endif
+         enddo
+      enddo
+c Compute the weighted average of the shower scale. Weight is given by
+c the ABS cross section to given FKS configuration.
+      temp_wgt=0d0
+      shsctemp=0d0
+      do i=1,fks_configs
+         temp_wgt=temp_wgt+abs(tmp_wgt(i))
+         shsctemp=shsctemp+abs(tmp_wgt(i))*showerscale(i)
+      enddo
+      if (temp_wgt.ne.0d0) then
+         shsctemp=shsctemp/temp_wgt
+      else
+         shsctemp=0d0
+      endif
+c Overwrite the shower scale for the S-events
+      do i=1,icontr
+         if (H_event(i)) cycle
+         if (icontr_sum(0,i).ne.0) shower_scale(i)=shsctemp
       enddo
       return
       end
@@ -1800,6 +1846,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
+      include 'timing_variables.inc'
       integer i,j,k,iFKS_picked,ict
       double precision tot_sum,rnd,ran2,current,target
       external ran2
@@ -1817,6 +1864,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
       common/c_nFKSprocess/nFKSprocess
       double precision     SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      call cpu_time(tBefore)
+      if (icontr.eq.0) return
       tot_sum=0d0
       do i=1,icontr
          do j=1,niproc(i)
@@ -1860,6 +1909,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
          SCALUP(iFKS_picked*2-1)=shower_scale(icontr_picked)
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
+      call cpu_time(tAfter)
+      t_p_unw=t_p_unw+(tAfter-tBefore)
       return
       end
 
@@ -1911,7 +1962,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
             do ii=1,iproc_save(nFKS(ict))
                if (eto(ii,nFKS(ict)).ne.ipr) cycle
                n_ctr_found=n_ctr_found+1
-               write (n_ctr_str(n_ctr_found),'(3(1x,d16.10),1x,i2)')
+               write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
      &              (wgt(j,ict)*conv,j=1,3),
      &              nexternal
                procid=''
@@ -1923,7 +1974,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
                n_ctr_str(n_ctr_found) =
      &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &              //trim(adjustl(procid))
-               write (str_temp,'(i2,5(1x,d14.8),3(1x,i2),1x,d16.8)')
+               write (str_temp,'(i2,5(1x,d14.8),3(1x,i2),1x,d18.12)')
      &              QCDpower(ict),
      &              (bjx(j,ict),j=1,2),
      &              (scales2(j,ict),j=1,3),
@@ -1938,7 +1989,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
          else
             ipr=iproc_picked
             n_ctr_found=n_ctr_found+1
-            write (n_ctr_str(n_ctr_found),'(3(1x,d16.10),1x,i2)')
+            write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
      &           (wgt(j,ict)*conv,j=1,3),
      &           nexternal
             procid=''
@@ -1950,7 +2001,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
             n_ctr_str(n_ctr_found) =
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(procid))
-            write (str_temp,'(i2,5(1x,d14.8),3(1x,i2),1x,d16.8)')
+            write (str_temp,'(i2,5(1x,d14.8),3(1x,i2),1x,d18.12)')
      &           QCDpower(ict),
      &           (bjx(j,ict),j=1,2),
      &           (scales2(j,ict),j=1,3),
