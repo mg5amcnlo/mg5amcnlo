@@ -52,9 +52,13 @@ class OneResult(object):
         self.eff_iter = []
         self.maxwgt_iter = []
         self.maxwgt = 0 # weight used for the secondary unweighting.
+        self.th_maxwgt= 0 # weight that should have been use for secondary unweighting
+                          # this can happen if we force maxweight
+        self.th_nunwgt = 0 # associated number of event with th_maxwgt 
+                           #(this is theoretical do not correspond to a number of written event)
         return
     
-    @cluster.multiple_try(nb_try=5,sleep=20)
+    #@cluster.multiple_try(nb_try=5,sleep=20)
     def read_results(self, filepath):
         """read results.dat and fullfill information"""
         
@@ -84,7 +88,7 @@ class OneResult(object):
                          self.maxit, self.nunwgt, self.luminosity, self.wgt, \
                          self.xsec = data[:10]
                 if len(data) > 10:
-                    self.maxwgt = data[10]
+                    self.maxwgt, self.th_maxwgt, self.th_nunwgt = data[10:13]
                 if self.mfactor > 1:
                     self.luminosity /= self.mfactor
                 continue
@@ -202,12 +206,15 @@ class Combine_results(list, OneResult):
         self.luminosity = sum([one.luminosity for one in self])
         self.ysec_iter = []
         self.yerr_iter = []
+        self.th_maxwgt = 0.0
+        self.th_nunwgt = 0 
         for result in self:
             self.ysec_iter+=result.ysec_iter
             self.yerr_iter+=result.yerr_iter
             self.yasec_iter += result.yasec_iter
             self.eff_iter += result.eff_iter
             self.maxwgt_iter += result.maxwgt_iter
+
 
     
     def compute_iterations(self):
@@ -359,9 +366,10 @@ class Combine_results(list, OneResult):
             power = int(power) + 1
             return '%.5fE%+03i' %(nb,power)
 
-        line = '%s %s %s %i %i %i %i %s %s %s\n' % (fstr(self.axsec), fstr(self.xerru), 
+        line = '%s %s %s %i %i %i %i %s %s %s %s %i\n' % (fstr(self.axsec), fstr(self.xerru), 
                 fstr(self.xerrc), self.nevents, self.nw, self.maxit, self.nunwgt,
-                 fstr(self.luminosity), fstr(self.wgt), fstr(self.xsec))        
+                 fstr(self.luminosity), fstr(self.wgt), fstr(self.xsec),
+                 fstr(self.th_maxwgt), self.th_nunwgt)        
         fsock = open(output_path,'w') 
         fsock.writelines(line)
         for i in range(len(self.ysec_iter)):

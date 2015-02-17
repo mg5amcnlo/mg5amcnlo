@@ -37,9 +37,6 @@ class grid_information(object):
         self.target_evt = 0
         self.nb_sample = 0
         self.force_max_wgt = [] # list of weight for the secondary unweighting
-        self.th_maxwgt = []     # list of weight that should have been use for it
-        self.th_unwgt = []      # list of the number of unwgt event
-        
         
         #
         self.results = sum_html.Combine_results('combined')
@@ -119,11 +116,6 @@ class grid_information(object):
             self.target_evt += data[5]  
         self.force_max_wgt.append(data[6])
         
-        # theoretical value for the unweighting (if no force_max_wgt was set)
-        line = finput.readline()
-        data = [self.convert_to_number(i) for i in line.split()]       
-        self.th_maxwgt.append(data[0])
-        self.th_nunwgt.append(data[1])
         
             
         # discrete sampler/helicity information
@@ -152,7 +144,7 @@ class grid_information(object):
         self.results.add_results(fname,finput)
 
     
-    def write_associate_grid(self, path, max_it, curr_it):
+    def write_associate_grid(self, path, max_it, curr_it, mode="survey"):
         """use the grid information to create the grid associate"""
 
         new_grid = self.get_new_grid()
@@ -192,7 +184,7 @@ class grid_information(object):
         if not self.mc_hel:
             fsock.write(self.helicity_line)
         
-        self.discrete_grid.write(fsock)
+        self.discrete_grid.write(fsock, mode)
         
         return twgt
     
@@ -201,21 +193,32 @@ class grid_information(object):
            This correspond to the weight which allow "trunc_max" (1%) of the event
            to have a weight larger than one."""
         
-        nb_data = len(self.th_unwgt)
-        total_sum = sum(self.th_maxwgt[i] * self.th_unwgt[i] for i in xrange(nb_data))
-        info = sorted([ (self.th_maxwgt[i], self.th_unwgt[i]) for i in xrange(nb_data)])
+        
+        th_maxwgt = [R.th_maxwgt for R in self.results]
+        th_nunwgt = [R.th_nunwgt for R in self.results]
+        nb_data = len(th_nunwgt)
+        total_sum = sum(th_maxwgt[i] * th_nunwgt[i] for i in xrange(nb_data))
+        info = sorted([ (th_maxwgt[i], th_nunwgt[i]) for i in xrange(nb_data) 
+                                                          if th_nunwgt[i] > 0],
+                      reverse=True)
 
-        
-        
+        misc.sprint(info)
+        if len(info) == 0:
+            maxwgt = max(th_maxwgt)
+            if maxwgt==0:
+                return -1
+            else:
+                return maxwgt
+            
         xsum = 0
         nb_event = 0
         i = 0        
-        while (xsum-info[i][0] * nb_event < trunc_max * total_sum or i == len(info)):
+        while (xsum-info[i][0] * nb_event < trunc_max * total_sum and i != len(info)-2):
             xsum += info[i][0]*info[i][1]
             nb_event += info[i][1]
             i += 1
         else:
-            old_nb, old_w  = info[i-1]
+            old_nb, old_w  = info[i+1]
             new_nb, new_w  = info[i]
                 
             return (old_nb * old_w + new_nb * new_w) / (old_nb + new_nb) 
@@ -226,40 +229,35 @@ class grid_information(object):
         if max_wgt == -1:
             max_wgt = self.get_max_wgt()
         
+        #th_maxwgt = [R.th_maxwgt for R in self.results]
+        #th_nunwgt = [R.th_nunwgt for R in self.results]
+        
         # 1. estimate based on the information in results.dat
         #estimate1 = sum([max(R.nunwgt*R.maxwgt/max_wgt, R.nunwgt)  
         #                                     for R in self.results if R.nunwgt])
         
         # 2. estimate based on the information of the theoretical information
-        #info = zip(self.th_maxwgt, self.th_unwgt)
+        #info = zip(self.th_maxwgt, self.th_nunwgt)
         #estimate2 = sum(max(N, N*W/max_wgt, N) for N,W in info)
         
         # 3. 
         total_nunwgt = 0
-        for i in range(len(self.th_maxwgt)):
+        for i in range(len(self.results)):
             #take the data
             maxwgt1 = self.results[i].maxwgt
             nunwgt1  = self.results[i].nunwgt
-            maxwgt2 = self.th_maxwgt[i]
-            nunwgt2 = self.th_unwgt[i]
+            maxwgt2 = self.results[i].th_maxwgt
+            nunwgt2 = self.results[i].th_nunwgt
             
             if maxwgt1 > maxwgt2:
                 maxwgt1, maxwgt2 = maxwgt2, maxwgt1
                 nunwgt1, nunwgt2 = nunwgt2, nunwgt1
             
-            if nunwgt2 > nunwgt1:
-                # This should not happen but since those number are statistical
-                # it can be.
-                maxwgt1 = self.results[i].maxwgt
-                nunwgt1  = self.results[i].nunwgt
-                if max_wgt <= maxwgt1:
-                    total_nunwgt += nunwgt1
-                else:
-                    total_nunwgt +=  nunwgt1 * maxwgt1 / max_wgt
-                continue
+            assert nunwgt1 >= nunwgt2
             
             if max_wgt <= maxwgt1:
-                total_nunwgt += nunwgt1
+                # we can not return more event than those written on he disk
+                total_nunwgt += self.results[i].nunwgt
             elif max_wgt > maxwgt2:
                 total_nunwgt += nunwgt2 * maxwgt2 / max_wgt
             else:
@@ -271,8 +269,8 @@ class grid_information(object):
                 to_add = a + b / max_wgt
             
                 assert nunwgt2 <= to_add <= nunwgt1
-                total_nunwgt += min(to_add)
-        
+                total_nunwgt += min(to_add, self.results[i].nunwgt)
+        return total_nunwgt
         
     def plot_grid(self, grid, var=0):
         """make a plot of the grid."""
@@ -544,7 +542,7 @@ class DiscreteSampler(dict):
             line = next_line(fsock)
         return grid
     
-    def write(self, path):
+    def write(self, path, mode):
         """write into a file"""
         
         if isinstance(path, str):

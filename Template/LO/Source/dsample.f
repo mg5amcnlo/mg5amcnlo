@@ -76,6 +76,9 @@ c
       integer                   neventswritten
       common /to_eventswritten/ neventswritten
 
+      integer th_nunwgt
+      double precision th_maxwgt
+      common/theoretical_unwgt_max/th_maxwgt, th_nunwgt
 c
 c     External
 c
@@ -206,11 +209,13 @@ c     first iteration for gridpack runs
 C     OM 02/2015 Added maxwgt (target of the secondary unweight) to allow splitted
 C        generation of event.
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,2e13.5)')tmean,tsigma, 0.0,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean, maxwgt
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,3e13.5,i9)')tmean,tsigma, 0.0,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean, 
+     &     maxwgt, th_maxwgt, th_nunwgt
       else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,2e13.5)')tmean,0.0,tsigma,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean, maxwgt
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,3e13.5,i9)')tmean,0.0,tsigma,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt, trmean, 
+     &     maxwgt, th_maxwgt, th_nunwgt
       endif
 c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
@@ -220,8 +225,8 @@ c      do i=1,cur_it-1
       close(66, status='KEEP')
       else
          open(unit=66,file='results.dat',status='unknown')
-         write(66,'(3e12.5,2i9,i5,i9,4e10.3)')0.,0.,0.,kevent,nw,
-     &     1,0,0.,0.,0.,0.
+         write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,kevent,nw,
+     &     1,0,0.,0.,0.,0.,0.,0
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
          flush(66)
          close(66, status='KEEP')
@@ -368,11 +373,13 @@ c
 c     JA 02/2011 Added twgt to results.dat to allow event generation in
 c     first iteration for gridpack runs +02/2015 maxwgt 
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,2e13.5)')tmean,tsigma,0.0,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean, maxwgt
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,3e13.5, i9)')tmean,tsigma,0.0,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean, 
+     &    maxwgt, th_maxwgt, th_nunwgt
       else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,2e13.5)')tmean,0.0,tsigma,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean,maxwgt
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,3e13.5,i9)')tmean,0.0,tsigma,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean,
+     &    maxwgt, th_maxwgt, th_nunwgt
       endif
 c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
@@ -382,8 +389,8 @@ c      do i=1,cur_it-1
       close(66, status='KEEP')
       else
          open(unit=66,file='results.dat',status='unknown')
-         write(66,'(3e12.5,2i9,i5,i9,4e10.3)')0.,0.,0.,kevent,nw,
-     &     1,0,0.,0.,0.,0.
+         write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,kevent,nw,
+     &     1,0,0.,0.,0.,0.,0.,0
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
          flush(66)
          close(66, status='KEEP')
@@ -1640,7 +1647,6 @@ c          # special mode where we store information to combine them
                 write(22,*) (xmin(j), j=1,invar)
                 write(22,*) (xmax(j), j=1,invar)
                 write(22,*) mean, rmean, sigma, wmax, kn,events, force_max_wgt
-                write(22,*) th_nunwgt, th_maxwgt
 c               In order not to write out the reference grid but just
 c               the points which were added for this last iteration,
 c               we write out the discrete 'running' grids before the
@@ -1983,7 +1989,7 @@ c               if (1d0/sqrt(tsigma) .lt. accur) then
                   open(26, file='ftn26',status='unknown')
                   write(26,fmt='(4f21.17)')
      $                 ((grid(2,i,j),i=1,ng),j=1,invar)
-                  write(26,*) twgt, maxwgt
+                  write(26,*) twgt, force_max_wgt
 c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)
                   call write_discrete_grids(26,'ref')
                   close(26)                  
@@ -1995,7 +2001,7 @@ c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 122              close(22)
                   tsigma = tsigma*sqrt(chi2)  !This gives the 68% confidence cross section
                   if (use_cut.eq.-2)then
-                     call store_events(force_max_wgt, events/2d0)
+                    call store_events(force_max_wgt, events/2d0)
                   else
                      call store_events(-1d0, 0d0)
                   endif
@@ -2053,7 +2059,7 @@ c     Check nun and chi2 (ja 03/11)
                   open(26, file='ftn26',status='unknown')
                   write(26,fmt='(4f21.17)')
      $                 ((grid(2,i,j),i=1,ng),j=1,invar)
-                  write(26,*) twgt
+                  write(26,*) twgt, force_max_wgt
 c                  write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
                   call write_discrete_grids(26,'ref')
                   close(26)
@@ -2090,7 +2096,7 @@ c 129              close(22)
                open(26, file='ftn26',status='unknown')
                write(26,fmt='(4f21.17)')
      $              ((grid(2,i,j),i=1,ng),j=1,invar)
-               write(26,*) twgt 
+               write(26,*) twgt, force_max_wgt
                call write_discrete_grids(26,'ref')
 c               write(26,fmt='(4f21.17)') (alpha(i),i=1,maxconfigs)
                close(26)
@@ -2151,8 +2157,8 @@ c 23   close(22)
  222  format(a10,I3,3x,a6,e10.4,a16,e10.3,e12.3,3x,f5.1,a1)
 
       open(unit=66,file='results.dat',status='unknown')
-      write(66,'(3e12.5,2i9,i5,i9,4e10.3)')0.,0.,0.,0,0,
-     &     0,1,0.,0.,0.,0.
+      write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,0,0,
+     &     0,1,0.,0.,0.,0.,0.,0
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
       flush(66)
       close(66, status='KEEP')

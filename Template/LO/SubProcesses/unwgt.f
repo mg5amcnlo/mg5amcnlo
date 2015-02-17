@@ -217,8 +217,10 @@ c $E$ S-COMMENT_C $E$
 C**************************************************************************
 C     Takes events from scratch file (lun) and writes them to a permanent
 c     file  events.dat
-c     If grid_strategy =-2 (splitted generation on different node)
-c     do not normalise the sum of weight to cross-section
+c     if force_max_weight =-1, then get it automatically (for a given truncation)
+c     if xscale=0 then the sum of the weight will be reweighted to the cross-section.
+c     computed from the last 3 iteration. otherwise the weight of each event
+c     will be multiply by that value.
 C**************************************************************************
       IMPLICIT NONE
 c
@@ -243,6 +245,7 @@ c
       logical store_event(maxevents)
       integer iseed, nover, nstore
       double precision scale,aqcd,aqed
+      double precision random
       integer ievent
       character*1000 buff
       logical u_syst
@@ -324,15 +327,17 @@ c
          else
             wgt = 0d0
          endif
-         if (dabs(wgt) .gt. target_wgt*xran1(iseed)) then
+         random = xran1(iseed)
+         if (dabs(wgt) .gt. target_wgt*random) then
             xsum=xsum+max(dabs(wgt),target_Wgt)
             store_event(i)=.true.
             nstore=nstore+1
          else
             store_event(i) = .false.
          endif
-         if (force_max_weight.lt.0) then
-            if (dabs(wgt) .gt. th_maxwgt*xran1(iseed)) then
+         if (force_max_wgt.lt.0) then
+c           we use the same seed for the two evaluation of the unweighting efficiency
+            if (dabs(wgt) .gt. th_maxwgt*random) then
                th_nunwgt = th_nunwgt +1
             endif
          endif

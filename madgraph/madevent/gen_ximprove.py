@@ -505,7 +505,7 @@ class gensym(object):
     combining_job = 2 # number of channel by ajob
     splitted_grid = False 
     min_iterations = 3
-    
+    mode= "survey"
     
 
     def __init__(self, cmd, opt=None):
@@ -843,7 +843,8 @@ class gensym(object):
                                   
             grid_calculator.write_associate_grid(pjoin(Pdir,"G%s" % G,'ftn25'),
                                                  max_it=self.cmd.opts['iterations'],
-                                                 curr_it=step)
+                                                 curr_it=step,
+                                                 mode=self.mode)
             self.twgt_by_job[Gdirs[0]] = twgt
             for Gdir in Gdirs[:]:
                 files.ln(pjoin(Pdir,"G%s" % G, 'ftn25'),  Gdir)
@@ -1528,7 +1529,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
     """Doing the refine in multicore. Each core handle a couple of PS point."""
 
     nb_ps_by_job = 2000 
-
+    mode = "refine"
 
     def __init__(self, *args, **opts):
         
@@ -1620,11 +1621,18 @@ class gen_ximprove_share(gen_ximprove, gensym):
             old_nunwgt, old_maxwgt = self.generated_events[(Pdir, G)]
         else:
             old_nunwgt, old_maxwgt = 0, 0  
+
+        new_maxwgt = max(grid_calculator.get_max_wgt(), old_maxwgt)
+        new_nunwgt = grid_calculator.get_nunwgt(new_maxwgt)
+        efficiency = new_nunwgt / sum([R.nevents for R in grid_calculator.results])
+        nunwgt = old_nunwgt * old_maxwgt / new_maxwgt
+        nunwgt += new_nunwgt
         
         misc.sprint([R.maxwgt for R in grid_calculator.results if R.nunwgt])
         maxwgt = max([old_maxwgt]+[R.maxwgt for R in grid_calculator.results if R.nunwgt])
         nunwgt = old_nunwgt * old_maxwgt / maxwgt 
         new_evt = sum([R.nunwgt*R.maxwgt/maxwgt for R in grid_calculator.results if R.nunwgt])
+        misc.sprint(new_maxwgt, maxwgt, new_nunwgt, new_evt)
         efficiency = new_evt / sum([R.nevents for R in grid_calculator.results])
         nunwgt += new_evt
         
