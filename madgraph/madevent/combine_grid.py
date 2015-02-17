@@ -185,7 +185,23 @@ class grid_information(object):
         if not self.mc_hel:
             fsock.write(self.helicity_line)
         
-        self.discrete_grid.write(fsock, mode)
+        # At this stage we chose the small_contrib_threshold and damping power
+        # parameter of the discrete grids depending on the mode currently being
+        # run.
+        for  dimension in self.discrete_grid.values():
+            if mode=='survey':
+                # For the survey, we use the conservative 3% with the third root
+                dimension.small_contrib_threshold = 0.03
+                dimension.damping_power = 1.0/3.0
+            elif mode=='refine':
+                # For the refine, we use the more aggressive 0.3% with the square root
+                dimension.small_contrib_threshold = 0.003
+                dimension.damping_power = 0.5
+            else:
+                dimension.small_contrib_threshold = 0.0
+                dimension.damping_power = 0.5
+        
+        self.discrete_grid.write(fsock)
         
         return twgt
     
@@ -457,6 +473,8 @@ class DiscreteSampler(dict):
 #  Helicity
 #  10 # Attribute 'min_bin_probing_points' of the grid.
 #  1 # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
+#  0.01 # Attribute 'small_contrib_threshold' of the grid.
+#  0.5 # Attribute 'damping_power' of the grid.
 # # binID   n_entries weight   weight_sqr   abs_weight
 #    1   255   1.666491280568920E-002   4.274101502263763E-004   1.666491280568920E-002
 #    2   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
@@ -501,6 +519,8 @@ class DiscreteSampler(dict):
 #  10 # Attribute 'min_bin_probing_points' of the grid.
 #  1 # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
 # # binID   n_entries weight   weight_sqr   abs_weight
+#  0.01 # Attribute 'small_contrib_threshold' of the grid.
+#  0.5 # Attribute 'damping_power' of the grid.
 #    1   512   7.658545534133427E-003   9.424671508005602E-005   7.658545534133427E-003
 #    4   478   8.108669631788431E-003   1.009367301168054E-004   8.108669631788431E-003
 #  </DiscreteSampler_grid>
@@ -535,15 +555,22 @@ class DiscreteSampler(dict):
         line = next_line(fsock)
         grid.grid_mode = int(line)
 
+        # line 5  small_contrib_threshold
+        line = next_line(fsock)
+        grid.small_contrib_threshold = float(line)
+        
+        # line 6  damping_power
+        line = next_line(fsock)
+        grid.damping_power = float(line)
 
-        # line 5 and following grid information
+        # line 7 and following grid information
         line = next_line(fsock)
         while 'discretesampler_grid' not in line.lower():
             grid.add_bin_entry(*line.split())
             line = next_line(fsock)
         return grid
     
-    def write(self, path, mode):
+    def write(self, path):
         """write into a file"""
         
         if isinstance(path, str):
@@ -567,6 +594,13 @@ class DiscreteSamplerDimension(dict):
         self.min_bin_probing_points = 10
         self.grid_mode = 1 #1=='default',2=='initialization'
         self.grid_type = 1 # 1=='ref', 2=='run'
+        # The attribute below controls at which point we damp the probing
+        # of small contributions. It corresponds to the contribution relative
+        # to the averaged contribution of all bins. It must be >=0.0 and < 0.5
+        # typically
+        self.small_contrib_threshold = 0.0
+        # The power of the corresponding damping, typically 0.5
+        self.damping_power = 0.5
 
     def update(self, running_grid):
         """update the reference with the associate running grid """
@@ -642,6 +676,8 @@ class DiscreteSamplerDimension(dict):
   %(grid_type)s # grid_type. 1=='ref', 2=='run'
   %(min_bin_probing_points)s # Attribute 'min_bin_probing_points' of the grid.
   %(grid_mode)s # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
+  %(small_contrib)s # Attribute 'small_contrib_threshold' of the grid.
+  %(damping_power)s # Attribute 'damping_power' of the grid.
 #  binID   n_entries weight   weight_sqr   abs_weight
 %(bins_informations)s
   </DiscreteSampler_grid>
@@ -662,7 +698,9 @@ class DiscreteSamplerDimension(dict):
                 'grid_mode': self.grid_mode,
                 'grid_type': self.grid_type,
                 'bins_informations' : '\n'.join('    %s %s' % (bin_id,str(bin_info)) \
-                                            for (bin_id, bin_info) in bins)
+                                            for (bin_id, bin_info) in bins),
+                'small_contrib': '%3.3f'%self.small_contrib_threshold,
+                'damping_power': '%3.3f'%self.damping_power                
                 }
         
         fsock.write(template % data)
