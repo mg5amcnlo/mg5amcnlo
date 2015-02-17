@@ -222,6 +222,8 @@ c to the list of weights using the add_wgt subroutine
          wgt1=wgt1+ ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)) )*
      $        f_dc/g22
          wgt3=wgtdegrem_muF*f_dc/g22
+      else
+         wgt3=0d0
       endif
       if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,wgt1,0d0,wgt3)
       call cpu_time(tAfter)
@@ -288,6 +290,8 @@ c value to the list of weights using the add_wgt subroutine
      $        *f_dsc(1)-(wgtdegrem_xi*f_dsc(2)+wgtdegrem_lxi*f_dsc(3)))
      $        /g22
          wgt3=-wgtdegrem_muF*f_dsc(4)/g22
+      else
+         wgt3=0d0
       endif
       if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,wgt1,0d0,wgt3)
       call cpu_time(tAfter)
