@@ -808,7 +808,7 @@ c From dsample_fks
      $     ,iFKS,sum
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
-     $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF
+     $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
       external passcuts
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       data firsttime/.true./
@@ -972,8 +972,8 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
-         call fill_mint_function_NLOPS(f)
-         call fill_MC_integer(1,proc_map(0,1),f(1)*vol1)
+         call fill_mint_function_NLOPS(f,n1body_wgt)
+         call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop 1

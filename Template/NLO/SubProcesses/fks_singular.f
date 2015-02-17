@@ -1723,13 +1723,14 @@ c$$$            exit
       end
 
 
-      subroutine fill_mint_function_NLOPS(f)
+      subroutine fill_mint_function_NLOPS(f,n1body_wgt)
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'mint.inc'
-      integer i,j
+      integer i,j,ict
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
+     $     ,n1body_wgt,tmp_wgt
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
@@ -1740,6 +1741,7 @@ c$$$            exit
       sigint=0d0
       sigint1=0d0
       sigint_ABS=0d0
+      n1body_wgt=0d0
       if (icontr.eq.0) then
          sigint_ABS=0d0
          sigint=0d0
@@ -1747,12 +1749,11 @@ c$$$            exit
       else
          do i=1,icontr
             sigint=sigint+wgts(1,i)
-            if (icontr_sum(0,i).ne.0) then
-               do j=1,niproc(i)
-                  sigint_ABS=sigint_ABS+abs(unwgt(j,i))
-                  sigint1=sigint1+unwgt(j,i) ! for consistency check
-               enddo
-            endif
+            if (icontr_sum(0,i).eq.0) cycle
+            do j=1,niproc(i)
+               sigint_ABS=sigint_ABS+abs(unwgt(j,i))
+               sigint1=sigint1+unwgt(j,i) ! for consistency check
+            enddo
          enddo
 c check the consistency of the results
          if (imode.ne.1 .or. only_virt) then
@@ -1770,6 +1771,17 @@ c check the consistency of the results
                stop 1
             endif
          endif
+c n1body_wgt is used for the importance sampling over FKS directories
+         do i=1,icontr
+            if (icontr_sum(0,i).eq.0) cycle
+            tmp_wgt=0d0
+            do j=1,icontr_sum(0,i)
+               ict=icontr_sum(j,i)
+               if (itype(ict).ne.2 .and. itype(ict).ne.3 .and.
+     $             itype(ict).ne.14) tmp_wgt=tmp_wgt+wgts(1,ict)
+            enddo
+            n1body_wgt=n1body_wgt+abs(tmp_wgt)
+         enddo
       endif
       f(1)=sigint_ABS
       f(2)=sigint
