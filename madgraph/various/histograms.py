@@ -28,12 +28,70 @@ import os
 import re
 import sys
 
-import madgraph.core.base_objects as base_objects
-import madgraph.various.misc as misc
-
-from madgraph import MG5DIR, MadGraph5Error
-
 logger = logging.getLogger("madgraph.various.histograms")
+
+try:
+    # import from madgraph directory
+    import madgraph.various.misc as misc
+    from madgraph import MadGraph5Error
+
+except ImportError, error:
+    logger.debug(error)
+    # import from madevent directory
+    import internal.misc as misc    
+    from internal import MadGraph5Error
+
+# I copy the Physics object list here so as not to add a whole dependency to
+# base_objects which is annoying when using this histograms module from the
+# bin/internal location of a process output (i.e. outside an MG5_aMC env.)
+
+#===============================================================================
+# PhysicsObjectList
+#===============================================================================
+class histograms_PhysicsObjectList(list):
+    """A class to store lists of physics object."""
+
+    class PhysicsObjectListError(Exception):
+        """Exception raised if an error occurs in the definition
+        or execution of a physics object list."""
+        pass
+
+    def __init__(self, init_list=None):
+        """Creates a new particle list object. If a list of physics 
+        object is given, add them."""
+
+        list.__init__(self)
+
+        if init_list is not None:
+            for object in init_list:
+                self.append(object)
+                
+    def append(self, object):
+        """Appends an element, but test if valid before."""
+        
+        assert self.is_valid_element(object), \
+            "Object %s is not a valid object for the current list" % repr(object)
+
+        list.append(self, object)
+        
+
+    def is_valid_element(self, obj):
+        """Test if object obj is a valid element for the list."""
+        return True
+
+    def __str__(self):
+        """String representation of the physics object list object. 
+        Outputs valid Python with improved format."""
+
+        mystr = '['
+
+        for obj in self:
+            mystr = mystr + str(obj) + ',\n'
+
+        mystr = mystr.rstrip(',\n')
+
+        return mystr + ']'
+#===============================================================================
 
 class Bin(object):
     """A class to store Bin related features and function.
@@ -143,7 +201,7 @@ class Bin(object):
 
         return res_bin
 
-class BinList(base_objects.PhysicsObjectList):
+class BinList(histograms_PhysicsObjectList):
     """ A class implementing features related to a list of Bins. """
 
     def __init__(self, list = [], weight_labels = None):
@@ -969,7 +1027,7 @@ class HwU(Histogram):
         
         return ( y_min , y_max )
     
-class HwUList(base_objects.PhysicsObjectList):
+class HwUList(histograms_PhysicsObjectList):
     """ A class implementing features related to a list of Hwu Histograms. """
     
     def is_valid_element(self, obj):
@@ -1449,7 +1507,6 @@ plot \\"""
 
         # Return the starting data_block position for the next histogram group
         return block_position+len(self)
-            
 
 if __name__ == "__main__":
     main_doc = \

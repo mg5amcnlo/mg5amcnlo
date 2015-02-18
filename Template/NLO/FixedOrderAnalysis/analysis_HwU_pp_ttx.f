@@ -27,14 +27,14 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         call HwU_book(l+10,'tt delta eta     '//cc(i),40,-4.d0,4.d0)
         call HwU_book(l+11,'y_tt             '//cc(i),80,-4.d0,4.d0)
         call HwU_book(l+12,'delta y          '//cc(i),40,-4.d0,4.d0)
-        call HwU_book(l+13,'tt azimt         '//cc(i),20,2*pi/3,pi)
-        call HwU_book(l+14,'tt del R         '//cc(i),40,2*pi/3,4*pi/3)
+        call HwU_book(l+13,'tt azimt zoomin  '//cc(i),20,2*pi/3,pi)
+        call HwU_book(l+14,'tt del R zoomin  '//cc(i),40,2*pi/3,4*pi/3)
         call HwU_book(l+15,'y_tb             '//cc(i),80,-4.d0,4.d0)
         call HwU_book(l+16,'y_t              '//cc(i),80,-4.d0,4.d0)
         call HwU_book(l+17,'tt log[pi-azimt] '//cc(i),82,-4.d0,0.1d0)
-        call HwU_book(l+18,'tt pt            '//cc(i),96,80.d0,2000.d0)
-        call HwU_book(l+19,'tb pt            '//cc(i),100,400.d0,2400.d0)
-        call HwU_book(l+20,'t pt             '//cc(i),100,400.d0,2400.d0)
+        call HwU_book(l+18,'tt pt zoomout    '//cc(i),96,80.d0,2000.d0)
+       call HwU_book(l+19,'tb pt zoomout    '//cc(i),100,400.d0,2400.d0)
+       call HwU_book(l+20,'t pt  zoomout    '//cc(i),100,400.d0,2400.d0)
       enddo
       return
       end
