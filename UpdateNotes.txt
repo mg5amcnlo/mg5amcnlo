@@ -8,6 +8,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                       - nhel can only take 0/1 value. 1 is a real MC over helicity (with importance sampling)
                       - use_syst is set on by default (but for matching)                      
                 OM: Cuts are also applied for 1>N processes (but the default run_card doesn't have any cut).
+                OM: Possibility to not transfer pdf file to the node for each job. 
+                       This is done via a new option (cluster_local_path) which should contain the pdf set.
+                       This path is intented to point to a node specific filesystem.
                     
 2.2.3(XX/XX/XX) RF: If a NAN is found, the code now skips that PS point and continues.
                 OM: Fix a bug in MadWeight (correlated param_card was not creating the correct input file)
