@@ -366,9 +366,9 @@ class Combine_results(list, OneResult):
             power = int(power) + 1
             return '%.5fE%+03i' %(nb,power)
 
-        line = '%s %s %s %i %i %i %i %s %s %s %s %i\n' % (fstr(self.axsec), fstr(self.xerru), 
+        line = '%s %s %s %i %i %i %i %s %s %s %s %s %i\n' % (fstr(self.axsec), fstr(self.xerru), 
                 fstr(self.xerrc), self.nevents, self.nw, self.maxit, self.nunwgt,
-                 fstr(self.luminosity), fstr(self.wgt), fstr(self.xsec),
+                 fstr(self.luminosity), fstr(self.wgt), fstr(self.xsec), fstr(self.maxwgt),
                  fstr(self.th_maxwgt), self.th_nunwgt)        
         fsock = open(output_path,'w') 
         fsock.writelines(line)
