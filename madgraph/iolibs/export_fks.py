@@ -73,6 +73,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         dir_path = self.dir_path
         clean =self.opt['clean']
         
+        
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(dir_path):
             if not mgme_dir:
@@ -191,6 +192,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Copy the different python files in the Template
         self.copy_python_files()
 
+        # We need to create the correct open_data for the pdf
+        self.write_pdf_opendata()
+        
     # I put it here not in optimized one, because I want to use the same makefile_loop.inc
     # Also, we overload this function (i.e. it is already defined in 
     # LoopProcessExporterFortranSA) because the path of the template makefile
@@ -3050,6 +3054,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                             writers.FortranWriter('cts_mpc.h'),)
 
         self.copy_python_files()
+
+
+        # We need to create the correct open_data for the pdf
+        self.write_pdf_opendata()
+
 
         # Return to original PWD
         os.chdir(cwd)

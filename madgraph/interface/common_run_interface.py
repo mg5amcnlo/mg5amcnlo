@@ -1291,6 +1291,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if self.options["cluster_local_path"] and self.options['run_mode'] ==1:
             # no need to transfer the pdf.
             return ''
+        
+        def check_cluster(path):
+            if not self.options["cluster_local_path"] or self.options['run_mode'] !=1:
+                return path
+            main = self.options["cluster_local_path"]
+            if os.path.isfile(path):
+                filename = os.path.basename(path)
+            possible_path = [pjoin(main, filename),
+                             pjoin(main, "lhadpf", filename),
+                             pjoin(main, "Pdfdata", filename)]
+            if any(os.path.exists(p) for p in possible_path):
+                return " "
+            else:
+                return path
+                             
 
         if hasattr(self, 'pdffile') and self.pdffile:
             return self.pdffile
@@ -1300,11 +1315,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if len(data) < 4:
                     continue
                 if data[1].lower() == self.run_card['pdlabel'].lower():
-                    self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
+                    self.pdffile = check_cluster(pjoin(self.me_dir, 'lib', 'Pdfdata', data[2]))
                     return self.pdffile
             else:
                 # possible when using lhapdf
-                self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                path = pjoin(self.me_dir, 'lib', 'PDFsets')
+                if os.path.exists(path):
+                    self.pdffile = path
+                else:
+                    self.pdffile = " "
                 return self.pdffile
                 
     def do_quit(self, line):
@@ -1985,9 +2004,33 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 os.mkdir(pdfsets_dir)
             except OSError:
                 pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
-
+        else:
+            #clean previous set of pdf used
+            for name in os.listdir(pdfsets_dir):
+                if name != pdfsetname:
+                    try:
+                        if os.path.isdir(pjoin(pdfsets_dir, name)):
+                            shutil.rmtree(pjoin(pdfsets_dir, name))
+                        else:
+                            os.remove(pjoin(pdfsets_dir, name))
+                    except Exception, error:
+                        logger.debug('%s', error)
+        
+        # Check if we need to copy the pdf
+        if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
+            os.path.exists(pjoin(self.options["cluster_local_path"], "lhapdf", pdfsetname)):
+            # no need to copy it
+            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+                try:
+                    if os.path.isdir(pjoin(pdfsets_dir, name)):
+                        shutil.rmtree(pjoin(pdfsets_dir, name))
+                    else:
+                        os.remove(pjoin(pdfsets_dir, name))
+                except Exception, error:
+                    logger.debug('%s', error)
+        
         #check that the pdfset is not already there
-        if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
+        elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
            not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)):
 
             if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
@@ -1998,7 +2041,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
                 files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
             
-
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
         lhapdf_version = self.get_lhapdf_version()
