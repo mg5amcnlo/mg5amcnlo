@@ -1698,7 +1698,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
             nb = float(nb) /10
             power = int(power) + 1
             return '%.5fE%+03i' %(nb,power)
-        line = '%s %s %s %i %i %i %i %s %s %s\n' % \
+        line = '%s %s %s %i %i %i %i %s %s %s 0.0 0.0 0\n' % \
             (fstr(cross), fstr(error*cross), fstr(error*cross), 
              nevents, nw, maxit,nunwgt,
              fstr(luminosity), fstr(wgt), fstr(abscross))
