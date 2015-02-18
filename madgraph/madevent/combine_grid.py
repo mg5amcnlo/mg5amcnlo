@@ -2,15 +2,18 @@ from __future__ import division
 import collections
 import math
 import os
-
 try:
     import madgraph
 except ImportError:
     import internal.sum_html as sum_html
     import internal.misc as misc
+    import internal.files as files
 else:
     import madgraph.madevent.sum_html as sum_html
     import madgraph.various.misc as misc
+    import madgraph.iolibs.files as files
+
+pjoin = os.path.join
 
 class grid_information(object):
 
@@ -143,8 +146,29 @@ class grid_information(object):
         
         self.results.add_results(fname,finput)
 
+    def write_grid_for_submission(self, Pdir, G, n_split, nb_events, mode='survey',
+                                                     conservative_factor = 1.0):
+        """ Generate the grid for the resubmission """
+
+        Gdirs = [] #build the the list of directory
+        for i in range(n_split):
+            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            Gdirs.append(path)
+                
+        # Create the new grid and put it in all directory  
+        if not os.path.exists(pjoin(Pdir,"G%s" % G)):
+            os.mkdir(pjoin(Pdir,"G%s" % G))
+        
+        self.write_associate_grid(pjoin(Pdir,"G%s" % G,'ftn25'), nb_events,
+                            conservative_factor=conservative_factor, mode=mode)
+
+        # In refine, the link is automatically created by the job
+        if mode=='survey':
+            for Gdir in Gdirs[:]:
+                files.ln(pjoin(Pdir,"G%s" % G, 'ftn25'),  Gdir)
     
-    def write_associate_grid(self, path, max_it, curr_it, mode="survey"):
+    def write_associate_grid(self, path, nb_event, 
+                                        conservative_factor=1.0, mode="survey"):
         """use the grid information to create the grid associate"""
 
         new_grid = self.get_new_grid()
@@ -169,10 +193,12 @@ class grid_information(object):
         if  data:
             fsock.write('\n')
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
-        
+                
         #means that this the max number of iteration
-        twgt = mean / max_it /2**curr_it / self.target_evt
+        # The division by max_iter is just to be more conservative
+        twgt = mean / 8.0 / nb_event
         
+        misc.sprint(mean,self.target_evt, twgt)
         
 
 

@@ -1787,7 +1787,9 @@ c-----
  23         events = 2 * events
             vol = 1d0/dble(events*itm)
             knt = events
-            twgt = mean / (dble(itm)*dble(events))
+            if (use_cut.ne.-2) then
+              twgt = mean / (dble(itm)*dble(events))
+            endif
 c            write(*,*) 'New number of events',events,twgt
 
             mean = 0d0
@@ -2001,9 +2003,9 @@ c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 122              close(22)
                   tsigma = tsigma*sqrt(chi2)  !This gives the 68% confidence cross section
                   if (use_cut.eq.-2)then
-                    call store_events(force_max_wgt, events/2d0)
+                    call store_events(force_max_wgt, .False.)
                   else
-                     call store_events(-1d0, 0d0)
+                     call store_events(-1d0, .True.)
                   endif
                   cur_it = itm+2
                   return
@@ -2020,9 +2022,9 @@ c
 c               nun = n_unwgted()
 c               write(*,*) 'Estimated events',nun, accur
                if (use_cut.eq.-2) then
-                  call store_events(force_max_wgt, events/2d0)
+                  call store_events(force_max_wgt, .False.)
                else
-                  call store_events(-1d0, 0d0)
+                  call store_events(-1d0, .True.)
                endif
 
                nun = neventswritten
@@ -2079,9 +2081,9 @@ c 129              close(22)
 
             if (cur_it .gt. itm) then               
                if (use_cut.eq.-2)then
-                  call store_events(force_max_wgt, events/2d0)
+                  call store_events(force_max_wgt, .False.)
                else
-                  call store_events(-1d0, 0d0)
+                  call store_events(-1d0, .True.)
                endif
                tmean = tmean / tsigma
                trmean = trmean / tsigma

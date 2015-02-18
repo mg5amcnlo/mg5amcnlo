@@ -133,7 +133,7 @@ c-----
 c  Begin Code
 c-----
 c      write(*,*) 'storing Events'
-      call store_events(-1d0, 0d0)
+      call store_events(-1d0, .True.)
       rewind(lun)
       nw = 0
       maxwgt = 0d0
@@ -213,7 +213,7 @@ c $E$ S-COMMENT_C $E$
       endif
       end
 
-      subroutine store_events(force_max_wgt, xscale)
+      subroutine store_events(force_max_wgt, scale_to_xsec)
 C**************************************************************************
 C     Takes events from scratch file (lun) and writes them to a permanent
 c     file  events.dat
@@ -232,7 +232,8 @@ c
 c
 c     Arguments
 c
-      double precision force_max_wgt, xscale
+      double precision force_max_wgt 
+      logical scale_to_xsec
 c
 c     Local
 c
@@ -242,6 +243,7 @@ c
       double precision xsec,xsecabs,xerr,xtot
       double precision xsum, xover, target_wgt
       double precision orig_Wgt(maxevents)
+      double precision xscale
       logical store_event(maxevents)
       integer iseed, nover, nstore
       double precision scale,aqcd,aqed
@@ -286,9 +288,11 @@ c     First scale all of the events to the total cross section
 c
 
       if (nw .le. 0) return
-      if (xscale.eq.0) then
+      if (scale_to_xsec) then
          call sample_result(xsecabs,xsec,xerr,itmin)
          if (xsecabs .le. 0) return !Fix by TS 12/3/2010
+      else
+         xscale = nw*twgt
       endif
       xtot=0
       call dsort(nw, swgt)
@@ -308,7 +312,7 @@ c
       th_maxwgt = dabs(swgt(i))
       if ( force_max_wgt.lt.0)then
          target_wgt = dabs(swgt(i))
-      else if (xscale.ne.0) then
+      else if (.not.scale_to_xsec) then
          target_wgt = force_max_wgt / xscale
       else
          stop 1
@@ -341,7 +345,7 @@ c           we use the same seed for the two evaluation of the unweighting effic
             th_nunwgt = th_nunwgt +1
          endif
       enddo
-      if (xscale.eq.0)then
+      if (scale_to_xsec)then
          xscale = xsecabs/xsum
       endif
       target_wgt = target_wgt*xscale
@@ -382,7 +386,7 @@ c      endif
       enddo
       write(*,*) 'Found ',nw,' events.'
       write(*,*) 'Wrote ',i ,' events.'
-      if (xscale.eq.0)then
+      if (scale_to_xsec)then
          write(*,*) 'Actual xsec ',xsec
          write(*,*) 'Correct abs xsec ',xsecabs
          write(*,*) 'Event xsec ', xtot
@@ -394,9 +398,8 @@ c      endif
       if (force_max_wgt.lt.0)then
          th_maxwgt = target_wgt
          th_nunwgt = neventswritten
-      else
-
       endif
+
  99   close(lunw)
       
 c      close(lun)

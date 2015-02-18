@@ -544,7 +544,6 @@ class gensym(object):
         self.splitted_Pdir = {}
         self.splitted_for_dir = lambda x,y: self.splitted_grid
         self.combining_job_for_Pdir = lambda x: self.combining_job
-        self.twgt_by_job = {} 
         self.lastoffset = {}
     
     def launch(self):
@@ -601,7 +600,6 @@ class gensym(object):
     def submit_to_cluster(self, job_list):
         """ """
 
-        self.twgt_by_job = {} 
         if self.run_card['job_strategy'] > 0:
             if len(job_list) >1:
                 for path, dirs in job_list.items():
@@ -740,11 +738,17 @@ class gensym(object):
                                     cwd=pjoin(self.me_dir,'SubProcesses' , Pdir),
                                     packet_member=packet)
 
-
     def combine_iteration(self, Pdir, G, step):
         
         
         grid_calculator, cross, error = self.combine_grid(Pdir, G, step)
+        
+        # Compute the number of events used for this run.                      
+        nb_events = grid_calculator.target_evt
+        grid_calculator.write_grid_for_submission(Pdir,G,
+                        self.splitted_for_dir(Pdir, G),
+                        nb_events,mode=self.mode,
+                        conservative_factor=5.0)
         
         Gdirs = [] #build the the list of directory
         for i in range(self.splitted_for_dir(Pdir, G)):
@@ -803,10 +807,8 @@ class gensym(object):
         # 1. create an object to combine the grid information and fill it
         grid_calculator = combine_grid.grid_information(self.run_card['nhel'])
         
-        Gdirs = [] #build the the list of directory
         for i in range(self.splitted_for_dir(Pdir, G)):
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
-            Gdirs.append(path)
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
@@ -831,23 +833,7 @@ class gensym(object):
                              self.sigma[(Pdir,G)])/(step-1))/self.sigma[(Pdir,G)])
             else:
                 error = sigma/cross
-        
-            # 3. create the new grid and put it in all directory  
-            if step == 1:
-                twgt = -1 * self.cmd.opts['iterations']
-            else:
-                twgt = self.twgt_by_job[Gdirs[0]]
-            
-            if not os.path.exists(pjoin(Pdir,"G%s" % G)):
-                os.mkdir(pjoin(Pdir,"G%s" % G))
-                                  
-            grid_calculator.write_associate_grid(pjoin(Pdir,"G%s" % G,'ftn25'),
-                                                 max_it=self.cmd.opts['iterations'],
-                                                 curr_it=step,
-                                                 mode=self.mode)
-            self.twgt_by_job[Gdirs[0]] = twgt
-            for Gdir in Gdirs[:]:
-                files.ln(pjoin(Pdir,"G%s" % G, 'ftn25'),  Gdir)
+
         if True and __debug__:
             # make the unweighting to compute the number of events:
             maxwgt = grid_calculator.get_max_wgt(0.01)
@@ -1645,15 +1631,19 @@ class gen_ximprove_share(gen_ximprove, gensym):
             logger.info("found enough event for %s/G%s" % (os.path.basename(Pdir), G))
             self.write_results(grid_calculator, cross, error, Pdir, G, step, efficiency)
             return 0
-        elif step < self.min_iter:
+        elif step >= self.max_iter:
+            logger.debug("fail to find enough event")
+            self.write_results(grid_calculator, cross, error, Pdir, G, step, efficiency)
+            return 0
+
+        nb_split_before = len(grid_calculator.results)
+        nevents = grid_calculator.results[0].nevents
+        
+        need_ps_point = (needed_event - nunwgt)/efficiency
+        need_job = need_ps_point // nevents + 1        
+        
+        if step < self.min_iter:
             # This is normal but check if we are on the good track
-            nb_split_before = len(grid_calculator.results)
-            nevents = grid_calculator.results[0].nevents
-            
-            need_ps_point = (needed_event - nunwgt)/efficiency
-            need_job = need_ps_point // nevents + 1
-
-
             job_at_first_iter = nb_split_before/2**(step-1) 
             expected_total_job = job_at_first_iter * (2**self.min_iter-1)
             done_job = job_at_first_iter * (2**step-1)
@@ -1670,19 +1660,17 @@ class gen_ximprove_share(gen_ximprove, gensym):
         
         elif step < self.max_iter:
             misc.sprint("need extra iteration")
-            nb_split_before = len(grid_calculator.results)
-            need_ps_point = (needed_event - nunwgt)/efficiency
-            nevents = grid_calculator.results[0].nevents
-            need_job = need_ps_point // nevents + 1
-            
+
             if step + 1 == self.max_iter:
                 need_job = 1.20 * need_job # avoid to have just too few event.
 
             need_job = int(min(need_job, nb_split_before*1.5))
             self.create_resubmit_one_iter(Pdir, G, nevents, need_job, step)
-        else:
-            logger.debug("fail to find enough event")
-            self.write_results(grid_calculator, cross, error, Pdir, G, step, efficiency)
+            
+        # Compute the number of events used for this run.            
+        grid_calculator.write_grid_for_submission(Pdir,G,
+                self.splitted_for_dir(Pdir, G), nb_job*nevents ,mode=self.mode,
+                                              conservative_factor=self.max_iter)
             
         return 0
     
