@@ -239,6 +239,8 @@ def multiple_try(nb_try=5, sleep=20):
                     wait_once = True
                     time.sleep(sleep * (i+1))
 
+            if __debug__:
+                raise
             raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)
         return deco_f_retry
     return deco_retry
