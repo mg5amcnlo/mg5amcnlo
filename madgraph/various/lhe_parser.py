@@ -311,7 +311,6 @@ class EventFile(object):
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
         nb_keep = 0
-        misc.sprint(trunc_error)
         for i in range(nb_try):
             self.seek(0)
             outfile = EventFile(outputpath, "w")
@@ -323,7 +322,6 @@ class EventFile(object):
             if event_target:
                 if i==0:
                     max_wgt = max_wgt_for_trunc(0)
-                    misc.sprint(trunc_error)
                 else:
                     #guess the correct max_wgt based on last iteration
                     efficiency = nb_keep/nb_event
@@ -505,7 +503,6 @@ class MultiEventFile(EventFile):
             all_wgt.sort()
             nb_keep = max(20, int(total_event*trunc_error*10))
             all_wgt = all_wgt[-nb_keep:] 
-            misc.sprint(all_wgt[0], all_wgt[-1])
             
         self.total_event_in_files = total_event
         #final selection of the interesting weight to keep

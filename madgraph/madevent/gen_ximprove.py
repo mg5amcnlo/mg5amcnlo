@@ -862,8 +862,8 @@ class gensym(object):
             maxit = step
             wgt = 0
             nevents = grid_calculator.results.nevents
-            maxwgt = max([R.maxwgt for R in grid_calculator.results if R.nunwgt])
-            nunwgt = sum([R.nunwgt*R.maxwgt/maxwgt for R in grid_calculator.results if R.nunwgt])
+            maxwgt = grid_calculator.get_max_wgt()
+            nunwgt = grid_calculator.get_nunwgt()
             luminosity = nunwgt/cross
             
         #format the results.dat
@@ -1516,6 +1516,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
 
     nb_ps_by_job = 2000 
     mode = "refine"
+    gen_events_security = 1.1
 
     def __init__(self, *args, **opts):
         
@@ -1545,7 +1546,6 @@ class gen_ximprove_share(gen_ximprove, gensym):
             needed_event = goal_lum*C.get('xsec')
             #2. estimate how many points we need in each iteration
             if C.get('nunwgt') > 0:
-                misc.sprint(C.get('nunwgt'), C.get('nevents'))
                 nevents =  needed_event * (C.get('nevents') / C.get('nunwgt'))
                 #split by iter
                 nevents = int(nevents / (2**self.min_iter-1))
@@ -1608,19 +1608,12 @@ class gen_ximprove_share(gen_ximprove, gensym):
         else:
             old_nunwgt, old_maxwgt = 0, 0  
 
-        new_maxwgt = max(grid_calculator.get_max_wgt(), old_maxwgt)
-        new_nunwgt = grid_calculator.get_nunwgt(new_maxwgt)
-        efficiency = new_nunwgt / sum([R.nevents for R in grid_calculator.results])
-        nunwgt = old_nunwgt * old_maxwgt / new_maxwgt
-        nunwgt += new_nunwgt
-        
-        misc.sprint([R.maxwgt for R in grid_calculator.results if R.nunwgt])
-        maxwgt = max([old_maxwgt]+[R.maxwgt for R in grid_calculator.results if R.nunwgt])
-        nunwgt = old_nunwgt * old_maxwgt / maxwgt 
-        new_evt = sum([R.nunwgt*R.maxwgt/maxwgt for R in grid_calculator.results if R.nunwgt])
-        misc.sprint(new_maxwgt, maxwgt, new_nunwgt, new_evt)
+        maxwgt = max(grid_calculator.get_max_wgt(), old_maxwgt)
+        new_evt = grid_calculator.get_nunwgt(maxwgt)
         efficiency = new_evt / sum([R.nevents for R in grid_calculator.results])
+        nunwgt = old_nunwgt * old_maxwgt / maxwgt
         nunwgt += new_evt
+        
         
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)
 
@@ -1655,6 +1648,10 @@ class gen_ximprove_share(gen_ximprove, gensym):
             
             nb_job = (need_job-0.5)//(2**(self.min_iter-step)-1) + 1
             misc.sprint("resubmit %s job for iteration number %s" % (nb_job, step+1))
+            grid_calculator.write_grid_for_submission(Pdir,G,
+                self.splitted_for_dir(Pdir, G), nb_job*nevents ,mode=self.mode,
+                                              conservative_factor=self.max_iter)
+            
             self.create_resubmit_one_iter(Pdir, G, nevents, nb_job, step)
             #self.create_job(Pdir, G, nb_job, nevents, step)
         
@@ -1664,14 +1661,15 @@ class gen_ximprove_share(gen_ximprove, gensym):
             if step + 1 == self.max_iter:
                 need_job = 1.20 * need_job # avoid to have just too few event.
 
-            need_job = int(min(need_job, nb_split_before*1.5))
-            self.create_resubmit_one_iter(Pdir, G, nevents, need_job, step)
-            
-        # Compute the number of events used for this run.            
-        grid_calculator.write_grid_for_submission(Pdir,G,
+            nb_job = int(min(need_job, nb_split_before*1.5))
+            grid_calculator.write_grid_for_submission(Pdir,G,
                 self.splitted_for_dir(Pdir, G), nb_job*nevents ,mode=self.mode,
                                               conservative_factor=self.max_iter)
             
+            self.create_resubmit_one_iter(Pdir, G, nevents, nb_job, step)
+            
+            
+
         return 0
     
         

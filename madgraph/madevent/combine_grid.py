@@ -198,15 +198,11 @@ class grid_information(object):
         # The division by max_iter is just to be more conservative
         twgt = mean / 8.0 / nb_event
         
-        misc.sprint(mean,self.target_evt, twgt)
-        
-
-
         trunc_max = 0.10
         force_max_wgt = self.get_max_wgt(trunc_max)
-        misc.sprint(force_max_wgt)
 
         fsock.write('%s %s \n' %(twgt, force_max_wgt))
+        misc.sprint(os.path.basename(os.path.dirname(path)), force_max_wgt)
         
         if not self.mc_hel:
             fsock.write(self.helicity_line)
@@ -245,7 +241,6 @@ class grid_information(object):
                                                           if th_nunwgt[i] > 0],
                       reverse=True)
 
-        misc.sprint(info)
         if len(info) == 0:
             maxwgt = max(th_maxwgt)
             if maxwgt==0:
@@ -256,15 +251,26 @@ class grid_information(object):
         xsum = 0
         nb_event = 0
         i = 0        
-        while (xsum-info[i][0] * nb_event < trunc_max * total_sum and i != len(info)-2):
+        while (i != len(info) and xsum-info[i][0] * nb_event < trunc_max * total_sum):
             xsum += info[i][0]*info[i][1]
             nb_event += info[i][1]
             i += 1
         else:
-            old_w, old_nb  = info[i+1]
-            new_w, new_nb  = info[i]
-                
-            return (old_nb * old_w + new_nb * new_w) / (old_nb + new_nb) 
+            # Naively we want to return info[i-1]
+            # We want to be smarter and find the value which has exactly
+            # a trunc_max error. 
+            # For this we solve the following equation
+            # xsum_old - X * nb_event_old = trunc_max *total_sum
+                        
+            wgt =  (xsum - trunc_max *total_sum )/ nb_event
+            
+            if __debug__:
+                if len(info) == i:
+                    assert 0 < wgt < info[i-1][0]
+                else:
+                    assert info[i][0] < wgt < info[i-1][0]        
+            
+            return wgt
 
     def get_nunwgt(self, max_wgt=-1):
         """return an estimate of the number of unweighted events for a given weight"""
@@ -310,8 +316,8 @@ class grid_information(object):
                 b = maxwgt1 * maxwgt2 / (maxwgt1 -maxwgt2) *(nunwgt2 -nunwgt1)
                 
                 to_add = a + b / max_wgt
-            
-                assert nunwgt2 <= to_add <= nunwgt1
+                            
+                assert round(nunwgt2) <= round(to_add) <= round(nunwgt1)
                 total_nunwgt += min(to_add, self.results[i].nunwgt)
         return total_nunwgt
         
