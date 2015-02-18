@@ -126,6 +126,10 @@ c applgrid
       integer iappl
       common /for_applgrid/ iappl
 
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
+
+
 C-----
 C  BEGIN CODE
 C-----  
@@ -133,6 +137,8 @@ c
 c     Setup the timing variable
 c
       call cpu_time(tBefore)
+      fixed_order=.true.
+      nlo_ps=.false.
 
 c     Read general MadFKS parameters
 c

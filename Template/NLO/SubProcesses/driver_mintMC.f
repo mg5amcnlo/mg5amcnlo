@@ -138,11 +138,15 @@ c timing statistics
 
 c general MadFKS parameters
       include "FKSParams.inc"
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
 
 C-----
 C  BEGIN CODE
 C-----  
       call cpu_time(tBefore)
+      fixed_order=.false.
+      nlo_ps=.true.
 
 c     Read general MadFKS parameters
 c
@@ -935,7 +939,7 @@ c check if event or counter-event passes cuts
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(mohdr)
             passcuts_n1body=passcuts(p,rwgt)
-            if (.not. (passcuts_body.or.passcuts_n1body)) cycle
+            if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
 c Set the shower scales            
             call set_cms_stuff(izero)
             call set_shower_scale_noshape(p,iFKS*2-1)

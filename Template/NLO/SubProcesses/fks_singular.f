@@ -647,9 +647,12 @@ c bpower.
       external ran2
       real*8 rndec(10)
       common/crndec/rndec
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
       include "appl_common.inc" 
       call cpu_time(tBefore)
-c Random numbers to be used in the plotting routine
+c Random numbers to be used in the plotting routine: these numbers will
+c not change between events, counter events and n-body contributions.
       if(needrndec)then
          do i=1,10
             rndec(i)=ran2()
@@ -661,8 +664,8 @@ c Put here call to compute bpower
          wgtbpower=bpower
 c Store the power of alphas of the Born events in the appl common block.
          if(iappl.ne.0) appl_bpower = wgtbpower
-c Initialize hiostograms
-         call initplot
+c Initialize hiostograms for fixed order runs
+         if (fixed_order) call initplot
 c Compute cpower done for bottom Yukawa, routine needs to be adopted
 c for other muR-dependendent factors
          call compute_cpower(p_born,cpower)
