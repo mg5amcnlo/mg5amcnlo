@@ -871,7 +871,7 @@ c "npNLO".
          born_wgt_mint=0d0
          virtual_over_born=0d0
          MCcntcalled=.false.
-         if (ickkw.eq.3) call set_FxFx_scale(-1,p)
+         if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 
@@ -896,7 +896,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
-            if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
+            if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             if (abrv(1:2).ne.'vi') then
                call compute_born
@@ -927,31 +927,67 @@ c for different nFKSprocess.
             gfactcl=1.d0
             MCcntcalled=.false.
             call generate_momenta(ndim,iconfig,jac,x,p)
+c Every contribution has to have a viable set of Born momenta (even if
+c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
+c check if event or counter-event passes cuts
+            call set_cms_stuff(izero)
+            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            call set_cms_stuff(mohdr)
+            passcuts_n1body=passcuts(p,rwgt)
+            if (.not. (passcuts_body.or.passcuts_n1body)) cycle
 c Set the shower scales            
             call set_cms_stuff(izero)
             call set_shower_scale_noshape(p,iFKS*2-1)
             call set_cms_stuff(mohdr)
             call set_shower_scale_noshape(p,iFKS*2)
+c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
-            call set_cms_stuff(izero)
-            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
-            call set_cms_stuff(mohdr)
-            passcuts_n1body=passcuts(p,rwgt)
+c Include the FxFx Sudakov terms in the prefactors:
+c   CP : counter-event kinematics passes cuts
+c   EP : event kinematics passes cuts
+c   CE : counter-event kinematics exists
+c   EE : event kinematics exists
+c   CC : compute FxFx for counter-events kinematics
+c   EC : compute FxFx for event kinematics
+c
+c     CP  EP  CE  EE | CC  EC
+c     X   X   X   X  | X   X
+c     X       X   X  | X   X
+c         X   X   X  |     X
+c     X       X      | X   X
+c         X       X  |     X
+c
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(0,p)
+               if (passcuts_nbody .and. abrv.ne.'real') then
+                  call set_cms_stuff(izero)
+                  call set_FxFx_scale(2,p1_cnt(0,1,0))
+               endif
+               if (p(0,1).gt.0d0) then
+                  call set_cms_stuff(mohdr)
+                  call set_FxFx_scale(3,p)
+               endif
+            endif               
             if (passcuts_nbody .and. abrv.ne.'real') then
-               call set_cms_stuff(izero)
-               if (ickkw.eq.3) call set_FxFx_scale(izero,p1_cnt(0,1,0))
+c Include the MonteCarlo subtraction terms
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
+                  if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
-                  call set_cms_stuff(izero)
                else
 c For UNLOPS all real-emission contributions need to be added to the
 c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
 c events are called, so this will remain 0.
                   probne=0d0
                endif
+c Include the FKS counter terms. When close to the soft or collinear
+c limits, the MC subtraction terms should be replaced by the FKS
+c ones. This is set via the gfactsf, gfactcl and probne functions (set
+c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
+               call set_cms_stuff(izero)
+               if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
                call set_alphaS(p1_cnt(0,1,0))
                replace_MC_subt=(1d0-gfactsf)*probne
                call compute_soft_counter_term(replace_MC_subt)
@@ -962,15 +998,16 @@ c events are called, so this will remain 0.
                replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
                call compute_soft_collinear_counter_term(replace_MC_subt)
             endif
+c Include the real-emission contribution.
             if (passcuts_n1body) then
                call set_cms_stuff(mohdr)
-               if (ickkw.eq.3) call set_FxFx_scale(mohdr,p)
+               if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)
                sudakov_damp=probne
                call compute_real_emission(p,sudakov_damp)
             endif
-c Update the shower starting scale. This might be updated again below if
-c the nFKSprocess is the same.
+c Update the shower starting scale with the shape from the MC
+c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS)
          enddo
  12      continue
@@ -979,6 +1016,8 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
+c Update the shower starting scale for the S-events after we have
+c determined which contributions are identical.
          call update_shower_scale_Sevents
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)

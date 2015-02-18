@@ -432,16 +432,23 @@ c by 'compute_prefactors_nbody' and 'compute_prefactors_n1body') by the
 c Sudakov suppression. If called more than once with the same momenta
 c and iterm, skip setting of the scales, and multiply the f_* factors by
 c the cached Sudakovs.
-c     iterm= -1: reset the computation of the Sudakovs
-c     iterm=  0: Sudakov for n-body kinematics
-c     iterm=100: Sudakov for n+1-body kinematics
+c     iterm=  0 : reset the computation of the Sudakovs
+c     iterm=  1 : Sudakov for n-body kinematics (f_b and f_nb)
+c     iterm=  2 : Sudakov for n-body kinematics (all but f_b and f_nb)
+c     iterm=  3 : Sudakov for n+1-body kinematics
+c     iterm= -1 or -2 : only restore scales for n-body w/o recomputing
+c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      integer iterm,iterm_last,i,j
-      double precision p(0:3,nexternal),p_last(0:3,nexternal),rewgt
-     &     ,rewgt_izero,rewgt_mohdr,rewgt_exp_izero,rewgt_exp_mohdr
+      integer iterm,iterm_last_izero,iterm_last_mohdr,i,j
+     &     ,nfxfx_ren_scales_izero,nfxfx_ren_scales_mohdr
+      double precision p(0:3,nexternal),p_last_izero(0:3,nexternal)
+     &     ,p_last_mohdr(0:3,nexternal),rewgt,rewgt_izero,rewgt_mohdr
+     &     ,rewgt_exp_izero,rewgt_exp_mohdr
+     &     ,fxfx_ren_scales_izero(0:nexternal),fxfx_fac_scale_izero(2)
+     &     ,fxfx_ren_scales_mohdr(0:nexternal),fxfx_fac_scale_mohdr(2)
       logical setclscales,rewgt_izero_calculated,rewgt_mohdr_calculated
      &     ,momenta_equal,already_set
       external setclscales,rewgt,momenta_equal
@@ -458,19 +465,29 @@ c     iterm=100: Sudakov for n+1-body kinematics
       common /factor_nbody/ f_b,f_nb
       double precision fxfx_exp_rewgt
       common /c_fxfx_exp_regt/ fxfx_exp_rewgt
+      integer                              nFxFx_ren_scales
+      double precision     FxFx_ren_scales(0:nexternal),
+     $                     FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
+     $                     FxFx_fac_scale
+      save rewgt_mohdr_calculated,rewgt_izero_calculated,p_last_izero
+     &     ,p_last_mohdr,iterm_last_izero,iterm_last_mohdr
+     &     ,fxfx_ren_scales_izero ,fxfx_ren_scales_mohdr
+     &     ,fxfx_fac_scale_izero ,fxfx_fac_scale_mohdr
+     &     ,nfxfx_ren_scales_izero ,nfxfx_ren_scales_mohdr
       call cpu_time(tBefore)
       ktscheme=1
-      if (iterm.eq.-1) then
+      if (iterm.eq.0) then
          rewgt_mohdr_calculated=.false.
          rewgt_izero_calculated=.false.
          fxfx_exp_rewgt=0d0
          return
       endif
       already_set=.false.
-      if (iterm.eq.0) then
+      if (iterm.eq.1 .or. iterm.eq.2) then
          if (rewgt_izero_calculated) then
-            if (iterm.eq.iterm_last) then
-               if (momenta_equal(p1_cnt(0,1,0),p_last)) then
+            if (iterm_last_izero.ne.1 .and. iterm_last_izero.ne.2) then
+               if (momenta_equal(p1_cnt(0,1,0),p_last_izero)) then
                   already_set=.true.
                endif
             endif
@@ -484,33 +501,39 @@ c     iterm=100: Sudakov for n+1-body kinematics
             fxfx_exp_rewgt=rewgt_exp_izero
          endif
          rewgt_izero_calculated=.true.
-         iterm_last=iterm
+         iterm_last_izero=iterm
          do i=1,nexternal
             do j=0,3
-               p_last(j,i)=p1_cnt(j,i,0)
+               p_last_izero(j,i)=p1_cnt(j,i,0)
             enddo
          enddo
-         f_b =f_b *rewgt_izero
-         f_nb=f_nb*rewgt_izero
-         f_s =f_s *rewgt_izero
-         f_c =f_c *rewgt_izero
-         f_dc=f_dc*rewgt_izero
-         f_sc=f_sc*rewgt_izero
-         do i=1,4
-            f_dsc(i)=f_dsc(i)*rewgt_izero
+         if (iterm.eq.1) then
+            f_b =f_b *rewgt_izero
+            f_nb=f_nb*rewgt_izero
+         elseif(iterm.eq.2) then
+            f_s =f_s *rewgt_izero
+            f_c =f_c *rewgt_izero
+            f_dc=f_dc*rewgt_izero
+            f_sc=f_sc*rewgt_izero
+            do i=1,4
+               f_dsc(i)=f_dsc(i)*rewgt_izero
+            enddo
+            f_MC_S =f_MC_S *rewgt_izero
+            f_s_MC_S =f_s_MC_S *rewgt_izero
+            f_c_MC_S =f_c_MC_S *rewgt_izero
+            f_sc_MC_S=f_sc_MC_S*rewgt_izero
+         endif
+         nFxFx_ren_scales_izero=nFxFx_ren_scales
+         do i=0,nexternal
+            FxFx_ren_scales_izero(i)=FxFx_ren_scales(i)
          enddo
-         f_MC_S =f_MC_S *rewgt_izero
-         f_s_MC_S =f_s_MC_S *rewgt_izero
-         f_c_MC_S =f_c_MC_S *rewgt_izero
-         f_sc_MC_S=f_sc_MC_S*rewgt_izero
-         call cpu_time(tAfter)
-         tFxFx=tFxFx+(tAfter-tBefore)
-         return
-      endif
-      if (iterm.eq.-100) then
+         do i=1,2
+            FxFx_fac_scale_izero(i)=FxFx_fac_scale(i)
+         enddo
+      elseif (iterm.eq.3) then
          if (rewgt_mohdr_calculated) then
-            if (iterm.eq.iterm_last) then
-               if (momenta_equal(p,p_last)) then
+            if (iterm.eq.iterm_last_mohdr) then
+               if (momenta_equal(p,p_last_mohdr)) then
                   already_set=.true.
                endif
             endif
@@ -523,10 +546,10 @@ c     iterm=100: Sudakov for n+1-body kinematics
             rewgt_mohdr=rewgt(p,rewgt_exp_mohdr)
          endif
          rewgt_mohdr_calculated=.true.
-         iterm_last=iterm
+         iterm_last_mohdr=iterm
          do i=1,nexternal
             do j=0,3
-               p_last(j,i)=p(j,i)
+               p_last_mohdr(j,i)=p(j,i)
             enddo
          enddo
          f_r=f_r*rewgt_mohdr
@@ -534,10 +557,39 @@ c     iterm=100: Sudakov for n+1-body kinematics
          f_s_MC_H =f_s_MC_H *rewgt_izero
          f_c_MC_H =f_c_MC_H *rewgt_izero
          f_sc_MC_H=f_sc_MC_H*rewgt_izero
+         nFxFx_ren_scales_mohdr=nFxFx_ren_scales
+         do i=0,nexternal
+            FxFx_ren_scales_mohdr(i)=FxFx_ren_scales(i)
+         enddo
+         do i=1,2
+            FxFx_fac_scale_mohdr(i)=FxFx_fac_scale(i)
+         enddo
          call cpu_time(tAfter)
          tFxFx=tFxFx+(tAfter-tBefore)
          return
+      elseif (iterm.eq.-1 .or. iterm.eq.-2) then
+         nFxFx_ren_scales=nFxFx_ren_scales_izero
+         do i=0,nexternal
+            FxFx_ren_scales(i)=FxFx_ren_scales_izero(i)
+         enddo
+         do i=1,2
+            FxFx_fac_scale(i)=FxFx_fac_scale_izero(i)
+         enddo
+      elseif (iterm.eq.-3) then
+         nFxFx_ren_scales=nFxFx_ren_scales_mohdr
+         do i=0,nexternal
+            FxFx_ren_scales(i)=FxFx_ren_scales_mohdr(i)
+         enddo
+         do i=1,2
+            FxFx_fac_scale(i)=FxFx_fac_scale_mohdr(i)
+         enddo
+      else
+         write (*,*) 'ERROR: unknown iterm in set_FxFx_scale',iterm
+         stop 1
       endif
+      call cpu_time(tAfter)
+      tFxFx=tFxFx+(tAfter-tBefore)
+      return
       end
       
       
