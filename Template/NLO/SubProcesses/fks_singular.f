@@ -463,7 +463,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
-      double precision fxfx_exp_rewgt
+      double precision         fxfx_exp_rewgt
       common /c_fxfx_exp_regt/ fxfx_exp_rewgt
       integer                              nFxFx_ren_scales
       double precision     FxFx_ren_scales(0:nexternal),
@@ -497,8 +497,8 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
                write (*,*) 'ERROR in setclscales izero'
                stop 1
             endif
-            rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
-            fxfx_exp_rewgt=rewgt_exp_izero
+            rewgt_izero=min(rewgt(p1_cnt(0,1,0),rewgt_exp_izero),1d0)
+            fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
          endif
          rewgt_izero_calculated=.true.
          iterm_last_izero=iterm
@@ -543,7 +543,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
                write (*,*) 'ERROR in setclscales mohdr'
                stop 1
             endif
-            rewgt_mohdr=rewgt(p,rewgt_exp_mohdr)
+            rewgt_mohdr=min(rewgt(p,rewgt_exp_mohdr),1d0)
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
