@@ -313,12 +313,6 @@ class EventFile(object):
         nb_keep = 0
         for i in range(nb_try):
             self.seek(0)
-            outfile = EventFile(outputpath, "w")
-            # need to write banner information
-            # need to see what to do with rwgt information!
-            if self.banner:
-                banner.write(outfile)
-                        
             if event_target:
                 if i==0:
                     max_wgt = max_wgt_for_trunc(0)
@@ -341,6 +335,13 @@ class EventFile(object):
                             break     
                 logger.log(log_level, "Max_wgt use is %s previous nb_keep was %s" %(max_wgt, nb_keep))
 
+            # Now that we know what max_wgt to use, we can write the files.
+            outfile = EventFile(outputpath, "w")
+            # need to write banner information
+            # need to see what to do with rwgt information!
+            if self.banner:
+                banner.write(outfile)
+
             # scan the file
             nb_keep = 0
             trunc_cross = 0
@@ -356,13 +357,14 @@ class EventFile(object):
                         trunc_cross += event.wgt - max_wgt 
                     if event_target ==0 or nb_keep < event_target: 
                         outfile.write(str(event))
+
                 elif wgt < 0:
                     nb_keep += 1
                     event.wgt = -1 * max(abs(wgt), max_wgt)
                     if abs(wgt) != max_wgt:
                         trunc_cross += event.wgt - max_wgt
                     if event_target ==0 or nb_keep < event_target: 
-                        outfile.write(event)
+                        outfile.write(str(event))
             
             if nb_keep >= event_target:
                 if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
