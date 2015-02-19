@@ -1574,6 +1574,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
             nb_ps_by_job = total_ps_points / self.cmd.options["nb_core"]
         else:
             nb_ps_by_job = self.nb_ps_by_job
+            
+        nb_ps_by_job = max(nb_ps_by_job, 500)
 
         for C, nevents in channel_to_ps_point:
             nb_job = int(nevents // nb_ps_by_job +1)
