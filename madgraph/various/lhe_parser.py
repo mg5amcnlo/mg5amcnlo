@@ -339,8 +339,8 @@ class EventFile(object):
                         else:
                             logger.info("Job Done! %s", nb_keep)
                             break     
-                logger.log(log_level, "Max_wgt use is %s previous nb_keep was %s" %( max_wgt, nb_keep))
-            
+                logger.log(log_level, "Max_wgt use is %s previous nb_keep was %s" %(max_wgt, nb_keep))
+
             # scan the file
             nb_keep = 0
             trunc_cross = 0
@@ -379,12 +379,18 @@ class EventFile(object):
         else:
             # pass here if event_target > 0 and all the attempt fail.
             logger.warning("fail to reach target event")
+        
+        logger.log(log_level, "Final maximum weight used for final "+\
+                    "unweighting is %s yielding %s events." % (max_wgt,nb_keep))
             
         if event_target:
+            nb_events_unweighted = nb_keep
             nb_keep = min( event_target, nb_keep)
+        else:
+            nb_events_unweighted = nb_keep
 
         logger.log(log_level, "write %i event in %s (efficiency %.2g %%, truncation %s %%)" % 
-                           (nb_keep, outputpath, nb_keep/nb_event*100, trunc_cross/cross['all']*100))
+          (nb_keep, outputpath, nb_events_unweighted/nb_event*100, trunc_cross/cross['all']*100))
      
         return nb_keep
         

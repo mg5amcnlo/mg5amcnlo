@@ -41,7 +41,7 @@ class OneResult(object):
         self.xerru = 0  # uncorrelated error
         self.xerrc = 0  # correlated error
         self.nevents = 0
-        self.nw = 0     # Don't know
+        self.nw = 0     # number of events after the primary unweighting
         self.maxit = 0  # 
         self.nunwgt = 0  # number of unweighted events
         self.luminosity = 0

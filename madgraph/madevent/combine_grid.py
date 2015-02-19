@@ -197,7 +197,6 @@ class grid_information(object):
         #means that this the max number of iteration
         # The division by max_iter is just to be more conservative
         twgt = mean / 8.0 / nb_event
-        
         trunc_max = 0.10
         force_max_wgt = self.get_max_wgt(trunc_max)
 
