@@ -840,8 +840,9 @@ class gensym(object):
             if maxwgt:
                 nunwgt = grid_calculator.get_nunwgt(maxwgt) 
                 luminosity = nunwgt/cross
+                primary_event = sum([R.nw for R in grid_calculator.results])
                 written_event = sum([R.nunwgt for R in grid_calculator.results])
-                misc.sprint(G, cross, error*cross, nunwgt, written_event,luminosity)
+                misc.sprint(G, cross, error*cross, nunwgt, written_event, primary_event, luminosity)
 
  
         return grid_calculator, cross, error

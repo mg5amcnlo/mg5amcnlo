@@ -3425,7 +3425,7 @@ zeor by MadLoop.""")
                 for G in output_files:
                     required_output.append('%s/results.dat' % G)                
                 input_files.append(pjoin(argument[1], "input_app.txt"))
-                input_files.append(pjoin(argument[1], "ftn25"))
+                input_files.append(pjoin(argument[1], "ftn26"))
                 
                 #submitting
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
