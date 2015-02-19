@@ -21,20 +21,12 @@ C
 C     LOCAL
 C
       integer i,j,l,l1,l2,ndim,nevts
-      integer npoints
-      character*130 buf
 
       integer lunlhe
       parameter (lunlhe=98)
 c
 c     Global
 c
-      integer                                      nsteps
-      character*40          result_file,where_file
-      common /sample_status/result_file,where_file,nsteps
-      integer ngroup
-      common/to_group/ngroup
-      data ngroup/0/
 cc
       include 'run.inc'
       include 'coupl.inc'
@@ -42,42 +34,11 @@ cc
       integer           iconfig
       common/to_configs/iconfig
 
-
-      double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
-
 c Vegas stuff
-      integer ipole
-      common/tosigint/ndim,ipole
+      common/tosigint/ndim
 
       real*8 sigintF
       external sigintF
-
-      integer irestart
-      logical savegrid
-
-      external initplot
-c Set plotKin=.true. to plot H and S event kinematics (integration steps)
-c Set plotEv=.true. to use events for plotting (unweighting phase)
-      logical plotEv,plotKin
-      common/cEvKinplot/plotEv,plotKin
-
-c For tests
-      real*8 fksmaxwgt,xisave,ysave
-      common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
-
-      integer ivirtpoints,ivirtpointsExcept
-      double precision  virtmax,virtmin,virtsum
-      common/cvirt3test/virtmax,virtmin,virtsum,ivirtpoints,
-     &     ivirtpointsExcept
-      double precision total_wgt_sum,total_wgt_sum_max,
-     &                 total_wgt_sum_min
-      common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
-     &                 total_wgt_sum_min
 
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
@@ -153,9 +114,7 @@ c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
       average_virtual=0d0
       virtual_fraction=virt_fraction
-c
-c     Read process number
-c
+
       ntot=0
       nsun=0
       nsps=0
@@ -169,19 +128,7 @@ c
       do i=0,9
         n1(i)=0
       enddo
-      
-      open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
-      read (lun+1,'(a130)',err=11,end=11) buf
-      l1=index(buf,'P')
-      l2=index(buf,'_')
-      if(l1.ne.0.and.l2.ne.0.and.l1.lt.l2-1)
-     $     read(buf(l1+1:l2-1),*,err=11) ngroup
- 11   print *,'Process in group number ',ngroup
 
-      lun = 27
-      twgt = -2d0            !determine wgt after first iteration
-      open(unit=lun,status='scratch')
-      nsteps=2
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
@@ -225,25 +172,9 @@ c at the NLO)
         stop
       endif
       write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
-      itotalpoints=0
-      ivirtpoints=0
-      ivirtpointsExcept=0
-      total_wgt_sum=0d0
-      total_wgt_sum_max=0d0
-      total_wgt_sum_min=0d0
       i_momcmp_count=0
       xratmax=0.d0
       unwgt=.false.
-c Plots
-      plotEv=.false.
-      plotKin=.false.
-      call addfil(dum)
-c Always setup_fill_rwgt_NLOplot (when doing scale or pdf
-c uncertainties), because in mint, when getting 2 bad iterations in a
-c row, there is a call to initplot to reset the plots (for fixed order
-c computations). This makes sure that the code doesn't crash in that
-c case.
-      if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
 
 c*************************************************************
 c     setting of the grids
@@ -269,11 +200,6 @@ c to restore grids:
             read (12,*) ifold_energy,ifold_phi,ifold_yij
             read (12,*) virtual_fraction,average_virtual
             close (12)
-         endif
-c
-         if(plotKin)then
-            open(unit=99,file='WARMUP.top',status='unknown')
-            call initplot
          endif
 c
          write (*,*) 'imode is ',imode
@@ -307,10 +233,6 @@ c*************************************************************
 c     computation of upper bounding envelope
 c*************************************************************
       elseif(imode.eq.1) then
-         if(plotKin)then
-            open(unit=99,file='MADatNLO.top',status='unknown')
-            call initplot
-         endif
 c to restore grids:
          open (unit=12, file='mint_grids',status='old')
          do j=0,nintervals
@@ -424,7 +346,6 @@ c determine how many events for the virtual and how many for the no-virt
          write (*,*) "Generating virt :: novi approx.",ncall_virt
      $        ,ncall_novi
 
-         if(plotEv)open(unit=99,file='hard-events.top',status='unknown')
          open(unit=lunlhe,file='events.lhe',status='unknown')
 
 c fill the information for the write_header_init common block
@@ -433,8 +354,6 @@ c fill the information for the write_header_init common block
          inter=ans(2)
          absint=ans(1)+ans(5)
          uncer=unc(2)
-
-         if(plotEv)call initplot
 
          weight=(ans(1)+ans(5))/ncall
 
@@ -471,12 +390,12 @@ c Randomly pick the contribution that will be written in the event file
             call pick_unweight_contr(iFKS_picked)
             call update_fks_dir(iFKS_picked,iconfig)
             call fill_rwgt_lines
-            call finalize_event(x,weight,lunlhe,plotEv,putonshell)
+            call finalize_event(x,weight,lunlhe,putonshell)
          enddo
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
          write (*,*) 'Generation efficiencies:',x(1),x(4)
-c Uncomment the next to lines to plot the integral from the PS points
+c Uncomment the next to lines to print the integral from the PS points
 c trown during event generation. This corresponds only to the cross
 c section if these points are thrown flat, so not using the xmmm() stuff
 c in mint.
@@ -486,19 +405,10 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
          close(lunlhe)
       endif
 
-      write(*,*)'Maximum weight found:',fksmaxwgt
-      write(*,*)'Found for:',xisave,ysave
-
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
         write(*,*)'WARNING: genps_fks code 555555'
         write(*,*)i_momcmp_count,xratmax
-      endif
-
-      if(plotEv.or.plotKin)then
-        call mclear
-        call topout
-        close(99)
       endif
 
       if (ntot.ne.0) then
@@ -839,8 +749,8 @@ c From dsample_fks
       common /c_vob/   virtual_over_born
       logical       nbody
       common/cnbody/nbody
-      integer         ndim,ipole
-      common/tosigint/ndim,ipole
+      integer         ndim
+      common/tosigint/ndim
       character*4      abrv
       common /to_abrv/ abrv
       double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -1770,8 +1680,8 @@ c     include all quarks (except top quark) and the gluon.
       integer i
       double precision xx(ndimmax),x(99),ran2
       external ran2
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      integer         ndim
+      common/tosigint/ndim
       character*4 abrv
       common /to_abrv/ abrv
       do i=1,99

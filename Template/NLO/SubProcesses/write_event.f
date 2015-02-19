@@ -1,12 +1,12 @@
-      subroutine finalize_event(xx,weight,lunlhe,plotEv,putonshell)
+      subroutine finalize_event(xx,weight,lunlhe,putonshell)
       implicit none
       include 'nexternal.inc'
       include "genps.inc"
       include "unlops.inc"
       include "run.inc"
       include 'timing_variables.inc'
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      integer ndim
+      common/tosigint/ndim
       integer           iconfig
       common/to_configs/iconfig
       integer itmax,ncall
@@ -15,8 +15,8 @@
       common/SHevents/Hevents
       integer i,j,lunlhe
       include 'mint.inc'
-      real*8 xx(ndimmax),weight,plot_wgt,evnt_wgt
-      logical plotEv, putonshell
+      real*8 xx(ndimmax),weight,evnt_wgt
+      logical putonshell
       double precision wgt,unwgtfun
       double precision x(99),p(0:3,nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
@@ -24,10 +24,6 @@
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      integer iplot_ev,iplot_cnt,iplot_born
-      parameter (iplot_ev=11)
-      parameter (iplot_cnt=12)
-      parameter (iplot_born=20)
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
@@ -55,10 +51,7 @@
       enddo
       
       wgt=1d0
-c Normalization to the number of requested events is done in subroutine
-c topout (madfks_plot.f), so multiply here to get # of events.
       evnt_wgt=evtsgn*weight
-      plot_wgt=evnt_wgt*itmax*ncall
       call generate_momenta(ndim,iconfig,wgt,x,p)
 c
 c Get all the info we need for writing the events.
@@ -78,7 +71,7 @@ c
          endif
          Hevents=.true.
          call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &        .false.,ndim,ipole,x,jpart,npart,pb,shower_scale)
+     &        .false.,ndim,x,jpart,npart,pb,shower_scale)
 c Put the Hevent info in a common block
          NUP_H=npart
          do i=1,NUP_H
@@ -100,16 +93,7 @@ c Put the Hevent info in a common block
       endif
       
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &     putonshell,ndim,ipole,x,jpart,npart,pb,shower_scale)
-
-c Plot the events also on the fly
-      if(plotEv) then
-         if (Hevents) then
-            call outfun(p,ybst_til_tolab,plot_wgt,iplot_ev)
-         else
-            call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
-         endif
-      endif
+     &     putonshell,ndim,x,jpart,npart,pb,shower_scale)
 
       call unweight_function(p_born,unwgtfun)
       if (unwgtfun.ne.0d0) then
@@ -327,8 +311,8 @@ c********************************************************************
       integer lunlhe,i
       double precision x(99),sigintF_save,f_abs_save
       common /c_sigint/ x,sigintF_save,f_abs_save
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      integer ndim
+      common/tosigint/ndim
       write (lunlhe,'(a)')'  <event>'
       write (lunlhe,*) ndim,sigintF_save,f_abs_save
       write (lunlhe,*) (x(i),i=1,ndim)

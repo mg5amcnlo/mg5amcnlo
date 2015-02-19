@@ -42,8 +42,7 @@ cc
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw
 
 c Vegas stuff
-      integer ipole
-      common/tosigint/ndim,ipole
+      common/tosigint/ndim
 
       real*8 sigint
       external sigint
@@ -54,29 +53,9 @@ c Vegas stuff
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
-      external initplot
-
-
-c For tests
-      real*8 fksmaxwgt,xisave,ysave
-      common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
-
       integer i_momcmp_count
       double precision xratmax
       common/ccheckcnt/i_momcmp_count,xratmax
-
-c For tests of virtuals
-      integer ivirtpoints,ivirtpointsExcept
-      double precision  virtmax,virtmin,virtsum
-      common/cvirt3test/virtmax,virtmin,virtsum,ivirtpoints,
-     &     ivirtpointsExcept
-      double precision total_wgt_sum,total_wgt_sum_max,
-     &                 total_wgt_sum_min
-      common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
-     &                 total_wgt_sum_min
 
       integer n_mp, n_disc
 c For MINT:
@@ -215,13 +194,6 @@ c     Fill the number of combined matrix elements for given initial state lumino
          call find_iproc_map
          write(6,*) "   ... done."
       endif
-
-      itotalpoints=0
-      ivirtpoints=0
-      ivirtpointsExcept=0
-      total_wgt_sum=0d0
-      total_wgt_sum_max=0d0
-      total_wgt_sum_min=0d0
       i_momcmp_count=0
       xratmax=0.d0
       unwgt=.false.
@@ -300,25 +272,6 @@ c to save grids:
          write (*,*) 'Unknown imode',imode
          stop
       endif
-
-      write (*,*) ''
-      write (*,*) '----------------------------------------------------'
-      if (irestart.eq.1 .or. irestart.eq.3) then
-         write (*,*) 'Total points tried:                   ',
-     &        ncall*itmax
-         write (*,*) 'Total points passing generation cuts: ',
-     &        itotalpoints
-         write (*,*) 'Efficiency of events passing cuts:    ',
-     &        dble(itotalpoints)/dble(ncall*itmax)
-      else
-         write (*,*)
-     &       'Run has been restarted, next line is only for current run'
-         write (*,*) 'Total points passing cuts: ',itotalpoints
-      endif
-      write (*,*) '----------------------------------------------------'
-      write (*,*) ''
-      write (*,*) ''
-      write (*,*) '----------------------------------------------------'
 
       if (ntot.ne.0) then
          write(*,*) "Satistics from MadLoop:"
@@ -430,8 +383,8 @@ c timing statistics
       logical passcuts,passcuts_nbody,passcuts_n1body,sum
       external passcuts
       data sum /.false./
-      integer         ndim,ipole
-      common/tosigint/ndim,ipole
+      integer         ndim
+      common/tosigint/ndim
       logical       nbody
       common/cnbody/nbody
       integer           iconfig
@@ -627,8 +580,8 @@ c Finalize PS point
       integer i
       double precision xx(ndimmax),x(99),ran2
       external ran2
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      integer ndim
+      common/tosigint/ndim
       character*4 abrv
       common /to_abrv/ abrv
       do i=1,99
@@ -692,9 +645,6 @@ c
       logical nbody
       common/cnbody/nbody
 
-      integer nvtozero
-      logical doVirtTest
-      common/cvirt2test/nvtozero,doVirtTest
 c
 c To convert diagram number to configuration
 c
@@ -726,7 +676,6 @@ c
 c-----
 c  Begin Code
 c-----
-      doVirtTest=.true.
       mint=.true.
       unwgt=.false.
       write(*,'(a)') 'Enter number of events and iterations: '
@@ -821,8 +770,6 @@ c Options are way too many: make sure we understand all of them
       else
         write (*,*) "Normal integration (Sfunction != 1)"
       endif
-
-      doVirtTest=doVirtTest.and.abrv(1:2).eq.'vi'
 c
 c
 c     Here I want to set up with B.W. we map and which we don't
