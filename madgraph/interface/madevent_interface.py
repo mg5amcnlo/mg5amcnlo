@@ -2669,10 +2669,6 @@ zeor by MadLoop.""")
             
             misc.sprint(nb_event)
             self.results.add_detail('nb_event', nb_event)
-
-                        
-                
-
         
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
