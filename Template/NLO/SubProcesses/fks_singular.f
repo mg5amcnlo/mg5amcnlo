@@ -485,6 +485,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       endif
       already_set=.false.
       if (iterm.eq.1 .or. iterm.eq.2) then
+c n-body momenta FxFx Sudakov factor (i.e. for S-events)
          if (rewgt_izero_calculated) then
             if (iterm_last_izero.ne.1 .and. iterm_last_izero.ne.2) then
                if (momenta_equal(p1_cnt(0,1,0),p_last_izero)) then
@@ -531,6 +532,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
             FxFx_fac_scale_izero(i)=FxFx_fac_scale(i)
          enddo
       elseif (iterm.eq.3) then
+c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
          if (rewgt_mohdr_calculated) then
             if (iterm.eq.iterm_last_mohdr) then
                if (momenta_equal(p,p_last_mohdr)) then
@@ -568,6 +570,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
          tFxFx=tFxFx+(tAfter-tBefore)
          return
       elseif (iterm.eq.-1 .or. iterm.eq.-2) then
+c Restore scales for the n-body FxFx terms
          nFxFx_ren_scales=nFxFx_ren_scales_izero
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_izero(i)
@@ -576,6 +579,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
             FxFx_fac_scale(i)=FxFx_fac_scale_izero(i)
          enddo
       elseif (iterm.eq.-3) then
+c Restore scales for the n+1-body FxFx terms
          nFxFx_ren_scales=nFxFx_ren_scales_mohdr
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_mohdr(i)
@@ -1594,6 +1598,7 @@ c call the analysis/histogramming routines
       end
 
       subroutine fill_mint_function(f)
+c Fills the function that is returned to the MINT integrator
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -1619,6 +1624,9 @@ c call the analysis/histogramming routines
       
 
       subroutine include_shape_in_shower_scale(p,iFKS)
+c Includes the shape function from the MC counter terms in the shower
+c starting scale. This function needs to be called (at least) once per
+c FKS configuration that is included in the current PS point.
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1675,6 +1683,11 @@ c S-event contribution
 
 
       subroutine sum_identical_contributions
+c Sum contributions that would lead to an identical event before taking
+c the ABS value. In particular this means adding the real emission with
+c the MC counter terms for the H-events FKS configuration by FKS
+c configuration, while for the S-events also contributions from the
+c various FKS configurations can be summed together.
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -1775,6 +1788,12 @@ c include it here!
       end
 
       subroutine update_shower_scale_Sevents
+c When contributions from various FKS configrations are summed together
+c for the S-events (see the sum_identical_contributions subroutine), we
+c need to update the shower starting scale (because it is not
+c necessarily the same for all of these summed FKS configurations). Take
+c the weighted average over the FKS configurations as the shower scale
+c for the summed contribution.
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -1829,6 +1848,8 @@ c Overwrite the shower scale for the S-events
 
 
       subroutine fill_mint_function_NLOPS(f,n1body_wgt)
+c Fills the function that is returned to the MINT integrator. Depending
+c on the imode we should or should not include the virtual corrections.
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -1899,6 +1920,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
 
 
       subroutine pick_unweight_contr(iFKS_picked)
+c Randomly pick (weighted by the ABS values) the contribution to a given
+c PS point that should be written in the event file.
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -1944,6 +1967,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
          endif
          current=current+abs(unwgt(j,i))
       enddo
+c found the contribution that should be written:
       icontr_picked=i
       iproc_picked=j
       if (H_event(icontr_picked)) then
@@ -1975,6 +1999,12 @@ c n1body_wgt is used for the importance sampling over FKS directories
 
 
       subroutine fill_rwgt_lines
+c Fills the lines, n_ctr_str, to be written in an event file with the
+c (internal) information to perform scale and/or PDF reweighting. All
+c information is available in each line to do the reweighting, apart
+c from the momenta: these are put in the momenta_str_l() array, and a
+c label in each of the n_ctr_str refers to a corresponding set of
+c momenta in the momenta_str_l() array.
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
@@ -1995,8 +2025,12 @@ c n1body_wgt is used for the importance sampling over FKS directories
       wgtref=unwgt(iproc_picked,icontr_picked)
       n_ctr_found=0
       n_mom_conf=0
+c Loop over all the contributions in the picked contribution (the latter
+c is chosen in the pick_unweight_cont() subroutine)
       do i=1,icontr_sum(0,icontr_picked)
          ict=icontr_sum(i,icontr_picked)
+c Check if the current set of momenta are already available in the
+c momenta_str_l array. If not, add it.
          found=.false.
          do j=1,n_mom_conf
             if (momenta_equal(momenta_str_l(0,1,j),momenta_m(0,1,ict)))
@@ -2017,6 +2051,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
             momenta_conf=n_mom_conf
          endif
          if (.not. Hevents) then
+c For S-events, be careful to take all the IPROC that contribute to the
+c iproc_picked:
             ipr=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
             do ii=1,iproc_save(nFKS(ict))
                if (eto(ii,nFKS(ict)).ne.ipr) cycle
@@ -2046,6 +2082,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
      &              //trim(adjustl(str_temp))
             enddo
          else
+c H-event
             ipr=iproc_picked
             n_ctr_found=n_ctr_found+1
             write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')

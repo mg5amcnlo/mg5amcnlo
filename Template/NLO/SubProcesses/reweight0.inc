@@ -126,7 +126,7 @@ c i.e. also for Yukawa: ren_group_coeff = gamma0
       parameter (ren_group_coeff_in=0d0)
 
       integer n_ctr_found,max_n_ctr,n_mom_conf
-      parameter (max_n_ctr=200)
+      parameter (max_n_ctr=256)
       character*1024 n_ctr_str(max_n_ctr)
       double precision momenta_str(0:3,maxparticles,max_n_ctr)
       common /c_rwgt_lines/n_ctr_str,momenta_str,n_ctr_found,n_mom_conf
