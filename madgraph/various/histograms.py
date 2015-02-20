@@ -30,13 +30,17 @@ import sys
 
 logger = logging.getLogger("madgraph.various.histograms")
 
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+
 try:
     # import from madgraph directory
+    sys.path.insert(0, os.path.join(root_path,os.pardir,os.pardir))
     import madgraph.various.misc as misc
     from madgraph import MadGraph5Error
 
 except ImportError, error:
     logger.debug(error)
+    sys.path.insert(0, os.path.join(root_path,os.pardir)) 
     # import from madevent directory
     import internal.misc as misc    
     from internal import MadGraph5Error
@@ -1085,7 +1089,28 @@ class HwUList(histograms_PhysicsObjectList):
         while not new_histo.bins is None:
             self.append(new_histo)
             new_histo = HwU(stream, weight_header)            
-            
+
+        # Order the histograms according to their type.
+        titles_order = [h.title for h in self]
+        def ordering_function(histo):
+            title_position = titles_order.index(histo.title)
+            if histo.type is None:
+                return (title_position,3)
+            if histo.type.startswith('NLO'):
+                return (title_position,1)
+            elif histo.type.startswith('LO'):
+                return (title_position,2)
+            elif histo.type.startswith('AUX'):
+                return (title_position,5)
+            else:
+                return (title_position,4)
+
+        # The command below is to first order them in alphabetical order, but it
+        # is often better to keep the order of the original HwU source.
+#        self.sort(key=lambda histo: '%s_%d'%(histo.title,
+#                                                  type_order.index(histo.type)))
+        self.sort(key=ordering_function)
+    
         # Explicitly close the opened stream for clarity.
         if isinstance(file_path, str):
             stream.close()
@@ -1125,27 +1150,6 @@ class HwUList(histograms_PhysicsObjectList):
         # Now we consider that we are attempting a gnuplot output.
         if format == 'gnuplot':
             gnuplot_stream = open(path+'.gnuplot','w')
-
-        # First order the histograms according to their type.
-        titles_order = [h.title for h in self]
-        def ordering_function(histo):
-            title_position = titles_order.index(histo.title)
-            if histo.type is None:
-                return (title_position,3)
-            if histo.type.startswith('NLO'):
-                return (title_position,1)
-            elif histo.type.startswith('LO'):
-                return (title_position,2)
-            elif histo.type.startswith('AUX'):
-                return (title_position,5)
-            else:
-                return (title_position,4)
-
-        # The command below is to first order them in alphabetical order, but it
-        # is often better to keep the order of the original HwU source.
-#        self.sort(key=lambda histo: '%s_%d'%(histo.title,
-#                                                  type_order.index(histo.type)))
-        self.sort(key=ordering_function)
 
         # Now group all the identified matching histograms in a list
         matching_histo_lists = HwUList([HwUList([self[0]])])
@@ -1219,8 +1223,8 @@ set style data histeps
         # Now write the tail of the gnuplot command file
         gnuplot_output_list.extend([
           "unset multiplot",
-          '!ps2pdf "%s.ps"'%output_base_name,
-          '!open "%s.pdf"'%output_base_name])
+          '!ps2pdf "%s.ps" &> /dev/null'%output_base_name,
+          '!open "%s.pdf" &> /dev/null'%output_base_name])
         
         # Now write result to stream and close it
         gnuplot_stream.write('\n'.join(gnuplot_output_list))
@@ -1610,12 +1614,16 @@ if __name__ == "__main__":
         new_histo_list = HwUList(arg)
         if accepted_types!=[]:
             new_histo_list = [h for h in new_histo_list if h.type in accepted_types]
-        if i!=0:
-            for histo in new_histo_list:
-                if not histo.type is None:
-                    histo.type += " #%d"%(i+1)
-                else:
-                    histo.type = "#%d"%(i+1)
+        for histo in new_histo_list:
+            if not histo.type is None:
+                histo.type += ' '
+            else:
+                histo.type = ''
+            # Firs option is to give a bit of the name     
+            #histo.type += " %s, #%d"%\
+            #                       (os.path.basename(arg).split('.')[0][:3],i+1)
+            # But it is more elegant to give just the number.
+            histo.type += "#%d"%(i+1)
 
         histo_list.extend(new_histo_list)
     log("A total of %i histograms were found."%len(histo_list))
