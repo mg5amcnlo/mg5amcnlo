@@ -1067,12 +1067,17 @@ class HwUList(histograms_PhysicsObjectList):
 
         return isinstance(obj, HwU) or isinstance(obj, HwUList)
     
-    def __init__(self, file_path, weight_header=None, **opts):
+    def __init__(self, file_path, weight_header=None, accepted_types_order=[], 
+                                                                        **opts):
         """ Read one plot from a file_path or a stream. 
         This constructor reads all plots specified in target file.
         File_path can be a path or a stream in the argument.
         The option weight_header specifies an ordered list of weight names 
-        to appear in the file or stream specified."""
+        to appear in the file or stream specified. It accepted_types_order is 
+        empty, no filter is applied, otherwise only histograms of the specified  
+        types will be kept, and in this specified order for a given identical 
+        title.
+        """
         
         if isinstance(file_path, str):
             stream = open(file_path,'r')
@@ -1087,23 +1092,25 @@ class HwUList(histograms_PhysicsObjectList):
 
         new_histo = HwU(stream, weight_header)
         while not new_histo.bins is None:
-            self.append(new_histo)
-            new_histo = HwU(stream, weight_header)            
+            if accepted_types_order==[] or \
+                                         new_histo.type in accepted_types_order:
+                self.append(new_histo)
+            new_histo = HwU(stream, weight_header)
 
         # Order the histograms according to their type.
         titles_order = [h.title for h in self]
         def ordering_function(histo):
             title_position = titles_order.index(histo.title)
-            if histo.type is None:
-                return (title_position,3)
-            if histo.type.startswith('NLO'):
-                return (title_position,1)
-            elif histo.type.startswith('LO'):
-                return (title_position,2)
-            elif histo.type.startswith('AUX'):
-                return (title_position,5)
+            if accepted_types_order==[]:
+                type_precedence = {'NLO':1,'LO':1,None:3,'AUX':5}
+                try:
+                    ordering_key = (title_position,type_precedence[histo.type])
+                except KeyError:
+                    ordering_key = (title_position,4)
             else:
-                return (title_position,4)
+                ordering_key = (title_position,
+                                         accepted_types_order.index(histo.type))
+            return ordering_key
 
         # The command below is to first order them in alphabetical order, but it
         # is often better to keep the order of the original HwU source.
@@ -1591,13 +1598,10 @@ if __name__ == "__main__":
         log('\n\n%s'%main_doc)
         sys.exit(0)
 
-    if not any(arg.startswith('--out=') for arg in sys.argv):
-        log('Please specify an output name with --out=<OutputName>.')
-        sys.exit(0)
-    else:
-        for arg in sys.argv[1:]:
-            if arg.startswith('--out='):
-                OutName = arg[6:]
+    OutName = ""
+    for arg in sys.argv[1:]:
+        if arg.startswith('--out='):
+            OutName = arg[6:]
 
     accepted_types = []
     for arg in sys.argv[1:]:
@@ -1611,9 +1615,9 @@ if __name__ == "__main__":
         if arg.startswith('--'):
             break
         log("Loading histograms from '%s'."%arg)
-        new_histo_list = HwUList(arg)
-        if accepted_types!=[]:
-            new_histo_list = [h for h in new_histo_list if h.type in accepted_types]
+        if OutName=="":
+            OutName = os.path.basename(arg).split('.')[0]+'_output'
+        new_histo_list = HwUList(arg, accepted_types_order=accepted_types)
         for histo in new_histo_list:
             if not histo.type is None:
                 histo.type += ' '
