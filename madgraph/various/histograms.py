@@ -1617,17 +1617,17 @@ if __name__ == "__main__":
     """ For testing and standalone use. Usage:
         python histograms.py <.HwU input_file_path_1> <.HwU input_file_path_2> ... --out=<output_file_path.format> <option>
         Where <option> can be *one* of the following: 
+           '--help'          See this message.
            '--gnuplot' or '' output the histogram read to gnuplot
            '--HwU'           to output the histogram read to the raw HwU source.
            '--types=<type1>,<type2>,...' to keep only the type<i> when importing histograms.
-           '--help'          See this message.
-           '--show_full'     to show the complete output of what was read.
-           '--show_short'    to show a summary of what was read.
            '--n_ratios=<integer>' Specifies how many curves must be considerd for the ratios.
            '--no_scale'      Turn off the plotting of scale uncertainties
            '--no_pdf'        Turn off the plotting of PDF uncertainties
            '--no_stat'       Turn off the plotting of all statistical uncertainties
            '--no_open'       Turn off the automatic processing of the gnuplot output.
+           '--show_full'     to show the complete output of what was read.
+           '--show_short'    to show a summary of what was read.
     """
     
     n_ratios   = 1
