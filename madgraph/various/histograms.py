@@ -777,7 +777,8 @@ class HwU(Histogram):
             try:
                 res += ', %s'%type_map[self.type]
             except KeyError:
-                res += ', %s'%str(self.type)                
+                res += ', %s'%str('NLO' if self.type.split()[0]=='NLO' else
+                                                                      self.type)               
             return res
 
         elif format=='HwU':
@@ -978,16 +979,18 @@ class HwU(Histogram):
         return (x_min, x_max)
     
     @classmethod
-    def get_y_optimal_range(cls,histo_list, weight_labels=None, scale='LOG',
-                                                                 Kratio = False):
+    def get_y_optimal_range(cls,histo_list, labels=None, 
+                                                   scale='LOG', Kratio = False):
         """ Function to determine the optimal y-axis range when plotting 
         together the histos in histo_list and considering the weights 
         weight_labels. The option Kratio is present to allow for the couple of
         tweaks necessary for the the K-factor ratio histogram y-range."""
 
         # If no list of weight labels to consider is given, use them all.
-        if weight_labels is None:
+        if labels is None:
             weight_labels = histo_list[0].bins.weight_labels
+        else:
+            weight_labels = labels
         
         all_weights = []
         for histo in histo_list:
@@ -1000,7 +1003,7 @@ class HwU(Histogram):
                     if scale!='LOG':
                         all_weights.append(bin.wgts[label])
                         if label == 'stat_error':
-                            all_weights.append(-bin.wgts[label])         
+                            all_weights.append(-bin.wgts[label])  
                     elif bin.wgts[label]>0.0:
                         all_weights.append(bin.wgts[label])
         
@@ -1038,19 +1041,19 @@ class HwU(Histogram):
             if y_min != y_max:
                 return ( y_min , y_max )
 
-        # Make sure the range has finite length
+        # Enforce the maximum if there is 5 bins or less
+        if len(histo_list[0].bins) <= 5:
+            y_min = min
+            y_max = max   
+
+        # Finally make sure the range has finite length
         if y_min == y_max:
             if max == min:
                 y_min -= 1.0
                 y_max += 1.0
             else:
                 y_min = min
-                y_max = max
-
-        # Finally enforce the maximum if there is 5 bins or less
-        if len(histo_list[0].bins) <= 5:
-            y_min = min
-            y_max = max            
+                y_max = max         
         
         return ( y_min , y_max )
     
@@ -1122,7 +1125,8 @@ class HwUList(histograms_PhysicsObjectList):
         if isinstance(file_path, str):
             stream.close()
 
-    def output(self, path, format='gnuplot'):
+    def output(self, path, format='gnuplot',number_of_ratios = 1, 
+                                 uncertainties=['scale','pdf','statitistical']):
         """ Ouput this histogram to a file, stream or string if path is kept to
         None. The supported format are for now. Chose whether to print the header
         or not."""
@@ -1225,7 +1229,9 @@ set style data histeps
         for histo_group in self:
             # Output this group
             block_position = histo_group.output_group(HwU_output_list, 
-                    gnuplot_output_list, block_position,output_base_name+'.HwU')
+                    gnuplot_output_list, block_position,output_base_name+'.HwU',
+                    number_of_ratios=number_of_ratios, 
+                    uncertainties = uncertainties)
 
         # Now write the tail of the gnuplot command file
         gnuplot_output_list.extend([
@@ -1243,44 +1249,57 @@ set style data histeps
                                  "%s.[HwU|gnuplot]' and can "%output_base_name+\
                                          "now be rendered by invoking gnuplot.")
 
-    def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name):
+    def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
+          number_of_ratios = 1, uncertainties =['scale','pdf','statitistical']):
         """ This functions output a single group of histograms with either one
         histograms untyped (i.e. type=None) or two of type 'NLO' and 'LO' 
         respectively."""
-        
-        # A sanity check to make sure that there is either one histogram
-        # of type 'None' or two of type 'NLO' and 'LO' respectively, since
-        # these are the only combinations supported sofar
-#        if not (len(self)==1 or \
-#                       (len(self)==2 and [h.type for h in self]==['NLO','LO'])):
-#            raise MadGraph5Error, "The set of histogram types that can be"+\
-#              "output can only contain a single histogram or exactly two with"+\
-#              " types ['NLO','LO'], in this order, not %s"\
-#                                             %(str([str(h.type) for h in self]))
 
-        # First compute the ratio of NLO and LO histograms if present
+        layout_geometry = [(0.0,0.5,1.0,0.4),
+                           (0.0,0.4,1.0,0.1),
+                           (0.0,0.3,1.0,0.1)]
+        layout_geometry.reverse()
+        
+        # First compute the ratio of all the histograms from the second to the
+        # number_of_ratios+1 ones in the list to the first histogram.
         n_histograms = len(self)
-        if len(self)>=2:
-            self.append(self[0]/self[1])
+        ratio_histos = HwUList([])
+        for i, histo in enumerate(self[1:number_of_ratios+1]):
+            ratio_histos.append(histo/self[0])
             if self[0].type=='NLO' and self[1].type=='LO':
-                self[-1].title += ' K-factor'
+                ratio_histos[-1].title += '1/K-factor'
             else:
-                self[-1].title += ' %s/%s'%(
-                                        self[0].type if self[0].type else '#1',
-                                         self[1].type if self[1].type else '#2')
+                ratio_histos[-1].title += ' %s/%s'%(
+                              self[1].type if self[1].type else '(%d)'%(i+2),
+                              self[0].type if self[0].type else '(1)')
             # By setting its type to aux, we make sure this histogram will be
             # filtered out if the .HwU file output here would be re-loaded later.
-            self[-1].type       = 'AUX'
+            ratio_histos[-1].type       = 'AUX'
+        self.extend(ratio_histos)
 
         # Compute scale variation envelope for all diagrams
-        mu_var_pos  = self[0].set_uncertainty(type='all_scale')
-        PDF_var_pos = self[0].set_uncertainty(type='PDF')
+        if 'scale' in uncertainties:
+            mu_var_pos  = self[0].set_uncertainty(type='all_scale')
+        else:
+            mu_var_pos = None
+        
+        if 'pdf' in uncertainties: 
+            PDF_var_pos = self[0].set_uncertainty(type='PDF')
+        else:
+            PDF_var_pos = None
+
+        no_uncertainties =  (PDF_var_pos is None or 'PDF' not in uncertainties) \
+                     and (mu_var_pos is None or 'scale' not in uncertainties) and \
+                                             'statistical' not in uncertainties
+
         for histo in self[1:]:
-            if mu_var_pos != histo.set_uncertainty(type='all_scale'):
+            if (not mu_var_pos is None) and \
+                          mu_var_pos != histo.set_uncertainty(type='all_scale'):
                raise MadGraph5Error, 'Not all histograms in this group specify'+\
                  ' scale dependencies. It is required to be able to output them'+\
                  ' together.'
-            if PDF_var_pos != histo.set_uncertainty(type='PDF'):
+            if (not PDF_var_pos is None) and\
+                               PDF_var_pos != histo.set_uncertainty(type='PDF'):
                raise MadGraph5Error, 'Not all histograms in this group specify'+\
                  ' PDF dependencies. It is required to be able to output them'+\
                  ' together.'
@@ -1314,7 +1333,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
         
         # Now the header for each subhistogram
         subhistogram_header = \
-"""#-- rendering subhistogram '%(subhistogram_type)s'
+"""#-- rendering subhistograms '%(subhistogram_type)s'
 %(unset label)s
 %(set_format_y)s
 set yrange [%(ymin).4e:%(ymax).4e]
@@ -1339,6 +1358,7 @@ plot \\"""
         if not PDF_var_pos is None:
             wgts_to_consider.append(self[0].bins.weight_labels[PDF_var_pos])
             wgts_to_consider.append(self[0].bins.weight_labels[PDF_var_pos+1])
+
         (xmin, xmax) = HwU.get_x_optimal_range(self[:2],\
                                                weight_labels = wgts_to_consider)
         replacement_dic['xmin'] = xmin
@@ -1354,7 +1374,7 @@ plot \\"""
                  str(self[0].type),str(self[1].type)) if len(self)>1 else \
                                                          'single diagram output'
         (ymin, ymax) = HwU.get_y_optimal_range(self[:2],
-                   weight_labels = wgts_to_consider, scale=self[0].y_axis_mode)
+                   labels = wgts_to_consider, scale=self[0].y_axis_mode)
 
         # Force a linear scale if the detected range is negative
         if ymin< 0.0:
@@ -1362,23 +1382,22 @@ plot \\"""
             
         # Already add a margin on upper bound.
         if self[0].y_axis_mode=='LOG':
-            ymax += 10.0 * (ymax - ymin)
-            ymin -= 0.9 * ymin
+            ymax += 10.0 * ymax
+            ymin -= 0.1 * ymin
         else:
-            ymax += 0.2 * (ymax - ymin)
-            ymin -= 0.2 * (ymax - ymin)
+            ymax += 0.3 * (ymax - ymin)
+            ymin -= 0.3 * (ymax - ymin)
 
         replacement_dic['ymin'] = ymin
         replacement_dic['ymax'] = ymax
         replacement_dic['unset label'] = ''
-        replacement_dic['origin_x'] = 0.0
-        replacement_dic['origin_y'] = 0.5        
-        replacement_dic['size_x'] = 1.0
-        replacement_dic['size_y'] = 0.4
+        (replacement_dic['origin_x'], replacement_dic['origin_y'],
+         replacement_dic['size_x'], replacement_dic['size_y']) = layout_geometry.pop()
         replacement_dic['mytics'] = 10
         # Use default choise for the main histogram
         replacement_dic['set_ytics'] = 'set ytics auto'
-        replacement_dic['set_format_x'] = "set format x ''"
+        replacement_dic['set_format_x'] = "set format x ''" if \
+          (len(self)-n_histograms>0 or not no_uncertainties) else "set format x"
         replacement_dic['set_ylabel'] = 'set ylabel "{/Symbol s} per bin [pb]"' 
         replacement_dic['set_yscale'] = "set logscale y" if \
                               self[0].y_axis_mode=='LOG' else 'unset logscale y'
@@ -1388,22 +1407,26 @@ plot \\"""
         replacement_dic['set_histo_label'] = ""
         gnuplot_out.append(subhistogram_header%replacement_dic)
         
-        # Now add the main subhistogram
+        # Now add the main layout
         plot_lines = []
         for i, histo in enumerate(self[:n_histograms]):
             color_index = i%self.number_line_colors_defined+1
-            plot_lines.extend([
+            title = '%d'%(i+1) if histo.type is None else ('NLO' if \
+                                   histo.type.split()[0]=='NLO' else histo.type)
+            plot_lines.append(
 "'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
-%(HwU_name,block_position+i,i+1,histo.get_HwU_histogram_name(format='human')
-if i==0 else (histo.type if histo.type else 'central value for plot #%d'%(i+1))),
+%(HwU_name,block_position+i,color_index,histo.get_HwU_histogram_name(format='human')
+if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))))
+            if 'statistical' in uncertainties:
+                plot_lines.append(
 "'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"\
-%(HwU_name,block_position+i,color_index)])
+%(HwU_name,block_position+i,color_index))
             # And show scale variation if available
             if not mu_var_pos is None:
                 plot_lines.extend([
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,mu_var_pos+3,color_index+10,'%s scale variation'\
-%('%d'%(i+1) if histo.type is None else histo.type)),
+%title),
 "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
 %(HwU_name,block_position+i,mu_var_pos+4,color_index+10),
                 ])
@@ -1412,7 +1435,7 @@ if i==0 else (histo.type if histo.type else 'central value for plot #%d'%(i+1)))
                 plot_lines.extend([
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,PDF_var_pos+3,color_index+20,'%s PDF variation'\
-%('%d'%(i+1) if histo.type is None else histo.type)),
+%title),
 "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
 %(HwU_name,block_position+i,PDF_var_pos+4,color_index+20),
                 ])
@@ -1423,13 +1446,16 @@ if i==0 else (histo.type if histo.type else 'central value for plot #%d'%(i+1)))
         # Now we can add the scale variation ratio
         replacement_dic['subhistogram_type'] = 'Relative scale and PDF uncertainty'
 
+        if 'statistical' in uncertainties: 
+            wgts_to_consider.append('stat_error')
+
         # This function is just to temporarily create the ratio histogram with 
         # the hwu.combine function. Notice hoewer that the histogram hence created
         # is not used to actuall plot the quantity in gnuplot   
         def rel_scale(wgtsA, wgtsB):
             new_wgts = {}
             for label, wgt in wgtsA.items():
-                if label in wgts_to_consider+['stat_error']:
+                if label in wgts_to_consider:
                     if wgtsB['central']==0.0 and wgt==0.0:
                         new_wgts[label] = 0.0
                         continue
@@ -1448,37 +1474,42 @@ if i==0 else (histo.type if histo.type else 'central value for plot #%d'%(i+1)))
 
         (ymin, ymax) = HwU.get_y_optimal_range(
           [self[0].__class__.combine(self[0],self[0],rel_scale),], 
-          weight_labels = wgts_to_consider+['stat_error'],  scale='LIN')
+          labels = wgts_to_consider,  scale='LIN')
 
         # Add a margin on upper and lower bound.
-        ymax = min(ymax + 0.2 * (ymax - ymin), 10.0)
-        ymin = max(ymin - 0.2 * (ymax - ymin), -10.0)
+        ymax = ymax + 0.2 * (ymax - ymin)
+        ymin = ymin - 0.2 * (ymax - ymin)
         replacement_dic['unset label'] = 'unset label'
         replacement_dic['ymin'] = ymin
         replacement_dic['ymax'] = ymax
-        replacement_dic['origin_x'] = 0.0
-        replacement_dic['origin_y'] = 0.4        
-        replacement_dic['size_x'] = 1.0
-        replacement_dic['size_y'] = 0.1
+        if not no_uncertainties:
+            (replacement_dic['origin_x'], replacement_dic['origin_y'],
+         replacement_dic['size_x'], replacement_dic['size_y']) = layout_geometry.pop()
         replacement_dic['mytics'] = 2
 #        replacement_dic['set_ytics'] = 'set ytics %f'%((int(10*(ymax-ymin))/10)/3.0)
         replacement_dic['set_ytics'] = 'set ytics auto'
-        replacement_dic['set_format_x'] = "set format x ''" if len(self)>1 else \
-                                                                  "set format x"
+        replacement_dic['set_format_x'] = "set format x ''" if \
+                                    len(self)-n_histograms>0 else "set format x"
         replacement_dic['set_ylabel'] = 'set ylabel "%s rel.unc."'\
-                                       %(self[0].type if self[0].type else '#1')
+                              %('#1' if self[0].type==None else '%s'%('NLO' if \
+                              self[0].type.split()[0]=='NLO' else self[0].type))
         replacement_dic['set_yscale'] = "unset logscale y"
         replacement_dic['set_format_y'] = 'unset format'
                                 
         replacement_dic['set_histo_label'] = \
          'set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13'
 #        'set label "Relative uncertainties" font ",9" at graph 0.79, graph 0.13'
-        gnuplot_out.append(subhistogram_header%replacement_dic)
+        # Simply don't add these lines if there are no uncertainties.
+        # This meant uncessary extra work, but I no longer car at this point
+        if not no_uncertainties:
+            gnuplot_out.append(subhistogram_header%replacement_dic)
         
         # Now add the first subhistogram
-        plot_lines = ["0.0 ls 999 title ''",
+        plot_lines = ["0.0 ls 999 title ''"]
+        if 'statistical' in uncertainties:
+           plot_lines.append(
 "'%s' index %d using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''"%\
-(HwU_name,block_position)]
+(HwU_name,block_position))
         # Then the scale variations
         if not mu_var_pos is None:
             plot_lines.extend([
@@ -1496,45 +1527,41 @@ if i==0 else (histo.type if histo.type else 'central value for plot #%d'%(i+1)))
             ])
         
         # Add the plot lines
-        gnuplot_out.append(',\\\n'.join(plot_lines))
+        if not no_uncertainties:
+            gnuplot_out.append(',\\\n'.join(plot_lines))
 
-        # We finish here for a single diagram output
-        if len(self)<=1:
+        # We finish here when no ratio plot are asked for.
+        if len(self)-n_histograms==0:
             # Now add the tail for this group
             gnuplot_out.extend(['','unset label','',
 '################################################################################'])
             # Return the starting data_block position for the next histogram group
             return block_position+len(self)
 
-        # We can finally add the last subhistogram for the K-factor
-        # Now we can add the scale variation ratio
-        if self[0].type=='NLO' and self[0].type=='LO':
-            ratio_name_long = 'NLO/LO (K-factor)'
-            ratio_name_short = 'NLO/LO'
-        else:
-            ratio_name_long = '%s/%s'%(
-                '#1' if self[0].type==None else '%s'%self[0].type,
-                '#2' if self[1].type==None else '%s'%self[1].type)
-            ratio_name_short = ratio_name_long
+        # We can finally add the last subhistograms for the ratios.
+        ratio_name_long = '%s/%s'%(
+            '(2)' if (len(self)-n_histograms)==1 else 
+            '((2) to (%d))'%(len(self)-n_histograms+2),
+            '(1)' if self[0].type==None else '%s'%('NLO' if \
+            self[0].type.split()[0]=='NLO' else self[0].type))
+
+        ratio_name_short = ratio_name_long
             
         ratio_name = '%s/%s'
         replacement_dic['subhistogram_type'] = '%s ratio'%ratio_name_long
         replacement_dic['set_ylabel'] = 'set ylabel "%s"'%ratio_name_short
 
-        (ymin, ymax) = HwU.get_y_optimal_range([self[-1],], 
-                   weight_labels = wgts_to_consider+['stat_error'], scale='LIN',
-                   Kratio = True)        
+        (ymin, ymax) = HwU.get_y_optimal_range(self[n_histograms:], 
+               labels = wgts_to_consider, scale='LIN',Kratio = True)    
         
         # Add a margin on upper and lower bound.
-        ymax = min(ymax + 0.15 * (ymax - ymin), 10.0)
-        ymin = max(ymin - 0.15 * (ymax - ymin), -10.0)
+        ymax = ymax + 0.2 * (ymax - ymin)
+        ymin = ymin - 0.2 * (ymax - ymin)
         replacement_dic['unset label'] = 'unset label'
         replacement_dic['ymin'] = ymin
         replacement_dic['ymax'] = ymax
-        replacement_dic['origin_x'] = 0.0
-        replacement_dic['origin_y'] = 0.3      
-        replacement_dic['size_x'] = 1.0
-        replacement_dic['size_y'] = 0.1
+        (replacement_dic['origin_x'], replacement_dic['origin_y'],
+         replacement_dic['size_x'], replacement_dic['size_y']) = layout_geometry.pop()
         replacement_dic['mytics'] = 2
 #        replacement_dic['set_ytics'] = 'set ytics %f'%((int(10*(ymax-ymin))/10)/10.0)
         replacement_dic['set_ytics'] = 'set ytics auto'
@@ -1545,28 +1572,35 @@ if i==0 else (histo.type if histo.type else 'central value for plot #%d'%(i+1)))
         'set label "%s" font ",9" at graph 0.03, graph 0.13'%ratio_name_long
 #        'set label "NLO/LO (K-factor)" font ",9" at graph 0.82, graph 0.13'
         gnuplot_out.append(subhistogram_header%replacement_dic)
-        
-        # Now add the first subhistogram
-        plot_lines = ["1.0 ls 999 title ''",
-"'%s' index %d using (($1+$2)/2):3 ls 1 title ''"%\
-(HwU_name,block_position+n_histograms),
-"'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls 1 title ''"%\
-(HwU_name,block_position+n_histograms)]
-        # Then the scale variations
-        if not mu_var_pos is None:
-            plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):%d ls 11 title ''"\
-%(HwU_name,block_position+n_histograms,mu_var_pos+3),
-"'%s' index %d using (($1+$2)/2):%d ls 11 title ''"\
-%(HwU_name,block_position+n_histograms,mu_var_pos+4)
-            ])
-        if not PDF_var_pos is None:
-            plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):%d ls 21 title ''"\
-%(HwU_name,block_position+n_histograms,PDF_var_pos+3),
-"'%s' index %d using (($1+$2)/2):%d ls 21 title ''"\
-%(HwU_name,block_position+n_histograms,PDF_var_pos+4)
-            ])
+
+        plot_lines = []
+        for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
+            block_ratio_pos = block_position+n_histograms+i_histo_ratio
+            color_index     = color_index = (i_histo_ratio+1)%\
+                                               self.number_line_colors_defined+1
+            # Now add the subhistograms
+            plot_lines.extend(["1.0 ls 999 title ''",
+    "'%s' index %d using (($1+$2)/2):3 ls %d title ''"%\
+    (HwU_name,block_ratio_pos,color_index)])
+            if 'statistical' in uncertainties:
+                plot_lines.append(
+    "'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"%\
+    (HwU_name,block_ratio_pos,color_index))
+            # Then the scale variations
+            if not mu_var_pos is None:
+                plot_lines.extend([
+    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
+    %(HwU_name,block_ratio_pos,mu_var_pos+3,10+color_index),
+    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
+    %(HwU_name,block_ratio_pos,mu_var_pos+4,10+color_index)
+                ])
+            if not PDF_var_pos is None:
+                plot_lines.extend([
+    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
+    %(HwU_name,block_ratio_pos,PDF_var_pos+3,20+color_index),
+    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
+    %(HwU_name,block_ratio_pos,PDF_var_pos+4,20+color_index)
+                ])
         
         # Add the plot lines
         gnuplot_out.append(',\\\n'.join(plot_lines))
@@ -1589,7 +1623,16 @@ if __name__ == "__main__":
            '--help'          See this message.
            '--show_full'     to show the complete output of what was read.
            '--show_short'    to show a summary of what was read.
+           '--n_ratios=<integer>' Specifies how many curves must be considerd for the ratios.
+           '--no_scale'      Turn off the plotting of scale uncertainties
+           '--no_pdf'        Turn off the plotting of PDF uncertainties
+           '--no_stat'       Turn off the plotting of all statistical uncertainties
+           '--no_open'       Turn off the automatic processing of the gnuplot output.
     """
+    
+    n_ratios   = 1
+    uncertainties = ['scale','pdf','statistical']
+    auto_open = True
     
     def log(msg):
         print "histograms.py :: %s"%str(msg)
@@ -1609,6 +1652,22 @@ if __name__ == "__main__":
             accepted_types = [(type if type!='None' else None) for type in \
                                                              arg[8:].split(',')]
 
+    for arg in sys.argv[1:]:
+        if arg.startswith('--n_ratios='):
+            n_ratios = int(arg[11:])
+
+    if '--no_open' in sys.argv:
+        auto_open = False
+
+    if '--no_scale' in sys.argv:
+        uncertainties.remove('scale')
+
+    if '--no_pdf' in sys.argv:
+        uncertainties.remove('pdf')
+        
+    if '--no_stat' in sys.argv:
+        uncertainties.remove('statistical')        
+
     log("=======")
     histo_list = HwUList([])
     for i, arg in enumerate(sys.argv[1:]):
@@ -1623,7 +1682,7 @@ if __name__ == "__main__":
                 histo.type += ' '
             else:
                 histo.type = ''
-            # Firs option is to give a bit of the name     
+            # Firs option is to give a bit of the name of the source HwU file.     
             #histo.type += " %s, #%d"%\
             #                       (os.path.basename(arg).split('.')[0][:3],i+1)
             # But it is more elegant to give just the number.
@@ -1634,10 +1693,20 @@ if __name__ == "__main__":
     log("=======")
 
     if '--gnuplot' in sys.argv or all(arg not in ['--HwU'] for arg in sys.argv):
-        histo_list.output(OutName, format='gnuplot')
+        histo_list.output(OutName, format='gnuplot', number_of_ratios = n_ratios, 
+            uncertainties=uncertainties)
         log("%d histograms have been output in " % len(histo_list)+\
                 "the gnuplot format at '%s.[HwU|gnuplot]'." % OutName)
-        sys.exit(0)
+        if auto_open:
+            command = 'gnuplot %s.gnuplot'%OutName
+            try:
+                import subprocess
+                subprocess.call(command,shell=True)
+            except:
+                log("Automatic processing of the gnuplot card failed. Try the"+\
+                    " command by hand:\n%s"%command)
+            else:
+                sys.exit(0)
 
     if '--HwU' in sys.argv:
         log("Histograms data has been output in the HwU format at "+\
