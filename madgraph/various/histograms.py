@@ -781,6 +781,10 @@ class HwU(Histogram):
                                                                       self.type)               
             return res
 
+        elif format=='human-no_type':
+            res = self.title
+            return res
+
         elif format=='HwU':
             res = [self.title]
             res.append('|X_AXIS@%s'%self.x_axis_mode)
@@ -1063,7 +1067,7 @@ class HwUList(histograms_PhysicsObjectList):
     # Define here the number of line color schemes defined. If you need more,
     # simply define them in the gnuplot header and increase the number below.
     # It must be <= 9.
-    number_line_colors_defined = 4 
+    number_line_colors_defined = 8
     
     def is_valid_element(self, obj):
         """Test wether specified object is of the right type for this list."""
@@ -1105,7 +1109,7 @@ class HwUList(histograms_PhysicsObjectList):
         def ordering_function(histo):
             title_position = titles_order.index(histo.title)
             if accepted_types_order==[]:
-                type_precedence = {'NLO':1,'LO':1,None:3,'AUX':5}
+                type_precedence = {'NLO':2,'LO':1,None:3,'AUX':5}
                 try:
                     ordering_key = (title_position,type_precedence[histo.type])
                 except KeyError:
@@ -1198,23 +1202,45 @@ set key font ",9"
 set key samplen "2"
 set output "%s.ps"
 
-set style line 1 lt 1 lc rgb "#006D4F" lw 1.8
-set style line 11 lt 2 lc rgb "#006D4F" lw 1.8
-set style line 21 lt 4 lc rgb "#006D4F" lw 1.8
+# This is the "PODO" color palette of gnuplot v.5, but with the order
+# changed: palette of colors selected to be easily distinguishable by
+# color-blind individuals with either protanopia or deuteranopia. Bang
+# Wong [2011] Nature Methods 8, 441.
 
-set style line 2 lt 1 lc rgb "#B90091" lw 1.8
-set style line 12 lt 2 lc rgb "#B90091" lw 1.8
-set style line 22 lt 4 lc rgb "#B90091" lw 1.8
+set style line  1 lt 1 lc rgb "#009e73" lw 2.5
+set style line 11 lt 2 lc rgb "#009e73" lw 2.5
+set style line 21 lt 4 lc rgb "#009e73" lw 2.5
 
-set style line 3 lt 1 lc rgb "#2818B1" lw 1.8
-set style line 13 lt 2 lc rgb "#2818B1" lw 1.8
-set style line 23 lt 4 lc rgb "#2818B1" lw 1.8
+set style line  2 lt 1 lc rgb "#0072b2" lw 2.5
+set style line 12 lt 2 lc rgb "#0072b2" lw 2.5
+set style line 22 lt 4 lc rgb "#0072b2" lw 2.5
 
-set style line 4 lt 1 lc rgb "#A67B00" lw 1.8
-set style line 14 lt 2 lc rgb "#A67B00" lw 1.8
-set style line 24 lt 4 lc rgb "#A67B00" lw 1.8
+set style line  3 lt 1 lc rgb "#d55e00" lw 2.5
+set style line 13 lt 2 lc rgb "#d55e00" lw 2.5
+set style line 23 lt 4 lc rgb "#d55e00" lw 2.5
 
-set style line 999 lt 1 lc rgb "gray" lw 1.8
+set style line  4 lt 1 lc rgb "#f0e442" lw 2.5
+set style line 14 lt 2 lc rgb "#f0e442" lw 2.5
+set style line 24 lt 4 lc rgb "#f0e442" lw 2.5
+
+set style line  5 lt 1 lc rgb "#56b4e9" lw 2.5
+set style line 15 lt 2 lc rgb "#56b4e9" lw 2.5
+set style line 25 lt 4 lc rgb "#56b4e9" lw 2.5
+
+set style line  6 lt 1 lc rgb "#cc79a7" lw 2.5
+set style line 16 lt 2 lc rgb "#cc79a7" lw 2.5
+set style line 26 lt 4 lc rgb "#cc79a7" lw 2.5
+
+set style line  7 lt 1 lc rgb "#e69f00" lw 2.5
+set style line 17 lt 2 lc rgb "#e69f00" lw 2.5
+set style line 27 lt 4 lc rgb "#e69f00" lw 2.5
+
+set style line  8 lt 1 lc rgb "black" lw 2.5
+set style line 18 lt 2 lc rgb "black" lw 2.5
+set style line 28 lt 4 lc rgb "black" lw 2.5
+
+
+set style line 999 lt 1 lc rgb "gray" lw 2.5
 
 safe(x,y,a) = (y == 0.0 ? a : x/y)
 
@@ -1268,6 +1294,8 @@ set style data histeps
             ratio_histos.append(histo/self[0])
             if self[0].type=='NLO' and self[1].type=='LO':
                 ratio_histos[-1].title += '1/K-factor'
+            elif self[0].type=='LO' and self[1].type=='NLO':
+                ratio_histos[-1].title += 'K-factor'
             else:
                 ratio_histos[-1].title += ' %s/%s'%(
                               self[1].type if self[1].type else '(%d)'%(i+2),
@@ -1327,7 +1355,7 @@ set xtics nomirror
 set ytics nomirror
 set mytics %(mxtics)d
 %(set_xtics)s
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 """
         
@@ -1348,7 +1376,7 @@ set mytics %(mytics)d
 plot \\"""
         replacement_dic = {}
 
-        replacement_dic['title'] = self[0].get_HwU_histogram_name(format='human')
+        replacement_dic['title'] = self[0].get_HwU_histogram_name(format='human-no_type')
         # Determine what weight to consider when computing the optimal 
         # range for the y-axis.
         wgts_to_consider = ['central']
@@ -1541,7 +1569,7 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
         # We can finally add the last subhistograms for the ratios.
         ratio_name_long = '%s/%s'%(
             '(2)' if (len(self)-n_histograms)==1 else 
-            '((2) to (%d))'%(len(self)-n_histograms+2),
+            '((2) to (%d))'%(len(self)-n_histograms+1),
             '(1)' if self[0].type==None else '%s'%('NLO' if \
             self[0].type.split()[0]=='NLO' else self[0].type))
 
