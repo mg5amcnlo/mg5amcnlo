@@ -5098,11 +5098,9 @@ c            stop
          bsv_wgt=0d0
          virt_wgt=0d0
          born_wgt=0d0
-         if(doreweight)then
-           wgtnstmp=0d0
-           wgtwnstmpmuf=0d0
-           wgtwnstmpmur=0d0
-         endif
+         wgtnstmp=0d0
+         wgtwnstmpmuf=0d0
+         wgtwnstmpmur=0d0
       endif
 
       return
