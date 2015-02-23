@@ -3371,14 +3371,12 @@ Integrated cross-section
         keep_fourth_arg = False
         output_files = []
         required_output = []
-        input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
-                     pjoin(self.me_dir, 'SubProcesses', 'randinit'),
+        input_files = [pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
                      pjoin(cwd, 'initial_states_map.dat'),
                      pjoin(cwd, 'configs_and_props_info.dat'),
                      pjoin(cwd, 'leshouche_info.dat'),
-                     pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
         if os.path.exists(pjoin(cwd,'nevents.tar')):
