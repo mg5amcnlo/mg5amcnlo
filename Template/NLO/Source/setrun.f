@@ -56,7 +56,6 @@ c
      &     xmaxup(maxpup),lprup(maxpup)
 c
       include 'nexternal.inc'
-      include 'leshouche_decl.inc'
       logical gridrun,gridpack
       integer          iseed
       common /to_seed/ iseed
@@ -65,6 +64,13 @@ c
       common /event_normalisation/event_norm
       integer iappl
       common /for_applgrid/ iappl
+C      
+      integer    maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
+      include 'born_leshouche.inc'
 c
 c----------
 c     start
@@ -74,7 +80,6 @@ c----------
 c MZ add the possibility to have shower_MC input lowercase
       call to_upper(shower_MC)
 C
-      call read_leshouche_info(idup_d,mothup_d,icolup_d)
 
 c merging cuts
       xqcut=0d0
@@ -160,7 +165,7 @@ C       Fill common block for Les Houches init info
         elseif(lpp(i).eq.-3) then
           idbmup(i)=-11
         elseif(lpp(i).eq.0) then
-          idbmup(i)=idup_d(1,i,1)
+          idbmup(i)=idup(i,1)
         else
           idbmup(i)=lpp(i)
         endif
@@ -219,8 +224,8 @@ C-------------------------------------------------
      $   10000,
      $   10041,
      $   10042,
-     $   200200,
-     $   200400,
+     $   246800,
+     $   247000,
      $   244600/
 
 
