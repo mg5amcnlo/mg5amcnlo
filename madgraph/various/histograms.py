@@ -1109,7 +1109,7 @@ class HwUList(histograms_PhysicsObjectList):
         def ordering_function(histo):
             title_position = titles_order.index(histo.title)
             if accepted_types_order==[]:
-                type_precedence = {'NLO':2,'LO':1,None:3,'AUX':5}
+                type_precedence = {'NLO':1,'LO':2,None:3,'AUX':5}
                 try:
                     ordering_key = (title_position,type_precedence[histo.type])
                 except KeyError:
