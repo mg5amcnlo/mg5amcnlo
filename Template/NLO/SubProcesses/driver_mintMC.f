@@ -578,6 +578,8 @@ c
 c
 c     Global
 c
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
@@ -688,16 +690,26 @@ c These should be ignored (but kept for 'historical reasons')
       endif
       isum_hel = 0
 
-      write(*,10) 'Enter Configuration Number: '
+      write(*,'(a)') 'Enter Configuration Number: '
       read(*,*) dconfig
       iconfig = int(dconfig)
+      if ( nint(dconfig*10) - iconfig*10 .eq.0 ) then
+         ini_fin_fks=0
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.1 ) then
+         ini_fin_fks=1
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.2 ) then
+         ini_fin_fks=2
+      else
+         write (*,*) 'ERROR: invalid configuration number',dconfig
+         stop 1
+      endif
       do i=1,mapconfig(0)
          if (iconfig.eq.mapconfig(i)) then
             iconfig=i
             exit
          endif
       enddo
-      write(*,12) 'Running Configuration Number: ',iconfig
+      write(*,*) 'Running Configuration Number: ',iconfig,ini_fin_fks
 
       write (*,'(a)') 'Enter running mode for MINT:'
       write (*,'(a)') '0 to set-up grids, 1 to integrate,'//
@@ -744,17 +756,7 @@ c
 c
 c     Here I want to set up with B.W. we map and which we don't
 c
-      dconfig = dconfig-iconfig
-      if (dconfig .eq. 0) then
-         write(*,*) 'Not subdividing B.W.'
-         lbw(0)=0
-      else
-         lbw(0)=1
-         jconfig=dconfig*1000.1
-         write(*,*) 'Using dconfig=',jconfig
-         call DeCode(jconfig,lbw(1),3,nexternal)
-         write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
-      endif
+      lbw(0)=0
  10   format( a)
  12   format( a,i4)
       end
@@ -847,6 +849,8 @@ c From dsample_fks
       logical foundB(2)
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
 c PDG codes of particles
@@ -1112,8 +1116,21 @@ c
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 c Pick the first one because that's the one with the soft singularity.
          nFKSprocess=proc_map(proc_map(0,1),1)
-         nFKSprocess_all=nFKSprocess
          call fks_inc_chooser()
+         if (ini_fin_fks.eq.1) then
+            do while (j_fks.le.nincoming) 
+               call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+               nFKSprocess=proc_map(proc_map(0,1),1)
+               call fks_inc_chooser()
+            enddo
+         elseif (ini_fin_fks.eq.2) then
+            do while (j_fks.gt.nincoming) 
+               call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+               nFKSprocess=proc_map(proc_map(0,1),1)
+               call fks_inc_chooser()
+            enddo
+         endif
+         nFKSprocess_all=nFKSprocess
          if (sum.eq.0) then
 c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             if (j_fks.le.nincoming) then
@@ -1157,7 +1174,11 @@ c$$$            endif
 c THIS CAN BE OPTIMIZED
          call setcuts
          call setfksfactor(iconfig)
-         wgt=1d0
+         if (ini_fin_fks.eq.0) then
+            wgt=1d0
+         else
+            wgt=0.5d0
+         endif
          call generate_momenta(ndim,iconfig,wgt,x,p)
          call dsigF(p,wgt,w,dsigS,dsigH)
          result(0,1)= w*dsigS

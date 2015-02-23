@@ -3229,7 +3229,7 @@ Integrated cross-section
         # find the number of the integration channel
         splittings = []
         ajob = open(pjoin(self.me_dir, 'SubProcesses', pdir, job)).read()
-        pattern = re.compile('for i in (\d+) ; do')
+        pattern = re.compile('for i in  ([\d.\d\s]*); do')
         match = re.search(pattern, ajob)
         channel = match.groups()[0]
         # then open the nevents_unweighted_splitted file and look for the 
@@ -3396,7 +3396,7 @@ Integrated cross-section
                 tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
                 tf.close()
 
-        Ire = re.compile("for i in ([\d\s]*) ; do")
+        Ire = re.compile("for i in  ([\d.\d\s]*); do")
         try : 
             fsock = open(exe)
         except IOError:
@@ -3404,7 +3404,7 @@ Integrated cross-section
         text = fsock.read()
         data = Ire.findall(text)
         subdir = ' '.join(data).split()
-               
+
         if args[0] == '0':
             # MADEVENT MINT FO MODE
             input_files.append(pjoin(cwd, 'madevent_mintFO'))

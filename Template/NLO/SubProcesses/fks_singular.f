@@ -5931,6 +5931,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       common/sctests/softtest,colltest
 
       integer config_fks,i,j,iconfig,fac1,fac2
+      double precision dfac1
 
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
      &     fkssymmetryfactorDeg
@@ -6194,8 +6195,15 @@ c Check to see if this channel needs to be included in the multi-channeling
          diagramsymmetryfactor=0d0
          if (multi_channel) then
             open (unit=19,file="symfact.dat",status="old",err=14)
-            do i=1,mapconfig(0)
-               read (19,*,err=23) fac1,fac2
+            i=0
+            do
+               i=i+1
+               read (19,*,err=23,end=23) dfac1,fac2
+               fac1=nint(dfac1)
+               if (nint(dfac1*10)-fac1*10 .eq.2 ) then
+                  i=i-1
+                  cycle
+               endif
                if (i.eq.iconfig) then
                   if (mapconfig(iconfig).ne.fac1) then
                      write (*,*) 'inconsistency in symfact.dat',i
@@ -6205,6 +6213,7 @@ c Check to see if this channel needs to be included in the multi-channeling
                   diagramsymmetryfactor=dble(fac2)
                endif
             enddo
+ 23         continue
             close(19)
          else                   ! no multi_channel
             diagramsymmetryfactor=1d0
@@ -6219,9 +6228,6 @@ c Check to see if this channel needs to be included in the multi-channeling
  99   continue
       write (*,*) '"integrate.fks" or "nbodyonly.fks" not found.'
       write (*,*) 'make and run "genint_fks" first.'
-      stop
- 23   continue
-      write (*,*) '"symfact.dat" is not of the correct format'
       stop
  14   continue
       diagramsymmetryfactor=1d0

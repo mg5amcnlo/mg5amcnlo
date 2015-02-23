@@ -435,6 +435,7 @@ c timing statistics
       include 'c_weight.inc'
       include 'reweight.inc'
       include 'run.inc'
+      include 'fks_info.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min
@@ -442,6 +443,8 @@ c timing statistics
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum
       external passcuts
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
       data sum /.false./
       integer         ndim,ipole
       common/tosigint/ndim,ipole
@@ -482,6 +485,15 @@ c timing statistics
       if (ickkw.eq.3) call set_FxFx_scale(-1,p)
       call update_vegas_x(xx,x)
       call get_MC_integer(1,fks_configs,nFKS_picked,vol)
+      if (ini_fin_fks.eq.1) then
+         do while (fks_j_d(nFKS_picked).le.nincoming) 
+            call get_MC_integer(1,fks_configs,nFKS_picked,vol)
+         enddo
+      elseif (ini_fin_fks.eq.2) then
+         do while (fks_j_d(nFKS_picked).gt.nincoming) 
+            call get_MC_integer(1,fks_configs,nFKS_picked,vol)
+         enddo
+      endif
 
 c The nbody contributions
       if (abrv.eq.'real') goto 11
@@ -489,7 +501,11 @@ c The nbody contributions
       calculatedBorn=.false.
       call get_born_nFKSprocess(nFKS_picked,nFKS_born)
       call update_fks_dir(nFKS_born,iconfig)
-      jac=1d0
+      if (ini_fin_fks.eq.0) then
+         jac=1d0
+      else
+         jac=0.5d0
+      endif
       call generate_momenta(ndim,iconfig,jac,x,p)
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
@@ -687,6 +703,8 @@ c
 c
 c     Global
 c
+      integer ini_fin_fks
+      common /fks_channels/ini_fin_fks
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
@@ -756,7 +774,7 @@ c-----
          use_cut = 2
       endif
 
-      write(*,10) 'Suppress amplitude (0 no, 1 yes)? '
+      write(*,'(a)') 'Suppress amplitude (0 no, 1 yes)? '
       read(*,*) i
       if (i .eq. 1) then
          multi_channel = .true.
@@ -766,7 +784,7 @@ c-----
          write(*,*) 'Using full amplitude.'
       endif
 
-      write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
+      write(*,'(a)') 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (i .eq. 0) then
          mc_hel = 0
@@ -777,16 +795,26 @@ c-----
       endif
       isum_hel=0
 
-      write(*,10) 'Enter Configuration Number: '
+      write(*,'(a)') 'Enter Configuration Number: '
       read(*,*) dconfig
       iconfig = int(dconfig)
+      if ( nint(dconfig*10) - iconfig*10 .eq.0 ) then
+         ini_fin_fks=0
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.1 ) then
+         ini_fin_fks=1
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.2 ) then
+         ini_fin_fks=2
+      else
+         write (*,*) 'ERROR: invalid configuration number',dconfig
+         stop 1
+      endif
       do i=1,mapconfig(0)
          if (iconfig.eq.mapconfig(i)) then
             iconfig=i
             exit
          endif
       enddo
-      write(*,12) 'Running Configuration Number: ',iconfig
+      write(*,*) 'Running Configuration Number: ',iconfig,ini_fin_fks
 c
 c Enter parameters that control Vegas grids
 c
@@ -840,18 +868,6 @@ c
 c
 c     Here I want to set up with B.W. we map and which we don't
 c
-      dconfig = dconfig-iconfig
-      if (dconfig .eq. 0) then
-         write(*,*) 'Not subdividing B.W.'
-         lbw(0)=0
-      else
-         lbw(0)=1
-         jconfig=dconfig*1000.1
-         write(*,*) 'Using dconfig=',jconfig
-         call DeCode(jconfig,lbw(1),3,nexternal)
-         write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
-      endif
- 10   format( a)
- 12   format( a,i4)
+      lbw(0)=0
       end
 c
