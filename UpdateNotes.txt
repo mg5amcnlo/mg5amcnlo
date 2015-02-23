@@ -1,6 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.3.0(XX/XX/15) RF: Fixed a bug in the aMCfast/APPLGrid interface introduced in version 2.2.3
+		RF: Fixed a bug in the setting of the integration grids (LO process generation) for the minimum
+		    energy needed for photons. The bug did not lead to any bias in event generation.
 
 2.2.3(10/02/15) RF: Re-factoring of the structure of the code for fNLO computations.
                 OM: Fix a bug in MadWeight (correlated param_card was not creating the correct input file)
@@ -19,9 +21,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Fix a bug in the LO re-weighing  module which was removing the 
                     SysCalc weight from the lhe file (thanks Shin-Shan)
                 Team: Fixes to different small bugs / improvement in the error and warning messages
-		RF: For aMC runs, If a NAN is found, the code now skips that PS point and continues instead of leading to NAN.
-                RF: For fNLO runs the virtuals were included twice in the setting of the integration grids. This was not
-                    leading to any biais  in previous version of the code.
+		RF: For aMC runs, If a NAN is found, the code now skips that PS point and continues instead of
+		    leading to NAN.
+                RF: For fNLO runs the virtuals were included twice in the setting of the integration grids. 
+                    This was not leading to any bias in previous version of the code.
 
 
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
