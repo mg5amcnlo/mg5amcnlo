@@ -149,3 +149,56 @@ C         Call UNWGT to unweight and store events
         ENDIF
       ENDIF
       END
+C     
+C     Functionality to handling grid
+C     
+
+      SUBROUTINE WRITE_GOOD_HEL(STREAM_ID)
+      IMPLICIT NONE
+      INTEGER STREAM_ID
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=16)
+      LOGICAL GOODHEL(NCOMB)
+      INTEGER NTRY
+      COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
+      WRITE(STREAM_ID,*) GOODHEL
+      RETURN
+      END
+
+
+      SUBROUTINE READ_GOOD_HEL(STREAM_ID)
+      IMPLICIT NONE
+      INCLUDE 'genps.inc'
+      INTEGER STREAM_ID
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=16)
+      LOGICAL GOODHEL(NCOMB)
+      INTEGER NTRY
+      COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
+      READ(STREAM_ID,*) GOODHEL
+      NTRY = MAXTRIES + 1
+      RETURN
+      END
+
+      SUBROUTINE INIT_GOOD_HEL()
+      IMPLICIT NONE
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=16)
+      LOGICAL GOODHEL(NCOMB)
+      INTEGER NTRY
+      INTEGER I
+
+      DO I=1,NCOMB
+        GOODHEL(I) = .FALSE.
+      ENDDO
+      NTRY = 0
+      END
+
+      INTEGER FUNCTION GET_MAXSPROC()
+      IMPLICIT NONE
+      GET_MAXSPROC = 1
+      RETURN
+      END
+
+
+

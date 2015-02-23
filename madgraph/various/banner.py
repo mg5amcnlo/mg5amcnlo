@@ -14,12 +14,14 @@
 ################################################################################
 """A File for splitting"""
 
+from __future__ import division
 import copy
 import logging
 import numbers
 import os
 import sys
 import re
+import math
 
 pjoin = os.path.join
 
@@ -114,7 +116,7 @@ class Banner(dict):
     def read_banner(self, input_path):
         """read a banner"""
 
-        if isinstance(input_path, str):
+        if isinstance(input_path, str) and input_path.find('\n') ==-1:
             input_path = open(input_path)
 
         text = ''
@@ -151,6 +153,36 @@ class Banner(dict):
         elif version > 3:
             raise Exception, "Not Supported version"
         self.lhe_version = version
+    
+    
+    def modify_init_cross(self, cross):
+        """modify the init information with the associate cross-section"""
+
+        assert isinstance(cross, dict)
+#        assert "all" in cross
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        new_data = []
+        new_data.append(all_lines[0])
+        for i in range(1, len(all_lines)):
+            line = all_lines[i]
+            split = line.split()
+            if len(split) == 4:
+                xsec, xerr, xmax, pid = split 
+            else:
+                new_data += all_lines[i:]
+                break
+            if int(pid) not in cross:
+                raise Exception
+            pid = int(pid)
+            ratio = cross[pid]/float(xsec)
+            line = "   %+13.7e %+13.7e %+13.7e %i" % \
+                (float(cross[pid]), ratio* float(xerr), ratio*float(xmax), pid)
+            new_data.append(line)
+        self['init'] = '\n'.join(new_data)
+    
+    
     
     def load_basic(self, medir):
         """ Load the proc_card /param_card and run_card """
@@ -1268,6 +1300,46 @@ class RunCard(ConfigFile):
             line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
             fsock.writelines(line)
         fsock.close()   
+
+    def get_banner_init_information(self):
+        """return a dictionary with the information needed to write
+        the first line of the <init> block of the lhe file."""
+        
+        output = {}
+        
+        def get_idbmup(lpp):
+            """return the particle colliding pdg code"""
+            if lpp in (1,2, -1,-2):
+                return math.copysign(2212, lpp)
+            elif lpp in (3,-3):
+                return math.copysign(11, lpp)
+            elif lpp == 0:
+                logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
+                return 0
+            else:
+                return lpp
+        
+        def get_pdf_id(pdf):
+            if pdf == "lhapdf":
+                return self["lhaid"]
+            else: 
+                return {'none': 0, 'mrs02nl':20250, 'mrs02nn':20270, 'cteq4_m': 19150,
+                        'cteq4_l':19170, 'cteq4_d':19160, 'cteq5_m':19050, 
+                        'cteq5_d':19060,'cteq5_l':19070,'cteq5m1':19051,
+                        'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
+                        'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244600
+                        }[pdf]
+            
+        output["idbmup1"] = get_idbmup(self['lpp1'])
+        output["idbmup2"] = get_idbmup(self['lpp2'])
+        output["ebmup1"] = self["ebeam1"]
+        output["ebmup2"] = self["ebeam2"]
+        output["pdfgup1"] = 0
+        output["pdfgup2"] = 0
+        output["pdfsup1"] = get_pdf_id(self["pdlabel"])
+        output["pdfsup2"] = get_pdf_id(self["pdlabel"])
+        return output
+        
 
 class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card infomration"""
