@@ -2,7 +2,7 @@
 !     Module      : DiscreteSampler
 !     Author      : Valentin Hirschi
 !     Date        : 29.10.2014
-!     Destriction : 
+!     Description : 
 !              A relatively simple and flexible module to do
 !              sampling of discrete dimensions for Monte-Carlo
 !              purposes.
@@ -129,6 +129,21 @@
 !       ::   in the running grid. When updated, the reference grid will 
 !       ::   therefore be *overwritten* by the running grid.
 !
+!
+!     DS_get_damping_for_grid(grid_name, small_contrib, damping_power)
+!       :: Returns the current value stored in the run grid for
+!       :: dimension grid_name of what are the parameter damping the
+!       :: bin with small contributions and whose Jacobian can
+!       :: potentially be very large. See the definition of these 
+!       :: parameters for a description of the procedure.
+!
+!     DS_set_damping_for_grid(grid_name, small_contrib, damping_power)
+!       :: Sets the value for both the ref and running grid of the
+!       :: dimension grid_name of what are the parameter damping the
+!       :: bin with small contributions and whose Jacobian can
+!       :: potentially be very large. See the definition of these 
+!       :: parameters for a description of the procedure.
+!
       module DiscreteSampler
 
       use StringCast
@@ -189,26 +204,41 @@
 !         initialisation, and its weights do not compare with those put
 !         in the running grid. When updated, the reference grid will 
 !         therefore be *overwritten* by the running grid.
-        integer                                :: grid_mode
+        integer                               :: grid_mode
+!
+!       Treat specially bin with a contribution (i.e. weight) worth less than 
+!       'small_contrib_threshold' of the averaged contributionover all bins.
+!       For those, we sample according to the square root (or the specified power 
+!       'damping power' of the difference between the reference value corresponding 
+!       to the chosen mode and the small_contrib_threshold.
+!       In this way, we are less sensitive to possible large fluctuations 
+!       of very suppressed contributions for which the Jacobian would be 
+!       really big. However, the square-root is such that a really
+!       suppressed contribution at the level of numerical precision
+!       would still never be probed.
+!       Notice that this procedure does *not* change the weight in the
+!       bin, but only how it is used for bin picking.
+        real*8                                :: small_contrib_threshold
+        real*8                                :: damping_power
 !       Minimum number of points to probe each bin with when the reference
 !       grid is empty. Once each bin has been probed that many times, the
 !       subroutine DS_get_point will use a uniform distribution
-        integer                                :: min_bin_probing_points
+        integer                               :: min_bin_probing_points
 !       Keep track of the norm (i.e. sum of all weights) and the total
 !       number of points for ease and optimisation purpose
-        real*8                                 :: norm
+        real*8                                :: norm
 !       The sum of the absolute value of the weight in each bin
-        real*8                                 :: abs_norm
+        real*8                                :: abs_norm
 !       The sum of the variance of the weight in each bin
-        real*8                                 :: variance_norm
+        real*8                                :: variance_norm
 !       The sum of the squared weights in each bin
-        real*8                                 :: norm_sqr    
-        integer                                :: n_tot_entries
+        real*8                                :: norm_sqr    
+        integer                               :: n_tot_entries
 !       A handy way of referring to the dimension by its name rather than
 !       an index.
-        character, dimension(:), allocatable   :: dimension_name
+        character, dimension(:), allocatable  :: dimension_name
 !       Bins of the grid
-        type(bin) , dimension(:), allocatable  :: bins
+        type(bin) , dimension(:), allocatable :: bins
       endtype sampledDimension
 
 !     This stores the overall discrete reference grid
@@ -365,7 +395,7 @@
 
 !       ---------------------------------------------------------------
 !       This subroutine takes care of registering a new dimension in
-!       the DSampler module by characterizing it by its name and number
+!       the DSampler module by characterizin it by its name and number
 !       of bins.
 !       ---------------------------------------------------------------
         subroutine DS_register_dimension(dim_name,n_bins,all_grids)
@@ -487,13 +517,15 @@
           do i=1, size(source%dimension_name)
             trget%dimension_name(i) = source%dimension_name(i)
           enddo
-          trget%norm                   = source%norm
-          trget%abs_norm               = source%abs_norm
-          trget%variance_norm          = source%variance_norm
-          trget%norm_sqr               = source%norm_sqr
-          trget%n_tot_entries          = source%n_tot_entries 
-          trget%min_bin_probing_points = source%min_bin_probing_points
-          trget%grid_mode              = source%grid_mode
+          trget%norm                    = source%norm
+          trget%abs_norm                = source%abs_norm
+          trget%variance_norm           = source%variance_norm
+          trget%norm_sqr                = source%norm_sqr
+          trget%n_tot_entries           = source%n_tot_entries 
+          trget%min_bin_probing_points  = source%min_bin_probing_points
+          trget%grid_mode               = source%grid_mode
+          trget%damping_power           = source%damping_power
+          trget%small_contrib_threshold = source%small_contrib_threshold
         end subroutine DS_copy_dimension
 
 !       ----------------------------------------------------------------------
@@ -611,8 +643,11 @@
 !         By default require each bin to be probed by 10 points
 !         before a uniform distribution is used when the reference grid
 !         is empty
-          d_dim%min_bin_probing_points = 10
-          d_dim%grid_mode              = 1 
+          d_dim%min_bin_probing_points  = 10
+          d_dim%grid_mode               = 1
+!         Turn off the damping of small contributions by default
+          d_dim%small_contrib_threshold = 0.0d0
+          d_dim%damping_power           = 0.5d0
 !         By default give sequential ids to the bins
           do i=1, size(d_dim%bins)
             d_dim%bins(i)%bid = i
@@ -745,6 +780,106 @@
           DS_get_dim_status = 1
           return
         end function DS_get_dim_status
+
+!       ---------------------------------------------------------------
+!       Access function to modify the damping parameters of small
+!       contributions
+!       ---------------------------------------------------------------
+        subroutine DS_set_damping_for_grid(grid_name, in_small_contrib,
+     &                                                 in_damping_power)
+        implicit none
+!         
+!         Subroutine arguments
+!
+          character(len=*), intent(in)     :: grid_name          
+          real*8, intent(in)               :: in_small_contrib
+          real*8, intent(in)               :: in_damping_power
+!
+!         Local variables
+!
+          integer                          :: ref_grid_index
+          integer                          :: run_grid_index
+!         
+!         Begin code
+!
+          ref_grid_index = DS_dim_index(ref_grid, grid_name, .True.)
+          if (ref_grid_index.eq.-1) then
+            write(*,*) "DiscreteSampler:: Error in 'DS_set_damping_"//
+     &        "for_grid', dimension '"//grid_name//"' could not be"//
+     &        " found in the reference grid."
+              stop 1
+          endif
+          run_grid_index = DS_dim_index(run_grid, grid_name, .True.)
+          if (run_grid_index.eq.-1) then
+            write(*,*) "DiscreteSampler:: Error in 'DS_set_damping_"//
+     &        "for_grid', dimension '"//grid_name//"' could not be"//
+     &        " found in the running grid."
+              stop 1
+          endif
+
+!         Limit arbitrarily at 50% because anything above that really
+!         breaks the assumption of a small grid deformation not 
+!         significantly affecting the averaged contribution taked as
+!         a threshold.
+          if (in_small_contrib.lt.0.0d0.or.
+     &                                  in_small_contrib.gt.0.5d0) then
+            write(*,*) "The small relative contribution threshold "//
+     &      toStr_real_with_ndig(in_small_contrib,3) 
+     &      //") given in argument of the function 'DS_set_damping_"//
+     &      "for_grid' must be >=0.0 and <= 0.5."
+            stop 1
+          endif
+
+          if (in_damping_power.lt.0.0d0.or.
+     &                                  in_damping_power.gt.1.0d0) then
+            write(*,*) "The damping power ("//
+     &      toStr_real_with_ndig(in_damping_power,3) 
+     &      //") given in argument of the function 'DS_set_damping_"//
+     &      "for_grid' must be >= 0.0 and <= 1.0."
+            stop 1
+          endif
+
+          ref_grid(ref_grid_index)%small_contrib_threshold = 
+     &                                                  in_small_contrib
+          ref_grid(ref_grid_index)%damping_power = in_damping_power
+          run_grid(run_grid_index)%small_contrib_threshold = 
+     &                                                  in_small_contrib
+          run_grid(run_grid_index)%damping_power = in_damping_power
+        end subroutine DS_set_damping_for_grid
+
+!       ---------------------------------------------------------------
+!       Access function to access the damping parameters for small
+!       contributions stored in the reference grid
+!       ---------------------------------------------------------------
+        subroutine DS_get_damping_for_grid(grid_name, out_small_contrib,
+     &                                                out_damping_power)
+        implicit none
+!         
+!         Subroutine arguments
+!
+          character(len=*), intent(in)      :: grid_name          
+          real*8, intent(out)               :: out_small_contrib
+          real*8, intent(out)               :: out_damping_power        
+!
+!         Local variables
+!
+          integer                           :: run_grid_index
+!         
+!         Begin code
+!
+          run_grid_index = DS_dim_index(run_grid, grid_name, .True.)
+          if (run_grid_index.eq.-1) then
+            write(*,*) "DiscreteSampler:: Error in 'DS_get_damping_"//
+     &        "for_grid', dimension '"//grid_name//"' could not be"//
+     &        " found in the running grid."
+              stop 1
+          endif
+
+          out_small_contrib = run_grid(run_grid_index)%
+     &                                           small_contrib_threshold
+          out_damping_power = run_grid(run_grid_index)%damping_power
+
+        end subroutine DS_get_damping_for_grid
 
 !       ---------------------------------------------------------------
 !       Access function to modify the mode of the reference grid:
@@ -1627,11 +1762,6 @@
      &          d_index)%abs_norm / ref_grid(ref_d_index)%abs_norm)
               ref_bin%abs_weight = ref_bin%abs_weight * (run_grid(
      &          d_index)%abs_norm / ref_grid(ref_d_index)%abs_norm)
-              if (ref_bin%bid%id.eq.2) then
-                write(39,*) 'Problem ',ref_bin%bid%id,
-     &        run_grid(d_index)%abs_norm,
-     &        ref_grid(ref_d_index)%abs_norm
-              endif
               ref_bin%weight_sqr = ref_bin%weight_sqr * (run_grid(
      &          d_index)%norm_sqr / ref_grid(ref_d_index)%norm_sqr)
             endif
@@ -1650,6 +1780,10 @@
           ref_grid(ref_d_index)%min_bin_probing_points =
      &       run_grid(d_index)%min_bin_probing_points
           ref_grid(ref_d_index)%grid_mode = run_grid(d_index)%grid_mode
+          ref_grid(ref_d_index)%small_contrib_threshold = 
+     &                        run_grid(d_index)%small_contrib_threshold
+          ref_grid(ref_d_index)%damping_power = 
+     &                                  run_grid(d_index)%damping_power
 
 !         Now filter all bins in ref_grid that have 0.0 weight and
 !         remove them! They will not be probed anyway.
@@ -1913,18 +2047,17 @@
 !       suppressed contribution at the level of numerical precision
 !       would still never be probed.
 !       
-        small_contrib_threshold      = 10.0e-2
-        damping_power                = 1.0/3.0
         average_contrib              = sampling_norm / size(mGrid%bins)
         do i=1,size(mGrid%bins)
           mBin = mGrid%bins(i)    
           if ( (mBin%weight/average_contrib) .lt.
-     &                                     small_contrib_threshold) then
-             sampling_norm        = sampling_norm - mGrid%bins(i)%weight
-             mGrid%bins(i)%weight = 
-     &        ((mBin%weight/(small_contrib_threshold*average_contrib))
-     &        **damping_power)*small_contrib_threshold*average_contrib
-             sampling_norm        = sampling_norm + mGrid%bins(i)%weight
+     &                             runGrid%small_contrib_threshold) then
+            sampling_norm        = sampling_norm - mGrid%bins(i)%weight
+            mGrid%bins(i)%weight = 
+     &        ((mBin%weight/(runGrid%small_contrib_threshold
+     &        *average_contrib))**runGrid%damping_power)*
+     &        runGrid%small_contrib_threshold*average_contrib
+            sampling_norm        = sampling_norm + mGrid%bins(i)%weight
           endif
         enddo
 !
@@ -1957,16 +2090,15 @@
      &                                    convoluted_grid_names(j)//"'."
                 stop 1
               endif
-!             Notice that for the convolution we always use the
-!             absolute value of the weight because we assume the user
-!             has edited this grid by himself for with a single entry.
+              ! Notice that for the convolution we always use the
+              ! absolute value of the weight because we assume the user
+              ! has edited this grid by himself for with a single entry.
               convolution_factors(i) = convolution_factors(i)*
      &                          conv_dim%bins(conv_bin_index)%abs_weight
             enddo
             sampling_norm = sampling_norm + 
      &        convolution_factors(i)*mGrid%bins(i)%weight
           enddo
-        
         else
           do i=1,size(mGrid%bins)
             convolution_factors(i)    = 1.0d0
@@ -2053,6 +2185,7 @@
               enddo
             endif
         endif
+
 !
 !       Now come the usual sampling method 
 !
@@ -2254,7 +2387,11 @@
      &      ))//" # Attribute 'min_bin_probing_points' of the grid."
           write(streamID,*) ' '//trim(toStr(grid%grid_mode
      &      ))//" # Attribute 'grid_mode' of the grid. 1=='default',"
-     2      //"2=='initialization'"
+     &      //"2=='initialization'"
+          write(streamID,*) ' '//trim(toStr(grid%small_contrib_threshold
+     &      ))//" # Attribute 'small_contrib_threshold' of the grid."
+          write(streamID,*) ' '//trim(toStr(grid%damping_power
+     &      ))//" # Attribute 'damping_power' of the grid."
           write(streamID,*) '# binID   n_entries weight   weight_sqr'//
      &      '   abs_weight'
           do i=1,size(grid%bins)
@@ -2337,7 +2474,8 @@
           integer                      :: read_position
           integer                      :: run_dim_index
           integer                      :: grid_mode
-
+          real*8                       :: small_contrib_threshold
+          real*8                       :: damping_power
 !
 !         Begin code
 !
@@ -2417,8 +2555,29 @@
                   case(4)
                     read(streamID,*,end=990) 
      &                run_grid(size(run_grid))%grid_mode
+                  case(5)
+                    read(streamID,*,end=990) small_contrib_threshold
+                    if (small_contrib_threshold.lt.0.0d0.or.
+     &                              small_contrib_threshold.gt.0.5d0) then
+                      write(*,*) 'DiscreteSampler:: The '//
+     &                  'small_contrib_threshold must be >= 0.0 and '//
+     &                  '< 0.5 to be meaningful.'
+                      stop 1
+                    endif
+                    run_grid(size(run_grid))%small_contrib_threshold
+     &                                         = small_contrib_threshold
+                  case(6)
+                    read(streamID,*,end=990) damping_power
+                    if (damping_power.lt.0.0d0.or.
+     &                                         damping_power.gt.1.0d0) then
+                      write(*,*) 'DiscreteSampler:: The damping power'//
+     &                  ' must be >= 0.0 and <= 1.0.'
+                      stop 1
+                    endif
+                    run_grid(size(run_grid))%damping_power
+     &                                                   = damping_power
 !                   Make sure that the last info read before reading the
-!                   bin content (here the info with read_position=3)
+!                   bin content (here the info with read_position=6)
 !                   sets startedGrid to .True. to start the bin readout 
                     startedGrid   = .True.
                   case default
