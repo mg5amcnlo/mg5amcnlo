@@ -727,7 +727,7 @@ class gensym(object):
            
         if need_submit:
             self.resubmit_survey(Pdir,G, Gdirs, step)
-        else:
+        elif cross:
             # prepare information for refine
             newGpath = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
             if not os.path.exists(newGpath):
@@ -749,7 +749,13 @@ class gensym(object):
                                
             # create the appropriate results.dat
             self.write_results(grid_calculator, cross, error, Pdir, G, step)
-                
+        else:
+            # copy one log
+            files.cp(pjoin(Gdirs[0], 'log.txt'), 
+                         pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
+            # create the appropriate results.dat
+            self.write_results(grid_calculator, cross, error, Pdir, G, step)
+            
         return 0
 
     def combine_grid(self, Pdir, G, step):
@@ -783,13 +789,15 @@ class gensym(object):
                              self.sigma[(Pdir,G)])/(step-1))/self.sigma[(Pdir,G)])
             else:
                 error = sigma/cross
+        else:
+            error = 0
 
-        if True and __debug__:
+        if True and __debug__ :
             # make the unweighting to compute the number of events:
             maxwgt = grid_calculator.get_max_wgt(0.01)
             if maxwgt:
                 nunwgt = grid_calculator.get_nunwgt(maxwgt) 
-                luminosity = nunwgt/cross
+                luminosity = nunwgt/(cross+1e-99)
                 primary_event = sum([R.nw for R in grid_calculator.results])
                 written_event = sum([R.nunwgt for R in grid_calculator.results])
                 misc.sprint(G, cross, error*cross, nunwgt, written_event, primary_event, luminosity)
@@ -804,6 +812,7 @@ class gensym(object):
         if cross == 0:
             abscross,nw, luminosity = 0, 0, 0
             wgt, maxit,nunwgt, wgt, nevents = 0,0,0,0,0
+            maxwgt = 0
             error = 0
         else:
             grid_calculator.results.compute_values()

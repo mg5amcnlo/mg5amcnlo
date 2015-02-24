@@ -18,6 +18,7 @@ import time
 import re
 import glob
 import inspect
+import sys
 
 logger = logging.getLogger('madgraph.cluster') 
 
@@ -604,11 +605,13 @@ class MultiCore(Cluster):
                             self.stoprequest.set()
                             self.remove("fct %s does not return 0" % exe)
                 except Exception,error:
-                     logger.warning(str(error))
-                     self.stoprequest.set()
-                     self.remove(error)
-                     if __debug__:
-                         raise
+                    self.fail_msg = sys.exc_info()
+                    logger.warning(str(error))
+                    self.stoprequest.set()
+                    self.remove(error)
+                    
+                    if __debug__:
+                        raise self.fail_msg[0], self.fail_msg[1],self.fail_msg[2]
 
                 self.queue.task_done()
                 self.done.put(tag)
@@ -658,7 +661,7 @@ class MultiCore(Cluster):
         
         # ensure the worker to stop
         self.stoprequest.set()
-        if error:
+        if error and not self.fail_msg:
             self.fail_msg = error
             
         # cleaning the queue done_pid_queue and move them to done_pid        
@@ -757,8 +760,10 @@ class MultiCore(Cluster):
         if self.stoprequest.isSet():
             if isinstance(self.fail_msg, Exception):
                 raise self.fail_msg
-            else:
+            elif isinstance(self.fail_msg, str):
                 raise Exception, self.fail_msg
+            else:
+                raise self.fail_msg[0], self.fail_msg[1], self.fail_msg[2]
         # reset variable for next submission
         try:
             self.lock.clear()

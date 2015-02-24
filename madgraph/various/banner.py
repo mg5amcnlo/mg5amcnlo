@@ -1598,7 +1598,6 @@ class RunCardLO(RunCard):
 
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
-            self['use_syst'] = False
             
         if proc_characteristic['ninitial'] == 1:
             #remove all cut

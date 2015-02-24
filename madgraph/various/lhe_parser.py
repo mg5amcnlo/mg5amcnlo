@@ -305,7 +305,12 @@ class EventFile(object):
 
         # need to modify the banner so load it to an object
         if self.banner:
-            import madgraph.various.banner as banner_module
+            try:
+                import madgraph
+            except:
+                import internal.banner as banner_module
+            else:
+                import madgraph.various.banner as banner_module
             if not isinstance(self.banner, banner_module.Banner):
                 banner = self.get_banner()
                 # 1. modify the cross-section
