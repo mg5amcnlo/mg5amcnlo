@@ -9,6 +9,13 @@
 !
 !     List of public subroutines and usage :
 !
+!     DS_initialize(tolerate_zero_grid, verbose)
+!       :: Initializes the general options of the DiscreteSampler.
+!       :: tolerate_zero_grid is a logical that specifies whether
+!       :: DiscreteSampler should crash when asked to sample a dimension
+!       :: of zero norm.
+!       :: Verbose is another logical setting the verbosity of the
+!       :: module.
 !
 !     DS_register_dimension(name, n_bins,(all_grid|void))
 !       ::  Register a new dimension with its name and number of bins
@@ -141,8 +148,13 @@
 
       use StringCast
 
+!     Global options for the module
       logical    DS_verbose
-      parameter (DS_verbose=.FALSE.)
+      save DS_verbose
+      logical    DS_tolerate_zero_norm
+      save DS_tolerate_zero_norm
+!     An allocatable to mark initialization
+      logical, dimension(:), allocatable  :: DS_isInitialized
 
 !     This parameter sets how large must be the sampling bar when
 !     displaying information about a dimension
@@ -301,6 +313,49 @@
 !       ---------------------------------------------------------------
 !       This subroutine is simply the logger of this module
 !       ---------------------------------------------------------------
+        subroutine DS_initialize(tolerate_zero_norm, verbose)
+        implicit none
+!         
+!         Subroutine arguments
+!         
+          logical, optional, intent(in)            :: tolerate_zero_norm
+          logical, optional, intent(in)            :: verbose 
+
+          if (allocated(DS_isInitialized)) then
+            write(*,*) "DiscreteSampler:: Error: The DiscreteSampler"//
+     &        " module can only be initialized once."
+            stop 1
+          else
+            allocate(DS_isInitialized(1))
+          endif
+          if (present(verbose)) then
+            DS_verbose = verbose
+          else
+            DS_verbose = .False.
+          endif
+
+          if (present(tolerate_zero_norm)) then
+            DS_tolerate_zero_norm = tolerate_zero_norm
+          else
+            DS_tolerate_zero_norm = .True.
+          endif
+
+!         Re-instore the if statement below if too annoying
+!          if(DS_verbose) then
+            write(*,*) ''
+            write(*,*) '********************************************'
+            write(*,*) '* You are using the DiscreteSampler module *'
+            write(*,*) '*      part of the MG5_aMC framework       *'
+            write(*,*) '*         Author: Valentin Hirschi         *'
+            write(*,*) '********************************************'
+            write(*,*) ''
+!          endif
+
+        end subroutine DS_initialize
+
+!       ---------------------------------------------------------------
+!       This subroutine is simply the logger of this module
+!       ---------------------------------------------------------------
 
         subroutine DS_Logger(msg)
         implicit none
@@ -358,6 +413,10 @@
 !
 !         Begin code
 !
+!         Make sure the module is initialized
+          if (.not.allocated(DS_isInitialized)) then
+              call DS_initialize()
+          endif
           if (present(all_grids)) then
             do_all_grids = all_grids
           else
@@ -394,6 +453,10 @@
 !
 !         Begin code
 !
+!         Make sure the module is initialized
+          if (.not.allocated(DS_isInitialized)) then
+              call DS_initialize()
+          endif
           if(allocated(grid)) then
             dim_index = DS_dim_index(grid,dim_name,.True.)
             if (dim_index.ne.-1) then
@@ -1972,7 +2035,6 @@
           endif
         enddo
 
-
 !
 !       Treat specially contributions worth less than 5% of the
 !       contribution averaged over all bins. For those, we sample
@@ -1985,18 +2047,21 @@
 !       would still never be probed.
 !       
         average_contrib              = sampling_norm / size(mGrid%bins)
-        do i=1,size(mGrid%bins)
-          mBin = mGrid%bins(i)    
-          if ( (mBin%weight/average_contrib) .lt.
-     &                             runGrid%small_contrib_threshold) then
-            sampling_norm        = sampling_norm - mGrid%bins(i)%weight
-            mGrid%bins(i)%weight = 
-     &        ((mBin%weight/(runGrid%small_contrib_threshold
+!       Ignore this if the average contribution is zero
+        if (average_contrib.gt.0.0d0) then
+          do i=1,size(mGrid%bins)
+            mBin = mGrid%bins(i)    
+            if ( (mBin%weight/average_contrib) .lt.
+     &                               runGrid%small_contrib_threshold) then
+              sampling_norm       = sampling_norm - mGrid%bins(i)%weight
+              mGrid%bins(i)%weight = 
+     &          ((mBin%weight/(runGrid%small_contrib_threshold
      &        *average_contrib))**runGrid%damping_power)*
      &        runGrid%small_contrib_threshold*average_contrib
-            sampling_norm        = sampling_norm + mGrid%bins(i)%weight
-          endif
-        enddo
+              sampling_norm       = sampling_norm + mGrid%bins(i)%weight
+            endif
+          enddo
+        endif
 !
 !       Now appropriately set the convolution factors
 !
@@ -2042,7 +2107,8 @@
           enddo
         endif
 
-        if (sampling_norm.eq.0d0) then
+!       Now crash nicely on zero norm grid
+        if (sampling_norm.eq.0d0.and..not.DS_tolerate_zero_norm) then
           one_norm_is_zero = .FALSE.
           write(*,*) 'DiscreteSampler:: Error, all bins'//
      &     " of sampled dimension '"//dim_name//"' or of the"//
@@ -2051,13 +2117,13 @@
             write(*,*) "DiscreteSampler:: Sampled dimension "//
      & "    : '"//trim(toStr(mGrid%dimension_name))//"' with norm "//
      &                     trim(toStr(mGrid%abs_norm,'ENw.3'))//"."
-            one_norm_is_zero = ((.not.one_norm_is_zero).and.
+            one_norm_is_zero = (one_norm_is_zero.or.
      &                                          mGrid%abs_norm.eq.0.0d0)
           elseif (chosen_mode.eq.1) then
             write(*,*) "DiscreteSampler:: Sampled dimension "//
      & "    : '"//trim(toStr(mGrid%dimension_name))//"' with norm "//
      &                     trim(toStr(mGrid%variance_norm,'ENw.3'))//"."
-            one_norm_is_zero = ((.not.one_norm_is_zero).and.
+            one_norm_is_zero = (one_norm_is_zero.or.
      &                                     mGrid%variance_norm.eq.0.0d0)
           elseif (chosen_mode.eq.3) then
             write(*,*) "DiscreteSampler:: Norm of sampled dimension '"//
@@ -2071,7 +2137,7 @@
               write(*,*) "DiscreteSampler:: Convoluted dimension "//
      &       trim(toStr(i))//": '"//convoluted_grid_names(i)//
      &       "' with norm "//trim(toStr(conv_dim%abs_norm,'ENw.3'))//"."
-            one_norm_is_zero = ((.not.one_norm_is_zero).and.
+            one_norm_is_zero = (one_norm_is_zero.or.
      &                                       conv_dim%abs_norm.eq.0.0d0)
             enddo
           endif
@@ -2085,8 +2151,41 @@
      &        " to investigate further."
           endif
           write(*,*) "DiscreteSampler:: One norm is zero, no sampling"//
-     &     " can be done in these conditions."
+     &     " can be done in these conditions. Set 'tolerate_zero_norm"//
+     &     "' to .True. when initializating the module to proceed wi"//
+     &     "th a uniform distribution for the grids of zero norm."
           stop 1
+        endif
+
+!       Or make it pure random if DS_tolerate_zero_norm is True.
+        if (sampling_norm.eq.0d0) then
+            do i=1,size(mGrid%bins)
+               bin_indices_to_fill(i) = .True.
+               if(chosen_mode.eq.2.and.mGrid%abs_norm.eq.0.0d0.or.
+     &            chosen_mode.eq.1.and.mGrid%variance_norm.eq.0.0d0) then
+                 mGrid%bins(i)%weight     = 1.0d0
+               endif
+               if (present(convoluted_grid_names).and.
+     &             initialization_done.and.conv_dim%abs_norm.eq.0.0d0) then
+                 conv_dim = DS_get_dimension(run_grid,
+     &                                         convoluted_grid_names(i))
+                 if (conv_dim%abs_norm.eq.0.0d0) then
+                   convolution_factors(i) = 1.0d0
+                 endif
+               endif
+               sampling_norm = sampling_norm + 
+     &                       mGrid%bins(i)%weight*convolution_factors(i)
+            enddo
+!           If sampling_norm is again zero it means that the two grids
+!           are "orthogonal" so that we have no choice but to randomize 
+!           both.
+            if (sampling_norm.eq.0.0d0) then
+              do i=1,size(mGrid%bins)
+                mGrid%bins(i)%weight = 1.0d0
+                convolution_factors(i) = 1.0d0
+                sampling_norm = sampling_norm + 1.0d0
+              enddo
+            endif
         endif
 
 !
@@ -2327,6 +2426,10 @@
 !
 !         Begin code
 !
+!         Make sure the module is initialized
+          if (.not.allocated(DS_isInitialized)) then
+              call DS_initialize()
+          endif
           inquire(file=filename, exist=fileExist)
           if (.not.fileExist) then
             write(*,*) 'DiscreteSampler:: Error, the file '//filename//
@@ -2378,6 +2481,10 @@
 !
 !         Begin code
 !
+!         Make sure the module is initialized
+          if (.not.allocated(DS_isInitialized)) then
+              call DS_initialize()
+          endif
 !         Now start reading the file
           startedGrid   = .False.
           read_position = 0

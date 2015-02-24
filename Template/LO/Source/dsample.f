@@ -1971,7 +1971,11 @@ c
             if (tsigma .gt. 0d0 .and. cur_it .gt. itmin .and. accur .gt. 0d0) then
 
                xxmean = tmean/tsigma
-               xchi2 = (chi2/xxmean/xxmean-tsigma)/dble(cur_it-2)               
+               if (cur_it.ne.2)then
+                  xchi2 = (chi2/xxmean/xxmean-tsigma)/dble(cur_it-2)               
+               else
+                  xchi2 = 0d0
+               endif
                write(*,'(a,4f8.3)') ' Accuracy: ',sqrt(xchi2/tsigma),
      &              accur,1/sqrt(tsigma),xchi2
 c               write(*,*) 'We got it',1d0/sqrt(tsigma), accur

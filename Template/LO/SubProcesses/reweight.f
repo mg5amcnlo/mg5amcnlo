@@ -1197,8 +1197,10 @@ c     Store pdf information for systematics studies (initial)
          enddo
       endif
 
-      if(ickkw.le.0) goto 100
-
+      if(ickkw.le.0)then
+         asref=0 ! usefull for syscalc
+         goto 100
+      endif
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
       do i=1,nexternal
@@ -1512,6 +1514,7 @@ c           fs sudakov weight
 c     Set reweight factor for systematics studies
       if(use_syst)then
          s_rwfact = rewgt
+         
 c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
 c     factor in front of matrix element
          do i=1,2

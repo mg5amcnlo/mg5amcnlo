@@ -2045,6 +2045,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                        " ".join(['--' + opt + '=' + str(val) for (opt,val) \
                                  in opts])),
                       postcmd=False)
+        self.refine_mode = "old" # specify how to combine event
         self.exec_cmd('combine_events', postcmd=False)
         self.exec_cmd('store_events', postcmd=False)
         
@@ -2663,7 +2664,12 @@ zeor by MadLoop.""")
                 if os.path.exists(pjoin(Gdir, 'events.lhe')):
                     result = sum_html.OneResult('')
                     result.read_results(pjoin(Gdir, 'results.dat'))
-                    AllEvent.add(pjoin(Gdir, 'events.lhe'), mfactor * result.get('xsec'))
+                    AllEvent.add(pjoin(Gdir, 'events.lhe'), 
+                                 result.get('xsec'),
+                                 result.get('xerru'),
+                                 result.get('axsec')
+                                 )
+                    
             get_wgt = lambda event: event.wgt
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
@@ -3590,7 +3596,7 @@ zeor by MadLoop.""")
         
         if hasattr(self, "Pdirs"):
             if self.me_dir in self.Pdirs[0]:
-                return self.Pdir
+                return self.Pdirs
         self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
                      for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
         return self.Pdirs
@@ -3872,7 +3878,9 @@ zeor by MadLoop.""")
 
         if not event_path:
             if mode == 'parton':
-                event_path = pjoin(event_dir,'unweighted_events.lhe')
+                event_path = pjoin(event_dir,self.run_name, 'unweighted_events.lhe')
+                if not (os.path.exists(event_path) or os.path.exists(event_path+".gz")):
+                    event_path = pjoin(event_dir, 'unweighted_events.lhe')
                 output = pjoin(event_dir, 'syscalc.lhe')
             elif mode == 'Pythia':
                 if 'mgpythiacard' in self.banner:
@@ -3895,7 +3903,7 @@ zeor by MadLoop.""")
             
         if not os.path.exists(event_path):
             if os.path.exists(event_path+'.gz'):
-                misc.gzip(event_path)
+                misc.gunzip(event_path+'.gz')
             else:
                 raise SysCalcError, 'Events file %s does not exits' % event_path
         

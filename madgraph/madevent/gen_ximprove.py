@@ -72,6 +72,7 @@ class gen_ximprove_old(object):
 
     def __init__(self, cmd, opt=None):
         
+        raise Exception
         self.cmd = cmd
         self.run_card = cmd.run_card
         run_card = self.run_card
@@ -441,57 +442,6 @@ class gen_ximprove_old(object):
        
 
 
-# class gen_ximprove_loop_induced(gen_ximprove):
-#     """Since loop induce is much smaller splits much more the generation."""
-#     
-#     
-#     # some hardcoded value which impact the generation
-#     gen_events_security = 1.1 # multiply the number of requested event by this number for security
-#     combining_job = 0         # allow to run multiple channel in sequence
-#     max_request_event = 400   # split jobs if a channel if it needs more than that 
-#     max_event_in_iter = 500
-#     min_event_in_iter = 250
-#     max_splitting = 260       # maximum duplication of a given channel 
-#     min_iter = 2    
-#     max_iter = 6
-#     keep_grid_for_refine = True
-# 
-#     def increase_parralelization(self, nexternal):
-# 
-#         self.max_splitting = 1000   
-#              
-#         if self.run_card['refine_evt_by_job'] != -1:
-#             pass
-#         elif nexternal == 3:
-#             self.max_request_event = 200
-#         elif nexternal == 4:
-#             self.max_request_event = 100
-#         elif nexternal >= 5:
-#             self.max_request_event = 50
-#             self.min_event_in_iter = 125
-#             self.max_iter = 5
-
-
-# def get_ximprove(cmd, opt):
-#     """Factory Determine the appropriate class and returns it"""
-#     
-#     if cmd.proc_characteristics['loop_induced']:
-#         if cmd.proc_characteristics['nexternal'] <=2:
-#             return gen_ximprove_loop_induced(cmd, opt)
-#         else:
-#             out = gen_ximprove_loop_induced(cmd, opt)
-#             out.increase_parralelization(cmd.proc_characteristics['nexternal'])
-#             return out
-#     elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
-#         raise Exception, "Not implemented"
-#     else:
-#         out = gen_ximprove(cmd, opt)
-#         if cmd.opts['accuracy'] < cmd._survey_options['accuracy'][1]:
-#             out.increase_precision()
-# 
-#         return out
-    
-
 
 class gensym(object):
     """a class to call the fortran gensym executable and handle it's output
@@ -777,7 +727,7 @@ class gensym(object):
            
         if need_submit:
             self.resubmit_survey(Pdir,G, Gdirs, step)
-        else:
+        elif cross:
             # prepare information for refine
             newGpath = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
             if not os.path.exists(newGpath):
@@ -799,7 +749,13 @@ class gensym(object):
                                
             # create the appropriate results.dat
             self.write_results(grid_calculator, cross, error, Pdir, G, step)
-                
+        else:
+            # copy one log
+            files.cp(pjoin(Gdirs[0], 'log.txt'), 
+                         pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
+            # create the appropriate results.dat
+            self.write_results(grid_calculator, cross, error, Pdir, G, step)
+            
         return 0
 
     def combine_grid(self, Pdir, G, step):
@@ -833,13 +789,15 @@ class gensym(object):
                              self.sigma[(Pdir,G)])/(step-1))/self.sigma[(Pdir,G)])
             else:
                 error = sigma/cross
+        else:
+            error = 0
 
-        if True and __debug__:
+        if True and __debug__ :
             # make the unweighting to compute the number of events:
             maxwgt = grid_calculator.get_max_wgt(0.01)
             if maxwgt:
                 nunwgt = grid_calculator.get_nunwgt(maxwgt) 
-                luminosity = nunwgt/cross
+                luminosity = nunwgt/(cross+1e-99)
                 primary_event = sum([R.nw for R in grid_calculator.results])
                 written_event = sum([R.nunwgt for R in grid_calculator.results])
                 misc.sprint(G, cross, error*cross, nunwgt, written_event, primary_event, luminosity)
@@ -854,6 +812,7 @@ class gensym(object):
         if cross == 0:
             abscross,nw, luminosity = 0, 0, 0
             wgt, maxit,nunwgt, wgt, nevents = 0,0,0,0,0
+            maxwgt = 0
             error = 0
         else:
             grid_calculator.results.compute_values()
@@ -1003,7 +962,6 @@ class gen_ximprove(object):
             return super(gen_ximprove, cls).__new__(gen_ximprove_v4, cmd, opt)
             
             
-
     def __init__(self, cmd, opt=None):
         
         try:

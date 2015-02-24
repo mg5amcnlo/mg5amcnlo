@@ -4,6 +4,7 @@ import random
 import re
 import math
 import time
+import os
 
 
 if '__main__' == __name__:
@@ -181,8 +182,11 @@ class EventFile(object):
     def get_banner(self):
         """return a banner object"""
         import madgraph.various.banner as banner
+        if isinstance(self.banner, banner.Banner):
+            return self.banner
+        
         output = banner.Banner()
-        output.read_banner(self.banner.split('\n'))
+        output.read_banner(self.banner)
         return output
     
     def __len__(self):
@@ -243,14 +247,13 @@ class EventFile(object):
         #final selection of the interesting weight to keep
         all_wgt.sort()
         # drop the lowest weight
-        misc.sprint( nb_event, trunc_error)
         nb_keep = max(20, int(nb_event*trunc_error*10))
         all_wgt = all_wgt[-nb_keep:] 
         self.seek(0)
         return all_wgt, cross, nb_event
             
     
-    def unweight(self, outputpath, wgt, max_wgt=0, trunc_error=0, event_target=0, 
+    def unweight(self, outputpath, get_wgt, max_wgt=0, trunc_error=0, event_target=0, 
                  log_level=logging.DEBUG):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
@@ -259,16 +262,22 @@ class EventFile(object):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
-        
-        if isinstance(wgt, str):
-            unwgt_name =wgt 
+
+        if isinstance(get_wgt, str):
+            unwgt_name =get_wgt 
             def get_wgt(event):
                 event.parse_reweight()
                 return event.reweight_data[unwgt_name]
         else:
-            unwgt_name = wgt.func_name
-            get_wgt = wgt
+            unwgt_name = get_wgt.func_name
 
+        
+        # check which weight to write
+        if hasattr(self, "written_weight"):
+            written_weight = lambda x: math.copysign(self.written_weight,float(x))
+        else: 
+            written_weight = lambda x: x
+            
         all_wgt, cross, nb_event = self.initialize_unweighting(get_wgt, trunc_error)
 
         # function that need to be define on the flight
@@ -296,17 +305,27 @@ class EventFile(object):
 
         # need to modify the banner so load it to an object
         if self.banner:
-            banner = self.get_banner()
-            # 1. modify the cross-section
-            banner.modify_init_cross(cross)
-            strategy = banner.get_lha_strategy()
-            # 2. modify the lha strategy
-            if strategy >0:  
-                banner.set_lha_strategy(4)
+            try:
+                import madgraph
+            except:
+                import internal.banner as banner_module
             else:
-                banner.set_lha_strategy(-4)
-            # 3. add information about change in weight
-            banner["unweight"] = "unweighted by %s" % unwgt_name
+                import madgraph.various.banner as banner_module
+            if not isinstance(self.banner, banner_module.Banner):
+                banner = self.get_banner()
+                # 1. modify the cross-section
+                banner.modify_init_cross(cross)
+                strategy = banner.get_lha_strategy()
+                # 2. modify the lha strategy
+                if strategy >0:  
+                    banner.set_lha_strategy(4)
+                else:
+                    banner.set_lha_strategy(-4)
+                # 3. add information about change in weight
+                banner["unweight"] = "unweighted by %s" % unwgt_name
+            else:
+                banner = self.banner
+
         
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
@@ -327,7 +346,7 @@ class EventFile(object):
                     max_wgt = max(min_max_wgt, needed_max_wgt)
                     max_wgt = min(max_wgt, all_wgt[-1])
                     if max_wgt == last_max_wgt:
-                        if nb_keep < event_target:
+                        if nb_keep <= event_target:
                             logger.warning("fail to reach target")
                             break
                         else:
@@ -335,12 +354,12 @@ class EventFile(object):
                             break     
                 logger.log(log_level, "Max_wgt use is %s previous nb_keep was %s" %(max_wgt, nb_keep))
 
-            # Now that we know what max_wgt to use, we can write the files.
+            #create output file (here since we are sure that we have to rewrite it)
             outfile = EventFile(outputpath, "w")
             # need to write banner information
             # need to see what to do with rwgt information!
             if self.banner:
-                banner.write(outfile)
+                banner.write(outfile, close_tag=False)
 
             # scan the file
             nb_keep = 0
@@ -352,10 +371,11 @@ class EventFile(object):
                     continue
                 elif wgt > 0:
                     nb_keep += 1
-                    event.wgt = max(wgt, max_wgt)
+                    event.wgt = written_weight(max(wgt, max_wgt))
+                    
                     if abs(wgt) != max_wgt:
                         trunc_cross += event.wgt - max_wgt 
-                    if event_target ==0 or nb_keep < event_target: 
+                    if event_target ==0 or nb_keep <= event_target:                         
                         outfile.write(str(event))
 
                 elif wgt < 0:
@@ -363,10 +383,10 @@ class EventFile(object):
                     event.wgt = -1 * max(abs(wgt), max_wgt)
                     if abs(wgt) != max_wgt:
                         trunc_cross += event.wgt - max_wgt
-                    if event_target ==0 or nb_keep < event_target: 
+                    if event_target ==0 or nb_keep <= event_target: 
                         outfile.write(str(event))
             
-            if nb_keep >= event_target:
+            if nb_keep > event_target:
                 if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
                     outfile.close()
                     logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
@@ -421,23 +441,27 @@ class MultiEventFile(EventFile):
         self.total_event_in_files = 0
         self.curr_nb_events = []
         self.cross = []
+        self.error = []
+        self.across = []
         self.scales = []
         if start_list:
             for p in start_list:
                 self.add(p)
         self.configure = False
         
-    def add(self, path, cross=0):
+    def add(self, path, cross=0, error=0,across=0):
         """ add a file to the pool, cross allow to reweight the sum of weight 
         in the file to the given cross-section 
         """
         
         obj = EventFile(path)
-        if len(self.files) == 0:
+        if len(self.files) == 0 and not self.banner:
             self.banner = obj.banner
         self.curr_nb_events.append(0)
         self.initial_nb_events.append(0)
         self.cross.append(cross)
+        self.across.append(across)
+        self.error.append(error)
         self.scales.append(1)
         self.files.append(obj)
         self.configure = False
@@ -465,6 +489,63 @@ class MultiEventFile(EventFile):
                 return event
         else:
             raise Exception
+    
+
+    def define_init_banner(self, wgt):
+        """define the part of the init_banner"""
+        
+        if not self.banner:
+            return
+        
+        # compute the cross-section of each splitted channel
+        grouped_cross = {}
+        grouped_error = {}
+        for i,ff in enumerate(self.files):
+            filename = ff.name
+            Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')][-1]
+            group = Pdir.split("_")[0][1:]
+            if group in grouped_cross:
+                grouped_cross[group] += self.cross[i]
+                grouped_error[group] += self.error[i]**2 
+            else:
+                grouped_cross[group] = self.cross[i]
+                grouped_error[group] = self.error[i]**2                
+                
+        nb_group = len(grouped_cross)
+        
+        # compute the information for the first line 
+        try:
+            run_card = self.banner.run_card
+        except:
+            run_card = self.banner.charge_card("run_card")
+        
+        init_information = run_card.get_banner_init_information()
+        init_information["nprup"] = nb_group
+        
+        if run_card["lhe_version"] < 3:
+            init_information["generator_info"] = ""
+        else:
+            init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='2.2.1'>please cite 1405.0301 </generator>\n"
+        
+        # cross_information:
+        cross_info = "%(cross)e %(error)e %(wgt)e %(id)i\n"
+        init_information["cross_info"] =""
+        for id in grouped_cross:
+            conv = {"id": int(id), "cross": grouped_cross[id], "error": math.sqrt(grouped_error[id]),
+                    "wgt": wgt}
+            init_information["cross_info"] += cross_info % conv  
+            
+        
+        
+        template_init =\
+        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i %(nprup)i
+%(cross_info)s
+%(generator_info)s
+"""
+        
+        self.banner["init"] = template_init % init_information
+        
+            
     
     def initialize_unweighting(self, getwgt, trunc_error):
         """ scan once the file to return 
@@ -520,7 +601,6 @@ class MultiEventFile(EventFile):
         all_wgt = all_wgt[-nb_keep:]  
         self.seek(0)
         self.configure = True
-        misc.sprint(total_event)
         return all_wgt, sum_cross, total_event
     
     def configure(self):
@@ -544,7 +624,7 @@ class MultiEventFile(EventFile):
         for f in self.files:
             f.seek(pos)
             
-    def unweight(self, outputpath, wgt, **opts):
+    def unweight(self, outputpath, get_wgt, **opts):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
@@ -553,17 +633,22 @@ class MultiEventFile(EventFile):
         (stop to write event when target is reached)
         """
         
-        if isinstance(wgt, str):
-            unwgt_name =wgt 
-            def get_wgt(event):
+        if isinstance(get_wgt, str):
+            unwgt_name =get_wgt 
+            def get_wgt_multi(event):
                 event.parse_reweight()
                 return event.reweight_data[unwgt_name] * event.sample_scale
         else:
-            unwgt_name = wgt.func_name
-            get_wgt = lambda event: wgt(event) * event.sample_scale
+            unwgt_name = get_wgt.func_name
+            get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
         #define the weighting such that we have built-in the scaling
-           
-        return super(MultiEventFile, self).unweight(outputpath, get_wgt, **opts)
+        
+        if opts['event_target']:
+            new_wgt = sum(self.across)/opts['event_target']
+            self.define_init_banner(new_wgt)
+            self.written_weight = new_wgt
+          
+        return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
            
 class Event(list):
@@ -1095,7 +1180,8 @@ class FourMomentum(object):
         self.px = px
         self.py = py
         self.pz =pz
-        
+    
+    @property
     def mass(self):
         """return the mass"""    
         return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
@@ -1103,6 +1189,10 @@ class FourMomentum(object):
     def mass_sqr(self):
         """return the mass square"""    
         return self.E**2 - self.px**2 - self.py**2 - self.pz**2
+    
+    @property
+    def pt(self):
+        return math.sqrt(max(0, self.pt2()))
     
     def pt2(self):
         """ return the pt square """

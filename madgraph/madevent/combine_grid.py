@@ -171,6 +171,10 @@ class grid_information(object):
                                         conservative_factor=1.0, mode="survey"):
         """use the grid information to create the grid associate"""
 
+        if not self.nb_ps_point:
+            # PS return 0 so pointless to continue
+            return
+
         new_grid = self.get_new_grid()
         
         fsock = open(path, 'w')
@@ -192,6 +196,8 @@ class grid_information(object):
             fsock.write('%+.16f' % v)
         if  data:
             fsock.write('\n')
+
+        
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
                 
         #means that this the max number of iteration
