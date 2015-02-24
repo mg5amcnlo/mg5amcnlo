@@ -295,8 +295,6 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
             # information in the Helas loop diagrams.
             matrix_element.compute_all_analytic_information(
                                       self.exporter.get_aloha_model(self.model))
-            # and TIR specific entries
-            self.exporter.set_TIR_replace_dict_entries()
             
             # Finally the entries specific to the optimized output
             self.exporter.set_optimized_output_specific_replace_dict_entries(\
