@@ -2035,7 +2035,6 @@
           endif
         enddo
 
-
 !
 !       Treat specially contributions worth less than 5% of the
 !       contribution averaged over all bins. For those, we sample
@@ -2048,18 +2047,21 @@
 !       would still never be probed.
 !       
         average_contrib              = sampling_norm / size(mGrid%bins)
-        do i=1,size(mGrid%bins)
-          mBin = mGrid%bins(i)    
-          if ( (mBin%weight/average_contrib) .lt.
-     &                             runGrid%small_contrib_threshold) then
-            sampling_norm        = sampling_norm - mGrid%bins(i)%weight
-            mGrid%bins(i)%weight = 
-     &        ((mBin%weight/(runGrid%small_contrib_threshold
+!       Ignore this if the average contribution is zero
+        if (average_contrib.gt.0.0d0) then
+          do i=1,size(mGrid%bins)
+            mBin = mGrid%bins(i)    
+            if ( (mBin%weight/average_contrib) .lt.
+     &                               runGrid%small_contrib_threshold) then
+              sampling_norm       = sampling_norm - mGrid%bins(i)%weight
+              mGrid%bins(i)%weight = 
+     &          ((mBin%weight/(runGrid%small_contrib_threshold
      &        *average_contrib))**runGrid%damping_power)*
      &        runGrid%small_contrib_threshold*average_contrib
-            sampling_norm        = sampling_norm + mGrid%bins(i)%weight
-          endif
-        enddo
+              sampling_norm       = sampling_norm + mGrid%bins(i)%weight
+            endif
+          enddo
+        endif
 !
 !       Now appropriately set the convolution factors
 !
