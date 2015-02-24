@@ -589,10 +589,11 @@ c
          if (xwidth(-i) .gt. 0d0) then
             nbw=nbw+1
             if(forcebw(-i) .eq. 1) then
-               if (iarray(nbw) .ne. 1) then
-                  failConfig=.true.
-                  return
-               endif
+c               if (iarray(nbw) .ne. 1) then
+c                  write(*,*) "fail due to iarray", iarray(nbw)
+c                  failConfig=.true.
+c                  return
+c               endif
                if(xmass(-i).gt.prmass(-i,iconfig)+bwcutoff*xwidth(-i)) then
                   failConfig=.true.
                   return

@@ -23,8 +23,8 @@ class TestShowerCard(unittest.TestCase):
     """Check the class linked to a block of the param_card"""
 
     def setUp(self):
-        if not hasattr(self, 'text_noanalyse') or not hasattr(self, 'text_analyse'):
-            TestShowerCard.text_noanalyse = \
+        if not hasattr(self, 'card') or not hasattr(self, 'card_analyse'):
+            text = \
 """#***********************************************************************
 #                        MadGraph5_aMC@NLO                             *
 #                                                                      *
@@ -46,7 +46,7 @@ class TestShowerCard(unittest.TestCase):
 #***********************************************************************
 # Number of events, jobs, errors, and random seeds                     *
 #***********************************************************************
-nevents = -1     # N evts to shower (< 0 = all)
+nevents      = -1     # N evts to shower (< 0 = all)
 nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
 combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
 maxprint     = 2      # N evts to print in the log
@@ -76,12 +76,12 @@ mum_stable   = F      # set mu-'s stable
 #***********************************************************************
 # Mass of the b quark                                                  *
 #***********************************************************************
-b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
+b_mass       = -1     # b mass, (< 0 = default)
 #***********************************************************************
 # Special settings                                                     *
 #***********************************************************************
-is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
-is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
+is_4lep      = F    # T if 4-lepton production        !ONLY FOR PYTHIA6!
+is_bbar      = F    # T if bb~ production             !ONLY FOR HERWIG6!
 #***********************************************************************
 # Decay channels                                                       *
 # Write down the decay channels for the resonances, to be performed by *
@@ -127,6 +127,7 @@ is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
 #***********************************************************************
 EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
                                  # Default: "stdhep Fmcfio"
+                                 # PYTHIA > 8.200 may require library dl
 EXTRAPATHS   = ../lib            # Path to the extra-libraries
                                  # Default: "../lib"
 INCLUDEPATHS =                   # Path to header files needed by c++
@@ -136,8 +137,9 @@ ANALYSE      =                   # User's analysis and histogramming
                                  # and use spaces to separate files)
 
 """
+            TestShowerCard.card = shower_card.ShowerCard(text, testing = True) 
 
-            TestShowerCard.text_analyse = \
+            text_analyse = \
 """#***********************************************************************
 #                        MadGraph5_aMC@NLO                             *
 #                                                                      *
@@ -159,7 +161,7 @@ ANALYSE      =                   # User's analysis and histogramming
 #***********************************************************************
 # Number of events, jobs, errors, and random seeds                     *
 #***********************************************************************
-nevents = -1     # N evts to shower (< 0 = all)
+nevents      = -1     # N evts to shower (< 0 = all)
 nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
 combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
 maxprint     = 2      # N evts to print in the log
@@ -189,12 +191,12 @@ mum_stable   = F      # set mu-'s stable
 #***********************************************************************
 # Mass of the b quark                                                  *
 #***********************************************************************
-b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
+b_mass       = -1     # b mass, (< 0 = default)
 #***********************************************************************
 # Special settings                                                     *
 #***********************************************************************
-is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
-is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
+is_4lep      = F    # T if 4-lepton production        !ONLY FOR PYTHIA6!
+is_bbar      = F    # T if bb~ production             !ONLY FOR HERWIG6!
 #***********************************************************************
 # Decay channels                                                       *
 # Write down the decay channels for the resonances, to be performed by *
@@ -240,6 +242,7 @@ is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
 #***********************************************************************
 EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
                                  # Default: "stdhep Fmcfio"
+                                 # PYTHIA > 8.200 may require library dl
 EXTRAPATHS   = ../lib            # Path to the extra-libraries
                                  # Default: "../lib"
 INCLUDEPATHS =                   # Path to header files needed by c++
@@ -249,498 +252,7 @@ ANALYSE      =                   # User's analysis and histogramming
                                  # and use spaces to separate files)
 
 """
-
-
-    def test_shower_card_py8_set_int(self):
-        """test that the set_param function works for an integer"""
-        goal = \
-"""#***********************************************************************
-#                        MadGraph5_aMC@NLO                             *
-#                                                                      *
-#                      shower_card.dat aMC@NLO                         *
-#                                                                      *
-#  This file is used to set the parameters for the shower.             *
-#                                                                      *
-#  Some notation/conventions:                                          *
-#                                                                      *
-#   Lines starting with a hash (#) are info or comments                *
-#                                                                      *
-#   mind the format:   variable    = value     # comment               *
-#***********************************************************************
-#
-#****************
-# Shower settings
-#****************
-#
-#***********************************************************************
-# Number of events, jobs, errors, and random seeds                     *
-#***********************************************************************
-nevents = -1     # N evts to shower (< 0 = all)
-nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
-combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
-maxprint = 5 # N evts to print in the log
-maxerrs      = 0.1    # max fraction of errors
-rnd_seed     = 0      # 1st random seed (0 = default)
-rnd_seed2    = 0      # 2nd random seed (0 = default) !ONLY FOR HWERIG6!
-#***********************************************************************
-# PDFs and non-perturbative modelling                                  *
-#***********************************************************************
-pdfcode      = 0      # 0 = internal, 1 = same as NLO, other = lhaglue
-ue_enabled   = F      # underlying event
-hadronize    = T      # hadronisation on/off        !IGNORED BY HERWIG6!
-lambda_5     = -1     # Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!
-#***********************************************************************
-# Stable or unstable particles                                         *
-#***********************************************************************
-b_stable     = F      # set B hadrons stable
-pi_stable    = T      # set pi0's stable
-wp_stable    = F      # set w+'s stable
-wm_stable    = F      # set w-'s stable
-z_stable     = F      # set z0's stable
-h_stable     = F      # set Higgs' stable
-tap_stable   = F      # set tau+'s stable
-tam_stable   = F      # set tau-'s stable
-mup_stable   = F      # set mu+'s stable
-mum_stable   = F      # set mu-'s stable
-#***********************************************************************
-# Mass of the b quark                                                  *
-#***********************************************************************
-b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
-#***********************************************************************
-# Special settings                                                     *
-#***********************************************************************
-is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
-is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
-#***********************************************************************
-# Decay channels                                                       *
-# Write down the decay channels for the resonances, to be performed by *
-# the shower.                                                          *
-# The syntax (for a two-body decay) is                                 *
-# DM_I = M > D1 D2 @ BR @ ME                                           *
-# where I < 100, M is the decaying resonance, D1, D2 are the decay     *
-# products (up to D5 if such a decay is supported by the shower), BR   *
-# is the branching ratio (only used by the HERWIG6 shower, ignored     *
-# otherwise) and ME is the type of matrix element to be used in the    *
-# decay (only used by HERWIG6, ignored otherwise).                     *
-# BR's are correctly understood by HERWIG6 only if they add up to 1    *
-# and only if no more than three modes are required for a given        *
-# resonance.                                                           *
-# ME corresponds to the third entry of subroutine HWMODK, see the      *
-# relevant manual.                                                     *
-#                                                                      *
-# WARNING: in HERWIG6, the order of decay products in > 2-body decays  *
-# IS RELEVANT.                                                         *
-# WARNING: in PYTHIA6, turning hadronisation off disables top decays   *
-# WARNING: in PYTHIA6 and PYTHIA8, 1 -> n decays (with n > 2) are      *
-# handled through a sequence of 1 -> 2 decays.                         *
-#                                                                      *
-# Examples of syntax:                                                  *
-# Z -> e+ e- or mu+ mu- with BR = 0.5 each                             *
-# DM_1 = 23 > -11 11 @ 0.5d0 @ 100                                     *
-# DM_2 = 23 > -13 13 @ 0.5d0 @ 100                                     *
-# H -> tau+ tau- with BR = 1                                           *
-# DM_3 = 25 > -15 15 @ 1.0d0 @ 0                                       *
-# t -> nu_e e+ b with BR = 1 (HERWIG)                                  *
-# DM_4 = 6 > 12 -11 5 @ 1d0 @ 100                                      *
-# t -> nu_e e+ b with BR = 1 (PYTHIA)                                  *
-# DM_5 = 6 > 24 5 @ 1d0 @ 100                                          *
-# DM_6 = 24 > 12 -11 @ 1d0 @ 100                                       *
-#***********************************************************************
-
-#***********************************************************************
-# Extra Libraries/analyses                                             *
-# The following lines need to be changed if the user does not want to  *
-# create a StdHEP/HepMC file, but to directly run an own analysis (to  *
-# be placed in HWAnalyzer or analogous MCatNLO subfolders).            *
-# Please use files in those folders as examples.                       *
-#***********************************************************************
-EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
-                                 # Default: "stdhep Fmcfio"
-EXTRAPATHS   = ../lib            # Path to the extra-libraries
-                                 # Default: "../lib"
-INCLUDEPATHS =                   # Path to header files needed by c++
-                                 # Dir names separated by white spaces
-ANALYSE      =                   # User's analysis and histogramming
-                                 # routines (please use .o as extension
-                                 # and use spaces to separate files)
-
-
-"""
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        write_to='sometext'
-        text = card.set_param('maxprint', '5', write_to)
-        for a, b in zip(text.split('\n'), goal.split('\n')):
-            self.assertEqual(a,b)
-        self.assertEqual(text, goal)
-
-
-    def test_shower_card_py8_set_float(self):
-        """test that the set_param function works for a float"""
-        goal = \
-"""#***********************************************************************
-#                        MadGraph5_aMC@NLO                             *
-#                                                                      *
-#                      shower_card.dat aMC@NLO                         *
-#                                                                      *
-#  This file is used to set the parameters for the shower.             *
-#                                                                      *
-#  Some notation/conventions:                                          *
-#                                                                      *
-#   Lines starting with a hash (#) are info or comments                *
-#                                                                      *
-#   mind the format:   variable    = value     # comment               *
-#***********************************************************************
-#
-#****************
-# Shower settings
-#****************
-#
-#***********************************************************************
-# Number of events, jobs, errors, and random seeds                     *
-#***********************************************************************
-nevents = -1     # N evts to shower (< 0 = all)
-nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
-combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
-maxprint     = 2      # N evts to print in the log
-maxerrs = 0.5 # max fraction of errors
-rnd_seed     = 0      # 1st random seed (0 = default)
-rnd_seed2    = 0      # 2nd random seed (0 = default) !ONLY FOR HWERIG6!
-#***********************************************************************
-# PDFs and non-perturbative modelling                                  *
-#***********************************************************************
-pdfcode      = 0      # 0 = internal, 1 = same as NLO, other = lhaglue
-ue_enabled   = F      # underlying event
-hadronize    = T      # hadronisation on/off        !IGNORED BY HERWIG6!
-lambda_5     = -1     # Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!
-#***********************************************************************
-# Stable or unstable particles                                         *
-#***********************************************************************
-b_stable     = F      # set B hadrons stable
-pi_stable    = T      # set pi0's stable
-wp_stable    = F      # set w+'s stable
-wm_stable    = F      # set w-'s stable
-z_stable     = F      # set z0's stable
-h_stable     = F      # set Higgs' stable
-tap_stable   = F      # set tau+'s stable
-tam_stable   = F      # set tau-'s stable
-mup_stable   = F      # set mu+'s stable
-mum_stable   = F      # set mu-'s stable
-#***********************************************************************
-# Mass of the b quark                                                  *
-#***********************************************************************
-b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
-#***********************************************************************
-# Special settings                                                     *
-#***********************************************************************
-is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
-is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
-#***********************************************************************
-# Decay channels                                                       *
-# Write down the decay channels for the resonances, to be performed by *
-# the shower.                                                          *
-# The syntax (for a two-body decay) is                                 *
-# DM_I = M > D1 D2 @ BR @ ME                                           *
-# where I < 100, M is the decaying resonance, D1, D2 are the decay     *
-# products (up to D5 if such a decay is supported by the shower), BR   *
-# is the branching ratio (only used by the HERWIG6 shower, ignored     *
-# otherwise) and ME is the type of matrix element to be used in the    *
-# decay (only used by HERWIG6, ignored otherwise).                     *
-# BR's are correctly understood by HERWIG6 only if they add up to 1    *
-# and only if no more than three modes are required for a given        *
-# resonance.                                                           *
-# ME corresponds to the third entry of subroutine HWMODK, see the      *
-# relevant manual.                                                     *
-#                                                                      *
-# WARNING: in HERWIG6, the order of decay products in > 2-body decays  *
-# IS RELEVANT.                                                         *
-# WARNING: in PYTHIA6, turning hadronisation off disables top decays   *
-# WARNING: in PYTHIA6 and PYTHIA8, 1 -> n decays (with n > 2) are      *
-# handled through a sequence of 1 -> 2 decays.                         *
-#                                                                      *
-# Examples of syntax:                                                  *
-# Z -> e+ e- or mu+ mu- with BR = 0.5 each                             *
-# DM_1 = 23 > -11 11 @ 0.5d0 @ 100                                     *
-# DM_2 = 23 > -13 13 @ 0.5d0 @ 100                                     *
-# H -> tau+ tau- with BR = 1                                           *
-# DM_3 = 25 > -15 15 @ 1.0d0 @ 0                                       *
-# t -> nu_e e+ b with BR = 1 (HERWIG)                                  *
-# DM_4 = 6 > 12 -11 5 @ 1d0 @ 100                                      *
-# t -> nu_e e+ b with BR = 1 (PYTHIA)                                  *
-# DM_5 = 6 > 24 5 @ 1d0 @ 100                                          *
-# DM_6 = 24 > 12 -11 @ 1d0 @ 100                                       *
-#***********************************************************************
-
-#***********************************************************************
-# Extra Libraries/analyses                                             *
-# The following lines need to be changed if the user does not want to  *
-# create a StdHEP/HepMC file, but to directly run an own analysis (to  *
-# be placed in HWAnalyzer or analogous MCatNLO subfolders).            *
-# Please use files in those folders as examples.                       *
-#***********************************************************************
-EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
-                                 # Default: "stdhep Fmcfio"
-EXTRAPATHS   = ../lib            # Path to the extra-libraries
-                                 # Default: "../lib"
-INCLUDEPATHS =                   # Path to header files needed by c++
-                                 # Dir names separated by white spaces
-ANALYSE      =                   # User's analysis and histogramming
-                                 # routines (please use .o as extension
-                                 # and use spaces to separate files)
-
-
-"""
-        write_to='sometext'
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        text = card.set_param('maxerrs', '0.5', write_to)
-        for a, b in zip(text.split('\n'), goal.split('\n')):
-            self.assertEqual(a,b)
-        self.assertEqual(text, goal)
-
-
-    def test_shower_card_py8_set_str(self):
-        """test that the set_param function works for a string"""
-        goal = \
-"""#***********************************************************************
-#                        MadGraph5_aMC@NLO                             *
-#                                                                      *
-#                      shower_card.dat aMC@NLO                         *
-#                                                                      *
-#  This file is used to set the parameters for the shower.             *
-#                                                                      *
-#  Some notation/conventions:                                          *
-#                                                                      *
-#   Lines starting with a hash (#) are info or comments                *
-#                                                                      *
-#   mind the format:   variable    = value     # comment               *
-#***********************************************************************
-#
-#****************
-# Shower settings
-#****************
-#
-#***********************************************************************
-# Number of events, jobs, errors, and random seeds                     *
-#***********************************************************************
-nevents = -1     # N evts to shower (< 0 = all)
-nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
-combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
-maxprint     = 2      # N evts to print in the log
-maxerrs      = 0.1    # max fraction of errors
-rnd_seed     = 0      # 1st random seed (0 = default)
-rnd_seed2    = 0      # 2nd random seed (0 = default) !ONLY FOR HWERIG6!
-#***********************************************************************
-# PDFs and non-perturbative modelling                                  *
-#***********************************************************************
-pdfcode      = 0      # 0 = internal, 1 = same as NLO, other = lhaglue
-ue_enabled   = F      # underlying event
-hadronize    = T      # hadronisation on/off        !IGNORED BY HERWIG6!
-lambda_5     = -1     # Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!
-#***********************************************************************
-# Stable or unstable particles                                         *
-#***********************************************************************
-b_stable     = F      # set B hadrons stable
-pi_stable    = T      # set pi0's stable
-wp_stable    = F      # set w+'s stable
-wm_stable    = F      # set w-'s stable
-z_stable     = F      # set z0's stable
-h_stable     = F      # set Higgs' stable
-tap_stable   = F      # set tau+'s stable
-tam_stable   = F      # set tau-'s stable
-mup_stable   = F      # set mu+'s stable
-mum_stable   = F      # set mu-'s stable
-#***********************************************************************
-# Mass of the b quark                                                  *
-#***********************************************************************
-b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
-#***********************************************************************
-# Special settings                                                     *
-#***********************************************************************
-is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
-is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
-#***********************************************************************
-# Decay channels                                                       *
-# Write down the decay channels for the resonances, to be performed by *
-# the shower.                                                          *
-# The syntax (for a two-body decay) is                                 *
-# DM_I = M > D1 D2 @ BR @ ME                                           *
-# where I < 100, M is the decaying resonance, D1, D2 are the decay     *
-# products (up to D5 if such a decay is supported by the shower), BR   *
-# is the branching ratio (only used by the HERWIG6 shower, ignored     *
-# otherwise) and ME is the type of matrix element to be used in the    *
-# decay (only used by HERWIG6, ignored otherwise).                     *
-# BR's are correctly understood by HERWIG6 only if they add up to 1    *
-# and only if no more than three modes are required for a given        *
-# resonance.                                                           *
-# ME corresponds to the third entry of subroutine HWMODK, see the      *
-# relevant manual.                                                     *
-#                                                                      *
-# WARNING: in HERWIG6, the order of decay products in > 2-body decays  *
-# IS RELEVANT.                                                         *
-# WARNING: in PYTHIA6, turning hadronisation off disables top decays   *
-# WARNING: in PYTHIA6 and PYTHIA8, 1 -> n decays (with n > 2) are      *
-# handled through a sequence of 1 -> 2 decays.                         *
-#                                                                      *
-# Examples of syntax:                                                  *
-# Z -> e+ e- or mu+ mu- with BR = 0.5 each                             *
-# DM_1 = 23 > -11 11 @ 0.5d0 @ 100                                     *
-# DM_2 = 23 > -13 13 @ 0.5d0 @ 100                                     *
-# H -> tau+ tau- with BR = 1                                           *
-# DM_3 = 25 > -15 15 @ 1.0d0 @ 0                                       *
-# t -> nu_e e+ b with BR = 1 (HERWIG)                                  *
-# DM_4 = 6 > 12 -11 5 @ 1d0 @ 100                                      *
-# t -> nu_e e+ b with BR = 1 (PYTHIA)                                  *
-# DM_5 = 6 > 24 5 @ 1d0 @ 100                                          *
-# DM_6 = 24 > 12 -11 @ 1d0 @ 100                                       *
-#***********************************************************************
-
-#***********************************************************************
-# Extra Libraries/analyses                                             *
-# The following lines need to be changed if the user does not want to  *
-# create a StdHEP/HepMC file, but to directly run an own analysis (to  *
-# be placed in HWAnalyzer or analogous MCatNLO subfolders).            *
-# Please use files in those folders as examples.                       *
-#***********************************************************************
-EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
-                                 # Default: "stdhep Fmcfio"
-EXTRAPATHS   = ../lib            # Path to the extra-libraries
-                                 # Default: "../lib"
-INCLUDEPATHS =                   # Path to header files needed by c++
-                                 # Dir names separated by white spaces
-analyse = pippo.o # User's analysis and histogramming
-                                 # routines (please use .o as extension
-                                 # and use spaces to separate files)
-
-
-"""
-        write_to='sometext'
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        text = card.set_param('analyse', 'pippo.o', write_to)
-        for a, b in zip(text.split('\n'), goal.split('\n')):
-            self.assertEqual(a,b)
-        self.assertEqual(text, goal)
-
-
-    def test_shower_card_py8_set_bool(self):
-        """test that the set_param function works for a bool"""
-        goal = \
-"""#***********************************************************************
-#                        MadGraph5_aMC@NLO                             *
-#                                                                      *
-#                      shower_card.dat aMC@NLO                         *
-#                                                                      *
-#  This file is used to set the parameters for the shower.             *
-#                                                                      *
-#  Some notation/conventions:                                          *
-#                                                                      *
-#   Lines starting with a hash (#) are info or comments                *
-#                                                                      *
-#   mind the format:   variable    = value     # comment               *
-#***********************************************************************
-#
-#****************
-# Shower settings
-#****************
-#
-#***********************************************************************
-# Number of events, jobs, errors, and random seeds                     *
-#***********************************************************************
-nevents = -1     # N evts to shower (< 0 = all)
-nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
-combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
-maxprint     = 2      # N evts to print in the log
-maxerrs      = 0.1    # max fraction of errors
-rnd_seed     = 0      # 1st random seed (0 = default)
-rnd_seed2    = 0      # 2nd random seed (0 = default) !ONLY FOR HWERIG6!
-#***********************************************************************
-# PDFs and non-perturbative modelling                                  *
-#***********************************************************************
-pdfcode      = 0      # 0 = internal, 1 = same as NLO, other = lhaglue
-ue_enabled = T # underlying event
-hadronize    = T      # hadronisation on/off        !IGNORED BY HERWIG6!
-lambda_5     = -1     # Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!
-#***********************************************************************
-# Stable or unstable particles                                         *
-#***********************************************************************
-b_stable     = F      # set B hadrons stable
-pi_stable    = T      # set pi0's stable
-wp_stable    = F      # set w+'s stable
-wm_stable    = F      # set w-'s stable
-z_stable     = F      # set z0's stable
-h_stable     = F      # set Higgs' stable
-tap_stable   = F      # set tau+'s stable
-tam_stable   = F      # set tau-'s stable
-mup_stable   = F      # set mu+'s stable
-mum_stable   = F      # set mu-'s stable
-#***********************************************************************
-# Mass of the b quark                                                  *
-#***********************************************************************
-b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
-#***********************************************************************
-# Special settings                                                     *
-#***********************************************************************
-is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
-is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
-#***********************************************************************
-# Decay channels                                                       *
-# Write down the decay channels for the resonances, to be performed by *
-# the shower.                                                          *
-# The syntax (for a two-body decay) is                                 *
-# DM_I = M > D1 D2 @ BR @ ME                                           *
-# where I < 100, M is the decaying resonance, D1, D2 are the decay     *
-# products (up to D5 if such a decay is supported by the shower), BR   *
-# is the branching ratio (only used by the HERWIG6 shower, ignored     *
-# otherwise) and ME is the type of matrix element to be used in the    *
-# decay (only used by HERWIG6, ignored otherwise).                     *
-# BR's are correctly understood by HERWIG6 only if they add up to 1    *
-# and only if no more than three modes are required for a given        *
-# resonance.                                                           *
-# ME corresponds to the third entry of subroutine HWMODK, see the      *
-# relevant manual.                                                     *
-#                                                                      *
-# WARNING: in HERWIG6, the order of decay products in > 2-body decays  *
-# IS RELEVANT.                                                         *
-# WARNING: in PYTHIA6, turning hadronisation off disables top decays   *
-# WARNING: in PYTHIA6 and PYTHIA8, 1 -> n decays (with n > 2) are      *
-# handled through a sequence of 1 -> 2 decays.                         *
-#                                                                      *
-# Examples of syntax:                                                  *
-# Z -> e+ e- or mu+ mu- with BR = 0.5 each                             *
-# DM_1 = 23 > -11 11 @ 0.5d0 @ 100                                     *
-# DM_2 = 23 > -13 13 @ 0.5d0 @ 100                                     *
-# H -> tau+ tau- with BR = 1                                           *
-# DM_3 = 25 > -15 15 @ 1.0d0 @ 0                                       *
-# t -> nu_e e+ b with BR = 1 (HERWIG)                                  *
-# DM_4 = 6 > 12 -11 5 @ 1d0 @ 100                                      *
-# t -> nu_e e+ b with BR = 1 (PYTHIA)                                  *
-# DM_5 = 6 > 24 5 @ 1d0 @ 100                                          *
-# DM_6 = 24 > 12 -11 @ 1d0 @ 100                                       *
-#***********************************************************************
-
-#***********************************************************************
-# Extra Libraries/analyses                                             *
-# The following lines need to be changed if the user does not want to  *
-# create a StdHEP/HepMC file, but to directly run an own analysis (to  *
-# be placed in HWAnalyzer or analogous MCatNLO subfolders).            *
-# Please use files in those folders as examples.                       *
-#***********************************************************************
-EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
-                                 # Default: "stdhep Fmcfio"
-EXTRAPATHS   = ../lib            # Path to the extra-libraries
-                                 # Default: "../lib"
-INCLUDEPATHS =                   # Path to header files needed by c++
-                                 # Dir names separated by white spaces
-ANALYSE      =                   # User's analysis and histogramming
-                                 # routines (please use .o as extension
-                                 # and use spaces to separate files)
-
-
-"""
-        write_to='sometext'
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        text = card.set_param('ue_enabled', 'True', write_to)
-        for a, b in zip(text.split('\n'), goal.split('\n')):
-            self.assertEqual(a,b)
-        self.assertEqual(text, goal)
+            TestShowerCard.card_analyse = shower_card.ShowerCard(text_analyse, testing = True) 
 
 
     def test_shower_card_py8(self):
@@ -770,12 +282,10 @@ EXTRAPATHS="../lib"
 INCLUDEPATHS=
 PY8UTI=""
 """
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        text = card.write_card('PYTHIA8', '')
+        text = self.card.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
-
 
     def test_shower_card_py8_analyse(self):
         """test that the py8 card is correctly written"""
@@ -804,8 +314,7 @@ EXTRAPATHS="../lib"
 INCLUDEPATHS=
 PY8UTI=""
 """
-        card = shower_card.ShowerCard(self.text_analyse, testing = True) 
-        text = card.write_card('PYTHIA8', '')
+        text = self.card_analyse.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
@@ -837,8 +346,7 @@ EXTRAPATHS="../lib"
 INCLUDEPATHS=
 HWPPUTI=""
 """
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        text = card.write_card('HERWIGPP', '')
+        text = self.card.write_card('HERWIGPP', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
@@ -871,8 +379,7 @@ EXTRAPATHS="../lib"
 INCLUDEPATHS=
 HWPPUTI=""
 """
-        card = shower_card.ShowerCard(self.text_analyse, testing = True) 
-        text = card.write_card('HERWIGPP', '')
+        text = self.card_analyse.write_card('HERWIGPP', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
@@ -906,8 +413,7 @@ EXTRAPATHS="../lib"
 INCLUDEPATHS=
 HWUTI="mcatnlo_hwan_stdhep.o"
 """
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        text = card.write_card('HERWIG6', '')
+        text = self.card.write_card('HERWIG6', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
@@ -941,8 +447,7 @@ EXTRAPATHS="../lib"
 INCLUDEPATHS=
 HWUTI="mcatnlo_hwan_stdhep.o"
 """
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        text = card.write_card('HERWIG6', '')
+        text = self.card_analyse.write_card('HERWIG6', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
@@ -976,8 +481,7 @@ EXTRAPATHS="../lib"
 INCLUDEPATHS=
 PYUTI="mcatnlo_pyan_stdhep.o"
 """
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        text = card.write_card('PYTHIA6Q', '')
+        text = self.card.write_card('PYTHIA6Q', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
@@ -1011,8 +515,7 @@ EXTRAPATHS="../lib"
 INCLUDEPATHS=
 PYUTI="mcatnlo_pyan_stdhep.o"
 """
-        card = shower_card.ShowerCard(self.text_noanalyse, testing = True) 
-        text = card.write_card('PYTHIA6Q', '')
+        text = self.card_analyse.write_card('PYTHIA6Q', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
