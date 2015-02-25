@@ -31,16 +31,15 @@ import sys
 logger = logging.getLogger("madgraph.various.histograms")
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.insert(0, os.path.join(root_path,os.pardir)) 
 
 try:
     # import from madgraph directory
-    sys.path.insert(0, os.path.join(root_path,os.pardir,os.pardir))
     import madgraph.various.misc as misc
     from madgraph import MadGraph5Error
 
 except ImportError, error:
     logger.debug(error)
-    sys.path.insert(0, os.path.join(root_path,os.pardir)) 
     # import from madevent directory
     import internal.misc as misc    
     from internal import MadGraph5Error
@@ -977,6 +976,13 @@ class HwU(Histogram):
                                                     for bin in histo.bins if \
              (sum(abs(bin.wgts[label]) for label in weight_labels) > 0.0)]  ,[])
 
+        if len(all_boundaries)==0:
+            all_boundaries = sum([ list(bin.boundaries) for histo in histo_list \
+                                                      for bin in histo.bins],[])
+            if len(all_boundaries)==0:
+                raise MadGraph5Error, "The histograms with title '%s'"\
+                                  %histo_list[0].title+" seems to have no bins."
+                
         x_min = min(all_boundaries)
         x_max = max(all_boundaries)
         
@@ -1016,10 +1022,16 @@ class HwU(Histogram):
                            for histo in histo_list for bin in histo.bins],  [])
 
         all_weights.sort()
-        partial_max = all_weights[int(len(all_weights)*0.95)]
-        partial_min = all_weights[int(len(all_weights)*0.05)]
-        max         = all_weights[-1]
-        min         = all_weights[0]
+        if len(all_weights)!=0:
+            partial_max = all_weights[int(len(all_weights)*0.95)]
+            partial_min = all_weights[int(len(all_weights)*0.05)]
+            max         = all_weights[-1]
+            min         = all_weights[0]
+        else:
+            if scale!='LOG':
+                return (0.0,1.0)
+            else:
+                return (1.0,10.0)
         
         y_max = 0.0
         y_min = 0.0
@@ -1487,7 +1499,7 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
                     if wgtsB['central']==0.0 and wgt==0.0:
                         new_wgts[label] = 0.0
                         continue
-                    elif wgtsB[label]==0.0:
+                    elif wgtsB['central']==0.0:
 #                       It is ok to skip the warning here.
 #                        logger.debug('Warning:: A bin with finite weight '+
 #                                       'was divided by a bin with zero weight.')
