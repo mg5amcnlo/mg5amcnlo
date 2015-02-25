@@ -1800,7 +1800,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.results.add_run( new_run, self.run_card)
             self.results.add_detail('nb_event', nb_event)
             self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
-            self.results.add_detail('error', error * madspin_cmd.branching_ratio)
+            self.results.add_detail('error', error * madspin_cmd.branching_ratio + cross * madspin_cmd.err_branching_ratio)
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run

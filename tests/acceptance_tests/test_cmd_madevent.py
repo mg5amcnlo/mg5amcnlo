@@ -527,7 +527,7 @@ class TestMEfromfile(unittest.TestCase):
         
         #a=rwa_input('freeze')
         self.check_parton_output(cross=150770.0, error=7.4e+02,target_event=1000)
-        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=6.3e+02,target_event=1000)
+        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,target_event=1000)
         #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
         self.check_pythia_output(run_name='run_01_decayed_1')
@@ -600,9 +600,12 @@ class TestMEfromfile(unittest.TestCase):
         self.assertTrue('lhe' in data[0].parton)
         
         if cross:
-            self.assertTrue(abs(cross - float(data[0]['cross']))/error < 3,
-                            'cross is %s and not %s. NB_SIGMA %s' % (float(data[0]['cross']), cross, float(data[0]['cross'])/error)
+            import math
+            new_error = math.sqrt(error**2 + float(data[0]['error'])**2)
+            self.assertTrue(abs(cross - float(data[0]['cross']))/new_error < 3,
+                            'cross is %s and not %s. NB_SIGMA %s' % (float(data[0]['cross']), cross, float(data[0]['cross'])/new_error)
                             )
+            self.assertTrue(float(data[0]['error']) < 3 * error)
                             
     def check_pythia_output(self, run_name='run_01'):
         """ """
