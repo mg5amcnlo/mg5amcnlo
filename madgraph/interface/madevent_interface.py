@@ -2585,7 +2585,11 @@ zeor by MadLoop.""")
         Pdir, Gdir, mode, step = self.split_arg(line)
         if Gdir.startswith("G"):
             Gdir = Gdir[1:]
+        if "SubProcesses" not in Pdir:
+            Pdir = pjoin(self.me_dir, "SubProcesses", Pdir)
         if mode == "S":
+            self.opts = dict([(key,value[1]) for (key,value) in \
+                          self._survey_options.items()])
             gensym = gen_ximprove.gensym(self)
             gensym.combine_iteration(Pdir, Gdir, int(step))
         elif mode == "R":
