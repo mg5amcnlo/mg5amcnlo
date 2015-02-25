@@ -2572,7 +2572,29 @@ zeor by MadLoop.""")
 
         self.update_status('finish refine', 'parton', makehtml=False)
         devnull.close()
+    
+    ############################################################################ 
+    def do_combine_iteration(self, line):
+        """Not in help: Combine a given iteration combine_iteration Pdir Gdir S|R step
+            S is for survey 
+            R is for refine
+            step is the iteration number (not very critical)""" 
+
+        self.set_run_name("tmp")
+        self.configure_directory(html_opening=False)
+        Pdir, Gdir, mode, step = self.split_arg(line)
+        if Gdir.startswith("G"):
+            Gdir = Gdir[1:]
+        if mode == "S":
+            gensym = gen_ximprove.gensym(self)
+            gensym.combine_iteration(Pdir, Gdir, int(step))
+        elif mode == "R":
+            refine = gen_ximprove.gen_ximprove_share(self)
+            refine.combine_iteration(Pdir, Gdir, int(step))             
         
+            
+
+      
     ############################################################################ 
     def do_combine_events(self, line):
         """Advanced commands: Launch combine events"""

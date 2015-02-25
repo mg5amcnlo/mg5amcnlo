@@ -87,7 +87,7 @@ class gensym(object):
         if self.cmd.proc_characteristics['loop_induced']:
             nexternal = self.cmd.proc_characteristics['nexternal']
             self.splitted_grid = max(2, (nexternal-2)**2)
-            if self.cmd.opts['accuracy'] == 0.1:
+            if hasattr(self.cmd, "opts") and self.cmd.opts['accuracy'] == 0.1:
                 self.cmd.opts['accuracy'] = 0.02
         
         if isinstance(cmd.cluster, cluster.MultiCore) and self.splitted_grid > 1:
@@ -1276,6 +1276,9 @@ class gen_ximprove_share(gen_ximprove, gensym):
                        'results.dat'),'w') 
         fsock.writelines(line)
         fsock.close()
-     
+
+    
+    
+    
     
         
