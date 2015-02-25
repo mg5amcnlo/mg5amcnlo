@@ -207,7 +207,6 @@ class grid_information(object):
         force_max_wgt = self.get_max_wgt(trunc_max)
 
         fsock.write('%s %s \n' %(twgt, force_max_wgt))
-        misc.sprint(os.path.basename(os.path.dirname(path)), force_max_wgt)
         
         if not self.mc_hel:
             fsock.write(self.helicity_line)

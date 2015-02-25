@@ -3170,12 +3170,19 @@ zeor by MadLoop.""")
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):
-                misc.gunzip('%s.gz' % filename)
+                misc.gunzip('%s.gz' % filename, keep=True)
             if  os.path.exists(filename):
-                shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
+                files.ln(filename, pjoin(self.me_dir, 'Events'))
                 self.create_plot('parton')
-                misc.gzip(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'),
+                if not os.path.exists(filename+'.gz'):
+                    misc.gzip(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'),
                           stdout= "%s.gz" % filename)
+                else:
+                    try:
+                        os.remove(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
+                        os.remove(filename)
+                    except Exception:
+                        pass
             else:
                 logger.info('No valid files for partonic plot') 
                 
