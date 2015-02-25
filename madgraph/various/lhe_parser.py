@@ -528,17 +528,18 @@ class MultiEventFile(EventFile):
             init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='2.2.1'>please cite 1405.0301 </generator>\n"
         
         # cross_information:
-        cross_info = "%(cross)e %(error)e %(wgt)e %(id)i\n"
-        init_information["cross_info"] =""
+        cross_info = "%(cross)e %(error)e %(wgt)e %(id)i"
+        init_information["cross_info"] = []
         for id in grouped_cross:
             conv = {"id": int(id), "cross": grouped_cross[id], "error": math.sqrt(grouped_error[id]),
                     "wgt": wgt}
-            init_information["cross_info"] += cross_info % conv  
+            init_information["cross_info"].append( cross_info % conv)
+        init_information["cross_info"] = '\n'.join(init_information["cross_info"])
             
         
         
         template_init =\
-        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i %(nprup)i
+        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i -3 %(nprup)i
 %(cross_info)s
 %(generator_info)s
 """
