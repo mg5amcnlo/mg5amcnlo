@@ -320,7 +320,7 @@ c        BJET
             endif
 c        PHOTON
             if(is_a_a(i))then
-                 etmin(i) = max(pta, ptgmin, eamax)
+                 etmin(i) = max(pta, ptgmin, ea)
                  SMIN = SMIN + etmin(i)
                  etmax(i)=ptamax
                  emin(i)=ea

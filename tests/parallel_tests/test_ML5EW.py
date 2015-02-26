@@ -275,7 +275,7 @@ class ML5EWTest(unittest.TestCase):
     # First tests consisting in a list of quick 2>2 processes to be run together
     #===========================================================================
 
-    def test_short_ML5EW_sm_vs_stored_ML5EW(self):
+    def test__ML5EW_sm_vs_stored_ML5EW(self):
         if ML5EW_processes_short:
             compare_processes(self,ML5EW_processes_short,model = self.test_model_name,
                                    pickle_file = 'ml5ew_short_parallel_tests.pkl',
@@ -286,7 +286,7 @@ class ML5EWTest(unittest.TestCase):
     # First tests consisting in a list of quick 2>2 processes to be run together
     #===========================================================================
 
-    def test_short_ML5EW_sm_vs_stored_ML5EW_sqso(self):
+    def test_ML5EW_sm_vs_stored_ML5EW_sqso(self):
         if ML5EW_processes_short_sqso:
             compare_processes(self,ML5EW_processes_short_sqso,
                     model = self.test_model_name,
