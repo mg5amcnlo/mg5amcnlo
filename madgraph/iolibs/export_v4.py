@@ -1954,16 +1954,19 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             matrix_template = 'matrix_standalone_msP_v4.inc'
         elif self.opt['export_format']=='standalone_msF':
             matrix_template = 'matrix_standalone_msF_v4.inc'
+	elif self.opt['export_format']=='matchbox':
+            replace_dict["proc_prefix"] = 'MG5_%i_' % matrix_element.get('processes')[0].get('id')
+            replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
+
         if len(split_orders)>0:
             if self.opt['export_format'] in ['standalone_msP', 'standalone_msF']:
                 logger.debug("Warning: The export format %s is not "+\
                   " available for individual ME evaluation of given coupl. orders."+\
                   " Only the total ME will be computed.", self.opt['export_format'])
-            else:
-	      if self.opt['export_format'] in ['madloop_matchbox']:
+            elif  self.opt['export_format'] in ['madloop_matchbox']:
 		replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
 		matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
-	      else:
+	    else:
                 matrix_template = "matrix_standalone_splitOrders_v4.inc"
 
         if write:
@@ -2009,7 +2012,7 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
     code in the case of Born only routine"""
 
     default_opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madevent', 'mp': False,
+                        'export_format':'matchbox', 'mp': False,
                         'sa_symmetry': True}
 
     #specific template of the born
@@ -2017,26 +2020,6 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
 
     matrix_template = "matrix_standalone_matchbox.inc"
     
-    def write_matrix_element_v4(self, writer, matrix_element, fortran_model, write=True,proc_prefix=''):
-        
-        """Create the born_matrix.f file for the born process as for a standard
-        tree-level computation."""
-        replace_dict = super(ProcessExporterFortranMatchBox, self).write_matrix_element_v4(
-                              writer, matrix_element, fortran_model, write=False)
-        # need to add the matchbox dedicated output:
-        replace_dict["proc_prefix"] = 'MG5_%i_' % matrix_element.get('processes')[0].get('id')
-        replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
-        
-        if write:
-            path = pjoin(_file_path, 'iolibs', 'template_files', self.matrix_template)
-            content = open(path).read()
-            content = content % replace_dict
-            # Write the file
-            writer.writelines(content)
-            return replace_dict['return_value']
-        else:
-            return replace_dict # for subclass update   
-
     @staticmethod    
     def get_color_string_lines(matrix_element):
         """Return the color matrix definition lines for this matrix element. Split
