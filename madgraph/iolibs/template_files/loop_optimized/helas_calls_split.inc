@@ -3,14 +3,19 @@ C
       IMPLICIT NONE
 C  
 C CONSTANTS
-C  
-	  %(nbornamps_decl)s
+C    
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
+## if (not LoopInduced) {
+	  INTEGER NBORNAMPS
+      PARAMETER (NBORNAMPS=%(nbornamps)d)
+## }
 	  INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d)
+	  INTEGER    NLOOPAMPS
+	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
 	  INTEGER MAXLWFSIZE
@@ -64,7 +69,10 @@ C
 	  integer I_LIB
 	  common/%(proc_prefix)sI_LIB/I_LIB
 
-      %(dp_born_amps_decl)s
+## if(not LoopInduced) {
+	  %(complex_dp_format)s AMP(NBORNAMPS)
+	  common/%(proc_prefix)sAMPS/AMP
+## }
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/W
 
@@ -72,15 +80,13 @@ C
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/WL,PL
 
-	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
-	  common/%(proc_prefix)sLCOEFS/LOOPCOEFS
-
+## if(not AmplitudeReduction){
       %(complex_dp_format)s AMPL(3,NCTAMPS)
+## } else {
+      %(complex_dp_format)s AMPL(3,NLOOPAMPS)
+## } 
 	  common/%(proc_prefix)sAMPL/AMPL
 
-      %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
-	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
-	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
 C
 C ----------
 C BEGIN CODE

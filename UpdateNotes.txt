@@ -1,6 +1,14 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.3.0(XX/XX/15) RF: Fixed a bug in the aMCfast/APPLGrid interface introduced in version 2.2.3
+2.3.0(XX/XX/XX) OM+VH: Adding the possibility to compute cross-section for loop-induced process
+                OM: New MultiCore class with better thread support
+                OM+VH: Change the handling of the run_card.
+                      - The default value depends now of your running process
+                      - cut_decays is now on False by default
+                      - nhel can only take 0/1 value. 1 is a real MC over helicity (with importance sampling)
+                      - use_syst is set on by default (but for matching)                      
+                OM: Cuts are also applied for 1>N processes (but the default run_card doesn't have any cut).     
+                RF: Fixed a bug in the aMCfast/APPLGrid interface introduced in version 2.2.3
 		RF: Fixed a bug in the setting of the integration grids (LO process generation) for the minimum
 		    energy needed for photons. The bug did not lead to any bias in event generation.
 

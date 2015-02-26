@@ -72,6 +72,8 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
     """Test class for the loop exporter modules. It uses hardcoded output 
     for the comparisons."""
 
+    loop_exporters = {}
+
     # A helper function to add more easily IOTests for several exporters.
     def addIOTestsForProcess(self,testName,testFolder,particles_ids,exporters,orders,
                              files_to_check=IOTests.IOTest.all_files,
@@ -88,12 +90,14 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
             fortran_model = self.fortran_models['fortran_model']
         
         needed = False
-        if not isinstance(exporters,dict):
+
+        if not isinstance(exporters,list):
             if self.need(testFolder,testName):
-                needed = True
+                needed = True    
         elif any(self.need('%s_%s'%(testFolder,exporter) ,testName) for \
-                                                  exporter in exporters.keys()):
+                                                         exporter in exporters):
             needed = True
+            
         if not needed:
             return
         
@@ -107,22 +111,57 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                         'perturbation_couplings': perturbation_couplings,
                         'NLO_mode': NLO_mode})
         
-        # Exporter directly given
-        if not isinstance(exporters,dict):
+        if isinstance(exporters, dict):
+            # Several exporters given in a dictionary
+            test_list = [('%s_%s'%(testFolder,exp),exp) for exp in exporters]            
+        elif not isinstance(exporters,list) :
+            # Exporter directly given
             test_list = [(testFolder,exporters)]
-        # Several exporters given in a dictionary
         else:
-            test_list = [('%s_%s'%(testFolder,exp),exporters[exp]) for exp in \
-                                                               exporters.keys()]
-               
+            test_list = [('%s_%s'%(testFolder,exp),exp) for exp in exporters] 
+
         for (folderName, exporter) in test_list:
             if self.need(folderName,testName):
                 self.addIOTest(folderName,testName, IOTests.IOTest(\
+                  test_instance = self,
                   procdef=myproc,
                   exporter=exporter,
                   helasModel=fortran_model,
                   testedFiles=files_to_check,
                   outputPath=_proc_file_path))
+    
+    def get_exporter_withName(self, exporter_name):
+        """ Returns on demand the exporter of given nickname """
+
+
+        if exporter_name == 'default':
+            self.loop_exporters[exporter_name] = loop_exporters.\
+                              LoopProcessExporterFortranSA(
+                              _mgme_file_path, _proc_file_path,
+                              {'clean':False, 'complex_mass':False, 
+                               'export_format':'madloop','mp':True,
+                               'loop_dir':_loop_file_path,
+                               'cuttools_dir':_cuttools_file_path,
+                               'fortran_compiler':'gfortran',
+                               'output_dependencies':'external',
+                               'SubProc_prefix': 'P',
+                               'compute_color_flows': False})
+        elif exporter_name == 'optimized':
+            self.loop_exporters[exporter_name] = loop_exporters.\
+                              LoopProcessOptimizedExporterFortranSA(\
+                              _mgme_file_path, _proc_file_path,
+                              {'clean':False, 'complex_mass':False, 
+                               'export_format':'madloop','mp':True,
+                               'loop_dir':_loop_file_path,
+                               'cuttools_dir':_cuttools_file_path,
+                               'fortran_compiler':'gfortran',
+                               'output_dependencies':'external',
+                               'SubProc_prefix': 'P',
+                               'compute_color_flows': False})
+        else:
+            raise MadGraph5Error, 'Exporter with nickname '+\
+                                          '%s not implemented'%exporter_name
+        return self.loop_exporters[exporter_name]
 
     def load_IOTestsUnit(self):
         """load the models and exporters if necessary."""
@@ -138,39 +177,19 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                 'fortran_model' : helas_call_writers.FortranUFOHelasCallWriter(\
                                                          self.models['loop_sm']) 
                                   }
-            
-            self.loop_exporters = {
-                'default' : loop_exporters.LoopProcessExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external'}),
-                'optimized' : loop_exporters.\
-                                  LoopProcessOptimizedExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external'})
-                                  }
-            
+
             # g g > t t~
             self.addIOTestsForProcess( testName = 'gg_ttx',
                                        testFolder = 'short_ML_SMQCD',
                                        particles_ids = [21,21,6,-6],
-                                       exporters = self.loop_exporters,
+                                       exporters = ['default','optimized'],
                                        orders = {'QCD':2,'QED':0} )
 
             # d d > t t~ (only the proc files for this one)
             self.addIOTestsForProcess( testName = 'ddx_ttx',
                                        testFolder = 'short_ML_SMQCD',
                                        particles_ids = [1,-1,6,-6],
-                                       exporters = self.loop_exporters,
+                                       exporters = ['default','optimized'],
                                        orders = {'QCD':2,'QED':0},
                                        files_to_check=IOTests.IOTest.proc_files)
 
@@ -179,7 +198,7 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
             self.addIOTestsForProcess( testName = 'gg_hh',
                                        testFolder = 'short_ML_SMQCD_LoopInduced',
                                        particles_ids = [21,21,25,25],
-                                       exporters = self.loop_exporters['default'],
+                                       exporters = 'default',
                                        orders = {'QCD': 2, 'QED': 2} )
 
     def testIO_ProcOutputIOTests(self, load_only=False):
@@ -214,7 +233,9 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
                                    'fortran_compiler':'gfortran',
-                                   'output_dependencies':'external'})
+                                   'output_dependencies':'external',
+                                   'SubProc_prefix': '',
+                                   'compute_color_flows': False})
 
     @IOTests.createIOTest(groupName='LoopSquaredOrder_IOTest')
     def testIO_Loop_sqso_uux_ddx(self):
@@ -274,8 +295,6 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
             # information in the Helas loop diagrams.
             matrix_element.compute_all_analytic_information(
                                       self.exporter.get_aloha_model(self.model))
-            # and TIR specific entries
-            self.exporter.set_TIR_replace_dict_entries()
             
             # Finally the entries specific to the optimized output
             self.exporter.set_optimized_output_specific_replace_dict_entries(\

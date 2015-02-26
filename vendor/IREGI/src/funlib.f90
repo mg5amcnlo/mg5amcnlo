@@ -6,14 +6,32 @@ CONTAINS
     IMPLICIT NONE
     INTEGER::fac
     INTEGER,INTENT(IN)::i
+    INTEGER::init=0,j
+    LOGICAL,DIMENSION(12)::lfacsave
+    INTEGER,DIMENSION(12)::facsave
+    SAVE facsave,init,lfacsave
+    IF(init.EQ.0)THEN
+       lfacsave(1:12)=.FALSE.
+       init=1
+    ENDIF
     IF(i.LT.0)THEN
        WRITE(*,*)"ERROR: i<0 in factorial with i=",i
+       STOP
+    ENDIF
+    IF(i.GT.12)THEN
+       WRITE(*,*)"ERROR: i > 12, please take long type (KIND=LINT) integer"
        STOP
     ENDIF
     IF(i.EQ.0)THEN
        fac=1
     ELSE
-       fac=i*factorial(i-1)
+       IF(lfacsave(i))THEN
+          fac=facsave(i)
+       ELSE
+          fac=i*factorial(i-1)
+          facsave(i)=fac
+          lfacsave(i)=.TRUE.
+       ENDIF
     ENDIF
   END FUNCTION factorial
 
@@ -51,7 +69,7 @@ CONTAINS
     ENDIF
     k0=0
     DO j=0,i
-       k=factorial(i-j+n-2)/factorial(n-2)/factorial(i-j)
+       k=xiarray_arg1(i-j,n-1)
        sol(k0+1:k0+k,1)=j
        CALL calc_all_integers(n-1,k,i-j,sol(k0+1:k0+k,2:n))
        k0=k0+k
@@ -68,380 +86,88 @@ CONTAINS
     INTEGER,INTENT(IN)::n,ntot,i
     INTEGER,DIMENSION(ntot,n),INTENT(OUT)::sol
     REAL(KIND(1d0)),DIMENSION(ntot),INTENT(OUT)::factor
-    INTEGER::ifirst=0,j,k,ntemptot
+    INTEGER::ifirst=0,j,jk,k,ntemptot
+    INTEGER::maxxiarray,inum,nnum,maxxiarray1,maxxiarray2
+    INTEGER::maxfactor_xiarray
     SAVE ifirst
     ! calculate xiarray_i_n first
     IF(ifirst.EQ.0)THEN
-       DO j=0,10
-          x1array(j,1)=j
-       ENDDO
-       ! n=2
-       CALL calc_all_integers(2,1,0,xiarray_0_2(1:1,1:2))
-       factor_xiarray_0_2(1)=1d0
-       CALL calc_all_integers(2,2,1,xiarray_1_2(1:2,1:2))
-       DO j=1,2
-          factor_xiarray_1_2(j)=DBLE(factorial(1))
-          DO k=1,2
-             factor_xiarray_1_2(j)=factor_xiarray_1_2(j)/&
-                  DBLE(factorial(xiarray_1_2(j,k)))
+       maxxiarray=(MAXRANK_IREGI+1)*(MAXNLOOP_IREGI-1)
+       IF(.NOT.ALLOCATED(xiarray))THEN
+          ALLOCATE(xiarray(maxxiarray))
+       ENDIF
+       maxfactor_xiarray=(MAXRANK_IREGI+1)*(MAXNLOOP_IREGI-2)
+       IF(.NOT.ALLOCATED(factor_xiarray))THEN
+          ALLOCATE(factor_xiarray(MAXRANK_IREGI+2:maxfactor_xiarray+MAXRANK_IREGI+1))
+       ENDIF
+       ! x1+x2+...+xn==i
+       ! C(i+n-1)^(n-1)=(i+n-1)!/(n-1)!/i!
+       DO j=1,maxxiarray
+          inum=MOD(j-1,MAXRANK_IREGI+1) ! i
+          nnum=(j-1)/(MAXRANK_IREGI+1)+1 ! n
+          maxxiarray1=xiarray_arg1(inum,nnum)
+          maxxiarray2=nnum
+          IF(.NOT.ALLOCATED(xiarray(j)%xiarray_i_n))THEN
+             ALLOCATE(xiarray(j)%xiarray_i_n(maxxiarray1,maxxiarray2))
+          ENDIF
+          IF(nnum.EQ.1)THEN
+             xiarray(j)%xiarray_i_n(1,1)=j-1
+             CYCLE
+          ENDIF
+          CALL calc_all_integers(nnum,maxxiarray1,inum,&
+               xiarray(j)%xiarray_i_n(1:maxxiarray1,1:maxxiarray2))
+          IF(.NOT.ALLOCATED(factor_xiarray(j)%factor_xiarray_i_n))THEN
+             ALLOCATE(factor_xiarray(j)%factor_xiarray_i_n(maxxiarray1))
+          ENDIF
+          DO jk=1,maxxiarray1
+             factor_xiarray(j)%factor_xiarray_i_n(jk)=DBLE(factorial(inum))
+             DO k=1,nnum
+                factor_xiarray(j)%factor_xiarray_i_n(jk)=factor_xiarray(j)%factor_xiarray_i_n(jk)/&
+                     DBLE(factorial(xiarray(j)%xiarray_i_n(jk,k)))
+             ENDDO
           ENDDO
+          ntot_xiarray(inum,nnum)=maxxiarray1
        ENDDO
-       CALL calc_all_integers(2,3,2,xiarray_2_2(1:3,1:2))
-       DO j=1,3
-          factor_xiarray_2_2(j)=DBLE(factorial(2))
-          DO k=1,2
-             factor_xiarray_2_2(j)=factor_xiarray_2_2(j)/&
-                  DBLE(factorial(xiarray_2_2(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(2,4,3,xiarray_3_2(1:4,1:2))
-       DO j=1,4
-          factor_xiarray_3_2(j)=DBLE(factorial(3))
-          DO k=1,2
-             factor_xiarray_3_2(j)=factor_xiarray_3_2(j)/&
-                  DBLE(factorial(xiarray_3_2(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(2,5,4,xiarray_4_2(1:5,1:2))
-       DO j=1,5
-          factor_xiarray_4_2(j)=DBLE(factorial(4))
-          DO k=1,2
-             factor_xiarray_4_2(j)=factor_xiarray_4_2(j)/&
-                  DBLE(factorial(xiarray_4_2(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(2,6,5,xiarray_5_2(1:6,1:2))
-       DO j=1,6
-          factor_xiarray_5_2(j)=DBLE(factorial(5))
-          DO k=1,2
-             factor_xiarray_5_2(j)=factor_xiarray_5_2(j)/&
-                  DBLE(factorial(xiarray_5_2(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(2,7,6,xiarray_6_2(1:7,1:2))
-       DO j=1,7
-          factor_xiarray_6_2(j)=DBLE(factorial(6))
-          DO k=1,2
-             factor_xiarray_6_2(j)=factor_xiarray_6_2(j)/&
-                  DBLE(factorial(xiarray_6_2(j,k)))
-          ENDDO
-       ENDDO
-       ntot_xiarray(0,2)=1
-       ntot_xiarray(1,2)=2
-       ntot_xiarray(2,2)=3
-       ntot_xiarray(3,2)=4
-       ntot_xiarray(4,2)=5
-       ntot_xiarray(5,2)=6
-       ntot_xiarray(6,2)=7
-       ! n=3
-       CALL calc_all_integers(3,1,0,xiarray_0_3(1:1,1:3))
-       factor_xiarray_0_3(1)=1d0
-       CALL calc_all_integers(3,3,1,xiarray_1_3(1:3,1:3))
-       DO j=1,3
-          factor_xiarray_1_3(j)=DBLE(factorial(1))
-          DO k=1,3
-             factor_xiarray_1_3(j)=factor_xiarray_1_3(j)/&
-                  DBLE(factorial(xiarray_1_3(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(3,6,2,xiarray_2_3(1:6,1:3))
-       DO j=1,6
-          factor_xiarray_2_3(j)=DBLE(factorial(2))
-          DO k=1,3
-             factor_xiarray_2_3(j)=factor_xiarray_2_3(j)/&
-                  DBLE(factorial(xiarray_2_3(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(3,10,3,xiarray_3_3(1:10,1:3))
-       DO j=1,10
-          factor_xiarray_3_3(j)=DBLE(factorial(3))
-          DO k=1,3
-             factor_xiarray_3_3(j)=factor_xiarray_3_3(j)/&
-                  DBLE(factorial(xiarray_3_3(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(3,15,4,xiarray_4_3(1:15,1:3))
-       DO j=1,15
-          factor_xiarray_4_3(j)=DBLE(factorial(4))
-          DO k=1,3
-             factor_xiarray_4_3(j)=factor_xiarray_4_3(j)/&
-                  DBLE(factorial(xiarray_4_3(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(3,21,5,xiarray_5_3(1:21,1:3))
-       DO j=1,21
-          factor_xiarray_5_3(j)=DBLE(factorial(5))
-          DO k=1,3
-             factor_xiarray_5_3(j)=factor_xiarray_5_3(j)/&
-                  DBLE(factorial(xiarray_5_3(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(3,28,6,xiarray_6_3(1:28,1:3))
-       DO j=1,28
-          factor_xiarray_6_3(j)=DBLE(factorial(6))
-          DO k=1,3
-             factor_xiarray_6_3(j)=factor_xiarray_6_3(j)/&
-                  DBLE(factorial(xiarray_6_3(j,k)))
-          ENDDO
-       ENDDO
-       ntot_xiarray(0,3)=1
-       ntot_xiarray(1,3)=3
-       ntot_xiarray(2,3)=6
-       ntot_xiarray(3,3)=10
-       ntot_xiarray(4,3)=15
-       ntot_xiarray(5,3)=21
-       ntot_xiarray(6,3)=28
-       ! n=4
-       CALL calc_all_integers(4,1,0,xiarray_0_4(1:1,1:4))
-       factor_xiarray_0_4(1)=1d0
-       CALL calc_all_integers(4,4,1,xiarray_1_4(1:4,1:4))
-       DO j=1,4
-          factor_xiarray_1_4(j)=DBLE(factorial(1))
-          DO k=1,4
-             factor_xiarray_1_4(j)=factor_xiarray_1_4(j)/&
-                  DBLE(factorial(xiarray_1_4(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(4,10,2,xiarray_2_4(1:10,1:4))
-       DO j=1,10
-          factor_xiarray_2_4(j)=DBLE(factorial(2))
-          DO k=1,4
-             factor_xiarray_2_4(j)=factor_xiarray_2_4(j)/&
-                  DBLE(factorial(xiarray_2_4(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(4,20,3,xiarray_3_4(1:20,1:4))
-       DO j=1,20
-          factor_xiarray_3_4(j)=DBLE(factorial(3))
-          DO k=1,4
-             factor_xiarray_3_4(j)=factor_xiarray_3_4(j)/&
-                  DBLE(factorial(xiarray_3_4(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(4,35,4,xiarray_4_4(1:35,1:4))
-       DO j=1,35
-          factor_xiarray_4_4(j)=DBLE(factorial(4))
-          DO k=1,4
-             factor_xiarray_4_4(j)=factor_xiarray_4_4(j)/&
-                  DBLE(factorial(xiarray_4_4(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(4,56,5,xiarray_5_4(1:56,1:4))
-       DO j=1,56
-          factor_xiarray_5_4(j)=DBLE(factorial(5))
-          DO k=1,4
-             factor_xiarray_5_4(j)=factor_xiarray_5_4(j)/&
-                  DBLE(factorial(xiarray_5_4(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(4,84,6,xiarray_6_4(1:84,1:4))
-       DO j=1,84
-          factor_xiarray_6_4(j)=DBLE(factorial(6))
-          DO k=1,4
-             factor_xiarray_6_4(j)=factor_xiarray_6_4(j)/&
-                  DBLE(factorial(xiarray_6_4(j,k)))
-          ENDDO
-       ENDDO
-       ntot_xiarray(0,4)=1
-       ntot_xiarray(1,4)=4
-       ntot_xiarray(2,4)=10
-       ntot_xiarray(3,4)=20
-       ntot_xiarray(4,4)=35
-       ntot_xiarray(5,4)=56
-       ntot_xiarray(6,4)=84
-       ! n=5
-       CALL calc_all_integers(5,1,0,xiarray_0_5(1:1,1:5))
-       factor_xiarray_0_5(1)=1d0
-       CALL calc_all_integers(5,5,1,xiarray_1_5(1:5,1:5))
-       DO j=1,5
-          factor_xiarray_1_5(j)=DBLE(factorial(1))
-          DO k=1,5
-             factor_xiarray_1_5(j)=factor_xiarray_1_5(j)/&
-                  DBLE(factorial(xiarray_1_5(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(5,15,2,xiarray_2_5(1:15,1:5))
-       DO j=1,15
-          factor_xiarray_2_5(j)=DBLE(factorial(2))
-          DO k=1,5
-             factor_xiarray_2_5(j)=factor_xiarray_2_5(j)/&
-                  DBLE(factorial(xiarray_2_5(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(5,35,3,xiarray_3_5(1:35,1:5))
-       DO j=1,35
-          factor_xiarray_3_5(j)=DBLE(factorial(3))
-          DO k=1,5
-             factor_xiarray_3_5(j)=factor_xiarray_3_5(j)/&
-                  DBLE(factorial(xiarray_3_5(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(5,70,4,xiarray_4_5(1:70,1:5))
-       DO j=1,70
-          factor_xiarray_4_5(j)=DBLE(factorial(4))
-          DO k=1,5
-             factor_xiarray_4_5(j)=factor_xiarray_4_5(j)/&
-                  DBLE(factorial(xiarray_4_5(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(5,126,5,xiarray_5_5(1:126,1:5))
-       DO j=1,126
-          factor_xiarray_5_5(j)=DBLE(factorial(5))
-          DO k=1,5
-             factor_xiarray_5_5(j)=factor_xiarray_5_5(j)/&
-                  DBLE(factorial(xiarray_5_5(j,k)))
-          ENDDO
-       ENDDO
-       CALL calc_all_integers(5,210,6,xiarray_6_5(1:210,1:5))
-       DO j=1,210
-          factor_xiarray_6_5(j)=DBLE(factorial(6))
-          DO k=1,5
-             factor_xiarray_6_5(j)=factor_xiarray_6_5(j)/&
-                  DBLE(factorial(xiarray_6_5(j,k)))
-          ENDDO
-       ENDDO
-       ntot_xiarray(0,5)=1
-       ntot_xiarray(1,5)=5
-       ntot_xiarray(2,5)=15
-       ntot_xiarray(3,5)=35
-       ntot_xiarray(4,5)=70
-       ntot_xiarray(5,5)=126
-       ntot_xiarray(6,5)=210
        ifirst=1
     ENDIF
-    IF(n.EQ.1.AND.i.GT.10)THEN
-       WRITE(*,*)"ERROR:i is out of the range 10 for n=1 in all_integers"
+    IF(n.GT.MAXNLOOP_IREGI-1.OR.n.LT.1)THEN
+       WRITE(*,100)"ERROR: n is out of range 1<=n<=",MAXNLOOP_IREGI-1," in all_integers"
+       STOP
+    ENDIF
+    IF(i.GT.MAXRANK_IREGI.OR.i.LT.0)THEN
+       WRITE(*,100)"ERROR: r is out of range 0<=r<=",MAXRANK_IREGI," in all_integers"
        STOP
     ENDIF
     IF(n.EQ.1.AND.ntot.NE.1)THEN
        WRITE(*,*)"ERROR:ntot should be 1 when n=1 in all_integers"
        STOP
     ENDIF
-    IF(n.GE.2.AND.n.LE.5.AND.i.GT.6)THEN
-       WRITE(*,*)"ERROR: i is out of the range 6 for 2<=n<=5 in all_integers"
-       STOP
-    ENDIF
-    IF(n.GE.2.AND.n.LE.5)THEN
+    IF(n.GE.2.AND.n.LE.MAXNLOOP_IREGI-1)THEN
        ! Make it work in MadLoop, otherwise it is wrong
        IF(ntot.NE.ntot_xiarray(i,n))THEN
           WRITE(*,*)"ERROR: ntot is not correct in all_integers"
           STOP
        ENDIF
     ENDIF
-    IF(n.GT.5.OR.n.LT.1)THEN
-       WRITE(*,*)"ERROR: n is out of range 1<=n<=5 in all_integers"
-       STOP
-    ENDIF
+    j=(n-1)*(MAXRANK_IREGI+1)+i+1
     SELECT CASE(n)
        CASE(1)
-          sol(1:ntot,1:n)=x1array(i:i,1:n)
+          sol(1:ntot,1:n)=xiarray(j)%xiarray_i_n(1:1,1:n)
           factor(1)=1d0
-       CASE(2)
-          SELECT CASE(i)
-             CASE(0)
-                sol(1:ntot,1:n)=xiarray_0_2(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_0_2(1:ntot)
-             CASE(1)
-                sol(1:ntot,1:n)=xiarray_1_2(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_1_2(1:ntot)
-             CASE(2)
-                sol(1:ntot,1:n)=xiarray_2_2(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_2_2(1:ntot)
-             CASE(3)
-                sol(1:ntot,1:n)=xiarray_3_2(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_3_2(1:ntot)
-             CASE(4)
-                sol(1:ntot,1:n)=xiarray_4_2(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_4_2(1:ntot)
-             CASE(5)
-                sol(1:ntot,1:n)=xiarray_5_2(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_5_2(1:ntot)
-             CASE(6)
-                sol(1:ntot,1:n)=xiarray_6_2(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_6_2(1:ntot)
-          END SELECT
-       CASE(3)
-          SELECT CASE(i)
-             CASE(0)
-                sol(1:ntot,1:n)=xiarray_0_3(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_0_3(1:ntot)
-             CASE(1)
-                sol(1:ntot,1:n)=xiarray_1_3(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_1_3(1:ntot)
-             CASE(2)
-                sol(1:ntot,1:n)=xiarray_2_3(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_2_3(1:ntot)
-             CASE(3)
-                sol(1:ntot,1:n)=xiarray_3_3(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_3_3(1:ntot)
-             CASE(4)
-                sol(1:ntot,1:n)=xiarray_4_3(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_4_3(1:ntot)
-             CASE(5)
-                sol(1:ntot,1:n)=xiarray_5_3(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_5_3(1:ntot)
-             CASE(6)
-                sol(1:ntot,1:n)=xiarray_6_3(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_6_3(1:ntot)
-          END SELECT
-       CASE(4)
-          SELECT CASE(i)
-             CASE(0)
-                sol(1:ntot,1:n)=xiarray_0_4(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_0_4(1:ntot)
-             CASE(1)
-                sol(1:ntot,1:n)=xiarray_1_4(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_1_4(1:ntot)
-             CASE(2)
-                sol(1:ntot,1:n)=xiarray_2_4(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_2_4(1:ntot)
-             CASE(3)
-                sol(1:ntot,1:n)=xiarray_3_4(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_3_4(1:ntot)
-             CASE(4)
-                sol(1:ntot,1:n)=xiarray_4_4(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_4_4(1:ntot)
-             CASE(5)
-                sol(1:ntot,1:n)=xiarray_5_4(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_5_4(1:ntot)
-             CASE(6)
-                sol(1:ntot,1:n)=xiarray_6_4(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_6_4(1:ntot)
-          END SELECT
-       CASE(5)
-          SELECT CASE(i)
-             CASE(0)
-                sol(1:ntot,1:n)=xiarray_0_5(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_0_5(1:ntot)
-             CASE(1)
-                sol(1:ntot,1:n)=xiarray_1_5(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_1_5(1:ntot)
-             CASE(2)
-                sol(1:ntot,1:n)=xiarray_2_5(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_2_5(1:ntot)
-             CASE(3)
-                sol(1:ntot,1:n)=xiarray_3_5(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_3_5(1:ntot)
-             CASE(4)
-                sol(1:ntot,1:n)=xiarray_4_5(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_4_5(1:ntot)
-             CASE(5)
-                sol(1:ntot,1:n)=xiarray_5_5(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_5_5(1:ntot)
-             CASE(6)
-                sol(1:ntot,1:n)=xiarray_6_5(1:ntot,1:n)
-                factor(1:ntot)=factor_xiarray_6_5(1:ntot)
-          END SELECT
+       CASE DEFAULT
+          sol(1:ntot,1:n)=xiarray(j)%xiarray_i_n(1:ntot,1:n)
+          factor(1:ntot)=factor_xiarray(j)%factor_xiarray_i_n(1:ntot)
     END SELECT
     RETURN
+100 FORMAT(2X,A31,I2,A16)
   END SUBROUTINE all_Integers
 
   SUBROUTINE calc_factorial_pair
     IMPLICIT NONE
     INTEGER::i,j
-    factorial_pair(1:10,0)=1d0
-    DO i=1,10
-       DO j=1,10
+    factorial_pair(1:MAXINDICES_IREGI,0)=1d0
+    DO i=1,MAXINDICES_IREGI
+       DO j=1,MAXRANK_IREGI
           factorial_pair(i,j)=DBLE(factorial(i+j-1))&
                /DBLE(factorial(i-1))/DBLE(factorial(j))
        ENDDO
@@ -970,4 +696,30 @@ CONTAINS
     ENDDO
     RETURN
   END SUBROUTINE SHIFT_MOM
+
+  FUNCTION xiarray_arg1(i,n)
+    IMPLICIT NONE
+    INTEGER,INTENT(IN)::i,n
+    INTEGER::xiarray_arg1
+    INTEGER::imax,imin,j
+    !INTEGER(KIND=LINT)::itemp
+    IF(i+n-1.GT.12)THEN
+       imax=MAX(n-1,i)
+       imin=MIN(n-1,i)
+       xiarray_arg1=1
+       DO j=imax+1,i+n-1
+          xiarray_arg1=xiarray_arg1*j
+       ENDDO
+       IF(imin.LE.12)THEN
+          xiarray_arg1=xiarray_arg1/factorial(imin)
+       ELSE
+          DO j=1,imin
+             xiarray_arg1=xiarray_arg1/j
+          ENDDO
+       ENDIF
+    ELSE
+       xiarray_arg1=factorial(i+n-1)/factorial(n-1)/factorial(i)
+    ENDIF
+    RETURN
+  END FUNCTION xiarray_arg1
 END MODULE FUNLIB

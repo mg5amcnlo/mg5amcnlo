@@ -258,22 +258,22 @@ class IOExportPythonTest(unittest.TestCase):
         # LOCAL VARIABLES 
         #  
         helicities = [ \\
-        [-1,-1,-1,-1],
-        [-1,-1,-1,1],
-        [-1,-1,1,-1],
-        [-1,-1,1,1],
-        [-1,1,-1,-1],
-        [-1,1,-1,1],
-        [-1,1,1,-1],
-        [-1,1,1,1],
-        [1,-1,-1,-1],
         [1,-1,-1,1],
-        [1,-1,1,-1],
+        [1,-1,-1,-1],
         [1,-1,1,1],
-        [1,1,-1,-1],
+        [1,-1,1,-1],
         [1,1,-1,1],
+        [1,1,-1,-1],
+        [1,1,1,1],
         [1,1,1,-1],
-        [1,1,1,1]]
+        [-1,-1,-1,1],
+        [-1,-1,-1,-1],
+        [-1,-1,1,1],
+        [-1,-1,1,-1],
+        [-1,1,-1,1],
+        [-1,1,-1,-1],
+        [-1,1,1,1],
+        [-1,1,1,-1]]
         denominator = 36
         # ----------
         # BEGIN CODE
@@ -369,6 +369,7 @@ class IOExportPythonTest(unittest.TestCase):
 
         matrix_methods = exporter.get_python_matrix_methods()["0_uux_uux"].\
                           split('\n')
+
         self.assertEqual(matrix_methods, goal_method)
         
 

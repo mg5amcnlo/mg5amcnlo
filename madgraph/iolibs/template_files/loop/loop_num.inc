@@ -32,8 +32,8 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER WE(NEXTERNAL)	  
-      INTEGER ID, SYMFACT,AMPLNUM
-      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT, MULTIPLIER, AMPLNUM
+      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
 	  LOGICAL GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
@@ -63,7 +63,7 @@ C
 	%(dp_squaring)s
   ENDIF
   ENDDO
-	  RES=RES/SYMFACT
+	  RES=(RES*MULTIPLIER)/SYMFACT
 
 	  END
 
@@ -106,8 +106,8 @@ C
       common/%(proc_prefix)sDP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)  
-      INTEGER ID, SYMFACT,AMPLNUM
-      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT,MULTIPLIER,AMPLNUM
+      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
 	  %(dp_born_amps_decl)s	  
 	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
@@ -168,8 +168,8 @@ C
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
       INTEGER WE(NEXTERNAL)  
-      INTEGER ID, SYMFACT,AMPLNUM
-      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT,MULTIPLIER,AMPLNUM
+      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
 	  LOGICAL GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
@@ -210,7 +210,7 @@ C       This is just to compute the wfs in quad prec
 	%(mp_squaring)s
   ENDIF
   ENDDO
-	  QPRES=QPRES/SYMFACT
+	  QPRES=(QPRES*MULTIPLIER)/SYMFACT
 
 	  RES=QPRES
       END
@@ -254,8 +254,8 @@ C
       common/%(proc_prefix)sMP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)
-      INTEGER ID, SYMFACT,AMPLNUM
-      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,AMPLNUM
+      INTEGER ID, SYMFACT,MULTIPLIER,AMPLNUM
+      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
 	  %(mp_born_amps_decl)s	  
 	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)

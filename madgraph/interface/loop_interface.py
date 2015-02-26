@@ -273,12 +273,18 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
-    def validate_model(self, loop_type='virtual',coupling_type='QCD', stop=True):
+    def validate_model(self, loop_type='virtual',coupling_type=['QCD'], stop=True):
         """ Upgrade the model sm to loop_sm if needed """
+
+        # Allow to call this function with a string instead of a list of 
+        # perturbation orders.
+        if isinstance(coupling_type,str):
+            coupling_type = [coupling_type,]
 
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
-              (coupling_type not in self._curr_model['perturbation_couplings']):
+           any((coupl not in self._curr_model['perturbation_couplings']) \
+           for coupl in coupling_type):
             if loop_type.startswith('real'):
                 if loop_type == 'real':
                     logger.info(\
@@ -291,26 +297,26 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             else:
                 logger.info(\
                   "The current model %s does not allow to generate"%self._curr_model.get('name')+
-                  " loop corrections of type %s."%coupling_type)
+                  " loop corrections of type %s."%str(coupling_type))
                 model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
                 if model_name.split('-')[0]=='loop_sm':
 		           model_name = model_name[5:]
                 if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
-                    if not self.options['gauge']=='Feynman' and coupling_type == 'QED':
+                    if not self.options['gauge']=='Feynman' and 'QED' in coupling_type:
                         logger.info('Switch to Feynman gauge because '+\
                           'model loop_qcd_qed_sm is restricted only to Feynman gauge.')
                         self._curr_model = None
                         mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-                    if coupling_type == 'QCD':
+                    if coupling_type == ['QCD',]:
                         add_on = ''
-                    elif coupling_type == 'QED':
+                    elif coupling_type in [['QED'],['QCD','QED']]:
                         add_on = 'qcd_qed_'
                     else:
 			            raise MadGraph5Error(
-                          "The pertubation coupling cannot be '%s'"%coupling_type+\
-                                                        " in SM loop processes")
+                          "The pertubation coupling cannot be '%s'"\
+                                    %str(coupling_type)+" in SM loop processes")
 
                     logger.info("MG5_aMC now loads 'loop_%s%s'."%(add_on,model_name))
 
@@ -435,13 +441,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                     shutil.rmtree(self._export_dir)
                 except OSError:
                     raise self.InvalidCmd('Could not remove directory %s.'\
-                                                         %str(self._export_dir))     
-
-        if not self._curr_amps[0].get('process').get('has_born') and \
-                                          self.options['loop_optimized_output']:
-            logger.warning('The loop optimized output is not available for '+\
-                     'loop-induced processes. Now setting this option to False.')
-            self.do_set('loop_optimized_output False')
+                                                         %str(self._export_dir))
 
         self._curr_exporter = export_v4.ExportV4Factory(self, \
                                                  noclean, output_type='madloop')

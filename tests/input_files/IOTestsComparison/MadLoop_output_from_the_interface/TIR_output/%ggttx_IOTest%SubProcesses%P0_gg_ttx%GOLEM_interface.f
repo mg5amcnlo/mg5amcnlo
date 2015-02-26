@@ -9,7 +9,7 @@ C     The Golem95 version should be higher than 1.3.0.
 C     It supports RANK = NLOOPLINE + 1 tensor integrals when 1 <
 C      NLOOPLINE < 6.
 C     
-C     Process: g g > t t~ [ QCD ]
+C     Process: g g > t t~ [ virt = QCD ]
 C     
 C     
 C     MODULES
@@ -665,6 +665,7 @@ C           massless onshellness. (here we pick the energy component)
       ENDIF
 
       END
+
 
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_0(ML_COEFS,GOLEM_COEFS)
       USE PRECISION_GOLEM, ONLY: KI

@@ -7,7 +7,7 @@ C
 C     Computes all the AMP and WFS in quadruple precision for the 
 C     phase space point P(0:3,NEXTERNAL)
 C     
-C     Process: g g > h h QED=2 QCD=2 [ virt = QCD ]
+C     Process: g g > h h QED=2 QCD=2 [ sqrvirt = QCD ]
 C     
       IMPLICIT NONE
 C     
