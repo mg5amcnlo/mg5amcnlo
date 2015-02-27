@@ -2690,7 +2690,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif args[start+1].lower() in ['f','.false.','false']:
                 self.shower_card.set_param(args[start],'.false.',pjoin(self.me_dir,'Cards','shower_card.dat'))
             else:
-                args_str = ' '.join(str(a) for a in args[1:len(args)])
+                args_str = ' '.join(str(a) for a in args[start+1:len(args)])
                 self.shower_card.set_param(args[start],args_str,pjoin(self.me_dir,'Cards','shower_card.dat'))
 
         #INVALID --------------------------------------------------------------

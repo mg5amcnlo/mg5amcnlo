@@ -17,6 +17,9 @@
 import sys
 import re
 import os
+import logging
+
+logger = logging.getLogger('madgraph.shower_card') 
 
 pjoin = os.path.join
 
@@ -144,7 +147,7 @@ class ShowerCard(dict):
 
         #then update self.text and write the new card
         if write_to:
-            print '\033[1m' + 'INFO: modify parameter %s of the shower_card.dat to %s' % (key, value) + '\033[0;0m'
+            logger.info('modify parameter %s of the shower_card.dat to %s' % (key, value))
             key_re = re.compile('^(\s*)%s\s*=\s*(.+)\s*$' % key , re.IGNORECASE)
             newlines = []
             for line in self.text.split('\n'):
@@ -168,8 +171,7 @@ class ShowerCard(dict):
 
             if str(key).upper().startswith('DM') and not value.lower() in ['','none','default']:
                 newlines.append('%s = %s' % (str(key).upper(), value[0:len(value)]))
-                print ''
-                print '\033[1m' + 'INFO: please specify a decay through set dm_1 M > D1 D2 @ BR @ ME; see shower_card.dat for details' + '\033[0;0m'
+                logger.info('please specify a decay through set dm_1 M > D1 D2 @ BR @ ME; see shower_card.dat for details')
                 
             self.text = '\n'.join(newlines) + '\n'
 
