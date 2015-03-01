@@ -235,6 +235,7 @@ class EventFile(object):
             nb_event +=1
             wgt = get_wgt(event)
             cross['all'] += wgt
+            cross['abs'] += abs(wgt)
             cross[event.ievent] += wgt
             all_wgt.append(abs(wgt))
             # avoid all_wgt to be too large
@@ -286,7 +287,7 @@ class EventFile(object):
             
             xsum = 0
             i=1 
-            while (xsum - all_wgt[-i] * (i-1) <= cross['all'] * trunc):
+            while (xsum - all_wgt[-i] * (i-1) <= cross['abs'] * trunc):
                 max_wgt = all_wgt[-i]
                 xsum += all_wgt[-i]
                 i +=1
@@ -449,7 +450,7 @@ class MultiEventFile(EventFile):
                 self.add(p)
         self.configure = False
         
-    def add(self, path, cross=0, error=0,across=0):
+    def add(self, path, cross=0, error=0, across=0):
         """ add a file to the pool, cross allow to reweight the sum of weight 
         in the file to the given cross-section 
         """
@@ -572,6 +573,7 @@ class MultiEventFile(EventFile):
                 event.sample_scale = 1
                 wgt = getwgt(event)
                 cross['all'] += wgt
+                cross['abs'] += abs(wgt)
                 cross[event.ievent] += wgt
                 new_wgt.append(abs(wgt))
                 # avoid all_wgt to be too large
@@ -584,7 +586,7 @@ class MultiEventFile(EventFile):
                 raise Exception
             # store the information
             self.initial_nb_events[i] = nb_event
-            self.scales[i] = self.cross[i]/cross['all'] if self.cross[i] else 1
+            self.scales[i] = self.across[i]/cross['abs'] if self.across[i] else 1
             misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
                         % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
             for key in cross:
