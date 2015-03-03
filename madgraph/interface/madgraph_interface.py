@@ -63,7 +63,6 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
-import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
@@ -78,6 +77,9 @@ import madgraph.interface.tutorial_text_madloop as tutorial_text_madloop
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.madevent_interface as madevent_interface
 import madgraph.interface.amcatnlo_run_interface as amcatnlo_run
+
+import madgraph.loop.loop_exporters as loop_exporters
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_module
@@ -669,6 +671,14 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   improvement.")
         logger.info(" > CP relations among helicites are detected and the helicity")
         logger.info("   filter has more potential.")
+        logger.info("loop_color_flows True|False",'$MG:color:BLACK')
+        logger.info(" > Only relevant for the loop optimized output.")
+        logger.info(" > Reduces the loop diagrams at the amplitude level")
+        logger.info("   rendering possible the computation of the loop amplitude")
+        logger.info("   for a fixed color flow or color configuration.")
+        logger.info(" > This option can considerably slow down the loop ME")
+        logger.info("   computation time, especially when summing over all color")
+        logger.info("   and helicity configuration, hence turned off by default.")        
         logger.info("gauge unitary|Feynman",'$MG:color:BLACK')
         logger.info(" > (default unitary) choose the gauge of the non QCD part.")
         logger.info(" > For loop processes, only Feynman gauge is employable.")
@@ -1203,7 +1213,8 @@ This will take effect only in a NEW terminal
         """ check the validity of the line"""
 
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
-                                          'loop_optimized_output']:
+                                          'loop_optimized_output',\
+                                          'loop_color_flows']:
             args.append('True')
 
         if len(args) > 2 and '=' == args[1]:
@@ -1252,9 +1263,9 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('timeout values should be a integer')
 
-        if args[0] in ['loop_optimized_output']:
+        if args[0] in ['loop_optimized_output', 'loop_color_flows']:
             if args[1] not in ['True', 'False']:
-                raise self.InvalidCmd('loop_optimized_output needs argument True or False')
+                raise self.InvalidCmd('%s needs argument True or False'%args[0])
 
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman']:
@@ -2152,7 +2163,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
-                           'loop_optimized_output']:
+                           'loop_optimized_output', 'loop_color_flows']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
@@ -2406,7 +2417,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge']
-    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=']
     _OLP_supported = ['MadLoop', 'GoSam']
@@ -2445,6 +2456,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
+                       'cluster_size':100,
                        'output_dependencies':'external'
                        }
 
@@ -2453,7 +2465,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
                           'stdout_level':None,
-                          'loop_optimized_output':True
+                          'loop_optimized_output':True,
+                          'loop_color_flows':False
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -2653,13 +2666,6 @@ This implies that with decay chains:
                            "ignore_six_quark_processes" in self.options \
                            else []
 
-            # Decide here wether one needs a LoopMultiProcess or a MultiProcess
-            multiprocessclass=None
-            if myprocdef['perturbation_couplings']!=[]:
-                multiprocessclass=loop_diagram_generation.LoopMultiProcess
-            else:
-                multiprocessclass=diagram_generation.MultiProcess
-
             myproc = diagram_generation.MultiProcess(myprocdef,
                                      collect_mirror_procs = collect_mirror_procs,
                                      ignore_six_quark_processes = ignore_six_quark_processes,
@@ -2672,7 +2678,6 @@ This implies that with decay chains:
                 elif warning_duplicate:
                     raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                                 amp.nice_string_processes()
-
 
             # Reset _done_export, since we have new process
             self._done_export = False
@@ -3036,7 +3041,10 @@ This implies that with decay chains:
         elif args[0] == 'options':
             outstr = "                          MadGraph5_aMC@NLO Options    \n"
             outstr += "                          ----------------    \n"
-            for key, default in self.options_madgraph.items():
+            keys = self.options_madgraph.keys()
+            keys.sort()
+            for key in keys:
+                default = self.options_madgraph[key] 
                 value = self.options[key]
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)
@@ -3045,7 +3053,10 @@ This implies that with decay chains:
             outstr += "\n"
             outstr += "                         MadEvent Options    \n"
             outstr += "                          ----------------    \n"
-            for key, default in self.options_madevent.items():
+            keys = self.options_madevent.keys()
+            keys.sort()
+            for key in keys:
+                default = self.options_madevent[key]
                 value = self.options[key]
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)
@@ -3054,7 +3065,10 @@ This implies that with decay chains:
             outstr += "\n"
             outstr += "                      Configuration Options    \n"
             outstr += "                      ---------------------    \n"
-            for key, default in self.options_configuration.items():
+            keys = self.options_configuration.keys()
+            keys.sort()
+            for key in keys:
+                default = self.options_configuration[key]
                 value = self.options[key]
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)
@@ -3553,11 +3567,12 @@ This implies that with decay chains:
             option=perturbation_couplings_re.group("option")
             if option:
                 if option in self._valid_nlo_modes:
+                    LoopOption=option
                     if option=='sqrvirt':
                         LoopOption='virt'
                         HasBorn=False
-                    else:
-                        LoopOption=option
+                    elif option=='noborn':
+                        HasBorn=False
                 else:
                     raise self.InvalidCmd, "NLO mode %s is not valid. "%option+\
                        "Valid modes are %s. "%str(self._valid_nlo_modes)
@@ -3800,6 +3815,104 @@ This implies that with decay chains:
                               })
         #                       'is_decay_chain': decay_process\
 
+
+    def create_loop_induced(self, line, myprocdef=None):
+        """ Routine to create the MultiProcess for the loop-induced case"""
+        
+        args = self.split_arg(line)
+        
+        warning_duplicate = True
+        if '--no_warning=duplicate' in args:
+            warning_duplicate = False
+            args.remove('--no_warning=duplicate')
+        
+        # Check the validity of the arguments
+        self.check_add(args)
+        if args[0] == 'process':
+            args = args[1:]
+        
+        # special option for 1->N to avoid generation of kinematically forbidden
+        #decay.
+        if args[-1].startswith('--optimize'):
+            optimize = True
+            args.pop()
+        else:
+            optimize = False
+
+    
+        if not myprocdef:
+            myprocdef = self.extract_process(' '.join(args))
+        
+        myprocdef.set('NLO_mode', 'noborn')
+            
+        # store the first process (for the perl script)
+        if not self._generate_info:
+            self._generate_info = line
+                
+        # Reset Helas matrix elements
+        #self._curr_matrix_elements = helas_objects.HelasLoopInducedMultiProcess()
+
+
+        # Check that we have the same number of initial states as
+        # existing processes
+        if self._curr_amps and self._curr_amps[0].get_ninitial() != \
+               myprocdef.get_ninitial():
+            raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+      
+        if self._curr_amps and (not isinstance(self._curr_amps[0], loop_diagram_generation.LoopAmplitude) or \
+             self._curr_amps[0]['has_born']):
+            raise self.InvalidCmd("Can not mix loop induced process with not loop induced process")
+            
+        # Negative coupling order contraints can be given on at most one
+        # coupling order (and either in squared orders or orders, not both)
+        if len([1 for val in myprocdef.get('orders').values()+\
+                      myprocdef.get('squared_orders').values() if val<0])>1:
+            raise MadGraph5Error("Negative coupling order constraints"+\
+              " can only be given on one type of coupling and either on"+\
+                           " squared orders or amplitude orders, not both.")
+
+        cpu_time1 = time.time()
+
+        # Generate processes
+        if self.options['group_subprocesses'] == 'Auto':
+                collect_mirror_procs = True
+        else:
+            collect_mirror_procs = self.options['group_subprocesses']
+        ignore_six_quark_processes = \
+                       self.options['ignore_six_quark_processes'] if \
+                       "ignore_six_quark_processes" in self.options \
+                       else []
+
+        # Decide here wether one needs a LoopMultiProcess or a MultiProcess
+
+        myproc = loop_diagram_generation.LoopInducedMultiProcess(myprocdef,
+                                 collect_mirror_procs = collect_mirror_procs,
+                                 ignore_six_quark_processes = ignore_six_quark_processes,
+                                 optimize=optimize)
+
+        for amp in myproc.get('amplitudes'):
+            if amp not in self._curr_amps:
+                self._curr_amps.append(amp)
+                if amp['has_born']:
+                    raise Exception
+            elif warning_duplicate:
+                raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
+                                            amp.nice_string_processes()
+
+        # Reset _done_export, since we have new process
+        self._done_export = False
+
+        cpu_time2 = time.time()
+
+        nprocs = len(myproc.get('amplitudes'))
+        ndiags = sum([amp.get_number_of_diagrams() for \
+                          amp in myproc.get('amplitudes')])
+        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
+              (nprocs, ndiags, (cpu_time2 - cpu_time1)))
+        ndiags = sum([amp.get_number_of_diagrams() for \
+                          amp in self._curr_amps])
+        logger.info("Total: %i processes with %i diagrams" % \
+              (len(self._curr_amps), ndiags))
 
     @staticmethod
     def split_process_line(procline):
@@ -5390,7 +5503,8 @@ This implies that with decay chains:
     def do_set(self, line, log=True):
         """Set an option, which will be default for coming generations/outputs
         """
-        # Be carefull:
+
+        # Be careful:
         # This command is associated to a post_cmd: post_set.
         args = self.split_arg(line)
 
@@ -5531,6 +5645,21 @@ This implies that with decay chains:
                     logger.info('set loop optimized output to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self.options[args[0]] = eval(args[1])
+            if not self.options['loop_optimized_output'] and \
+                                               self.options['loop_color_flows']:
+                logger.warning("Turning off option 'loop_color_flows'"+\
+                    " since it is not available for non-optimized loop output.")
+                self.do_set('loop_color_flows False',log=False)
+        elif args[0] == 'loop_color_flows':
+            if log:
+                    logger.info('set loop color flows to %s' % args[1])
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self.options[args[0]] = eval(args[1])
+            if self.options['loop_color_flows'] and \
+                                      not self.options['loop_optimized_output']:
+                logger.warning("Turning on option 'loop_optimized'"+\
+                                     " needed for loop color flow computation.")
+                self.do_set('loop_optimized_output True',False)
 
         elif args[0] == 'fastjet':
             try:
@@ -5587,7 +5716,7 @@ This implies that with decay chains:
                         ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
-                         'cluster_retry_wait']:
+                         'cluster_retry_wait', 'cluster_size']:
                 self.options[args[0]] = int(args[1])
 
         elif args[0] == 'cluster_status_update':
@@ -5666,6 +5795,7 @@ This implies that with decay chains:
             main_file_name = args[args.index('-name') + 1]
         except Exception:
             pass
+
 
         ################
         # ALOHA OUTPUT #
@@ -5816,15 +5946,19 @@ This implies that with decay chains:
                               isinstance(amp, \
                                          diagram_generation.DecayChainAmplitude)])
                     subproc_groups = group_subprocs.SubProcessGroupList()
+                    matrix_elements_opts = {'optimized_output':
+                                       self.options['loop_optimized_output']}
                     if non_dc_amps:
                         subproc_groups.extend(\
-                            group_subprocs.SubProcessGroup.group_amplitudes(\
-                                                non_dc_amps, self._export_format))
+                          group_subprocs.SubProcessGroup.group_amplitudes(\
+                          non_dc_amps, self._export_format, 
+                                     matrix_elements_opts=matrix_elements_opts))
 
                     if dc_amps:
                         dc_subproc_group = \
                                   group_subprocs.DecayChainSubProcessGroup.\
-                                  group_amplitudes(dc_amps, self._export_format)
+                                  group_amplitudes(dc_amps, self._export_format,
+                                      matrix_elements_opts=matrix_elements_opts)
                         subproc_groups.extend(dc_subproc_group.\
                                     generate_helas_decay_chain_subproc_groups())
 
@@ -5839,10 +5973,24 @@ This implies that with decay chains:
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
                     mode = {}
-                    if self._export_format in [ 'standalone_msP' , 'standalone_msF', 'standalone_rw']:
+                    if self._export_format in [ 'standalone_msP' , 
+                                             'standalone_msF', 'standalone_rw']:
                         mode['mode'] = 'MadSpin'
-                    self._curr_matrix_elements = \
-                       helas_objects.HelasMultiProcess(self._curr_amps, matrix_element_opts=mode)
+                    # The conditional statement tests whether we are dealing
+                    # with a loop induced process.
+                    if isinstance(self._curr_amps[0], 
+                                         loop_diagram_generation.LoopAmplitude):
+                        mode['optimized_output']=self.options['loop_optimized_output']
+                        HelasMultiProcessClass = loop_helas_objects.LoopHelasProcess
+                        compute_loop_nc = True
+                    else:
+                        HelasMultiProcessClass = helas_objects.HelasMultiProcess
+                        compute_loop_nc = False
+                    
+                    self._curr_matrix_elements = HelasMultiProcessClass(
+                      self._curr_amps, compute_loop_nc=compute_loop_nc,
+                                                       matrix_element_opts=mode)
+                    
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
@@ -5858,6 +6006,8 @@ This implies that with decay chains:
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine
+
+
 
         ndiags, cpu_time = generate_matrix_elements(self)
 
@@ -5876,20 +6026,9 @@ This implies that with decay chains:
 
         # MadEvent
         if self._export_format == 'madevent':
-            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
-                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
-                    calls = calls + \
-                         self._curr_exporter.generate_subprocess_directory_v4(\
-                                me_group, self._curr_fortran_model,
-                                group_number)
-            else:
-                for me_number, me in \
-                   enumerate(self._curr_matrix_elements.get_matrix_elements()):
-                    calls = calls + \
-                            self._curr_exporter.generate_subprocess_directory_v4(\
-                                me, self._curr_fortran_model, me_number)
-
-
+            calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
+                                                 self._curr_fortran_model)
+            
             # Write the procdef_mg5.dat file with process info
             card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
@@ -5982,7 +6121,7 @@ This implies that with decay chains:
                 export_cpp.generate_subprocess_directory_standalone_cpp(\
                               me, self._curr_cpp_model,
                               path = path)
-
+                    
         cpu_time2 = time.time() - cpu_time1
 
         logger.info(("Generated helas calls for %d subprocesses " + \
@@ -6017,6 +6156,7 @@ This implies that with decay chains:
     def finalize(self, nojpeg, online = False):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
+        
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
                                    'standalone_msF', 'standalone_rw', 'NLO', 'madweight']:
 

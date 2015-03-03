@@ -6,6 +6,7 @@ USE matrices
 USE pave_reduce
 USE mis_warp
 USE binary_tree
+USE global
 IMPLICIT NONE
 !REAL(KIND(1d0)),PARAMETER::EPS=1d-10
 REAL(KIND(1d0)),PARAMETER::pi=3.141592653589793d0
@@ -1208,12 +1209,6 @@ CONTAINS
     INTEGER::idim,i
     INTEGER,DIMENSION(NLOOPLINE)::indices
     res(1:4)=pavefun_reduce(NLOOPLINE,paveindices,PCL,M2L)
-    !PRINT *,"===========================",STABLE_IREGI
-    !PRINT *,paveindices(0:NLOOPLINE)
-    !DO i=1,NLOOPLINE
-    !   PRINT *,i,PCL(i,0:3),M2L(i)
-    !ENDDO
-    !PRINT *,res(1:4)
     IF(.NOT.STABLE_IREGI)THEN
        STABLE_IREGI=.TRUE.
        CALL PAVE2IBP(NLOOPLINE,paveindices,factor,idim,indices)

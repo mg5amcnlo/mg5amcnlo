@@ -206,8 +206,19 @@ class Switcher(object):
                     self.change_principal_cmd('aMC@NLO')
                 elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
                     self.change_principal_cmd('MadLoop')
-                    
-        return self.cmd.do_add(self, line, *args, **opts)
+                elif nlo_mode == 'noborn': 
+                    self.change_principal_cmd('MadLoop')
+                    self.cmd.validate_model(self, loop_type=nlo_mode,
+                                                            coupling_type=orders)
+                    self.change_principal_cmd('MadGraph')
+                    return self.cmd.create_loop_induced(self, line, *args, **opts)
+        try:
+            return  self.cmd.do_add(self, line, *args, **opts)
+        except fks_base.NoBornException:
+            logger.info("No Born diagrams found. Now switching to loop-induced mode.", '$MG:color:BLACK')
+            self.change_principal_cmd('MadGraph')
+            return self.cmd.create_loop_induced(self, line, *args, **opts)
+
         
     def do_check(self, line, *args, **opts):
 

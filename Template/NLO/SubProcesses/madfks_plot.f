@@ -2,6 +2,7 @@ c Wrapper routines for the fixed order analyses
       subroutine initplot
       implicit none
       include 'run.inc'
+      include "nexternal.inc"
       include 'reweight0.inc'
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
@@ -81,6 +82,7 @@ c To keep track of the accumulated results:
 
       subroutine topout
       implicit none
+      include "nexternal.inc"
       include 'reweight0.inc'
       include 'reweightNLO.inc'
       integer ii,jj,n

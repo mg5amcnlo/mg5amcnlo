@@ -23,11 +23,16 @@ import re
 import logging
 
 try:
-    import madgraph.various.sum_html as sum_html
-    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
+    import madgraph
 except ImportError:
     import internal.sum_html as sum_html
-    from internal import InvalidCmd, MadGraph5Error
+    import internal.misc as misc
+    from internal import InvalidCmd, MadGraph5Error    
+else:
+    import madgraph.madevent.sum_html as sum_html
+    import madgraph.various.misc as misc
+    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
+
     
 logger = logging.getLogger('madevent.combine_run') # -> stdout
 
@@ -89,10 +94,10 @@ class CombineRuns(object):
             return
         for i in range(njobs):
             if channel.endswith(os.path.pathsep):
-                path = channel[:-1] + alphabet[i] 
+                path = channel[:-1] + alphabet[i % 26] + str((i+1)//26) 
             else:
-                path = channel + alphabet[i] 
-            results.add_results(name=alphabet[i], 
+                path = channel + alphabet[i % 26] + str((i+1)//26) 
+            results.add_results(name=alphabet[i % 26] + str((i+1)//26) , 
                                 filepath=pjoin(path, 'results.dat'))
         
         results.compute_average()
@@ -105,7 +110,8 @@ class CombineRuns(object):
         fsock.write('--------------------- Multi run with %s jobs. ---------------------\n'
                     % njobs)
         for r in results:
-            fsock.write('job %s : %s %s %s\n' % (r.name, r.xsec, r.axsec, r.nunwgt))  
+            fsock.write('job %s : %s %s +- %s %s\n' % (r.name, r.xsec, r.axsec,\
+                                                       r.xerru, r.nunwgt))  
             
         #Now read in all of the events and write them
         #back out with the appropriate scaled weight
@@ -117,7 +123,7 @@ class CombineRuns(object):
             if channel.endswith(os.path.pathsep):
                 path = channel[:-1] + i 
             else:
-                path = channel + i 
+                path = channel + i
             nw = self.copy_events(fsock, pjoin(path,'events.lhe'), wgt)
             #tot_events += nw
         #logger.debug("Combined %s events to %s " % (tot_events, channel))
