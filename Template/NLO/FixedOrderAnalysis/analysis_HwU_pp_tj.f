@@ -9,95 +9,52 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
       integer nwgt
       character*(*) weights_info(*)
-      integer j,kk,l,nwgt_analysis
-      common/c_analysis/nwgt_analysis
+      integer j,kk,l
       character*6 cc(2)
       data cc/'|T@NLO','|T@LO '/
-      call open_root_file()
-      nwgt_analysis=nwgt
+      call HwU_inithist(nwgt,weights_info)
       do j=1,2
-      do kk=1,nwgt_analysis
-      l=(kk-1)*48+(j-1)*24
-      call rbook(l+ 1,'t pt        '//cc(j)//weights_info(kk)
-     &     ,5d0,0d0,200d0)
-      call rbook(l+ 2,'t log pt    '//cc(j)//weights_info(kk)
-     &     ,0.05d0,0d0,5d0)
-      call rbook(l+ 3,'t y         '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
-      call rbook(l+ 4,'t eta       '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
+         l=(j-1)*24
+         call HwU_book(l+ 1,'t pt        '//cc(j) ,40,0d0,200d0)
+         call HwU_book(l+ 2,'t log pt    '//cc(j) ,100,0d0,5d0)
+         call HwU_book(l+ 3,'t y         '//cc(j) ,48,-6d0,6d0)
+         call HwU_book(l+ 4,'t eta       '//cc(j) ,48,-6d0,6d0)
 c
-      call rbook(l+ 5,'j1 pt       '//cc(j)//weights_info(kk)
-     &     ,5d0,0d0,200d0)
-      call rbook(l+ 6,'j1 log pt   '//cc(j)//weights_info(kk)
-     &     ,0.05d0,0d0,5d0)
-      call rbook(l+ 7,'j1 y        '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
-      call rbook(l+ 8,'j1 eta      '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
+         call HwU_book(l+ 5,'j1 pt       '//cc(j) ,40,0d0,200d0)
+         call HwU_book(l+ 6,'j1 log pt   '//cc(j) ,100,0d0,5d0)
+         call HwU_book(l+ 7,'j1 y        '//cc(j) ,48,-6d0,6d0)
+         call HwU_book(l+ 8,'j1 eta      '//cc(j) ,48,-6d0,6d0)
 c
-      call rbook(l+ 9,'j2 pt       '//cc(j)//weights_info(kk)
-     &     ,5d0,0d0,200d0)
-      call rbook(l+10,'j2 log pt   '//cc(j)//weights_info(kk)
-     &     ,0.05d0,0d0,5d0)
-      call rbook(l+11,'j2 y        '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
-      call rbook(l+12,'j2 eta      '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
+         call HwU_book(l+ 9,'j2 pt       '//cc(j) ,40,0d0,200d0)
+         call HwU_book(l+10,'j2 log pt   '//cc(j) ,100,0d0,5d0)
+         call HwU_book(l+11,'j2 y        '//cc(j) ,48,-6d0,6d0)
+         call HwU_book(l+12,'j2 eta      '//cc(j) ,48,-6d0,6d0)
 c
-      call rbook(l+13,'bj1 pt      '//cc(j)//weights_info(kk)
-     &     ,5d0,0d0,200d0)
-      call rbook(l+14,'bj1 log pt  '//cc(j)//weights_info(kk)
-     &     ,0.05d0,0d0,5d0)
-      call rbook(l+15,'bj1 y       '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
-      call rbook(l+16,'bj1 eta     '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
+         call HwU_book(l+13,'bj1 pt      '//cc(j) ,40,0d0,200d0)
+         call HwU_book(l+14,'bj1 log pt  '//cc(j) ,100,0d0,5d0)
+         call HwU_book(l+15,'bj1 y       '//cc(j) ,48,-6d0,6d0)
+         call HwU_book(l+16,'bj1 eta     '//cc(j) ,48,-6d0,6d0)
 c
-      call rbook(l+17,'bj2 pt      '//cc(j)//weights_info(kk)
-     &     ,5d0,0d0,200d0)
-      call rbook(l+18,'bj2 log pt  '//cc(j)//weights_info(kk)
-     &     ,0.05d0,0d0,5d0)
-      call rbook(l+19,'bj2 y       '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
-      call rbook(l+20,'bj2 eta     '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
+         call HwU_book(l+17,'bj2 pt      '//cc(j) ,40,0d0,200d0)
+         call HwU_book(l+18,'bj2 log pt  '//cc(j) ,100,0d0,5d0)
+         call HwU_book(l+19,'bj2 y       '//cc(j) ,48,-6d0,6d0)
+         call HwU_book(l+20,'bj2 eta     '//cc(j) ,48,-6d0,6d0)
 c
-      call rbook(l+21,'syst pt     '//cc(j)//weights_info(kk)
-     &     ,5d0,0d0,200d0)
-      call rbook(l+22,'syst log pt '//cc(j)//weights_info(kk)
-     &     ,0.05d0,0d0,5d0)
-      call rbook(l+23,'syst y      '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
-      call rbook(l+24,'syst eta    '//cc(j)//weights_info(kk)
-     &     ,0.25d0,-6d0,6d0)
+         call HwU_book(l+21,'syst pt     '//cc(j) ,40,0d0,200d0)
+         call HwU_book(l+22,'syst log pt '//cc(j) ,100,0d0,5d0)
+         call HwU_book(l+23,'syst y      '//cc(j) ,48,-6d0,6d0)
+         call HwU_book(l+24,'syst eta    '//cc(j) ,48,-6d0,6d0)
 c
-      enddo
       enddo
       return
       end
 
-
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      subroutine analysis_end(xnorm)
+      subroutine analysis_end(dummy)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
-      double precision xnorm
-      integer i,jj
-      integer kk,l,nwgt_analysis
-      common/c_analysis/nwgt_analysis
-c Do not touch the following lines. These lines make sure that the
-c histograms will have the correct overall normalisation: cross section
-c (in pb) per bin.
-      do i=1,2
-      do kk=1,nwgt_analysis
-      l=(kk-1)*48+(i-1)*24
-      do jj=1,24
-        call ropera(l+jj,'+',l+jj,l+jj,xnorm,0.d0)
-      enddo
-      enddo
-      enddo
-      call close_root_file
+      double precision dummy
+      call HwU_write_file
       return                
       end
 
@@ -114,8 +71,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       double precision wgts(*)
       integer ibody,mu,count_bj,count_j
       double precision wgt,var
-      integer i,j,kk,l,nwgt_analysis,itop
-      common/c_analysis/nwgt_analysis
+      integer i,j,kk,litop
       double precision www,pQCD(0:3,nexternal),palg,rfj,sycut,pjet(0:3
      $     ,nexternal),ptj1,yj1,etaj1,ptbj1,ybj1,etabj1,ptj2,yj2,etaj2
      $     ,ptbj2,ybj2,etabj2,p_top(0:3),pttop,ytop,etatop,psyst(0:3)
@@ -257,45 +213,41 @@ C b-jet
       nbjet=count_bj
 c fill the histograms
       do i=1,2
-         do kk=1,nwgt_analysis
-            www=wgts(kk)
-            l=(kk-1)*48+(i-1)*24
-            if (ibody.ne.3 .and.i.eq.2) cycle
-            call rfill(l+1,pttop,www)
-            if(pttop.gt.0d0) call rfill(l+2,log10(pttop),www)
-            call rfill(l+3,ytop,www)
-            call rfill(l+4,etatop,www)
-            if(njet.ge.1)then
-               call rfill(l+5,ptj1,www)
-               if (ptj1.gt.0d0) call rfill(l+6,log10(ptj1),www)
-               call rfill(l+7,yj1,www)
-               call rfill(l+8,etaj1,www)
-               call rfill(l+21,ptsyst,www)
-               if(ptsyst.gt.0d0) call rfill(l+22,log10(ptsyst),www)
-               call rfill(l+23,ysyst,www)
-               call rfill(l+24,etasyst,www)
-            endif
-            if(njet.ge.2)then
-               call rfill(l+9,ptj2,www)
-               if(ptj2.gt.0d0) call rfill(l+10,log10(ptj2),www)
-               call rfill(l+11,yj2,www)
-               call rfill(l+12,etaj2,www)
-            endif
-            if(nbjet.ge.1)then
-               call rfill(l+13,ptbj1,www)
-               if (ptbj1.gt.0d0) call rfill(l+14,log10(ptbj1),www)
-               call rfill(l+15,ybj1,www)
-               call rfill(l+16,etabj1,www)
-            endif
-            if(nbjet.ge.2)then
-               call rfill(l+17,ptbj2,www)
-               if (ptbj2.gt.0d0) call rfill(l+18,log10(ptbj2),www)
-               call rfill(l+19,ybj2,www)
-               call rfill(l+20,etabj2,www)
-            endif
-         enddo
+         l=(i-1)*24
+         if (ibody.ne.3 .and.i.eq.2) cycle
+         call HwU_fill(l+1,pttop,wgts)
+         if(pttop.gt.0d0) call HwU_fill(l+2,log10(pttop),wgts)
+         call HwU_fill(l+3,ytop,wgts)
+         call HwU_fill(l+4,etatop,wgts)
+         if(njet.ge.1)then
+            call HwU_fill(l+5,ptj1,wgts)
+            if (ptj1.gt.0d0) call HwU_fill(l+6,log10(ptj1),wgts)
+            call HwU_fill(l+7,yj1,wgts)
+            call HwU_fill(l+8,etaj1,wgts)
+            call HwU_fill(l+21,ptsyst,wgts)
+            if(ptsyst.gt.0d0) call HwU_fill(l+22,log10(ptsyst),wgts)
+            call HwU_fill(l+23,ysyst,wgts)
+            call HwU_fill(l+24,etasyst,wgts)
+         endif
+         if(njet.ge.2)then
+            call HwU_fill(l+9,ptj2,wgts)
+            if(ptj2.gt.0d0) call HwU_fill(l+10,log10(ptj2),wgts)
+            call HwU_fill(l+11,yj2,wgts)
+            call HwU_fill(l+12,etaj2,wgts)
+         endif
+         if(nbjet.ge.1)then
+            call HwU_fill(l+13,ptbj1,wgts)
+            if (ptbj1.gt.0d0) call HwU_fill(l+14,log10(ptbj1),wgts)
+            call HwU_fill(l+15,ybj1,wgts)
+            call HwU_fill(l+16,etabj1,wgts)
+         endif
+         if(nbjet.ge.2)then
+            call HwU_fill(l+17,ptbj2,wgts)
+            if (ptbj2.gt.0d0) call HwU_fill(l+18,log10(ptbj2),wgts)
+            call HwU_fill(l+19,ybj2,wgts)
+            call HwU_fill(l+20,etabj2,wgts)
+         endif
       enddo
-      
  999  return      
       end
 

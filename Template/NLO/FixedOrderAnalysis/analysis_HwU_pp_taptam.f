@@ -7,63 +7,27 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
       integer nwgt
       character*(*) weights_info(*)
-      integer i,kk,l,nwgt_analysis
-      common/c_analysis/nwgt_analysis
+      integer i,kk,l
       character*6 cc(2)
       data cc/'|T@NLO','|T@LO '/
-      include 'dbook.inc'
-      call inihist
-      nwgt_analysis=nwgt
-      if (nwgt_analysis*8.gt.nplots/4) then
-         write (*,*) 'error in analysis_begin: '/
-     &        /'too many histograms, increase NPLOTS to',
-     &        nwgt_analysis*8*4
-         stop 1
-      endif
+      call HwU_inithist(nwgt,weights_info)
       do i=1,2
-      do kk=1,nwgt_analysis
-        l=(kk-1)*8+(i-1)*4
-        call bookup(l+1,'total rate  '//cc(i)//weights_info(kk),
-     &       1.0d0,0.5d0,5.5d0)
-        call bookup(l+2,'ta+ta- mass '//cc(i)//weights_info(kk),
-     &       5d0,0d0,200d0)
-        call bookup(l+3,'ta+ta- rap  '//cc(i)//weights_info(kk),
-     &       0.25d0,-5d0,5d0)
-        call bookup(l+4,'ta+ta- pt   '//cc(i)//weights_info(kk),
-     &       20d0,0d0,400d0)
-      enddo
+         l=(i-1)*4
+         call HwU_book(l+1,'total rate  '//cc(i), 5,0.5d0,5.5d0)
+         call HwU_book(l+2,'ta+ta- mass '//cc(i), 40,0d0,200d0)
+         call HwU_book(l+3,'ta+ta- rap  '//cc(i), 40,-5d0,5d0)
+         call HwU_book(l+4,'ta+ta- pt   '//cc(i), 20,0d0,400d0)
       enddo
       return
       end
 
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      subroutine analysis_end(xnorm)
+      subroutine analysis_end(dummy)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
-      character*14 ytit
-      double precision xnorm
-      integer i
-      integer kk,l,nwgt_analysis
-      common/c_analysis/nwgt_analysis
-      include 'dbook.inc'
-      call open_topdrawer_file
-      call mclear
-      do i=1,NPLOTS
-         call mopera(i,'+',i,i,xnorm,0.d0)
-         call mfinal(i)
-      enddo
-      ytit='sigma per bin '
-      do i=1,2
-      do kk=1,nwgt_analysis
-         l=(kk-1)*8+(i-1)*4
-         call multitop(l+1,3,2,'total rate  ',ytit,'LIN')
-         call multitop(l+2,3,2,'ta+ ta- mass',ytit,'LOG')
-         call multitop(l+3,3,2,'ta+ ta- rap ',ytit,'LOG')
-         call multitop(l+4,3,2,'ta+ ta- pt  ',ytit,'LOG')
-      enddo
-      enddo
-      call close_topdrawer_file
+      double precision dummy
+      call HwU_write_file
       return                
       end
 
@@ -79,8 +43,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       double precision wgts(*)
       integer ibody
       double precision wgt,var
-      integer i,kk,l,nwgt_analysis
-      common/c_analysis/nwgt_analysis
+      integer i,kk,l
       double precision ph(0:3),yh,xmh,pth,www
       double precision getrapidity,dot
       external getrapidity,dot
@@ -122,15 +85,12 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       pth = sqrt(max(ph(1)**2+ph(2)**2,0d0))
       var = 1.d0
       do i=1,2
-         do kk=1,nwgt_analysis
-            www=wgts(kk)
-            l=(kk-1)*8+(i-1)*4
-            if (ibody.ne.3 .and.i.eq.2) cycle
-            call mfill(l+1,var,www)
-            call mfill(l+2,xmh,www)
-            call mfill(l+3,yh,www)
-            call mfill(l+4,pth,www)
-         enddo
+         l=(i-1)*4
+         if (ibody.ne.3 .and.i.eq.2) cycle
+         call HwU_fill(l+1,var,wgts)
+         call HwU_fill(l+2,xmh,wgts)
+         call HwU_fill(l+3,yh,wgts)
+         call HwU_fill(l+4,pth,wgts)
       enddo
  999  return      
       end

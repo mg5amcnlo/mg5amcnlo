@@ -12,57 +12,31 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
       integer nwgt
       character*(*) weights_info(*)
-      integer i,kk,l,nwgt_analysis
-      common/c_analysis/nwgt_analysis
+      integer i,kk,l
       character*6 cc(2)
       data cc/'|T@NLO','|T@LO '/
-      call open_root_file()
-      nwgt_analysis=nwgt
+      call HwU_inithist(nwgt,weights_info)
       do i=1,2
-      do kk=1,nwgt_analysis
-        l=(kk-1)*16+(i-1)*8
-        call rbook(l+1,'total rate '//cc(i)//weights_info(kk),
-     &       1.0d0,0.5d0,5.5d0)
-        call rbook(l+2,'lep rapidity '//cc(i)//weights_info(kk),
-     &       0.5d0,-5d0,5d0)
-        call rbook(l+3,'lep pt '//cc(i)//weights_info(kk),
-     &       10d0,0d0,200d0)
-        call rbook(l+4,'et miss '//cc(i)//weights_info(kk),
-     &       10d0,0d0,200d0)
-        call rbook(l+5,'trans. mass '//cc(i)//weights_info(kk),
-     &       5d0,0d0,200d0)
-        call rbook(l+6,'w rapidity '//cc(i)//weights_info(kk),
-     &       0.5d0,-5d0,5d0)
-        call rbook(l+7,'w pt '//cc(i)//weights_info(kk),
-     &       10d00,0d0,200d0)
-        call rbook(l+8,'cphi[l,vl] '//cc(i)//weights_info(kk),
-     &       0.05d0,-1d0,1d0)
-      enddo
+        l=(i-1)*8
+        call HwU_book(l+1,'total rate '//cc(i), 5,0.5d0,5.5d0)
+        call HwU_book(l+2,'lep rapidity '//cc(i), 20,-5d0,5d0)
+        call HwU_book(l+3,'lep pt '//cc(i), 20,0d0,200d0)
+        call HwU_book(l+4,'et miss '//cc(i), 20,0d0,200d0)
+        call HwU_book(l+5,'trans. mass '//cc(i), 40,0d0,200d0)
+        call HwU_book(l+6,'w rapidity '//cc(i), 20,-5d0,5d0)
+        call HwU_book(l+7,'w pt '//cc(i), 20,0d0,200d0)
+        call HwU_book(l+8,'cphi[l,vl] '//cc(i), 40,-1d0,1d0)
       enddo
       return
       end
 
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      subroutine analysis_end(xnorm)
+      subroutine analysis_end(dummy)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
-      double precision xnorm
-      integer i,jj
-      integer kk,l,nwgt_analysis
-      common/c_analysis/nwgt_analysis
-c Do not touch the following lines. These lines make sure that the
-c histograms will have the correct overall normalisation: cross section
-c (in pb) per bin.
-      do i=1,2
-      do kk=1,nwgt_analysis
-        l=(kk-1)*16+(i-1)*8
-        do jj=1,8
-          call ropera(l+jj,'+',l+jj,l+jj,xnorm,0.d0)
-        enddo
-      enddo
-      enddo
-      call close_root_file
+      double precision dummy
+      call HwU_write_file
       return                
       end
 
@@ -77,8 +51,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       double precision wgts(*)
       integer ibody
       double precision wgt,var
-      integer i,kk,l,nwgt_analysis
-      common/c_analysis/nwgt_analysis
+      integer i,kk,l
       double precision pw(0:3),pe(0:3),pn(0:3),ye,yw,pte,etmiss,mtr,ptw,cphi,www
       double precision getrapidity
       external getrapidity
@@ -127,19 +100,16 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       cphi   = (pe(1)*pn(1)+pe(2)*pn(2))/pte/etmiss
       var    = 1.d0
       do i=1,2
-         do kk=1,nwgt_analysis
-            www=wgts(kk)
-            l=(kk-1)*16+(i-1)*8
-            if (ibody.ne.3 .and.i.eq.2) cycle
-            call rfill(l+1,var,www)
-            call rfill(l+2,ye,www)
-            call rfill(l+3,pte,www)
-            call rfill(l+4,etmiss,www)
-            call rfill(l+5,mtr,www)
-            call rfill(l+6,yw,www)
-            call rfill(l+7,ptw,www)
-            call rfill(l+8,cphi,www)
-         enddo
+         l=(i-1)*8
+         if (ibody.ne.3 .and.i.eq.2) cycle
+         call HwU_fill(l+1,var,wgts)
+         call HwU_fill(l+2,ye,wgts)
+         call HwU_fill(l+3,pte,wgts)
+         call HwU_fill(l+4,etmiss,wgts)
+         call HwU_fill(l+5,mtr,wgts)
+         call HwU_fill(l+6,yw,wgts)
+         call HwU_fill(l+7,ptw,wgts)
+         call HwU_fill(l+8,cphi,wgts)
       enddo
  999  return      
       end

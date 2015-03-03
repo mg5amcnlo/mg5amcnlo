@@ -211,8 +211,8 @@ class CheckValidForCmd(object):
             if self.mother and self.mother.options['complex_mass_scheme']:
                 model.change_mass_to_complex_scheme()
         else:
-            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
-                                        decay=True)
+            model = import_ufo.import_model(pjoin(
+                           self.me_dir,'bin','internal', 'ufomodel'),decay=True)
             #pattern for checking complex mass scheme.
             has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
             if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\

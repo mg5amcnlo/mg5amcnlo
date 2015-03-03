@@ -546,8 +546,8 @@ class aMCatNLOLauncher(ExtLauncher):
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
                 if self.options[opt] and not opt in ['cluster', 'multicore', 'name', 'appl_start_grid']])
         if self.options['name']:
-            option_line += ' --name %s' %  self.options['name']  
-        if self.options['appl_start_grid']:
+            option_line += ' --name %s' %  self.options['name']
+        if 'appl_start_grid' in self.options and  self.options['appl_start_grid']:
             option_line += ' --appl_start_grid %s' %  self.options['appl_start_grid']
         command = 'launch ' + self.run_mode + ' ' + option_line
 
