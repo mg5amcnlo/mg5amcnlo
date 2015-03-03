@@ -661,6 +661,20 @@ c
               stop
            endif
            write(ifile,'(a)')'  </rwgt>'
+         elseif(jwgtinfo.eq.-5) then
+           write(ifile,'(a)')'  <rwgt>'
+           write (ifile,'(1x,d16.10,3(1x,i4))') wgtref,n_ctr_found
+     &          ,n_mom_conf,nint(wgtcpower)
+           do i=1,n_mom_conf
+              do j=1,mexternal
+                 write (ifile,'(4(1x,d16.10))')
+     &                (momenta_str(ii,j,i),ii=0,3)
+              enddo
+           enddo
+           do i=1,n_ctr_found
+              write (ifile,'(a)') trim(adjustl(n_ctr_str(i)))
+           enddo
+           write(ifile,'(a)')'  </rwgt>'
          elseif(jwgtinfo.eq.15) then
            write(ifile,'(a)')'  <unlops>'
            write(ifile,*)NUP_H
@@ -889,6 +903,18 @@ c
               write (*,*) 'Not an S- or H-event in write_lhef_event'
               stop
            endif
+           read(ifile,'(a)')string
+         elseif(jwgtinfo.eq.-5) then
+           read(ifile,'(a)')string
+           read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
+           do i=1,n_mom_conf
+              do j=1,mexternal
+                 read (ifile,*) (momenta_str(ii,j,i),ii=0,3)
+              enddo
+           enddo
+           do i=1,n_ctr_found
+              read (ifile,'(a)') n_ctr_str(i)
+           enddo
            read(ifile,'(a)')string
          elseif(jwgtinfo.eq.15) then
            read(ifile,'(a)') string
@@ -1129,6 +1155,18 @@ c
               write (*,*) 'Not an S- or H-event in write_lhef_event'
               stop
            endif
+           read(ifile,'(a)')string
+         elseif(jwgtinfo.eq.-5) then
+           read(ifile,'(a)')string
+           read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
+           do i=1,n_mom_conf
+              do j=1,mexternal
+                 read (ifile,*) (momenta_str(ii,j,i),ii=0,3)
+              enddo
+           enddo
+           do i=1,n_ctr_found
+              read (ifile,'(a)') n_ctr_str(i)
+           enddo
            read(ifile,'(a)')string
          elseif(jwgtinfo.eq.15) then
            read(ifile,'(a)') string

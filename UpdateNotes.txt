@@ -11,6 +11,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 RF: Fixed a bug in the aMCfast/APPLGrid interface introduced in version 2.2.3
 		RF: Fixed a bug in the setting of the integration grids (LO process generation) for the minimum
 		    energy needed for photons. The bug did not lead to any bias in event generation.
+		RF: Re-factoring of the structure of the code for NLO+PS computations.
 
 2.2.3(10/02/15) RF: Re-factoring of the structure of the code for fNLO computations.
                 OM: Fix a bug in MadWeight (correlated param_card was not creating the correct input file)
