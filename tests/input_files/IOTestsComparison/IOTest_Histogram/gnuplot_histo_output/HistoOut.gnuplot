@@ -18,13 +18,45 @@ set key font ",9"
 set key samplen "2"
 set output "HistoOut.ps"
 
-set style line 1 lt 1 lc rgb "#006D4F" lw 1.8
-set style line 2 lt 1 lc rgb "#B90091" lw 1.8
-set style line 11 lt 2 lc rgb "#006D4F" lw 1.8
-set style line 12 lt 2 lc rgb "#B90091" lw 1.8
-set style line 21 lt 4 lc rgb "#006D4F" lw 1.8
-set style line 22 lt 4 lc rgb "#B90091" lw 1.8
-set style line 99 lt 1 lc rgb "gray" lw 1.8
+# This is the "PODO" color palette of gnuplot v.5, but with the order
+# changed: palette of colors selected to be easily distinguishable by
+# color-blind individuals with either protanopia or deuteranopia. Bang
+# Wong [2011] Nature Methods 8, 441.
+
+set style line  1 lt 1 lc rgb "#009e73" lw 2.5
+set style line 11 lt 2 lc rgb "#009e73" lw 2.5
+set style line 21 lt 4 lc rgb "#009e73" lw 2.5
+
+set style line  2 lt 1 lc rgb "#0072b2" lw 2.5
+set style line 12 lt 2 lc rgb "#0072b2" lw 2.5
+set style line 22 lt 4 lc rgb "#0072b2" lw 2.5
+
+set style line  3 lt 1 lc rgb "#d55e00" lw 2.5
+set style line 13 lt 2 lc rgb "#d55e00" lw 2.5
+set style line 23 lt 4 lc rgb "#d55e00" lw 2.5
+
+set style line  4 lt 1 lc rgb "#f0e442" lw 2.5
+set style line 14 lt 2 lc rgb "#f0e442" lw 2.5
+set style line 24 lt 4 lc rgb "#f0e442" lw 2.5
+
+set style line  5 lt 1 lc rgb "#56b4e9" lw 2.5
+set style line 15 lt 2 lc rgb "#56b4e9" lw 2.5
+set style line 25 lt 4 lc rgb "#56b4e9" lw 2.5
+
+set style line  6 lt 1 lc rgb "#cc79a7" lw 2.5
+set style line 16 lt 2 lc rgb "#cc79a7" lw 2.5
+set style line 26 lt 4 lc rgb "#cc79a7" lw 2.5
+
+set style line  7 lt 1 lc rgb "#e69f00" lw 2.5
+set style line 17 lt 2 lc rgb "#e69f00" lw 2.5
+set style line 27 lt 4 lc rgb "#e69f00" lw 2.5
+
+set style line  8 lt 1 lc rgb "black" lw 2.5
+set style line 18 lt 2 lc rgb "black" lw 2.5
+set style line 28 lt 4 lc rgb "black" lw 2.5
+
+
+set style line 999 lt 1 lc rgb "gray" lw 2.5
 
 safe(x,y,a) = (y == 0.0 ? a : x/y)
 
@@ -33,70 +65,11 @@ set style data histeps
 
 
 ################################################################################
-### Rendering of the plot titled 'cphi[l,vl] K-factor, NLO'
+### Rendering of the plot titled 'cphi[l,vl]'
 ################################################################################
 
 set multiplot
-set label "cphi[l,vl] K-factor, NLO" font ",13" at graph 0.04, graph 1.05
-set xrange [-1.0000e+00:-9.5000e-01]
-set bmargin 0 
-set tmargin 0
-set xtics nomirror
-set ytics nomirror
-set mytics 10
-set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
-set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
-
-#-- rendering subhistogram 'single diagram output'
-
-set format y '10^{%%T}'
-set yrange [9.2515e-01:4.3460e+01]
-set origin 0.0000e+00, 5.0000e-01
-set size 1.0000e+00, 4.0000e-01
-set mytics 10
-set ytics auto
-set format x ''
-set logscale y
-set ylabel "{/Symbol s} per bin [pb]"
-
-plot \
-'HistoOut.HwU' index 0 using (($1+$2)/2):3 ls 1 title 'cphi[l,vl] K-factor, NLO',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):8 ls 21 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
-unset label
-unset format
-set yrange [-4.3161e-01:4.0828e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
-set mytics 2
-set ytics auto
-set format x 'cphi[l,vl] K-factor'
-unset logscale y
-set ylabel "NLO rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
-plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-
-unset label
-
-################################################################################
-
-################################################################################
-### Rendering of the plot titled 'cphi[l,vl], NLO'
-################################################################################
-
-set multiplot
-set label "cphi[l,vl], NLO" font ",13" at graph 0.04, graph 1.05
+set label "cphi[l,vl]" font ",13" at graph 0.04, graph 1.05
 set xrange [-1.0000e+00:1.0000e+00]
 set bmargin 0 
 set tmargin 0
@@ -104,13 +77,13 @@ set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'NLO and LO results'
+#-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [7.6500e-01:1.6186e+04]
+set yrange [6.8850e+00:1.6262e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -120,19 +93,17 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 1 using (($1+$2)/2):3 ls 1 title 'cphi[l,vl], NLO',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 2 using (($1+$2)/2):3 ls 2 title 'cphi[l,vl], LO',\
-'HistoOut.HwU' index 2 using (($1+$2)/2):3:4 w yerrorbar ls 2 title '',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 2 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
-'HistoOut.HwU' index 2 using (($1+$2)/2):6 ls 12 title '',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):8 ls 21 title '',\
-'HistoOut.HwU' index 2 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
-'HistoOut.HwU' index 2 using (($1+$2)/2):8 ls 22 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 0 using (($1+$2)/2):3 ls 1 title 'cphi[l,vl], NLO',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):8 ls 21 title '',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):3 ls 2 title 'LO',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):8 ls 22 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
 set yrange [-4.6811e-01:5.7853e-01]
@@ -145,57 +116,55 @@ unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-#-- rendering subhistogram 'NLO/LO K-factor ratio'
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+#-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-5.0691e+00:1.0000e+01]
+set yrange [7.4371e-02:1.1353e-01]
 set origin 0.0000e+00, 3.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
 set format x
 unset logscale y
-set ylabel "NLO/LO"
-set label "NLO/LO (K-factor)" font ",9" at graph 0.03, graph 0.13
+set ylabel "(2)/NLO"
+set label "(2)/NLO" font ",9" at graph 0.03, graph 0.13
 plot \
-1.0 ls 99 title '',\
-'HistoOut.HwU' index 3 using (($1+$2)/2):3 ls 1 title '',\
-'HistoOut.HwU' index 3 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 3 using (($1+$2)/2):5 ls 11 title '',\
-'HistoOut.HwU' index 3 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 3 using (($1+$2)/2):7 ls 21 title '',\
-'HistoOut.HwU' index 3 using (($1+$2)/2):8 ls 21 title ''
+1.0 ls 999 title '',\
+'HistoOut.HwU' index 2 using (($1+$2)/2):3 ls 2 title '',\
+'HistoOut.HwU' index 2 using (($1+$2)/2):5 ls 12 title '',\
+'HistoOut.HwU' index 2 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 2 using (($1+$2)/2):7 ls 22 title '',\
+'HistoOut.HwU' index 2 using (($1+$2)/2):8 ls 22 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'et miss K-factor, NLO'
+### Rendering of the plot titled 'cphi[l,vl] K-factor'
 ################################################################################
 
 set multiplot
-set label "et miss K-factor, NLO" font ",13" at graph 0.04, graph 1.05
-set xrange [0.0000e+00:1.8000e+02]
+set label "cphi[l,vl] K-factor" font ",13" at graph 0.04, graph 1.05
+set xrange [-1.0000e+00:-9.5000e-01]
 set bmargin 0 
 set tmargin 0
 set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'single diagram output'
+#-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
-set yrange [8.1107e-02:7.7896e+02]
+set yrange [8.3263e+00:1.3597e+02]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -205,127 +174,121 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 4 using (($1+$2)/2):3 ls 1 title 'et miss K-factor, NLO',\
-'HistoOut.HwU' index 4 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 4 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 4 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 4 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 4 using (($1+$2)/2):8 ls 21 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 3 using (($1+$2)/2):3 ls 1 title 'cphi[l,vl] K-factor, NLO',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):8 ls 21 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.2625e+00:1.1942e+00]
+set yrange [-2.0081e-01:2.1998e-01]
 set origin 0.0000e+00, 4.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
-set format x 'et miss K-factor'
+set format x
 unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 4 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+
+unset label
+
+################################################################################
+
+################################################################################
+### Rendering of the plot titled 'et miss'
+################################################################################
+
+set multiplot
+set label "et miss" font ",13" at graph 0.04, graph 1.05
+set xrange [0.0000e+00:2.0000e+02]
+set bmargin 0 
+set tmargin 0
+set xtics nomirror
+set ytics nomirror
+set mytics 10
+set xtics auto
+set key horizontal noreverse maxcols 1 width -4 
+set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
+
+#-- rendering subhistograms 'NLO and LO results'
+
+set format y '10^{%%T}'
+set yrange [5.2830e-02:4.9724e+04]
+set origin 0.0000e+00, 5.0000e-01
+set size 1.0000e+00, 4.0000e-01
+set mytics 10
+set ytics auto
+set format x ''
+set logscale y
+set ylabel "{/Symbol s} per bin [pb]"
+
+plot \
+'HistoOut.HwU' index 4 using (($1+$2)/2):3 ls 1 title 'et miss, NLO',\
+'HistoOut.HwU' index 4 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 4 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 4 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 4 using (($1+$2)/2):8 ls 21 title '',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):3 ls 2 title 'LO',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):8 ls 22 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
+unset label
+unset format
+set yrange [-3.2802e-01:2.9991e-01]
+set origin 0.0000e+00, 4.0000e-01
+set size 1.0000e+00, 1.0000e-01
+set mytics 2
+set ytics auto
+set format x ''
+unset logscale y
+set ylabel "NLO rel.unc."
+set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+plot \
+0.0 ls 999 title '',\
 'HistoOut.HwU' index 4 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 4 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 4 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
 'HistoOut.HwU' index 4 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-
-unset label
-
-################################################################################
-
-################################################################################
-### Rendering of the plot titled 'et miss, NLO'
-################################################################################
-
-set multiplot
-set label "et miss, NLO" font ",13" at graph 0.04, graph 1.05
-set xrange [0.0000e+00:2.0000e+02]
-set bmargin 0 
-set tmargin 0
-set xtics nomirror
-set ytics nomirror
-set mytics 10
-set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
-set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
-
-#-- rendering subhistogram 'NLO and LO results'
-
-set format y '10^{%%T}'
-set yrange [5.8700e-03:4.9723e+04]
-set origin 0.0000e+00, 5.0000e-01
-set size 1.0000e+00, 4.0000e-01
-set mytics 10
-set ytics auto
-set format x ''
-set logscale y
-set ylabel "{/Symbol s} per bin [pb]"
-
-plot \
-'HistoOut.HwU' index 5 using (($1+$2)/2):3 ls 1 title 'et miss, NLO',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 6 using (($1+$2)/2):3 ls 2 title 'et miss, LO',\
-'HistoOut.HwU' index 6 using (($1+$2)/2):3:4 w yerrorbar ls 2 title '',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 6 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
-'HistoOut.HwU' index 6 using (($1+$2)/2):6 ls 12 title '',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):8 ls 21 title '',\
-'HistoOut.HwU' index 6 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
-'HistoOut.HwU' index 6 using (($1+$2)/2):8 ls 22 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+#-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-7.0610e-01:6.6794e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
-set mytics 2
-set ytics auto
-set format x ''
-unset logscale y
-set ylabel "NLO rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
-plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-#-- rendering subhistogram 'NLO/LO K-factor ratio'
-unset label
-unset format
-set yrange [-1.0000e+01:1.0000e+01]
+set yrange [-8.3479e-01:9.2115e-01]
 set origin 0.0000e+00, 3.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
 set format x
 unset logscale y
-set ylabel "NLO/LO"
-set label "NLO/LO (K-factor)" font ",9" at graph 0.03, graph 0.13
+set ylabel "(2)/NLO"
+set label "(2)/NLO" font ",9" at graph 0.03, graph 0.13
 plot \
-1.0 ls 99 title '',\
-'HistoOut.HwU' index 7 using (($1+$2)/2):3 ls 1 title '',\
-'HistoOut.HwU' index 7 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 7 using (($1+$2)/2):5 ls 11 title '',\
-'HistoOut.HwU' index 7 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 7 using (($1+$2)/2):7 ls 21 title '',\
-'HistoOut.HwU' index 7 using (($1+$2)/2):8 ls 21 title ''
+1.0 ls 999 title '',\
+'HistoOut.HwU' index 6 using (($1+$2)/2):3 ls 2 title '',\
+'HistoOut.HwU' index 6 using (($1+$2)/2):5 ls 12 title '',\
+'HistoOut.HwU' index 6 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 6 using (($1+$2)/2):7 ls 22 title '',\
+'HistoOut.HwU' index 6 using (($1+$2)/2):8 ls 22 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'lep pt K-factor, NLO'
+### Rendering of the plot titled 'et miss K-factor'
 ################################################################################
 
 set multiplot
-set label "lep pt K-factor, NLO" font ",13" at graph 0.04, graph 1.05
+set label "et miss K-factor" font ",13" at graph 0.04, graph 1.05
 set xrange [0.0000e+00:1.8000e+02]
 set bmargin 0 
 set tmargin 0
@@ -333,13 +296,13 @@ set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'single diagram output'
+#-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
-set yrange [6.8737e-02:4.6193e+02]
+set yrange [7.2996e-01:7.8707e+02]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -349,42 +312,40 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 8 using (($1+$2)/2):3 ls 1 title 'lep pt K-factor, NLO',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):8 ls 21 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 7 using (($1+$2)/2):3 ls 1 title 'et miss K-factor, NLO',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):8 ls 21 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.1120e+00:1.0519e+00]
+set yrange [-4.4782e-01:3.3281e-01]
 set origin 0.0000e+00, 4.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
-set format x 'lep pt K-factor'
+set format x
 unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'lep pt, NLO'
+### Rendering of the plot titled 'lep pt'
 ################################################################################
 
 set multiplot
-set label "lep pt, NLO" font ",13" at graph 0.04, graph 1.05
+set label "lep pt" font ",13" at graph 0.04, graph 1.05
 set xrange [0.0000e+00:2.0000e+02]
 set bmargin 0 
 set tmargin 0
@@ -392,13 +353,13 @@ set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'NLO and LO results'
+#-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [5.8700e-03:4.9723e+04]
+set yrange [5.2830e-02:4.9724e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -408,22 +369,20 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 9 using (($1+$2)/2):3 ls 1 title 'lep pt, NLO',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 10 using (($1+$2)/2):3 ls 2 title 'lep pt, LO',\
-'HistoOut.HwU' index 10 using (($1+$2)/2):3:4 w yerrorbar ls 2 title '',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 10 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
-'HistoOut.HwU' index 10 using (($1+$2)/2):6 ls 12 title '',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):8 ls 21 title '',\
-'HistoOut.HwU' index 10 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
-'HistoOut.HwU' index 10 using (($1+$2)/2):8 ls 22 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 8 using (($1+$2)/2):3 ls 1 title 'lep pt, NLO',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):8 ls 21 title '',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):3 ls 2 title 'LO',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):8 ls 22 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-6.7168e-01:6.3537e-01]
+set yrange [-3.3957e-01:3.0377e-01]
 set origin 0.0000e+00, 4.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
@@ -433,57 +392,55 @@ unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-#-- rendering subhistogram 'NLO/LO K-factor ratio'
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+#-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-1.0000e+01:1.0000e+01]
+set yrange [-3.2102e-01:1.7413e+00]
 set origin 0.0000e+00, 3.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
 set format x
 unset logscale y
-set ylabel "NLO/LO"
-set label "NLO/LO (K-factor)" font ",9" at graph 0.03, graph 0.13
+set ylabel "(2)/NLO"
+set label "(2)/NLO" font ",9" at graph 0.03, graph 0.13
 plot \
-1.0 ls 99 title '',\
-'HistoOut.HwU' index 11 using (($1+$2)/2):3 ls 1 title '',\
-'HistoOut.HwU' index 11 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 11 using (($1+$2)/2):5 ls 11 title '',\
-'HistoOut.HwU' index 11 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 11 using (($1+$2)/2):7 ls 21 title '',\
-'HistoOut.HwU' index 11 using (($1+$2)/2):8 ls 21 title ''
+1.0 ls 999 title '',\
+'HistoOut.HwU' index 10 using (($1+$2)/2):3 ls 2 title '',\
+'HistoOut.HwU' index 10 using (($1+$2)/2):5 ls 12 title '',\
+'HistoOut.HwU' index 10 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 10 using (($1+$2)/2):7 ls 22 title '',\
+'HistoOut.HwU' index 10 using (($1+$2)/2):8 ls 22 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'lep rapidity K-factor, NLO'
+### Rendering of the plot titled 'lep pt K-factor'
 ################################################################################
 
 set multiplot
-set label "lep rapidity K-factor, NLO" font ",13" at graph 0.04, graph 1.05
-set xrange [-5.0000e+00:5.0000e+00]
+set label "lep pt K-factor" font ",13" at graph 0.04, graph 1.05
+set xrange [0.0000e+00:1.8000e+02]
 set bmargin 0 
 set tmargin 0
 set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'single diagram output'
+#-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
-set yrange [9.8209e-02:1.1805e+01]
+set yrange [6.1863e-01:4.6880e+02]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -493,42 +450,40 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 12 using (($1+$2)/2):3 ls 1 title 'lep rapidity K-factor, NLO',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):8 ls 21 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 11 using (($1+$2)/2):3 ls 1 title 'lep pt K-factor, NLO',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):8 ls 21 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-3.9029e-01:3.6919e-01]
+set yrange [-5.8784e-01:4.1534e-01]
 set origin 0.0000e+00, 4.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
-set format x 'lep rapidity K-factor'
+set format x
 unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'lep rapidity, NLO'
+### Rendering of the plot titled 'lep rapidity'
 ################################################################################
 
 set multiplot
-set label "lep rapidity, NLO" font ",13" at graph 0.04, graph 1.05
+set label "lep rapidity" font ",13" at graph 0.04, graph 1.05
 set xrange [-5.0000e+00:5.0000e+00]
 set bmargin 0 
 set tmargin 0
@@ -536,13 +491,13 @@ set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'NLO and LO results'
+#-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [1.9779e+00:9.5497e+03]
+set yrange [1.7801e+01:9.7475e+03]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -552,19 +507,17 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 13 using (($1+$2)/2):3 ls 1 title 'lep rapidity, NLO',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 14 using (($1+$2)/2):3 ls 2 title 'lep rapidity, LO',\
-'HistoOut.HwU' index 14 using (($1+$2)/2):3:4 w yerrorbar ls 2 title '',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 14 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
-'HistoOut.HwU' index 14 using (($1+$2)/2):6 ls 12 title '',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):8 ls 21 title '',\
-'HistoOut.HwU' index 14 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
-'HistoOut.HwU' index 14 using (($1+$2)/2):8 ls 22 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 12 using (($1+$2)/2):3 ls 1 title 'lep rapidity, NLO',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):8 ls 21 title '',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):3 ls 2 title 'LO',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):8 ls 22 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
 set yrange [-4.1641e-01:3.7151e-01]
@@ -577,57 +530,55 @@ unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-#-- rendering subhistogram 'NLO/LO K-factor ratio'
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+#-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-7.1182e-01:2.3085e+00]
+set yrange [3.8636e-01:1.1202e+00]
 set origin 0.0000e+00, 3.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
 set format x
 unset logscale y
-set ylabel "NLO/LO"
-set label "NLO/LO (K-factor)" font ",9" at graph 0.03, graph 0.13
+set ylabel "(2)/NLO"
+set label "(2)/NLO" font ",9" at graph 0.03, graph 0.13
 plot \
-1.0 ls 99 title '',\
-'HistoOut.HwU' index 15 using (($1+$2)/2):3 ls 1 title '',\
-'HistoOut.HwU' index 15 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 15 using (($1+$2)/2):5 ls 11 title '',\
-'HistoOut.HwU' index 15 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 15 using (($1+$2)/2):7 ls 21 title '',\
-'HistoOut.HwU' index 15 using (($1+$2)/2):8 ls 21 title ''
+1.0 ls 999 title '',\
+'HistoOut.HwU' index 14 using (($1+$2)/2):3 ls 2 title '',\
+'HistoOut.HwU' index 14 using (($1+$2)/2):5 ls 12 title '',\
+'HistoOut.HwU' index 14 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 14 using (($1+$2)/2):7 ls 22 title '',\
+'HistoOut.HwU' index 14 using (($1+$2)/2):8 ls 22 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'total rate K-factor, NLO'
+### Rendering of the plot titled 'lep rapidity K-factor'
 ################################################################################
 
 set multiplot
-set label "total rate K-factor, NLO" font ",13" at graph 0.04, graph 1.05
-set xrange [5.0000e-01:1.5000e+00]
+set label "lep rapidity K-factor" font ",13" at graph 0.04, graph 1.05
+set xrange [-5.0000e+00:5.0000e+00]
 set bmargin 0 
 set tmargin 0
 set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'single diagram output'
+#-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
-set yrange [1.2170e-01:5.7767e+00]
+set yrange [8.8388e-01:2.1626e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -637,42 +588,40 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 16 using (($1+$2)/2):3 ls 1 title 'total rate K-factor, NLO',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):8 ls 21 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 15 using (($1+$2)/2):3 ls 1 title 'lep rapidity K-factor, NLO',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):8 ls 21 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.9712e-01:2.3171e-01]
+set yrange [-2.7513e-01:2.9749e-01]
 set origin 0.0000e+00, 4.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
-set format x 'total rate K-factor'
+set format x
 unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'total rate, NLO'
+### Rendering of the plot titled 'total rate'
 ################################################################################
 
 set multiplot
-set label "total rate, NLO" font ",13" at graph 0.04, graph 1.05
+set label "total rate" font ",13" at graph 0.04, graph 1.05
 set xrange [5.0000e-01:1.5000e+00]
 set bmargin 0 
 set tmargin 0
@@ -680,13 +629,13 @@ set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'NLO and LO results'
+#-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [6.3108e+02:6.6484e+04]
+set yrange [5.6798e+03:1.2959e+05]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -696,19 +645,17 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 17 using (($1+$2)/2):3 ls 1 title 'total rate, NLO',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 18 using (($1+$2)/2):3 ls 2 title 'total rate, LO',\
-'HistoOut.HwU' index 18 using (($1+$2)/2):3:4 w yerrorbar ls 2 title '',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 18 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
-'HistoOut.HwU' index 18 using (($1+$2)/2):6 ls 12 title '',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):8 ls 21 title '',\
-'HistoOut.HwU' index 18 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
-'HistoOut.HwU' index 18 using (($1+$2)/2):8 ls 22 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 16 using (($1+$2)/2):3 ls 1 title 'total rate, NLO',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):8 ls 21 title '',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):3 ls 2 title 'LO',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):8 ls 22 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
 set yrange [-1.6603e-01:1.3890e-01]
@@ -721,57 +668,55 @@ unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-#-- rendering subhistogram 'NLO/LO K-factor ratio'
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+#-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-2.9553e-01:1.8781e+00]
+set yrange [5.6282e-01:8.6343e-01]
 set origin 0.0000e+00, 3.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
 set format x
 unset logscale y
-set ylabel "NLO/LO"
-set label "NLO/LO (K-factor)" font ",9" at graph 0.03, graph 0.13
+set ylabel "(2)/NLO"
+set label "(2)/NLO" font ",9" at graph 0.03, graph 0.13
 plot \
-1.0 ls 99 title '',\
-'HistoOut.HwU' index 19 using (($1+$2)/2):3 ls 1 title '',\
-'HistoOut.HwU' index 19 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 19 using (($1+$2)/2):5 ls 11 title '',\
-'HistoOut.HwU' index 19 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 19 using (($1+$2)/2):7 ls 21 title '',\
-'HistoOut.HwU' index 19 using (($1+$2)/2):8 ls 21 title ''
+1.0 ls 999 title '',\
+'HistoOut.HwU' index 18 using (($1+$2)/2):3 ls 2 title '',\
+'HistoOut.HwU' index 18 using (($1+$2)/2):5 ls 12 title '',\
+'HistoOut.HwU' index 18 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 18 using (($1+$2)/2):7 ls 22 title '',\
+'HistoOut.HwU' index 18 using (($1+$2)/2):8 ls 22 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'trans. mass K-factor, NLO'
+### Rendering of the plot titled 'total rate K-factor'
 ################################################################################
 
 set multiplot
-set label "trans. mass K-factor, NLO" font ",13" at graph 0.04, graph 1.05
-set xrange [0.0000e+00:2.0000e+02]
+set label "total rate K-factor" font ",13" at graph 0.04, graph 1.05
+set xrange [5.0000e-01:1.5000e+00]
 set bmargin 0 
 set tmargin 0
 set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'single diagram output'
+#-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
-set yrange [2.6317e-03:3.1150e+01]
+set yrange [1.0953e+00:1.7947e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -781,42 +726,121 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 20 using (($1+$2)/2):3 ls 1 title 'trans. mass K-factor, NLO',\
-'HistoOut.HwU' index 20 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 20 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 20 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 20 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 20 using (($1+$2)/2):8 ls 21 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 19 using (($1+$2)/2):3 ls 1 title 'total rate K-factor, NLO',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):8 ls 21 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-8.5677e-01:9.1225e-01]
+set yrange [-1.9712e-01:2.3171e-01]
 set origin 0.0000e+00, 4.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
-set format x 'trans. mass K-factor'
+set format x
 unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 20 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+
+unset label
+
+################################################################################
+
+################################################################################
+### Rendering of the plot titled 'trans. mass'
+################################################################################
+
+set multiplot
+set label "trans. mass" font ",13" at graph 0.04, graph 1.05
+set xrange [0.0000e+00:2.0000e+02]
+set bmargin 0 
+set tmargin 0
+set xtics nomirror
+set ytics nomirror
+set mytics 10
+set xtics auto
+set key horizontal noreverse maxcols 1 width -4 
+set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
+
+#-- rendering subhistograms 'NLO and LO results'
+
+set format y '10^{%%T}'
+set yrange [9.5952e-03:2.4162e+04]
+set origin 0.0000e+00, 5.0000e-01
+set size 1.0000e+00, 4.0000e-01
+set mytics 10
+set ytics auto
+set format x ''
+set logscale y
+set ylabel "{/Symbol s} per bin [pb]"
+
+plot \
+'HistoOut.HwU' index 20 using (($1+$2)/2):3 ls 1 title 'trans. mass, NLO',\
+'HistoOut.HwU' index 20 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 20 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 20 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 20 using (($1+$2)/2):8 ls 21 title '',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):3 ls 2 title 'LO',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):8 ls 22 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
+unset label
+unset format
+set yrange [-4.2181e-01:3.3480e-01]
+set origin 0.0000e+00, 4.0000e-01
+set size 1.0000e+00, 1.0000e-01
+set mytics 2
+set ytics auto
+set format x ''
+unset logscale y
+set ylabel "NLO rel.unc."
+set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+plot \
+0.0 ls 999 title '',\
 'HistoOut.HwU' index 20 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 20 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 20 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
 'HistoOut.HwU' index 20 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+#-- rendering subhistograms '(2)/NLO ratio'
+unset label
+unset format
+set yrange [-3.4140e-01:2.8528e+00]
+set origin 0.0000e+00, 3.0000e-01
+set size 1.0000e+00, 1.0000e-01
+set mytics 2
+set ytics auto
+set format x
+unset logscale y
+set ylabel "(2)/NLO"
+set label "(2)/NLO" font ",9" at graph 0.03, graph 0.13
+plot \
+1.0 ls 999 title '',\
+'HistoOut.HwU' index 22 using (($1+$2)/2):3 ls 2 title '',\
+'HistoOut.HwU' index 22 using (($1+$2)/2):5 ls 12 title '',\
+'HistoOut.HwU' index 22 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 22 using (($1+$2)/2):7 ls 22 title '',\
+'HistoOut.HwU' index 22 using (($1+$2)/2):8 ls 22 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'trans. mass, NLO'
+### Rendering of the plot titled 'trans. mass K-factor'
 ################################################################################
 
 set multiplot
-set label "trans. mass, NLO" font ",13" at graph 0.04, graph 1.05
+set label "trans. mass K-factor" font ",13" at graph 0.04, graph 1.05
 set xrange [0.0000e+00:2.0000e+02]
 set bmargin 0 
 set tmargin 0
@@ -824,13 +848,13 @@ set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'NLO and LO results'
+#-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
-set yrange [1.0661e-03:2.4162e+04]
+set yrange [2.3685e-02:3.1413e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -840,22 +864,77 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 21 using (($1+$2)/2):3 ls 1 title 'trans. mass, NLO',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 22 using (($1+$2)/2):3 ls 2 title 'trans. mass, LO',\
-'HistoOut.HwU' index 22 using (($1+$2)/2):3:4 w yerrorbar ls 2 title '',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 22 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
-'HistoOut.HwU' index 22 using (($1+$2)/2):6 ls 12 title '',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):8 ls 21 title '',\
-'HistoOut.HwU' index 22 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
-'HistoOut.HwU' index 22 using (($1+$2)/2):8 ls 22 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 23 using (($1+$2)/2):3 ls 1 title 'trans. mass K-factor, NLO',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):8 ls 21 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-8.0046e-01:7.1416e-01]
+set yrange [-4.1428e-01:4.2102e-01]
+set origin 0.0000e+00, 4.0000e-01
+set size 1.0000e+00, 1.0000e-01
+set mytics 2
+set ytics auto
+set format x
+unset logscale y
+set ylabel "NLO rel.unc."
+set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+plot \
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+
+unset label
+
+################################################################################
+
+################################################################################
+### Rendering of the plot titled 'w pt'
+################################################################################
+
+set multiplot
+set label "w pt" font ",13" at graph 0.04, graph 1.05
+set xrange [0.0000e+00:2.0000e+02]
+set bmargin 0 
+set tmargin 0
+set xtics nomirror
+set ytics nomirror
+set mytics 10
+set xtics auto
+set key horizontal noreverse maxcols 1 width -4 
+set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
+
+#-- rendering subhistograms 'NLO and LO results'
+
+set format y '10^{%%T}'
+set yrange [2.3067e+00:9.9691e+04]
+set origin 0.0000e+00, 5.0000e-01
+set size 1.0000e+00, 4.0000e-01
+set mytics 10
+set ytics auto
+set format x ''
+set logscale y
+set ylabel "{/Symbol s} per bin [pb]"
+
+plot \
+'HistoOut.HwU' index 24 using (($1+$2)/2):3 ls 1 title 'w pt, NLO',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):8 ls 21 title '',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):3 ls 2 title 'LO',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):8 ls 22 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
+unset label
+unset format
+set yrange [-3.6492e-01:3.8950e-01]
 set origin 0.0000e+00, 4.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
@@ -865,43 +944,41 @@ unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-#-- rendering subhistogram 'NLO/LO K-factor ratio'
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+#-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-4.6052e+00:3.1769e+00]
+set yrange [9.2557e-01:1.7009e+00]
 set origin 0.0000e+00, 3.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
 set format x
 unset logscale y
-set ylabel "NLO/LO"
-set label "NLO/LO (K-factor)" font ",9" at graph 0.03, graph 0.13
+set ylabel "(2)/NLO"
+set label "(2)/NLO" font ",9" at graph 0.03, graph 0.13
 plot \
-1.0 ls 99 title '',\
-'HistoOut.HwU' index 23 using (($1+$2)/2):3 ls 1 title '',\
-'HistoOut.HwU' index 23 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 23 using (($1+$2)/2):5 ls 11 title '',\
-'HistoOut.HwU' index 23 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 23 using (($1+$2)/2):7 ls 21 title '',\
-'HistoOut.HwU' index 23 using (($1+$2)/2):8 ls 21 title ''
+1.0 ls 999 title '',\
+'HistoOut.HwU' index 26 using (($1+$2)/2):3 ls 2 title '',\
+'HistoOut.HwU' index 26 using (($1+$2)/2):5 ls 12 title '',\
+'HistoOut.HwU' index 26 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 26 using (($1+$2)/2):7 ls 22 title '',\
+'HistoOut.HwU' index 26 using (($1+$2)/2):8 ls 22 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'w pt K-factor, NLO'
+### Rendering of the plot titled 'w pt K-factor'
 ################################################################################
 
 set multiplot
-set label "w pt K-factor, NLO" font ",13" at graph 0.04, graph 1.05
+set label "w pt K-factor" font ",13" at graph 0.04, graph 1.05
 set xrange [0.0000e+00:1.0000e+01]
 set bmargin 0 
 set tmargin 0
@@ -909,13 +986,13 @@ set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'single diagram output'
+#-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
-set yrange [6.2768e-02:4.1519e+00]
+set yrange [5.6491e-01:1.0429e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -925,13 +1002,12 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 24 using (($1+$2)/2):3 ls 1 title 'w pt K-factor, NLO',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):8 ls 21 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 27 using (($1+$2)/2):3 ls 1 title 'w pt K-factor, NLO',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):6 ls 11 title '',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):8 ls 21 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
 set yrange [-3.1760e-01:2.5399e-01]
@@ -939,113 +1015,27 @@ set origin 0.0000e+00, 4.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
-set format x 'w pt K-factor'
-unset logscale y
-set ylabel "NLO rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
-plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-
-unset label
-
-################################################################################
-
-################################################################################
-### Rendering of the plot titled 'w pt, NLO'
-################################################################################
-
-set multiplot
-set label "w pt, NLO" font ",13" at graph 0.04, graph 1.05
-set xrange [0.0000e+00:2.0000e+02]
-set bmargin 0 
-set tmargin 0
-set xtics nomirror
-set ytics nomirror
-set mytics 10
-set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
-set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
-
-#-- rendering subhistogram 'NLO and LO results'
-
-set format y '10^{%%T}'
-set yrange [2.5630e-01:9.9665e+04]
-set origin 0.0000e+00, 5.0000e-01
-set size 1.0000e+00, 4.0000e-01
-set mytics 10
-set ytics auto
-set format x ''
-set logscale y
-set ylabel "{/Symbol s} per bin [pb]"
-
-plot \
-'HistoOut.HwU' index 25 using (($1+$2)/2):3 ls 1 title 'w pt, NLO',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 26 using (($1+$2)/2):3 ls 2 title 'w pt, LO',\
-'HistoOut.HwU' index 26 using (($1+$2)/2):3:4 w yerrorbar ls 2 title '',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 26 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
-'HistoOut.HwU' index 26 using (($1+$2)/2):6 ls 12 title '',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):8 ls 21 title '',\
-'HistoOut.HwU' index 26 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
-'HistoOut.HwU' index 26 using (($1+$2)/2):8 ls 22 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
-unset label
-unset format
-set yrange [-5.0234e-01:4.7518e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
-set mytics 2
-set ytics auto
-set format x ''
-unset logscale y
-set ylabel "NLO rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
-plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-#-- rendering subhistogram 'NLO/LO K-factor ratio'
-unset label
-unset format
-set yrange [-1.7106e-01:1.0912e+00]
-set origin 0.0000e+00, 3.0000e-01
-set size 1.0000e+00, 1.0000e-01
-set mytics 2
-set ytics auto
 set format x
 unset logscale y
-set ylabel "NLO/LO"
-set label "NLO/LO (K-factor)" font ",9" at graph 0.03, graph 0.13
+set ylabel "NLO rel.unc."
+set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-1.0 ls 99 title '',\
-'HistoOut.HwU' index 27 using (($1+$2)/2):3 ls 1 title '',\
-'HistoOut.HwU' index 27 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 27 using (($1+$2)/2):5 ls 11 title '',\
-'HistoOut.HwU' index 27 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 27 using (($1+$2)/2):7 ls 21 title '',\
-'HistoOut.HwU' index 27 using (($1+$2)/2):8 ls 21 title ''
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
 
 unset label
 
 ################################################################################
 
 ################################################################################
-### Rendering of the plot titled 'w rapidity K-factor, NLO'
+### Rendering of the plot titled 'w rapidity'
 ################################################################################
 
 set multiplot
-set label "w rapidity K-factor, NLO" font ",13" at graph 0.04, graph 1.05
+set label "w rapidity" font ",13" at graph 0.04, graph 1.05
 set xrange [-5.0000e+00:5.0000e+00]
 set bmargin 0 
 set tmargin 0
@@ -1053,13 +1043,13 @@ set xtics nomirror
 set ytics nomirror
 set mytics 10
 set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
+set key horizontal noreverse maxcols 1 width -4 
 set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
 
-#-- rendering subhistogram 'single diagram output'
+#-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [8.1073e-02:1.1836e+01]
+set yrange [1.0414e+01:8.8162e+03]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -1069,78 +1059,17 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-'HistoOut.HwU' index 28 using (($1+$2)/2):3 ls 1 title 'w rapidity K-factor, NLO',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
+'HistoOut.HwU' index 28 using (($1+$2)/2):3 ls 1 title 'w rapidity, NLO',\
 'HistoOut.HwU' index 28 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
 'HistoOut.HwU' index 28 using (($1+$2)/2):6 ls 11 title '',\
 'HistoOut.HwU' index 28 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):8 ls 21 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
-unset label
-unset format
-set yrange [-2.8103e-01:3.2451e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
-set mytics 2
-set ytics auto
-set format x 'w rapidity K-factor'
-unset logscale y
-set ylabel "NLO rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
-plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-
-unset label
-
-################################################################################
-
-################################################################################
-### Rendering of the plot titled 'w rapidity, NLO'
-################################################################################
-
-set multiplot
-set label "w rapidity, NLO" font ",13" at graph 0.04, graph 1.05
-set xrange [-5.0000e+00:5.0000e+00]
-set bmargin 0 
-set tmargin 0
-set xtics nomirror
-set ytics nomirror
-set mytics 10
-set xtics auto
-set key horizontal noreverse maxcols 1 width -4 at graph 0.92, graph 0.9
-set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
-
-#-- rendering subhistogram 'NLO and LO results'
-
-set format y '10^{%%T}'
-set yrange [1.1571e+00:8.7005e+03]
-set origin 0.0000e+00, 5.0000e-01
-set size 1.0000e+00, 4.0000e-01
-set mytics 10
-set ytics auto
-set format x ''
-set logscale y
-set ylabel "{/Symbol s} per bin [pb]"
-
-plot \
-'HistoOut.HwU' index 29 using (($1+$2)/2):3 ls 1 title 'w rapidity, NLO',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 30 using (($1+$2)/2):3 ls 2 title 'w rapidity, LO',\
-'HistoOut.HwU' index 30 using (($1+$2)/2):3:4 w yerrorbar ls 2 title '',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 30 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
-'HistoOut.HwU' index 30 using (($1+$2)/2):6 ls 12 title '',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):8 ls 21 title '',\
-'HistoOut.HwU' index 30 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
-'HistoOut.HwU' index 30 using (($1+$2)/2):8 ls 22 title ''
-#-- rendering subhistogram 'Relative scale and PDF uncertainty'
+'HistoOut.HwU' index 28 using (($1+$2)/2):8 ls 21 title '',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):3 ls 2 title 'LO',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):5 ls 12 title 'LO scale variation',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):7 ls 22 title 'LO PDF variation',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):8 ls 22 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
 set yrange [-9.5760e-01:9.4743e-01]
@@ -1153,36 +1082,91 @@ unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
 plot \
-0.0 ls 99 title '',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
-#-- rendering subhistogram 'NLO/LO K-factor ratio'
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+#-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-5.2517e-01:2.1122e+00]
+set yrange [3.8790e-01:1.3698e+00]
 set origin 0.0000e+00, 3.0000e-01
 set size 1.0000e+00, 1.0000e-01
 set mytics 2
 set ytics auto
 set format x
 unset logscale y
-set ylabel "NLO/LO"
-set label "NLO/LO (K-factor)" font ",9" at graph 0.03, graph 0.13
+set ylabel "(2)/NLO"
+set label "(2)/NLO" font ",9" at graph 0.03, graph 0.13
 plot \
-1.0 ls 99 title '',\
-'HistoOut.HwU' index 31 using (($1+$2)/2):3 ls 1 title '',\
-'HistoOut.HwU' index 31 using (($1+$2)/2):3:4 w yerrorbar ls 1 title '',\
-'HistoOut.HwU' index 31 using (($1+$2)/2):5 ls 11 title '',\
+1.0 ls 999 title '',\
+'HistoOut.HwU' index 30 using (($1+$2)/2):3 ls 2 title '',\
+'HistoOut.HwU' index 30 using (($1+$2)/2):5 ls 12 title '',\
+'HistoOut.HwU' index 30 using (($1+$2)/2):6 ls 12 title '',\
+'HistoOut.HwU' index 30 using (($1+$2)/2):7 ls 22 title '',\
+'HistoOut.HwU' index 30 using (($1+$2)/2):8 ls 22 title ''
+
+unset label
+
+################################################################################
+
+################################################################################
+### Rendering of the plot titled 'w rapidity K-factor'
+################################################################################
+
+set multiplot
+set label "w rapidity K-factor" font ",13" at graph 0.04, graph 1.05
+set xrange [-5.0000e+00:5.0000e+00]
+set bmargin 0 
+set tmargin 0
+set xtics nomirror
+set ytics nomirror
+set mytics 10
+set xtics auto
+set key horizontal noreverse maxcols 1 width -4 
+set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.02, graph 0.04
+
+#-- rendering subhistograms 'single diagram output'
+
+set format y '10^{%%T}'
+set yrange [7.2966e-01:1.9944e+01]
+set origin 0.0000e+00, 5.0000e-01
+set size 1.0000e+00, 4.0000e-01
+set mytics 10
+set ytics auto
+set format x ''
+set logscale y
+set ylabel "{/Symbol s} per bin [pb]"
+
+plot \
+'HistoOut.HwU' index 31 using (($1+$2)/2):3 ls 1 title 'w rapidity K-factor, NLO',\
+'HistoOut.HwU' index 31 using (($1+$2)/2):5 ls 11 title 'NLO scale variation',\
 'HistoOut.HwU' index 31 using (($1+$2)/2):6 ls 11 title '',\
-'HistoOut.HwU' index 31 using (($1+$2)/2):7 ls 21 title '',\
+'HistoOut.HwU' index 31 using (($1+$2)/2):7 ls 21 title 'NLO PDF variation',\
 'HistoOut.HwU' index 31 using (($1+$2)/2):8 ls 21 title ''
+#-- rendering subhistograms 'Relative scale and PDF uncertainty'
+unset label
+unset format
+set yrange [-2.6403e-01:3.2176e-01]
+set origin 0.0000e+00, 4.0000e-01
+set size 1.0000e+00, 1.0000e-01
+set mytics 2
+set ytics auto
+set format x
+unset logscale y
+set ylabel "NLO rel.unc."
+set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+plot \
+0.0 ls 999 title '',\
+'HistoOut.HwU' index 31 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 31 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
+'HistoOut.HwU' index 31 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 31 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
 
 unset label
 
 ################################################################################
 unset multiplot
-!ps2pdf "HistoOut.ps"
-!open "HistoOut.pdf"
+!ps2pdf "HistoOut.ps" &> /dev/null
+!open "HistoOut.pdf" &> /dev/null
