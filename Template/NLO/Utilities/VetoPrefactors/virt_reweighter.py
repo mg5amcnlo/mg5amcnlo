@@ -93,18 +93,29 @@ def setup_channel(channelPath):
     # First create the stability check fortran driver executable if not 
     # already present.
     if not os.path.isfile(pjoin(channelPath,'StabilityCheckDriver.f')):
-        cp(pjoin(MGRootPath,'Template','loop_material','Checks',\
-                   checkerName),pjoin(channelPath,'StabilityCheckDriver.f'))
+        with open(pjoin(MGRootPath,'Template','loop_material','Checks',
+                        'StabilityCheckDriver.f'),'r') as checkerFile:
+            with open(pjoin(channelPath,'proc_prefix.txt')) as proc_prefix:
+                checkerToWrite = checkerFile.read()%{'proc_prefix':
+                                                     proc_prefix.read()}
+        checkerFile = open(pjoin(channelPath,'StabilityCheckDriver.f'),'w')
+        checkerFile.write(checkerToWrite)
+        checkerFile.close()                
     # Copy the makefile for that code
     if not os.path.isfile(pjoin(channelPath,'makefile_steerer')):
         # Redirect ../../lib and ../../Source/make_opts to one level above.
         makefileSteererFile=open(pjoin(channelPath,'makefile_steerer'),'w')
-        makefileContent=open(pjoin(MGRootPath,'Template','loop_material',
-           'StandAlone','SubProcesses','makefile')).read()
-        makefileContent=makefileContent.replace('../../lib','../../../lib')
-        makefileContent=makefileContent.replace('../../Source/make_opts',\
-                                               '../../../Source/make_opts')    
-        makefileSteererFile.write(makefileContent)
+        file = open(os.path.join(MGRootPath,'Template','loop_material',
+                                 'StandAlone','SubProcesses','makefile.inc')).read()  
+        replace_dict={}
+        replace_dict['link_tir_libs']='-lcts -liregi'
+        replace_dict['tir_libs']=' '
+        replace_dict['dotf']='%.f'
+        replace_dict['doto']='%.o'
+        replace_dict['tir_include']=' '
+        file=file%replace_dict
+        
+        makefileSteererFile.write(file)
         makefileSteererFile.close()
 
 #    # Make sure to recompile the possibly modified files (time stamps can be

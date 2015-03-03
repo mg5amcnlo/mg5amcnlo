@@ -1,5 +1,5 @@
       subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
-     &     ,putonshell,ndim,ipole,x,jpart,npart,pb,shower_scale)
+     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
       implicit none
@@ -17,7 +17,7 @@ c Arguments
       double precision ybst_til_tolab,shower_scale
       integer iconfig
       logical Hevents,putonshell
-      integer ndim,ipole,jpart(7,-nexternal+3:2*nexternal-3),npart
+      integer ndim,jpart(7,-nexternal+3:2*nexternal-3),npart
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
 
 c Local
@@ -251,7 +251,8 @@ c
       if (sumborn.eq.0d0) then
          write (*,*) 'Error #1 in add_write_info:'
          write (*,*) 'in MadFKS, sumborn should always be larger'//
-     &        ' than zero, because always QCD partons around',sumborn,max_bcol
+     $        ' than zero, because always QCD partons around',sumborn
+     $        ,max_bcol
          do i=1,max_bcol
             write (*,*) i,iBornGraph,icolamp(i,iBornGraph,1),jamp2(i)
          enddo

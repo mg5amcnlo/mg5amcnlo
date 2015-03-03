@@ -25,6 +25,7 @@ import re
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
+import madgraph.various.misc as misc
 from madgraph import MadGraph5Error, MG5DIR
 
 logger = logging.getLogger('madgraph.loop_base_objects')
@@ -68,9 +69,19 @@ class LoopDiagram(base_objects.Diagram):
         # It is the (positive) PDG of the (particle, not anti-particle) L-cut 
         # particle for a loop diagram.
         self['type'] = 0
+        # Loop diagrams can be identified to others which are numerically exactly
+        # equivalent. This is the case for example for the closed massles quark
+        # loops. In this case, only one copy of the diagram is kept and this
+        # multiplier attribute is set the to number of identified diagrams.
+        self['multiplier'] = 1
         # This stores the list of amplitudes vertices which give the R2/UV
         # counter-terms to this loop.
         self['CT_vertices'] = base_objects.VertexList()
+        # The 'contracted_diagram' is the diagram constructed by the function
+        # get_contracted_loop_diagram' which corresponds to the list of vertices
+        # to construct the equivalent diagram to this one when the loop is shrunk
+        # to one point.
+        self['contracted_diagram'] = None
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -110,11 +121,21 @@ class LoopDiagram(base_objects.Diagram):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid integer" % str(value)
 
+        if name == 'multiplier':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer" % str(value)
+
+        if name == 'contracted_diagram':
+            if not isinstance(value, base_objects.Diagram):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid Diagram." % str(value)                            
+
         else:
             super(LoopDiagram, self).filter(name, value)
 
         return True
-    
+
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         
@@ -176,6 +197,241 @@ class LoopDiagram(base_objects.Diagram):
         mystr=mystr[:-1]
 
         return mystr
+
+    def get_contracted_loop_diagram_without_tag(self, struct_rep=None):
+        """This is the old function used without tag which means that no
+        canonical loop information can be produced. It will be used for 
+        unit test only and moved there when I'll implement them."""
+
+        # Without the tagging information we will have to reconstruct the
+        # contracted diagrams with the unordered vertices
+        if len(self.get('vertices'))==0:
+            raise MadGraph5Error, "Function get_contracted_loop_diagram()"+\
+                "called for the first time without specifying struct_rep "+\
+                                            "for a diagram already tagged."
+                                
+        # The leg below will be the outgoing one 
+        contracted_vertex_last_loop_leg = None
+        # List here the vertices which have to appear after and before the
+        # contracted loop vertex.
+        vertices_after_contracted_vertex = []
+        vertices_before_contracted_vertex = []
+        # To know if a given vertex must be placed after or before the
+        # the contracted loop vertex, we must now the list of leg numbers
+        # which have been "generated" starting from the one outgoing leg of
+        # the contracted loop vertex.
+        contracted_vertex_leg_daughters_nb = []
+                                            
+        # We need a different treatment for the amplitude-type vertex 
+        # (the last one) for which all legs are incoming.
+        for vertex in self.get('vertices')[:-1]:
+            # If the interaction had nothing to do with a loop, just add it
+            if not any(l['loop_line'] for l in vertex.get('legs')):
+                # before the contracted vertex if it didn't need any of 
+                # the leg numbers it generated
+                if any((l.get('number') in contracted_vertex_leg_daughters_nb) \
+                                          for l in vertex.get('legs')[:-1]):
+                    vertices_after_contracted_vertex.append(vertex)
+                    contracted_vertex_leg_daughters_nb.append(vertex.get('legs')[-1])
+                else:
+                    vertices_before_contracted_vertex.append(vertex)
+            else:
+                # Add to the mothers of the contracted vertex
+                contracted_vertex.get('legs').extend(
+                   [l for l in vertex.get('legs')[:-1] if not l['loop_line']])
+                # Extend the list of PDGs making up this interaction.
+                # This is useful for the DigramChainTag.
+                contracted_vertex.get('PDGs').extend([l.get('id') for l in
+                                  vertex.get('legs') if not l['loop_line']])
+                # If the outgoing leg is not a loop line but the vertex still
+                # has two loop lines as mothers, then it is the vertex that we 
+                # must replace by the contracted loop vertex
+                if not vertex.get('legs')[-1]['loop_line']:
+                    # The contracted vertex is not of amplitude type here
+                    contracted_vertex_last_loop_leg = vertex.get('legs')[-1]
+                    
+        # Treat the last vertex now
+        if any(l['loop_line'] for l in self.get('vertices')[-1].get('legs')):
+            # Add to the mothers of the contracted vertex
+            contracted_vertex.get('legs').extend([l for l in 
+                self.get('vertices')[-1].get('legs') if not l['loop_line']])
+
+        else:
+            vertices_after_contracted_vertex.append(self.get('vertices')[-1])
+            
+        
+        contracted_diagram_vertices.extend(vertices_before_contracted_vertex)
+        if not contracted_vertex_last_loop_leg is None:
+            contracted_vertex.get('legs').append(contracted_vertex_last_loop_leg)
+
+        if len(contracted_vertex.get('legs'))==1:
+            stop
+        contracted_diagram_vertices.append(contracted_vertex)
+        contracted_diagram_vertices.extend(vertices_after_contracted_vertex)
+
+        contracted_diagram = base_objects.Diagram(
+           {'vertices':contracted_diagram_vertices,'orders':self.get('orders')})
+
+        return contracted_diagram
+    
+    def build_loop_tag_for_diagram_identification(self, model, FDStrut_rep,
+                                            use_FDStructure_ID_for_tag = False):
+        """ This function returns what will be used as the 'loop_tag' attribute
+        of the ContractedVertex instance in the function 'get_contracted_loop_diagram'.
+        It is important since it is what is used by MG5_aMC to decide
+        if two processes have *exactly* the same matrix element and can be
+        identified. 
+        There is no need to characterize the details of the FDStructures attached
+        to the loops because these are already compared using the rest of the
+        DiagramTag structure. All we need is to identify a structure by its
+        external leg numbers."""
+
+        canonical_tag = self['canonical_tag']
+     
+        # First create a list of objects we want to use to identify the particles
+        # running in the loop. We use here the same strategy as in the function
+        # 'vertex_id_from_vertex' of IdentifyMETag.
+        # However, in addition to what one has in IdentifyMETag, we must also
+        # keep track of the attribute 'is_part' since this provides the 
+        # direction of the loop flow.
+        loop_parts_tagging = [[]]*len(canonical_tag)
+        for i, tag_elem in enumerate(canonical_tag):
+            loop_part = model.get_particle(tag_elem[0])
+            loop_parts_tagging[i] = (loop_part.get('spin'), 
+                                     loop_part.get('color'),
+                                     loop_part.get('self_antipart'),
+                                     loop_part.get('mass'),
+                                     loop_part.get('width'),
+                                     loop_part.get('is_part'))
+        
+        # Now create a list of objects which we want to use to uniquely
+        # identify each structure attached to the loop for the loop_tag.
+        FDStructs_tagging = [[]]*len(canonical_tag)
+        for i, tag_elem in enumerate(canonical_tag):
+            for struct_ID in tag_elem[1]:
+                if not use_FDStructure_ID_for_tag:
+                    # The FDStructures will be probed by the rest of the 
+                    # DiagramTag, it is therefore not necessary to include any
+                    # information regarding the structures in the loop_tag.
+                    # However, notice that this means that the same loop attached
+                    # to structures (1,2,3,4), in this order, and another one
+                    # attached to the same structure but in a different order,
+                    # say (1,4,3,2), will share the same DiagramTag (because the
+                    # structure are the same but in a different order) since the
+                    # loop_tag doesn't account for any information regarding the
+                    # structures. This is ok because the Diagram is only intended
+                    # for process identifications.
+                    pass
+#                    FDStructs_tagging[i].extend([leg.get('number') for leg in
+#                        FDStrut_rep.get_struct(struct_ID).get('external_legs')])
+                else:
+                    # For the loop diagram identification (within a given process)
+                    # we must account for the FDStructure, and it is then
+                    # simplest to just use their ID (since all loop diagrams 
+                    # have been tagged with the same FDStructure repository in
+                    # this case, so that the FDStructure ID is really unique).
+                    # There is no need to use the 'canonical' attribute of the
+                    # structure ID.
+                    FDStructs_tagging[i].append(struct_ID)
+
+            FDStructs_tagging[i].sort()
+            FDStructs_tagging[i] = tuple(FDStructs_tagging[i])
+        
+        # We want to identify processes together if their diagrams
+        # are made of the same interactions which can however have different
+        # ID's for different process (i.e. the ID of the 'gdd~' interaction is
+        # different than the one of 'gss~'). We again use the same strategy
+        # as in the function 'vertex_id_from_vertex' of IdentifyMETag.
+        # So we create a list of objects we want to use to tag the loop interactions 
+        interactions_tagging = [[]]*len(canonical_tag)
+        for i, tag_elem in enumerate(canonical_tag):
+            inter = model.get_interaction(tag_elem[2])
+            coup_keys = sorted(inter.get('couplings').keys())
+            interactions_tagging[i]=(
+                tuple((key, inter.get('couplings')[key]) for key in coup_keys),
+                tuple(str(c) for c in inter.get('color')),
+                tuple(inter.get('lorentz')))
+
+        return tuple(
+                 # For each loop vertex, we must identify the following three things
+                 zip(
+                   # Loop particle identification
+                   loop_parts_tagging,
+                   # FDStructure identification
+                   FDStructs_tagging,
+                   # Loop interactions identification
+                   interactions_tagging,
+                 )
+                 # Finally make sure that the loop orders are the same
+                 + sorted(self.get_loop_orders(model).items())
+               )
+
+    def get_contracted_loop_diagram(self, model, struct_rep=None):
+        """ Returns a base_objects.Diagram which correspond to this loop diagram
+        with the loop shrunk to a point. If struct_rep is no specified, then
+        the tagging will proceed assuming no FDStructure has been identified yet.
+        Otherwise, it will possible reuse them an update the repository."""
+        
+        if self['type']<=0:
+            return copy.copy(self)
+
+        if self['contracted_diagram']:
+            return self['contracted_diagram']
+
+        # If this loop diagram hasn't been tagged yet, we must do that now.
+        # (or if the structure repository is not provided
+        if not self['canonical_tag'] or struct_rep is None:
+            n_external_legs = len(base_objects.LegList([l for l in 
+                               self.get_external_legs() if not l['loop_line']]))
+            
+            # use natural ordering for loop tagging
+            start_in, end_in = n_external_legs +1, n_external_legs+2
+            for l in self['vertices'][0]['legs']:
+                if l.same(start_in):
+                    break
+                elif l.same(end_in):
+                    start_in, end_in = end_in, start_in
+                    break
+                
+            if struct_rep is None:                
+                struct_rep = FDStructureList([])
+            self.tag(struct_rep, model, start_in=start_in, end_in=end_in, 
+                                                              synchronize=False)
+
+        contracted_diagram_vertices = base_objects.VertexList()
+        # We give this vertex the special ID -2 so that whenever MG5_aMC tries
+        # to retrieve an information in typically gets from the model interaction
+        # it will instead get it from the 'loop_info' provided by the contracted
+        # vertex of its corresponding vertex_id in a Tag
+        contracted_vertex = base_objects.ContractedVertex({
+          'id':-2,
+          'loop_orders':self.get_loop_orders(model),
+          'loop_tag': self.build_loop_tag_for_diagram_identification(model, struct_rep)
+                                                          })
+
+        # Using the 'tag' information, the construction of the contracted diagram
+        # quite simple. First scan all structures to add their vertices and at
+        # the same time construct the legs of the final vertex which corresponds
+        # to the shrunk loop.
+        for tagelem in self['tag']:
+            contracted_vertex.get('legs').extend([struct_rep[
+                 struct_ID].get('binding_leg') for struct_ID in tagelem[1]])
+            # Extend the list of PDGs making up this interaction.
+            # This is useful for the DigramChainTag.
+            contracted_vertex.get('PDGs').extend([struct_rep[struct_ID].
+                  get('binding_leg').get('id') for struct_ID in tagelem[1]])     
+            contracted_diagram_vertices.extend(sum([struct_rep[
+                struct_ID].get('vertices') for struct_ID in tagelem[1]],[]))
+    
+        # Add the shrunk vertex to the contracted diagram vertices list.
+        contracted_diagram_vertices.append(contracted_vertex)
+
+        contracted_diagram = base_objects.Diagram(
+           {'vertices':contracted_diagram_vertices,'orders':self.get('orders')})
+        
+        self['contracted_diagram'] = contracted_diagram
+        
+        return contracted_diagram
 
     def get_CT(self,model,string=None):
         """ Returns the CounterTerms of the type passed in argument. If None
@@ -277,7 +533,7 @@ class LoopDiagram(base_objects.Diagram):
         return weight
     
     @classmethod
-    def choose_optimal_lcut(cls,intag,struct_rep,process):
+    def choose_optimal_lcut(cls,intag,struct_rep, model, external_legs):
         """ This function chooses the place where to cut the loop in order to
         maximize the loop wavefunction recycling in the open loops method.
         This amounts to cut just before the combined structure with smallest 
@@ -285,8 +541,7 @@ class LoopDiagram(base_objects.Diagram):
         weight."""
         
         tag=copy.deepcopy(intag)
-        model=process['model']
-        number_legs=len(process.get('legs'))
+        number_legs=len(external_legs)
         
         # Put the smallest weight first
         weights=[cls.compute_weight(t[1],struct_rep,number_legs) for t in tag]
@@ -351,7 +606,7 @@ class LoopDiagram(base_objects.Diagram):
 
         return canonical_tag        
 
-    def tag(self, struct_rep, start_in, end_in, process):
+    def tag(self, struct_rep, model, start_in=None, end_in=None, synchronize=True):
         """ Construct the tag of the diagram providing the loop structure 
         of it. """
        
@@ -359,6 +614,16 @@ class LoopDiagram(base_objects.Diagram):
         # It is dummy at this stage
         loopVertexList=base_objects.VertexList()
         
+        # We create here the list of external legs. It will be used in each call
+        # of process_next_loop_leg to generate the FDStructure vertices, so
+        # it is more efficient to create it here once only.
+        external_legs = base_objects.LegList([l for l in 
+                                self.get_external_legs() if not l['loop_line']])
+
+        if start_in is None or end_in is None:
+            start_in = len(external_legs)+1
+            end_in = len(external_legs)+2                     
+                
         # Notice here that start and end can be either the Legs object
         # specification of the two L-cut particles or simply their 'number'.
         if isinstance(start_in,int) and isinstance(end_in,int):
@@ -372,8 +637,8 @@ class LoopDiagram(base_objects.Diagram):
             raise MadGraph5Error, "In the diagram tag function, 'start' and "+\
                 " 'end' must be either integers or Leg objects." 
         
-        if(self.process_next_loop_leg(struct_rep,-1,-1,start,end,\
-                                                       loopVertexList,process)):
+        if self.process_next_loop_leg(struct_rep,-1,-1,start,end,\
+                                          loopVertexList, model, external_legs):
             # Possible check here is:
             #mytype=self['type']
             #self.synchronize_loop_vertices_with_tag(process['model'],
@@ -384,11 +649,12 @@ class LoopDiagram(base_objects.Diagram):
             # optimizations.
             if self.cutting_method=='default':
                 # The default one has no specific property.
-                canonical_tag=self.choose_default_lcut(self['tag'],process['model'])
+                canonical_tag=self.choose_default_lcut(self['tag'],model)
             elif self.cutting_method=='optimal':
                 # The choice below is optimized for recycling the loop wavefunction
                 # in the open loops method.
-                canonical_tag=self.choose_optimal_lcut(self['tag'],struct_rep,process)
+                canonical_tag=self.choose_optimal_lcut(self['tag'],struct_rep, 
+                                                           model, external_legs)
             else:
                 raise MadGraph5Error, 'The cutting method %s is not implemented.'\
                                                             %self.cutting_method
@@ -397,7 +663,8 @@ class LoopDiagram(base_objects.Diagram):
             # We assign here the loopVertexList to the list of vertices 
             # building this loop diagram. Keep in mind the the structures are 
             # factored out.
-            self.synchronize_loop_vertices_with_tag(process['model'],
+            if synchronize:
+                self.synchronize_loop_vertices_with_tag(model,
                                                            struct_rep,start,end)
             # Now we just have to replace, in the canonical_tag, the legs with
             # the corresponding leg PDG since this is the only thing that matter
@@ -453,7 +720,7 @@ class LoopDiagram(base_objects.Diagram):
             " not be found when reconstructing the loop vertices."
 
     def process_next_loop_leg(self, structRep, fromVert, fromPos, currLeg, \
-                              endLeg, loopVertexList, process):
+                                  endLeg, loopVertexList, model, external_legs):
         """ Finds a loop leg and what is the next one. Also identify and tag the
         FD structure attached in between these two loop legs. It adds the 
         corresponding tuple to the diagram tag and calls iself again to treat
@@ -476,6 +743,7 @@ class LoopDiagram(base_objects.Diagram):
             # in vertex i.
             canonical = self.construct_FDStructure(i,pos,\
                                self['vertices'][i].get('legs')[k],FDStruct)
+
             if not canonical:
                 raise self.PhysicsObjectError, \
                       "Failed to reconstruct a FDStructure."
@@ -504,7 +772,7 @@ class LoopDiagram(base_objects.Diagram):
                 # And we now ask the structure to create its vertices, 
                 # starting from the outter legs going inwards towards the 
                 # binding leg.
-                FDStruct.generate_vertices(process)
+                FDStruct.generate_vertices(model, external_legs)
                 structRep.append(FDStruct)
             else:
                 # We get here the ID of the FDstruct recognised which has 
@@ -564,7 +832,8 @@ class LoopDiagram(base_objects.Diagram):
                     # process_next_loop_leg, we can now change it to the Leg 
                     # it really correspond to.
                     if isinstance(currLeg,int):
-                        currLeg=self['vertices'][i].get('legs')[j]
+                        currLeg=base_objects.Leg(self['vertices'][i].get('legs')[j])
+                        
                     # We can now process this loop interaction found...
                     for k in filter(lambda ind: not ind==j, \
                                    range(len(self['vertices'][i].get('legs')))):
@@ -614,6 +883,7 @@ class LoopDiagram(base_objects.Diagram):
             myleglist=base_objects.LegList([copy.copy(\
                         structRep[FDindex]['binding_leg']) for FDindex in \
                         FDStructureIDList])
+
                 
             # Add The original loop leg we started from. We either take it 
             # from starting leg (at the first call of process_next_loop_leg)
@@ -628,8 +898,18 @@ class LoopDiagram(base_objects.Diagram):
             else:
                 self['tag'].append([copy.copy(currLeg),\
                                      sorted(FDStructureIDList),vertFoundID])
-                myleglist.append(copy.copy(currLeg))
-            
+                new_input_leg = copy.copy(currLeg)
+                if fromPos!=-1:
+                    # In this case the currLeg is an *output* of the current
+                    # loop vertex (the last loop vertex must have been a 2-point
+                    # dummy one otherwise loopVertexList wouldn't be empty). 
+                    # To have this leg as an *input* of the loop vertex we are
+                    # constructing with generate_loop_vertex, we must switch 
+                    # the id of the new_input_leg to its corresponding anti pdg.
+                    new_input_leg.set('id',model.get_particle(
+                                   new_input_leg.get('id')).get_anti_pdg_code())
+                myleglist.append(new_input_leg)
+                    
             # Now depending we reached the last loop vertex or not, we will 
             # create a current (with ref_dict_to1) or a wavefunction plus 
             # a trivial two-point amplitude with interaction id=-1 which
@@ -642,20 +922,20 @@ class LoopDiagram(base_objects.Diagram):
             # as we reach this number, we reached the EXTERNAL outter leg 
             # which set the end of the tagging algorithm.
             loopVertexList.append(\
-              self.generate_loop_vertex(myleglist,process['model'],vertFoundID))
+                         self.generate_loop_vertex(myleglist,model,vertFoundID))
+            # check that the particle/anti-particle is set correctly
+
         if nextLoopLeg.same(endLeg):
             # Now we can add the corresponding 'fake' amplitude vertex
             # with flagged id = -1
             # If last vertex was dummy, then recuperate the original leg
             if vertFoundID not in [0,-1]:
                 starting_Leg=copy.copy(myleglist[-1])
-                legid=process['model'].get_particle(myleglist[-1]['id']).\
-                                                    get_anti_pdg_code()
+                legid=model.get_particle(myleglist[-1]['id']).get_anti_pdg_code()
                 state=myleglist[-1].get('state')
             else:
                 starting_Leg=copy.copy(currLeg)
-                legid=process['model'].get_particle(currLeg['id']).\
-                                                    get_anti_pdg_code()
+                legid=model.get_particle(currLeg['id']).get_anti_pdg_code()
                 state=currLeg.get('state')
 
             loopVertexList.append(base_objects.Vertex(\
@@ -673,7 +953,7 @@ class LoopDiagram(base_objects.Diagram):
             # This is where the recursion happens. We have not reached the 
             # end loop leg yet, so we iterate the procedure.
             return self.process_next_loop_leg(structRep, vertPos, legPos, \
-                        nextLoopLeg, endLeg, loopVertexList, process)
+                      nextLoopLeg, endLeg, loopVertexList, model, external_legs)
 
     def synchronize_loop_vertices_with_tag(self,model,struct_rep,
                                          lcut_part_number,lcut_antipart_number):
@@ -972,9 +1252,11 @@ class LoopDiagram(base_objects.Diagram):
         
         loop_orders = {}
         for vertex in self['vertices']:
-            # We do not count the identity vertex
-            if vertex['id'] not in [0,-1] and len([1 for leg in vertex['legs'] if \
-                                                          leg['loop_line']])==2:
+            # We do not count the identity vertex nor the vertices building the
+            # external FDStructures (possibly left over if not synchronized with
+            # the tag).
+            if vertex['id'] not in [0,-1] and len([1 for leg \
+                                     in vertex['legs'] if leg['loop_line']])==2:
                 vertex_orders = model.get_interaction(vertex['id'])['orders']
                 for order in vertex_orders.keys():
                     if order in loop_orders.keys():
@@ -1366,18 +1648,27 @@ class FDStructure(base_objects.PhysicsObject):
             return '()'    
 
 
-    def generate_vertices(self, process):
+    def generate_vertices(self, model, external_legs=None):
         """ This functions generate the vertices building this structure, 
         starting from the outter legs going towards the binding leg. 
         It uses the interactions dictionaries from the model. """
 
+        if isinstance(model, base_objects.Process):
+            assert  external_legs is None
+            #retro-compatible way to call the function
+            external_legs= model.get('legs')
+            model = model['model']
+        assert external_legs is not None
+        assert isinstance(model, base_objects.Model)
+            
+
+        
         # First empty the existing vertices
         self.set('vertices',base_objects.VertexList())
 
         tag=copy.copy(self['canonical'])
 
         # Define easy access points
-        model = process['model']
         ref_dict_to1 = model.get('ref_dict_to1')
 
         if not tag:
@@ -1386,14 +1677,7 @@ class FDStructure(base_objects.PhysicsObject):
         "reconstruction of the vertices cannot be performed."
 
         # Create a local copy of the external legs
-        leglist = copy.deepcopy(process.get('legs'))
-
-        for leg in leglist:
-            # Need to flip part-antipart for incoming particles, 
-            # so they are all outgoing
-            if leg.get('state') == False:
-                part = model.get('particle_dict')[leg.get('id')]
-                leg.set('id', part.get_anti_pdg_code())
+        leglist = copy.deepcopy(external_legs)
 
         # Create a dictionary to get an easy access to a given particle number
         legDict={}

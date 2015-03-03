@@ -167,6 +167,7 @@ for event in evtFile:
     momenta=[[p.E,p.px,p.py,p.pz] for p in event if p.status==-1]
     pdg=[int(p.pid) for p in event if p.status==-1]
 
+    event.parse_reweight()
     born_wgt=event.reweight_data['1001']
 
 # PDG codes of the incoming particles

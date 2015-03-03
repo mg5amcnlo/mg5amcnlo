@@ -56,3 +56,9 @@ c
       logical clusinfo
       double precision lhe_version
       COMMON/TO_LHEFORMAT/lhe_version,clusinfo
+
+c     
+C     Controls wheter to perform Monte-Carlo sampling over grouped subprocesses
+C
+      logical MC_grouped_subproc
+      common/to_MC_grouped_subproc/MC_grouped_subproc

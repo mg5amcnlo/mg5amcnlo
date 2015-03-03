@@ -110,7 +110,6 @@ c
 c     setup masses for the final-state particles
 c
       include 'pmass.inc'
-      include 'qmass.inc'
 
 C-----
 C  BEGIN CODE
@@ -185,7 +184,6 @@ c     check if I have to apply cuts on the particles
 c
       do i=nincoming+1,nexternal
          do_cuts(i)=.true.
-         if(nincoming.eq.1) do_cuts(i)=.false.
          if(.not.cut_decays.and.from_decay(i)) do_cuts(i)=.false.
          is_a_j(i)=.false.
          is_a_l(i)=.false.
@@ -322,7 +320,7 @@ c        BJET
             endif
 c        PHOTON
             if(is_a_a(i))then
-                 etmin(i) = max(pta, ptgmin, eamax)
+                 etmin(i) = max(pta, ptgmin, ea)
                  SMIN = SMIN + etmin(i)
                  etmax(i)=ptamax
                  emin(i)=ea

@@ -106,7 +106,9 @@ c For backward compatibility
       ellissextonfact=QES_over_ref
 
 c check that the event normalization input is reasoble
-      call case_trap2(event_norm)
+      buff = event_norm 
+      call case_trap2(buff) ! requires a string of length 20 at least
+      event_norm=buff 
       if (event_norm(1:7).ne.'average' .and. event_norm(1:3).ne.'sum'
      $     .and. event_norm(1:5).ne.'unity')then
          write (*,*) 'Do not understand the event_norm parameter'/

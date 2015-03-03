@@ -1,3 +1,5 @@
+*     -*-fortran-*-
+
 c Common blocks for NLO or aMC@NLO reweighting
 c Conventions for array relevant to NLO computations:
 c   i=1,2,3,4  -> event, soft, collinear, soft-collinear
@@ -129,3 +131,8 @@ c NLO+NNLL jet veto stuff
       common/cwgt_jet_veto/veto_multiplier,H1_factor_virt,
      &                     veto_compensating_factor,born_wgt_veto
 
+      integer n_ctr_found,max_n_ctr,n_mom_conf
+      parameter (max_n_ctr=256)
+      character*1024 n_ctr_str(max_n_ctr)
+      double precision momenta_str(0:3,maxparticles,max_n_ctr)
+      common /c_rwgt_lines/n_ctr_str,momenta_str,n_ctr_found,n_mom_conf

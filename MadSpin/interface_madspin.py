@@ -463,6 +463,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         generate_all.run()
                         
         self.branching_ratio = generate_all.branching_ratio
+        try:
+            self.err_branching_ratio = generate_all.err_branching_ratio
+        except Exception:
+            self.err_branching_ratio = 0
+            
         evt_path = self.events_file.name
         try:
             self.events_file.close()
@@ -532,6 +537,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 new block:
                 %s""" \
                 % (self.options['ms_dir'], name, orig_block, block)
+
+        #replace init information
+        generate_all.banner['init'] = self.banner['init']
         
         # NOW we have all the information available for RUNNING
         

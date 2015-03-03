@@ -19,7 +19,7 @@ c  iwgtinfo=4 (default) --> same as 3, but also wgtbpower is included
 c  iwgtinfo=5 (new default) --> needed when combining nFKSprocesses
 c If computing parton-level NLO, iwgtinfo=2 must not be used
       integer iwgtinfo
-      parameter (iwgtinfo=5)
+      parameter (iwgtinfo=-5)
 
 c
 c Auxiliary quantities
@@ -30,8 +30,8 @@ c Temporary quantities relevant to degenerate terms
       common/cwgtaux1/wgtdegrem_xi,wgtdegrem_lxi,wgtdegrem_muF
 
 c Temporary quantities relevant to n-body terms
-      double precision wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody
-      common/cwgtaux2/wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody
+      double precision wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody,wgtvirttmp
+      common/cwgtaux2/wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody,wgtvirttmp
 
 c Temporary weights for pure-NLO computations: event, counterevents+Born, 
 c and Born, with the same conventions as in fks_singular

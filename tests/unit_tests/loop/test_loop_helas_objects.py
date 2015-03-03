@@ -397,6 +397,10 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     raise Error,"Selection must be a list of integers or 2-tuple of integers."                                        
             else:
                 raise Error,"Mode can only be 'individual' or 'collective'"
+            
+  #          diagSelection = base_objects.DiagramList(\
+  #            [diag for diag in diagSelection if not isinstance(diag,\
+  #             loop_base_objects.LoopUVCTDiagram) and diag['type']!=0])
             bornDiagSelected=base_objects.DiagramList(\
               [diag for diag in diagSelection if not isinstance(diag,\
                loop_base_objects.LoopUVCTDiagram) and diag['type']==0])
@@ -407,7 +411,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
               [diag for diag in diagSelection if isinstance(diag, \
                 loop_base_objects.LoopUVCTDiagram)])
             loopAmplitude.set('diagrams',diagSelection)
-            myloopME=loop_helas_objects.LoopHelasMatrixElement(loopAmplitude,gen_color=False)
+            myloopME=loop_helas_objects.LoopHelasMatrixElement(loopAmplitude,
+                                                                gen_color=False)
             # Keep in mind that the loop diagram is always placed before its
             # corresponding CT diagrams.
             AllReconstructedDiags=myloopME.get_base_amplitude().get('diagrams')
@@ -418,7 +423,9 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
             nLoopUVCTDiags = len(loopUVCTDiagSelected)
             nLoopDiags = 0
             for diag in loopDiagSelected:
-                nLoopDiags += (1+len(diag.get('CT_vertices')))
+                # We don't want to count twice the counterterms with same ID
+                nLoopDiags += (1+len(set(vert.get('id') for vert in \
+                                                      diag.get('CT_vertices'))))
             if checkColor:
                 if (loopDiagSelected or loopUVCTDiagSelected):
                     loop_col_basis = loop_color_amp.LoopColorBasis()
@@ -497,7 +504,10 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # We assume here the number of base_object.Diagram
                         # generated is correct.
                         if not isinstance(diag,loop_base_objects.LoopUVCTDiagram):
-                            shift=len(diag.get('CT_vertices'))
+                            # We don't want to count twice the counterterms with
+                            # same ID
+                            shift=len(set(vert.get('id') for vert in \
+                                                       diag.get('CT_vertices')))
                         else:
                             shift=0
                         reconstructedDiags=AllReconstructedDiags[diagIndex:\
@@ -532,7 +542,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     start_leg=reconstructedDiags[0].get_starting_loop_line()
                     finish_leg=reconstructedDiags[0].get_finishing_loop_line()
                     reconstructedDiags[0].tag(loopAmplitude['structure_repository'],\
-                      start_leg.get('number'),finish_leg.get('number'),process)
+                      process['model'],start_leg.get('number'),finish_leg.get('number'))
                     # Then make sure it leads to the same canonical tag
                     self.assertEqual(diag['canonical_tag'],\
                                  reconstructedDiags[0]['canonical_tag'])
@@ -544,8 +554,9 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                 if not isinstance(diag, loop_base_objects.LoopUVCTDiagram) \
                    and diag.get('CT_vertices'):
                     # Check that the right number of counter-diagrams is produced
-                    self.assertEqual(len(reconstructedDiags)-1,\
-                                 len(diag.get('CT_vertices')))
+                    # We don't want to count twice the counterterms with same ID
+                    self.assertEqual(len(reconstructedDiags)-1,
+                      len(set(vert.get('id') for vert in diag.get('CT_vertices'))))
                     for ct_number in range(1,len(reconstructedDiags)):
                         if verbose: print 'reconstructed CT diag',ct_number,':',\
                           reconstructedDiags[ct_number].nice_string()
@@ -661,8 +672,9 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 "contributes to the following loop color basis elements",contribution_list
                         # Check the number of key entries for the counter-terms                        
                         if diag.get('CT_vertices'):
-                            self.assertEqual(len(diag.get('CT_vertices')),\
-                              len(this_loop_colorize_obj)-1)
+                            # We don't want to count twice the counterterms with same ID
+                            self.assertEqual(len(set(vert.get('id') for vert in \
+                              diag.get('CT_vertices'))),len(this_loop_colorize_obj)-1)
                             # Don't forget that in get_base_amplitude the CT are given sorted
                             # according to their vertex id
                             ctverts=copy.copy(diag.get('CT_vertices'))
@@ -725,7 +737,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                 
         myloopproc = base_objects.Process({'legs':myleglist,
                                         'model':self.myloopmodel,
-                                        'orders':{},
+                                        'orders':{'QED':0},
                                         'perturbation_couplings':['QCD',],
                                         'squared_orders':{}})
     
