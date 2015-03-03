@@ -1141,8 +1141,8 @@ class HwUList(histograms_PhysicsObjectList):
         if isinstance(file_path, str):
             stream.close()
 
-    def output(self, path, format='gnuplot',number_of_ratios = 1, 
-                                 uncertainties=['scale','pdf','statitistical']):
+    def output(self, path, format='gnuplot',number_of_ratios = -1, 
+          uncertainties=['scale','pdf','statitistical'],ratio_correlations=True):
         """ Ouput this histogram to a file, stream or string if path is kept to
         None. The supported format are for now. Chose whether to print the header
         or not."""
@@ -1269,7 +1269,8 @@ set style data histeps
             block_position = histo_group.output_group(HwU_output_list, 
                     gnuplot_output_list, block_position,output_base_name+'.HwU',
                     number_of_ratios=number_of_ratios, 
-                    uncertainties = uncertainties)
+                    uncertainties = uncertainties,
+                    ratio_correlations = ratio_correlations)
 
         # Now write the tail of the gnuplot command file
         gnuplot_output_list.extend([
@@ -1288,7 +1289,8 @@ set style data histeps
                                          "now be rendered by invoking gnuplot.")
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
-          number_of_ratios = 1, uncertainties =['scale','pdf','statitistical']):
+          number_of_ratios = -1, uncertainties =['scale','pdf','statitistical'],
+          ratio_correlations = True):
         """ This functions output a single group of histograms with either one
         histograms untyped (i.e. type=None) or two of type 'NLO' and 'LO' 
         respectively."""
@@ -1298,12 +1300,35 @@ set style data histeps
                            (0.0,0.3,1.0,0.1)]
         layout_geometry.reverse()
         
+        
+        # This function is to create the ratio histograms if the user turned off
+        # correlations.
+        def ratio_no_correlations(wgtsA, wgtsB):
+            new_wgts = {}
+            for label, wgt in wgtsA.items():
+                if wgtsB['central']==0.0 and wgt==0.0:
+                    new_wgts[label] = 0.0
+                    continue
+                elif wgtsB['central']==0.0:
+                    # It is ok to skip the warning here.
+#                   logger.debug('Warning:: A bin with finite weight '+
+#                                      'was divided by a bin with zero weight.')
+                    new_wgts[label] = 0.0
+                    continue
+                new_wgts[label] = (wgtsA[label]/wgtsB['central'])
+            return new_wgts
+        
         # First compute the ratio of all the histograms from the second to the
         # number_of_ratios+1 ones in the list to the first histogram.
         n_histograms = len(self)
         ratio_histos = HwUList([])
-        for i, histo in enumerate(self[1:number_of_ratios+1]):
-            ratio_histos.append(histo/self[0])
+        for i, histo in enumerate(self[1:
+                     number_of_ratios+1 if number_of_ratios>=0 else len(self)]):
+            if ratio_correlations:
+                ratio_histos.append(histo/self[0])
+            else:
+                ratio_histos.append(self[0].__class__.combine(histo, self[0],
+                                                         ratio_no_correlations))
             if self[0].type=='NLO' and self[1].type=='LO':
                 ratio_histos[-1].title += '1/K-factor'
             elif self[0].type=='LO' and self[1].type=='NLO':
@@ -1489,9 +1514,8 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
         if 'statistical' in uncertainties: 
             wgts_to_consider.append('stat_error')
 
-        # This function is just to temporarily create the ratio histogram with 
-        # the hwu.combine function. Notice hoewer that the histogram hence created
-        # is not used to actuall plot the quantity in gnuplot   
+        # This function is just to temporarily create the scale ratio histogram with 
+        # the hwu.combine function. 
         def rel_scale(wgtsA, wgtsB):
             new_wgts = {}
             for label, wgt in wgtsA.items():
@@ -1511,7 +1535,9 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
                 else:
                     new_wgts[label] = wgtsA[label]
             return new_wgts
-
+        # Notice even though a ratio histogram is created here, it
+        # is not actually used to plot the quantity in gnuplot, but just to
+        # compute the y range. 
         (ymin, ymax) = HwU.get_y_optimal_range(
           [self[0].__class__.combine(self[0],self[0],rel_scale),], 
           labels = wgts_to_consider,  scale='LIN')
@@ -1668,11 +1694,13 @@ if __name__ == "__main__":
            '--no_open'       Turn off the automatic processing of the gnuplot output.
            '--show_full'     to show the complete output of what was read.
            '--show_short'    to show a summary of what was read.
+           '--simple_ratios' to turn off correlations and error propagation in the ratio.
     """
     
-    n_ratios   = 1
+    n_ratios   = -1
     uncertainties = ['scale','pdf','statistical']
     auto_open = True
+    ratio_correlations = True
     
     def log(msg):
         print "histograms.py :: %s"%str(msg)
@@ -1698,6 +1726,9 @@ if __name__ == "__main__":
 
     if '--no_open' in sys.argv:
         auto_open = False
+
+    if '--simple_ratios' in sys.argv:
+        ratio_correlations = False
 
     if '--no_scale' in sys.argv:
         uncertainties.remove('scale')
@@ -1734,7 +1765,7 @@ if __name__ == "__main__":
 
     if '--gnuplot' in sys.argv or all(arg not in ['--HwU'] for arg in sys.argv):
         histo_list.output(OutName, format='gnuplot', number_of_ratios = n_ratios, 
-            uncertainties=uncertainties)
+            uncertainties=uncertainties, ratio_correlations=ratio_correlations)
         log("%d histograms have been output in " % len(histo_list)+\
                 "the gnuplot format at '%s.[HwU|gnuplot]'." % OutName)
         if auto_open:
