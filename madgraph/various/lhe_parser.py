@@ -450,10 +450,14 @@ class MultiEventFile(EventFile):
                 self.add(p)
         self.configure = False
         
-    def add(self, path, cross=0, error=0, across=0):
-        """ add a file to the pool, cross allow to reweight the sum of weight 
+    def add(self, path, cross, error, across):
+        """ add a file to the pool, across allow to reweight the sum of weight 
         in the file to the given cross-section 
         """
+        
+        if across == 0:
+            # No event linked to this channel -> so no need to include it
+            return 
         
         obj = EventFile(path)
         if len(self.files) == 0 and not self.banner:
