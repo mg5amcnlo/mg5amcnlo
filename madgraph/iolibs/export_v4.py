@@ -2045,8 +2045,10 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
             arg=[]
             for match in all_matches:
                 ctype, tmparg = match[0], [m.strip() for m in match[1].split(',')]
-                if ctype not in ['T', 'Tr']:
-                    raise MadGraph5Error, 'Color Structure not handle by Matchbox'
+                if ctype in ['ColorOne' ]:
+                    continue
+                if ctype not in ['T', 'Tr' ]:
+                    raise MadGraph5Error, 'Color Structure not handle by Matchbox: %s'  % ctype
                 tmparg += ['0']
                 arg +=tmparg
             for j, v in enumerate(arg):
@@ -2064,8 +2066,11 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                     matrix_strings.append(""" 
                     elseif (in1.eq.%s.and.in2.eq.%s)then
                     out = %s
-                    """  % (key[0], key[1], output[key]))                
-        matrix_strings.append(" else \n out = - 1 \n endif")
+                    """  % (key[0], key[1], output[key]))
+        if len(matrix_strings):                
+            matrix_strings.append(" else \n out = - 1 \n endif")
+        else: 
+            return "\n out = - 1 \n "
         return "\n".join(matrix_strings)
     
     def make(self,*args,**opts):
