@@ -1169,8 +1169,7 @@ class RunCard(ConfigFile):
         if not template:
             raise Exception
 
-       
-        if python_template:
+        if python_template and not to_write:
             text = file(template,'r').read() % self
         else:
             text = ""
@@ -1182,13 +1181,18 @@ class RunCard(ConfigFile):
                 if len(nline) != 2:
                     text += line
                 elif nline[1].strip() in self:
-                    text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
+                    if python_template:
+                        text += line % {nline[1].strip().lower(): self[nline[1].strip()]}
+                    else:
+                        text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
                     if nline[1].strip().lower() in to_write:
                         to_write.remove(nline[1].strip().lower())
+                    else:
+                        misc.sprint(to_write, nline[1].strip().lower())
                 else:
                     logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
                     text += line 
-        
+
         if to_write:
             text+="""#********************************************************************* 
 #  Additional parameter

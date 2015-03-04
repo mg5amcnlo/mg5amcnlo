@@ -2435,7 +2435,7 @@ zeor by MadLoop.""")
                 
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
-        if 'survey' in self.history[-1] or self.ninitial ==1  or \
+        if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
            self.run_card['gridpack']:
             #will be done during the refine (more precisely in gen_ximprove)
             cross, error = sum_html.make_all_html_results(self)
@@ -2610,12 +2610,12 @@ zeor by MadLoop.""")
         self.update_status('Combining Events', level='parton')
 
         
-        if self.refine_mode == "old":
+        if not hasattr(self, "refine_mode") or self.refine_mode == "old":
             try:
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
                 pass
-            if self.options['run_mode'] ==1 and self.options['cluster_tmp_path']:
+            if self.options['run_mode'] ==1 and self.options['cluster_temp_path']:
                 tmpcluster = cluster.MultiCore(nb_core=1)
                 tmpcluster.launch_and_wait('../bin/internal/run_combine', 
                                             cwd=pjoin(self.me_dir,'SubProcesses'),
