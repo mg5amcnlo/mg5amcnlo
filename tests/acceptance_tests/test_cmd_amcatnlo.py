@@ -810,7 +810,7 @@ class MECmdShell(IOTests.IOTestManager):
             pass
         import subprocess
         
-        stdout = open('/tmp/test.log','w')
+        stdout = open('%s/test.log' % self.path,'w')
         if logging.getLogger('madgraph').level <= 20:
             stderr=None
         else:
@@ -824,7 +824,7 @@ class MECmdShell(IOTests.IOTestManager):
                          cwd=pjoin(MG5DIR),
                         stdout=stdout,stderr=stderr)
         stdout.close()
-        text = open('/tmp/test.log','r').read()
+        text = open('%s/test.log' % self.path,'r').read()
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
