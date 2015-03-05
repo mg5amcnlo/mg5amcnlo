@@ -74,6 +74,7 @@ rm -f coupl.inc >& /dev/null
 cp -p ../HTML/thinking.gif ../HTML/card.jpg
 ln -sf ../Source/cuts.inc cuts.inc
 ln -sf ../Source/genps.inc genps.inc
+ln -sf ../Source/run_card.inc run_card.inc
 
 if [[ -e ../param_card.dat  ]]; then
   mv ../param_card.dat ./Cards/param_card.dat

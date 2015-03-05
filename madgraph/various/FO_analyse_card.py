@@ -41,7 +41,7 @@ class FOAnalyseCard(dict):
     
     def read_card(self, card_path):
         """read the FO_analyse_card, if testing card_path is the content"""
-        fo_analysis_formats = ['topdrawer','root','none']
+        fo_analysis_formats = ['topdrawer','hwu','root','none']
         if not self.testing:
             content = open(card_path).read()
         else:
@@ -80,11 +80,13 @@ class FOAnalyseCard(dict):
             if key in self.string_vars:
                 if key == 'fo_analysis_format':
                     if value == 'topdrawer':
-                        to_add = 'dbook.o open_output_files_dummy.o'
+                        to_add = 'dbook.o open_output_files_dummy.o HwU_dummy.o'
+                    elif value == 'hwu':
+                        to_add = 'HwU.o open_output_files_dummy.o'
                     elif value == 'root':
-                        to_add = 'rbook_fe8.o rbook_be8.o'
+                        to_add = 'rbook_fe8.o rbook_be8.o HwU_dummy.o'
                     else:
-                        to_add = 'analysis_dummy.o dbook.o open_output_files_dummy.o'
+                        to_add = 'analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o'
                         
 
 

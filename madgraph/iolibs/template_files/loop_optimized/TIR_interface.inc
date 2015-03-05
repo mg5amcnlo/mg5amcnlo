@@ -8,7 +8,7 @@ C
 C  
 C  
 C CONSTANTS 
-C  
+C 
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 C     These are constants related to the split orders
@@ -22,6 +22,10 @@ C     These are constants related to the split orders
       PARAMETER (checkPConservation=.TRUE.)
       %(real_dp_format)s NORMALIZATION
       PARAMETER (NORMALIZATION = 1.D0/(16.D0*3.14159265358979323846D0**2))
+## if(TIRCaching){
+      INTEGER TIR_CACHE_SIZE
+      include 'tir_cache_size.inc'
+## }
 C  
 C ARGUMENTS 
 C
@@ -42,11 +46,23 @@ C
 	  LOGICAL CTINIT, TIRINIT, GOLEMINIT
 	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT
 
+c This variable will be used to detect changes in the TIR library used so as to force the reset of the TIR filter.
+	  INTEGER LAST_LIB_USED
+	  DATA LAST_LIB_USED/-1/
+
        %(complex_dp_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3)
        %(complex_dp_format)s PJCOEFS(0:LOOPMAXCOEFS-1,3)
+## if(TIRCaching){
+       integer TIR_CACHE_INDEX 
+       %(complex_dp_format)s TIRCOEFS_CACHING(3,0:LOOPMAXCOEFS-1,NLOOPGROUPS,TIR_CACHE_SIZE)
+       SAVE TIRCOEFS_CACHING
+## }
 C
 C EXTERNAL FUNCTIONS
 C
+## if(TIRCaching){
+	integer %(proc_prefix)sTIRCACHE_INDEX
+## }
 C
 C GLOBAL VARIABLES
 C
@@ -56,16 +72,56 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
+c The argument ILIB is the TIR library to be used for that specific library.
+      INTEGER LIBINDEX
+      COMMON/%(proc_prefix)sI_LIB/LIBINDEX
 
+## if(not AmplitudeReduction){
        %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## }else{
+       %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
        COMMON/%(proc_prefix)sLCOEFS/LOOPCOEFS
-
+## if(TIRCaching){
+C The index 0 of the second dimensions is filled with .false. as it makes the implementation simpler this way when the user sets TIR_CACHE_SIZE to be 0.
+	   LOGICAL TIR_DONE(NLOOPGROUPS,0:TIR_CACHE_SIZE)
+	   COMMON/%(proc_prefix)sTIRCACHING/TIR_DONE
+## }
 C ----------
 C BEGIN CODE
 C ----------
 
+C Initialize for the very first time ML is called LAST_ILIB with the first ILIB used.
+IF(LAST_LIB_USED.eq.-1) THEN
+  LAST_LIB_USED = MLREDUCTIONLIB(LIBINDEX)
+ELSE
+C We changed the TIR library so we must refresh the cache.
+  IF(MLREDUCTIONLIB(LIBINDEX).NE.LAST_LIB_USED) THEN
+    LAST_LIB_USED = MLREDUCTIONLIB(LIBINDEX)
+	CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+  ENDIF
+ENDIF
+
+IF (MLReductionLib(I_LIB).EQ.4) THEN
+## if(golem_available) {
+C Using Golem95
+C PDEN is dummy for Golem95 so we just initialize it to zero here so as to use it for the function SWITCHORDER
+  DO I=0,3
+    DO J=1,NLOOPLINE-1
+      PDEN(I,J)=0.0d0
+    ENDDO
+  ENDDO
+  CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+  CALL %(proc_prefix)sGOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
+  RETURN
+## } else {
+C Golem95 not available
+  WRITE(*,*) 'ERROR:: Golem95 is not interfaced.'
+  STOP
+## }
+ENDIF
+
 C INITIALIZE TIR IF NEEDED
-      %(golem_calling)s
       IF (TIRINIT) THEN
 	    TIRINIT=.FALSE.
 		CALL %(proc_prefix)sINITTIR()
@@ -120,25 +176,133 @@ C NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       DO I=0,RANK
          NLOOPCOEFS=NLOOPCOEFS+(3+I)*(2+I)*(1+I)/6
       ENDDO
- 
+## if(TIRCaching){
+      if (TIR_CACHE_SIZE.eq.0) THEN
+	    TIR_CACHE_INDEX = 0
+	  ELSE
+	    TIR_CACHE_INDEX = %(proc_prefix)sTIRCACHE_INDEX(CTMODE)
+C This way whenever the CTMode exceeds the cache size it rolls back to the beginning and MadLoop will have taken care of having re-initialized TIR_DONE between labels 200 and 205 in loop_matrix.f
+		TIR_CACHE_INDEX = MOD(TIR_CACHE_INDEX-1,TIR_CACHE_SIZE)+1 
+	  ENDIF
+
+	  IF(.NOT.TIR_DONE(I_LOOPGROUP,TIR_CACHE_INDEX))THEN
+## } 
       SELECT CASE(MLReductionLib(I_LIB))
       CASE(2)
 C     PJFry++
-%(pjfry_calling)s
+## if(pjfry_available){
+      CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)
+C     CONVERT TO MADLOOP CONVENTION
+      CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)
+## } else {
+      WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
+      STOP
+## }
       CASE(3)
 C     IREGI
-%(iregi_calling)s
+## if(iregi_available){
+      CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,RANK,PDEN,M2L,MU_R,PJCOEFS,STABLE)
+C     CONVERT TO MADLOOP CONVENTION
+      CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)  
+## } else {
+      WRITE(*,*) 'ERROR:: IREGI is not interfaced.'
+      STOP
+## }
       END SELECT
-
+## if(TIRCaching){
+C The zero index is dummy and means no caching at all since TIR_CACHE_SIZE=0.
+	    IF(TIR_CACHE_INDEX.NE.0) THEN
+	      DO I=1,3
+	  	    DO J=0,NLOOPCOEFS-1
+	         TIRCOEFS_CACHING(I,J,I_LOOPGROUP,TIR_CACHE_INDEX)=TIRCOEFS(J,I)
+	        ENDDO
+	      ENDDO
+	      TIR_DONE(I_LOOPGROUP,TIR_CACHE_INDEX)=.TRUE.
+	    ENDIF
+	  ELSE
+	    DO I=1,3
+	      DO J=0,NLOOPCOEFS-1
+	        TIRCOEFS(J,I)=TIRCOEFS_CACHING(I,J,I_LOOPGROUP,TIR_CACHE_INDEX)
+	      ENDDO
+	    ENDDO
+	  ENDIF
+## }
       DO I=1,3
-      	 RES(I)=LOOPCOEFS(0,I_SQSO,I_LOOPGROUP)*TIRCOEFS(0,I)
-      	 DO J=1,NLOOPCOEFS-1
-	    RES(I)=RES(I)+LOOPCOEFS(J,I_SQSO,I_LOOPGROUP)*TIRCOEFS(J,I)
+	     RES(I)=(0.0d0,0.0d0)
+      	 DO J=0,NLOOPCOEFS-1
+## if(not AmplitudeReduction){
+	       RES(I)=RES(I)+LOOPCOEFS(J,I_SQSO,I_LOOPGROUP)*TIRCOEFS(J,I)
+## }else{
+	       RES(I)=RES(I)+LOOPCOEFS(J,I_LOOPGROUP)*TIRCOEFS(J,I)
+## }
 	 ENDDO
       ENDDO
-          %(finalize_TIR)s
+## if(AmplitudeReduction){
+      RES(1)=NORMALIZATION*RES(1)
+      RES(2)=NORMALIZATION*RES(2)
+      RES(3)=NORMALIZATION*RES(3)
+## } else {
+      RES(1)=NORMALIZATION*2.0d0*DBLE(RES(1))
+      RES(2)=NORMALIZATION*2.0d0*DBLE(RES(2))
+      RES(3)=NORMALIZATION*2.0d0*DBLE(RES(3))
+## }
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
       END
+
+      SUBROUTINE %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      IMPLICIT NONE
+
+      INTEGER CTMODE,NLOOPLINE
+
+      %(real_dp_format)s PL(0:3,NLOOPLINE)
+      %(real_dp_format)s PDEN(0:3,NLOOPLINE-1)
+      COMPLEX*16 M2L(NLOOPLINE)
+      %(real_dp_format)s NEW_PL(0:3,NLOOPLINE)
+      %(real_dp_format)s NEW_PDEN(0:3,NLOOPLINE-1)
+      %(complex_dp_format)s NEW_M2L(NLOOPLINE)
+
+      INTEGER I,J,K
+
+      IF (CTMode.ne.2.and.CTMode.ne.4) THEN
+        RETURN 
+      ENDIF
+
+      IF (NLOOPLINE.le.2) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+           NEW_PDEN(J,NLOOPLINE-I) = PDEN(J,I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+           PDEN(J,I) = NEW_PDEN(J,I)
+        ENDDO
+      ENDDO
+
+      DO I=2,NLOOPLINE
+        NEW_M2L(I)=M2L(NLOOPLINE-I+2)
+      ENDDO
+      DO I=2,NLOOPLINE
+        M2L(I)=NEW_M2L(I)
+      ENDDO
+
+
+      DO I=1,NLOOPLINE
+        DO J=0,3
+          NEW_PL(J,I) = -PL(J,NLOOPLINE+1-I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE
+        DO J=0,3
+           PL(J,I) = NEW_PL(J,I)
+        ENDDO
+      ENDDO
+
+      end
 
 	  SUBROUTINE %(proc_prefix)sINITTIR()
 C 
@@ -171,7 +335,9 @@ C 1 -> LOOPTOOLS
 C 2 -> AVH
 C 3 -> QCDLOOP
       LOOPLIB=CTLOOPLIBRARY
-%(initiregi)s
+## if (iregi_available) {
+      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)
+## }
 C      The initialization below is for CT v1.9.2+
        IF (CTINIT) THEN
 	     CTINIT=.FALSE.
@@ -193,7 +359,7 @@ C
 C CONSTANTS
 C
             INTEGER NLOOPLIB,QP_NLOOPLIB
-            PARAMETER (NLOOPLIB=3,QP_NLOOPLIB=1)
+            PARAMETER (NLOOPLIB=4,QP_NLOOPLIB=1)
 C
 C ARGUMENTS
 C
@@ -202,7 +368,7 @@ C
 C
 C LOCAL VARIABLES
 C
-            INTEGER I,J_LIB,LIBNUM
+            INTEGER I,J_LIB,LIBNUM,SELECT_LIBINDEX
 	    LOGICAL LPASS
 C
 C GLOBAL VARIABLES
@@ -222,17 +388,21 @@ C  QP EVALUATION, ONLY CUTTOOLS
 		   STOP 'No qp tools available, please make sure MLReductionLib is correct'
 		ENDIF
 		J_LIB=0
-		DO I=1,QP_NLOOPLIB
-		   IF(INDEX_QP_TOOLS(I).EQ.LIBINDEX)THEN
-		     J_LIB=I
-		     EXIT
+		SELECT_LIBINDEX=LIBINDEX
+		DO WHILE(J_LIB.EQ.0)
+		   DO I=1,QP_NLOOPLIB	
+		      IF(INDEX_QP_TOOLS(I).EQ.SELECT_LIBINDEX)THEN
+		        J_LIB=I
+		        EXIT
+		      ENDIF
+		   ENDDO
+		   IF(J_LIB.EQ.0)THEN
+                      SELECT_LIBINDEX=SELECT_LIBINDEX+1		
+                      IF(SELECT_LIBINDEX.GT.NLOOPLIB.OR.MLReductionLib(SELECT_LIBINDEX).EQ.0)SELECT_LIBINDEX=1
 		   ENDIF
 		ENDDO
-		IF(J_LIB.EQ.0)THEN
-		   STOP 'CANNOT find the correct qp tool'
-		ENDIF
 		I=J_LIB
-		I_LIB=LIBINDEX
+		I_LIB=SELECT_LIBINDEX
 		LIBNUM=MLReductionLib(I_LIB)
 		DO
 		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,LPASS)
@@ -266,3 +436,47 @@ C  DP EVALUATION
 	    ENDIF
 	    RETURN
 	  END
+
+	  SUBROUTINE %(proc_prefix)sCLEAR_TIR_CACHE()
+## if(TIRCaching){
+	    IMPLICIT NONE
+
+		INTEGER NLOOPGROUPS
+        PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
+        INTEGER TIR_CACHE_SIZE
+        include 'tir_cache_size.inc'
+
+		INTEGER I,J
+
+	    LOGICAL TIR_DONE(NLOOPGROUPS,0:TIR_CACHE_SIZE)
+	    COMMON/%(proc_prefix)sTIRCACHING/TIR_DONE
+        
+		DO I=0,TIR_CACHE_SIZE
+		  DO J=1,NLOOPGROUPS
+            TIR_DONE(J,I)=.FALSE.
+          ENDDO
+		ENDDO
+## } else {
+C No TIR caching implemented, this is dummy. (The subroutine is kept as it might be called by the MC).
+	    CONTINUE
+## }
+	  END SUBROUTINE
+
+## if(TIRCaching){
+	  integer function %(proc_prefix)sTIRCACHE_INDEX(CTMODE)
+C Mapping function from CTMode to index and the TIR_cache
+        INTEGER TIR_CACHE_SIZE
+        include 'tir_cache_size.inc'
+
+		INTEGER CTMODE
+
+		%(proc_prefix)sTIRCACHE_INDEX=CTMODE
+		IF(%(proc_prefix)sTIRCACHE_INDEX.gt.2) THEN
+C This way, the CTMode 4 and 5 are sent to 3 and 4 respectively.
+		  %(proc_prefix)sTIRCACHE_INDEX = %(proc_prefix)sTIRCACHE_INDEX-1
+		ENDIF
+
+C In principle if we wanted to cache other modes or rotations, we could do it here
+	    RETURN 
+      END
+## }

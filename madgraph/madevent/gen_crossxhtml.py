@@ -24,15 +24,18 @@ import glob
 import logging
 
 try:
+    import madgraph
+except ImportError:
     import internal.files as files
     import internal.save_load_object as save_load_object
     import internal.lhe_parser as lhe_parser
     import internal.misc as misc
-except ImportError:
+else:
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.various.lhe_parser as lhe_parser
     import madgraph.various.misc as misc
+
 pjoin = os.path.join
 exists = os.path.exists
 logger = logging.getLogger('madgraph.stdout') # -> stdout
@@ -496,17 +499,17 @@ class RunResults(list):
         data = process.split('>',1)[0].split()
         if len(data) == 2:
             name1,name2 = data
-            if run_card['lpp1'] == '-1':
+            if run_card['lpp1'] == -1:
                 name1 = ' p~'
-            elif run_card['lpp1']  == '1':
+            elif run_card['lpp1']  == 1:
                 name1 = ' p'   
-            elif run_card['lpp1'] == '2':
+            elif run_card['lpp1'] in [2,3]:
                 name1 = ' a'
-            if run_card['lpp2'] == '-1':
+            if run_card['lpp2'] == -1:
                 name2 = 'p~'
-            elif run_card['lpp2']  == '1':
+            elif run_card['lpp2']  == 1:
                 name2 = ' p' 
-            elif run_card['lpp2'] == '2':
+            elif run_card['lpp2'] == [2,3]:
                 name2 = ' a'                
             self.info['collider'] = '''%s %s <br> %s x %s  GeV''' % \
                     (name1, name2, run_card['ebeam1'], run_card['ebeam2'])
@@ -611,7 +614,7 @@ class RunResults(list):
                 tagresult = self.return_tag(tag)
             tagresult['nb_event'] = nb_event
             tagresult['cross'] = cross
-            if run_card['ickkw'] != '0':
+            if run_card['ickkw'] != 0:
                 #parse the file to have back the information
                 pythia_log = misc.BackRead(pjoin(path, '%s_pythia.log' % tag))
                 pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
@@ -739,7 +742,6 @@ class OneTagResults(dict):
     def update_status(self, level='all', nolevel=[]):
         """update the status of the current run """
 
-        import misc as misc
         exists = os.path.exists
         run = self['run_name']
         tag =self['tag']

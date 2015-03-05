@@ -53,10 +53,11 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
 
 pjoin = os.path.join
 
+
 #===============================================================================
 # IOImportV4Test
 #===============================================================================
-class IOExportV4Test(unittest.TestCase,
+class IOExportV4IOTest(IOTests.IOTestManager,
                      test_file_writers.CheckFileCreate):
     """Test class for the export v4 module"""
 
@@ -148,270 +149,365 @@ class IOExportV4Test(unittest.TestCase,
 
     tearDown = test_file_writers.CheckFileCreate.clean_files
     
+    @IOTests.createIOTest()
+    def testIO_export_matrix_element_v4_madevent_group(self):
+        """target: amp2lines.txt 
+           target: configs.inc
+           target: nqcd_list.inc
+           target: config_subproc_map.inc
+           target: coloramps.inc
+           target: symfact.dat
+           target: processes.dat
+           target: mirrorprocs.inc
+           target: matrix1.f
+           target: auto_dsig.f
+           target: super_auto_dsig.f
+           
+           """
+
+        # Setup a model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        a = mypartlist[-1]
+
+        # A Z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[-1]
+
+        # Gluon and photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             a]),
+                      'color': [color.ColorString([color.T(1,0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             a]),
+                      'color': [color.ColorString([color.T(1,0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # 3 gluon vertiex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [g] * 3),
+                      'color': [color.ColorString([color.f(0,1,2)])],
+                      'lorentz':['VVV1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        # Coupling of Z to quarks
+        
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             z]),
+                      'color': [color.ColorString([color.T(1,0)])],
+                      'lorentz':['FFV1', 'FFV2'],
+                      'couplings':{(0, 0):'GUZ1', (0, 1):'GUZ2'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             z]),
+                      'color': [color.ColorString([color.T(1,0)])],
+                      'lorentz':['FFV1', 'FFV2'],
+                      'couplings':{(0, 0):'GDZ1', (0, 0):'GDZ2'},
+                      'orders':{'QED':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)        
+        mymodel.set('name', 'sm')
+
+        # Set parameters
+        external_parameters = [\
+            base_objects.ParamCardVariable('zero', 0.,'DUM', 1),
+            base_objects.ParamCardVariable('MZ', 91.,'MASS', 23),
+            base_objects.ParamCardVariable('WZ', 2.,'DECAY', 23)]
+        couplings = [\
+            base_objects.ModelVariable('GQQ', '1.', 'complex'),
+            base_objects.ModelVariable('GQED', '0.1', 'complex'),
+            base_objects.ModelVariable('G', '1.', 'complex'),
+            base_objects.ModelVariable('GUZ1', '0.1', 'complex'),
+            base_objects.ModelVariable('GUZ2', '0.1', 'complex'),
+            base_objects.ModelVariable('GDZ1', '0.05', 'complex'),
+            base_objects.ModelVariable('GDZ2', '0.05', 'complex')]
+        mymodel.set('parameters', {('external',): external_parameters})
+        mymodel.set('couplings', {(): couplings})
+        mymodel.set('functions', [])
+                    
+
+
+        procs = [[2,-2,21,21], [2,-2,2,-2], [2,-2,1,-1]]
+        amplitudes = diagram_generation.AmplitudeList()
+
+        for proc in procs:
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
+
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':mymodel})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            amplitudes.append(my_amplitude)
+
+        # Calculate diagrams for all processes
+        amplitudes[1].set('has_mirror_process', True)
+        subprocess_groups = group_subprocs.SubProcessGroup.\
+                           group_amplitudes(amplitudes, "madevent")
+        self.assertEqual(len(subprocess_groups), 2)
+        self.assertEqual(subprocess_groups[0].get('name'), 'qq_gg')
+        self.assertEqual(subprocess_groups[1].get('name'), 'qq_qq')
+
+        subprocess_group = subprocess_groups[1]
+        matrix_elements = subprocess_group.get('matrix_elements')
+
+        maxflows = 0
+        for me in matrix_elements:
+            maxflows = max(maxflows,
+                           len(me.get('color_basis')))
+        
+        self.assertEqual(maxflows, 2)
+
+        exporter = export_v4.ProcessExporterFortranMEGroup()
+
+        # Test amp2 lines
+        
+        amp2_lines = \
+                 exporter.get_amp2_lines(matrix_elements[0],
+                                          subprocess_group.get('diagram_maps')[0])
+        
+        open(pjoin(self.IOpath,'amp2lines.txt'),'w').write('\n'.join(amp2_lines))
+
+        # Test configs.inc
+
+        mapconfigs, (s_and_t_channels, nqcd_list) = \
+                       exporter.write_configs_file(\
+                                writers.FortranWriter(pjoin(self.IOpath,'configs.inc')),
+                                subprocess_group,
+                                subprocess_group.get('diagrams_for_configs'))
+
+        # Test config_nqcd.inc
+        exporter.write_config_nqcd_file(\
+            writers.FortranWriter(pjoin(self.IOpath,'nqcd_list.inc')),
+            nqcd_list)
     
+        # Test config_subproc_map.inc
 
-    def test_export_matrix_element_v4_standalone(self):
-        """Test the result of exporting a matrix element to file"""
+        exporter.write_config_subproc_map_file(\
+            writers.FortranWriter(pjoin(self.IOpath, "config_subproc_map.inc")),
+            subprocess_group.get('diagrams_for_configs'))
 
-        goal_matrix_f = \
-"""      SUBROUTINE SMATRIXHEL(P,HEL,ANS)
-      IMPLICIT NONE
-C     
-C     CONSTANT
-C     
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER                 NCOMB
-      PARAMETER (             NCOMB=32)
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL),ANS
-      INTEGER HEL
-C     
-C     GLOBAL VARIABLES
-C     
-      INTEGER USERHEL
-      COMMON/HELUSERCHOICE/USERHEL
-C     ----------
-C     BEGIN CODE
-C     ----------
-      USERHEL=HEL
-      CALL SMATRIX(P,ANS)
-      USERHEL=-1
+        #open(pjoin(self.IOpath,"config_subproc_map.inc"),'w').write(goal_confsub)
 
-      END
-
-      SUBROUTINE SMATRIX(P,ANS)
-C     
-C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
-C     By the MadGraph5_aMC@NLO Development Team
-C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-C     
-C     MadGraph5_aMC@NLO StandAlone Version
-C     
-C     Returns amplitude squared summed/avg over colors
-C     and helicities
-C     for the point in phase space P(0:3,NEXTERNAL)
-C     
-C     Process: e+ e- > a a a
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER                 NCOMB
-      PARAMETER (             NCOMB=32)
-      INTEGER HELAVGFACTOR
-      PARAMETER (HELAVGFACTOR=4)
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL),ANS
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-      REAL*8 T
-      REAL*8 MATRIX
-      INTEGER IHEL,IDEN, I
-      INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
-
-C     
-C     GLOBAL VARIABLES
-C     
-      INTEGER USERHEL
-      COMMON/HELUSERCHOICE/USERHEL
-      DATA USERHEL/-1/
-
-      DATA (NHEL(I,   1),I=1,5) /-1,-1,-1,-1,-1/
-      DATA (NHEL(I,   2),I=1,5) /-1,-1,-1,-1, 1/
-      DATA (NHEL(I,   3),I=1,5) /-1,-1,-1, 1,-1/
-      DATA (NHEL(I,   4),I=1,5) /-1,-1,-1, 1, 1/
-      DATA (NHEL(I,   5),I=1,5) /-1,-1, 1,-1,-1/
-      DATA (NHEL(I,   6),I=1,5) /-1,-1, 1,-1, 1/
-      DATA (NHEL(I,   7),I=1,5) /-1,-1, 1, 1,-1/
-      DATA (NHEL(I,   8),I=1,5) /-1,-1, 1, 1, 1/
-      DATA (NHEL(I,   9),I=1,5) /-1, 1,-1,-1,-1/
-      DATA (NHEL(I,  10),I=1,5) /-1, 1,-1,-1, 1/
-      DATA (NHEL(I,  11),I=1,5) /-1, 1,-1, 1,-1/
-      DATA (NHEL(I,  12),I=1,5) /-1, 1,-1, 1, 1/
-      DATA (NHEL(I,  13),I=1,5) /-1, 1, 1,-1,-1/
-      DATA (NHEL(I,  14),I=1,5) /-1, 1, 1,-1, 1/
-      DATA (NHEL(I,  15),I=1,5) /-1, 1, 1, 1,-1/
-      DATA (NHEL(I,  16),I=1,5) /-1, 1, 1, 1, 1/
-      DATA (NHEL(I,  17),I=1,5) / 1,-1,-1,-1,-1/
-      DATA (NHEL(I,  18),I=1,5) / 1,-1,-1,-1, 1/
-      DATA (NHEL(I,  19),I=1,5) / 1,-1,-1, 1,-1/
-      DATA (NHEL(I,  20),I=1,5) / 1,-1,-1, 1, 1/
-      DATA (NHEL(I,  21),I=1,5) / 1,-1, 1,-1,-1/
-      DATA (NHEL(I,  22),I=1,5) / 1,-1, 1,-1, 1/
-      DATA (NHEL(I,  23),I=1,5) / 1,-1, 1, 1,-1/
-      DATA (NHEL(I,  24),I=1,5) / 1,-1, 1, 1, 1/
-      DATA (NHEL(I,  25),I=1,5) / 1, 1,-1,-1,-1/
-      DATA (NHEL(I,  26),I=1,5) / 1, 1,-1,-1, 1/
-      DATA (NHEL(I,  27),I=1,5) / 1, 1,-1, 1,-1/
-      DATA (NHEL(I,  28),I=1,5) / 1, 1,-1, 1, 1/
-      DATA (NHEL(I,  29),I=1,5) / 1, 1, 1,-1,-1/
-      DATA (NHEL(I,  30),I=1,5) / 1, 1, 1,-1, 1/
-      DATA (NHEL(I,  31),I=1,5) / 1, 1, 1, 1,-1/
-      DATA (NHEL(I,  32),I=1,5) / 1, 1, 1, 1, 1/
-      DATA IDEN/24/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-        JC(IHEL) = +1
-      ENDDO
-      ANS = 0D0
-      DO IHEL=1,NCOMB
-        IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
-          IF (GOODHEL(IHEL) .OR. NTRY .LT. 20) THEN
-            T=MATRIX(P ,NHEL(1,IHEL),JC(1))
-            ANS=ANS+T
-            IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-              GOODHEL(IHEL)=.TRUE.
-            ENDIF
-          ENDIF
-        ENDIF
-      ENDDO
-      ANS=ANS/DBLE(IDEN)
-      IF(USERHEL.NE.-1) THEN
-        ANS=ANS*HELAVGFACTOR
-      ENDIF
-      END
+        # Test coloramps.inc
+        
+        exporter.write_coloramps_file(\
+            writers.FortranWriter(pjoin(self.IOpath,'coloramps.inc')),
+            subprocess_group.get('diagrams_for_configs'),
+            maxflows,
+            matrix_elements)
 
 
-      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C     
-C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
-C     By the MadGraph5_aMC@NLO Development Team
-C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-C     
-C     Returns amplitude squared summed/avg over colors
-C     for the point with external lines W(0:6,NEXTERNAL)
-C     
-C     Process: e+ e- > a a a
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=6)
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=9, NCOLOR=1)
-      REAL*8     ZERO
-      PARAMETER (ZERO=0D0)
-      COMPLEX*16 IMAG1
-      PARAMETER (IMAG1=(0D0,1D0))
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER I,J
-      COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(18,NWAVEFUNCS)
-      COMPLEX*16 DUM0,DUM1
-      DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
-C     
-C     GLOBAL VARIABLES
-C     
-      INCLUDE 'coupl.inc'
+        # Test find_matrix_elements_for_configs
 
-C     
-C     COLOR DATA
-C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  1) /    1/
-C     1 ColorOne()
-C     ----------
-C     BEGIN CODE
-C     ----------
-      CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
-      CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
-      CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
-      CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
-      CALL FVOXXX(W(1,1),W(1,3),MGVX12,ZERO,ZERO,W(1,6))
-      CALL FVIXXX(W(1,2),W(1,4),MGVX12,ZERO,ZERO,W(1,7))
-C     Amplitude(s) for diagram number 1
-      CALL IOVXXX(W(1,7),W(1,6),W(1,5),MGVX12,AMP(1))
-      CALL FVIXXX(W(1,2),W(1,5),MGVX12,ZERO,ZERO,W(1,8))
-C     Amplitude(s) for diagram number 2
-      CALL IOVXXX(W(1,8),W(1,6),W(1,4),MGVX12,AMP(2))
-      CALL FVOXXX(W(1,1),W(1,4),MGVX12,ZERO,ZERO,W(1,6))
-      CALL FVIXXX(W(1,2),W(1,3),MGVX12,ZERO,ZERO,W(1,9))
-C     Amplitude(s) for diagram number 3
-      CALL IOVXXX(W(1,9),W(1,6),W(1,5),MGVX12,AMP(3))
-C     Amplitude(s) for diagram number 4
-      CALL IOVXXX(W(1,8),W(1,6),W(1,3),MGVX12,AMP(4))
-      CALL FVOXXX(W(1,1),W(1,5),MGVX12,ZERO,ZERO,W(1,6))
-C     Amplitude(s) for diagram number 5
-      CALL IOVXXX(W(1,9),W(1,6),W(1,4),MGVX12,AMP(5))
-C     Amplitude(s) for diagram number 6
-      CALL IOVXXX(W(1,7),W(1,6),W(1,3),MGVX12,AMP(6))
-      JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
+        self.assertEqual(\
+            diagram_symmetry.find_matrix_elements_for_configs(subprocess_group),
+            ([], {}))
 
-      MATRIX = 0.D0
-      DO I = 1, NCOLOR
-        ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-        ENDDO
-        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
-      ENDDO
+        symmetry, perms, ident_perms = \
+                  diagram_symmetry.find_symmetry(subprocess_group)
 
-      END
-""" % misc.get_pkg_info()
+        self.assertEqual(symmetry, [1,1,1,1,1,1])
+        self.assertEqual(perms,
+                         [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
+        self.assertEqual(ident_perms,
+                         [[0,1,2,3]])
 
-        process_exporter = export_v4.ProcessExporterFortranSA()
+        # Test symfact.dat
+        
+        exporter.write_symfact_file(\
+            writers.FortranWriter(pjoin(self.IOpath,'symfact.dat')),
+            symmetry)
 
-        process_exporter.write_matrix_element_v4(\
-            writers.FortranWriter(self.give_pos('test')),
-            self.mymatrixelement,
-            self.myfortranmodel)
 
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal_matrix_f)
+        # Test processes.dat
 
-    def test_coeff_string(self):
-        """Test the coeff string for JAMP lines"""
+        files.write_to_file(pjoin(self.IOpath,'processes.dat'),
+                            exporter.write_processes_file,
+                            subprocess_group)
 
-        process_exporter = export_v4.ProcessExporterFortran()
 
-        self.assertEqual(process_exporter.coeff(1,
-                                         fractions.Fraction(1),
-                                         False, 0), '+')
+        # Test mirrorprocs.inc
 
-        self.assertEqual(process_exporter.coeff(-1,
-                                         fractions.Fraction(1),
-                                         False, 0), '-')
+        exporter.write_mirrorprocs(\
+            writers.FortranWriter(pjoin(self.IOpath,'mirrorprocs.inc')),
+            subprocess_group)
 
-        self.assertEqual(process_exporter.coeff(-1,
-                                         fractions.Fraction(-3),
-                                         False, 0), '+3D0*')
+        # Test matrix1.f
+        exporter.write_matrix_element_v4(\
+            writers.FortranWriter(pjoin(self.IOpath,'matrix1.f')),
+            matrix_elements[0],
+            helas_call_writers.FortranUFOHelasCallWriter(mymodel),
+            "1")
 
-        self.assertEqual(process_exporter.coeff(-1,
-                                         fractions.Fraction(3, 5),
-                                         True, -2), '-1D0/15D0*imag1*')
 
-    def test_export_matrix_element_v4_madevent_nogroup(self):
-        """Test the result of exporting a subprocess group matrix element"""
+        # Test auto_dsig,f
+        exporter.write_auto_dsig_file(\
+            writers.FortranWriter(pjoin(self.IOpath, "auto_dsig.f")),
+            matrix_elements[0],
+            "1")
+
+
+
+        # Test super auto_dsig.f
+        exporter.write_super_auto_dsig_file(\
+            writers.FortranWriter(pjoin(self.IOpath, "super_auto_dsig.f")),
+            subprocess_group)
+   
+
+
+#===============================================================================
+# IOImportV4Test
+#===============================================================================
+    @IOTests.createIOTest()
+    def testIO_export_matrix_element_v4_madevent_nogroup(self):
+        """target: configs.inc
+           target: coloramps.inc
+           target: symswap.inc
+           target: symfact.inc
+           target: matrix.f
+           target: auto_dsig.f
+           """
 
         # Setup a model
 
@@ -655,47 +751,18 @@ C     Amplitude(s) for diagram number 6
         # Test configs.inc
 
         mapconfigs, s_and_t_channels = exporter.write_configs_file(\
-            writers.FortranWriter(self.give_pos('test')),
+            writers.FortranWriter(pjoin(self.IOpath,'configs.inc')),
             matrix_element)
 
-        goal_configs = """C     Diagram 1
-      DATA MAPCONFIG(1)/1/
-      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
-      DATA (SPROP(I,-1,1),I=1,1)/21/
-      DATA TPRID(-1,1)/0/
-C     Diagram 2
-      DATA MAPCONFIG(2)/2/
-      DATA (IFOREST(I,-1,2),I=1,2)/1,3/
-      DATA TPRID(-1,2)/2/
-      DATA (SPROP(I,-1,2),I=1,1)/0/
-      DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
-C     Diagram 3
-      DATA MAPCONFIG(3)/3/
-      DATA (IFOREST(I,-1,3),I=1,2)/1,4/
-      DATA TPRID(-1,3)/2/
-      DATA (SPROP(I,-1,3),I=1,1)/0/
-      DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
-C     Number of configs
-      DATA MAPCONFIG(0)/3/
-"""
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal_configs)
+
 
         # Test coloramps.inc
         
         exporter.write_coloramps_file(\
-            writers.FortranWriter(self.give_pos('test')),
+            writers.FortranWriter(pjoin(self.IOpath,'coloramps.inc')),
             mapconfigs,
             matrix_element)
 
-        #print open(self.give_pos('test')).read()
-
-        self.assertFileContains('test',
-"""      LOGICAL ICOLAMP(2,3,1)
-      DATA(ICOLAMP(I,1,1),I=1,2)/.TRUE.,.TRUE./
-      DATA(ICOLAMP(I,2,1),I=1,2)/.FALSE.,.TRUE./
-      DATA(ICOLAMP(I,3,1),I=1,2)/.TRUE.,.FALSE./
-""")
 
         symmetry, perms, ident_perms = \
                   diagram_symmetry.find_symmetry(matrix_element)
@@ -709,651 +776,67 @@ C     Number of configs
         # Test symswap.inc
         
         exporter.write_symswap_file(\
-            writers.FortranWriter(self.give_pos('test')),
+            writers.FortranWriter(pjoin(self.IOpath,'symswap.inc')),
             ident_perms)
-        goal_symswap_dat = """      DATA (ISYM(I,1),I=1,NEXTERNAL)/1,2,3,4/
-      DATA (ISYM(I,2),I=1,NEXTERNAL)/1,2,4,3/
-      DATA NSYM/2/
-"""
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal_symswap_dat)
+
 
         # Test symfact.dat
         
         exporter.write_symfact_file(\
-            writers.FortranWriter(self.give_pos('test')),
+            writers.FortranWriter(pjoin(self.IOpath,'symfact.inc')),
             symmetry)
-        goal_symfact_dat = """ 1   1
- 2   2
- 3  -2
-"""
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal_symfact_dat)
+
 
         # Test matrix.f
         exporter.write_matrix_element_v4(\
-            writers.FortranWriter(self.give_pos('test')),
+            writers.FortranWriter(pjoin(self.IOpath,'matrix.f')),
             matrix_element,
             helas_call_writers.FortranUFOHelasCallWriter(mymodel))
 
-        goal_matrix1 = \
-"""      SUBROUTINE SMATRIX(P,ANS)
-C     
-C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
-C     By the MadGraph5_aMC@NLO Development Team
-C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-C     
-C     MadGraph5_aMC@NLO for Madevent Version
-C     
-C     Returns amplitude squared summed/avg over colors
-C     and helicities
-C     for the point in phase space P(0:3,NEXTERNAL)
-C     
-C     Process: u u~ > g g
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INCLUDE 'genps.inc'
-      INCLUDE 'maxconfigs.inc'
-      INCLUDE 'nexternal.inc'
-      INCLUDE 'maxamps.inc'
-      INTEGER                 NCOMB
-      PARAMETER (             NCOMB=16)
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=3)
-      INTEGER    NDIAGS
-      PARAMETER (NDIAGS=3)
-      INTEGER    THEL
-      PARAMETER (THEL=NCOMB)
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL),ANS
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-      REAL*8 T,MATRIX
-      REAL*8 R,SUMHEL,TS(NCOMB)
-      INTEGER I,IDEN
-      INTEGER IPROC,JC(NEXTERNAL),II
-      LOGICAL GOODHEL(NCOMB)
-      REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-      INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
-      REAL     XRAN1
-      EXTERNAL XRAN1
-C     
-C     GLOBAL VARIABLES
-C     
-      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-      COMMON/TO_AMPS/  AMP2,       JAMP2
-
-      CHARACTER*101        HEL_BUFF
-      COMMON/TO_HELICITY/  HEL_BUFF
-
-      REAL*8 POL(2)
-      COMMON/TO_POLARIZATION/ POL
-
-      INTEGER          ISUM_HEL
-      LOGICAL                    MULTI_CHANNEL
-      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
-      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
-      DATA NTRY,IDUM /0,-1/
-      DATA XTRY, XREJ, NGOOD /0,0,0/
-      SAVE YFRAC, IGOOD, JHEL
-      DATA GOODHEL/THEL*.FALSE./
-      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
-      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1, 1/
-      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1,-1/
-      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1, 1/
-      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1,-1/
-      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1, 1/
-      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1,-1/
-      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1, 1/
-      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1,-1/
-      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1, 1/
-      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1,-1/
-      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1, 1/
-      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1,-1/
-      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
-      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
-      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
-      DATA IDEN/72/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      NTRY=NTRY+1
-      DO I=1,NEXTERNAL
-        JC(I) = +1
-      ENDDO
-
-      IF (MULTI_CHANNEL) THEN
-        DO I=1,NDIAGS
-          AMP2(I)=0D0
-        ENDDO
-        JAMP2(0)=2
-        DO I=1,INT(JAMP2(0))
-          JAMP2(I)=0D0
-        ENDDO
-      ENDIF
-      ANS = 0D0
-      WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
-      DO I=1,NCOMB
-        TS(I)=0D0
-      ENDDO
-      IF (ISUM_HEL .EQ. 0 .OR. NTRY .LE. MAXTRIES) THEN
-        DO I=1,NCOMB
-          IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES) THEN
-            T=MATRIX(P ,NHEL(1,I),JC(1))
-            DO JJ=1,NINCOMING
-              IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0
-     $         ,POL(JJ)))) THEN
-                T=T*ABS(POL(JJ))
-              ELSE IF(POL(JJ).NE.1D0)THEN
-                T=T*(2D0-ABS(POL(JJ)))
-              ENDIF
-            ENDDO
-            ANS=ANS+T
-            TS(I)=T
-          ENDIF
-        ENDDO
-        JHEL = 1
-        IF(NTRY.LE.MAXTRIES)THEN
-          DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
-              GOODHEL(I)=.TRUE.
-              NGOOD = NGOOD +1
-              IGOOD(NGOOD) = I
-              PRINT *,'Adding good helicity ',I,TS(I)/ANS
-            ENDIF
-          ENDDO
-        ENDIF
-        IF(NTRY.EQ.MAXTRIES)THEN
-          ISUM_HEL=MIN(ISUM_HEL,NGOOD)
-        ENDIF
-      ELSE  !RANDOM HELICITY
-        DO J=1,ISUM_HEL
-          JHEL=JHEL+1
-          IF (JHEL .GT. NGOOD) JHEL=1
-          HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
-          I = IGOOD(JHEL)
-          T=MATRIX(P ,NHEL(1,I),JC(1))
-          DO JJ=1,NINCOMING
-            IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
-     $       ) THEN
-              T=T*ABS(POL(JJ))
-            ELSE IF(POL(JJ).NE.1D0)THEN
-              T=T*(2D0-ABS(POL(JJ)))
-            ENDIF
-          ENDDO
-          ANS=ANS+T*HWGT
-          TS(I)=T*HWGT
-        ENDDO
-        IF (ISUM_HEL .EQ. 1) THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-        ENDIF
-      ENDIF
-      IF (ISUM_HEL .NE. 1) THEN
-        R=XRAN1(IDUM)*ANS
-        SUMHEL=0D0
-        DO I=1,NCOMB
-          SUMHEL=SUMHEL+TS(I)
-          IF(R.LT.SUMHEL)THEN
-            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-            GOTO 10
-          ENDIF
-        ENDDO
- 10     CONTINUE
-      ENDIF
-      IF (MULTI_CHANNEL) THEN
-        XTOT=0D0
-        DO I=1,NDIAGS
-          XTOT=XTOT+AMP2(I)
-        ENDDO
-        IF (XTOT.NE.0D0) THEN
-          ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT
-        ELSE
-          ANS=0D0
-        ENDIF
-      ENDIF
-      ANS=ANS/DBLE(IDEN)
-      END
-
-
-      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C     
-C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
-C     By the MadGraph5_aMC@NLO Development Team
-C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-C     
-C     Returns amplitude squared summed/avg over colors
-C     for the point with external lines W(0:6,NEXTERNAL)
-C     
-C     Process: u u~ > g g
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=3)
-      INCLUDE 'genps.inc'
-      INCLUDE 'nexternal.inc'
-      INCLUDE 'maxamps.inc'
-      INTEGER    NWAVEFUNCS,     NCOLOR
-      PARAMETER (NWAVEFUNCS=5, NCOLOR=2)
-      REAL*8     ZERO
-      PARAMETER (ZERO=0D0)
-      COMPLEX*16 IMAG1
-      PARAMETER (IMAG1=(0D0,1D0))
-      INTEGER NAMPSO, NSQAMPSO
-      PARAMETER (NAMPSO=1, NSQAMPSO=1)
-      LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
-      DATA CHOSEN_SO_CONFIGS/.TRUE./
-      SAVE CHOSEN_SO_CONFIGS
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER I,J,M,N
-      COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
-      COMPLEX*16 W(18,NWAVEFUNCS)
-C     Needed for v4 models
-      COMPLEX*16 DUM0,DUM1
-      DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
-C     
-C     FUNCTION
-C     
-      INTEGER SQSOINDEX
-C     
-C     GLOBAL VARIABLES
-C     
-      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-      COMMON/TO_AMPS/  AMP2,       JAMP2
-      INCLUDE 'coupl.inc'
-C     
-C     COLOR DATA
-C     
-      DATA DENOM(1)/3/
-      DATA (CF(I,  1),I=  1,  2) /   16,   -2/
-C     1 T(3,4,2,1)
-      DATA DENOM(2)/3/
-      DATA (CF(I,  2),I=  1,  2) /   -2,   16/
-C     1 T(4,3,2,1)
-C     ----------
-C     BEGIN CODE
-C     ----------
-      CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-      CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-      CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
-      CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO,ZERO,W(1,5))
-C     Amplitude(s) for diagram number 1
-      CALL VVV1_0(W(1,3),W(1,4),W(1,5),G,AMP(1))
-      CALL FFV1_2(W(1,1),W(1,3),GQQ,ZERO,ZERO,W(1,5))
-C     Amplitude(s) for diagram number 2
-      CALL FFV1_0(W(1,5),W(1,2),W(1,4),GQQ,AMP(2))
-      CALL FFV1_2(W(1,1),W(1,4),GQQ,ZERO,ZERO,W(1,5))
-C     Amplitude(s) for diagram number 3
-      CALL FFV1_0(W(1,5),W(1,2),W(1,3),GQQ,AMP(3))
-C     JAMPs contributing to orders ALL_ORDERS=1
-      JAMP(1,1)=-IMAG1*AMP(1)+AMP(3)
-      JAMP(2,1)=+IMAG1*AMP(1)+AMP(2)
-
-      MATRIX = 0.D0
-      DO M = 1, NAMPSO
-        DO I = 1, NCOLOR
-          ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
-          ENDDO
-          DO N = 1, NAMPSO
-            IF (CHOSEN_SO_CONFIGS(SQSOINDEX(M,N))) THEN
-              MATRIX = MATRIX + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
-            ENDIF
-          ENDDO
-        ENDDO
-      ENDDO
-
-      AMP2(1)=AMP2(1)+AMP(1)*DCONJG(AMP(1))
-      AMP2(2)=AMP2(2)+AMP(2)*DCONJG(AMP(2))
-      AMP2(3)=AMP2(3)+AMP(3)*DCONJG(AMP(3))
-      DO I = 1, NCOLOR
-        DO M = 1, NAMPSO
-          DO N = 1, NAMPSO
-            IF (CHOSEN_SO_CONFIGS(SQSOINDEX(M,N))) THEN
-              JAMP2(I)=JAMP2(I)+DABS(DBLE(JAMP(I,M)*DCONJG(JAMP(I,N))))
-            ENDIF
-          ENDDO
-        ENDDO
-      ENDDO
-
-      END
-
-C     Set of functions to handle the array indices of the split orders
-
-
-      INTEGER FUNCTION SQSOINDEX(ORDERINDEXA, ORDERINDEXB)
-C     
-C     This functions plays the role of the interference matrix. It can
-C      be hardcoded or 
-C     made more elegant using hashtables if its execution speed ever
-C      becomes a relevant
-C     factor. From two split order indices, it return the corresponding
-C      index in the squared 
-C     order canonical ordering.
-C     
-C     CONSTANTS
-C     
-
-      INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=1)
-C     
-C     ARGUMENTS
-C     
-      INTEGER ORDERINDEXA, ORDERINDEXB
-C     
-C     LOCAL VARIABLES
-C     
-      INTEGER I, SQORDERS(NSO)
-      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
-      DATA (AMPSPLITORDERS(  1,I),I=  1,  1) /    1/
-C     
-C     FUNCTION
-C     
-      INTEGER SOINDEX_FOR_SQUARED_ORDERS
-C     
-C     BEGIN CODE
-C     
-      DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $   NDEXB,I)
-      ENDDO
-      SQSOINDEX=SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
-      END
-
-      INTEGER FUNCTION SOINDEX_FOR_SQUARED_ORDERS(ORDERS)
-C     
-C     This functions returns the integer index identifying the squared
-C      split orders list passed in argument which corresponds to the
-C      values of the following list of couplings (and in this order).
-C     []
-C     
-C     CONSTANTS
-C     
-      INTEGER    NSO, NSQSO, NAMPSO
-      PARAMETER (NSO=1, NSQSO=1, NAMPSO=1)
-C     
-C     ARGUMENTS
-C     
-      INTEGER ORDERS(NSO)
-C     
-C     LOCAL VARIABLES
-C     
-      INTEGER I,J
-      INTEGER SQSPLITORDERS(NSQSO,NSO)
-      DATA (SQSPLITORDERS(  1,I),I=  1,  1) /    2/
-C     
-C     BEGIN CODE
-C     
-      DO I=1,NSQSO
-        DO J=1,NSO
-          IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
-        ENDDO
-        SOINDEX_FOR_SQUARED_ORDERS = I
-        RETURN
- 1009   CONTINUE
-      ENDDO
-
-      WRITE(*,*) 'ERROR:: Stopping function SOINDEX_FOR_SQUARED_ORDERS'
-      WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
-      STOP
-
-      END
-
-      SUBROUTINE GET_NSQSO_BORN(NSQSO)
-C     
-C     Simple subroutine returning the number of squared split order
-C     contributions returned when calling smatrix_split_orders 
-C     
-
-      INTEGER    NSQUAREDSO
-      PARAMETER  (NSQUAREDSO=1)
-
-      INTEGER NSQSO
-
-      NSQSO=NSQUAREDSO
-
-      END""" % misc.get_pkg_info()
-
-        open('sol.txt','w').writelines(open(self.give_pos('test')).read())
-        self.assertFileContains('test', goal_matrix1)
-
         # Test auto_dsig,f
         exporter.write_auto_dsig_file(\
-            writers.FortranWriter(self.give_pos('test')),
+            writers.FortranWriter(pjoin(self.IOpath,"auto_dsig.f")),
             matrix_element)
 
-        goal_auto_dsig1 = \
-"""      DOUBLE PRECISION FUNCTION DSIG(PP,WGT,IMODE)
-C     ****************************************************
-C     
-C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
-C     By the MadGraph5_aMC@NLO Development Team
-C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-C     
-C     Process: u u~ > g g
-C     
-C     RETURNS DIFFERENTIAL CROSS SECTION
-C     Input:
-C     pp    4 momentum of external particles
-C     wgt   weight from Monte Carlo
-C     imode 0 run, 1 init, 2 reweight, 
-C     3 finalize, 4 only PDFs
-C     Output:
-C     Amplitude squared and summed
-C     ****************************************************
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INCLUDE 'genps.inc'
-      INCLUDE 'nexternal.inc'
-      INCLUDE 'maxconfigs.inc'
-      INCLUDE 'maxamps.inc'
-      DOUBLE PRECISION       CONV
-      PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
-      REAL*8     PI
-      PARAMETER (PI=3.1415926D0)
-C     
-C     ARGUMENTS 
-C     
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
-      INTEGER IMODE
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER I,ITYPE,LP,IPROC
-      DOUBLE PRECISION U1
-      DOUBLE PRECISION UX2
-      DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION DSIGUU,R,RCONF
-      INTEGER LUN,ICONF,IFACT,NFACT
-      DATA NFACT/1/
-      SAVE NFACT
-C     
-C     EXTERNAL FUNCTIONS
-C     
-      LOGICAL PASSCUTS
-      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
-      INTEGER NEXTUNOPEN
-C     
-C     GLOBAL VARIABLES
-C     
-      INTEGER          IPSEL
-      COMMON /SUBPROC/ IPSEL
-C     MINCFIG has this config number
-      INTEGER           MINCFIG, MAXCFIG
-      COMMON/TO_CONFIGS/MINCFIG, MAXCFIG
-      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
-C     Keep track of whether cuts already calculated for this event
-      LOGICAL CUTSDONE,CUTSPASSED
-      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 
-      INCLUDE 'coupl.inc'
-      INCLUDE 'run.inc'
-C     
-C     DATA
-C     
-      DATA U1/1*1D0/
-      DATA UX2/1*1D0/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      DSIG=0D0
-      CUTSDONE=.FALSE.
-      CUTSPASSED=.FALSE.
-      IF(IMODE.EQ.1)THEN
-C       Set up process information from file symfact
-        LUN=NEXTUNOPEN()
-        NFACT=1
-        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
-        DO WHILE(.TRUE.)
-          READ(LUN,*,ERR=10,END=10) RCONF, IFACT
-          ICONF=INT(RCONF)
-          IF(ICONF.EQ.MAPCONFIG(MINCFIG))THEN
-            NFACT=IFACT
-          ENDIF
-        ENDDO
- 10     CLOSE(LUN)
-        RETURN
- 20     WRITE(*,*)'Error opening symfact.dat. No symmetry factor used.'
-        RETURN
-      ENDIF
-C     Only run if IMODE is 0
-      IF(IMODE.NE.0.AND.IMODE.NE.4) RETURN
 
-      IF (PASSCUTS(PP)) THEN
-        IF (ABS(LPP(1)) .GE. 1) THEN
-          LP=SIGN(1,LPP(1))
-          U1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
-        ENDIF
-        IF (ABS(LPP(2)) .GE. 1) THEN
-          LP=SIGN(1,LPP(2))
-          UX2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
-        ENDIF
-        PD(0) = 0D0
-        IPROC = 0
-        IPROC=IPROC+1  ! u u~ > g g
-        PD(IPROC)=U1*UX2
-        PD(0)=PD(0)+DABS(PD(IPROC))
-        IF (IMODE.EQ.4)THEN
-          DSIG = PD(0)
-          RETURN
-        ENDIF
-        CALL SMATRIX(PP,DSIGUU)
-C       Select a flavor combination (need to do here for right sign)
-        CALL RANMAR(R)
-        IPSEL=0
-        DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-          IPSEL=IPSEL+1
-          R=R-DABS(PD(IPSEL))/PD(0)
-        ENDDO
-        DSIGUU=DSIGUU*REWGT(PP)*NFACT
-        IF (DSIGUU.LT.1D199) THEN
-C         Set sign of dsig based on sign of PDF and matrix element
-          DSIG=DSIGN(PD(0)*CONV*DSIGUU,DSIGUU*PD(IPSEL))
-        ELSE
-          WRITE(*,*) 'Error in matrix element'
-          DSIGUU=0D0
-          DSIG=0D0
-        ENDIF
-        IF(IMODE.EQ.0.AND.DABS(DSIG).GT.0D0)THEN
-C         Call UNWGT to unweight and store events
-          CALL UNWGT(PP,DSIG*WGT,1)
-        ENDIF
-      ENDIF
-      END
 
-""" % misc.get_pkg_info()
-        
+class ExportV4IOTest(unittest.TestCase,
+                     test_file_writers.CheckFileCreate):
+    """Test class for the export v4 module"""
 
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal_auto_dsig1)
+    mymodel = base_objects.Model()
+    mymatrixelement = helas_objects.HelasMatrixElement()
+    myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+    created_files = ['test'
+                    ]
 
-    def test_export_matrix_element_v4_madevent_group(self):
-        """Test the result of exporting a subprocess group matrix element"""
+    def setUp(self):
 
-        # Setup a model
+        test_file_writers.CheckFileCreate.clean_files
+        # Set up model
 
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
 
-        # A gluon
-        mypartlist.append(base_objects.Particle({'name':'g',
-                      'antiname':'g',
-                      'spin':3,
-                      'color':8,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'g',
-                      'antitexname':'g',
-                      'line':'curly',
-                      'charge':0.,
-                      'pdg_code':21,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-
-        g = mypartlist[-1]
-
-        # A quark U and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'u',
-                      'antiname':'u~',
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
                       'spin':2,
-                      'color':3,
+                      'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'u',
-                      'antitexname':'\bar u',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
                       'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':2,
+                      'charge':-1.,
+                      'pdg_code':11,
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        u = mypartlist[-1]
-        antiu = copy.copy(u)
-        antiu.set('is_part', False)
-
-        # A quark D and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'d',
-                      'antiname':'d~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'d',
-                      'antitexname':'\bar d',
-                      'line':'straight',
-                      'charge':-1. / 3.,
-                      'pdg_code':1,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        d = mypartlist[-1]
-        antid = copy.copy(d)
-        antid.set('is_part', False)
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
 
         # A photon
         mypartlist.append(base_objects.Particle({'name':'a',
@@ -1370,373 +853,104 @@ C         Call UNWGT to unweight and store events
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
+        a = mypartlist[len(mypartlist) - 1]
 
-        a = mypartlist[-1]
-
-        # A Z
-        mypartlist.append(base_objects.Particle({'name':'z',
-                      'antiname':'z',
-                      'spin':3,
-                      'color':1,
-                      'mass':'MZ',
-                      'width':'WZ',
-                      'texname':'Z',
-                      'antitexname':'Z',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':23,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':True}))
-        z = mypartlist[-1]
-
-        # Gluon and photon couplings to quarks
-        myinterlist.append(base_objects.Interaction({
-                      'id': 1,
-                      'particles': base_objects.ParticleList(\
-                                            [antiu, \
-                                             u, \
-                                             g]),
-                      'color': [color.ColorString([color.T(2,1,0)])],
-                      'lorentz':['FFV1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 2,
-                      'particles': base_objects.ParticleList(\
-                                            [antiu, \
-                                             u, \
-                                             a]),
-                      'color': [color.ColorString([color.T(1,0)])],
-                      'lorentz':['FFV1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 3,
-                      'particles': base_objects.ParticleList(\
-                                            [antid, \
-                                             d, \
-                                             g]),
-                      'color': [color.ColorString([color.T(2,1,0)])],
-                      'lorentz':['FFV1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 4,
-                      'particles': base_objects.ParticleList(\
-                                            [antid, \
-                                             d, \
-                                             a]),
-                      'color': [color.ColorString([color.T(1,0)])],
-                      'lorentz':['FFV1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        # 3 gluon vertiex
-        myinterlist.append(base_objects.Interaction({
-                      'id': 5,
-                      'particles': base_objects.ParticleList(\
-                                            [g] * 3),
-                      'color': [color.ColorString([color.f(0,1,2)])],
-                      'lorentz':['VVV1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':1}}))
-
-        # Coupling of Z to quarks
-        
-        myinterlist.append(base_objects.Interaction({
-                      'id': 6,
-                      'particles': base_objects.ParticleList(\
-                                            [antiu, \
-                                             u, \
-                                             z]),
-                      'color': [color.ColorString([color.T(1,0)])],
-                      'lorentz':['FFV1', 'FFV2'],
-                      'couplings':{(0, 0):'GUZ1', (0, 1):'GUZ2'},
-                      'orders':{'QED':1}}))
-
+        # Coupling of e to gamma
         myinterlist.append(base_objects.Interaction({
                       'id': 7,
                       'particles': base_objects.ParticleList(\
-                                            [antid, \
-                                             d, \
-                                             z]),
-                      'color': [color.ColorString([color.T(1,0)])],
-                      'lorentz':['FFV1', 'FFV2'],
-                      'couplings':{(0, 0):'GDZ1', (0, 0):'GDZ2'},
+                                            [eminus, \
+                                             eplus, \
+                                             a]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX12'},
                       'orders':{'QED':1}}))
 
-        mymodel = base_objects.Model()
-        mymodel.set('particles', mypartlist)
-        mymodel.set('interactions', myinterlist)        
-        mymodel.set('name', 'sm')
+        self.mymodel.set('particles', mypartlist)
+        self.mymodel.set('interactions', myinterlist)
 
-        # Set parameters
-        external_parameters = [\
-            base_objects.ParamCardVariable('zero', 0.,'DUM', 1),
-            base_objects.ParamCardVariable('MZ', 91.,'MASS', 23),
-            base_objects.ParamCardVariable('WZ', 2.,'DECAY', 23)]
-        couplings = [\
-            base_objects.ModelVariable('GQQ', '1.', 'complex'),
-            base_objects.ModelVariable('GQED', '0.1', 'complex'),
-            base_objects.ModelVariable('G', '1.', 'complex'),
-            base_objects.ModelVariable('GUZ1', '0.1', 'complex'),
-            base_objects.ModelVariable('GUZ2', '0.1', 'complex'),
-            base_objects.ModelVariable('GDZ1', '0.05', 'complex'),
-            base_objects.ModelVariable('GDZ2', '0.05', 'complex')]
-        mymodel.set('parameters', {('external',): external_parameters})
-        mymodel.set('couplings', {(): couplings})
-        mymodel.set('functions', [])
-                    
+        myleglist = base_objects.LegList()
 
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':11,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':True}))
 
-        procs = [[2,-2,21,21], [2,-2,2,-2], [2,-2,1,-1]]
-        amplitudes = diagram_generation.AmplitudeList()
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
 
-        for proc in procs:
-            # Define the multiprocess
-            my_leglist = base_objects.LegList([\
-                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
-            my_leglist[0].set('state', False)
-            my_leglist[1].set('state', False)
+        self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
+        self.myfortranmodel.downcase = False
 
-            my_process = base_objects.Process({'legs':my_leglist,
-                                               'model':mymodel})
-            my_amplitude = diagram_generation.Amplitude(my_process)
-            amplitudes.append(my_amplitude)
+    tearDown = test_file_writers.CheckFileCreate.clean_files
+    
+    
 
-        # Calculate diagrams for all processes
+    def test_export_matrix_element_v4_standalone(self):
+        """Test the result of exporting a matrix element to file"""
 
-        amplitudes[1].set('has_mirror_process', True)
-        subprocess_groups = group_subprocs.SubProcessGroup.\
-                           group_amplitudes(amplitudes, "madevent")
-        self.assertEqual(len(subprocess_groups), 2)
-        self.assertEqual(subprocess_groups[0].get('name'), 'qq_gg')
-        self.assertEqual(subprocess_groups[1].get('name'), 'qq_qq')
+        goal_matrix_f = \
+"""      SUBROUTINE SMATRIXHEL(P,HEL,ANS)
+      IMPLICIT NONE
+C     
+C     CONSTANT
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=5)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=32)
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER HEL
+C     
+C     GLOBAL VARIABLES
+C     
+      INTEGER USERHEL
+      COMMON/HELUSERCHOICE/USERHEL
+C     ----------
+C     BEGIN CODE
+C     ----------
+      USERHEL=HEL
+      CALL SMATRIX(P,ANS)
+      USERHEL=-1
 
-        subprocess_group = subprocess_groups[1]
-        matrix_elements = subprocess_group.get('matrix_elements')
+      END
 
-        maxflows = 0
-        for me in matrix_elements:
-            maxflows = max(maxflows,
-                           len(me.get('color_basis')))
-        
-        self.assertEqual(maxflows, 2)
-
-        exporter = export_v4.ProcessExporterFortranMEGroup()
-
-        # Test amp2 lines
-        
-        amp2_lines = \
-                 exporter.get_amp2_lines(matrix_elements[0],
-                                          subprocess_group.get('diagram_maps')[0])
-                 
-        self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
-			  'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
-			  'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
-			  'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))',
-			  'AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))',
-			  'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))'])
-        # Test configs.inc
-
-        mapconfigs, (s_and_t_channels, nqcd_list) = \
-                       exporter.write_configs_file(\
-                                writers.FortranWriter(self.give_pos('test')),
-                                subprocess_group,
-                                subprocess_group.get('diagrams_for_configs'))
-
-        goal_configs = """C     Diagram 1
-      DATA MAPCONFIG(1)/1/
-      DATA (IFOREST(I,-1,1),I=1,2)/4,3/
-      DATA (SPROP(I,-1,1),I=1,2)/21,21/
-      DATA TPRID(-1,1)/0/
-C     Diagram 2
-      DATA MAPCONFIG(2)/2/
-      DATA (IFOREST(I,-1,2),I=1,2)/4,3/
-      DATA (SPROP(I,-1,2),I=1,2)/22,22/
-      DATA TPRID(-1,2)/0/
-C     Diagram 3
-      DATA MAPCONFIG(3)/3/
-      DATA (IFOREST(I,-1,3),I=1,2)/4,3/
-      DATA (SPROP(I,-1,3),I=1,2)/23,23/
-      DATA TPRID(-1,3)/0/
-C     Diagram 4
-      DATA MAPCONFIG(4)/4/
-      DATA (IFOREST(I,-1,4),I=1,2)/1,3/
-      DATA TPRID(-1,4)/21/
-      DATA (SPROP(I,-1,4),I=1,2)/0,0/
-      DATA (IFOREST(I,-2,4),I=1,2)/-1,4/
-C     Diagram 5
-      DATA MAPCONFIG(5)/5/
-      DATA (IFOREST(I,-1,5),I=1,2)/1,3/
-      DATA TPRID(-1,5)/22/
-      DATA (SPROP(I,-1,5),I=1,2)/0,0/
-      DATA (IFOREST(I,-2,5),I=1,2)/-1,4/
-C     Diagram 6
-      DATA MAPCONFIG(6)/6/
-      DATA (IFOREST(I,-1,6),I=1,2)/1,3/
-      DATA TPRID(-1,6)/23/
-      DATA (SPROP(I,-1,6),I=1,2)/0,0/
-      DATA (IFOREST(I,-2,6),I=1,2)/-1,4/
-C     Number of configs
-      DATA MAPCONFIG(0)/6/
-"""
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal_configs)
-
-        # Test config_nqcd.inc
-
-        exporter.write_config_nqcd_file(\
-            writers.FortranWriter(self.give_pos('test')),
-            nqcd_list)
-
-        goal_nqcd = """      DATA NQCD(1)/2/
-      DATA NQCD(2)/0/
-      DATA NQCD(3)/0/
-      DATA NQCD(4)/2/
-      DATA NQCD(5)/0/
-      DATA NQCD(6)/0/
-"""
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal_nqcd)
-
-        # Test config_subproc_map.inc
-
-        exporter.write_config_subproc_map_file(\
-            writers.FortranWriter(self.give_pos('test')),
-            subprocess_group.get('diagrams_for_configs'))
-
-        goal_confsub = """      DATA (CONFSUB(I,1),I=1,2)/1,1/
-      DATA (CONFSUB(I,2),I=1,2)/2,2/
-      DATA (CONFSUB(I,3),I=1,2)/3,3/
-      DATA (CONFSUB(I,4),I=1,2)/4,0/
-      DATA (CONFSUB(I,5),I=1,2)/5,0/
-      DATA (CONFSUB(I,6),I=1,2)/6,0/
-"""
-        
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal_confsub)
-
-        # Test coloramps.inc
-        
-        exporter.write_coloramps_file(\
-            writers.FortranWriter(self.give_pos('test')),
-            subprocess_group.get('diagrams_for_configs'),
-            maxflows,
-            matrix_elements)
-
-        #print open(self.give_pos('test')).read()
-
-        self.assertFileContains('test',
-"""      LOGICAL ICOLAMP(2,6,2)
-      DATA(ICOLAMP(I,1,1),I=1,2)/.FALSE.,.TRUE./
-      DATA(ICOLAMP(I,2,1),I=1,2)/.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,3,1),I=1,2)/.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,4,1),I=1,2)/.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,5,1),I=1,2)/.FALSE.,.TRUE./
-      DATA(ICOLAMP(I,6,1),I=1,2)/.FALSE.,.TRUE./
-      DATA(ICOLAMP(I,1,2),I=1,2)/.FALSE.,.TRUE./
-      DATA(ICOLAMP(I,2,2),I=1,2)/.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,3,2),I=1,2)/.TRUE.,.FALSE./
-""")
-
-        # Test find_matrix_elements_for_configs
-
-        self.assertEqual(\
-            diagram_symmetry.find_matrix_elements_for_configs(subprocess_group),
-            ([], {}))
-
-        symmetry, perms, ident_perms = \
-                  diagram_symmetry.find_symmetry(subprocess_group)
-
-        self.assertEqual(symmetry, [1,1,1,1,1,1])
-        self.assertEqual(perms,
-                         [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
-        self.assertEqual(ident_perms,
-                         [[0,1,2,3]])
-
-        # Test symfact.dat
-        
-        exporter.write_symfact_file(\
-            writers.FortranWriter(self.give_pos('test')),
-            symmetry)
-        goal_symfact_dat = """ 1   1
- 2   1
- 3   1
- 4   1
- 5   1
- 6   1
-"""
-        self.assertFileContains('test', goal_symfact_dat)
-
-        # Test processes.dat
-
-        files.write_to_file(self.give_pos('test'),
-                            exporter.write_processes_file,
-                            subprocess_group)
-
-        goal_processes = """1       u u~ > u u~
-mirror  u~ u > u u~
-2       u u~ > d d~
-mirror  none"""
-        
-        self.assertFileContains('test', goal_processes)
-
-        # Test mirrorprocs.inc
-
-        exporter.write_mirrorprocs(\
-            writers.FortranWriter(self.give_pos('test')),
-            subprocess_group)
-
-        goal_mirror_inc = \
-                 "      DATA (MIRRORPROCS(I),I=1,2)/.TRUE.,.FALSE./\n"
-        
-        self.assertFileContains('test', goal_mirror_inc)
-
-        # Test matrix1.f
-        exporter.write_matrix_element_v4(\
-            writers.FortranWriter(self.give_pos('test')),
-            matrix_elements[0],
-            helas_call_writers.FortranUFOHelasCallWriter(mymodel),
-            "1")
-
-        goal_matrix1 = \
-"""      SUBROUTINE SMATRIX1(P,ANS)
+      SUBROUTINE SMATRIX(P,ANS)
 C     
 C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
 C     By the MadGraph5_aMC@NLO Development Team
 C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
-C     MadGraph5_aMC@NLO for Madevent Version
+C     MadGraph5_aMC@NLO StandAlone Version
 C     
 C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u u~ > u u~
+C     Process: e+ e- > a a a
 C     
       IMPLICIT NONE
 C     
 C     CONSTANTS
 C     
-      INCLUDE 'genps.inc'
-      INCLUDE 'maxconfigs.inc'
-      INCLUDE 'nexternal.inc'
-      INCLUDE 'maxamps.inc'
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=5)
       INTEGER                 NCOMB
-      PARAMETER (             NCOMB=16)
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=6)
-      INTEGER    NDIAGS
-      PARAMETER (NDIAGS=6)
-      INTEGER    THEL
-      PARAMETER (THEL=2*NCOMB)
+      PARAMETER (             NCOMB=32)
+      INTEGER HELAVGFACTOR
+      PARAMETER (HELAVGFACTOR=4)
 C     
 C     ARGUMENTS 
 C     
@@ -1744,169 +958,82 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(2)
-      INTEGER ISHEL(2)
-      REAL*8 T,MATRIX1
-      REAL*8 R,SUMHEL,TS(NCOMB)
-      INTEGER I,IDEN
-      INTEGER JC(NEXTERNAL),II
-      LOGICAL GOODHEL(NCOMB,2)
-      REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-      INTEGER NGOOD(2), IGOOD(NCOMB,2)
-      INTEGER JHEL(2), J, JJ
+      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+      REAL*8 T
+      REAL*8 MATRIX
+      INTEGER IHEL,IDEN, I
+      INTEGER JC(NEXTERNAL)
+      LOGICAL GOODHEL(NCOMB)
+      DATA NTRY/0/
+      DATA GOODHEL/NCOMB*.FALSE./
+
 C     
 C     GLOBAL VARIABLES
 C     
-      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-      COMMON/TO_AMPS/  AMP2,       JAMP2
+      INTEGER USERHEL
+      COMMON/HELUSERCHOICE/USERHEL
+      DATA USERHEL/-1/
 
-      CHARACTER*101         HEL_BUFF
-      COMMON/TO_HELICITY/  HEL_BUFF
-
-      INTEGER IMIRROR
-      COMMON/TO_MIRROR/ IMIRROR
-
-      REAL*8 POL(2)
-      COMMON/TO_POLARIZATION/ POL
-
-      INTEGER          ISUM_HEL
-      LOGICAL                    MULTI_CHANNEL
-      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
-      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
-      INTEGER SUBDIAG(MAXSPROC),IB(2)
-      COMMON/TO_SUB_DIAG/SUBDIAG,IB
-      DATA XTRY, XREJ /0,0/
-      DATA NTRY /0,0/
-      DATA NGOOD /0,0/
-      DATA ISHEL/0,0/
-      SAVE YFRAC, IGOOD, JHEL
-      DATA GOODHEL/THEL*.FALSE./
-      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
-      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1, 1/
-      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1,-1/
-      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1, 1/
-      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1,-1/
-      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1, 1/
-      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1,-1/
-      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1, 1/
-      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1,-1/
-      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1, 1/
-      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1,-1/
-      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1, 1/
-      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1,-1/
-      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
-      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
-      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
-      DATA IDEN/36/
+      DATA (NHEL(I,   1),I=1,5) /-1, 1,-1,-1,-1/
+      DATA (NHEL(I,   2),I=1,5) /-1, 1,-1,-1, 1/
+      DATA (NHEL(I,   3),I=1,5) /-1, 1,-1, 1,-1/
+      DATA (NHEL(I,   4),I=1,5) /-1, 1,-1, 1, 1/
+      DATA (NHEL(I,   5),I=1,5) /-1, 1, 1,-1,-1/
+      DATA (NHEL(I,   6),I=1,5) /-1, 1, 1,-1, 1/
+      DATA (NHEL(I,   7),I=1,5) /-1, 1, 1, 1,-1/
+      DATA (NHEL(I,   8),I=1,5) /-1, 1, 1, 1, 1/
+      DATA (NHEL(I,   9),I=1,5) /-1,-1,-1,-1,-1/
+      DATA (NHEL(I,  10),I=1,5) /-1,-1,-1,-1, 1/
+      DATA (NHEL(I,  11),I=1,5) /-1,-1,-1, 1,-1/
+      DATA (NHEL(I,  12),I=1,5) /-1,-1,-1, 1, 1/
+      DATA (NHEL(I,  13),I=1,5) /-1,-1, 1,-1,-1/
+      DATA (NHEL(I,  14),I=1,5) /-1,-1, 1,-1, 1/
+      DATA (NHEL(I,  15),I=1,5) /-1,-1, 1, 1,-1/
+      DATA (NHEL(I,  16),I=1,5) /-1,-1, 1, 1, 1/
+      DATA (NHEL(I,  17),I=1,5) / 1, 1,-1,-1,-1/
+      DATA (NHEL(I,  18),I=1,5) / 1, 1,-1,-1, 1/
+      DATA (NHEL(I,  19),I=1,5) / 1, 1,-1, 1,-1/
+      DATA (NHEL(I,  20),I=1,5) / 1, 1,-1, 1, 1/
+      DATA (NHEL(I,  21),I=1,5) / 1, 1, 1,-1,-1/
+      DATA (NHEL(I,  22),I=1,5) / 1, 1, 1,-1, 1/
+      DATA (NHEL(I,  23),I=1,5) / 1, 1, 1, 1,-1/
+      DATA (NHEL(I,  24),I=1,5) / 1, 1, 1, 1, 1/
+      DATA (NHEL(I,  25),I=1,5) / 1,-1,-1,-1,-1/
+      DATA (NHEL(I,  26),I=1,5) / 1,-1,-1,-1, 1/
+      DATA (NHEL(I,  27),I=1,5) / 1,-1,-1, 1,-1/
+      DATA (NHEL(I,  28),I=1,5) / 1,-1,-1, 1, 1/
+      DATA (NHEL(I,  29),I=1,5) / 1,-1, 1,-1,-1/
+      DATA (NHEL(I,  30),I=1,5) / 1,-1, 1,-1, 1/
+      DATA (NHEL(I,  31),I=1,5) / 1,-1, 1, 1,-1/
+      DATA (NHEL(I,  32),I=1,5) / 1,-1, 1, 1, 1/
+      DATA IDEN/24/
 C     ----------
 C     BEGIN CODE
 C     ----------
-      NTRY(IMIRROR)=NTRY(IMIRROR)+1
-      DO I=1,NEXTERNAL
-        JC(I) = +1
+      NTRY=NTRY+1
+      DO IHEL=1,NEXTERNAL
+        JC(IHEL) = +1
       ENDDO
-
-      IF (MULTI_CHANNEL) THEN
-        DO I=1,NDIAGS
-          AMP2(I)=0D0
-        ENDDO
-        JAMP2(0)=2
-        DO I=1,INT(JAMP2(0))
-          JAMP2(I)=0D0
-        ENDDO
-      ENDIF
       ANS = 0D0
-      WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
-      DO I=1,NCOMB
-        TS(I)=0D0
+      DO IHEL=1,NCOMB
+        IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
+          IF (GOODHEL(IHEL) .OR. NTRY .LT. 20) THEN
+            T=MATRIX(P ,NHEL(1,IHEL),JC(1))
+            ANS=ANS+T
+            IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
+              GOODHEL(IHEL)=.TRUE.
+            ENDIF
+          ENDIF
+        ENDIF
       ENDDO
-      IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
-        DO I=1,NCOMB
-          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
-            T=MATRIX1(P ,NHEL(1,I),JC(1))
-            DO JJ=1,NINCOMING
-              IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0
-     $         ,POL(JJ)))) THEN
-                T=T*ABS(POL(JJ))
-              ELSE IF(POL(JJ).NE.1D0)THEN
-                T=T*(2D0-ABS(POL(JJ)))
-              ENDIF
-            ENDDO
-            ANS=ANS+DABS(T)
-            TS(I)=T
-          ENDIF
-        ENDDO
-        JHEL(IMIRROR) = 1
-        IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
-          DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS
-     $       *LIMHEL/NCOMB)) THEN
-              GOODHEL(I,IMIRROR)=.TRUE.
-              NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
-              IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-              PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
-     $         ,' in event ',NTRY(IMIRROR)
-            ENDIF
-          ENDDO
-        ENDIF
-        IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
-          ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
-        ENDIF
-      ELSE  !LOOP OVER GOOD HELICITIES
-        DO J=1,ISHEL(IMIRROR)
-          JHEL(IMIRROR)=JHEL(IMIRROR)+1
-          IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
-          HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
-          I = IGOOD(JHEL(IMIRROR),IMIRROR)
-          T=MATRIX1(P ,NHEL(1,I),JC(1))
-          DO JJ=1,NINCOMING
-            IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
-     $       ) THEN
-              T=T*ABS(POL(JJ))
-            ELSE IF(POL(JJ).NE.1D0)THEN
-              T=T*(2D0-ABS(POL(JJ)))
-            ENDIF
-          ENDDO
-          ANS=ANS+DABS(T)*HWGT
-          TS(I)=T*HWGT
-        ENDDO
-        IF (ISHEL(IMIRROR) .EQ. 1) THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-C         Set right sign for ANS, based on sign of chosen helicity
-          ANS=DSIGN(ANS,TS(I))
-        ENDIF
-      ENDIF
-      IF (ISHEL(IMIRROR) .NE. 1) THEN
-        CALL RANMAR(R)
-        SUMHEL=0D0
-        DO I=1,NCOMB
-          SUMHEL=SUMHEL+DABS(TS(I))/ANS
-          IF(R.LT.SUMHEL)THEN
-            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-C           Set right sign for ANS, based on sign of chosen helicity
-            ANS=DSIGN(ANS,TS(I))
-            GOTO 10
-          ENDIF
-        ENDDO
- 10     CONTINUE
-      ENDIF
-      IF (MULTI_CHANNEL) THEN
-        XTOT=0D0
-        DO I=1,NDIAGS
-          XTOT=XTOT+AMP2(I)
-        ENDDO
-        IF (XTOT.NE.0D0) THEN
-          ANS=ANS*AMP2(SUBDIAG(1))/XTOT
-        ELSE
-          ANS=0D0
-        ENDIF
-      ENDIF
       ANS=ANS/DBLE(IDEN)
+      IF(USERHEL.NE.-1) THEN
+        ANS=ANS*HELAVGFACTOR
+      ENDIF
       END
 
 
-      REAL*8 FUNCTION MATRIX1(P,NHEL,IC)
+      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
 C     
 C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
 C     By the MadGraph5_aMC@NLO Development Team
@@ -1915,7 +1042,7 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u u~ > u u~
+C     Process: e+ e- > a a a
 C     
       IMPLICIT NONE
 C     
@@ -1923,20 +1050,14 @@ C     CONSTANTS
 C     
       INTEGER    NGRAPHS
       PARAMETER (NGRAPHS=6)
-      INCLUDE 'genps.inc'
-      INCLUDE 'nexternal.inc'
-      INCLUDE 'maxamps.inc'
-      INTEGER    NWAVEFUNCS,     NCOLOR
-      PARAMETER (NWAVEFUNCS=5, NCOLOR=2)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=5)
+      INTEGER    NWAVEFUNCS, NCOLOR
+      PARAMETER (NWAVEFUNCS=9, NCOLOR=1)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
       PARAMETER (IMAG1=(0D0,1D0))
-      INTEGER NAMPSO, NSQAMPSO
-      PARAMETER (NAMPSO=1, NSQAMPSO=1)
-      LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
-      DATA CHOSEN_SO_CONFIGS/.TRUE./
-      SAVE CHOSEN_SO_CONFIGS
 C     
 C     ARGUMENTS 
 C     
@@ -1945,687 +1066,94 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER I,J,M,N
+      INTEGER I,J
       COMPLEX*16 ZTEMP
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
-C     Needed for v4 models
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
 C     
-C     FUNCTION
-C     
-      INTEGER SQSOINDEX1
-C     
 C     GLOBAL VARIABLES
 C     
-      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-      COMMON/TO_AMPS/  AMP2,       JAMP2
       INCLUDE 'coupl.inc'
+
 C     
 C     COLOR DATA
 C     
       DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /    9,    3/
-C     1 T(2,1) T(3,4)
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    3,    9/
-C     1 T(2,4) T(3,1)
+      DATA (CF(I,  1),I=  1,  1) /    1/
+C     1 ColorOne()
 C     ----------
 C     BEGIN CODE
 C     ----------
-      CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-      CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-      CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-      CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO,ZERO,W(1,5))
+      CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
+      CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
+      CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
+      CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
+      CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
+      CALL FVOXXX(W(1,1),W(1,3),MGVX12,ZERO,ZERO,W(1,6))
+      CALL FVIXXX(W(1,2),W(1,4),MGVX12,ZERO,ZERO,W(1,7))
 C     Amplitude(s) for diagram number 1
-      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GQQ,AMP(1))
-      CALL FFV1_3(W(1,1),W(1,2),GQED,ZERO,ZERO,W(1,5))
+      CALL IOVXXX(W(1,7),W(1,6),W(1,5),MGVX12,AMP(1))
+      CALL FVIXXX(W(1,2),W(1,5),MGVX12,ZERO,ZERO,W(1,8))
 C     Amplitude(s) for diagram number 2
-      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GQED,AMP(2))
-      CALL FFV1_2_3(W(1,1),W(1,2),GUZ1,GUZ2,MZ,WZ,W(1,5))
+      CALL IOVXXX(W(1,8),W(1,6),W(1,4),MGVX12,AMP(2))
+      CALL FVOXXX(W(1,1),W(1,4),MGVX12,ZERO,ZERO,W(1,6))
+      CALL FVIXXX(W(1,2),W(1,3),MGVX12,ZERO,ZERO,W(1,9))
 C     Amplitude(s) for diagram number 3
-      CALL FFV1_2_0(W(1,4),W(1,3),W(1,5),GUZ1,GUZ2,AMP(3))
-      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO,ZERO,W(1,5))
+      CALL IOVXXX(W(1,9),W(1,6),W(1,5),MGVX12,AMP(3))
 C     Amplitude(s) for diagram number 4
-      CALL FFV1_0(W(1,4),W(1,2),W(1,5),GQQ,AMP(4))
-      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO,ZERO,W(1,5))
+      CALL IOVXXX(W(1,8),W(1,6),W(1,3),MGVX12,AMP(4))
+      CALL FVOXXX(W(1,1),W(1,5),MGVX12,ZERO,ZERO,W(1,6))
 C     Amplitude(s) for diagram number 5
-      CALL FFV1_0(W(1,4),W(1,2),W(1,5),GQED,AMP(5))
-      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ,WZ,W(1,5))
+      CALL IOVXXX(W(1,9),W(1,6),W(1,4),MGVX12,AMP(5))
 C     Amplitude(s) for diagram number 6
-      CALL FFV1_2_0(W(1,4),W(1,2),W(1,5),GUZ1,GUZ2,AMP(6))
-C     JAMPs contributing to orders ALL_ORDERS=1
-      JAMP(1,1)=+1D0/6D0*AMP(1)-AMP(2)-AMP(3)+1D0/2D0*AMP(4)
-      JAMP(2,1)=-1D0/2D0*AMP(1)-1D0/6D0*AMP(4)+AMP(5)+AMP(6)
+      CALL IOVXXX(W(1,7),W(1,6),W(1,3),MGVX12,AMP(6))
+      JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
 
-      MATRIX1 = 0.D0
-      DO M = 1, NAMPSO
-        DO I = 1, NCOLOR
-          ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
-          ENDDO
-          DO N = 1, NAMPSO
-            IF (CHOSEN_SO_CONFIGS(SQSOINDEX1(M,N))) THEN
-              MATRIX1 = MATRIX1 + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
-            ENDIF
-          ENDDO
-        ENDDO
-      ENDDO
-
-      AMP2(1)=AMP2(1)+AMP(1)*DCONJG(AMP(1))
-      AMP2(2)=AMP2(2)+AMP(2)*DCONJG(AMP(2))
-      AMP2(3)=AMP2(3)+AMP(3)*DCONJG(AMP(3))
-      AMP2(4)=AMP2(4)+AMP(4)*DCONJG(AMP(4))
-      AMP2(5)=AMP2(5)+AMP(5)*DCONJG(AMP(5))
-      AMP2(6)=AMP2(6)+AMP(6)*DCONJG(AMP(6))
+      MATRIX = 0.D0
       DO I = 1, NCOLOR
-        DO M = 1, NAMPSO
-          DO N = 1, NAMPSO
-            IF (CHOSEN_SO_CONFIGS(SQSOINDEX1(M,N))) THEN
-              JAMP2(I)=JAMP2(I)+DABS(DBLE(JAMP(I,M)*DCONJG(JAMP(I,N))))
-            ENDIF
-          ENDDO
+        ZTEMP = (0.D0,0.D0)
+        DO J = 1, NCOLOR
+          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
         ENDDO
+        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
       ENDDO
 
       END
-
-C     Set of functions to handle the array indices of the split orders
-
-
-      INTEGER FUNCTION SQSOINDEX1(ORDERINDEXA, ORDERINDEXB)
-C     
-C     This functions plays the role of the interference matrix. It can
-C      be hardcoded or 
-C     made more elegant using hashtables if its execution speed ever
-C      becomes a relevant
-C     factor. From two split order indices, it return the corresponding
-C      index in the squared 
-C     order canonical ordering.
-C     
-C     CONSTANTS
-C     
-
-      INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=1)
-C     
-C     ARGUMENTS
-C     
-      INTEGER ORDERINDEXA, ORDERINDEXB
-C     
-C     LOCAL VARIABLES
-C     
-      INTEGER I, SQORDERS(NSO)
-      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
-      DATA (AMPSPLITORDERS(  1,I),I=  1,  1) /    1/
-C     
-C     FUNCTION
-C     
-      INTEGER SOINDEX_FOR_SQUARED_ORDERS1
-C     
-C     BEGIN CODE
-C     
-      DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $   NDEXB,I)
-      ENDDO
-      SQSOINDEX1=SOINDEX_FOR_SQUARED_ORDERS1(SQORDERS)
-      END
-
-      INTEGER FUNCTION SOINDEX_FOR_SQUARED_ORDERS1(ORDERS)
-C     
-C     This functions returns the integer index identifying the squared
-C      split orders list passed in argument which corresponds to the
-C      values of the following list of couplings (and in this order).
-C     []
-C     
-C     CONSTANTS
-C     
-      INTEGER    NSO, NSQSO, NAMPSO
-      PARAMETER (NSO=1, NSQSO=1, NAMPSO=1)
-C     
-C     ARGUMENTS
-C     
-      INTEGER ORDERS(NSO)
-C     
-C     LOCAL VARIABLES
-C     
-      INTEGER I,J
-      INTEGER SQSPLITORDERS(NSQSO,NSO)
-      DATA (SQSPLITORDERS(  1,I),I=  1,  1) /    2/
-C     
-C     BEGIN CODE
-C     
-      DO I=1,NSQSO
-        DO J=1,NSO
-          IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
-        ENDDO
-        SOINDEX_FOR_SQUARED_ORDERS1 = I
-        RETURN
- 1009   CONTINUE
-      ENDDO
-
-      WRITE(*,*) 'ERROR:: Stopping function SOINDEX_FOR_SQUARED_ORDERS'
-      WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
-      STOP
-
-      END
-
-      SUBROUTINE GET_NSQSO_BORN1(NSQSO)
-C     
-C     Simple subroutine returning the number of squared split order
-C     contributions returned when calling smatrix_split_orders 
-C     
-
-      INTEGER    NSQUAREDSO
-      PARAMETER  (NSQUAREDSO=1)
-
-      INTEGER NSQSO
-
-      NSQSO=NSQUAREDSO
-
-      END""" % misc.get_pkg_info()
-
-        open('solution.txt','w').writelines(open(self.give_pos('test')).read())
-        self.assertFileContains('test', goal_matrix1)
-
-        # Test auto_dsig,f
-        exporter.write_auto_dsig_file(\
-            writers.FortranWriter(self.give_pos('test')),
-            matrix_elements[0],
-            "1")
-
-        goal_auto_dsig1 = \
-"""      DOUBLE PRECISION FUNCTION DSIG1(PP,WGT,IMODE)
-C     ****************************************************
-C     
-C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
-C     By the MadGraph5_aMC@NLO Development Team
-C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-C     
-C     Process: u u~ > u u~
-C     
-C     RETURNS DIFFERENTIAL CROSS SECTION
-C     Input:
-C     pp    4 momentum of external particles
-C     wgt   weight from Monte Carlo
-C     imode 0 run, 1 init, 2 reweight, 
-C     3 finalize, 4 only PDFs
-C     Output:
-C     Amplitude squared and summed
-C     ****************************************************
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INCLUDE 'genps.inc'
-      INCLUDE 'nexternal.inc'
-      INCLUDE 'maxconfigs.inc'
-      INCLUDE 'maxamps.inc'
-      DOUBLE PRECISION       CONV
-      PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
-      REAL*8     PI
-      PARAMETER (PI=3.1415926D0)
-C     
-C     ARGUMENTS 
-C     
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
-      INTEGER IMODE
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER I,ITYPE,LP,IPROC
-      DOUBLE PRECISION U1
-      DOUBLE PRECISION UX2
-      DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION DSIGUU,R,RCONF
-      INTEGER LUN,ICONF,IFACT,NFACT
-      DATA NFACT/1/
-      SAVE NFACT
-C     
-C     EXTERNAL FUNCTIONS
-C     
-      LOGICAL PASSCUTS
-      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
-      INTEGER NEXTUNOPEN
-C     
-C     GLOBAL VARIABLES
-C     
-      INTEGER          IPSEL
-      COMMON /SUBPROC/ IPSEL
-C     MINCFIG has this config number
-      INTEGER           MINCFIG, MAXCFIG
-      COMMON/TO_CONFIGS/MINCFIG, MAXCFIG
-      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
-C     Keep track of whether cuts already calculated for this event
-      LOGICAL CUTSDONE,CUTSPASSED
-      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
-
-      INTEGER SUBDIAG(MAXSPROC),IB(2)
-      COMMON/TO_SUB_DIAG/SUBDIAG,IB
-      INCLUDE 'coupl.inc'
-      INCLUDE 'run.inc'
-C     
-C     DATA
-C     
-      DATA U1/1*1D0/
-      DATA UX2/1*1D0/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      DSIG1=0D0
-
-      IF(IMODE.EQ.1)THEN
-C       Set up process information from file symfact
-        LUN=NEXTUNOPEN()
-        NFACT=1
-        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
-        DO WHILE(.TRUE.)
-          READ(LUN,*,ERR=10,END=10) RCONF, IFACT
-          ICONF=INT(RCONF)
-          IF(ICONF.EQ.MAPCONFIG(MINCFIG))THEN
-            NFACT=IFACT
-          ENDIF
-        ENDDO
- 10     CLOSE(LUN)
-        RETURN
- 20     WRITE(*,*)'Error opening symfact.dat. No symmetry factor used.'
-        RETURN
-      ENDIF
-C     Only run if IMODE is 0
-      IF(IMODE.NE.0.AND.IMODE.NE.4) RETURN
-
-
-      IF (ABS(LPP(IB(1))).GE.1) THEN
-        LP=SIGN(1,LPP(IB(1)))
-        U1=PDG2PDF(ABS(LPP(IB(1))),2*LP,XBK(IB(1)),DSQRT(Q2FACT(1)))
-      ENDIF
-      IF (ABS(LPP(IB(2))).GE.1) THEN
-        LP=SIGN(1,LPP(IB(2)))
-        UX2=PDG2PDF(ABS(LPP(IB(2))),-2*LP,XBK(IB(2)),DSQRT(Q2FACT(2)))
-      ENDIF
-      PD(0) = 0D0
-      IPROC = 0
-      IPROC=IPROC+1  ! u u~ > u u~
-      PD(IPROC)=U1*UX2
-      PD(0)=PD(0)+DABS(PD(IPROC))
-      IF (IMODE.EQ.4)THEN
-        DSIG1 = PD(0)
-        RETURN
-      ENDIF
-      CALL SMATRIX1(PP,DSIGUU)
-C     Select a flavor combination (need to do here for right sign)
-      CALL RANMAR(R)
-      IPSEL=0
-      DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-        IPSEL=IPSEL+1
-        R=R-DABS(PD(IPSEL))/PD(0)
-      ENDDO
-      DSIGUU=DSIGUU*REWGT(PP)*NFACT
-      IF (DSIGUU.LT.1D199) THEN
-C       Set sign of dsig based on sign of PDF and matrix element
-        DSIG1=DSIGN(PD(0)*CONV*DSIGUU,DSIGUU*PD(IPSEL))
-      ELSE
-        WRITE(*,*) 'Error in matrix element'
-        DSIGUU=0D0
-        DSIG1=0D0
-      ENDIF
-      IF(IMODE.EQ.0.AND.DABS(DSIG1).GT.0D0)THEN
-C       Call UNWGT to unweight and store events
-        CALL UNWGT(PP,DSIG1*WGT,1)
-      ENDIF
-
-      END
-
 """ % misc.get_pkg_info()
-        
 
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal_auto_dsig1)
+        process_exporter = export_v4.ProcessExporterFortranSA()
 
-        # Test super auto_dsig.f
-        exporter.write_super_auto_dsig_file(\
+        process_exporter.write_matrix_element_v4(\
             writers.FortranWriter(self.give_pos('test')),
-            subprocess_group)
+            self.mymatrixelement,
+            self.myfortranmodel)
 
-        goal_super = \
-        """      DOUBLE PRECISION FUNCTION DSIG(PP,WGT,IMODE)
-C     ****************************************************
-C     
-C     Generated by MadGraph5_aMC@NLO v. %(version)s, %(date)s
-C     By the MadGraph5_aMC@NLO Development Team
-C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-C     
-C     Process: u u~ > u u~
-C     Process: u u~ > d d~
-C     
-C     RETURNS DIFFERENTIAL CROSS SECTION 
-C     FOR MULTIPLE PROCESSES IN PROCESS GROUP
-C     Input:
-C     pp    4 momentum of external particles
-C     wgt   weight from Monte Carlo
-C     imode 0 run, 1 init, 2 reweight,
-C     3 finalize, 4 only PDFs
-C     Output:
-C     Amplitude squared and summed
-C     ****************************************************
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INCLUDE 'genps.inc'
-      INCLUDE 'maxconfigs.inc'
-      INCLUDE 'nexternal.inc'
-      INCLUDE 'maxamps.inc'
-      REAL*8     PI
-      PARAMETER (PI=3.1415926D0)
-C     
-C     ARGUMENTS 
-C     
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
-      INTEGER IMODE
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER I,J,K,LUN,ICONF,IMIRROR,NPROC
-      SAVE NPROC
-      INTEGER SYMCONF(0:LMAXCONFIGS)
-      SAVE SYMCONF
-      DOUBLE PRECISION SUMPROB,TOTWGT,R,XDUM
-      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
-      INCLUDE 'config_subproc_map.inc'
-      INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
-      INCLUDE 'symperms.inc'
-      LOGICAL MIRRORPROCS(MAXSPROC)
-      INCLUDE 'mirrorprocs.inc'
-C     SELPROC is vector of selection weights for the subprocesses
-C     SUMWGT is vector of total weight for the subprocesses
-C     NUMEVTS is vector of event calls for the subprocesses
-      DOUBLE PRECISION SELPROC(2, MAXSPROC,LMAXCONFIGS)
-      DOUBLE PRECISION SUMWGT(2, MAXSPROC,LMAXCONFIGS)
-      INTEGER NUMEVTS(2, MAXSPROC,LMAXCONFIGS)
-      INTEGER LARGEDIM
-      PARAMETER (LARGEDIM=2*MAXSPROC*LMAXCONFIGS)
-      DATA SELPROC/LARGEDIM*0D0/
-      DATA SUMWGT/LARGEDIM*0D0/
-      DATA NUMEVTS/LARGEDIM*0/
-      SAVE SELPROC,SUMWGT,NUMEVTS
-C     
-C     EXTERNAL FUNCTIONS
-C     
-      INTEGER NEXTUNOPEN
-      DOUBLE PRECISION DSIGPROC
-      EXTERNAL NEXTUNOPEN,DSIGPROC
-C     
-C     GLOBAL VARIABLES
-C     
-      INCLUDE 'coupl.inc'
-      INCLUDE 'run.inc'
-C     ICONFIG has this config number
-      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
-C     IPROC has the present process number
-      INTEGER IPROC
-      COMMON/TO_MIRROR/IMIRROR, IPROC
-C     CM_RAP has parton-parton system rapidity
-      DOUBLE PRECISION CM_RAP
-      LOGICAL SET_CM_RAP
-      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
-C     Keep track of whether cuts already calculated for this event
-      LOGICAL CUTSDONE,CUTSPASSED
-      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
-C     ----------
-C     BEGIN CODE
-C     ----------
-      DSIG=0D0
+#        print open(self.give_pos('test')).read()
+        self.assertFileContains('test', goal_matrix_f)
 
-C     Make sure cuts are evaluated for first subprocess
-      CUTSDONE=.FALSE.
-      CUTSPASSED=.FALSE.
+    def test_coeff_string(self):
+        """Test the coeff string for JAMP lines"""
 
-      IF(IMODE.EQ.1)THEN
-C       Set up process information from file symfact
-        LUN=NEXTUNOPEN()
-        IPROC=1
-        SYMCONF(IPROC)=ICONFIG
-        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
-        DO WHILE(.TRUE.)
-          READ(LUN,*,ERR=10,END=10) XDUM, ICONF
-          IF(ICONF.EQ.-MAPCONFIG(ICONFIG))THEN
-            IPROC=IPROC+1
-            SYMCONF(IPROC)=INT(XDUM)
-          ENDIF
-        ENDDO
- 10     SYMCONF(0)=IPROC
-        CLOSE(LUN)
-        RETURN
- 20     SYMCONF(0)=IPROC
-        WRITE(*,*)'Error opening symfact.dat. No permutations used.'
-        RETURN
-      ELSE IF(IMODE.EQ.2)THEN
-C       Output weights and number of events
-        SUMPROB=0D0
-        DO J=1,SYMCONF(0)
-          DO I=1,MAXSPROC
-            DO K=1,2
-              SUMPROB=SUMPROB+SUMWGT(K,I,J)
-            ENDDO
-          ENDDO
-        ENDDO
-        WRITE(*,*)'Relative summed weights:'
-        DO J=1,SYMCONF(0)
-          WRITE(*,'(4E12.4)')((SUMWGT(K,I,J)/SUMPROB,K=1,2),I=1
-     $     ,MAXSPROC)
-        ENDDO
-        SUMPROB=0D0
-        DO J=1,SYMCONF(0)
-          DO I=1,MAXSPROC
-            DO K=1,2
-              SUMPROB=SUMPROB+NUMEVTS(K,I,J)
-            ENDDO
-          ENDDO
-        ENDDO
-        WRITE(*,*)'Relative number of events:'
-        DO J=1,SYMCONF(0)
-          WRITE(*,'(4E12.4)')((NUMEVTS(K,I,J)/SUMPROB,K=1,2),I=1
-     $     ,MAXSPROC)
-        ENDDO
-        WRITE(*,*)'Events:'
-        DO J=1,SYMCONF(0)
-          WRITE(*,'(4I12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
-        ENDDO
-C       Reset weights and number of events
-        DO J=1,SYMCONF(0)
-          DO I=1,MAXSPROC
-            DO K=1,2
-              NUMEVTS(K,I,J)=0
-              SUMWGT(K,I,J)=0D0
-            ENDDO
-          ENDDO
-        ENDDO
-        RETURN
-      ELSE IF(IMODE.EQ.3)THEN
-C       No finalize needed
-        RETURN
-      ENDIF
+        process_exporter = export_v4.ProcessExporterFortran()
 
-C     IMODE.EQ.0, regular run mode
+        self.assertEqual(process_exporter.coeff(1,
+                                         fractions.Fraction(1),
+                                         False, 0), '+')
 
-C     Select among the subprocesses based on PDF weight
-      SUMPROB=0D0
-      DO J=1,SYMCONF(0)
-        DO IPROC=1,MAXSPROC
-          IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
-            DO IMIRROR=1,2
-              IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
-C               Calculate PDF weight for all subprocesses
-                SELPROC(IMIRROR,IPROC,J)=DSIGPROC(PP,J,IPROC,IMIRROR
-     $           ,SYMCONF,CONFSUB,1D0,4)
-                SUMPROB=SUMPROB+SELPROC(IMIRROR,IPROC,J)
-                IF(IMIRROR.EQ.2)THEN
-C                 Need to flip back x values
-                  XDUM=XBK(1)
-                  XBK(1)=XBK(2)
-                  XBK(2)=XDUM
-                  CM_RAP=-CM_RAP
-                ENDIF
-              ENDIF
-            ENDDO
-          ENDIF
-        ENDDO
-      ENDDO
+        self.assertEqual(process_exporter.coeff(-1,
+                                         fractions.Fraction(1),
+                                         False, 0), '-')
 
-C     Perform the selection
-      CALL RANMAR(R)
-      R=R*SUMPROB
-      ICONF=0
-      IPROC=0
-      TOTWGT=0D0
-      DO J=1,SYMCONF(0)
-        DO I=1,MAXSPROC
-          DO K=1,2
-            TOTWGT=TOTWGT+SELPROC(K,I,J)
-            IF(R.LT.TOTWGT)THEN
-C             Normalize SELPROC to selection probability
-              SELPROC(K,I,J)=SELPROC(K,I,J)/SUMPROB
-              IPROC=I
-              ICONF=J
-              IMIRROR=K
-              GOTO 50
-            ENDIF
-          ENDDO
-        ENDDO
-      ENDDO
- 50   CONTINUE
+        self.assertEqual(process_exporter.coeff(-1,
+                                         fractions.Fraction(-3),
+                                         False, 0), '+3D0*')
 
-      IF(IPROC.EQ.0) RETURN
-
-C     Redo clustering to ensure consistent with final IPROC
-      CUTSDONE=.FALSE.
-
-C     Update weigth w.r.t SELPROC
-      WGT=WGT/SELPROC(IMIRROR,IPROC,ICONF)
-
-C     Call DSIGPROC to calculate sigma for process
-      DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)
-
-      IF(DSIG.GT.0D0)THEN
-C       Update summed weight and number of events
-        SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)
-     $   +DABS(DSIG*WGT)
-        NUMEVTS(IMIRROR,IPROC,ICONF)=NUMEVTS(IMIRROR,IPROC,ICONF)+1
-      ENDIF
-
-      RETURN
-      END
-
-      FUNCTION DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT
-     $ ,IMODE)
-C     ****************************************************
-C     RETURNS DIFFERENTIAL CROSS SECTION 
-C     FOR A PROCESS
-C     Input:
-C     pp    4 momentum of external particles
-C     wgt   weight from Monte Carlo
-C     imode 0 run, 1 init, 2 reweight, 3 finalize
-C     Output:
-C     Amplitude squared and summed
-C     ****************************************************
-
-      IMPLICIT NONE
-
-      INCLUDE 'genps.inc'
-      INCLUDE 'maxconfigs.inc'
-      INCLUDE 'nexternal.inc'
-      INCLUDE 'maxamps.inc'
-      INCLUDE 'coupl.inc'
-      INCLUDE 'run.inc'
-C     
-C     ARGUMENTS 
-C     
-      DOUBLE PRECISION DSIGPROC
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
-      INTEGER ICONF,IPROC,IMIRROR,IMODE
-      INTEGER SYMCONF(0:LMAXCONFIGS)
-      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
-C     
-C     GLOBAL VARIABLES
-C     
-C     SUBDIAG is vector of diagram numbers for this config
-C     IB gives which beam is which (for mirror processes)
-      INTEGER SUBDIAG(MAXSPROC),IB(2)
-      COMMON/TO_SUB_DIAG/SUBDIAG,IB
-C     ICONFIG has this config number
-      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
-C     CM_RAP has parton-parton system rapidity
-      DOUBLE PRECISION CM_RAP
-      LOGICAL SET_CM_RAP
-      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
-C     
-C     EXTERNAL FUNCTIONS
-C     
-      DOUBLE PRECISION DSIG1,DSIG2
-      LOGICAL PASSCUTS
-C     
-C     LOCAL VARIABLES 
-C     
-      DOUBLE PRECISION P1(0:3,NEXTERNAL),XDUM
-      INTEGER I,J,K,JC(NEXTERNAL)
-      INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
-      INCLUDE 'symperms.inc'
-
-      ICONFIG=SYMCONF(ICONF)
-      DO I=1,MAXSPROC
-        SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
-      ENDDO
-
-C     Set momenta according to this permutation
-      CALL SWITCHMOM(PP,P1,PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
-
-      IB(1)=1
-      IB(2)=2
-
-      IF(IMIRROR.EQ.2)THEN
-C       Flip momenta (rotate around x axis)
-        DO I=1,NEXTERNAL
-          P1(2,I)=-P1(2,I)
-          P1(3,I)=-P1(3,I)
-        ENDDO
-C       Flip beam identity
-        IB(1)=2
-        IB(2)=1
-C       Flip x values (to get boost right)
-        XDUM=XBK(1)
-        XBK(1)=XBK(2)
-        XBK(2)=XDUM
-C       Flip CM_RAP (to get rapidity right)
-        CM_RAP=-CM_RAP
-      ENDIF
-
-      DSIGPROC=0D0
-
-      IF (PASSCUTS(P1)) THEN
-        IF(IPROC.EQ.1) DSIGPROC=DSIG1(P1,WGT,IMODE)  ! u u~ > u u~
-        IF(IPROC.EQ.2) DSIGPROC=DSIG2(P1,WGT,IMODE)  ! u u~ > d d~
-      ENDIF
-      RETURN
-      END
-
-
-""" % misc.get_pkg_info()
-        
-
-        #print open(self.give_pos('test')).read()
-        #strings=open(self.give_pos('test')).read().split('\n')
-        #for i,s in enumerate(strings):
-        #    self.assertEqual(s,goal_super.split('\n')[i])
-        self.assertFileContains('test', goal_super)
+        self.assertEqual(process_exporter.coeff(-1,
+                                         fractions.Fraction(3, 5),
+                                         True, -2), '-1D0/15D0*imag1*')
 
     def test_export_group_decay_chains(self):
         """Test the result of exporting a subprocess group decay chain"""

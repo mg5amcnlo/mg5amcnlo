@@ -16,7 +16,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=3)
       INTEGER    NLOOPAMPS, NCTAMPS
-      PARAMETER (NLOOPAMPS=138, NCTAMPS=85)
+      PARAMETER (NLOOPAMPS=129, NCTAMPS=85)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NWAVEFUNCS
@@ -113,45 +113,39 @@ C         Amplitude(s) for born diagram with ID 3
           CALL MP_FFV1P0_3(W(1,4,H),W(1,3,H),GC_5,ZERO,ZERO,W(1,8,H))
 C         Counter-term amplitude(s) for loop diagram number 4
           CALL MP_R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,1))
+          CALL MP_R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,2))
+          CALL MP_R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,3))
+          CALL MP_R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,4))
 C         Counter-term amplitude(s) for loop diagram number 5
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2
-     $     ,2))
-          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2
-     $     ,3))
-          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2
-     $     ,4))
-          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2
      $     ,5))
-          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB,AMPL(1,6))
+          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2
+     $     ,6))
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2
      $     ,7))
-          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GT,AMPL(1,8))
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2
-     $     ,9))
-          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GG_1EPS,AMPL(2
+     $     ,8))
+          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB,AMPL(1,9))
+          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2
      $     ,10))
-          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,11))
-C         Counter-term amplitude(s) for loop diagram number 7
-          CALL MP_R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,12))
-C         Counter-term amplitude(s) for loop diagram number 8
-          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,13))
-C         Counter-term amplitude(s) for loop diagram number 10
-          CALL MP_R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,14))
-C         Counter-term amplitude(s) for loop diagram number 11
+          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GT,AMPL(1,11))
+          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2
+     $     ,12))
+          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GG_1EPS,AMPL(2
+     $     ,13))
+          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,14))
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,15))
-C         Counter-term amplitude(s) for loop diagram number 13
-          CALL MP_R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,16))
-C         Counter-term amplitude(s) for loop diagram number 14
+          CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,16))
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,17))
-C         Counter-term amplitude(s) for loop diagram number 16
+C         Counter-term amplitude(s) for loop diagram number 7
           CALL MP_R2_GG_1_R2_GG_3_0(W(1,5,H),W(1,8,H),R2_GGQ,R2_GGB
      $     ,AMPL(1,18))
-C         Counter-term amplitude(s) for loop diagram number 17
+C         Counter-term amplitude(s) for loop diagram number 8
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,19))
-C         Counter-term amplitude(s) for loop diagram number 19
+C         Counter-term amplitude(s) for loop diagram number 10
           CALL MP_R2_GG_1_R2_GG_3_0(W(1,5,H),W(1,8,H),R2_GGQ,R2_GGT
      $     ,AMPL(1,20))
-C         Counter-term amplitude(s) for loop diagram number 20
+C         Counter-term amplitude(s) for loop diagram number 11
           CALL MP_FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS
      $     ,AMPL(2,21))
           CALL MP_FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS
@@ -170,12 +164,12 @@ C         Counter-term amplitude(s) for loop diagram number 20
      $     ,AMPL(2,29))
           CALL MP_FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),R2_GQQ,AMPL(1,30))
           CALL MP_FFV1_2(W(1,4,H),W(1,2,H),GC_5,MDL_MT,MDL_WT,W(1,9,H))
-C         Counter-term amplitude(s) for loop diagram number 22
+C         Counter-term amplitude(s) for loop diagram number 13
           CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,9,H),W(1,6,H),R2_QQQ,R2_QQT
      $     ,AMPL(1,31))
           CALL MP_R2_QQ_2_0(W(1,9,H),W(1,6,H),UV_TMASS,AMPL(1,32))
           CALL MP_R2_QQ_2_0(W(1,9,H),W(1,6,H),UV_TMASS_1EPS,AMPL(2,33))
-C         Counter-term amplitude(s) for loop diagram number 23
+C         Counter-term amplitude(s) for loop diagram number 14
           CALL MP_FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS
      $     ,AMPL(2,34))
           CALL MP_FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS
@@ -195,13 +189,13 @@ C         Counter-term amplitude(s) for loop diagram number 23
           CALL MP_FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),R2_GQQ,AMPL(1,43))
           CALL MP_FFV1_1(W(1,3,H),W(1,2,H),GC_5,MDL_MT,MDL_WT,W(1,10
      $     ,H))
-C         Counter-term amplitude(s) for loop diagram number 25
+C         Counter-term amplitude(s) for loop diagram number 16
           CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,7,H),W(1,10,H),R2_QQQ,R2_QQT
      $     ,AMPL(1,44))
           CALL MP_R2_QQ_2_0(W(1,7,H),W(1,10,H),UV_TMASS,AMPL(1,45))
           CALL MP_R2_QQ_2_0(W(1,7,H),W(1,10,H),UV_TMASS_1EPS,AMPL(2
      $     ,46))
-C         Counter-term amplitude(s) for loop diagram number 26
+C         Counter-term amplitude(s) for loop diagram number 17
           CALL MP_FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS
      $     ,AMPL(2,47))
           CALL MP_FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS
@@ -219,7 +213,7 @@ C         Counter-term amplitude(s) for loop diagram number 26
           CALL MP_FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQG_1EPS
      $     ,AMPL(2,55))
           CALL MP_FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),R2_GQQ,AMPL(1,56))
-C         Counter-term amplitude(s) for loop diagram number 28
+C         Counter-term amplitude(s) for loop diagram number 19
           CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS
      $     ,AMPL(2,57))
           CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS
@@ -239,7 +233,7 @@ C         Counter-term amplitude(s) for loop diagram number 28
           CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQG_1EPS
      $     ,AMPL(2,65))
           CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),R2_GQQ,AMPL(1,66))
-C         Counter-term amplitude(s) for loop diagram number 29
+C         Counter-term amplitude(s) for loop diagram number 20
           CALL MP_FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS
      $     ,AMPL(2,67))
           CALL MP_FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS
@@ -257,34 +251,34 @@ C         Counter-term amplitude(s) for loop diagram number 29
           CALL MP_FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQG_1EPS
      $     ,AMPL(2,75))
           CALL MP_FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),R2_GQQ,AMPL(1,76))
-C         Counter-term amplitude(s) for loop diagram number 31
+C         Counter-term amplitude(s) for loop diagram number 22
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,77))
-C         Counter-term amplitude(s) for loop diagram number 41
+C         Counter-term amplitude(s) for loop diagram number 32
           CALL MP_R2_GG_1_R2_GG_2_0(W(1,5,H),W(1,8,H),R2_GGG_1
      $     ,R2_GGG_2,AMPL(1,78))
-C         Counter-term amplitude(s) for loop diagram number 42
+C         Counter-term amplitude(s) for loop diagram number 33
           CALL MP_VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GG,AMPL(1,79))
-C         Amplitude(s) for UVCT diagram with ID 49
+C         Amplitude(s) for UVCT diagram with ID 40
           CALL MP_FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(1,80))
           AMPL(1,80)=AMPL(1,80)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
      $     +2.0D0*UVWFCT_T_0)
-C         Amplitude(s) for UVCT diagram with ID 50
+C         Amplitude(s) for UVCT diagram with ID 41
           CALL MP_FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(2,81))
           AMPL(2,81)=AMPL(2,81)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0*UVWFCT_G_2
      $     _1EPS)
-C         Amplitude(s) for UVCT diagram with ID 51
+C         Amplitude(s) for UVCT diagram with ID 42
           CALL MP_FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),GC_5,AMPL(1,82))
           AMPL(1,82)=AMPL(1,82)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
      $     +2.0D0*UVWFCT_T_0)
-C         Amplitude(s) for UVCT diagram with ID 52
+C         Amplitude(s) for UVCT diagram with ID 43
           CALL MP_FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),GC_5,AMPL(2,83))
           AMPL(2,83)=AMPL(2,83)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0*UVWFCT_G_2
      $     _1EPS)
-C         Amplitude(s) for UVCT diagram with ID 53
+C         Amplitude(s) for UVCT diagram with ID 44
           CALL MP_FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),GC_5,AMPL(1,84))
           AMPL(1,84)=AMPL(1,84)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
      $     +2.0D0*UVWFCT_T_0)
-C         Amplitude(s) for UVCT diagram with ID 54
+C         Amplitude(s) for UVCT diagram with ID 45
           CALL MP_FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),GC_5,AMPL(2,85))
           AMPL(2,85)=AMPL(2,85)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0*UVWFCT_G_2
      $     _1EPS)

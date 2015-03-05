@@ -7,7 +7,7 @@
 !
 	  integer CTModeInit,CTModeRun,CheckCycle,MaxAttempts,
      &CTLoopLibrary,NRotations_DP,NRotations_QP,ImprovePSPoint,
-     &MLReductionLib(5),IREGIMODE
+     &MLReductionLib(5),IREGIMODE,HelicityFilterLevel
 
       real*8 MLStabThres,CTStabThres,ZeroThres,OSThres
 
@@ -18,4 +18,5 @@
      &ImprovePSPoint,CheckCycle, MaxAttempts,UseLoopFilter,MLStabThres,
      &CTStabThres,CTLoopLibrary,LoopInitStartOver,
      &DoubleCheckHelicityFilter,ZeroThres,OSThres,HelInitStartOver,
-     &MLReductionLib,IREGIMODE,IREGIRECY,WriteOutFilters
+     &MLReductionLib,IREGIMODE,HelicityFilterLevel,IREGIRECY,
+     &WriteOutFilters
