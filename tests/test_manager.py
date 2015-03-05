@@ -84,9 +84,10 @@ _hc_comparison_modif_log = pjoin(_input_file_path,'IOTestsRefModifs.log')
 class MyTextTestRunner(unittest.TextTestRunner):
     
     bypassed = []
-    keyboardstop=False
+
     def run(self, test):
         "Run the given test case or test suite."
+        keyboardstop=False
         MyTextTestRunner.stream = self.stream
         result = self._makeResult()
         startTime = time.time()
