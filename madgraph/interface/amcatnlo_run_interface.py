@@ -3649,7 +3649,7 @@ Integrated cross-section
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
-            if self.run_card['reweight_PDF'].lower() == '.true.':
+            if self.run_card['reweight_PDF']:
                 lhaid_list.append(int(self.run_card['PDF_set_min']))
                 lhaid_list.append(int(self.run_card['PDF_set_max']))
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
