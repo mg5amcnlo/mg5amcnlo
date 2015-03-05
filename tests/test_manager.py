@@ -87,10 +87,17 @@ class MyTextTestRunner(unittest.TextTestRunner):
 
     def run(self, test):
         "Run the given test case or test suite."
+        keyboardstop=False
         MyTextTestRunner.stream = self.stream
         result = self._makeResult()
         startTime = time.time()
-        test(result)
+        try:
+            test(result)
+        except KeyboardInterrupt:
+            keyboardstop=True
+            pass
+        except:
+            raise
         stopTime = time.time()
         timeTaken = float(stopTime - startTime)
         result.printErrors()
@@ -115,7 +122,8 @@ class MyTextTestRunner(unittest.TextTestRunner):
         if self.bypassed:
             self.stream.writeln("Bypassed %s:" % len(self.bypassed))
             self.stream.writeln(" ".join(self.bypassed))
-        
+        if keyboardstop:
+            self.stream.writeln("Some of the tests Bypassed due to Ctrl-C")
         return result 
 
     def run_border(self, test):
