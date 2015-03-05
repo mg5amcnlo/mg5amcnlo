@@ -21,7 +21,7 @@
 #***********************************************************************
 nevents      = -1     # N evts to shower (< 0 = all)
 nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
-combine_td   = T      # combine the topdrawer files if nsplit_jobs > 1
+combine_td   = T      # combine the topdrawer/HwU files if nsplit_jobs>1
 maxprint     = 2      # N evts to print in the log
 maxerrs      = 0.1    # max fraction of errors
 rnd_seed     = 0      # 1st random seed (0 = default)

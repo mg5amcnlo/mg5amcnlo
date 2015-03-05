@@ -48,8 +48,9 @@ c     input 2: Sum PS points for a given iteration and error estimate by
 c       square root of the sum of the squares. Perform a weighted average
 c       iteration-by-iteration
       implicit none
-      include "HwU.inc"
       integer input
+      integer error_estimation
+      common /HwU_common2/ error_estimation
       if (input.ge.0 .and. input.le.2) then
          error_estimation=input
       else
@@ -60,11 +61,15 @@ c       iteration-by-iteration
       end
       
       block data HwU
-c set the default for the error estimation method
-      include "HwU.inc"
+c set the default for the error estimation method. To reduce the size of
+c the executable, put the error_estimation variable in a separate common
+c block. If we would have included the 'HwU.inc' file here, that
+c complete common block seems to be included in the size executable
+c (approx. 110 MB).
+      integer error_estimation
+      common /HwU_common2/ error_estimation
       data error_estimation /1/
       end
-      
       
 c Book the histograms at the start of the run. Give a 'label' (an
 c integer) that identifies the plot when filling it and a title
@@ -179,7 +184,7 @@ c correctly taken into account.
       end
 
 
-c *****For fixed order f(N)LO runs*****
+c *****For plotting during fixed order f(N)LO runs*****
 c Call after every iteration. This adds the histograms of the current
 c iteration ('histy') to the accumulated results ('histy_acc'), with the
 c uncertainty estimate given in 'histy_err' and empties the arrays for
@@ -254,6 +259,8 @@ c weights are non-zero.
       include "HwU.inc"
       integer label,i,j
       double precision nPSinv,etot,vtot(max_wgts),niter,y_squared
+      integer error_estimation
+      common /HwU_common2/ error_estimation
       if (error_estimation.eq.2) then
 c     Use the weighted average bin-by-bin. This is not really justified
 c     for fNLO computations, because for bins with low statistics, the
@@ -340,8 +347,6 @@ c     making sure we normalise with the number of iterations.
          enddo
       endif
       end
-
-
       
 c Write the histograms to disk at the end of the run, multiplying the
 c output by 'xnorm'
