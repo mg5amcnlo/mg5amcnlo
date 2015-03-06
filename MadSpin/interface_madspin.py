@@ -64,6 +64,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         self.decay = madspin.decay_misc()
         self.model = None
+        self.mode = "madspin" # can be flat/bridge change the way the decay is done.
+                              # note amc@nlo does not support bridge.
         
         self.options = {'max_weight': -1, 
                         'curr_dir': os.path.realpath(os.getcwd()),
@@ -296,7 +298,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if len(args) < 2:
             raise self.InvalidCmd('set command requires at least two argument.')
         
-        valid = ['max_weight','seed','curr_dir']
+        valid = ['max_weight','seed','curr_dir', 'spinmode']
         if args[0] not in self.options and args[0] not in valid:
             raise self.InvalidCmd('Unknown options %s' % args[0])        
     
@@ -317,6 +319,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif args[0] == 'curr_dir':
             if not os.path.isdir(args[1]):
                 raise self.InvalidCmd('second argument should be a path to a existing directory')
+        
+        elif args[0] == "spinmode":
+            if args[1].lower() not in ["full", "bridge", "none"]:
+                raise self.InvalidCmd("spinmode can only take one of those 3 value: full/bridge/none") 
+        
 
         
     def do_set(self, line):
@@ -325,7 +332,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         args = self.split_arg(line)
         self.check_set(args)
         
-        if args[0] in  ['max_weight', 'BW_effect','ms_dir']:
+        if args[0] in  ['max_weight', 'BW_effect','ms_dir', 'spinmode']:
             self.options[args[0]] = args[1]
             if args[0] == 'ms_dir':
                 self.options['curr_dir'] = self.options['ms_dir']
@@ -347,7 +354,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Format
         if len(args) == 1:
-            opts = self.options.keys() + ['seed']
+            opts = self.options.keys() + ['seed', "spinmode"]
             return self.list_completion(text, opts) 
         elif len(args) == 2:
             if args[1] == 'BW_effect':
@@ -358,7 +365,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             curr_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
             return self.path_completion(text, curr_path, only_dirs = True)
-        
+        elif args[1] == "spinmode":
+            return self.list_completion(text, ["full", "bridge", "none"], line)
+         
     def help_set(self):
         """help the set command"""
         
