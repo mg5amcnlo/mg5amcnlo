@@ -14,8 +14,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*(*) weights_info(*)
       integer i,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
-      character*5 cc(2)
-      data cc/'     ','Born '/
+      character*6 cc(2)
+      data cc/'      ','Born  '/
       include 'dbook.inc'
       call inihist
       nwgt_analysis=nwgt

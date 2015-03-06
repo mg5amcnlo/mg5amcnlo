@@ -46,8 +46,8 @@ C
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
       INTEGER WE(NEXTERNAL)  
-      INTEGER ID, SYMFACT, AMPLNUM
-      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT, AMPLNUM
+      INTEGER ID, SYMFACT, MULTIPLIER, AMPLNUM
+      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT, MULTIPLIER, AMPLNUM
 
 C ----------
 C BEGIN CODE

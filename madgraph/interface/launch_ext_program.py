@@ -28,6 +28,7 @@ import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madevent_interface as me_cmd
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
+import madgraph.various.banner as banner_mod
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 from madgraph.iolibs.files import cp
@@ -134,10 +135,8 @@ class MadLoopLauncher(ExtLauncher):
         self.cards = ['param_card.dat','MadLoopParams.dat']
 
     def prepare_run(self):
-        """ Usually the user will not want to doublecheck the helicity filter."""
-        process_checks.LoopMatrixElementTimer.set_MadLoop_Params(
-                                os.path.join(self.card_dir,'MadLoopParams.dat'),
-                                        {'DoubleCheckHelicityFilter':'.FALSE.'})
+        """ Possible preparatory actions to take."""
+        pass
 
     def treat_input_file(self, filename, default=None, msg='', dir_path=None):
         """ask to edit a file"""
@@ -170,7 +169,16 @@ class MadLoopLauncher(ExtLauncher):
                 self.edit_file(os.path.join(dir_path,'PS.input'))
         else:
             super(MadLoopLauncher,self).treat_input_file(filename,default,msg)
-    
+            if filename == 'MadLoopParams.dat':
+                # Make sure to update the changes
+                MadLoopparam = banner_mod.MadLoopParam(
+                               os.path.join(self.card_dir, 'MadLoopParams.dat'))   
+                # Unless user asked for it, don't doublecheck the helicity filter.
+                MadLoopparam.set('DoubleCheckHelicityFilter', False, 
+                                                             ifnotdefault=False)
+                MadLoopparam.write(os.path.join(self.card_dir,os.path.pardir, 
+                                           'SubProcesses', 'MadLoopParams.dat'))
+
     def launch_program(self):
         """launch the main program"""
         evaluator = process_checks.LoopMatrixElementTimer
@@ -189,10 +197,11 @@ class MadLoopLauncher(ExtLauncher):
                 if nps == None:
                     raise MadGraph5Error,("Could not initialize the process %s"+\
                       " with %s PS points.")%(shell_name,max(attempts))
-                elif nps > min(attempts):
+                elif nps < 0 or nps > min(attempts):
                     logger.warning(("Could not initialize the process %s"+\
-                                   " with %d PS points. It needed %d.")\
-                                      %(shell_name,min(attempts),nps))
+                        " with %d PS points (double precision). It needed %d (%s).")\
+                        %(shell_name,min(attempts),abs(nps),\
+                    'in double precision' if nps>0 else 'in quadruple precision'))
                 # Ask if the user wants to edit the PS point.
                 self.treat_input_file('PS.input', default='n', 
                   msg='Phase-space point for process %s.'%shell_name,\
@@ -537,8 +546,8 @@ class aMCatNLOLauncher(ExtLauncher):
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
                 if self.options[opt] and not opt in ['cluster', 'multicore', 'name', 'appl_start_grid']])
         if self.options['name']:
-            option_line += ' --name %s' %  self.options['name']  
-        if self.options['appl_start_grid']:
+            option_line += ' --name %s' %  self.options['name']
+        if 'appl_start_grid' in self.options and  self.options['appl_start_grid']:
             option_line += ' --appl_start_grid %s' %  self.options['appl_start_grid']
         command = 'launch ' + self.run_mode + ' ' + option_line
 

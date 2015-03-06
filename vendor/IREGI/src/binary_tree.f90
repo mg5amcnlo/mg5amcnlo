@@ -131,6 +131,7 @@ CONTAINS
        ELSE
           find=.TRUE.
           nn=item%NLOOPLINE
+          !PRINT *, item1%xmatrix(1,1) ! Debug
           item%xmatrix(1:nn,1:nn)=item1%xmatrix(1:nn,1:nn)
           item%ymatrix(1:nn,1:nn)=item1%ymatrix(1:nn,1:nn)
           item%zmatrix(2:nn,2:nn)=item1%zmatrix(2:nn,2:nn)

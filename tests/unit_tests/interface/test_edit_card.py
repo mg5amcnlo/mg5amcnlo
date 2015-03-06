@@ -56,14 +56,21 @@ class TestEditCardCmd(unittest.TestCase):
         files.cp(pjoin(root_path, 'input_files/restrict_sm.dat'), '/tmp/edit_card/Cards/%s_default.dat' % card)
                 
         card = 'run_card'
-        files.cp(pjoin(template_path, 'LO/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
-        files.cp(pjoin(template_path, 'LO/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
+        import madgraph.various.banner as banner_mod
+        card = banner_mod.RunCardLO()
+        card.write('/tmp/edit_card/Cards/run_card.dat')
+        card.write('/tmp/edit_card/Cards/run_card_default.dat')
+
+
         card = 'MadWeight_card'
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
         card = 'shower_card'
         files.cp(pjoin(template_path, 'NLO/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
         files.cp(pjoin(template_path, 'NLO/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
+        
+        #MadLoop Card
+        files.cp(pjoin(template_path, 'loop_material/StandAlone/Cards/MadLoopParams.dat'), '/tmp/edit_card/Cards')
         
         fakemother = FakeInterface('/tmp/edit_card/')
         self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat', 'shower_card.dat'],
@@ -97,13 +104,16 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mw_parameter'  in first_level) 
         self.assertTrue('default'  not in first_level)        
         self.assertTrue('wt' in first_level)
-
+        self.assertTrue('iregimode' in first_level)
+        self.assertTrue('MadLoop_card' in first_level)
+        
         # MadWeight completion -------------------------------------------------
         # set MadWeight_card
         first_level = self.get_completion('set MadWeight_card')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level) 
+        self.assertTrue('MadLoop_card' not in first_level)        
         self.assertTrue('bjet_is_jet' in first_level)          
         self.assertTrue('13' not in first_level)          
         self.assertTrue('etaj' not in first_level)
@@ -112,12 +122,14 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('decay' not in first_level)
         self.assertTrue('mw_parameter'  in first_level)        
         self.assertTrue('default'  in first_level) 
+        self.assertTrue('iregimode' not in first_level)
          
         # set MadWeight_card mw_perm
         first_level = self.get_completion('set MadWeight_card mw_perm')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' in first_level)          
         self.assertTrue('13' not in first_level)          
         self.assertTrue('etaj' not in first_level)
@@ -126,12 +138,14 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('decay' not in first_level)
         self.assertTrue('mw_parameter'  not in first_level) 
         self.assertTrue('default'  not in first_level)   
+        self.assertTrue('iregimode' not in first_level)
         
         # set MadWeight_card mw_perm bjet_is_jet
         first_level = self.get_completion('set MadWeight_card mw_per bjet_is_jet')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level) 
+        self.assertTrue('MadLoop_card' not in first_level)        
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('13' not in first_level)          
         self.assertTrue('etaj' not in first_level)
@@ -140,12 +154,14 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('decay' not in first_level)
         self.assertTrue('mw_parameter'  not in first_level) 
         self.assertTrue('default'  in first_level) 
+        self.assertTrue('iregimode' not in first_level)
 
         # set MadWeight_card mw_parameter
         first_level = self.get_completion('set MadWeight_card mw_parameter')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('13'  in first_level)          
         self.assertTrue('etaj' not in first_level)
@@ -153,14 +169,16 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('width' not in first_level)
         self.assertTrue('decay' not in first_level)
         self.assertTrue('mw_parameter'  not in first_level) 
-        self.assertTrue('default'  not in first_level) 
+        self.assertTrue('default'  not in first_level)
+        self.assertTrue('iregimode' not in first_level) 
         
         
         # MadEvent completion -------------------------------------------------
         first_level = self.get_completion('set param_card ')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('6' not in first_level)          
         self.assertTrue('etaj' not in first_level)
@@ -171,12 +189,14 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mh' in first_level)
         self.assertTrue('as' in first_level)
         self.assertTrue('mw_parameter'  not in first_level)        
-        self.assertTrue('default'  in first_level) 
+        self.assertTrue('default'  in first_level)
+        self.assertTrue('iregimode' not in first_level) 
 
         first_level = self.get_completion('set param_card wolfenstein')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('6' not in first_level)          
         self.assertTrue('1' in first_level) 
@@ -189,11 +209,13 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('etaws'  in first_level)
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default' not in first_level)
+        self.assertTrue('iregimode' not in first_level)
 
         first_level = self.get_completion('set param_card wolfenstein etaws')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('6' not in first_level)          
         self.assertTrue('1' not in first_level) 
@@ -206,12 +228,14 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('etaws'  not in first_level)
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default'  in first_level)
-        self.assertTrue('Auto' not in first_level)        
+        self.assertTrue('Auto' not in first_level)
+        self.assertTrue('iregimode' not in first_level)        
 
         first_level = self.get_completion('set param_card decay')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('6'  in first_level)          
         self.assertTrue('1' not in first_level) 
@@ -225,11 +249,13 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default' not in first_level)
         self.assertTrue('Auto' not in first_level)
+        self.assertTrue('iregimode' not in first_level)
   
         first_level = self.get_completion('set param_card width')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('6'  in first_level)          
         self.assertTrue('1' not in first_level) 
@@ -243,11 +269,13 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default' not in first_level)
         self.assertTrue('Auto' not in first_level)
+        self.assertTrue('iregimode' not in first_level)
         
         first_level = self.get_completion('set param_card width wt')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('6'  not in first_level)          
         self.assertTrue('1' not in first_level) 
@@ -261,11 +289,13 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default' in first_level)
         self.assertTrue('Auto' in first_level)
+        self.assertTrue('iregimode' not in first_level)
         
         first_level = self.get_completion('set param_card width 6')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('6'  not in first_level)          
         self.assertTrue('1' not in first_level) 
@@ -278,13 +308,15 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('etaws'  not in first_level)
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default' in first_level)
-        self.assertTrue('Auto' in first_level)       
+        self.assertTrue('Auto' in first_level)
+        self.assertTrue('iregimode' not in first_level)       
         
         # Run_card completion -------------------------------------------------
         first_level = self.get_completion('set run_card ')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('6' not in first_level)          
         self.assertTrue('etaj'  in first_level)
@@ -295,12 +327,14 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mh' not in first_level)
         self.assertTrue('as' not in first_level)
         self.assertTrue('mw_parameter'  not in first_level)        
-        self.assertTrue('default'  in first_level) 
+        self.assertTrue('default'  in first_level)
+        self.assertTrue('iregimode' not in first_level) 
           
         first_level = self.get_completion('set run_card htjmax')
         self.assertTrue('MadWeight_card'  not in first_level)
         self.assertTrue('param_card'  not in first_level)
-        self.assertTrue('run_card' not in first_level)         
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
         self.assertTrue('bjet_is_jet' not in first_level)          
         self.assertTrue('6' not in first_level)          
         self.assertTrue('etaj' not in first_level)
@@ -311,7 +345,46 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mh' not in first_level)
         self.assertTrue('as' not in first_level)
         self.assertTrue('mw_parameter'  not in first_level)        
-        self.assertTrue('default'  in first_level)               
+        self.assertTrue('default'  in first_level)
+        self.assertTrue('iregimode' not in first_level)
+        
+        # ML_card completion ---------------------------------------------------               
+        first_level = self.get_completion('set MadLoop_card')
+        self.assertTrue('MadWeight_card'  not in first_level)
+        self.assertTrue('param_card'  not in first_level)
+        self.assertTrue('run_card' not in first_level) 
+        self.assertTrue('MadLoop_card' not in first_level)        
+        self.assertTrue('bjet_is_jet' not in first_level)          
+        self.assertTrue('6' not in first_level)          
+        self.assertTrue('etaj' not in first_level)
+        self.assertTrue('mass' not in first_level)
+        self.assertTrue('width' not in first_level)
+        self.assertTrue('decay' not in first_level)
+        self.assertTrue('wt' not in first_level)
+        self.assertTrue('mh' not in first_level)
+        self.assertTrue('as' not in first_level)
+        self.assertTrue('mw_parameter'  not in first_level)        
+        self.assertTrue('default'  in first_level)
+        self.assertTrue('iregimode' in first_level)        
+        
+        first_level = self.get_completion('set MadLoop_card iregimode')
+        self.assertTrue('MadWeight_card'  not in first_level)
+        self.assertTrue('param_card'  not in first_level)
+        self.assertTrue('run_card' not in first_level)
+        self.assertTrue('MadLoop_card' not in first_level)         
+        self.assertTrue('bjet_is_jet' not in first_level)          
+        self.assertTrue('6' not in first_level)          
+        self.assertTrue('etaj' not in first_level)
+        self.assertTrue('mass' not in first_level)
+        self.assertTrue('width' not in first_level)
+        self.assertTrue('decay' not in first_level)
+        self.assertTrue('wt' not in first_level)
+        self.assertTrue('mh' not in first_level)
+        self.assertTrue('as' not in first_level)
+        self.assertTrue('mw_parameter'  not in first_level)        
+        self.assertTrue('default'   in first_level)
+        self.assertTrue('iregimode' not in first_level)        
+        
         
     def test_modif_param_card(self):
         """ """
@@ -336,6 +409,43 @@ class TestEditCardCmd(unittest.TestCase):
         self.cmd.do_set('run_card ptj default')        
         self.assertEqual(run['ptj'], ptj)
 
+    def test_modif_ML_card(self):
+
+        ML = self.cmd.MLcard 
+
+        iregimode = self.cmd.MLcard['IREGIMODE']
+        
+        #check that nothing change if type is not correct
+        self.cmd.do_set('IREGIMODE True') #should do nothrin
+        self.assertEqual(iregimode, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode' not in ML.user_set)
+        
+        #check that we change it correctly when an input is given
+        self.cmd.do_set('IREGIMODE %s' % (iregimode+1))
+        self.assertEqual(iregimode+1, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode' in ML.user_set)        
+
+        #check that we change it correctly when going back to default
+        self.cmd.do_set('IREGIMODE default')
+        self.assertEqual(iregimode, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode'  not in ML.user_set)
+        
+        # check that the full change is ok
+        self.cmd.do_set('madloop_card IREGIMODE %s' % (iregimode+1))
+        self.assertEqual(iregimode+1, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode' in ML.user_set) 
+        
+        IREGIRECY = self.cmd.MLcard['IREGIRECY'] 
+        self.cmd.do_set('madloop_card IREGIRECY F')
+        self.assertEqual(False, self.cmd.MLcard['iregirecy'])
+        self.assertTrue(self.cmd.MLcard['iregirecy'] is self.cmd.MLcard['IREGIRECY'])
+        
+        self.cmd.do_set('madloop_card default')             
+        self.assertEqual(iregimode, self.cmd.MLcard['IREGIMODE'])
+        self.assertTrue('iregimode'  not in self.cmd.MLcard.user_set)                       
+        self.assertEqual(IREGIRECY, self.cmd.MLcard['IREGIRECY'])
+        self.assertTrue('iregimode'  not in self.cmd.MLcard.user_set)
+        self.assertTrue('iregirecy'  not in self.cmd.MLcard.user_set)
         
     def test_modif_madweight_card(self):
         """ """        

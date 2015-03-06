@@ -84,6 +84,9 @@ class TestMadWeight(unittest.TestCase):
                  set log_level debug
                  set nb_event_by_node 1
                  set mw_perm montecarlo F
+                 set ebeam1 7000
+                 set ebeam2 7000
+                 set pdlabel cteq6l1
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
 
@@ -149,6 +152,9 @@ class TestMadWeight(unittest.TestCase):
                  set mw_run MW_int_refine 8000
                  set mw_run  use_sobol T
                  set mw_gen force_nwa 2
+                 set ebeam1 7000
+                 set ebeam2 7000
+                 set pdlabel cteq6l1
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
@@ -219,6 +225,9 @@ class TestMadWeight(unittest.TestCase):
                  refine 0.01
                  set mw_run MW_int_points 1000
                  set mw_run MW_int_refine 10000
+                 set ebeam1 7000
+                 set ebeam2 7000
+                 set pdlabel cteq6l1
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         

@@ -141,7 +141,7 @@ def create_pickle(my_proc_list, pickle_file, runner, ref_runner=None,
     
 def compare_processes(testInstance, my_proc_list = [], model = 'loop_qcd_qed_sm-parallel_test',
         pickle_file = "", energy = 2000, tolerance = 3e-06, filename = "",
-        chosen_runner = "ML5_opt",loop_induce = False,mu_r=0.0):
+        chosen_runner = "ML5_opt",loop_induced = False,mu_r=0.0):
     """ A helper function to compare processes. 
     Note that the chosen_runner is what runner should to create the reference
     pickle if missing"""
@@ -174,10 +174,10 @@ def compare_processes(testInstance, my_proc_list = [], model = 'loop_qcd_qed_sm-
     MLParams = file.read()
     MLred = re.search(r'#MLReductionLib\n',MLParams)
     MLredstr=MLParams[MLred.end():MLred.end()+1]
-    if loop_induce and MLredstr!="1":return            
+    if loop_induced and MLredstr!="1":return            
     # Create a MERunner object for MadLoop 5 optimized
     # Open Loops is not avaiable for loop induced processes
-    if not loop_induce:
+    if not loop_induced:
         ML5_opt = loop_me_comparator.LoopMG5Runner()
         ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename,\
                       mu_r=mu_r)
@@ -194,11 +194,11 @@ def compare_processes(testInstance, my_proc_list = [], model = 'loop_qcd_qed_sm-
     if MLredstr=="1" and not has_sqso:
     # Always put the saved run first if you use it, so that the corresponding PS
     # points will be used.
-        if pickle_file != "" and not loop_induce:
+        if pickle_file != "" and not loop_induced:
             my_comp.set_me_runners(stored_runner,ML5_opt,ML5_default)
-        elif pickle_file !="" and loop_induce:
+        elif pickle_file !="" and loop_induced:
             my_comp.set_me_runners(stored_runner,ML5_default)
-        elif pickle_file == "" and not loop_induce:
+        elif pickle_file == "" and not loop_induced:
             my_comp.set_me_runners(ML5_opt,ML5_default)
         else:
             raise MadGraph5Error, \
@@ -462,7 +462,7 @@ class ML5EWTest(unittest.TestCase):
         compare_processes(self,[HCR_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = True)
+                               loop_induced = True)
         
     # test splitting orders (now only test the sum)
     # ('u u~ > u u~',{},['QCD QED'],{'QCD':99,'QED':99}
@@ -471,7 +471,7 @@ class ML5EWTest(unittest.TestCase):
         compare_processes(self,[HCR_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False)
+                               loop_induced = False)
         
     # test splitting orders (now only test the sum)
     # ('u u~ > u u~ g',{},['QCD QED'],{'QCD':99,'QED':99}
@@ -480,7 +480,7 @@ class ML5EWTest(unittest.TestCase):
         compare_processes(self,[HCR_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False)
+                               loop_induced = False)
 
     # test splitting orders (now only test the sum)
     # ('u u~ > u u~ a',{},['QCD QED'],{'QCD':99,'QED':99}
@@ -489,7 +489,7 @@ class ML5EWTest(unittest.TestCase):
         compare_processes(self,[HCR_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False)
+                               loop_induced = False)
         
     # checking with arXiv:1307.4331
     # thanks to Ninh for providing us the PS results
@@ -500,7 +500,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_WW", 
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
         
     # ('u~ u > w+ w-',{},['QED'],{})
     def test_long_sm_vs_stored_HCR_uxu_wpwm_QED(self):
@@ -509,7 +509,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_WW", 
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
         
     # ('d~ d > w+ w-',{},['QCD'],{})
     def test_long_sm_vs_stored_HCR_dxd_wpwm_QCD(self):
@@ -518,7 +518,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_WW", 
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
         
     # ('d~ d > w+ w-',{},['QED'],{})
     def test_long_sm_vs_stored_HCR_dxd_wpwm_QED(self):
@@ -527,7 +527,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_WW", 
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
 
     # ('u~ u > z z',{},['QCD'],{})
     def test_long_sm_vs_stored_HCR_uxu_zz_QCD(self):
@@ -536,7 +536,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_ZZ",
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
 
     # ('u~ u > z z',{},['QED'],{})
     def test_long_sm_vs_stored_HCR_uxu_zz_QED(self):
@@ -545,7 +545,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_ZZ",
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
 
     # ('d~ d > z z',{},['QCD'],{})
     def test_long_sm_vs_stored_HCR_dxd_zz_QCD(self):
@@ -554,7 +554,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_ZZ",
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
 
     # ('d~ d > z z',{},['QED'],{})
     def test_long_sm_vs_stored_HCR_dxd_zz_QED(self):
@@ -563,7 +563,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_ZZ",
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
 
     # ('u~ d > w- z',{},['QCD'],{})
     def test_long_sm_vs_stored_HCR_uxd_wmz_QCD(self):
@@ -572,7 +572,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_WZ",
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
 
     # ('u~ d > w- z',{},['QED'],{})
     def test_long_sm_vs_stored_HCR_uxd_wmz_QED(self):
@@ -581,7 +581,7 @@ class ML5EWTest(unittest.TestCase):
                model = "loop_qcd_qed_sm_Gmu-parallel_test_WZ",
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
-                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+                               loop_induced = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
 
 if '__main__' == __name__:
     # Get full logging info

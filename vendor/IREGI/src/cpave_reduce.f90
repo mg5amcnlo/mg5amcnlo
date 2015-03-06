@@ -25,13 +25,15 @@ CONTAINS
     INTEGER,DIMENSION(0:NLOOPLINE)::indices0,indices00
     COMPLEX(KIND(1d0)),DIMENSION(1:4)::sumf
     REAL(KIND(1d0))::factor,factor0
-    INTEGER,DIMENSION(1,1)::xitemp1
-    INTEGER,DIMENSION(6,2)::xitemp2
-    INTEGER,DIMENSION(21,3)::xitemp3
-    INTEGER,DIMENSION(56,4)::xitemp4
-    INTEGER,DIMENSION(126,5)::xitemp5
-    REAL(KIND(1d0)),DIMENSION(126)::factor_xi
+    TYPE xitemptype
+       INTEGER::dim1,dim2
+       INTEGER,DIMENSION(:,:),ALLOCATABLE::xitempi
+    END TYPE xitemptype
+    TYPE(xitemptype),DIMENSION(MAXNLOOP_IREGI-1)::xitemp
+    REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::factor_xi
     LOGICAL::find
+    INTEGER::init=0
+    SAVE init,xitemp,factor_xi
     TYPE(cibppave_node),POINTER::item
     pave(1:4)=DCMPLX(0d0)
     IF(.NOT.STABLE_IREGI)RETURN
@@ -53,6 +55,20 @@ CONTAINS
           DEALLOCATE(item)
           RETURN
        ENDIF
+    ENDIF
+    IF(init.EQ.0)THEN
+       DO i=1,MAXNLOOP_IREGI-1
+          xitemp(i)%dim2=i
+          xitemp(i)%dim1=xiarray_arg1(MAXRANK_IREGI,i)
+          IF(.NOT.ALLOCATED(xitemp(i)%xitempi))THEN
+             ALLOCATE(xitemp(i)%xitempi(xitemp(i)%dim1,xitemp(i)%dim2))
+          ENDIF
+       ENDDO
+       IF(.NOT.ALLOCATED(factor_xi))THEN
+          j=xiarray_arg1(MAXRANK_IREGI,MAXNLOOP_IREGI-1)
+          ALLOCATE(factor_xi(j))
+       ENDIF
+       init=1
     ENDIF
     mom(0:3)=PCL(1,0:3)
     IF(NLOOPLINE.GE.2)THEN
@@ -85,56 +101,24 @@ CONTAINS
              SELECT CASE(NLOOPLINE-1)
              CASE(1)
                 ntot=1
-                CALL all_integers(NLOOPLINE-1,ntot,i,xitemp1(1:ntot,1:1),&
+                CALL all_integers(NLOOPLINE-1,ntot,i,xitemp(1)%xitempi(1:ntot,1:1),&
                      factor_xi(1:ntot))
                 DO j=1,ntot
                    indices00(0:NLOOPLINE)=indices0(0:NLOOPLINE)
                    indices00(2:NLOOPLINE)=indices00(2:NLOOPLINE)&
-                        +xitemp1(j,1:1)
+                        +xitemp(1)%xitempi(j,1:1)
                    sumf(1:4)=sumf(1:4)+factor_xi(j)*&
                         comp_pavefun_reduce(NLOOPLINE,indices00,PCL1,M2L)
                 ENDDO
-             CASE(2)
-                ntot=ntot_xiarray(i,2)
+             CASE DEFAULT
+                ntot=ntot_xiarray(i,NLOOPLINE-1)
                 CALL all_integers(NLOOPLINE-1,ntot,i,&
-                     xitemp2(1:ntot,1:2),factor_xi(1:ntot))
+                     xitemp(NLOOPLINE-1)%xitempi(1:ntot,1:NLOOPLINE-1),&
+                     factor_xi(1:ntot))
                 DO j=1,ntot
                    indices00(0:NLOOPLINE)=indices0(0:NLOOPLINE)
                    indices00(2:NLOOPLINE)=indices00(2:NLOOPLINE)&
-                        +xitemp2(j,1:2)
-                   sumf(1:4)=sumf(1:4)+factor_xi(j)*&
-                        comp_pavefun_reduce(NLOOPLINE,indices00,PCL1,M2L)
-                ENDDO
-             CASE(3)
-                ntot=ntot_xiarray(i,3)
-                CALL all_integers(NLOOPLINE-1,ntot,i,&
-                     xitemp3(1:ntot,1:3),factor_xi(1:ntot))
-                DO j=1,ntot
-                   indices00(0:NLOOPLINE)=indices0(0:NLOOPLINE)
-                   indices00(2:NLOOPLINE)=indices00(2:NLOOPLINE)&
-                        +xitemp3(j,1:3)
-                   sumf(1:4)=sumf(1:4)+factor_xi(j)*&
-                        comp_pavefun_reduce(NLOOPLINE,indices00,PCL1,M2L)
-                ENDDO
-             CASE(4)
-                ntot=ntot_xiarray(i,4)
-                CALL all_integers(NLOOPLINE-1,ntot,i,&
-                     xitemp4(1:ntot,1:4),factor_xi(1:ntot))
-                DO j=1,ntot
-                   indices00(0:NLOOPLINE)=indices0(0:NLOOPLINE)
-                   indices00(2:NLOOPLINE)=indices00(2:NLOOPLINE)&
-                        +xitemp4(j,1:4)
-                   sumf(1:4)=sumf(1:4)+factor_xi(j)*&
-                        comp_pavefun_reduce(NLOOPLINE,indices00,PCL1,M2L)
-                ENDDO
-             CASE(5)
-                ntot=ntot_xiarray(i,5)
-                CALL all_integers(NLOOPLINE-1,ntot,i,&
-                     xitemp5(1:ntot,1:5),factor_xi(1:ntot))
-                DO j=1,ntot
-                   indices00(0:NLOOPLINE)=indices0(0:NLOOPLINE)
-                   indices00(2:NLOOPLINE)=indices00(2:NLOOPLINE)&
-                        +xitemp5(j,1:5)
+                        +xitemp(NLOOPLINE-1)%xitempi(j,1:NLOOPLINE-1)
                    sumf(1:4)=sumf(1:4)+factor_xi(j)*&
                         comp_pavefun_reduce(NLOOPLINE,indices00,PCL1,M2L)
                 ENDDO
@@ -189,7 +173,7 @@ CONTAINS
     COMPLEX(KIND(1d0)),DIMENSION(2,2)::xxList2
     COMPLEX(KIND(1d0)),DIMENSION(3,3)::xxList3
     INTEGER::ll1,ll2,ll3
-    INTEGER,DIMENSION(10)::llarray
+    INTEGER,DIMENSION(MAXNLOOP_IREGI*MAXINDICES_IREGI)::llarray
     TYPE(cibppave_node),POINTER::item
     LOGICAL::find
     pave(1:4)=DCMPLX(0d0)
@@ -1426,13 +1410,13 @@ CONTAINS
                 ENDIF
                 RETURN
              ENDIF
-          ELSE
+          ELSEIF(ii+jj+kk+ll.LT.6)THEN
              ! Generalization of Eq.(6.18), (6.19), (6.20), (6.21)
              CALL CXYZMATRICES(NLOOPLINE,PCL,M2L,&
                   XMATRIX,YMATRIX,ZMATRIX,detY,detZ)
              IF(ABS(detY).GE.EPS)THEN
                 ss=ii+jj+kk+ll
-                IF(ss.GT.10)THEN
+                IF(ss.GT.MAXNLOOP_IREGI*MAXINDICES_IREGI)THEN
                    WRITE(*,*)"ERROR: out of range of llarray in comp_pavefun_reduce"
                    STOP
                 ENDIF
@@ -1531,7 +1515,8 @@ CONTAINS
           ENDIF
        ENDIF
        IF(lind.EQ.0.AND.paveindices(2).EQ.0.AND.paveindices(3).EQ.0&
-            .AND.paveindices(4).EQ.0.AND.paveindices(5).EQ.0)THEN
+            .AND.paveindices(4).EQ.0.AND.paveindices(5).EQ.0.AND.&
+            paveindices(0).LT.6)THEN
           ! Generalization of Eq.(6.18) and Eq.(6.20)
           CALL CXYZMATRICES(NLOOPLINE,PCL,M2L,&
                XMATRIX,YMATRIX,ZMATRIX,detY,detZ)
@@ -1644,7 +1629,7 @@ CONTAINS
                 ENDIF
                 RETURN
              ENDIF
-          ELSE
+          ELSEIF(ss.LT.4)THEN
              ! Generalization of Eq.(6.20) and Eq.(6.21)
              CALL CXYZMATRICES(NLOOPLINE,PCL,M2L,&
                   XMATRIX,YMATRIX,ZMATRIX,detY,detZ)
@@ -1657,7 +1642,7 @@ CONTAINS
                 RETURN
              ENDIF
              ss=ss+2
-             IF(ss.GT.12)THEN
+             IF(ss.GT.MAXNLOOP_IREGI*MAXINDICES_IREGI+2)THEN
                 WRITE(*,*)"ERROR: out of range of llarray in comp_pavefun_reduce"
                 STOP
              ENDIF
@@ -1901,7 +1886,7 @@ CONTAINS
                 ENDIF
                 RETURN
              ENDIF
-             IF(ss.GT.10)THEN
+             IF(ss.GT.MAXNLOOP_IREGI*MAXINDICES_IREGI)THEN
                 WRITE(*,*)"ERROR: out of range of llarray in comp_pavefun_reduce"
                 STOP
              ENDIF
@@ -2002,7 +1987,7 @@ CONTAINS
              RETURN
           ENDIF
           PP=ss+paveindices(0)
-          IF(PP.GT.10)THEN
+          IF(PP.GT.MAXNLOOP_IREGI*MAXINDICES_IREGI)THEN
              WRITE(*,*)"ERROR: out of range of llarray in comp_pavefun_reduce"
              STOP
           ENDIF
@@ -2063,7 +2048,7 @@ CONTAINS
              RETURN
           ENDIF
           PP=ss+paveindices(0)
-          IF(PP.GT.10)THEN
+          IF(PP.GT.MAXNLOOP_IREGI*MAXINDICES_IREGI)THEN
              WRITE(*,*)"ERROR: out of range of llarray in comp_pavefun_reduce"
              STOP
           ENDIF

@@ -23,6 +23,9 @@ c              wgt      == wgt for choosing point thus far. 1/npnts*iter
 c     OUTPUTS: wgt      == updated weight after choosing points
 c              x        == points choosen from sample grid
 c              p        == transformed points call is f(p(x))
+c     COMMON:
+c           hel_picked  == Modified integer in gen_ps.inc to pass the
+c                          chosen helicity configuration to matrix<i>.f
 c
 c**************************************************************************
       implicit none
@@ -48,10 +51,18 @@ c
 c
 c     Global
 c
+      INTEGER                    ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 c-----
 c  Begin Code
 c-----
       call gen_mom(iconfig,mincfig,maxcfig,invar,wgt,x,p)
+C     Pick the helicity configuration from the DiscreteSampler if user
+C     decided to perform MC over helicity configurations.
+      if(ISUM_HEL.ne.0) then
+        call sample_get_discrete_x(wgt,hel_picked,iconfig,'Helicity')
+      endif
       end
 
       subroutine gen_mom(iconfig,mincfig,maxcfig,invar,wgt,x,p1)

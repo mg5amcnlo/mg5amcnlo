@@ -42,15 +42,17 @@
       double precision appl_www_histo,appl_norm_histo
       double precision appl_obs_histo
       double precision appl_obs_min,appl_obs_max
+      double precision appl_obs_bins(0:100)
       integer appl_obs_nbins
       integer appl_itype
       integer appl_obs_num
       common / appl_common_histokin / appl_www_histo,appl_norm_histo,
      1                                appl_obs_histo,
      2                                appl_obs_min,appl_obs_max,
-     3                                appl_obs_nbins,
-     4                                appl_itype,
-     5                                appl_obs_num
+     3                                appl_obs_bins,
+     4                                appl_obs_nbins,
+     5                                appl_itype,
+     6                                appl_obs_num
 
 *     This is the actual hadronic event weight, computed with the LHAPDF set
 *     defined above, needed for checks in the C++ applgrid interface

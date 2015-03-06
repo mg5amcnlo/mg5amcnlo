@@ -32,10 +32,14 @@ class CheckFileCreate():
     output_path = '/tmp/' # work only on LINUX but that's ok for the test routine
     created_files =[]
 
-    def assertFileContains(self, filename, solution):
+    def assertFileContains(self, filename, solution, partial=False):
         """ Check the content of a file """
-        
-        current_value = open(self.give_pos(filename)).read()
+
+        if isinstance(filename, str):
+            current_value = open(self.give_pos(filename)).read()
+        else:
+            current_value = filename.read()
+
         list_cur=current_value.split('\n')
         list_sol=solution.split('\n')
         while 1:
@@ -48,16 +52,35 @@ class CheckFileCreate():
                 list_cur.remove('')
             else:
                 break            
-        for a, b in zip(list_sol, list_cur):
-            self.assertEqual(a,b)
-        #for a, b in zip(current_value.split('\n'), solution.split('\n')):
-        #    self.assertEqual(a,b)
-        #self.assertEqual(current_value.split('\n'), solution.split('\n'))
-        self.assertEqual(len(list_sol), len(list_cur))
+
+        #full match expected
+        if not partial:
+            for a, b in zip(list_sol, list_cur):
+                self.assertEqual(a,b)
+            #for a, b in zip(current_value.split('\n'), solution.split('\n')):
+            #    self.assertEqual(a,b)
+            #self.assertEqual(current_value.split('\n'), solution.split('\n'))
+            self.assertEqual(len(list_sol), len(list_cur))
+        else:
+            #partial match expected
+            old_start = 0
+            len_sol = len(list_sol)
+            while 1:
+                start = list_cur[old_start:].index(list_sol[0])
+                if start == -1:
+                    raise
+                old_start += start
+                for a, b in zip(list_sol, list_cur[start:start+len_sol]):
+                    try:
+                        self.assertEqual(a,b)                
+                    except Exception:
+                        continue
+                else:
+                    break
+            
 
     def give_pos(self, filename):
         """ take a name and a change it in order to have a valid path in the output directory """
-        
         return os.path.join(self.output_path, filename)
 
     def clean_files(self):
@@ -309,3 +332,133 @@ void Sigma2ff2fftgmZ::setIdColAcol()
                               writer.write_line,
                               nonstring)
 
+
+class FilePreprocessingTest(unittest.TestCase):
+    """ Makes sure that the preprocessing tags '##' are correctly handled by the
+    function preprocess_template()."""
+    
+    def test_single_if_statement(self):
+        """ Test a single conditional statement """     
+        tests = [\
+("""
+[...]
+## if (TestVar) {
+A
+## } else {
+B
+## }
+[...]
+""".split('\n'),
+"""
+[...]
+A
+[...]
+""".split('\n'),
+{'TestVar':True}),
+("""
+[...]
+## if (not TestVar) {
+A
+## } else {
+B
+## }
+[...]
+""".split('\n'),
+"""
+[...]
+B
+[...]
+""".split('\n'),
+{'TestVar':True}),
+("""
+[...]
+## if (TestVar) {
+A
+## } else {
+B
+## }
+[...]
+""".split('\n'),
+"""
+[...]
+B
+[...]
+""".split('\n'),
+{'TestVar':False}),
+]
+        
+        for tested_text, goal, context in tests:
+            res = writers.FileWriter('tmp').preprocess_template(tested_text,
+                                                                context=context)
+            self.assertEqual(res,goal)
+            
+    def test_multiple_if_statement(self):
+        """ Test multiple entangle conditional statement """     
+        test_text = \
+"""
+[...]
+## if (TestVar1) {
+A
+## if (TestVar2) {
+B
+## if (TestVar3) {
+C
+## } else {
+D
+## }
+E
+## if (TestVar4) {
+F
+## }
+G
+## }
+H
+## } else {
+I
+## }
+[...]
+""".split('\n')
+
+        test_goals = \
+[
+("""
+[...]
+A
+B
+C
+E
+F
+G
+H
+[...]
+""".split('\n'),
+{'TestVar1':True,'TestVar2':True,'TestVar3':True,'TestVar4':True}),
+("""
+[...]
+A
+B
+C
+E
+G
+H
+[...]
+""".split('\n'),
+{'TestVar1':True,'TestVar2':True,'TestVar3':True,'TestVar4':False}),
+("""
+[...]
+A
+H
+[...]
+""".split('\n'),
+{'TestVar1':True,'TestVar2':False,'TestVar3':True,'TestVar4':False}),
+("""
+[...]
+I
+[...]
+""".split('\n'),
+{'TestVar1':False,'TestVar2':True,'TestVar3':True,'TestVar4':True})
+]
+        for goal, context in test_goals:
+            res = writers.FileWriter('tmp').preprocess_template(test_text,
+                                                                context=context)
+            self.assertEqual(res,goal)            

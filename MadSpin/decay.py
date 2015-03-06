@@ -63,7 +63,7 @@ import math
 from madgraph import MG5DIR, MadGraph5Error
 import madgraph.various.misc as misc
 #import time
-import tests.unit_tests.various.test_aloha as test_aloha
+import tests.parallel_tests.test_aloha as test_aloha
 
 class MadSpinError(MadGraph5Error):
     pass
@@ -3776,8 +3776,7 @@ class decay_all_events(object):
                 assert production['total_br'] - min(total_br) < 1e-4
         
         self.branching_ratio = max(total_br) * eff
-        
-        
+
         #self.banner['madspin'] += ms_banner
         # Update cross-section in the banner
         if 'mggenerationinfo' in self.banner:
@@ -3785,9 +3784,15 @@ class decay_all_events(object):
             for i,line in enumerate(mg_info):
                 if 'Events' in line:
                     if eff == 1:
+                        self.err_branching_ratio = 0
                         continue
-                    nb_event =  int(int(mg_info[i].split()[-1]) * eff) 
+                    initial_event = int(mg_info[i].split()[-1])
+                    nb_event =  int(initial_event * eff) 
                     mg_info[i] = '#  Number of Events        :       %i' % nb_event
+                    if eff >0.5:
+                        self.err_branching_ratio = max(total_br) * math.sqrt(initial_event - eff * initial_event)/initial_event
+                    else:
+                        self.err_branching_ratio = max(total_br) * math.sqrt(eff * initial_event)/initial_event
                     continue
                 if ':' not in line:
                     continue
@@ -3801,6 +3806,9 @@ class decay_all_events(object):
                 else:
                     mg_info[i] = '%s : %s' % (info, value * self.branching_ratio)
                 self.banner['mggenerationinfo'] = '\n'.join(mg_info)
+                
+            
+        
         if 'init' in self.banner:
             new_init =''
             for line in self.banner['init'].split('\n'):

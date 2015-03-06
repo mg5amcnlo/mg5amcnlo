@@ -45,13 +45,6 @@ c general MadFKS parameters
       data firsttime_run /.true./
       double precision qes2
       common /coupl_es/ qes2
-      integer nvtozero
-      logical doVirtTest 
-      common/cvirt2test/nvtozero,doVirtTest
-      integer ivirtpoints,ivirtpointsExcept
-      double precision  virtmax,virtmin,virtsum
-      common/cvirt3test/virtmax,virtmin,virtsum,ivirtpoints,
-     &     ivirtpointsExcept
       logical fksprefact
       parameter (fksprefact=.true.)
       integer ret_code
