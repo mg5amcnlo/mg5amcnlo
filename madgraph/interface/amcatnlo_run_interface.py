@@ -1458,6 +1458,15 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                 pjoin(self.me_dir, 'Events', self.run_name))
                 files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.gnuplot'),
                                 pjoin(self.me_dir, 'Events', self.run_name))
+                try:
+                    misc.call(['gnuplot','MADatNLO.gnuplot'],\
+                              stdout=os.open(os.devnull, os.O_RDWR),\
+                              stderr=os.open(os.devnull, os.O_RDWR),\
+                              cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                except Exception:
+                    pass
+
+
                 logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             elif self.analyse_card['fo_analysis_format'].lower() == 'root':
@@ -2673,6 +2682,13 @@ Integrated cross-section
                         histogram_list=histograms.HwUList(pjoin(rundir,file))
                         histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,
                                                     '%s%d'% (filename,i)),format = 'gnuplot')
+                        try:
+                            misc.call(['gnuplot','%s%d.gnuplot' % (filename,i)],\
+                                      stdout=os.open(os.devnull, os.O_RDWR),\
+                                      stderr=os.open(os.devnull, os.O_RDWR),\
+                                      cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                        except Exception:
+                            pass
                         plotfile=pjoin(self.me_dir,'Events',self.run_name,
                                                     '%s%d.HwU'% (filename,i))
                     plotfiles.append(plotfile)
@@ -2737,6 +2753,13 @@ Integrated cross-section
                             # And now output the finalized list
                             histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,'%s%d'% (filename, i)),
                                                   format = 'gnuplot')
+                            try:
+                                misc.call(['gnuplot','%s%d.gnuplot' % (filename, i)],\
+                                          stdout=os.open(os.devnull, os.O_RDWR),\
+                                          stderr=os.open(os.devnull, os.O_RDWR),\
+                                          cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                            except Exception:
+                                pass
 
                         plotfiles2.append(pjoin(self.me_dir, 'Events', self.run_name, '%s%d.%s' % (filename, i,ext)))
                         tar = tarfile.open(
