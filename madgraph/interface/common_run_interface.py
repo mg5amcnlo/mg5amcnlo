@@ -2016,9 +2016,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     except Exception, error:
                         logger.debug('%s', error)
         
+        lhapdf_cluster_possibilities = [self.options["cluster_local_path"],
+                                      pjoin(self.options["cluster_local_path"], "lhapdf"),
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf"),
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf", "6.1")
+                                      ]
+        
         # Check if we need to copy the pdf
         if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
-            os.path.exists(pjoin(self.options["cluster_local_path"], "lhapdf", pdfsetname)):
+            any((os.path.exists(pjoin(d, pdfsetname)) for d in lhapdf_cluster_possibilities)):
+
             # no need to copy it
             if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
                 try:
