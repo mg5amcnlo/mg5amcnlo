@@ -101,31 +101,11 @@ def setup_channel(channelPath):
         checkerFile = open(pjoin(channelPath,'StabilityCheckDriver.f'),'w')
         checkerFile.write(checkerToWrite)
         checkerFile.close()                
-    # Copy the makefile for that code
-    if not os.path.isfile(pjoin(channelPath,'makefile_steerer')):
-        # Redirect ../../lib and ../../Source/make_opts to one level above.
-        makefileSteererFile=open(pjoin(channelPath,'makefile_steerer'),'w')
-        file = open(os.path.join(MGRootPath,'Template','loop_material',
-                                 'StandAlone','SubProcesses','makefile.inc')).read()  
-        replace_dict={}
-        replace_dict['link_tir_libs']='-lcts -liregi'
-        replace_dict['tir_libs']=' '
-        replace_dict['dotf']='%.f'
-        replace_dict['doto']='%.o'
-        replace_dict['tir_include']=' '
-        file=file%replace_dict
-        
-        makefileSteererFile.write(file)
-        makefileSteererFile.close()
-
-#    # Make sure to recompile the possibly modified files (time stamps can be
-#    # off).
-#    if os.path.isfile(pjoin(channelPath,'StabilityCheckDriver')):
-#       os.remove(pjoin(channelPath,'StabilityCheckDriver'))
-#    if os.path.isfile(pjoin(channelPath,'loop_matrix.o')):
-#       os.remove(pjoin(channelPath,'loop_matrix.o'))
+    # Append the compilation of the StabilityCheckDriver to the makefile
+        with open (pjoin(channelPath,'makefile'),'a') as makefile:
+            makefile.write("\nStabilityCheckDriver:  StabilityCheckDriver.o $(PROCESS)\n\t$(FC) $(FFLAGS) -o StabilityCheckDriver StabilityCheckDriver.o $(PROCESS) $(LINKLIBS)")
     try:
-        misc.compile(arg=['-f','makefile_steerer','StabilityCheckDriver'], \
+        misc.compile(arg=['StabilityCheckDriver'], \
                      cwd=channelPath, mode='fortran', job_specs = False)
     except:
         logging.error("Could not compile %s/%s"%(channelPath,StabilityCheckDriver))

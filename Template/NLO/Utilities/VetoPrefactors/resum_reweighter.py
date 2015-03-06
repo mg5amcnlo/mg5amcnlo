@@ -177,7 +177,7 @@ for event in evtFile:
     x1=str(momenta[0][0]/ebeam1)
     x2=str(momenta[1][0]/ebeam2) 
 # Q is set to \sqrt(\hat{s})
-    Q =str(math.sqrt(2*momenta[0][0]*momenta[1][0]))
+    Q =str(2*math.sqrt(momenta[0][0]*momenta[1][0]))
 # renormalisation scale used to generate the events
     muMad=str(event.scale)
 
@@ -188,10 +188,29 @@ for event in evtFile:
     new_wgt = 0.0
 
     output_string = get_value(runner,input_string)
-    resum_fact=float(output_string.split()[0])
-    Hcomp_fact=float(output_string.split()[1])
-    alphah=float(output_string.split()[2])
-    new_wgt=(1+(alphah/(2.0*math.pi))*(event.wgt/born_wgt+Hcomp_fact))*resum_fact*born_wgt
+    mode=float(output_string.split()[0])
+    BCorr0=float(output_string.split()[1])
+    BCorr1=float(output_string.split()[2])
+    BCorrm0=float(output_string.split()[3])
+    BCorrm1=float(output_string.split()[4])
+    Efull=float(output_string.split()[5])
+    EfullNLL=float(output_string.split()[6])
+    Hcomp_fact=float(output_string.split()[7])
+    Hcomp_factm=float(output_string.split()[8])
+    alphah=float(output_string.split()[9])
+    alpham=float(output_string.split()[10])
+    EfO=float(output_string.split()[11])
+    EfONLL=float(output_string.split()[12])
+    alpha=float(output_string.split()[13])
+    if mode==1:
+        new_wgt= (1+alpha*BCorr1+(alphah/(2.0*math.pi))*(event.wgt/born_wgt+Hcomp_fact))*BCorr0*Efull*born_wgt
+    if mode==2:
+        new_wgt= BCorr0*EfullNLL*born_wgt
+    if mode==3:
+        new_wgt= (1+BCorrm1+EfO+(alpham/(2.0*math.pi))*(event.wgt/born_wgt+Hcomp_factm))*BCorrm0*born_wgt
+    if mode==4:
+        new_wgt= BCorrm0*(1+EfONLL)*born_wgt
+
     worked = True
 
     if i_evt<=5:

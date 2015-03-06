@@ -1476,7 +1476,7 @@ end
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
+                             nexternal, ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -3102,7 +3102,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
+                             nexternal, ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
