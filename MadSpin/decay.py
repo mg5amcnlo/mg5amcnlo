@@ -63,7 +63,7 @@ import math
 from madgraph import MG5DIR, MadGraph5Error
 import madgraph.various.misc as misc
 #import time
-import tests.unit_tests.various.test_aloha as test_aloha
+import tests.parallel_tests.test_aloha as test_aloha
 
 class MadSpinError(MadGraph5Error):
     pass

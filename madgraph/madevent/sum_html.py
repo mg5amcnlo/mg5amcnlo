@@ -88,7 +88,9 @@ class OneResult(object):
                          self.maxit, self.nunwgt, self.luminosity, self.wgt, \
                          self.xsec = data[:10]
                 if len(data) > 10:
-                    self.maxwgt, self.th_maxwgt, self.th_nunwgt = data[10:13]
+                    self.maxwgt = data[10]
+                if len(data) >12:
+                    self.th_maxwgt, self.th_nunwgt = data[11:13]
                 if self.mfactor > 1:
                     self.luminosity /= self.mfactor
                 continue

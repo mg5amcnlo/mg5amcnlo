@@ -2129,7 +2129,7 @@ c momenta in the momenta_str_l() array.
       include 'c_weight.inc'
       include 'reweight0.inc'
       include 'genps.inc'
-      include 'nfksconfigs.inc'
+      include 'nFKSconfigs.inc'
       integer i,ii,j,jj,ict,ipr,momenta_conf
       logical momenta_equal,found
       double precision conv,momenta_str_l(0:3,nexternal,max_n_ctr)

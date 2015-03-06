@@ -15,7 +15,7 @@
 # histogramming package 'dbook.f' is included in the code, while when
 # choosing root the 'rbook_fe8.f' and 'rbook_be8.cc' are included. If
 # 'none' is chosen, all the other entries below have to be set empty.
-FO_ANALYSIS_FORMAT = topdrawer
+FO_ANALYSIS_FORMAT = HwU
 #
 # Needed extra-libraries (FastJet is already linked):
 FO_EXTRALIBS = 
@@ -31,7 +31,7 @@ FO_INCLUDEPATHS =
 # User's analysis (to be put in the <PROCDIR>/FixedOrderAnalysis/
 # directory). Please use .o as extension and white spaces to separate
 # files.
-FO_ANALYSE = analysis_td_template.o
+FO_ANALYSE = analysis_HwU_template.o
 #
 #
 ## When linking with root, the following settings are a working
