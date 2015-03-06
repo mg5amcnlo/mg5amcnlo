@@ -213,6 +213,7 @@ c a scale to be used as a reference for renormalization scale
       include 'nexternal.inc'
       include 'reweight0.inc'
       include 'run.inc'
+      include 'cuts.inc'
       double precision muR_ref_dynamic,pp(0:3,nexternal)
       double precision tmp,scale_global_reference,pt,et,dot,sumdot
       external pt,et,dot,sumdot
@@ -512,16 +513,22 @@ c a scale to be used as a reference for renormalization scale
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'run.inc'
+      include 'cuts.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
-      double precision tmp,pt,et,dot,xm2,sumdot,xmt2
+      double precision tmp,pt,et,dot,xm2,sumdot,xmt2,ptmp(0:3)
       external pt,et,dot,sumdot
-      integer i,itype
+      integer i,j,itype
       parameter (itype=3)
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
 c
       tmp=0
-      if(itype.eq.1)then
+      if(ickkw.eq.-1)then
+c Special for analytic resummation in veto'ed cross sections:
+         tmp=ptj
+         temp_scale_id='NLO+NNLL veto scale: ptj_max'
+      elseif(itype.eq.1)then
 c Sum of transverse energies
         do i=nincoming+1,nexternal
           tmp=tmp+et(pp(0,i))

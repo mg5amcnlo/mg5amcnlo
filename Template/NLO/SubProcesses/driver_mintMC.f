@@ -309,7 +309,7 @@ c*************************************************************
 c Mass-shell stuff. This is MC-dependent
          call fill_MC_mshell()
          putonshell=.true.
-c$$$         putonshell=.false.
+         if (ickkw.eq.-1) putonshell=.false.
          unwgt=.true.
          open (unit=99,file='nevts',status='old',err=999)
          read (99,*) nevts
