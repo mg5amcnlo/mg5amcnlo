@@ -218,7 +218,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('calculate_xsect -f LO')
         self.do('quit')
 
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
@@ -452,7 +452,7 @@ class MECmdShell(IOTests.IOTestManager):
 
         self.do('launch NLO -f')
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
@@ -469,7 +469,7 @@ class MECmdShell(IOTests.IOTestManager):
                 stdout = open(os.devnull, 'w'))
 
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
@@ -776,7 +776,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('calculate_xsect NLO -f')        
         
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
@@ -792,7 +792,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('calculate_xsect LO -f')        
         
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
