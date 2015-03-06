@@ -805,12 +805,12 @@ class MECmdShell(IOTests.IOTestManager):
         
         cwd = os.getcwd()
         try:
-            shutil.rmtree('%s/' % self.path)
+            os.remove('%s/test.log' % self.tmpdir)
         except Exception, error:
             pass
         import subprocess
         
-        stdout = open('%s/test.log' % self.path,'w')
+        stdout = open('%s/test.log' % self.tmpdir,'w')
         if logging.getLogger('madgraph').level <= 20:
             stderr=None
         else:
@@ -821,10 +821,10 @@ class MECmdShell(IOTests.IOTestManager):
             
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_amcatnlo')],
-                         cwd=pjoin(MG5DIR),
+                         cwd=self.tmpdir,
                         stdout=stdout,stderr=stderr)
         stdout.close()
-        text = open('%s/test.log' % self.path,'r').read()
+        text = open('%s/test.log' % self.tmpdir,'r').read()
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
