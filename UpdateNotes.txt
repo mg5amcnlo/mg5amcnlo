@@ -1,6 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.3.0(XX/XX/XX) OM+VH: Adding the possibility to compute cross-section for loop-induced process
+		JB+OM: Addign matchbox output for matching in the Matchbox framework
                 OM: New MultiCore class with better thread support
                 OM+VH: Change the handling of the run_card.
                       - The default value depends now of your running process
@@ -36,7 +37,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		    leading to NAN.
                 RF: For fNLO runs the virtuals were included twice in the setting of the integration grids. 
                     This was not leading to any bias in previous version of the code.
-
 
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.

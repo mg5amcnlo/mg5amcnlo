@@ -354,7 +354,7 @@ class TestMECmdShell(unittest.TestCase):
             fsock = open('%s/Events/%s/%s_parton_syscalc.log' % \
                   (self.run_dir, data[0]['run_name'], data[0]['tag']),'r')
             text = fsock.read()
-            self.assertEqual(text.count('cross-section'),3)
+            self.assertTrue(text.count('cross-section') >= 3)
         
                 
     def check_pythia_output(self, run_name='run_01', syst=False):

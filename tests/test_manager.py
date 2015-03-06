@@ -984,11 +984,11 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         
     if options.timed == "Auto":
         if options.path == 'tests/unit_tests':
-            options.timed = 2
+            options.timed = 1
         elif options.path == 'tests/parallel_tests':
             options.timed = 400
         elif options.path == 'tests/acceptance_tests':
-            options.timed = 30
+            options.timed = 10
         else:
             options.timed = 0 
 
