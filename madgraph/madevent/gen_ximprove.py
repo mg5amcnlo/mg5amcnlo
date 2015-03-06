@@ -77,6 +77,7 @@ class gensym(object):
         self.run_card = cmd.run_card
         self.me_dir = cmd.me_dir
         
+        
         # dictionary to keep track of the precision when combining iteration
         self.cross = collections.defaultdict(int)
         self.abscross = collections.defaultdict(int)
@@ -203,7 +204,7 @@ class gensym(object):
     def submit_to_cluster_no_splitting(self, job_list):
         """submit the survey without the parralelization.
            This is the old mode which is still usefull in single core"""
-       
+     
         # write the template file for the parameter file   
         self.write_parameter(parralelization=False, Pdirs=job_list.keys())
         
@@ -534,7 +535,7 @@ class gensym(object):
             Pdirs = self.subproc
                
         for Pdir in Pdirs:
-            path =pjoin(self.me_dir, 'SubProcesses', Pdir, 'input_app.txt') 
+            path =pjoin(Pdir, 'input_app.txt') 
             self.write_parameter_file(path, options)
 
         

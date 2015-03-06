@@ -7,6 +7,7 @@ import time
 import os
 
 
+
 if '__main__' == __name__:
     import sys
     sys.path.append('../../')
@@ -50,7 +51,7 @@ class Particle(object):
         self.event_id = len(event) #not yet in the event
         # LHE information
         self.pid = 0
-        self.status = 0
+        self.status = 0 # -1:initial. 1:final. 2: propagator
         self.mother1 = None
         self.mother2 = None
         self.color1 = 0
@@ -66,6 +67,11 @@ class Particle(object):
 
         if line:
             self.parse(line)
+          
+    @property
+    def pdg(self):
+        "convenient alias"
+        return self.pid
             
     def parse(self, line):
         """parse the line"""
@@ -153,7 +159,7 @@ class EventFile(object):
 
     def __new__(self, path, mode='r', *args, **opt):
 
-        if path.endswith(".gz"):
+        if  path.endswith(".gz"):
             return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
         else:
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
@@ -1181,7 +1187,7 @@ class FourMomentum(object):
         self.px = px
         self.py = py
         self.pz =pz
-    
+
     @property
     def mass(self):
         """return the mass"""    
@@ -1190,7 +1196,7 @@ class FourMomentum(object):
     def mass_sqr(self):
         """return the mass square"""    
         return self.E**2 - self.px**2 - self.py**2 - self.pz**2
-    
+
     @property
     def pt(self):
         return math.sqrt(max(0, self.pt2()))
@@ -1263,55 +1269,7 @@ if '__main__' == __name__:
             output.write(str(event))
         output.write('</LesHouchesEvent>\n')
     
-    # Example 2: Adding the decay of one particle (Bridge Method).
-    if False:
-        orig_lhe = EventFile('unweighted_events.lhe')
-        decay_lhe = EventFile('unweighted_decay.lhe')
-        output = open('output_events.lhe', 'w')
-        output.write(orig_lhe.banner) #need to be modified by hand!
-        pid_to_decay  = 15 #which particle to decay
-        bypassed_decay = {} # not yet use decay due to wrong helicity
-        
-        counter = 0
-        start = time.time()
-        for event in orig_lhe:
-            if counter % 1000 == 1:
-                print "decaying event number %s [%s s]" % (counter, time.time()-start)
-            counter +=1
-            for particle in event:
-                if particle.pid == pid_to_decay:
-                    #ok we have to decay this particle!
-                    helicity = particle.helicity
-                    # use the already parsed_event if any
-                    done = False
-                    if helicity in bypassed_decay and bypassed_decay[helicity]:
-                        # use one of the already parsed (but not used) decay event
-                        for decay in bypassed_decay[helicity]:
-                            if decay[0].helicity == helicity:
-                                particle.add_decay(decay)
-                                bypassed_decay[helicity].remove(decay)
-                                done = True
-                                break
-                    # read the decay event up to find one valid decay
-                    while not done:
-                        try:
-                            decay = decay_lhe.next()
-                        except StopIteration:
-                            raise Exception, "not enoug event in the decay file"
-                        
-                        if helicity == decay[0].helicity or helicity==9:
-                            particle.add_decay(decay)
-                            done=True
-                        elif decay[0].helicity in bypassed_decay:
-                            if len(bypassed_decay[decay[0].helicity]) < 100:
-                                bypassed_decay[decay[0].helicity].append(decay)
-                            #limit to 100 to avoid huge increase of memory if only 
-                            #one helicity is present in the production sample.
-                        else:
-                            bypassed_decay[decay[0].helicity] = [decay]
 
-            output.write(str(event))
-        output.write('</LesHouchesEvent>\n')
         
     # Example 3: Plotting some variable
     if True:
@@ -1329,12 +1287,12 @@ if '__main__' == __name__:
             for particle in event:
                 if particle.status<0:
                     E+=particle.E
-
             event.parse_reweight()
 
             if 2 < event.reweight_data["mg_reweight_1"]/event.wgt:            
                 data.append(event.reweight_data["mg_reweight_1"]/event.wgt)
                 nb_pass +=1
+
             
         print nb_pass
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])

@@ -14,6 +14,7 @@
 ################################################################################
 """ Command interface for MadSpin """
 from __future__ import division
+import collections
 import logging
 import math
 import os
@@ -429,6 +430,9 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_launch(self, line):
         """end of the configuration launched the code"""
         
+        if self.options["spinmode"] in ["bridge", "none"]:
+            return self.run_bridge(line)
+        
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'madspin.pkl')):
             return self.run_from_pickle()
         
@@ -575,6 +579,130 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
     
+    def run_bridge(self, line):
+        """Run the Bridge Algorithm"""
+        
+        # 1. Read the event file to check which decay to perform and the number
+        #   of event to generate for each type of particle.
+        # 2. Generate the events requested
+        # 3. perform the merge of the events.
+        #    if not enough events. re-generate the missing one.
+        
+        args = self.split_arg(line)
+        self.check_launch(args)
+        
+        import madgraph.various.lhe_parser as lhe_parser
+        self.events_file.close()
+        orig_lhe = lhe_parser.EventFile(self.events_file.name)
+        
+        to_decay = collections.defaultdict(int)
+        nb_event = 0
+        for event in orig_lhe:
+            nb_event +=1
+            for particle in event:
+                if particle.status == 1 and particle.pdg in self.final_state:
+                    # final state and tag as to decay
+                    to_decay[particle.pdg] += 1
+        print to_decay
+        # 2. Generate the events requested  
+        with misc.MuteLogger(["madgraph"], [50]):
+            mg5 = self.mg5cmd
+            modelpath = self.model.get('modelpath')
+            mg5.exec_cmd("import model %s" % modelpath)      
+            
+            for pdg, nb_needed in to_decay.items():
+                part = self.model.get_particle(pdg)
+                name = part.get_name()
+                print pdg, name, nb_needed, self.list_branches[name]
+                for i,proc in enumerate(self.list_branches[name]):
+                    mg5.exec_cmd("generate %s" % proc)
+                    mg5.exec_cmd("output decay_%s_%s -f" %(str(pdg).replace("-","x"), i))
+                    options = dict(mg5.options)
+                    misc.sprint(options)
+                    options["automatic_html_opening"] = False
+                    import madgraph.interface.madevent_interface as madevent_interface
+                    me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                                "decay_%s_%s" %(str(pdg).replace("-","x"), i)),
+                                                              options=options)
+                    me5_cmd.options["automatic_html_opening"] = False
+                    run_card = banner.RunCard("decay_%s_%s/Cards/run_card.dat" %(str(pdg).replace("-","x"), i))
+                    run_card["nevents"] = int(nb_needed)
+                    me5_cmd.exec_cmd("generate_events -f")
+                    
+
+                    
+            
+
+            
+            
+            
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+            # Example 2: Adding the decay of one particle (Bridge Method).
+    if False:
+        orig_lhe = EventFile('unweighted_events.lhe')
+        decay_lhe = EventFile('unweighted_decay.lhe')
+        output = open('output_events.lhe', 'w')
+        output.write(orig_lhe.banner) #need to be modified by hand!
+        pid_to_decay  = 15 #which particle to decay
+        bypassed_decay = {} # not yet use decay due to wrong helicity
+        
+        counter = 0
+        start = time.time()
+        for event in orig_lhe:
+            if counter % 1000 == 1:
+                print "decaying event number %s [%s s]" % (counter, time.time()-start)
+            counter +=1
+            for particle in event:
+                if particle.pid == pid_to_decay:
+                    #ok we have to decay this particle!
+                    helicity = particle.helicity
+                    # use the already parsed_event if any
+                    done = False
+                    if helicity in bypassed_decay and bypassed_decay[helicity]:
+                        # use one of the already parsed (but not used) decay event
+                        for decay in bypassed_decay[helicity]:
+                            if decay[0].helicity == helicity:
+                                particle.add_decay(decay)
+                                bypassed_decay[helicity].remove(decay)
+                                done = True
+                                break
+                    # read the decay event up to find one valid decay
+                    while not done:
+                        try:
+                            decay = decay_lhe.next()
+                        except StopIteration:
+                            raise Exception, "not enoug event in the decay file"
+                        
+                        if helicity == decay[0].helicity or helicity==9:
+                            particle.add_decay(decay)
+                            done=True
+                        elif decay[0].helicity in bypassed_decay:
+                            if len(bypassed_decay[decay[0].helicity]) < 100:
+                                bypassed_decay[decay[0].helicity].append(decay)
+                            #limit to 100 to avoid huge increase of memory if only 
+                            #one helicity is present in the production sample.
+                        else:
+                            bypassed_decay[decay[0].helicity] = [decay]
+
+            output.write(str(event))
+        output.write('</LesHouchesEvent>\n')
+        
+        
+        
+        
     
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""

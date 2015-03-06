@@ -28,7 +28,7 @@ from cStringIO import StringIO
 logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
-from tests.unit_tests.various.test_aloha import set_global
+from tests.parallel_tests.test_aloha import set_global
 import tests.IOTests as IOTests
 
 import madgraph.interface.master_interface as MGCmd
