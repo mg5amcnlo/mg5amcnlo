@@ -1749,12 +1749,12 @@ class RunCardNLO(RunCard):
         self.add_param('pdf_set_max', 244700)
         #merging
         self.add_param('ickkw', 0)
-        self.add_param('bwcutoff', 15)
+        self.add_param('bwcutoff', 15.0)
         #cuts        
-        self.add_param('jetalgo', 1)
+        self.add_param('jetalgo', 1.0)
         self.add_param('jetradius', 0.7, hidden=True)         
         self.add_param('ptj', 10.0 , cut=True)
-        self.add_param('etaj', -1, cut=True)        
+        self.add_param('etaj', -1.0, cut=True)        
         self.add_param('ptl', 0.0, cut=True)
         self.add_param('etal', -1.0, cut=True) 
         self.add_param('drll', 0.0, cut=True)
