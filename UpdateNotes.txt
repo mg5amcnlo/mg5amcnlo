@@ -12,6 +12,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 RF: Fixed a bug in the aMCfast/APPLGrid interface introduced in version 2.2.3
 		RF: Fixed a bug in the setting of the integration grids (LO process generation) for the minimum
 		    energy needed for photons. The bug did not lead to any bias in event generation.
+                PT: Set command available for shower_card parameters
 		RF: Re-factoring of the structure of the code for NLO+PS computations.
 		RF+VH: Replaced the default topdrawer histograms with HwU histograms for f(N)LO runs only
 		RF+VB: Allow for variable bin-sizes in MG5_aMC+aMCfast+ApplGrid runs.

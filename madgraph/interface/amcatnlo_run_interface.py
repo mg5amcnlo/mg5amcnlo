@@ -1850,7 +1850,7 @@ Integrated cross-section
                      '\n      Fraction of negative weights: %4.2f' + \
                      '\n      Total running time : %s') % \
                         (self.run_card['nevents'],
-                         self.run_card['parton_shower'],
+                         self.run_card['parton_shower'].upper(),
                          neg_frac, 
                          misc.format_timer(time.time()-self.start_time))
 
@@ -2472,6 +2472,11 @@ Integrated cross-section
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
         self.shower_card.write_card(shower, shower_card_path)
 
+        # overwrite if shower_card_set.dat exists in MCatNLO
+        if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'shower_card_set.dat')):
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'shower_card_set.dat'),
+                     pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat'))
+        
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
         self.update_status('Compiling MCatNLO for %s...' % shower, level='shower') 
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
