@@ -24,7 +24,7 @@ import os
 import re
 import StringIO
 import madgraph.core.color_algebra as color
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
 
 
@@ -1562,6 +1562,45 @@ class Model(PhysicsObject):
             default[int(args[0])] = args[1].lower()
         
         return default
+
+    def change_electroweak_mode(self, mode):
+        """Change the electroweak mode. The only valid mode now is external.
+        Where in top of the default MW and sw2 are external parameters."""
+        
+        assert mode == "external"
+        
+        try:
+            W = self.get('particle_dict')[24]
+        except KeyError:
+            raise InvalidCmd('No W particle in the model impossible to change the EW scheme!')
+        
+        MW = self.get_parameter(W.get('mass'))
+        if not isinstance(MW, ParamCardVariable):
+            newMW = ParamCardVariable(MW.name, MW.value, 'MASS', [24])
+            if not newMW.value:
+                newMW.value = 80.385
+            #remove the old definition
+            self.get('parameters')[MW.depend].remove(MW)
+            # add the new one
+            self.add_param(newMW, ['external'])
+            
+        # Now check for sw2. if not define bypass this
+        try:
+            sw2 = self.get_parameter('sw2')
+        except KeyError:
+            try:
+                sw2 = self.get_parameter('mdl_sw2')
+            except KeyError:
+                sw2=None
+        
+        if sw2:
+            newsw2 = ParamCardVariable(sw2.name,sw2.value, 'SMINPUTS', [4])
+            if not newsw2.value:
+                newsw2.value = 0.222246485786
+            #remove the old definition
+            self.get('parameters')[sw2.depend].remove(sw2)
+            # add the new one
+            self.add_param(newsw2, ['external'])            
 
     def change_mass_to_complex_scheme(self):
         """modify the expression changing the mass to complex mass scheme"""
