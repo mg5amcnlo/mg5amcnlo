@@ -431,7 +431,7 @@ C
 C LOCAL VARIABLES 
 C
 	  INTEGER I, J, M, N, K, SQSOINDEX, DOUBLEFACT
-## if(not LoopInduced) {
+## if(LoopInduced) {
 	  INTEGER LOWERBOUND
 ## }
 	  INTEGER ORDERS_A(NSO), ORDERS_B(NSO)
@@ -548,7 +548,7 @@ C Same for contributions of split order index N by the Born amps
 	  ELSE
 	    LOWERBOUND = 1
 	  ENDIF
-      DO N=M,NLOOPAMPSO
+      DO N=LOWERBOUND,NLOOPAMPSO
 ## }
         SQSOINDEX = %(proc_prefix)sML5SQSOINDEX(M,N)
 ## if(LoopInduced){
