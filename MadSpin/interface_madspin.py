@@ -83,6 +83,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.to_decay={}
         self.mg5cmd = master_interface.MasterCmd()
         self.seed = None
+        self.err_branching_ratio = 0
         
         
         if event_path:
@@ -552,6 +553,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         generate_all.ending_run()
         self.branching_ratio = generate_all.branching_ratio
+        self.err_branching_ratio = generate_all.err_branching_ratio 
         evt_path = self.events_file.name
         try:
             self.events_file.close()

@@ -2519,7 +2519,7 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
             
         return export_v4.ProcessExporterFortranMatchBox.get_JAMP_lines(self, *args, **opts)
       
-    def get_ME_identifier(self, matrix_element):
+    def get_ME_identifier(self, matrix_element, group_number = None, group_elem_number = None):
         """ To not mix notations between borns and virtuals we call it here also MG5 """
         return 'MG5_%d_'%matrix_element.get('processes')[0].get('id')         
       
