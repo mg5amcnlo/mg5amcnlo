@@ -1518,9 +1518,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     nevents_unweighted = []
 
                 split = i == 2 and \
-                        int(self.run_card['nevt_job']) > 0 and \
-                        any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
-                            for l in nevents_unweighted if l])
+                        int(self.run_card['nevt_job']) > 0 
 
                 if i == 2 or not options['only_generation']:
                     # if the number of events requested is zero,
@@ -3368,14 +3366,12 @@ Integrated cross-section
         keep_fourth_arg = False
         output_files = []
         required_output = []
-        input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
-                     pjoin(self.me_dir, 'SubProcesses', 'randinit'),
+        input_files = [pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
                      pjoin(cwd, 'initial_states_map.dat'),
                      pjoin(cwd, 'configs_and_props_info.dat'),
                      pjoin(cwd, 'leshouche_info.dat'),
-                     pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
         if os.path.exists(pjoin(cwd,'nevents.tar')):

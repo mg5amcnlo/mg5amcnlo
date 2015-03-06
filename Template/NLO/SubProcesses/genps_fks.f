@@ -269,7 +269,12 @@ c Generate the rapditity of the Born system
       else
 c No PDFs (also use fixed energy when performing tests)
          call compute_tau_y_epem(j_fks,one_body,fksmass,stot,
-     &                          tau_born,ycm_born,ycmhat)
+     &        tau_born,ycm_born,ycmhat)
+         if (j_fks.le.nincoming .and. .not.(softtest.or.colltest)) then
+            write (*,*) 'Process has incoming j_fks, but fixed shat: '/
+     &           /'not allowed for processes generated at NLO.'
+            stop 1
+         endif
       endif
 c Compute Bjorken x's from tau and y
       xbjrk_born(1)=sqrt(tau_born)*exp(ycm_born)

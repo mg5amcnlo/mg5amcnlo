@@ -235,6 +235,7 @@ class EventFile(object):
             nb_event +=1
             wgt = get_wgt(event)
             cross['all'] += wgt
+            cross['abs'] += abs(wgt)
             cross[event.ievent] += wgt
             all_wgt.append(abs(wgt))
             # avoid all_wgt to be too large
@@ -286,7 +287,7 @@ class EventFile(object):
             
             xsum = 0
             i=1 
-            while (xsum - all_wgt[-i] * (i-1) <= cross['all'] * trunc):
+            while (xsum - all_wgt[-i] * (i-1) <= cross['abs'] * trunc):
                 max_wgt = all_wgt[-i]
                 xsum += all_wgt[-i]
                 i +=1
@@ -449,10 +450,14 @@ class MultiEventFile(EventFile):
                 self.add(p)
         self.configure = False
         
-    def add(self, path, cross=0, error=0,across=0):
-        """ add a file to the pool, cross allow to reweight the sum of weight 
+    def add(self, path, cross, error, across):
+        """ add a file to the pool, across allow to reweight the sum of weight 
         in the file to the given cross-section 
         """
+        
+        if across == 0:
+            # No event linked to this channel -> so no need to include it
+            return 
         
         obj = EventFile(path)
         if len(self.files) == 0 and not self.banner:
@@ -528,17 +533,18 @@ class MultiEventFile(EventFile):
             init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='2.2.1'>please cite 1405.0301 </generator>\n"
         
         # cross_information:
-        cross_info = "%(cross)e %(error)e %(wgt)e %(id)i\n"
-        init_information["cross_info"] =""
+        cross_info = "%(cross)e %(error)e %(wgt)e %(id)i"
+        init_information["cross_info"] = []
         for id in grouped_cross:
             conv = {"id": int(id), "cross": grouped_cross[id], "error": math.sqrt(grouped_error[id]),
                     "wgt": wgt}
-            init_information["cross_info"] += cross_info % conv  
+            init_information["cross_info"].append( cross_info % conv)
+        init_information["cross_info"] = '\n'.join(init_information["cross_info"])
             
         
         
         template_init =\
-        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i %(nprup)i
+        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i -3 %(nprup)i
 %(cross_info)s
 %(generator_info)s
 """
@@ -571,6 +577,7 @@ class MultiEventFile(EventFile):
                 event.sample_scale = 1
                 wgt = getwgt(event)
                 cross['all'] += wgt
+                cross['abs'] += abs(wgt)
                 cross[event.ievent] += wgt
                 new_wgt.append(abs(wgt))
                 # avoid all_wgt to be too large
@@ -583,7 +590,7 @@ class MultiEventFile(EventFile):
                 raise Exception
             # store the information
             self.initial_nb_events[i] = nb_event
-            self.scales[i] = self.cross[i]/cross['all'] if self.cross[i] else 1
+            self.scales[i] = self.across[i]/cross['abs'] if self.across[i] else 1
             misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
                         % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
             for key in cross:

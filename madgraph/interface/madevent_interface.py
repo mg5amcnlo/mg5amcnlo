@@ -2574,7 +2574,33 @@ zeor by MadLoop.""")
 
         self.update_status('finish refine', 'parton', makehtml=False)
         devnull.close()
+    
+    ############################################################################ 
+    def do_combine_iteration(self, line):
+        """Not in help: Combine a given iteration combine_iteration Pdir Gdir S|R step
+            S is for survey 
+            R is for refine
+            step is the iteration number (not very critical)""" 
+
+        self.set_run_name("tmp")
+        self.configure_directory(html_opening=False)
+        Pdir, Gdir, mode, step = self.split_arg(line)
+        if Gdir.startswith("G"):
+            Gdir = Gdir[1:]
+        if "SubProcesses" not in Pdir:
+            Pdir = pjoin(self.me_dir, "SubProcesses", Pdir)
+        if mode == "S":
+            self.opts = dict([(key,value[1]) for (key,value) in \
+                          self._survey_options.items()])
+            gensym = gen_ximprove.gensym(self)
+            gensym.combine_iteration(Pdir, Gdir, int(step))
+        elif mode == "R":
+            refine = gen_ximprove.gen_ximprove_share(self)
+            refine.combine_iteration(Pdir, Gdir, int(step))             
         
+            
+
+      
     ############################################################################ 
     def do_combine_events(self, line):
         """Advanced commands: Launch combine events"""
@@ -3172,12 +3198,19 @@ zeor by MadLoop.""")
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):
-                misc.gunzip('%s.gz' % filename)
+                misc.gunzip('%s.gz' % filename, keep=True)
             if  os.path.exists(filename):
-                shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
+                files.ln(filename, pjoin(self.me_dir, 'Events'))
                 self.create_plot('parton')
-                misc.gzip(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'),
+                if not os.path.exists(filename+'.gz'):
+                    misc.gzip(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'),
                           stdout= "%s.gz" % filename)
+                else:
+                    try:
+                        os.remove(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
+                        os.remove(filename)
+                    except Exception:
+                        pass
             else:
                 logger.info('No valid files for partonic plot') 
                 
