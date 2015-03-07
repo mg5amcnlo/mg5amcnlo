@@ -352,6 +352,7 @@ class ProcessExporterFortran(object):
          if(exists)return  
          LHAPath='./PDFsets'            
          """ % {"path" : self.opt["cluster_local_path"]}
+            changer = {"cluster_specific_path": to_add}
 
         ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
         template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_lhapdf.f"),"r").read()
