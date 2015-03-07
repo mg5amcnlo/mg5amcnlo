@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 ################################################################################
 #
 # Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
@@ -28,21 +29,20 @@ import os
 import re
 import sys
 
-logger = logging.getLogger("madgraph.various.histograms")
-
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
-sys.path.insert(0, os.path.join(root_path,os.pardir)) 
-
+sys.path.append(os.path.join(root_path)) 
+sys.path.append(os.path.join(root_path,os.pardir))
 try:
     # import from madgraph directory
     import madgraph.various.misc as misc
     from madgraph import MadGraph5Error
+    logger = logging.getLogger("madgraph.various.histograms")
 
 except ImportError, error:
-    logger.debug(error)
     # import from madevent directory
     import internal.misc as misc    
     from internal import MadGraph5Error
+    logger = logging.getLogger("internal.histograms")
 
 # I copy the Physics object list here so as not to add a whole dependency to
 # base_objects which is annoying when using this histograms module from the
@@ -1682,7 +1682,7 @@ if __name__ == "__main__":
     main_doc = \
     """ For testing and standalone use. Usage:
         python histograms.py <.HwU input_file_path_1> <.HwU input_file_path_2> ... --out=<output_file_path.format> <option>
-        Where <option> can be one of the following: 
+        Where <option> can be a list of the following: 
            '--help'          See this message.
            '--gnuplot' or '' output the histograms read to gnuplot
            '--HwU'           to output the histograms read to the raw HwU source.
@@ -1705,7 +1705,7 @@ if __name__ == "__main__":
     def log(msg):
         print "histograms.py :: %s"%str(msg)
     
-    if '--help' in sys.argv:
+    if '--help' in sys.argv or len(sys.argv)==1:
         log('\n\n%s'%main_doc)
         sys.exit(0)
 
