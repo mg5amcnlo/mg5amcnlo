@@ -1,11 +1,12 @@
-      subroutine finalize_event(xx,weight,lunlhe,plotEv,putonshell)
+      subroutine finalize_event(xx,weight,lunlhe,putonshell)
       implicit none
       include 'nexternal.inc'
       include "genps.inc"
       include "unlops.inc"
       include "run.inc"
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      include 'timing_variables.inc'
+      integer ndim
+      common/tosigint/ndim
       integer           iconfig
       common/to_configs/iconfig
       integer itmax,ncall
@@ -14,8 +15,8 @@
       common/SHevents/Hevents
       integer i,j,lunlhe
       include 'mint.inc'
-      real*8 xx(ndimmax),weight,plot_wgt,evnt_wgt
-      logical plotEv, putonshell
+      real*8 xx(ndimmax),weight,evnt_wgt
+      logical putonshell
       double precision wgt,unwgtfun
       double precision x(99),p(0:3,nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
@@ -23,10 +24,6 @@
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      integer iplot_ev,iplot_cnt,iplot_born
-      parameter (iplot_ev=11)
-      parameter (iplot_cnt=12)
-      parameter (iplot_born=20)
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
@@ -43,6 +40,7 @@
       common /to_abrv/ abrv
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+      call cpu_time(tBefore)
 
       do i=1,99
         if(i.le.ndim)then
@@ -53,10 +51,7 @@
       enddo
       
       wgt=1d0
-c Normalization to the number of requested events is done in subroutine
-c topout (madfks_plot.f), so multiply here to get # of events.
       evnt_wgt=evtsgn*weight
-      plot_wgt=evnt_wgt*itmax*ncall
       call generate_momenta(ndim,iconfig,wgt,x,p)
 c
 c Get all the info we need for writing the events.
@@ -76,7 +71,7 @@ c
          endif
          Hevents=.true.
          call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &        .false.,ndim,ipole,x,jpart,npart,pb,shower_scale)
+     &        .false.,ndim,x,jpart,npart,pb,shower_scale)
 c Put the Hevent info in a common block
          NUP_H=npart
          do i=1,NUP_H
@@ -98,16 +93,7 @@ c Put the Hevent info in a common block
       endif
       
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &     putonshell,ndim,ipole,x,jpart,npart,pb,shower_scale)
-
-c Plot the events also on the fly
-      if(plotEv) then
-         if (Hevents) then
-            call outfun(p,ybst_til_tolab,plot_wgt,iplot_ev)
-         else
-            call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
-         endif
-      endif
+     &     putonshell,ndim,x,jpart,npart,pb,shower_scale)
 
       call unweight_function(p_born,unwgtfun)
       if (unwgtfun.ne.0d0) then
@@ -125,6 +111,8 @@ c  Write-out the events
          call write_random_numbers(lunlhe)
       endif
       
+      call cpu_time(tAfter)
+      t_write=t_write+(tAfter-tBefore)
       return
       end
 
@@ -246,11 +234,15 @@ c
          firsttime=.false.
       endif
       ievent=66
-      if (ickkw.ne.4) then
-         scale = shower_scale
-      else
+
+      if (ickkw.eq.4) then
          scale = sqrt(muF12_current)
+      elseif (ickkw.eq.-1) then
+         scale = mu_r
+      else
+         scale = shower_scale
       endif
+
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
 
@@ -262,7 +254,7 @@ c
      &          ,scale2_lhe(nFKSprocess),izero,izero,izero,zero,zero
      &          ,zero,zero,zero
         else
-          if(iwgtinfo.lt.1.or.iwgtinfo.gt.5)then
+          if(iwgtinfo.ne.-5)then
             write(*,*)'Error in write_events_lhe'
             write(*,*)'  Inconsistency in reweight parameters'
             write(*,*)doreweight,iwgtinfo
@@ -314,7 +306,7 @@ c********************************************************************
      #    NUP,IDPRUP,XWGTUP,scale,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
 
- 201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),1x,i2,2(1x,i2),5(1x,d14.8))
+ 201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       return
       end
 
@@ -323,8 +315,8 @@ c********************************************************************
       integer lunlhe,i
       double precision x(99),sigintF_save,f_abs_save
       common /c_sigint/ x,sigintF_save,f_abs_save
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      integer ndim
+      common/tosigint/ndim
       write (lunlhe,'(a)')'  <event>'
       write (lunlhe,*) ndim,sigintF_save,f_abs_save
       write (lunlhe,*) (x(i),i=1,ndim)

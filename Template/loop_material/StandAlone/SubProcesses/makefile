@@ -1,5 +1,9 @@
 ifeq ($(wildcard ../../Source/make_opts),)
-    ROOT = ..
+    ifeq ($(wildcard ../Source/make_opts),)
+       ROOT = ../../..
+    else
+       ROOT = ..
+    endif
 else
     ROOT = ../..
 endif

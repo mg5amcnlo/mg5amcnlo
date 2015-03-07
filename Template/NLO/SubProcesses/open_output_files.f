@@ -29,3 +29,10 @@
       return
       end
 
+      subroutine HwU_write_file
+      implicit none
+      open (unit=99,file='MADatNLO.HwU',status='unknown')
+      call HwU_output(99)
+      close (99)
+      return
+      end
