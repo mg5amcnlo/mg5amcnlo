@@ -2018,9 +2018,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         lhapdf_cluster_possibilities = [self.options["cluster_local_path"],
                                       pjoin(self.options["cluster_local_path"], "lhapdf"),
+                                      pjoin(self.options["cluster_local_path"], "lhapdf", "pdfsets"),
                                       pjoin(self.options["cluster_local_path"], "..", "lhapdf"),
-                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf", "6.1")
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf", "pdfsets"),
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf","pdfsets", "6.1")
                                       ]
+        
+        print (os.path.exists(pjoin(d, pdfsetname)) for d in lhapdf_cluster_possibilities))
         
         # Check if we need to copy the pdf
         if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \

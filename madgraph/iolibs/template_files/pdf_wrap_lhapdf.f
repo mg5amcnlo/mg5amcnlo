@@ -43,10 +43,12 @@ c
       logical exists
       integer i
 
+
 c     first try in the current directory
       LHAPath='./PDFsets'
       Inquire(File=LHAPath, exist=exists)
       if(exists)return
+      %(cluster_specific_path)s
       do i=1,6
          LHAPath=up//LHAPath
          Inquire(File=LHAPath, exist=exists)
