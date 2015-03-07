@@ -68,17 +68,19 @@ class ProcessExporterFortran(object):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent', 'mp': False
+                        }
+
     def __init__(self, mgme_dir = "", dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
         self.model = None
 
+        self.opt = dict(self.default_opt)
         if opt:
-            self.opt = opt
-        else:
-            self.opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madevent', 'mp': False}
+            self.opt.update(opt)
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()
@@ -133,8 +135,6 @@ class ProcessExporterFortran(object):
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
         
         
-        
- 
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -1099,6 +1099,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 pass
         return res_list
 
+
     def get_JAMP_lines_split_order(self, col_amps, split_order_amps, 
           split_order_names=None, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)"):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
@@ -1164,15 +1165,30 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 res_list.append('C JAMPs contributing to orders '+' '.join(
                               ['%s=%i'%order for order in zip(split_order_names,
                                                                 amp_order[0])]))
-            res_list.extend(self.get_JAMP_lines(col_amps_order,
-                                   JAMP_format="JAMP(%s,{0})".format(str(i+1))))
+            if self.opt['export_format'] in ['madloop_matchbox']:
+                 res_list.extend(self.get_JAMP_lines(col_amps_order,
+                                   JAMP_format="JAMP(%s,{0})".format(str(i+1)),
+                                   JAMP_formatLC="LNJAMP(%s,{0})".format(str(i+1))))
+            else:
+                 res_list.extend(self.get_JAMP_lines(col_amps_order,
+                                   JAMP_format="JAMP(%s,{0})".format(str(i+1))))         
+	    
+	    
+	    
+	    
+	    
+	    
+
 
         return res_list
 
-    def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", 
-                                                AMP_format="AMP(%s)", split=-1):
+
+    def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", 
+                       split=-1):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
-        defined as a matrix element or directly as a color_amplitudes dictionary.
+        defined as a matrix element or directly as a color_amplitudes dictionary,
+        Jamp_formatLC should be define to allow to add LeadingColor computation 
+        (usefull for MatchBox)
         The split argument defines how the JAMP lines should be split in order
         not to be too long."""
 
@@ -1207,6 +1223,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 coeff_list=coeff_list[n:]
                 res = ((JAMP_format+"=") % str(i + 1)) + \
                       ((JAMP_format % str(i + 1)) if not first and split>0 else '')
+
                 first=False
                 # Optimization: if all contributions to that color basis element have
                 # the same coefficient (up to a sign), put it in front
@@ -1217,8 +1234,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     common_factor = True
                     global_factor = diff_fracs[0]
                     res = res + '%s(' % self.coeff(1, global_factor, False, 0)
-    
+                
+                # loop for JAMP
                 for (coefficient, amp_number) in coefs:
+                    if not coefficient:
+                        continue
                     if common_factor:
                         res = (res + "%s" + AMP_format) % \
                                                    (self.coeff(coefficient[0],
@@ -1237,7 +1257,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     res = res + ')'
     
                 res_list.append(res)
-
+                    
         return res_list
 
     def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False):
@@ -1696,6 +1716,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadGraph v4 StandAlone format."""
 
+    matrix_template = "matrix_standalone_v4.inc"
+
     def __init__(self, *args, **opts):
         """add the format information compare to standard init"""
         
@@ -1962,8 +1984,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # write_matrix_element_v4
     #===========================================================================
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                                                                proc_prefix=''):
-        """Export a matrix element to a matrix.f file in MG4 standalone format"""
+                                write=True, proc_prefix=''):
+        """Export a matrix element to a matrix.f file in MG4 standalone format
+        if write is on False, just return the replace_dict and not write anything."""
 
 
         if not matrix_element.get('processes') or \
@@ -2041,7 +2064,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         # JAMP definition, depends on the number of independent split orders
         split_orders=matrix_element.get('processes')[0].get('split_orders')
-                
+
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
@@ -2080,52 +2103,49 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             self.write_check_sa_splitOrders(squared_orders,split_orders,
               nexternal,ninitial,proc_prefix,check_sa_writer)
 
-        writers.FortranWriter('nsqso_born.inc').writelines(
-"""INTEGER NSQSO_BORN
-PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
+        if write:
+            writers.FortranWriter('nsqso_born.inc').writelines(
+                """INTEGER NSQSO_BORN
+                   PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
-        if len(split_orders)>0:
-            if self.opt['export_format']=='standalone_msP' :
-                logger.debug("Warning: The export format standalone_msP is not "+\
-                  " available for individual ME evaluation of given coupl. orders."+\
-                  " Only the total ME will be computed.")
-                file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_msP_v4.inc')).read()
 
-            elif self.opt['export_format']=='standalone_msF':
-                logger.debug("Warning: The export format standalone_msF is not "+\
+        matrix_template = self.matrix_template
+        if self.opt['export_format']=='standalone_msP' :
+            matrix_template = 'matrix_standalone_msP_v4.inc'
+        elif self.opt['export_format']=='standalone_msF':
+            matrix_template = 'matrix_standalone_msF_v4.inc'
+	elif self.opt['export_format']=='matchbox':
+            replace_dict["proc_prefix"] = 'MG5_%i_' % matrix_element.get('processes')[0].get('id')
+            replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
+
+        if len(split_orders)>0:
+            if self.opt['export_format'] in ['standalone_msP', 'standalone_msF']:
+                logger.debug("Warning: The export format %s is not "+\
                   " available for individual ME evaluation of given coupl. orders."+\
-                  " Only the total ME will be computed.")
-                file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_msF_v4.inc')).read()
-            else:
-                file = open(pjoin(_file_path, \
-                'iolibs/template_files/matrix_standalone_splitOrders_v4.inc')).read()
+                  " Only the total ME will be computed.", self.opt['export_format'])
+            elif  self.opt['export_format'] in ['madloop_matchbox']:
+		replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
+		matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
+	    else:
+                matrix_template = "matrix_standalone_splitOrders_v4.inc"
+
+        if write:
+            path = pjoin(_file_path, 'iolibs', 'template_files', matrix_template)
+            content = open(path).read()
+            content = content % replace_dict
+            # Write the file
+            writer.writelines(content)
+            # Add the helper functions.
+            if len(split_orders)>0:
+                content = '\n' + open(pjoin(_file_path, \
+                                   'iolibs/template_files/split_orders_helping_functions.inc'))\
+                                   .read()%replace_dict
+                writer.writelines(content)
+            return len(filter(lambda call: call.find('#') != 0, helas_calls))
         else:
-            if self.opt['export_format']=='standalone_msP' :
-                file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_msP_v4.inc')).read()
-
-            elif self.opt['export_format']=='standalone_msF':
-                file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_msF_v4.inc')).read()
-            else:
-                file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_v4.inc')).read()
-
-        file = file % replace_dict
-
-        # Add the helper functions.
-        if len(split_orders)>0:
-            file = file + '\n' + open(pjoin(_file_path, \
-             'iolibs/template_files/split_orders_helping_functions.inc'))\
-                                                            .read()%replace_dict
-
-        # Write the file
-        writer.writelines(file)
-
-        return len(filter(lambda call: call.find('#') != 0, helas_calls))
+            replace_dict['return_value'] = len(filter(lambda call: call.find('#') != 0, helas_calls))
+            return replace_dict # for subclass update
 
     def write_check_sa_splitOrders(self,squared_orders, split_orders, nexternal,
                                                 nincoming, proc_prefix, writer):
@@ -2150,6 +2170,121 @@ PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
                                     'nexternal':nexternal,
                                     'nincoming':nincoming,
                                     'proc_prefix':proc_prefix})
+
+
+class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
+    """class to take care of exporting a set of matrix element for the Matchbox
+    code in the case of Born only routine"""
+
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'matchbox', 'mp': False,
+                        'sa_symmetry': True}
+
+    #specific template of the born
+           
+
+    matrix_template = "matrix_standalone_matchbox.inc"
+    
+    @staticmethod    
+    def get_color_string_lines(matrix_element):
+        """Return the color matrix definition lines for this matrix element. Split
+        rows in chunks of size n."""
+
+        if not matrix_element.get('color_matrix'):
+            return "\n".join(["out = 1"])
+        
+        #start the real work
+        color_denominators = matrix_element.get('color_matrix').\
+                                                         get_line_denominators()
+        matrix_strings = []
+        my_cs = color.ColorString()
+        for i_color in xrange(len(color_denominators)):
+            # Then write the numerators for the matrix elements
+            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
+            t_str=repr(my_cs)
+            t_match=re.compile(r"(\w+)\(([\s\d+\,]*)\)")
+            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2,1) T(1,2)' returns with findall:
+            # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
+            all_matches = t_match.findall(t_str)
+            output = {}
+            arg=[]
+            for match in all_matches:
+                ctype, tmparg = match[0], [m.strip() for m in match[1].split(',')]
+                if ctype in ['ColorOne' ]:
+                    continue
+                if ctype not in ['T', 'Tr' ]:
+                    raise MadGraph5Error, 'Color Structure not handle by Matchbox: %s'  % ctype
+                tmparg += ['0']
+                arg +=tmparg
+            for j, v in enumerate(arg):
+                    output[(i_color,j)] = v
+
+            for key in output:
+                if matrix_strings == []:
+                    #first entry
+                    matrix_strings.append(""" 
+                    if (in1.eq.%s.and.in2.eq.%s)then
+                    out = %s
+                    """  % (key[0], key[1], output[key]))
+                else:
+                    #not first entry
+                    matrix_strings.append(""" 
+                    elseif (in1.eq.%s.and.in2.eq.%s)then
+                    out = %s
+                    """  % (key[0], key[1], output[key]))
+        if len(matrix_strings):                
+            matrix_strings.append(" else \n out = - 1 \n endif")
+        else: 
+            return "\n out = - 1 \n "
+        return "\n".join(matrix_strings)
+    
+    def make(self,*args,**opts):
+        pass
+
+    def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", split=-1,
+                       JAMP_formatLC=None):
+    
+        """Adding leading color part of the colorflow"""
+        
+        if not JAMP_formatLC:
+            JAMP_formatLC= "LN%s" % JAMP_format
+
+        error_msg="Malformed '%s' argument passed to the get_JAMP_lines"
+        if(isinstance(col_amps,helas_objects.HelasMatrixElement)):
+            col_amps=col_amps.get_color_amplitudes()
+        elif(isinstance(col_amps,list)):
+            if(col_amps and isinstance(col_amps[0],list)):
+                col_amps=col_amps
+            else:
+                raise MadGraph5Error, error_msg % 'col_amps'
+        else:
+            raise MadGraph5Error, error_msg % 'col_amps'
+
+        text = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
+                                            JAMP_format=JAMP_format,
+                                            AMP_format=AMP_format,
+                                            split=-1)
+        
+        
+        # Filter the col_ampls to generate only those without any 1/NC terms
+        
+        LC_col_amps = []
+        for coeff_list in col_amps:
+            to_add = []
+            for (coefficient, amp_number) in coeff_list:
+                if coefficient[3]==0:
+                    to_add.append( (coefficient, amp_number) )
+            LC_col_amps.append(to_add)
+           
+        text += super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
+                                            JAMP_format=JAMP_formatLC,
+                                            AMP_format=AMP_format,
+                                            split=-1)
+        
+        return text
+
+
+
 
 #===============================================================================
 # ProcessExporterFortranMW
@@ -2196,6 +2331,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # add the makefile in Source directory 
         filename = os.path.join(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FortranWriter(filename))
+
+
+
         
     #===========================================================================
     # convert_model_to_mg4
@@ -5018,10 +5156,11 @@ class UFO_model_to_mg4(object):
             #loop induced follow MadEvent way to handle the card.
             load_card = ''
             lha_read_filename='lha_read.f'            
-        elif self.opt['export_format'] in ['madloop','madloop_optimized']:
+        elif self.opt['export_format'] in ['madloop','madloop_optimized', 'madloop_matchbox']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
-        elif self.opt['export_format'].startswith('standalone') or self.opt['export_format'] in ['madweight']:
+        elif self.opt['export_format'].startswith('standalone') or self.opt['export_format'] in ['madweight']\
+	        or self.opt['export_format'].startswith('matchbox'):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
         else:
@@ -5046,9 +5185,11 @@ class UFO_model_to_mg4(object):
                 text = text.replace('madevent','aMCatNLO')
                 open(path, 'w').writelines(text)
         elif self.opt['export_format'] in ['standalone', 'standalone_msP','standalone_msF',
-                                  'madloop','madloop_optimized', 'standalone_rw', 'madweight']:
+                                  'madloop','madloop_optimized', 'standalone_rw', 'madweight','matchbox','madloop_matchbox']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
+        #elif self.opt['export_format'] in []:
+            #pass
         else:
             raise MadGraph5Error('Unknown format')
 
@@ -5847,16 +5988,21 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
       'SubProc_prefix':'P',
       'compute_color_flows':cmd.options['loop_color_flows']}
 
-    if output_type=='madloop':
+    if output_type.startswith('madloop'):
         import madgraph.loop.loop_exporters as loop_exporters
         if os.path.isdir(os.path.join(cmd._mgme_dir, 'Template/loop_material')):
             ExporterClass=None
             if not cmd.options['loop_optimized_output']:
                 ExporterClass=loop_exporters.LoopProcessExporterFortranSA
             else:
-                ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
-                MadLoop_SA_options['export_format'] = 'madloop_optimized'
-
+                if output_type == "madloop":
+                    ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                    MadLoop_SA_options['export_format'] = 'madloop_optimized'
+                elif output_type == "madloop_matchbox":
+                    ExporterClass=loop_exporters.LoopProcessExporterFortranMatchBox
+                    MadLoop_SA_options['export_format'] = 'madloop_matchbox'
+                else:
+                    raise Exception, "output_type not recognize %s" % output_type
             return ExporterClass(cmd._mgme_dir, cmd._export_dir, MadLoop_SA_options)
         else:
             raise MadGraph5Error('MG5_aMC cannot find the \'loop_material\' directory'+\
@@ -5937,6 +6083,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
             else:
                 return  ProcessExporterFortranME(cmd._mgme_dir, 
                                                             cmd._export_dir,opt)
+        elif format in ['matchbox']:
+            return ProcessExporterFortranMatchBox(cmd._mgme_dir, cmd._export_dir,opt)
         elif cmd._export_format in ['madweight'] and group_subprocesses:
 
             return ProcessExporterFortranMWGroup(cmd._mgme_dir, cmd._export_dir,
@@ -6242,4 +6390,4 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         return True
 
 
-
+    

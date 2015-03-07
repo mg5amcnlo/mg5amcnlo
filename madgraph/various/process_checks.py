@@ -1964,6 +1964,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         StabChecker.stdin.write('%.16E\n'%mu_r) 
         StabChecker.stdin.write('%d\n'%hel)
         StabChecker.stdin.write('%d\n'%split_orders)
+
         try:
             while True:
                 output = StabChecker.stdout.readline()  

@@ -1280,6 +1280,12 @@ This will take effect only in a NEW terminal
                 raise self.InvalidCmd('OLP value should be one of %s'\
                                                %str(MadGraphCmd._OLP_supported))
 
+        if args[0].lower() in ['ewscheme']:
+            if not self._curr_model:
+                raise self.InvalidCmd("ewscheme acts on the current model please load one first.")
+            if args[1] not in ['external']:
+                raise self.InvalidCmd('Only valid ewscheme is "external". To restore default, please re-import the model.')
+
         if args[0] in ['output_dependencies']:
             if args[1] not in MadGraphCmd._output_dependencies_supported:
                 raise self.InvalidCmd('output_dependencies value should be one of %s'\
@@ -1367,7 +1373,8 @@ This will take effect only in a NEW terminal
                     raise self.InvalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'madweight', 'standalone', 'standalone_cpp']:
+                     ['madevent', 'standalone', 'standalone_cpp', 'matchbox_cpp', 'madweight',
+                      'matchbox']:
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
@@ -1522,6 +1529,11 @@ This will take effect only in a NEW terminal
                                                name_dir(i))
         elif self._export_format == 'standalone_cpp':
             name_dir = lambda i: 'PROC_SA_CPP_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: pjoin(self.writing_dir,
+                                               name_dir(i))
+        elif self._export_format in ['matchbox_cpp', 'matchbox']:
+            name_dir = lambda i: 'PROC_MATCHBOX_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
@@ -2080,7 +2092,8 @@ class CompleteForCmd(cmd.CompleteCmd):
         forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
                             'mg5', 'DECAY', 'EventConverter', 'Models',
-                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct', 'aloha']
+                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct', 'aloha',
+                            'matchbox', 'matchbox_cpp', 'tests']
 
         #name of the run =>proposes old run name
         args = self.split_arg(line[0:begidx])
@@ -2158,7 +2171,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         # Format
         if len(args) == 1:
-            opts = self.options.keys()
+            opts = list(set(self.options.keys() + self._set_options))
             return self.list_completion(text, opts)
 
         if len(args) == 2:
@@ -2167,6 +2180,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
+            elif args[1].lower() == 'ewscheme':
+                return self.list_completion(text, ["external"])
             elif args[1] == 'gauge':
                 return self.list_completion(text, ['unitary', 'Feynman','default'])
             elif args[1] == 'OLP':
@@ -2408,7 +2423,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'update', 'Delphes2', 'SysCalc', 'Golem95']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
-    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
+    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
+                                            'matchbox_cpp', 'matchbox']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
@@ -2416,7 +2432,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'cpp_compiler',
                     'loop_optimized_output',
                     'complex_mass_scheme',
-                    'gauge']
+                    'gauge',
+                    'EWscheme']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=']
@@ -3707,6 +3724,12 @@ This implies that with decay chains:
                           "Multiparticle %s is or-multiparticle" % part_name + \
                           " which can be used only for required s-channels"
                 mylegids.extend(self._multiparticles[part_name])
+            elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():
+                if int(part_name) in self._curr_model.get('particle_dict'):
+                    mylegids.append(int(part_name))
+                else:
+                    raise self.InvalidCmd, \
+                      "No pdg_code %s in model" % part_name
             else:
                 mypart = self._curr_model['particles'].get_copy(part_name)
                 if mypart:
@@ -5549,7 +5572,11 @@ This implies that with decay chains:
             logging.getLogger('madevent').setLevel(level)
             if log:
                 logger.info('set output information to level: %s' % level)
-
+        elif args[0].lower() == "ewscheme":
+            logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
+                                              (self._curr_model.get('name'), args[1]))
+            logger.info("Importing a model will restore the default scheme")
+            self._curr_model.change_electroweak_mode(args[1])
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]]
             self.options[args[0]] = eval(args[1])
@@ -5793,6 +5820,10 @@ This implies that with decay chains:
         noclean = '-noclean' in args
         force = '-f' in args
         nojpeg = '-nojpeg' in args
+        flaglist = []
+        if '--postpone_model' in args:
+            flaglist.append('store_model')
+        
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
@@ -5851,6 +5882,8 @@ This implies that with decay chains:
         config['standalone_rw'] =  {'check': False, 'exporter': 'v4',  'output':'Template'}
         config['standalone_cpp'] = {'check': False, 'exporter': 'cpp', 'output': 'Template'}
         config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
+        config['matchbox_cpp'] =   {'check': True, 'exporter': 'cpp', 'output': 'Template'}
+        config['matchbox'] =       {'check': True, 'exporter': 'v4',  'output': 'Template'}
         config['madweight'] =      {'check': True, 'exporter': 'v4',  'output':'Template'}
 
         options = config[self._export_format]
@@ -5899,7 +5932,7 @@ This implies that with decay chains:
         self.export(nojpeg, main_file_name, args)
 
         # Automatically run finalize
-        self.finalize(nojpeg)
+        self.finalize(nojpeg, flaglist=flaglist)
 
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
@@ -6017,9 +6050,9 @@ This implies that with decay chains:
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 
-                                   'standalone_msP', 'standalone_msF', 
-                                   'standalone_rw', 'madweight']:
+        if self._export_format in ['standalone_cpp', 'madevent', 'standalone',
+                                   'standalone_msP', 'standalone_msF', 'standalone_rw',
+                                   'matchbox_cpp', 'madweight', 'matchbox']:
             path = pjoin(path, 'SubProcesses')
 
         cpu_time1 = time.time()
@@ -6097,7 +6130,8 @@ This implies that with decay chains:
                                 me, self._curr_fortran_model, me_number)
 
         # Fortran MadGraph5_aMC@NLO Standalone
-        if self._export_format in ['standalone', 'standalone_msP', 'standalone_msF', 'standalone_rw']:
+        if self._export_format in ['standalone', 'standalone_msP', 
+                                   'standalone_msF', 'standalone_rw', 'matchbox']:
             for me in matrix_elements[:]:
                 new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
@@ -6119,12 +6153,13 @@ This implies that with decay chains:
                     me, self._curr_fortran_model)
 
         # C++ standalone
-        if self._export_format == 'standalone_cpp':
+        if self._export_format in ['standalone_cpp', 'matchbox_cpp']:
             for me in matrix_elements:
                 export_cpp.generate_subprocess_directory_standalone_cpp(\
                               me, self._curr_cpp_model,
-                              path = path)
-                    
+                              path = path,
+                              format=self._export_format)
+
         cpu_time2 = time.time() - cpu_time1
 
         logger.info(("Generated helas calls for %d subprocesses " + \
@@ -6156,12 +6191,13 @@ This implies that with decay chains:
                [me.get('base_amplitude') for me in \
                 matrix_elements])
 
-    def finalize(self, nojpeg, online = False):
+    def finalize(self, nojpeg, online = False, flaglist=[]):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
-                                   'standalone_msF', 'standalone_rw', 'NLO', 'madweight']:
+                                   'standalone_msF', 'standalone_rw', 'NLO', 'madweight',
+                                   'matchbox']:
 
             # For v4 models, copy the model/HELAS information.
             if self._model_v4_path:
@@ -6176,11 +6212,21 @@ This implies that with decay chains:
                 # these processes
                 wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
                 wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-                self._curr_exporter.convert_model_to_mg4(self._curr_model,
+                # For a unique output of multiple type of exporter need to store this
+                # information.             
+                if hasattr(self, 'previous_lorentz'):
+                    wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
+                    wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                    del self.previous_lorentz
+                    del self.previous_couplings
+                if 'store_model' in flaglist:
+                    self.previous_lorentz = wanted_lorentz
+                    self.previous_couplings = wanted_couplings
+                else:
+                    self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                                wanted_lorentz,
                                                wanted_couplings)
-        
-        if self._export_format == 'standalone_cpp':
+        if self._export_format in ['standalone_cpp', 'matchbox_cpp']:
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
@@ -6240,7 +6286,7 @@ This implies that with decay chains:
                          to_keep={'mg5_path':MG5DIR})
 
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 'standalone_msF',
-                                   'standalone_rw', 'madweight']:
+                                   'standalone_rw', 'madweight', 'matchbox']:
 
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
@@ -6249,7 +6295,7 @@ This implies that with decay chains:
                                            online,
                                            self.options['fortran_compiler'])
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
         if self._export_format in ['madevent', 'NLO']:

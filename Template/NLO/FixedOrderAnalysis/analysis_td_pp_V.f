@@ -11,8 +11,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*(*) weights_info(*)
       integer j,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
-      character*5 cc(2)
-      data cc/'     ','Born '/
+      character*6 cc(2)
+      data cc/'|T@NLO','|T@LO '/
       real * 8 bin,xmi,xms,pi
       parameter (pi=3.14159265358979312d0)
       include 'dbook.inc'
