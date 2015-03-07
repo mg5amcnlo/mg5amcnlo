@@ -2742,14 +2742,14 @@ Integrated cross-section
                                      pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
                         elif out_id=='HWU':
                             histogram_list=histograms.HwUList(plotfiles[0])
-                            for ii, histo in enumerate(histogram_list):
-                                histogram_list[ii] = histo*norm
+                            for i, histo in enumerate(histogram_list):
+                                histogram_list[i] = histo*norm
                             for histo_path in plotfiles[1:]:
-                                for ii, histo in enumerate(histograms.HwUList(histo_path)):
+                                for i, histo in enumerate(histograms.HwUList(histo_path)):
                                     # First make sure the plots have the same weight labels and such
-                                    histo.test_plot_compability(histogram_list[ii])
+                                    histo.test_plot_compability(histogram_list[i])
                                     # Now let the histogram module do the magic and add them.
-                                    histogram_list[ii] += histo*norm
+                                    histogram_list[i] += histo*norm
                             # And now output the finalized list
                             histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,'%s%d'% (filename, i)),
                                                   format = 'gnuplot')
@@ -3704,7 +3704,7 @@ Integrated cross-section
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
-            if self.run_card['reweight_PDF'].lower() == '.true.':
+            if self.run_card['reweight_PDF']:
                 lhaid_list.append(int(self.run_card['PDF_set_min']))
                 lhaid_list.append(int(self.run_card['PDF_set_max']))
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
