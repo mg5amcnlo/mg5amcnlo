@@ -709,6 +709,9 @@ class IOTestManager(unittest.TestCase):
                     target = target.replace('MadGraph5_aMC@NLO v. %(version)s, %(date)s'\
                                                            %misc.get_pkg_info(),
                                           'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
+                    target = target.replace('v%(version)s (%(date)s)'\
+                                                           %misc.get_pkg_info(),
+                                                      'v%(version)s (%(date)s)')
                     file.close()
                     if os.path.isfile(comparison_path):
                         file = open(comparison_path,'r')
