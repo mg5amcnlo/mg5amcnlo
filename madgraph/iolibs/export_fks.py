@@ -563,6 +563,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_Sij.f',
                      'fks_powers.inc',
                      'fks_singular.f',
+                     'veto_xsec.f',
+                     'veto_xsec.inc',
                      'c_weight.inc',
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
@@ -1469,7 +1471,7 @@ end
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
+                             nexternal, ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -3095,7 +3097,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
+                             nexternal, ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),

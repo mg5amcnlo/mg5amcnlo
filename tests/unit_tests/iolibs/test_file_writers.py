@@ -32,7 +32,7 @@ class CheckFileCreate():
     output_path = '/tmp/' # work only on LINUX but that's ok for the test routine
     created_files =[]
 
-    def assertFileContains(self, filename, solution):
+    def assertFileContains(self, filename, solution, partial=False):
         """ Check the content of a file """
 
         if isinstance(filename, str):
@@ -52,12 +52,32 @@ class CheckFileCreate():
                 list_cur.remove('')
             else:
                 break            
-        for a, b in zip(list_sol, list_cur):
-            self.assertEqual(a,b)
-        #for a, b in zip(current_value.split('\n'), solution.split('\n')):
-        #    self.assertEqual(a,b)
-        #self.assertEqual(current_value.split('\n'), solution.split('\n'))
-        self.assertEqual(len(list_sol), len(list_cur))
+
+        #full match expected
+        if not partial:
+            for a, b in zip(list_sol, list_cur):
+                self.assertEqual(a,b)
+            #for a, b in zip(current_value.split('\n'), solution.split('\n')):
+            #    self.assertEqual(a,b)
+            #self.assertEqual(current_value.split('\n'), solution.split('\n'))
+            self.assertEqual(len(list_sol), len(list_cur))
+        else:
+            #partial match expected
+            old_start = 0
+            len_sol = len(list_sol)
+            while 1:
+                start = list_cur[old_start:].index(list_sol[0])
+                if start == -1:
+                    raise
+                old_start += start
+                for a, b in zip(list_sol, list_cur[start:start+len_sol]):
+                    try:
+                        self.assertEqual(a,b)                
+                    except Exception:
+                        continue
+                else:
+                    break
+            
 
     def give_pos(self, filename):
         """ take a name and a change it in order to have a valid path in the output directory """

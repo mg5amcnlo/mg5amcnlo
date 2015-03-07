@@ -234,11 +234,15 @@ c
          firsttime=.false.
       endif
       ievent=66
-      if (ickkw.ne.4) then
-         scale = shower_scale
-      else
+
+      if (ickkw.eq.4) then
          scale = sqrt(muF12_current)
+      elseif (ickkw.eq.-1) then
+         scale = mu_r
+      else
+         scale = shower_scale
       endif
+
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
 

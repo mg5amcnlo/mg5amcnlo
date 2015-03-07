@@ -65,12 +65,15 @@ class TestEditCardCmd(unittest.TestCase):
         card = 'MadWeight_card'
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
+        card = 'shower_card'
+        files.cp(pjoin(template_path, 'NLO/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
+        files.cp(pjoin(template_path, 'NLO/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
         
         #MadLoop Card
         files.cp(pjoin(template_path, 'loop_material/StandAlone/Cards/MadLoopParams.dat'), '/tmp/edit_card/Cards')
         
         fakemother = FakeInterface('/tmp/edit_card/')
-        self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat'],
+        self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat', 'shower_card.dat'],
                                         mode='auto', mother_interface=fakemother)
 
     def get_completion(self, text):
@@ -462,4 +465,23 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertEqual(mw['mw_select']['f'], ['1', '2','3'])
 
         
+    def test_modif_shower_card(self):
+        """ """
+        
+        shower = self.cmd.shower_card
+        nevents = shower['nevents']
+        self.cmd.do_set('shower_card nevents 199')
+        self.assertEqual(shower['nevents'], 199)
+        self.cmd.do_set('shower_card nevents default')        
+        self.assertEqual(shower['nevents'], -1)
+        self.cmd.do_set('mup_stable true')
+        self.assertEqual(shower['mup_stable'], True)
+        self.cmd.do_set('mup_stable F')
+        self.assertEqual(shower['mup_stable'], False)
+        self.cmd.do_set('mup_stable .true.')
+        self.assertEqual(shower['mup_stable'], True)
+        self.cmd.do_set('analyse a.o b.o c.o d.o')
+        self.assertEqual(shower['analyse'], 'a.o b.o c.o d.o')
+        self.cmd.do_set('shower_card analyse a.o b.o c.o f.o')
+        self.assertEqual(shower['analyse'], 'a.o b.o c.o f.o')
         
