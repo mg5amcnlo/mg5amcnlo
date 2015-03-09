@@ -2101,7 +2101,7 @@ c     this subdir has no soft singularities
             charges = [0.] * len(colors) 
 
             fks_i = len(colors)
-            for cpos, col in enumerate(colors):
+            for cpos, col in enumerate(colors[:-1]):
                 if col != 1:
                     fks_j = cpos+1
 
@@ -2113,7 +2113,7 @@ c     this subdir has no soft singularities
                             % ', '.join([str(pdg) for pdg in pdgs])]
             charge_lines = ['DATA (PARTICLE_CHARGE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
                             % ', '.join('%19.15fd0' % charg for charg in charges)]
-            fks_j_from_i_lines = ['DATA((FKS_J_FROM_I_D(1, %d, JPOS), JPOS = 0, 1)  / 1, %d /' \
+            fks_j_from_i_lines = ['DATA (FKS_J_FROM_I_D(1, %d, JPOS), JPOS = 0, 1)  / 1, %d /' \
                             % (fks_i, fks_j)]
             
 
