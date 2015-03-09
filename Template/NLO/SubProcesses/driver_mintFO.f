@@ -632,6 +632,9 @@ c     Constants
 c
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'run.inc'
 c
 c     Arguments
 c
@@ -767,6 +770,18 @@ c
         nbody=.false.
       endif
       abrv=abrvinput(1:4)
+      if (fks_configs.eq.1) then
+         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
+            write (*,*) 'Process generated with [LOonly=QCD]. '/
+     $           /'Setting abrv to "born".'
+            abrv='born'
+            if (ickkw.eq.3) then
+               write (*,*) 'FxFx merging not possible with'/
+     $              /' [LOonly=QCD] processes'
+               stop 1
+            endif
+         endif
+      endif
 c Options are way too many: make sure we understand all of them
       if ( abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
      &     abrv.ne.'virt'.and.
