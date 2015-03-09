@@ -459,7 +459,7 @@ class TestEditCardCmd(unittest.TestCase):
         
         # check that we can add block
         self.cmd.do_set('MadWeight_card mw_select E True')
-        self.assertEqual(mw['mw_select']['e'], 'true')
+        self.assertEqual(mw['mw_select']['e'].lower(), 'true')
         # check that we can add more than one value + add item
         self.cmd.do_set('mw_select F 1 2 3')
         self.assertEqual(mw['mw_select']['f'], ['1', '2','3'])
