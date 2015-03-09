@@ -2752,14 +2752,14 @@ Integrated cross-section
                                      pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
                         elif out_id=='HWU':
                             histogram_list=histograms.HwUList(plotfiles[0])
-                            for i, histo in enumerate(histogram_list):
-                                histogram_list[i] = histo*norm
+                            for ii, histo in enumerate(histogram_list):
+                                histogram_list[ii] = histo*norm
                             for histo_path in plotfiles[1:]:
-                                for i, histo in enumerate(histograms.HwUList(histo_path)):
+                                for ii, histo in enumerate(histograms.HwUList(histo_path)):
                                     # First make sure the plots have the same weight labels and such
-                                    histo.test_plot_compability(histogram_list[i])
+                                    histo.test_plot_compability(histogram_list[ii])
                                     # Now let the histogram module do the magic and add them.
-                                    histogram_list[i] += histo*norm
+                                    histogram_list[ii] += histo*norm
                             # And now output the finalized list
                             histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,'%s%d'% (filename, i)),
                                                   format = 'gnuplot')
