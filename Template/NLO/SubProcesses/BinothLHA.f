@@ -52,6 +52,7 @@ c general MadFKS parameters
       double precision tolerance, prec_found
       double precision, allocatable :: accuracies(:)
       integer i,j,IOErr, IOErrCounter
+      integer dt(8)
       integer nbad, nbadmax
       double precision target,ran2,accum
       external ran2
@@ -236,7 +237,8 @@ c optimized loop output
                  IOErrCounter = IOErrCounter+1
                  write(*,*) "File HelFilter.dat busy, retrying for"//
      &           " the ",IOErrCounter," time."
-                 call sleep(1)
+                 call date_and_time(values=dt)
+                 call sleep(1+(dt(8)/200))
                  goto 198
                endif
                write (*,*) 'Cannot do MC over hel:'/
