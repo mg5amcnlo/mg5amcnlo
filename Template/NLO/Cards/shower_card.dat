@@ -100,6 +100,8 @@ njmax      = 0        # Maximal multiplicity in the merging
 # create a StdHEP/HepMC file, but to directly run an own analysis (to  *
 # be placed in HWAnalyzer or analogous MCatNLO subfolders).            *
 # Please use files in those folders as examples.                       *
+# Remember that if your analysis uses hbook or is in the HwU format,   *
+# you must also add to hbook.o or HwU.o to the ANALYSE list as well.   *
 #***********************************************************************
 EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
                                  # Default: "stdhep Fmcfio"

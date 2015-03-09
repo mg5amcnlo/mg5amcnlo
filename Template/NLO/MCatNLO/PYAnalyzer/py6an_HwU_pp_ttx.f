@@ -1,6 +1,22 @@
 c
 c Example analysis for "p p > t t~ [QCD]" process.
 c
+c It features the HwU format for histogram booking and output.
+c The details of how to process/manipulate the resulting .HwU file,
+c in particular how to plot it using gnuplot, I refer the reader to this
+c FAQ:
+c
+c      https://answers.launchpad.net/mg5amcnlo/+faq/2671
+c
+c It mostly relies on using the following madgraph5 module in standalone
+c
+c  <MG5_aMC_install_dir>/madgraph/various/histograms.py
+c
+c You can learn about how to run it and what options are available with
+c
+c  python <MG5_aMC_install_dir>/madgraph/various/histograms.py --help
+c
+
 C----------------------------------------------------------------------
       SUBROUTINE RCLOS()
 C     DUMMY IF HBOOK IS USED
@@ -17,8 +33,18 @@ C----------------------------------------------------------------------
       REAL*8 pi
       integer j,kk,l,i
       PARAMETER (PI=3.14159265358979312D0)
-      character*5 cc(2)
-      data cc/'     ','cuts '/
+c
+c     The type suffix of the histogram title, with syntax 
+c     |T@<type_name> is semantic in the HwU format. It allows for
+c     various filtering when using the histogram.py module
+c     (see comment at the beginning of this file).
+c     It is in general a good idea to keep the same title for the
+c     same observable (if they use the same range) and differentiate
+c     them only using the type suffix.
+c
+      character*8 HwUtype(2)
+      data HwUtype/'|T@NOCUT','|T@CUT  '/
+
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
@@ -34,26 +60,31 @@ c for the uncertainty estimate
       nwgt_analysis=nwgt
       do i=1,2
        l=(i-1)*20
-       call HwU_book(l+ 1,'tt pt            '//cc(i),50,0.d0,100.d0)
-       call HwU_book(l+ 2,'tt log[pt]       '//cc(i),98,0.1d0,5.d0)
-       call HwU_book(l+ 3,'tt inv m         '//cc(i),60,300.d0,1000.d0)
-       call HwU_book(l+ 4,'tt azimt         '//cc(i),20,0.d0,pi)
-       call HwU_book(l+ 5,'tt del R         '//cc(i),60,0.d0,3*pi)
-       call HwU_book(l+ 6,'tb pt            '//cc(i),100,0.d0,500.d0)
-       call HwU_book(l+ 7,'tb log[pt]       '//cc(i),98,0.1d0,5.d0)
-       call HwU_book(l+ 8,'t pt             '//cc(i),100,0.d0,500.d0)
-       call HwU_book(l+ 9,'t log[pt]        '//cc(i),98,0.1d0,5.d0)
-       call HwU_book(l+10,'tt delta eta     '//cc(i),40,-4.d0,4.d0)
-       call HwU_book(l+11,'y_tt             '//cc(i),80,-4.d0,4.d0)
-       call HwU_book(l+12,'delta y          '//cc(i),40,-4.d0,4.d0)
-       call HwU_book(l+13,'tt azimt zoomin  '//cc(i),20,2*pi/3,pi)
-       call HwU_book(l+14,'tt del R zoomin  '//cc(i),40,2*pi/3,4*pi/3)
-       call HwU_book(l+15,'y_tb             '//cc(i),80,-4.d0,4.d0)
-       call HwU_book(l+16,'y_t              '//cc(i),80,-4.d0,4.d0)
-       call HwU_book(l+17,'tt log[pi-azimt] '//cc(i),82,-4.d0,0.1d0)
-       call HwU_book(l+18,'tt pt zoomout    '//cc(i),96,80.d0,2000.d0)
-       call HwU_book(l+19,'tb pt zoomout    '//cc(i),100,400.d0,2400.d0)
-       call HwU_book(l+20,'t pt  zoomout    '//cc(i),100,400.d0,2400.d0)
+       call HwU_book(l+ 1,'tt pt            '//HwUtype(i),
+     &                                                 50,0.d0,100.d0)
+       call HwU_book(l+ 2,'tt log[pt]       '//HwUtype(i),98,0.1d0,5.d0)
+       call HwU_book(l+ 3,'tt inv m         '//HwUtype(i),60,300.d0,1000.d0)
+       call HwU_book(l+ 4,'tt azimt         '//HwUtype(i),20,0.d0,pi)
+       call HwU_book(l+ 5,'tt del R         '//HwUtype(i),60,0.d0,3*pi)
+       call HwU_book(l+ 6,'tb pt            '//HwUtype(i),
+     &                                                 100,0.d0,500.d0)
+       call HwU_book(l+ 7,'tb log[pt]       '//HwUtype(i),98,0.1d0,5.d0)
+       call HwU_book(l+ 8,'t pt             '//HwUtype(i),
+     &                                                 100,0.d0,500.d0)
+       call HwU_book(l+ 9,'t log[pt]        '//HwUtype(i),98,0.1d0,5.d0)
+       call HwU_book(l+10,'tt delta eta     '//HwUtype(i),40,-4.d0,4.d0)
+       call HwU_book(l+11,'y_tt             '//HwUtype(i),80,-4.d0,4.d0)
+       call HwU_book(l+12,'delta y          '//HwUtype(i),40,-4.d0,4.d0)
+       call HwU_book(l+13,'tt azimt zoomin  '//HwUtype(i),20,2*pi/3,pi)
+       call HwU_book(l+14,'tt del R zoomin  '//HwUtype(i),
+     &                                                 40,2*pi/3,4*pi/3)
+       call HwU_book(l+15,'y_tb             '//HwUtype(i),80,-4.d0,4.d0)
+       call HwU_book(l+16,'y_t              '//HwUtype(i),80,-4.d0,4.d0)
+       call HwU_book(l+17,'tt log[pi-azimt] '//HwUtype(i),
+     &                                                   82,-4.d0,0.1d0)
+       call HwU_book(l+18,'tt pt zoomout    '//HwUtype(i),96,80.d0,2000.d0)
+       call HwU_book(l+19,'tb pt zoomout    '//HwUtype(i),100,400.d0,2400.d0)
+       call HwU_book(l+20,'t pt  zoomout    '//HwUtype(i),100,400.d0,2400.d0)
       enddo
       END
 
