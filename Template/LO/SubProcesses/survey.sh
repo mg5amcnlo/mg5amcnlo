@@ -1,8 +1,9 @@
 #!/bin/bash
 
-if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then
-tar -xf MadLoop5_resources.tar;
+if [[ -e MadLoop5_resources.tar.gz && ! -e MadLoop5_resources ]]; then
+tar -xzf MadLoop5_resources.tar.gz;
 fi
+
 k=run1_app.log;
 script=ajob1;                      
 offset=$1;
