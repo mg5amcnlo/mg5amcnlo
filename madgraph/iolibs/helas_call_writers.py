@@ -124,7 +124,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
             sqso_name = ' '.join(['%s=%d'%(split_orders[i],val) for i, \
                        val in enumerate(squared_orders[sqso_index][0])])
             sqso_identifier = "(%s), i.e. of split order ID=%d,"\
-                                                        %(sqso_name, sqso_index)
+                                                      %(sqso_name, sqso_index+1)
             res.append(comment%sqso_identifier)
             res.append("IF(FILTER_SO.AND.SQSO_TARGET."+\
                                  "EQ.%d) GOTO %d"%(sqso_index+1,continue_label))
@@ -265,10 +265,11 @@ class HelasCallWriter(base_objects.PhysicsObject):
         corresponding to the key"""
 
         try:
-            call = self["amplitudes"][amplitude.get_call_key()](amplitude)
-            return call
+            call = self["amplitudes"][amplitude.get_call_key()]
         except KeyError, error:
             return ""
+        else:
+            return call(amplitude)
 
     def add_wavefunction(self, key, function):
         """Set the function for writing the wavefunction
@@ -1038,7 +1039,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + \
                    "%(LoopCoupling{0})s,%(MPLoopCoupling{0})s,".format(i+1)
         call = call + "%(LoopRank)d,"
-        call = call + "%(LoopSymmetryFactor)d,"
+        call = call + "%(LoopSymmetryFactor)d,%(LoopMultiplier)d,"
         call = call + "%(ampNumber)d,AMPL(1,%(ampNumber)d),S(%(ampNumber)d))"
         
         def create_loop_amp(amplitude):
@@ -1328,7 +1329,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         assert isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement), \
                   "%s not valid argument for get_coef_construction_calls" % \
                   repr(matrix_element)
-
+        loop_induced = (not matrix_element.get('processes')[0].get('has_born'))
         res = []
         sqso_max_lamp = [sqso[1][2] for sqso in squared_orders]     
 
@@ -1340,15 +1341,21 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                     res.append(self.get_wavefunction_call(lwf))
             for lamp in ldiag.get_loop_amplitudes():
                 # If the loop grouping is not desired, then make sure it is 
-                # turned off here.
-                if not group_loops:
+                # turned off here. It is of course not to be included for 
+                # loop-induced processes
+                if (not group_loops) or loop_induced:
                     lamp.set('loop_group_id',i)
                     i=i+1
                 create_coef=[
-                   'CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
-                   '%(loop_rank)d','%(lcut_size)d',
-                   '%(loop_number)d','%(LoopSymmetryFactor)d',
-                   '%(amp_number)d,H)']
+                     'CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
+                     '%(loop_rank)d','%(lcut_size)d',
+                     '%(loop_number)d','%(LoopSymmetryFactor)d',
+                     '%(LoopMultiplier)d']
+                if not loop_induced:
+                    create_coef.append('%(amp_number)d,H)')
+                else:
+                    create_coef.append('%(amp_number)d)')
+            
                 res.append('CALL %(proc_prefix)s'+','.join(create_coef)%{\
                   'number':lamp.get_final_loop_wavefunction().get('number'),
                   'loop_rank':lamp.get_analytic_info('wavefunction_rank'),
@@ -1358,7 +1365,8 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         # be added into the same LOOPCOEF array component.
                   'loop_number':(lamp.get('loop_group_id')+1),
                   'amp_number':lamp.get('amplitudes')[0].get('number'),
-                  'LoopSymmetryFactor':lamp.get('loopsymmetryfactor')})
+                  'LoopSymmetryFactor':lamp.get('loopsymmetryfactor'),
+                  'LoopMultiplier':lamp.get('multiplier')})
                 res.extend(self.get_sqso_target_skip_code(
                       lamp.get('amplitudes')[0].get('number'), 
                       sqso_max_lamp, 4000, split_orders, squared_orders,
@@ -1392,8 +1400,6 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             # Reformat the loop group list in a convenient form
             loop_group_refs=[(lamps[1][0],lamps[1][1:]) for lamps in \
                                               matrix_element.get('loop_groups')]
-            max_loop_group_ref = max([lg[0].get('loop_group_id') for lg in \
-                                                               loop_group_refs])
             for (lamp_ref, lamps) in loop_group_refs:
                 res.append("# CutTools call for loop numbers %s"%\
                    ','.join(['%d'%lamp_ref.get('number'),]+\
@@ -1407,7 +1413,12 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             for ldiag in matrix_element.get_loop_diagrams():
                 res.append("# CutTools call for loop # %d"%ldiag.get('number'))
                 for lamp in ldiag.get_loop_amplitudes():
+                    # Make sure the loop number is used instead of the loop
+                    # group number
+                    loop_group_id_tmp = lamp.get('loop_group_id')
+                    lamp.set('loop_group_id',lamp.get('number')-1)
                     res.append(self.get_amplitude_call(lamp))
+                    lamp.set('loop_group_id',loop_group_id_tmp)                    
 
         return res
 

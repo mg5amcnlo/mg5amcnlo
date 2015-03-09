@@ -239,6 +239,8 @@ def multiple_try(nb_try=5, sleep=20):
                     wait_once = True
                     time.sleep(sleep * (i+1))
 
+            if __debug__:
+                raise
             raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)
         return deco_f_retry
     return deco_retry
@@ -729,13 +731,13 @@ def gunzip(path, keep=False, stdout=None):
 
 def gzip(path, stdout=None, error=True, forceexternal=False):
     """ a standard replacement for os.system('gzip %s ' % path)"""
-
-
-    
+ 
     #for large file (>1G) it is faster and safer to use a separate thread
-    if os.path.getsize(path) > 1e9:
+    if os.path.getsize(path) > 1e9 or forceexternal:
         call(['gzip', '-f', path])
         if stdout:
+            if not stdout.endswith(".gz"):
+                stdout = "%s.gz" % stdout
             shutil.move('%s.gz' % path, stdout)
         return
     
@@ -919,6 +921,10 @@ class OptionParser(optparse.OptionParser):
 
 def sprint(*args, **opt):
     """Returns the current line number in our program."""
+    
+    if not __debug__:
+        return
+    
     import inspect
     if opt.has_key('log'):
         log = opt['log']
@@ -928,18 +934,36 @@ def sprint(*args, **opt):
         level = opt['level']
     else:
         level = logging.getLogger('madgraph').level
-        if level == 20:
-            level = 10 #avoid info level
+        #print  "madgraph level",level
+        #if level == 20:
+        #    level = 10 #avoid info level
+        #print "use", level
     lineno  =  inspect.currentframe().f_back.f_lineno
     fargs =  inspect.getframeinfo(inspect.currentframe().f_back)
     filename, lineno = fargs[:2]
     #file = inspect.currentframe().f_back.co_filename
     #print type(file)
+    try:
+        source = inspect.getsourcelines(inspect.currentframe().f_back)
+        line = source[0][lineno-source[1]]
+        line = re.findall(r"misc\.sprint\(\s*(.*)\)\s*($|#)", line)[0][0]
+        if line.startswith("'") and line.endswith("'") and line.count(",") ==0:
+            line= ''
+        elif line.startswith("\"") and line.endswith("\"") and line.count(",") ==0:
+            line= ''
+        elif line.startswith(("\"","'")) and len(args)==1 and "%" in line:
+            line= ''        
+    except Exception:
+        line=''
 
-
-    log.log(level, ' '.join([str(a) for a in args]) + \
-               '\nraised at %s at line %s ' % (filename, lineno))
+    if line:
+        intro = ' %s = \033[0m' % line
+    else:
+        intro = ''
     
+
+    log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
+                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
     return 
 
 ################################################################################

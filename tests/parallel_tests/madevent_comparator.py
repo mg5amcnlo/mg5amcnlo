@@ -524,6 +524,7 @@ class MG5Runner(MadEventRunner):
                 splitline=line.split()
                 #if len(splitline)==8:
                 output['cross_'+name]=splitline[0]
+                print "found %s %s" % (splitline[0], splitline[1])
         return output
 
 class MG5OldRunner(MG5Runner):

@@ -7,7 +7,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and TIR.
 C     
-C     Process: g g > t t~ [ QCD ]
+C     Process: g g > t t~ [ virt = QCD ]
 C     
 C     
 C     CONSTANTS 
@@ -46,6 +46,11 @@ C
       LOGICAL CTINIT, TIRINIT, GOLEMINIT
       COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT
 
+C     This variable will be used to detect changes in the TIR library
+C      used so as to force the reset of the TIR filter.
+      INTEGER LAST_LIB_USED
+      DATA LAST_LIB_USED/-1/
+
       COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3)
       COMPLEX*16 PJCOEFS(0:LOOPMAXCOEFS-1,3)
 C     
@@ -60,20 +65,44 @@ C
       REAL*8 LSCALE
       COMMON/ML5_0_CT/LSCALE,CTMODE
 
+C     The argument ILIB is the TIR library to be used for that
+C      specific library.
+      INTEGER LIBINDEX
+      COMMON/ML5_0_I_LIB/LIBINDEX
 
       COMPLEX*16 LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
       COMMON/ML5_0_LCOEFS/LOOPCOEFS
-
 C     ----------
 C     BEGIN CODE
 C     ----------
 
-C     INITIALIZE TIR IF NEEDED
-      IF(MLREDUCTIONLIB(I_LIB).EQ.4)THEN
+C     Initialize for the very first time ML is called LAST_ILIB with
+C      the first ILIB used.
+      IF(LAST_LIB_USED.EQ.-1) THEN
+        LAST_LIB_USED = MLREDUCTIONLIB(LIBINDEX)
+      ELSE
+C       We changed the TIR library so we must refresh the cache.
+        IF(MLREDUCTIONLIB(LIBINDEX).NE.LAST_LIB_USED) THEN
+          LAST_LIB_USED = MLREDUCTIONLIB(LIBINDEX)
+          CALL ML5_0_CLEAR_TIR_CACHE()
+        ENDIF
+      ENDIF
+
+      IF (MLREDUCTIONLIB(I_LIB).EQ.4) THEN
 C       Using Golem95
+C       PDEN is dummy for Golem95 so we just initialize it to zero
+C        here so as to use it for the function SWITCHORDER
+        DO I=0,3
+          DO J=1,NLOOPLINE-1
+            PDEN(I,J)=0.0D0
+          ENDDO
+        ENDDO
+        CALL ML5_0_SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
         CALL ML5_0_GOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
         RETURN
       ENDIF
+
+C     INITIALIZE TIR IF NEEDED
       IF (TIRINIT) THEN
         TIRINIT=.FALSE.
         CALL ML5_0_INITTIR()
@@ -128,11 +157,10 @@ C     NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       DO I=0,RANK
         NLOOPCOEFS=NLOOPCOEFS+(3+I)*(2+I)*(1+I)/6
       ENDDO
-
       SELECT CASE(MLREDUCTIONLIB(I_LIB))
       CASE(2)
 C     PJFry++
-      WRITE(*,*)'PJFRY is not installed correctly  !'
+      WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
       STOP
       CASE(3)
 C     IREGI
@@ -141,10 +169,9 @@ C     IREGI
 C     CONVERT TO MADLOOP CONVENTION
       CALL ML5_0_CONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)
       END SELECT
-
       DO I=1,3
-        RES(I)=LOOPCOEFS(0,I_SQSO,I_LOOPGROUP)*TIRCOEFS(0,I)
-        DO J=1,NLOOPCOEFS-1
+        RES(I)=(0.0D0,0.0D0)
+        DO J=0,NLOOPCOEFS-1
           RES(I)=RES(I)+LOOPCOEFS(J,I_SQSO,I_LOOPGROUP)*TIRCOEFS(J,I)
         ENDDO
       ENDDO
@@ -152,6 +179,60 @@ C     CONVERT TO MADLOOP CONVENTION
       RES(2)=NORMALIZATION*2.0D0*DBLE(RES(2))
       RES(3)=NORMALIZATION*2.0D0*DBLE(RES(3))
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
+      END
+
+      SUBROUTINE ML5_0_SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      IMPLICIT NONE
+
+      INTEGER CTMODE,NLOOPLINE
+
+      REAL*8 PL(0:3,NLOOPLINE)
+      REAL*8 PDEN(0:3,NLOOPLINE-1)
+      COMPLEX*16 M2L(NLOOPLINE)
+      REAL*8 NEW_PL(0:3,NLOOPLINE)
+      REAL*8 NEW_PDEN(0:3,NLOOPLINE-1)
+      COMPLEX*16 NEW_M2L(NLOOPLINE)
+
+      INTEGER I,J,K
+
+      IF (CTMODE.NE.2.AND.CTMODE.NE.4) THEN
+        RETURN
+      ENDIF
+
+      IF (NLOOPLINE.LE.2) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+          NEW_PDEN(J,NLOOPLINE-I) = PDEN(J,I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+          PDEN(J,I) = NEW_PDEN(J,I)
+        ENDDO
+      ENDDO
+
+      DO I=2,NLOOPLINE
+        NEW_M2L(I)=M2L(NLOOPLINE-I+2)
+      ENDDO
+      DO I=2,NLOOPLINE
+        M2L(I)=NEW_M2L(I)
+      ENDDO
+
+
+      DO I=1,NLOOPLINE
+        DO J=0,3
+          NEW_PL(J,I) = -PL(J,NLOOPLINE+1-I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE
+        DO J=0,3
+          PL(J,I) = NEW_PL(J,I)
+        ENDDO
+      ENDDO
+
       END
 
       SUBROUTINE ML5_0_INITTIR()
@@ -210,7 +291,7 @@ C
 C     CONSTANTS
 C     
       INTEGER NLOOPLIB,QP_NLOOPLIB
-      PARAMETER (NLOOPLIB=3,QP_NLOOPLIB=1)
+      PARAMETER (NLOOPLIB=4,QP_NLOOPLIB=1)
 C     
 C     ARGUMENTS
 C     
@@ -219,7 +300,7 @@ C
 C     
 C     LOCAL VARIABLES
 C     
-      INTEGER I,J_LIB,LIBNUM
+      INTEGER I,J_LIB,LIBNUM,SELECT_LIBINDEX
       LOGICAL LPASS
 C     
 C     GLOBAL VARIABLES
@@ -240,17 +321,22 @@ C       QP EVALUATION, ONLY CUTTOOLS
      $     //'b is correct'
         ENDIF
         J_LIB=0
-        DO I=1,QP_NLOOPLIB
-          IF(INDEX_QP_TOOLS(I).EQ.LIBINDEX)THEN
-            J_LIB=I
-            EXIT
+        SELECT_LIBINDEX=LIBINDEX
+        DO WHILE(J_LIB.EQ.0)
+          DO I=1,QP_NLOOPLIB
+            IF(INDEX_QP_TOOLS(I).EQ.SELECT_LIBINDEX)THEN
+              J_LIB=I
+              EXIT
+            ENDIF
+          ENDDO
+          IF(J_LIB.EQ.0)THEN
+            SELECT_LIBINDEX=SELECT_LIBINDEX+1
+            IF(SELECT_LIBINDEX.GT.NLOOPLIB.OR.MLREDUCTIONLIB(SELECT_LIB
+     $       INDEX).EQ.0)SELECT_LIBINDEX=1
           ENDIF
         ENDDO
-        IF(J_LIB.EQ.0)THEN
-          STOP 'CANNOT find the correct qp tool'
-        ENDIF
         I=J_LIB
-        I_LIB=LIBINDEX
+        I_LIB=SELECT_LIBINDEX
         LIBNUM=MLREDUCTIONLIB(I_LIB)
         DO
         CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
@@ -284,6 +370,13 @@ C       DP EVALUATION
       ENDIF
       RETURN
       END
+
+      SUBROUTINE ML5_0_CLEAR_TIR_CACHE()
+C     No TIR caching implemented, this is dummy. (The subroutine is
+C      kept as it might be called by the MC).
+      CONTINUE
+      END SUBROUTINE
+
 
 
       SUBROUTINE ML5_0_CONVERT_IREGI_COEFFS(RANK,IREGICOEFS,TIRCOEFS)

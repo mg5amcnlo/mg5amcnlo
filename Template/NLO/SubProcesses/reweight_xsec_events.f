@@ -160,10 +160,10 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
      #                    scale1_lhe,scale2_lhe,
      #                    kwgtinfo,kexternal,jwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        if(kwgtinfo.lt.1.or.kwgtinfo.gt.5)then
+        if((kwgtinfo.lt.1.or.kwgtinfo.gt.5) .and. kwgtinfo.ne.-5)then
           write(*,*)'This event file cannot be reweighted [2]',i
           write(*,*)kwgtinfo
-          stop
+          stop 1
         endif
         if(i.eq.1)then
           saved_weight=abs(XWGTUP)
@@ -197,26 +197,32 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
 
-      nScontributions=1
-
 c To keep track of the accumulated results:
-        do ii=1,numscales
-           do jj=1,numscales
-              xsecScale_acc(jj,ii)=0d0
-           enddo
-        enddo
-        do n=0,nsets
-           xsecPDFr_acc(n)=0d0
-        enddo
+      do ii=1,numscales
+         do jj=1,numscales
+            xsecScale_acc(jj,ii)=0d0
+         enddo
+      enddo
+      do n=0,nsets
+         xsecPDFr_acc(n)=0d0
+      enddo
+
+       nScontributions=1
 
 c Determine the flavor map between the NLO and Born
       call find_iproc_map()
 
+      
+
       do i=1,maxevt
-        call read_lhef_event(ifile,
+
+         
+         call read_lhef_event(ifile,
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-        call reweight_fill_extra_inverse()
+
+         if (kwgtinfo.ne.-5) then
+         call reweight_fill_extra_inverse()
 
         if(buff(1:1).ne.'#')then
           write(*,*)'This event file cannot be reweighted [3]',i
@@ -414,20 +420,13 @@ c Restore default PDFs
 
         endif
 
-c Keep track of the accumulated results:
-        if (numscales.gt.0) then
-           do ii=1,numscales
-              do jj=1,numscales
-                 xsecScale_acc(ii,jj)=xsecScale_acc(ii,jj)+wgtxsecmu(ii
-     $                ,jj)/wgtref*XWGTUP
-              enddo
-           enddo
-        endif
-        if (nsets.gt.0) then
-           do n=0,nsets
-              xsecPDFr_acc(n)=xsecPDFr_acc(n)+wgtxsecPDF(n)/wgtref
-     $             *XWGTUP
-           enddo
+        else                      ! kwgtinfo.eq.-5
+         
+        call fill_wgt_info_from_rwgt_lines
+        if (do_rwgt_scale)call reweight_scale_ext(yfactR,yfactF)
+        if (do_rwgt_pdf)  call reweight_pdf_ext
+        call fill_rwgt_arrays
+
         endif
 
 c renormalize all the scale & PDF weights to have the same normalization
@@ -442,6 +441,21 @@ c as XWGTUP
         if(do_rwgt_pdf)then
            do n=0,nsets
               wgtxsecPDF(n)=wgtxsecPDF(n)/wgtref*XWGTUP
+           enddo
+        endif
+
+c Keep track of the accumulated results:
+        if (numscales.gt.0) then
+           do ii=1,numscales
+              do jj=1,numscales
+                 xsecScale_acc(ii,jj)=xsecScale_acc(ii,jj)+wgtxsecmu(ii
+     $                ,jj)
+              enddo
+           enddo
+        endif
+        if (nsets.gt.0) then
+           do n=0,nsets
+              xsecPDFr_acc(n)=xsecPDFr_acc(n)+wgtxsecPDF(n)
            enddo
         endif
 
@@ -547,3 +561,167 @@ c do the same as above for the counterevents
       end
 
 
+
+
+
+
+
+
+
+      
+      subroutine fill_wgt_info_from_rwgt_lines
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'reweight0.inc'
+      integer i,idum,j,k,momenta_conf
+      icontr=n_ctr_found
+      iwgt=1
+      do i=1,icontr
+         read(n_ctr_str(i),*)(wgt(j,i),j=1,3),idum,(pdg(j,i),j=1
+     &        ,nexternal),QCDpower(i),(bjx(j,i),j=1,2),(scales2(j,i),j=1
+     &        ,3),momenta_conf,itype(i),nFKS(i),wgts(1,i)
+         do j=1,nexternal
+            do k=0,3
+               momenta(k,j,i)=momenta_str(k,j,momenta_conf)
+            enddo
+         enddo
+      enddo
+      end
+      
+      subroutine reweight_scale_ext(yfactR,yfactF)
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'run.inc'
+      integer i,pd,lp,iwgt_save,kr,kf
+      double precision yfactR(3),yfactF(3),mu2_f(3),mu2_r(3),xlum(3)
+     &     ,pdg2pdf,mu2_q,rwgt_muR_dep_fac,g(3),alphas,pi
+      parameter (pi=3.14159265358979323846d0)
+      external pdg2pdf,rwgt_muR_dep_fac,alphas
+      iwgt_save=iwgt
+      do i=1,icontr
+         iwgt=iwgt_save
+         mu2_q=scales2(1,i)
+         do kr=1,3
+            mu2_r(kr)=scales2(2,i)*yfactR(kr)**2
+c Update the strong coupling
+            g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
+         enddo
+         do kf=1,3
+            mu2_f(kf)=scales2(3,i)*yfactF(kf)**2
+c call the PDFs
+            xlum(kf)=1d0
+            LP=SIGN(1,LPP(1))
+            pd=pdg(1,i)
+            if (pd.eq.21) pd=0
+            xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i)
+     &           ,DSQRT(mu2_f(kf)))
+            LP=SIGN(1,LPP(2))
+            pd=pdg(2,i)
+            if (pd.eq.21) pd=0
+            xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i)
+     &           ,DSQRT(mu2_f(kf)))
+         enddo
+         do kr=1,3
+            do kf=1,3
+               iwgt=iwgt+1 ! increment the iwgt for the wgts() array
+               if (iwgt.gt.max_wgt) then
+                  write (*,*) 'ERROR too many weights in reweight_scale'
+     &                 ,iwgt,max_wgt
+                  stop 1
+               endif
+c add the weights to the array
+               wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)*log(mu2_r(kr)
+     &              /mu2_q)+wgt(3,i)*log(mu2_f(kf)/mu2_q))*g(kr)
+     &              **QCDpower(i)
+               wgts(iwgt,i)=wgts(iwgt,i)
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r(kr)))
+            enddo
+         enddo
+      enddo
+      return
+      end
+
+      
+      subroutine reweight_pdf_ext
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'run.inc'
+      include 'reweight0.inc'
+      integer i,pd,lp,iwgt_save,izero,n
+      parameter (izero=0)
+      double precision mu2_f,mu2_r,pdg2pdf,mu2_q,rwgt_muR_dep_fac
+     &     ,xlum,alphas,g,pi
+      parameter (pi=3.14159265358979323846d0)
+      external pdg2pdf,rwgt_muR_dep_fac,alphas
+      do n=0,numPDFpairs*2
+         iwgt=iwgt+1
+         if (iwgt.gt.max_wgt) then
+            write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
+     &           ,max_wgt
+            stop 1
+         endif
+         call InitPDF(n)
+         do i=1,icontr
+            mu2_q=scales2(1,i)
+            mu2_r=scales2(2,i)
+            mu2_f=scales2(3,i)
+c alpha_s
+            g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
+c call the PDFs
+            xlum=1d0
+            LP=SIGN(1,LPP(1))
+            pd=pdg(1,i)
+            if (pd.eq.21) pd=0
+            xlum=xlum*PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i),DSQRT(mu2_f))
+            LP=SIGN(1,LPP(2))
+            pd=pdg(2,i)
+            if (pd.eq.21) pd=0
+            xlum=xlum*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i),DSQRT(mu2_f))
+c add the weights to the array
+            wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
+     &           wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+            wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
+         enddo
+      enddo
+      call InitPDF(izero)
+      return
+      end
+      
+
+      subroutine fill_rwgt_arrays
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'reweight0.inc'
+      integer kr,kf,n,iw,i
+      do kr=1,numscales
+         do kf=1,numscales
+            wgtxsecmu(kr,kf)=0d0
+         enddo
+      enddo
+      do n=0,numPDFpairs*2
+         wgtxsecPDF(n)=0d0
+      enddo
+      do i=1,icontr
+         iw=2
+         do kr=1,numscales
+            do kf=1,numscales
+               wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)+wgts(iw,i)
+               iw=iw+1
+            enddo
+         enddo
+         do n=0,numPDFpairs*2
+            wgtxsecPDF(n)=wgtxsecPDF(n)+wgts(iw,i)
+            iw=iw+1
+         enddo
+      enddo
+      if (numscales.eq.0) then
+         wgtxsecmu(1,1)=wgtxsecPDF(0)
+      endif
+      return
+      end
+
+      

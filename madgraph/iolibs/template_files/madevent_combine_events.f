@@ -563,9 +563,14 @@ c     ncode is number of digits needed for the bw coding
 c              Write with correct number of digits
                write(formstr,'(a,i1,a)') '(a,i',npos,',a)'
                write(dirname, formstr) 'G',k,'/'
-            else               !Handle B.W.
+            else if(npos+ncode+1.lt.10) then               !Handle B.W.
 c              Write with correct number of digits
                write(formstr,'(a,i1,a,i1,a)') '(a,f',npos+ncode+1,
+     $                 '.',ncode,',a)'
+               write(dirname,formstr)  'G',xi,'/'
+            else               !Handle B.W.
+c              Write with correct number of digits
+               write(formstr,'(a,i2,a,i1,a)') '(a,f',npos+ncode+1,
      $                 '.',ncode,',a)'
                write(dirname,formstr)  'G',xi,'/'
             endif     

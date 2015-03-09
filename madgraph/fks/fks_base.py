@@ -31,6 +31,8 @@ from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.fks_base')
 
 
+class NoBornException(Exception): pass
+
 #===============================================================================
 # FKS Process
 #===============================================================================
@@ -102,9 +104,9 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         try:
             # Now generating the borns for the first time.
             super(FKSMultiProcess, self).__init__(*arguments,**options)
-        except InvalidCmd as error:
+        except diagram_generation.NoDiagramException as error:
             # If no born, then this process most likely does not have any.
-            raise InvalidCmd, "Born diagrams could not be generated for the "+\
+            raise NoBornException, "Born diagrams could not be generated for the "+\
                self['process_definitions'][0].nice_string().replace('Process',\
                'process')+". Notice that aMC@NLO does not handle loop-induced"+\
                " processes yet, but you can still use MadLoop if you want to "+\

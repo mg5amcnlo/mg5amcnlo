@@ -12,7 +12,7 @@ pjoin = os.path.join
 # It will crash of pass, without much details provided or possibility of
 # automatically updating it. In order to have a better monitoring and updating
 # functionalities for these tests, you can run them from
-#  ./test/test_manager.py -i [U|R] (|-f|-F) 'testGroup/testName/ALL'
+#  ./test/test_manager.py -[U|R] (|-f|-F) 'testGroup/testName/ALL'
 # For more information on the syntax of the above, you can type
 #  ./test/test_manager.py help
 

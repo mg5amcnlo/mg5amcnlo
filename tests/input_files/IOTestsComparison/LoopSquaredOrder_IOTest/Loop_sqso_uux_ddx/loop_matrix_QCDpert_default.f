@@ -16,6 +16,17 @@ C     Process: u u~ > d d~ [ QCD ]
 C     
       IMPLICIT NONE
 C     
+C     USER CUSTOMIZABLE OPTIONS
+C     
+C     This parameter is designed for the check timing command of MG5.
+C      It skips the loop reduction.
+      LOGICAL SKIPLOOPEVAL
+      PARAMETER (SKIPLOOPEVAL=.FALSE.)
+C     For timing checks. Stops the code after having only initialized
+C      its arrays from the external data files 
+      LOGICAL BOOTANDSTOP
+      PARAMETER (BOOTANDSTOP=.FALSE.)
+C     
 C     CONSTANTS
 C     
       CHARACTER*512 PARAMFNAME,HELCONFIGFNAME,LOOPFILTERFNAME
@@ -33,8 +44,10 @@ C
       PARAMETER (NBORNAMPS=1)
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=14, NLOOPGROUPS=13, NCTAMPS=51)
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=65)
       INTEGER    NCOLORROWS
-      PARAMETER (NCOLORROWS=65)
+      PARAMETER (NCOLORROWS=NLOOPAMPS)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
@@ -68,14 +81,10 @@ C     At present, there are only CutTools,PJFry++,IREGI,Golem95
 C     Only CutTools provides QP
       INTEGER QP_NLOOPLIB
       PARAMETER (QP_NLOOPLIB=1)
-C     This parameter is designed for the check timing command of MG5
-      LOGICAL SKIPLOOPEVAL
-      PARAMETER (SKIPLOOPEVAL=.FALSE.)
-      LOGICAL BOOTANDSTOP
-      PARAMETER (BOOTANDSTOP=.FALSE.)
       INTEGER MAXSTABILITYLENGTH
       DATA MAXSTABILITYLENGTH/20/
       COMMON/ML5_0_STABILITY_TESTS/MAXSTABILITYLENGTH
+
 C     
 C     ARGUMENTS 
 C     
@@ -103,7 +112,7 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER I,J,K,H,DUMMY,I_QP_LIB
+      INTEGER I,J,K,H,HEL_MULT,I_QP_LIB,DUMMY
 
       CHARACTER*512 PARAMFN,HELCONFIGFN,LOOPFILTERFN,COLORNUMFN
      $ ,COLORDENOMFN,HELFILTERFN
@@ -134,9 +143,8 @@ C      I+20.
       LOGICAL EVAL_DONE(MAXSTABILITYLENGTH)
       LOGICAL DOING_QP_EVALS
       INTEGER STAB_INDEX,BASIC_CT_MODE
-      INTEGER N_DP_EVAL, N_QP_EVAL
-      DATA N_DP_EVAL/1/
-      DATA N_QP_EVAL/1/
+
+
       REAL*8 ACC(0:NSQUAREDSO)
       REAL*8 DP_RES(3,0:NSQUAREDSO,MAXSTABILITYLENGTH)
 C     QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM
@@ -149,9 +157,10 @@ C      DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
       REAL*8 HELSAVED(3,NCOMB)
       INTEGER ITEMP
       LOGICAL LTEMP
-      REAL*8 BORNBUFF(0:NSQSO_BORN)
+      REAL*8 BORNBUFF(0:NSQSO_BORN),TMPR
       REAL*8 BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3
-     $ ,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO),TEMP2
+     $ ,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO)
+      REAL*8 TEMP2
       COMPLEX*16 COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 CFTOT
       LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
@@ -160,6 +169,10 @@ C      DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
       LOGICAL LOOPFILTERBUFF(NSQUAREDSO,NLOOPGROUPS)
       DATA ((LOOPFILTERBUFF(J,I),J=1,NSQUAREDSO),I=1,NLOOPGROUPS)
      $ /NSQSOXNLG*.FALSE./
+
+      LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
+      DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
+      COMMON/ML5_0_RUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
 
       INTEGER IDEN
       DATA IDEN/36/
@@ -179,6 +192,7 @@ C      stability check to take place
 C     
 C     FUNCTIONS
 C     
+      INTEGER ML5_0_TIRCACHE_INDEX
       INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP
       INTEGER ML5_0_ML5SOINDEX_FOR_LOOP_AMP
       INTEGER ML5_0_ML5SQSOINDEX
@@ -192,9 +206,15 @@ C
       INCLUDE 'mp_coupl.inc'
       INCLUDE 'MadLoopParams.inc'
 
+
       LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
       DATA CHOSEN_SO_CONFIGS/.TRUE./
       COMMON/ML5_0_CHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
+
+      INTEGER N_DP_EVAL, N_QP_EVAL
+      DATA N_DP_EVAL/1/
+      DATA N_QP_EVAL/1/
+      COMMON/ML5_0_N_EVALS/N_DP_EVAL,N_QP_EVAL
 
       LOGICAL CHECKPHASE
       DATA CHECKPHASE/.TRUE./
@@ -212,13 +232,13 @@ C
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE
 C      AVAILABLE OR NOT
       LOGICAL LOOPLIBS_AVAILABLE(4)
-      DATA LOOPLIBS_AVAILABLE /.TRUE.,.TRUE.,.TRUE.,.TRUE./
+      DATA LOOPLIBS_AVAILABLE/.TRUE.,.TRUE.,.TRUE.,.TRUE./
       COMMON/ML5_0_LOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS
 C      AVAILABLE OR NOT IN THE LOOPLIBS
 C     PJFry++ and Golem95 do not support direction test
       LOGICAL LOOPLIBS_DIRECTEST(4)
-      DATA LOOPLIBS_DIRECTEST /.TRUE.,.FALSE.,.TRUE.,.FALSE./
+      DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE./
 
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
@@ -315,6 +335,8 @@ C     TILL NOW, ONLY CUTTOOLS PROVIDE QP
       COMPLEX*16 LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
       COMMON/ML5_0_LCOEFS/LOOPCOEFS
 
+
+
       COMPLEX*16 AMPL(3,NCTAMPS)
       COMMON/ML5_0_AMPL/AMPL
 
@@ -358,54 +380,121 @@ C     BEGIN CODE
 C     ----------
 
       IF(ML_INIT) THEN
+        ML_INIT = .FALSE.
         CALL PRINT_MADLOOP_BANNER()
         TMP = 'auto'
         CALL SETMADLOOPPATH(TMP)
         CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
         CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
-        ML_INIT = .FALSE.
+
+C       Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero
+C        if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
+        IF(.NOT.AUTOMATIC_TIR_CACHE_CLEARING) THEN
+          IF(NROTATIONS_DP.NE.0.OR.NROTATIONS_QP.NE.0) THEN
+            WRITE(*,*) 'INFO: AUTOMATIC_TIR_CACHE_CLEARING is disable'
+     $       //'d, so MadLoop automatically resets NROTATIONS_DP an'
+     $       //'d NROTATIONS_QP to 0.'
+            NROTATIONS_QP=0
+            NROTATIONS_DP=0
+          ENDIF
+        ENDIF
+      ENDIF
+
+      QP_TOOLS_AVAILABLE=.FALSE.
+      INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
+C     SKIP THE ONES THAT NOT AVAILABLE
+      J=1
+      DO I=1,NLOOPLIB
+        IF(MLREDUCTIONLIB(J).EQ.0)EXIT
+        IF(.NOT.LOOPLIBS_AVAILABLE(MLREDUCTIONLIB(J)))THEN
+          MLREDUCTIONLIB(J:NLOOPLIB-1)=MLREDUCTIONLIB(J+1:NLOOPLIB)
+          MLREDUCTIONLIB(NLOOPLIB)=0
+        ELSE
+          J=J+1
+        ENDIF
+      ENDDO
+      IF(MLREDUCTIONLIB(1).EQ.0)THEN
+        STOP 'No available loop reduction lib is provided. Make sur'
+     $   //'e MLReductionLib is correct.'
+      ENDIF
+      J=0
+      DO I=1,NLOOPLIB
+        IF(MLREDUCTIONLIB(I).EQ.1)THEN
+          J=J+1
+          IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
+          INDEX_QP_TOOLS(J)=I
+        ENDIF
+      ENDDO
+
+C     Setup the file paths
+      CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+      CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
+      CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
+      CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
+      CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
+      CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
+      CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
+
+      CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
+
+      OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
+     $  ACTION='READ')
+      DO I=1,NCOLORROWS
+        READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
+      ENDDO
+      GOTO 105
+ 104  CONTINUE
+      STOP 'Color factors could not be initialized from file ML5_0_Col'
+     $ //'orNumFactors.dat. File not found'
+ 105  CONTINUE
+      CLOSE(1)
+      OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
+     $  ACTION='READ')
+      DO I=1,NCOLORROWS
+        READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
+      ENDDO
+      GOTO 107
+ 106  CONTINUE
+      STOP 'Color factors could not be initialized from file ML5_0_Col'
+     $ //'orDenomFactors.dat. File not found'
+ 107  CONTINUE
+      CLOSE(1)
+      OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',                
+     $   ACTION='READ')
+      DO H=1,NCOMB
+        READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
+      ENDDO
+      GOTO 109
+ 108  CONTINUE
+      STOP 'Color helictiy configurations could not be initialize'
+     $ //'d from file ML5_0_HelConfigs.dat. File not found'
+ 109  CONTINUE
+      CLOSE(1)
+
+C     SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
+C     IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
+      DO I=0,3
+        PL(I,0)=(0.0D0,0.0D0)
+      ENDDO
+      DO I=1,MAXLWFSIZE
+        DO J=0,LOOPMAXCOEFS-1
+          DO K=1,MAXLWFSIZE
+            IF(I.EQ.K.AND.J.EQ.0) THEN
+              WL(I,J,K,0)=(1.0D0,0.0D0)
+            ELSE
+              WL(I,J,K,0)=(0.0D0,0.0D0)
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+      IF(BOOTANDSTOP) THEN
+        WRITE(*,*) 'Stopped by user request.'
+        STOP
       ENDIF
 
       IF(NTRY.EQ.0) THEN
-C       CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
-        QP_TOOLS_AVAILABLE=.FALSE.
-        INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
-C       SKIP THE ONES THAT NOT AVAILABLE
-        J=1
-        DO I=1,NLOOPLIB
-          IF(MLREDUCTIONLIB(J).EQ.0)EXIT
-          IF(.NOT.LOOPLIBS_AVAILABLE(MLREDUCTIONLIB(J)))THEN
-            MLREDUCTIONLIB(J:NLOOPLIB-1)=MLREDUCTIONLIB(J+1:NLOOPLIB)
-            MLREDUCTIONLIB(NLOOPLIB)=0
-          ELSE
-            J=J+1
-          ENDIF
-        ENDDO
-        IF(MLREDUCTIONLIB(1).EQ.0)THEN
-          STOP 'No available loop reduction lib is provided. Make sur'
-     $     //'e MLReductionLib is correct.'
-        ENDIF
-        J=0
-        DO I=1,NLOOPLIB
-          IF(MLREDUCTIONLIB(I).EQ.1)THEN
-            J=J+1
-            IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
-            INDEX_QP_TOOLS(J)=I
-          ENDIF
-        ENDDO
-
-C       Setup the file paths
-        CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
-        CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
-        CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
-        CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
-        CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
-        CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
-        CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
-
-        CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
-
-        HELDOUBLECHECKED=.NOT.DOUBLECHECKHELICITYFILTER
+        HELDOUBLECHECKED=(.NOT.DOUBLECHECKHELICITYFILTER).OR.(HELICITYF
+     $   ILTERLEVEL.EQ.0)
         OPEN(1, FILE=LOOPFILTERFN, ERR=100, STATUS='OLD',          
      $    ACTION='READ')
         DO J=1,NLOOPGROUPS
@@ -422,6 +511,13 @@ C       Setup the file paths
  101    CONTINUE
         CLOSE(1)
 
+        IF (HELICITYFILTERLEVEL.EQ.0) THEN
+          FOUNDHELFILTER=.TRUE.
+          DO J=1,NCOMB
+            GOODHEL(J)=1
+          ENDDO
+          GOTO 122
+        ENDIF
         OPEN(1, FILE=HELFILTERFN, ERR=102, STATUS='OLD',          
      $    ACTION='READ')
         DO I=1,NCOMB
@@ -435,63 +531,17 @@ C       Setup the file paths
         ENDDO
  103    CONTINUE
         CLOSE(1)
-
-        OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
-     $    ACTION='READ')
-        DO I=1,NCOLORROWS
-          READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
-        ENDDO
-        GOTO 105
- 104    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorNumFactors.dat. File not found'
- 105    CONTINUE
-        CLOSE(1)
-        OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
-     $    ACTION='READ')
-        DO I=1,NCOLORROWS
-          READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
-        ENDDO
-        GOTO 107
- 106    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorDenomFactors.dat. File not found'
- 107    CONTINUE
-        CLOSE(1)
-        OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',              
-     $       ACTION='READ')
-        DO H=1,NCOMB
-          READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
-        ENDDO
-        GOTO 109
- 108    CONTINUE
-        STOP 'Color helictiy configurations could not be initialize'
-     $   //'d from file ML5_0_HelConfigs.dat. File not found'
- 109    CONTINUE
-        CLOSE(1)
-
-C       SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
-C       IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
-        DO I=0,3
-          PL(I,0)=(0.0D0,0.0D0)
-        ENDDO
-        DO I=1,MAXLWFSIZE
-          DO J=0,LOOPMAXCOEFS-1
-            DO K=1,MAXLWFSIZE
-              IF(I.EQ.K.AND.J.EQ.0) THEN
-                WL(I,J,K,0)=(1.0D0,0.0D0)
-              ELSE
-                WL(I,J,K,0)=(0.0D0,0.0D0)
-              ENDIF
-            ENDDO
+        IF (HELICITYFILTERLEVEL.EQ.1) THEN
+C         We must make sure to remove the matching-helicity optimisatio
+C         n, as requested by the user.
+          DO J=1,NCOMB
+            IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.HELOFFSET)) THEN
+              GOODHEL(J)=1
+            ENDIF
           ENDDO
-        ENDDO
-        IF(BOOTANDSTOP) THEN
-          WRITE(*,*) 'Stopped by user request.'
-          STOP
         ENDIF
+ 122    CONTINUE
       ENDIF
-
 
 C     First compute the borns, it will store them in ANS(0,I)
 C     It is left untouched for the rest of MadLoop evaluation.
@@ -511,7 +561,6 @@ C     the split_order summed value I=0 is used in ML5 code.
       DO I=0,NSQSO_BORN
         ANS(0,I)=BORNBUFF(I)
       ENDDO
-
 
 C     We set here the reference to the born summed over all split
 C      orders
@@ -557,8 +606,8 @@ C        trust the evaluation for checks.
      $ ).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
       IF (WRITEOUTFILTERS) THEN
-        IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
-
+        IF ((HELICITYFILTERLEVEL.NE.0).AND.(.NOT. CHECKPHASE).AND.(.NOT
+     $   .FOUNDHELFILTER)) THEN
           OPEN(1, FILE=HELFILTERFN, ERR=110, STATUS='NEW',ACTION='WRIT'
      $     //'E')
           DO I=1,NCOMB
@@ -627,6 +676,7 @@ C        trust the evaluation for checks.
         ENDDO
       ENDDO
 
+
       IF (IMPROVEPSPOINT.GE.0) THEN
 C       Make the input PS more precise (exact onshell and energy-moment
 C       um conservation)
@@ -647,11 +697,25 @@ C       um conservation)
           AMPL(K,I)=(0.0D0,0.0D0)
         ENDDO
       ENDDO
-C     USE THE FIRST LOOP REDUCTION LIBRARY AND THE FIRST QP LOOP
-C      REDUCTION LIBRARY
+
+C     Start by using the first available loop reduction library and qp
+C      library.
       I_LIB=1
       I_QP_LIB=1
+
+      GOTO 208
+C     MadLoop jumps to this label during stability checks when it
+C      recomputes a rotated PS point
  200  CONTINUE
+C     For the computation of a rotated version of this PS point we
+C      must reset the TIR cache since this changes the definition of
+C      the loop denominators.
+      CALL ML5_0_CLEAR_TIR_CACHE()
+ 208  CONTINUE
+
+C     MadLoop jumps to this label during initialization when it goes
+C      to the computation of the next helicity.
+ 205  CONTINUE
 
       IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
         CALL ML5_0_SET_MP_PS(P_USER)
@@ -676,7 +740,7 @@ C      REDUCTION LIBRARY
       DO I=1,NLOOPGROUPS
         DO J=1,3
           DO K=1,NSQUAREDSO
-            LOOPRES(J,K,I)=0.0D0
+            LOOPRES(J,K,I)=(0.0D0,0.0D0)
           ENDDO
         ENDDO
       ENDDO
@@ -712,6 +776,14 @@ C       computed in quadruple precision.
           UVCT_REQ_SO_DONE=.FALSE.
           CT_REQ_SO_DONE=.FALSE.
           LOOP_REQ_SO_DONE=.FALSE.
+
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
+     $     -1) THEN
+            HEL_MULT=GOODHEL(H)
+          ELSE
+            HEL_MULT=1
+          ENDIF
+
 
 C         Helas calls for the born amplitudes and counterterms
 C          associated to given loops
@@ -787,7 +859,7 @@ C         Counter-term amplitude(s) for loop diagram number 15
           CALL R2_GG_1_R2_GG_3_0(W(1,5),W(1,6),R2_GGQ,R2_GGB,AMPL(1
      $     ,51))
 C         At this point, all CT amps needed for (QCD=6), i.e. of split
-C          order ID=0, are computed.
+C          order ID=1, are computed.
           IF(FILTER_SO.AND.SQSO_TARGET.EQ.1) GOTO 2000
  2000     CONTINUE
           CT_REQ_SO_DONE=.TRUE.
@@ -802,12 +874,6 @@ C         FeynRules, there are none of these type of counterterms.
  3000     CONTINUE
           UVCT_REQ_SO_DONE=.TRUE.
 
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
-            DUMMY=GOODHEL(H)
-          ELSE
-            DUMMY=1
-          ENDIF
           DO I=1,NCTAMPS
             DO J=1,NBORNAMPS
               CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0D0)
@@ -816,8 +882,8 @@ C         FeynRules, there are none of these type of counterterms.
      $         I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
               IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
                 DO K=1,3
-                  TEMP2 = 2.0D0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J
-     $             )))
+                  TEMP2 = 2.0D0*HEL_MULT*DBLE(CFTOT*AMPL(K,I)
+     $             *DCONJG(AMP(J)))
                   ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
                   ANS(K,0)=ANS(K,0)+TEMP2
                 ENDDO
@@ -830,7 +896,7 @@ C         Coefficient construction for loop diagram with ID 2
           CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,1))
           CALL VVV1L2P0_1(PL(0,1),W(1,6),GC_10,ZERO,ZERO,PL(0,2),COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,1),4,COEFS,4,4,WL(1,0,1,2))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,2),2,4,1,2,52,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,2),2,4,1,2,1,52,H)
 C         Coefficient construction for loop diagram with ID 3
           CALL FFV1L3_1(PL(0,0),W(1,3),GC_11,MDL_MD,ZERO,PL(0,3),COEFS)
           CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,3))
@@ -838,7 +904,7 @@ C         Coefficient construction for loop diagram with ID 3
           CALL ML5_0_UPDATE_WL_1_0(WL(1,0,1,3),4,COEFS,4,4,WL(1,0,1,4))
           CALL VVV1L2P0_1(PL(0,4),W(1,5),GC_10,ZERO,ZERO,PL(0,5),COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,4),4,COEFS,4,4,WL(1,0,1,5))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,5),2,4,2,1,53,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,5),2,4,2,1,1,53,H)
 C         Coefficient construction for loop diagram with ID 4
           CALL FFV1L1P0_3(PL(0,0),W(1,3),GC_11,ZERO,ZERO,PL(0,6),COEFS)
           CALL ML5_0_UPDATE_WL_0_0(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,6))
@@ -846,7 +912,7 @@ C         Coefficient construction for loop diagram with ID 4
           CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,6),4,COEFS,4,4,WL(1,0,1,7))
           CALL FFV1L1_2(PL(0,7),W(1,5),GC_11,MDL_MD,ZERO,PL(0,8),COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,7),4,COEFS,4,4,WL(1,0,1,8))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,8),2,4,3,1,54,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,8),2,4,3,1,1,54,H)
 C         Coefficient construction for loop diagram with ID 5
           CALL FFV1L2P0_3(PL(0,0),W(1,1),GC_11,ZERO,ZERO,PL(0,9),COEFS)
           CALL ML5_0_UPDATE_WL_0_0(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1,9))
@@ -858,7 +924,7 @@ C         Coefficient construction for loop diagram with ID 5
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,10),4,COEFS,4,4,WL(1,0,1
      $     ,11))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,11),2,4,4,1,55,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,11),2,4,4,1,1,55,H)
 C         Coefficient construction for loop diagram with ID 6
           CALL FFV1L3_2(PL(0,0),W(1,1),GC_11,MDL_MU,ZERO,PL(0,12)
      $     ,COEFS)
@@ -872,7 +938,7 @@ C         Coefficient construction for loop diagram with ID 6
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,13),4,COEFS,4,4,WL(1,0,1
      $     ,14))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,14),2,4,5,1,56,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,14),2,4,5,1,1,56,H)
 C         Coefficient construction for loop diagram with ID 7
           CALL FFV1L3_2(PL(0,13),W(1,4),GC_11,MDL_MD,ZERO,PL(0,15)
      $     ,COEFS)
@@ -882,7 +948,7 @@ C         Coefficient construction for loop diagram with ID 7
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_2_0(WL(1,0,1,15),4,COEFS,4,4,WL(1,0,1
      $     ,16))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,16),2,4,6,1,57,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,16),2,4,6,1,1,57,H)
 C         Coefficient construction for loop diagram with ID 8
           CALL FFV1L3_1(PL(0,13),W(1,3),GC_11,MDL_MD,ZERO,PL(0,17)
      $     ,COEFS)
@@ -892,7 +958,7 @@ C         Coefficient construction for loop diagram with ID 8
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_2_0(WL(1,0,1,17),4,COEFS,4,4,WL(1,0,1
      $     ,18))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,18),2,4,7,1,58,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,18),2,4,7,1,1,58,H)
 C         Coefficient construction for loop diagram with ID 9
           CALL UUV1L1_2(PL(0,0),W(1,5),GC_10,ZERO,ZERO,PL(0,19),COEFS)
           CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),1,COEFS,1,1,WL(1,0,1
@@ -900,7 +966,7 @@ C         Coefficient construction for loop diagram with ID 9
           CALL UUV1L1_2(PL(0,19),W(1,6),GC_10,ZERO,ZERO,PL(0,20),COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,19),1,COEFS,1,1,WL(1,0,1
      $     ,20))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,20),2,1,1,1,59,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,20),2,1,1,1,1,59,H)
 C         Coefficient construction for loop diagram with ID 10
           CALL FFV1L2_1(PL(0,0),W(1,5),GC_11,MDL_MU,ZERO,PL(0,21)
      $     ,COEFS)
@@ -910,7 +976,7 @@ C         Coefficient construction for loop diagram with ID 10
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,21),4,COEFS,4,4,WL(1,0,1
      $     ,22))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,22),2,4,8,1,60,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,22),2,4,8,1,1,60,H)
 C         Coefficient construction for loop diagram with ID 11
           CALL FFV1L2_1(PL(0,0),W(1,5),GC_11,MDL_MC,ZERO,PL(0,23)
      $     ,COEFS)
@@ -920,7 +986,7 @@ C         Coefficient construction for loop diagram with ID 11
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,23),4,COEFS,4,4,WL(1,0,1
      $     ,24))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,24),2,4,9,1,61,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,24),2,4,9,1,1,61,H)
 C         Coefficient construction for loop diagram with ID 12
           CALL FFV1L2_1(PL(0,0),W(1,5),GC_11,MDL_MT,MDL_WT,PL(0,25)
      $     ,COEFS)
@@ -930,7 +996,7 @@ C         Coefficient construction for loop diagram with ID 12
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,25),4,COEFS,4,4,WL(1,0,1
      $     ,26))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,26),2,4,10,1,62,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,26),2,4,10,1,1,62,H)
 C         Coefficient construction for loop diagram with ID 13
           CALL FFV1L2_1(PL(0,0),W(1,5),GC_11,MDL_MD,ZERO,PL(0,27)
      $     ,COEFS)
@@ -940,7 +1006,7 @@ C         Coefficient construction for loop diagram with ID 13
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,27),4,COEFS,4,4,WL(1,0,1
      $     ,28))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,28),2,4,11,1,63,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,28),2,4,11,1,1,63,H)
 C         Coefficient construction for loop diagram with ID 14
           CALL FFV1L2_1(PL(0,0),W(1,5),GC_11,MDL_MS,ZERO,PL(0,29)
      $     ,COEFS)
@@ -950,7 +1016,7 @@ C         Coefficient construction for loop diagram with ID 14
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,29),4,COEFS,4,4,WL(1,0,1
      $     ,30))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,30),2,4,12,1,64,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,30),2,4,12,1,1,64,H)
 C         Coefficient construction for loop diagram with ID 15
           CALL FFV1L2_1(PL(0,0),W(1,5),GC_11,MDL_MB,ZERO,PL(0,31)
      $     ,COEFS)
@@ -960,12 +1026,14 @@ C         Coefficient construction for loop diagram with ID 15
      $     ,COEFS)
           CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,31),4,COEFS,4,4,WL(1,0,1
      $     ,32))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,32),2,4,13,1,65,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,32),2,4,13,1,1,65,H)
 C         At this point, all loop coefficients needed for (QCD=6),
-C          i.e. of split order ID=0, are computed.
+C          i.e. of split order ID=1, are computed.
           IF(FILTER_SO.AND.SQSO_TARGET.EQ.1) GOTO 4000
  4000     CONTINUE
           LOOP_REQ_SO_DONE=.TRUE.
+
+
 
         ENDIF
       ENDDO
@@ -979,15 +1047,24 @@ C      LOOPCOEFS.
         ENDDO
       ENDDO
 
+
+C     MadLoop jumps to this label during stability checks when it
+C      recomputes the same PS point with a different CTMode
  300  CONTINUE
+
 C     Free cache when using IREGI
-      IF(IREGIRECY.AND.MLREDUCTIONLIB(I_LIB).EQ.3)CALL IREGI_FREE_PS
+      IF(IREGIRECY.AND.MLREDUCTIONLIB(I_LIB).EQ.3) THEN
+        CALL IREGI_FREE_PS()
+      ENDIF
+
+
 
       DO I=0,NSQUAREDSO
         DO J=1,3
           ANS(J,I)=BUFFR_BIS(J,I)
         ENDDO
       ENDDO
+
 
       IF(SKIPLOOPEVAL) THEN
         GOTO 1226
@@ -1031,7 +1108,7 @@ C       CutTools call for loop numbers 13
 C       CutTools call for loop numbers 14
         CALL ML5_0_LOOP_2(5,6,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,I_SO,13)
 C       At this point, all reductions needed for (QCD=6), i.e. of
-C        split order ID=0, are computed.
+C        split order ID=1, are computed.
         IF(FILTER_SO.AND.SQSO_TARGET.EQ.1) GOTO 5000
         GOTO 5001
  5000   CONTINUE
@@ -1073,7 +1150,7 @@ C        THE HELICITY FILTER SETUP
         HELSAVED(2,HELPICKED)=ANS(2,0)
         HELSAVED(3,HELPICKED)=ANS(3,0)
 
-        IF (CHECKPHASE) THEN
+        IF (CHECKPHASE.AND.NTRY.NE.0) THEN
 C         SET THE HELICITY FILTER
           IF(.NOT.FOUNDHELFILTER) THEN
             HEL_INCONSISTENT=.FALSE.
@@ -1082,8 +1159,8 @@ C         SET THE HELICITY FILTER
               IF(NTRY.EQ.1) THEN
                 GOODHEL(HELPICKED)=-HELOFFSET
               ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
-                WRITE(*,*) '##W02A WARNING Inconsistent helicity '
-     $           ,HELPICKED
+                WRITE(*,*) '##W02A WARNING Inconsistent zero helicit'
+     $           //'y ',HELPICKED
                 IF(HELINITSTARTOVER) THEN
                   WRITE(*,*) '##I01 INFO Initialization starting ove'
      $             //'r because of inconsistency in the helicit'
@@ -1093,7 +1170,7 @@ C         SET THE HELICITY FILTER
                   HEL_INCONSISTENT=.TRUE.
                 ENDIF
               ENDIF
-            ELSE
+            ELSEIF(HELICITYFILTERLEVEL.GT.1) THEN
               DO H=1,HELPICKED-1
                 IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C                 Be looser for helicity check, bring a factor 100
@@ -1110,8 +1187,8 @@ C                      other one and to avoid overlap
 C                     Make sure we have paired this hel config to the
 C                      same one last PS point
                     ELSEIF(GOODHEL(HELPICKED).NE.(-H-HELOFFSET)) THEN
-                      WRITE(*,*) '##W02B WARNING Inconsistent helicit'
-     $                 //'y ',HELPICKED
+                      WRITE(*,*) '##W02B WARNING Inconsistent matchin'
+     $                 //'g helicity ',HELPICKED
                       IF(HELINITSTARTOVER) THEN
                         WRITE(*,*) '##I01 INFO Initialization startin'
      $                   //'g over because of inconsistency in th'
@@ -1234,7 +1311,7 @@ C       GOTO NEXT HELICITY OR FINISH
         IF(HELPICKED.NE.NCOMB) THEN
           HELPICKED=HELPICKED+1
           MP_DONE=.FALSE.
-          GOTO 200
+          GOTO 205
         ELSE
 C         Useful printout
 C         do I=1,NCOMB
@@ -1257,7 +1334,6 @@ C         ENDDO
             ENDIF
           ENDIF
         ENDIF
-
       ENDIF
 
       DO K=1,3
@@ -1268,6 +1344,7 @@ C         ENDDO
           ENDIF
         ENDDO
       ENDDO
+
 
       IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.
      $ -1)) THEN
@@ -1302,7 +1379,9 @@ C        METHODS
             CTMODE=BASIC_CT_MODE+1
             GOTO 300
           ELSE
-C           NO DIRECTION TEST LIBRARIES: e.g. PJFry++ and Golem95
+C           If some TIR library would not support the loop direction
+C            test (they all do for now), then we would just copy the
+C            answer from mode 1 and carry on.
             STAB_INDEX=STAB_INDEX+1
             IF(DOING_QP_EVALS)THEN
               DO I=0,NSQUAREDSO
@@ -1666,9 +1745,9 @@ C      inconsistency, then we only allow for weight one comparisons.
      $       -1)) THEN
               GOTO 1231
             ENDIF
-C           Be loser for helicity comparison, so bring a factor 100
-          ELSEIF(.NOT.ML5_0_ISZERO((RESA(J)/RESB(J))-DBLE(WGT_TO_TRY(I
-     $     )),REF*100.0D0,-1,-1)) THEN
+C           Be looser for helicity comparison, so bring a factor 100
+          ELSEIF(.NOT.ML5_0_ISZERO(ABS((RESA(J)/RESB(J))-DBLE(WGT_TO_TR
+     $     Y(I))),1.0D0,-1,-1)) THEN
             GOTO 1231
           ENDIF
         ENDDO
@@ -1863,6 +1942,7 @@ C
       INTEGER I,J
       INTEGER SQPLITORDERS(NSQSO,NSO)
       DATA (SQPLITORDERS(  1,I),I=  1,  1) /    6/
+      COMMON/ML5_0_ML5SQPLITORDERS/SQPLITORDERS
 C     
 C     BEGIN CODE
 C     
@@ -1965,7 +2045,6 @@ C     order canonical ordering.
 C     
 C     CONSTANTS
 C     
-
       INTEGER    NSO, NSQUAREDSO, NAMPSO
       PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
 C     
@@ -1979,6 +2058,7 @@ C
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
       DATA (AMPSPLITORDERS(  1,I),I=  1,  1) /    2/
       DATA (AMPSPLITORDERS(  2,I),I=  1,  1) /    4/
+      COMMON/ML5_0_ML5AMPSPLITORDERS/AMPSPLITORDERS
 C     
 C     FUNCTION
 C     
@@ -1991,6 +2071,131 @@ C
      $   NDEXB,I)
       ENDDO
       ML5_0_ML5SQSOINDEX=ML5_0_ML5SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
+      END
+
+C     This is the inverse subroutine of ML5SOINDEX_FOR_SQUARED_ORDERS.
+C      Not directly useful, but provided nonetheless.
+      SUBROUTINE ML5_0_ML5GET_SQUARED_ORDERS_FOR_SOINDEX(SOINDEX
+     $ ,ORDERS)
+C     
+C     This functions returns the orders identified by the squared
+C      split order index in argument. Order values correspond to
+C      following list of couplings (and in this order):
+C     ['QCD']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NSQSO
+      PARAMETER (NSO=1, NSQSO=1)
+C     
+C     ARGUMENTS
+C     
+      INTEGER SOINDEX, ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I
+      INTEGER SQPLITORDERS(NSQSO,NSO)
+      COMMON/ML5_0_ML5SQPLITORDERS/SQPLITORDERS
+C     
+C     BEGIN CODE
+C     
+      IF (SOINDEX.GT.0.AND.SOINDEX.LE.NSQSO) THEN
+        DO I=1,NSO
+          ORDERS(I) =  SQPLITORDERS(SOINDEX,I)
+        ENDDO
+        RETURN
+      ENDIF
+
+      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5GET_SQUARED_ORDER'
+     $ //'S_FOR_SOINDEX'
+      WRITE(*,*) 'Could not find squared orders index ',SOINDEX
+      STOP
+
+      END SUBROUTINE
+
+C     This is the inverse subroutine of getting amplitude SO orders.
+C      Not directly useful, but provided nonetheless.
+      SUBROUTINE ML5_0_ML5GET_ORDERS_FOR_AMPSOINDEX(SOINDEX,ORDERS)
+C     
+C     This functions returns the orders identified by the split order
+C      index in argument. Order values correspond to following list of
+C      couplings (and in this order):
+C     ['QCD']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NAMPSO
+      PARAMETER (NSO=1, NAMPSO=2)
+C     
+C     ARGUMENTS
+C     
+      INTEGER SOINDEX, ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I
+      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
+      COMMON/ML5_0_ML5AMPSPLITORDERS/AMPSPLITORDERS
+C     
+C     BEGIN CODE
+C     
+      IF (SOINDEX.GT.0.AND.SOINDEX.LE.NAMPSO) THEN
+        DO I=1,NSO
+          ORDERS(I) =  AMPSPLITORDERS(SOINDEX,I)
+        ENDDO
+        RETURN
+      ENDIF
+
+      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5GET_ORDERS_FOR_AM'
+     $ //'PSOINDEX'
+      WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
+      STOP
+
+      END SUBROUTINE
+
+
+C     This function is not directly useful, but included for completene
+C     ss
+      INTEGER FUNCTION ML5_0_ML5SOINDEX_FOR_AMPORDERS(ORDERS)
+C     
+C     This functions returns the integer index identifying the
+C      amplitude split orders passed in argument which correspond to
+C      the values of the following list of couplings (and in this
+C      order):
+C     ['QCD']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NAMPSO
+      PARAMETER (NSO=1, NAMPSO=2)
+C     
+C     ARGUMENTS
+C     
+      INTEGER ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J
+      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
+      COMMON/ML5_0_ML5AMPSPLITORDERS/AMPSPLITORDERS
+C     
+C     BEGIN CODE
+C     
+      DO I=1,NAMPSO
+        DO J=1,NSO
+          IF (ORDERS(J).NE.AMPSPLITORDERS(I,J)) GOTO 1009
+        ENDDO
+        ML5_0_ML5SOINDEX_FOR_AMPORDERS = I
+        RETURN
+ 1009   CONTINUE
+      ENDDO
+
+      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5SOINDEX_FOR_AMPOR'
+     $ //'DERS'
+      WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
+      STOP
+
       END
 
 C     --=========================================--
@@ -2012,7 +2217,30 @@ C
 
       ALWAYS_TEST_STABILITY = ONOFF
 
-      END
+      END SUBROUTINE
+
+      SUBROUTINE ML5_0_SET_AUTOMATIC_TIR_CACHE_CLEARING(ONOFF)
+C     
+C     This function can be called by the MadLoop user so as to
+C      manually chose when
+C     to reset the TIR cache.
+C     
+      IMPLICIT NONE
+
+      INCLUDE 'MadLoopParams.inc'
+
+      LOGICAL ONOFF
+
+      LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
+      DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
+      COMMON/ML5_0_RUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
+
+      INTEGER N_DP_EVAL, N_QP_EVAL
+      COMMON/ML5_0_N_EVALS/N_DP_EVAL,N_QP_EVAL
+
+      WRITE(*,*) 'Warning: No TIR caching implemented. Call t'
+     $ //'o SET_AUTOMATIC_TIR_CACHE_CLEARING did nothing.'
+      END SUBROUTINE
 
       SUBROUTINE ML5_0_SET_COUPLINGORDERS_TARGET(SOTARGET)
       IMPLICIT NONE
@@ -2232,4 +2460,12 @@ C     Reset it to default value not to affect next runs
       RET_CODE=100*H+10*T+U
 
       END
+
+C     The subroutine below perform clean-up duties for MadLoop like
+C      de-allocating
+C     arrays
+      SUBROUTINE ML5_0_EXIT_MADLOOP()
+      CONTINUE
+      END
+
 

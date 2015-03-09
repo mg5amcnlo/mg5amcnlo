@@ -56,7 +56,6 @@ c
      &     xmaxup(maxpup),lprup(maxpup)
 c
       include 'nexternal.inc'
-      include 'leshouche_decl.inc'
       logical gridrun,gridpack
       integer          iseed
       common /to_seed/ iseed
@@ -65,6 +64,13 @@ c
       common /event_normalisation/event_norm
       integer iappl
       common /for_applgrid/ iappl
+C      
+      integer    maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
+      include 'born_leshouche.inc'
 c
 c----------
 c     start
@@ -74,7 +80,6 @@ c----------
 c MZ add the possibility to have shower_MC input lowercase
       call to_upper(shower_MC)
 C
-      call read_leshouche_info(idup_d,mothup_d,icolup_d)
 
 c merging cuts
       xqcut=0d0
@@ -101,7 +106,9 @@ c For backward compatibility
       ellissextonfact=QES_over_ref
 
 c check that the event normalization input is reasoble
-      call case_trap2(event_norm)
+      buff = event_norm 
+      call case_trap2(buff) ! requires a string of length 20 at least
+      event_norm=buff 
       if (event_norm(1:7).ne.'average' .and. event_norm(1:3).ne.'sum'
      $     .and. event_norm(1:5).ne.'unity')then
          write (*,*) 'Do not understand the event_norm parameter'/
@@ -119,7 +126,8 @@ c check that the event normalization input is reasoble
 
 c info for reweight
 
-      if (ickkw.ne.0 .and. ickkw.ne.4 .and. ickkw.ne.3) then
+      if ( ickkw.ne.0 .and. ickkw.ne.4 .and. ickkw.ne.3 .and.
+     &     ickkw.ne.-1) then
          write (*,*) 'ickkw parameter not known. ickkw=',ickkw
          stop
       endif
@@ -160,7 +168,7 @@ C       Fill common block for Les Houches init info
         elseif(lpp(i).eq.-3) then
           idbmup(i)=-11
         elseif(lpp(i).eq.0) then
-          idbmup(i)=idup_d(1,i,1)
+          idbmup(i)=idup(i,1)
         else
           idbmup(i)=lpp(i)
         endif
@@ -219,8 +227,8 @@ C-------------------------------------------------
      $   10000,
      $   10041,
      $   10042,
-     $   200200,
-     $   200400,
+     $   246800,
+     $   247000,
      $   244600/
 
 

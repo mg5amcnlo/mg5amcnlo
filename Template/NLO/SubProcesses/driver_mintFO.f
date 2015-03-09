@@ -42,8 +42,7 @@ cc
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw
 
 c Vegas stuff
-      integer ipole
-      common/tosigint/ndim,ipole
+      common/tosigint/ndim
 
       real*8 sigint
       external sigint
@@ -54,29 +53,9 @@ c Vegas stuff
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
-      external initplot
-
-
-c For tests
-      real*8 fksmaxwgt,xisave,ysave
-      common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
-
       integer i_momcmp_count
       double precision xratmax
       common/ccheckcnt/i_momcmp_count,xratmax
-
-c For tests of virtuals
-      integer ivirtpoints,ivirtpointsExcept
-      double precision  virtmax,virtmin,virtsum
-      common/cvirt3test/virtmax,virtmin,virtsum,ivirtpoints,
-     &     ivirtpointsExcept
-      double precision total_wgt_sum,total_wgt_sum_max,
-     &                 total_wgt_sum_min
-      common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
-     &                 total_wgt_sum_min
 
       integer n_mp, n_disc
 c For MINT:
@@ -126,6 +105,10 @@ c applgrid
       integer iappl
       common /for_applgrid/ iappl
 
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
+
+
 C-----
 C  BEGIN CODE
 C-----  
@@ -133,12 +116,16 @@ c
 c     Setup the timing variable
 c
       call cpu_time(tBefore)
+      fixed_order=.true.
+      nlo_ps=.false.
 
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
       average_virtual=0d0
-      virtual_fraction=virt_fraction
+      virtual_fraction=max(virt_fraction,min_virt_fraction)
+      
+      
 c
 c     Read process number
 c
@@ -209,13 +196,6 @@ c     Fill the number of combined matrix elements for given initial state lumino
          call find_iproc_map
          write(6,*) "   ... done."
       endif
-
-      itotalpoints=0
-      ivirtpoints=0
-      ivirtpointsExcept=0
-      total_wgt_sum=0d0
-      total_wgt_sum_max=0d0
-      total_wgt_sum_min=0d0
       i_momcmp_count=0
       xratmax=0.d0
       unwgt=.false.
@@ -262,6 +242,11 @@ c Update the number of PS points based on unc(1), ncall and accuracy
          endif
 c
          write (*,*) 'imode is ',imode
+
+         if (ickkw.eq.-1) then
+            min_virt_fraction=1d0
+            virtual_fraction=1d0
+         endif
 c
 c Setup for parton-level NLO reweighting
          if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
@@ -294,25 +279,6 @@ c to save grids:
          write (*,*) 'Unknown imode',imode
          stop
       endif
-
-      write (*,*) ''
-      write (*,*) '----------------------------------------------------'
-      if (irestart.eq.1 .or. irestart.eq.3) then
-         write (*,*) 'Total points tried:                   ',
-     &        ncall*itmax
-         write (*,*) 'Total points passing generation cuts: ',
-     &        itotalpoints
-         write (*,*) 'Efficiency of events passing cuts:    ',
-     &        dble(itotalpoints)/dble(ncall*itmax)
-      else
-         write (*,*)
-     &       'Run has been restarted, next line is only for current run'
-         write (*,*) 'Total points passing cuts: ',itotalpoints
-      endif
-      write (*,*) '----------------------------------------------------'
-      write (*,*) ''
-      write (*,*) ''
-      write (*,*) '----------------------------------------------------'
 
       if (ntot.ne.0) then
          write(*,*) "Satistics from MadLoop:"
@@ -347,14 +313,28 @@ c to save grids:
 
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
-      tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR
-      write(*,*) 'Time spent in clustering : ',tFastJet      
-      write(*,*) 'Time spent in PDF_Engine : ',tPDF
+      tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
+     &     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
+     $     +t_write)
+      write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
-      write(*,*) 'Time spent in Reals_evaluation: ',tDSigR
-      write(*,*) 'Time spent in IS_evaluation : ',tDSigI
-      write(*,*) 'Time spent in OneLoop_Engine : ',tOLP      
-      write(*,*) 'Time spent in other_tasks : ',tOther
+      write(*,*) 'Time spent in Reals_evaluation: ',tReal
+      write(*,*) 'Time spent in MCsubtraction : ',t_MC_subt
+      write(*,*) 'Time spent in Counter_terms : ',tCount
+      write(*,*) 'Time spent in Integrated_CT : ',tIS-tOLP
+      write(*,*) 'Time spent in Virtuals : ',tOLP      
+      write(*,*) 'Time spent in FxFx_cluster : ',tFxFx
+      write(*,*) 'Time spent in Nbody_prefactor : ',tf_nb
+      write(*,*) 'Time spent in N1body_prefactor : ',tf_all
+      write(*,*) 'Time spent in Adding_alphas_pdf : ',t_as
+      write(*,*) 'Time spent in Reweight_scale : ',tr_s
+      write(*,*) 'Time spent in Reweight_pdf : ',tr_pdf
+      write(*,*) 'Time spent in Filling_plots : ',t_plot
+      write(*,*) 'Time spent in Applying_cuts : ',t_cuts
+      write(*,*) 'Time spent in Sum_ident_contr : ',t_isum
+      write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
+      write(*,*) 'Time spent in Write_events : ',t_write
+      write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
       if(i_momcmp_count.ne.0)then
@@ -375,68 +355,254 @@ c timing statistics
       data tDSigI/0.0/
       data tDSigR/0.0/
       data tGenPS/0.0/
+      data tBorn/0.0/
+      data tIS/0.0/
+      data tReal/0.0/
+      data tCount/0.0/
+      data tFxFx/0.0/
+      data tf_nb/0.0/
+      data tf_all/0.0/
+      data t_as/0.0/
+      data tr_s/0.0/
+      data tr_pdf/0.0/
+      data t_plot/0.0/
+      data t_cuts/0.0/
+      data t_MC_subt/0.0/
+      data t_isum/0.0/
+      data t_p_unw/0.0/
+      data t_write/0.0/
       end
 
 
-      function sigint(xx,peso,ifl,f)
-c From dsample_fks
+      double precision function sigint(xx,vegas_wgt,ifl,f)
       implicit none
       include 'nexternal.inc'
       include 'mint.inc'
-      real*8 sigint,peso,xx(ndimmax),f(nintegrals)
-      integer ione
-      parameter (ione=1)
-      integer ifl
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      include 'nFKSconfigs.inc'
+      include 'c_weight.inc'
+      include 'reweight.inc'
+      include 'run.inc'
+      double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
+     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
+      integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min
+     $     ,nFKS_max,izero,ione,itwo,mohdr
+      parameter (izero=0,ione=1,itwo=2,mohdr=-100)
+      logical passcuts,passcuts_nbody,passcuts_n1body,sum
+      external passcuts
+      data sum /.false./
+      integer         ndim
+      common/tosigint/ndim
+      logical       nbody
+      common/cnbody/nbody
       integer           iconfig
       common/to_configs/iconfig
-      integer i
-      double precision wgt,dsig,ran2,rnd
-      external ran2
-      double precision x(99),p(0:3,nexternal)
-      include 'nFKSconfigs.inc'
-      include 'reweight_all.inc'
-      integer nfksprocess_all
-      INTEGER NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
-      character*4 abrv
-      common /to_abrv/ abrv
-      logical nbody
-      common/cnbody/nbody
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      logical sum,firsttime
-      parameter (sum=.false.)
-      data firsttime /.true./
-      logical foundB(2)
-      integer nFKSprocessBorn(2)
-      save nFKSprocessBorn,foundB
-      double precision vol,sigintR
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
+      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      double precision           virt_wgt_mint,born_wgt_mint
+      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      double precision virt_wgt_current,born_wgt_ao2pi_current
-      double precision virt_wgt,born_wgt_ao2pi
-      common/c_fks_singular/virt_wgt,born_wgt_ao2pi
-      logical fillh
-      integer mc_hel,ihel
-      double precision volh
-      common/mc_int2/volh,mc_hel,ihel,fillh
-c
+      logical                calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      character*4      abrv
+      common /to_abrv/ abrv
+      integer iappl
+      common /for_applgrid/ iappl
       if (ifl.ne.0) then
-         write (*,*) 'ifl not equal to zero in sigint()',ifl
-         stop
+         write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
+         stop 1
       endif
+      if (iappl.ne.0 .and. sum) then
+         write (*,*) 'WARNING: applgrid only possible '/
+     &        /'with MC over FKS directories',iappl,sum
+         write (*,*) 'Switching to MC over FKS directories'
+         sum=.false.
+      endif
+      sigint=0d0
+      icontr=0
+      virt_wgt_mint=0d0
+      born_wgt_mint=0d0
       virtual_over_born=0d0
+      if (ickkw.eq.-1) H1_factor_virt=0d0
+      if (ickkw.eq.3) call set_FxFx_scale(0,p)
+      call update_vegas_x(xx,x)
+      call get_MC_integer(1,fks_configs,nFKS_picked,vol)
 
+c The nbody contributions
+      if (abrv.eq.'real') goto 11
+      nbody=.true.
+      calculatedBorn=.false.
+      call get_born_nFKSprocess(nFKS_picked,nFKS_born)
+      call update_fks_dir(nFKS_born,iconfig)
+      jac=1d0
+      call generate_momenta(ndim,iconfig,jac,x,p)
+      if (p_born(0,1).lt.0d0) goto 12
+      call compute_prefactors_nbody(vegas_wgt)
+      call set_cms_stuff(izero)
+      passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+      if (passcuts_nbody) then
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
+         call set_alphaS(p1_cnt(0,1,0))
+         if (abrv(1:2).ne.'vi') then
+            call compute_born
+         endif
+         if (abrv.ne.'born') then
+            call compute_nbody_noborn
+         endif
+      endif
+
+ 11   continue
+c The n+1-body contributions (including counter terms)
+      if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
+      nbody=.false.
+      if (sum) then
+         nFKS_min=1
+         nFKS_max=fks_configs
+         MC_int_wgt=1d0
+      else
+         nFKS_min=nFKS_picked
+         nFKS_max=nFKS_picked
+         MC_int_wgt=1d0/vol
+      endif
+      do iFKS=nFKS_min,nFKS_max
+         jac=MC_int_wgt
+         call update_fks_dir(iFKS,iconfig)
+         call generate_momenta(ndim,iconfig,jac,x,p)
+         if (p_born(0,1).lt.0d0) cycle
+         call compute_prefactors_n1body(vegas_wgt,jac)
+         call set_cms_stuff(izero)
+         passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
+         call set_cms_stuff(mohdr)
+         passcuts_n1body=passcuts(p,rwgt)
+         if (passcuts_nbody .and. abrv.ne.'real') then
+            call set_cms_stuff(izero)
+            if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
+            call set_alphaS(p1_cnt(0,1,0))
+            call compute_soft_counter_term(0d0)
+            call set_cms_stuff(ione)
+            call compute_collinear_counter_term(0d0)
+            call set_cms_stuff(itwo)
+            call compute_soft_collinear_counter_term(0d0)
+         endif
+         if (passcuts_n1body) then
+            call set_cms_stuff(mohdr)
+            if (ickkw.eq.3) call set_FxFx_scale(3,p)
+            call set_alphaS(p)
+            call compute_real_emission(p,1d0)
+         endif
+      enddo
+      
+ 12   continue
+c Include PDFs and alpha_S and reweight to include the uncertainties
+      if (ickkw.eq.-1) call include_veto_multiplier
+      call include_PDF_and_alphas
+      if (doreweight) then
+         if (do_rwgt_scale .and. ickkw.ne.-1) call reweight_scale
+         if (do_rwgt_scale .and. ickkw.eq.-1) call reweight_scale_NNLL
+         if (do_rwgt_pdf) call reweight_pdf
+      endif
+      
+      if (iappl.ne.0) then
+         if (sum) then
+            write (*,*) 'ERROR: applgrid only possible '/
+     &           /'with MC over FKS directories',iappl,sum
+            stop 1
+         endif
+         call fill_applgrid_weights(vegas_wgt)
+      endif
+
+c Importance sampling for FKS configurations
+      if (sum) then
+         call get_wgt_nbody(sig)
+         call fill_MC_integer(1,nFKS_picked,abs(sig))
+      else
+         call get_wgt_no_nbody(sig)
+         call fill_MC_integer(1,nFKS_picked,abs(sig)*vol)
+      endif
+
+c Finalize PS point
+      call fill_plots
+      call fill_mint_function(f)
+      return
+      end
+
+      subroutine update_fks_dir(nFKS,iconfig)
+      implicit none
+      integer nFKS,iconfig
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      nFKSprocess=nFKS
+      call fks_inc_chooser()
+      call leshouche_inc_chooser()
+      call setcuts
+      call setfksfactor(iconfig)
+      return
+      end
+      
+      subroutine get_born_nFKSprocess(nFKS_in,nFKS_out)
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      integer nFKS_in,nFKS_out,iFKS,nFKSprocessBorn(2)
+      logical firsttime,foundB(2)
+      data firsttime /.true./
+      save nFKSprocessBorn,foundB
+      if (firsttime) then
+         firsttime=.false.
+         foundB(1)=.false.
+         foundB(2)=.false.
+         do iFKS=1,fks_configs
+            if (particle_type_D(iFKS,fks_i_D(iFKS)).eq.8) then
+               if (fks_j_D(iFKS).le.nincoming) then
+                  foundB(1)=.true.
+                  nFKSprocessBorn(1)=iFKS
+               else
+                  foundB(2)=.true.
+                  nFKSprocessBorn(2)=iFKS
+               endif
+            endif
+         enddo
+         write (*,*) 'Total number of FKS directories is', fks_configs
+         write (*,*) 'For the Born we use nFKSprocesses  #',
+     $        nFKSprocessBorn
+      endif
+      if (fks_j_D(nFKS_in).le.nincoming) then
+         if (.not.foundB(1)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'initial state j_fks, but there is no '/
+     &           /'configuration with i_fks a gluon and j_fks '/
+     &           /'initial state'
+            stop 1
+         endif
+         nFKS_out=nFKSprocessBorn(1)
+      else
+         if (.not.foundB(2)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'final state j_fks, but there is no configuration'/
+     &           /' with i_fks a gluon and j_fks final state'
+            stop 1
+         endif
+         nFKS_out=nFKSprocessBorn(2)
+      endif
+      return
+      end
+
+      subroutine update_vegas_x(xx,x)
+      implicit none
+      include 'mint.inc'
+      integer i
+      double precision xx(ndimmax),x(99),ran2
+      external ran2
+      integer ndim
+      common/tosigint/ndim
+      character*4 abrv
+      common /to_abrv/ abrv
       do i=1,99
-         if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
-     &        then
+         if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') then
             if(i.le.ndim-3)then
                x(i)=xx(i)
             elseif(i.le.ndim) then
@@ -452,118 +618,6 @@ c
             endif
          endif
       enddo
-
-      if (firsttime) then
-         firsttime=.false.
-         foundB(1)=.false.
-         foundB(2)=.false.
-         do nFKSprocess=1,fks_configs
-            call fks_inc_chooser()
-            if (particle_type(i_fks).eq.8) then
-               if (j_fks.le.nincoming) then
-                  foundB(1)=.true.
-                  nFKSprocessBorn(1)=nFKSprocess
-               else
-                  foundB(2)=.true.
-                  nFKSprocessBorn(2)=nFKSprocess
-               endif
-            endif
-         enddo
-         write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocesses  #',
-     &        nFKSprocessBorn
-      endif
-
-      sigint=0d0
-c
-c Compute the Born-like contributions with nbody=.true.
-c THIS CAN BE OPTIMIZED
-c
-      call get_MC_integer(1,fks_configs,nFKSprocess,vol)
-      nFKSprocess_all=nFKSprocess
-      call fks_inc_chooser()
-      if (j_fks.le.nincoming) then
-         if (.not.foundB(1)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'initial state j_fks, but there is no '/
-     &           /'configuration with i_fks a gluon and j_fks '/
-     &           /'initial state'
-            stop
-         endif
-         nFKSprocess=nFKSprocessBorn(1)
-      else
-         if (.not.foundB(2)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'final state j_fks, but there is no configuration'/
-     &           /' with i_fks a gluon and j_fks final state'
-            stop
-         endif
-         nFKSprocess=nFKSprocessBorn(2)
-      endif
-      nbody=.true.
-      fillh=.false.  ! this is set to true in BinothLHA if doing MC over helicities
-      nFKSprocess_used=nFKSprocess
-      nFKSprocess_used_Born=nFKSprocess
-      call fks_inc_chooser()
-      call leshouche_inc_chooser()
-      call setcuts
-      call setfksfactor(iconfig)
-      wgt=1d0
-      call generate_momenta(ndim,iconfig,wgt,x,p)
-      sigint = sigint+dsig(p,wgt,peso)*peso
-      if (mc_hel.ne.0 .and. fillh) then
-c Fill the importance sampling array
-         call fill_MC_integer(2,ihel,abs(sigint*volh))
-      endif
-
-      virt_wgt_current=virt_wgt
-      born_wgt_ao2pi_current=born_wgt_ao2pi
-c
-c Compute the subtracted real-emission corrections either as an explicit
-c sum or a Monte Carlo sum.
-c      
-      if (abrv.ne.'born' .and. abrv.ne.'grid' .and.
-     &     abrv(1:2).ne.'vi') then
-         nbody=.false.
-         if (sum) then
-c THIS CAN BE OPTIMIZED
-            do nFKSprocess=1,fks_configs
-               nFKSprocess_used=nFKSprocess
-               call fks_inc_chooser()
-               call leshouche_inc_chooser()
-               call setcuts
-               call setfksfactor(iconfig)
-               wgt=1d0
-               call generate_momenta(ndim,iconfig,wgt,x,p)
-               sigint = sigint+dsig(p,wgt,peso)*peso
-            enddo
-         else                   ! Monte Carlo over nFKSprocess
-            nFKSprocess=nFKSprocess_all
-            nFKSprocess_used=nFKSprocess
-c THIS CAN BE OPTIMIZED
-            call fks_inc_chooser()
-            call leshouche_inc_chooser()
-            call setcuts
-            call setfksfactor(iconfig)
-c     The variable 'vol' is the size of the cell for the MC over
-c     nFKSprocess. Need to divide by it here to correctly take into
-c     account this Jacobian
-            wgt=1d0/vol
-            call generate_momenta(ndim,iconfig,wgt,x,p)
-            sigintR = dsig(p,wgt,peso)*peso
-            call fill_MC_integer(1,nFKSprocess,abs(sigintR)*vol)
-            sigint = sigint+ sigintR
-         endif
-      endif
-
-      f(1)=abs(sigint+virt_wgt_current)
-      f(2)=sigint+virt_wgt_current
-      f(3)=virt_wgt_current
-      f(4)=virtual_over_born
-      f(5)=abs(virt_wgt_current)
-      f(6)=born_wgt_ao2pi_current
-
-      if (sigint.ne.0d0)itotalpoints=itotalpoints+1
       return
       end
 
@@ -608,9 +662,6 @@ c
       logical nbody
       common/cnbody/nbody
 
-      integer nvtozero
-      logical doVirtTest
-      common/cvirt2test/nvtozero,doVirtTest
 c
 c To convert diagram number to configuration
 c
@@ -642,7 +693,6 @@ c
 c-----
 c  Begin Code
 c-----
-      doVirtTest=.true.
       mint=.true.
       unwgt=.false.
       write(*,'(a)') 'Enter number of events and iterations: '
@@ -719,7 +769,7 @@ c
       abrv=abrvinput(1:4)
 c Options are way too many: make sure we understand all of them
       if ( abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
-     &     abrv.ne.'virt'.and.abrv.ne.'novi'.and.abrv.ne.'grid'.and.
+     &     abrv.ne.'virt'.and.
      &     abrv.ne.'viSC'.and.abrv.ne.'viLC'.and.abrv.ne.'novA'.and.
      &     abrv.ne.'novB'.and.abrv.ne.'viSA'.and.abrv.ne.'viSB') then
         write(*,*)'Error in input: abrv is:',abrv
@@ -737,8 +787,6 @@ c Options are way too many: make sure we understand all of them
       else
         write (*,*) "Normal integration (Sfunction != 1)"
       endif
-
-      doVirtTest=doVirtTest.and.abrv(1:2).eq.'vi'
 c
 c
 c     Here I want to set up with B.W. we map and which we don't

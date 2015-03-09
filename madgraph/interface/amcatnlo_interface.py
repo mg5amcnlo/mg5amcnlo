@@ -42,6 +42,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 import madgraph.various.cluster as cluster
 import madgraph.various.misc as misc
+import madgraph.various.banner as banner_mod
 
 #usefull shortcut
 pjoin = os.path.join
@@ -428,7 +429,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                    collect_mirror_procs,
                                    ignore_six_quark_processes,
                                    OLP=self.options['OLP']))
-            
         except AttributeError: 
             self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
@@ -568,14 +568,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
             self._fks_directories = []
-            proc_characteristics = ''
+            proc_charac = banner_mod.ProcCharacteristic()
             for charac in ['has_isr', 'has_fsr', 'has_loops']:
-                if self._curr_matrix_elements[charac]:
-                    proc_characteristics += '%s=true\n' % charac
-                else:
-                    proc_characteristics += '%s=false\n' % charac
-
-            open(pjoin(path, 'proc_characteristics'),'w').write(proc_characteristics)
+                proc_charac[charac] = self._curr_matrix_elements[charac]
+            proc_charac.write(pjoin(path, 'proc_characteristics'))
 
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):

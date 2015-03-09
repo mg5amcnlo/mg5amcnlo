@@ -177,7 +177,7 @@ c more than the Born).
          enddo
       endif
 
-c The UNLOPS cut:
+c THE UNLOPS CUT:
       if (ickkw.eq.4 .and. ptj.gt.0d0) then
 c Use special pythia pt cut for minimal pT
          do i=1,nexternal
@@ -192,6 +192,18 @@ c Use special pythia pt cut for minimal pT
          endif
 c Bypass normal jet cuts
          goto 122
+c THE VETO XSEC CUT:
+      elseif (ickkw.eq.-1 .and. ptj.gt.0d0) then
+c Use veto'ed Xsec for analytic NNLL resummation
+         if (nQCD.ne.1) then
+            write (*,*) 'ERROR: more than one QCD parton in '/
+     $           /'this event in cuts.f. There should only be one'
+            stop
+         endif
+         if (pt(pQCD(0,1)) .gt. ptj) then
+            passcuts_user=.false.
+            return
+         endif
       endif
 
 
@@ -399,6 +411,8 @@ C***************************************************************
       include "nexternal.inc"
       include 'run.inc'
       include 'genps.inc'
+      include 'cuts.inc'
+      include 'timing_variables.inc'
       REAL*8 P(0:3,nexternal),rwgt
       integer i,j,istatus(nexternal),iPDG(nexternal)
 c For boosts
@@ -421,6 +435,7 @@ c PDG codes of particles
       common /c_leshouche_inc/idup,mothup,icolup
       logical passcuts_user
       external passcuts_user
+      call cpu_time(tBefore)
 c Make sure have reasonable 4-momenta
       if (p(0,1) .le. 0d0) then
          passcuts=.false.
@@ -459,6 +474,8 @@ c Fill the arrays (momenta, status and PDG):
       enddo
 c Call the actual cuts function  
       passcuts = passcuts_user(pp,istatus,ipdg)
+      call cpu_time(tAfter)
+      t_cuts=t_cuts+(tAfter-tBefore)
       RETURN
       END
 

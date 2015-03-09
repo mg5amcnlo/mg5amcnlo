@@ -124,6 +124,11 @@ C*************************************************************
 c     initialization
       IMPLICIT NONE
       include 'dbook.inc'
+c     APPLgrid commons
+      include "reweight_appl.inc"
+      include "appl_common.inc"
+      integer iappl
+      common /for_applgrid/ iappl
 c
 c     LOCAL
 c
@@ -134,6 +139,8 @@ C
       NHIST=0
       DO 1, I=1,NPLOTS             
    1  BOOK(I)=' NO'
+C     Initialize the number of bins of the aMCfast grids
+      if(iappl.ne.0) appl_obs_nbins = 0
       END  
  
 
@@ -1019,7 +1026,7 @@ c     Fill the APPLgrid files
 
       subroutine bookup(n,string,del,xl,xu)
       implicit none
-      integer n,n_by4
+      integer i,n,n_by4
       character*(*) string
       double precision del,xl,xu
 c     APPLgrid commons
@@ -1033,19 +1040,28 @@ c     the word "Born".
       if(iappl.ne.0.and.index(string,"central").ne.0.and.
      1                  index(string,"Born").eq.0)then
 c     Observable parameters
-         appl_obs_nbins = int( ( xu -xl ) / del / 0.999999d0 )
-         appl_obs_min   = xl
-         appl_obs_max   = appl_obs_nbins * del + xl
-         if(abs(appl_obs_max-xu).gt.0.001d0*del)then
+c     Compute number of bins and edges only if they have not been given by the user.
+         if(appl_obs_nbins.eq.0)then
+            appl_obs_nbins = int( ( xu - xl ) / del / 0.999999d0 )
+c     compute bin edges
+            do i=0,appl_obs_nbins
+               appl_obs_bins(i) = xl + i * del
+            enddo
+         endif
+         appl_obs_min = appl_obs_bins(0)
+         appl_obs_max = appl_obs_bins(appl_obs_nbins)
+         if(abs(appl_obs_max-xu).gt.0.00000001d0)then
             write(*,*) 'APPLgrid Histogram: ', 
      1                 'Change of the upper limit:',xu,'-->',
-     2                 appl_obs_max
+     2                  appl_obs_max
          endif
 c     Initialize APPLgrid routines
          call APPL_init
 c     Keep track of the position of this histogram
          nh_obs = nh_obs + 1
          ih_obs(nh_obs) = n
+c     Reset number of bins to zero
+         appl_obs_nbins = 0
       endif
       n_by4=4*(n-1)+1
       call bookup4(n_by4,string,del,xl,xu)

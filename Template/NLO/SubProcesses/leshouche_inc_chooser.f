@@ -15,7 +15,8 @@ c leshouche.inc information
       logical firsttime
       data firsttime /.true./
       include 'leshouche_decl.inc'
-      save idup_d, mothup_d, icolup_d
+      common/c_leshouche_idup_d/ idup_d
+      save mothup_d, icolup_d
       
 c
       if (maxproc_used.gt.maxproc) then

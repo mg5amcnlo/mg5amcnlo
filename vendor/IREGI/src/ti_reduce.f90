@@ -25,15 +25,26 @@ CONTAINS
     LOGICAL,INTENT(OUT)::TSTABLE
     INTEGER,DIMENSION(1,1)::sol11
     REAL(KIND(1d0)),DIMENSION(1)::factor1
-    INTEGER::first=0,i,j,numzerp,n,r,nr,init,ntot
+    INTEGER::first=0,i,j,jk,numzerp,n,r,nr,init,ntot
     INTEGER,DIMENSION(NLOOPLINE)::zerp
-    REAL(KIND(1d0)),DIMENSION(xiarraymax2)::syfactor
-    INTEGER,DIMENSION(xiarraymax2,-1:NLOOPLINE)::sy
+    ! f[i,n]=(i+n-1)!/(n-1)!/i!
+    ! nmax=5,rmax=6,NLOOPLINE=nmax+1
+    ! see syntensor in ti_reduce.f90
+    ! xiarraymax2=(f[0,nmax])+(f[1,nmax])+(f[2,nmax]+f[0,nmax])
+    ! +(f[3,nmax]+f[1,nmax])+(f[4,nmax]+f[2,nmax]+f[0,nmax])
+    ! +(f[5,nmax]+f[3,nmax]+f[1,nmax])+(f[6,nmax]+f[4,nmax]+f[2,nmax]+f[0,nmax])
+    ! when rmax=5,nmax=5 -> xiarraymax2=314
+    ! when rmax=6,nmax=5 -> xiarraymax2=610
+    INTEGER::xiarraymax2,xiarraymax,xiarraymax3
+    !REAL(KIND(1d0)),DIMENSION(xiarraymax2)::syfactor
+    REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::syfactor 
+    !INTEGER,DIMENSION(xiarraymax2,-1:NLOOPLINE)::sy
+    INTEGER,DIMENSION(:,:),ALLOCATABLE::sy 
 !    REAL(KIND(1d0)),PARAMETER::EPS=1d-10
     REAL(KIND(1d0))::temp
     INTEGER::ctmode_local
     LOGICAL::do_shift
-    SAVE first
+    SAVE first,xiarraymax,xiarraymax2,xiarraymax3,syfactor,sy
     IF(PRESENT(CTMODE))THEN
        ctmode_local=CTMODE
     ELSE
@@ -42,16 +53,24 @@ CONTAINS
     MU_R_IREGI=MU
     IF(first.EQ.0)THEN
        IF(.NOT.print_banner)THEN
-       WRITE(*,*)"#####################################################################################"
-       WRITE(*,*)"#                                                                                   #"
-       WRITE(*,*)"#                           IREGI-alpha-1.0.0                                       #"
-       WRITE(*,*)"#    package for one-loop tensor Integral REduction with General propagator Indices #"
-       WRITE(*,*)"#    Author: Hua-Sheng Shao (huasheng.shao@cern.ch/erdissshaw@gmail.com)            #"
-       WRITE(*,*)"#    a) Physics School, Peking University, Beijing, China                           #"
-       WRITE(*,*)"#    b) PH Department, TH Unit, CERN, Geneva, Switzerland                           #"
-       WRITE(*,*)"#                                                                                   #"
-       WRITE(*,*)"#####################################################################################"
-       print_banner=.TRUE.
+          INCLUDE "banner.inc"
+          print_banner=.TRUE.
+       ENDIF
+       xiarraymax2=0
+       DO i=0,MAXRANK_IREGI
+          j=i/2+1
+          DO jk=1,j
+             xiarraymax2=xiarraymax2+&
+                  xiarray_arg1(2*jk-2+MOD(i,2),MAXNLOOP_IREGI-1)
+          ENDDO
+       ENDDO
+       xiarraymax=xiarray_arg1(MAXRANK_IREGI,MAXNLOOP_IREGI-1)
+       xiarraymax3=xiarray_arg1(MAXRANK_IREGI,4)
+       IF(.NOT.ALLOCATED(syfactor))THEN
+          ALLOCATE(syfactor(xiarraymax2))
+       ENDIF
+       IF(.NOT.ALLOCATED(sy))THEN
+          ALLOCATE(sy(xiarraymax2,-1:MAXNLOOP_IREGI))
        ENDIF
        ! initialization xiarray and metric
        CALL all_Integers(1,1,1,sol11,factor1)
@@ -98,12 +117,14 @@ CONTAINS
        ENDIF
     ENDDO
     n=NLOOPLINE-numzerp
-    IF(n.GE.6.OR.MAXRANK.GT.6)THEN
-       WRITE(*,*)"ERROR: out of range of tensor_integral_reduce (N<7,R<7)"
+    IF(n.GE.MAXNLOOP_IREGI.OR.MAXRANK.GT.MAXRANK_IREGI)THEN
+       WRITE(*,100)"ERROR: out of range of tensor_integral_reduce (N<=",MAXNLOOP_IREGI,",R<=",MAXRANK_IREGI,")"
        STOP
     ENDIF
-    CALL sytensor(n,MAXRANK,ntot,sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2))
-    CALL symmetry(IMODE,NLOOPLINE,ntot,sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2),&
+    CALL sytensor(n,MAXRANK,xiarraymax,xiarraymax2,ntot,&
+         sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2))
+    CALL symmetry(IMODE,NLOOPLINE,ntot,xiarraymax,xiarraymax2,xiarraymax3,&
+         sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2),&
          numzerp,zerp,PDEN,M2L,NCOEFS,TICOEFS)
     TSTABLE=STABLE_IREGI
     IF(TSTABLE.AND.do_shift)THEN
@@ -113,6 +134,7 @@ CONTAINS
        CALL SHIFT_MOM(PDEN_N,NCOEFS,TICOEFS_SAVE,TICOEFS)
     ENDIF
     RETURN
+100 FORMAT(2X,A50,I2,A4,I2,A1)
   END SUBROUTINE tensor_integral_reduce
 
   SUBROUTINE tensor_integral_reduce2(IMODE,NLOOPLINE,MAXRANK,NCOEFS,PDEN,PijMatrix,M2L,MU,TICOEFS,TSTABLE)
@@ -129,25 +151,44 @@ CONTAINS
     LOGICAL,INTENT(OUT)::TSTABLE
     INTEGER,DIMENSION(1,1)::sol11
     REAL(KIND(1d0)),DIMENSION(1)::factor1
-    INTEGER::first=0,i,j,numzerp,n,r,nr,init,ntot
+    INTEGER::first=0,i,j,jk,numzerp,n,r,nr,init,ntot
     INTEGER,DIMENSION(NLOOPLINE)::zerp
-    REAL(KIND(1d0)),DIMENSION(xiarraymax2)::syfactor
-    INTEGER,DIMENSION(xiarraymax2,-1:NLOOPLINE)::sy
+    ! f[i,n]=(i+n-1)!/(n-1)!/i!
+    ! nmax=5,rmax=6,NLOOPLINE=nmax+1
+    ! see syntensor in ti_reduce.f90 
+    ! xiarraymax2=(f[0,nmax])+(f[1,nmax])+(f[2,nmax]+f[0,nmax])
+    ! +(f[3,nmax]+f[1,nmax])+(f[4,nmax]+f[2,nmax]+f[0,nmax])
+    ! +(f[5,nmax]+f[3,nmax]+f[1,nmax])+(f[6,nmax]+f[4,nmax]+f[2,nmax]+f[0,nmax])
+    ! when rmax=5,nmax=5 -> xiarraymax2=314
+    ! when rmax=6,nmax=5 -> xiarraymax2=610 
+    INTEGER::xiarraymax2,xiarraymax,xiarraymax3
+    !REAL(KIND(1d0)),DIMENSION(xiarraymax2)::syfactor
+    REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::syfactor
+    !INTEGER,DIMENSION(xiarraymax2,-1:NLOOPLINE)::sy
+    INTEGER,DIMENSION(:,:),ALLOCATABLE::sy
     REAL(KIND(1d0))::temp
-    SAVE first
+    SAVE first,xiarraymax,xiarraymax2,xiarraymax3,syfactor,sy
     MU_R_IREGI=MU
     IF(first.EQ.0)THEN
        IF(.NOT.print_banner)THEN
-       WRITE(*,*)"#####################################################################################"
-       WRITE(*,*)"#                                                                                   #"
-       WRITE(*,*)"#                           IREGI-alpha-1.0.0                                       #"
-       WRITE(*,*)"#    package for one-loop tensor Integral REduction with General propagator Indices #"
-       WRITE(*,*)"#    Author: Hua-Sheng Shao (huasheng.shao@cern.ch/erdissshaw@gmail.com)            #"
-       WRITE(*,*)"#    a) Physics School, Peking University, Beijing, China                           #"
-       WRITE(*,*)"#    b) PH Department, TH Unit, CERN, Geneva, Switzerland                           #"
-       WRITE(*,*)"#                                                                                   #"
-       WRITE(*,*)"#####################################################################################"
-       print_banner=.TRUE.
+          INCLUDE "banner.inc"
+          print_banner=.TRUE.
+       ENDIF
+       xiarraymax2=0
+       DO i=0,MAXRANK_IREGI
+          j=i/2+1
+          DO jk=1,j
+             xiarraymax2=xiarraymax2+&
+                  xiarray_arg1(2*jk-2+MOD(i,2),MAXNLOOP_IREGI-1)
+          ENDDO
+       ENDDO
+       xiarraymax=xiarray_arg1(MAXRANK_IREGI,MAXNLOOP_IREGI-1)
+       xiarraymax3=xiarray_arg1(MAXRANK_IREGI,4)
+       IF(.NOT.ALLOCATED(syfactor))THEN
+          ALLOCATE(syfactor(xiarraymax2))
+       ENDIF
+       IF(.NOT.ALLOCATED(sy))THEN
+          ALLOCATE(sy(xiarraymax2,-1:MAXNLOOP_IREGI))
        ENDIF
        ! initialization xiarray and metric 
        CALL all_Integers(1,1,1,sol11,factor1)
@@ -175,22 +216,26 @@ CONTAINS
        ENDIF
     ENDDO
     n=NLOOPLINE-numzerp
-    IF(n.GE.6.OR.MAXRANK.GT.6)THEN
-       WRITE(*,*)"ERROR: out of range of tensor_integral_reduce2 (N<7,R<7)"
+    IF(n.GE.MAXNLOOP_IREGI.OR.MAXRANK.GT.MAXRANK_IREGI)THEN
+       WRITE(*,100)"ERROR: out of range of tensor_integral_reduce2 (N<=",MAXNLOOP_IREGI,",R<=",MAXRANK_IREGI,")"
        STOP
     ENDIF
-    CALL sytensor(n,MAXRANK,ntot,sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2))
-    CALL symmetry2(IMODE,NLOOPLINE,ntot,sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2),&
+    CALL sytensor(n,MAXRANK,xiarraymax,xiarraymax2,ntot,&
+         sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2))
+    CALL symmetry2(IMODE,NLOOPLINE,ntot,xiarraymax,xiarraymax2,xiarraymax3,&
+         sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2),&
          numzerp,zerp,PDEN,PijMatrix,M2L,NCOEFS,TICOEFS)
     TSTABLE=STABLE_IREGI
     RETURN
+100 FORMAT(2X,A51,I2,A4,I2,A1)
   END SUBROUTINE tensor_integral_reduce2
 
-  SUBROUTINE sytensor(n,rmax,ntot,sy,syfactor)
+  SUBROUTINE sytensor(n,rmax,xiarraymax,xiarraymax2,ntot,sy,syfactor)
     IMPLICIT NONE
-    INTEGER,INTENT(IN)::n,rmax
+    INTEGER,INTENT(IN)::n,rmax,xiarraymax,xiarraymax2
     INTEGER,INTENT(OUT)::ntot
     INTEGER,DIMENSION(xiarraymax2,-1:n),INTENT(OUT)::sy
+    !INTEGER,DIMENSION(*,*),INTENT(OUT)::sy
     INTEGER::r,i,i0,i0max,rm2x0,nntot,init
     INTEGER,DIMENSION(xiarraymax,n)::sol
     REAL(KIND(1d0)),DIMENSION(xiarraymax2),INTENT(OUT)::syfactor
@@ -233,13 +278,15 @@ CONTAINS
     RETURN
   END SUBROUTINE sytensor
 
-  SUBROUTINE symmetry2(IMODE,NLOOPLINE,ntot,sy,syfactor,numzerp,zerp,PDEN,PijMatrix,M2L,NCOEFS,coefs)
+  SUBROUTINE symmetry2(IMODE,NLOOPLINE,ntot,xiarraymax,xiarraymax2,xiarraymax3,&
+       sy,syfactor,numzerp,zerp,PDEN,PijMatrix,M2L,NCOEFS,coefs)
     ! IMODE=0, IBP reduction
     ! IMODE=1, PaVe reduction
     ! IMODE=2, PaVe reduction with stablility improved by IBP reduction
     IMPLICIT NONE
-    INTEGER,INTENT(IN)::ntot,numzerp,NLOOPLINE,IMODE,NCOEFS
+    INTEGER,INTENT(IN)::ntot,numzerp,NLOOPLINE,IMODE,NCOEFS,xiarraymax,xiarraymax2,xiarraymax3
     INTEGER,DIMENSION(xiarraymax2,-1:NLOOPLINE-numzerp),INTENT(IN)::sy
+    !INTEGER,DIMENSION(*,*),INTENT(IN)::sy
     REAL(KIND(1d0)),DIMENSION(xiarraymax2),INTENT(IN)::syfactor
     INTEGER,DIMENSION(NLOOPLINE),INTENT(IN)::zerp
     REAL(KIND(1d0)),DIMENSION(NLOOPLINE,0:3),INTENT(IN)::PDEN
@@ -255,11 +302,12 @@ CONTAINS
     INTEGER::i,j,k,init,r,nntot,nt
     LOGICAL::lzero
     INTEGER,DIMENSION(0:NLOOPLINE)::nj
-    INTEGER,DIMENSION(0:NLOOPLINE,1:5)::jlist
+    INTEGER,DIMENSION(0:NLOOPLINE,1:MAXRANK_IREGI)::jlist
     REAL(KIND(1d0))::res
     COMPLEX(KIND(1d0)),DIMENSION(1:4)::scalar
     REAL(KIND(1d0)),DIMENSION(xiarraymax3)::coco
-    INTEGER,DIMENSION(5)::lor
+    !REAL(KIND(1d0)),DIMENSION(xiarraymax)::coco
+    INTEGER,DIMENSION(MAXRANK_IREGI)::lor
     coefs(0:NCOEFS-1,1:4)=DCMPLX(0d0)
     j=1
     DO i=1,NLOOPLINE
@@ -295,9 +343,9 @@ CONTAINS
              init=init+sol(j,4)
           ENDIF
           nj(0:nt)=0
-          jlist(0:nt,1:5)=0
+          jlist(0:nt,1:MAXRANK_IREGI)=0
           CALL recursive_symmetry(nt,1,r,PCLL(1:nt,0:3),sy(i,-1:nt),lor(1:r),&
-               nj(0:nt),jlist(0:nt,1:5),res)
+               nj(0:nt),jlist(0:nt,1:MAXRANK_IREGI),res)
           lzero=lzero.AND.(ABS(res).LT.EPS)
           IF(.NOT.ML5_CONVENTION)THEN
              coco(j)=res*factor(j)
@@ -344,7 +392,7 @@ CONTAINS
                 ! optimized PaVe reduction
                 ! the stability has been improved by IBP reduction
                 scalar(1:4)=pave_opt_reduce2(NLOOPLINE,paveindices,PijMatrix,M2L)                
-             ENDIF
+             ENDIF             
              IF(.NOT.STABLE_IREGI)THEN
                 WRITE(*,*)"IREGI:WARNING, it detects unstable case, some integrals may set to be 0."
                 RETURN
@@ -359,13 +407,15 @@ CONTAINS
     RETURN
   END SUBROUTINE symmetry2
 
-  SUBROUTINE symmetry(IMODE,NLOOPLINE,ntot,sy,syfactor,numzerp,zerp,PDEN,M2L,NCOEFS,coefs)
+  SUBROUTINE symmetry(IMODE,NLOOPLINE,ntot,xiarraymax,xiarraymax2,xiarraymax3,&
+       sy,syfactor,numzerp,zerp,PDEN,M2L,NCOEFS,coefs)
     ! IMODE=0, IBP reduction  
     ! IMODE=1, PaVe reduction
     ! IMODE=2, PaVe reduction with stablility improved by IBP reduction 
     IMPLICIT NONE
-    INTEGER,INTENT(IN)::ntot,numzerp,NLOOPLINE,IMODE,NCOEFS
+    INTEGER,INTENT(IN)::ntot,numzerp,NLOOPLINE,IMODE,NCOEFS,xiarraymax,xiarraymax2,xiarraymax3
     INTEGER,DIMENSION(xiarraymax2,-1:NLOOPLINE-numzerp),INTENT(IN)::sy
+    !INTEGER,DIMENSION(*,*),INTENT(IN)::sy 
     REAL(KIND(1d0)),DIMENSION(xiarraymax2),INTENT(IN)::syfactor
     INTEGER,DIMENSION(NLOOPLINE),INTENT(IN)::zerp
     REAL(KIND(1d0)),DIMENSION(NLOOPLINE,0:3),INTENT(IN)::PDEN
@@ -380,11 +430,12 @@ CONTAINS
     INTEGER::i,j,k,init,r,nntot,nt
     LOGICAL::lzero
     INTEGER,DIMENSION(0:NLOOPLINE)::nj
-    INTEGER,DIMENSION(0:NLOOPLINE,1:5)::jlist
+    INTEGER,DIMENSION(0:NLOOPLINE,1:MAXRANK_IREGI)::jlist
     REAL(KIND(1d0))::res
     COMPLEX(KIND(1d0)),DIMENSION(1:4)::scalar
     REAL(KIND(1d0)),DIMENSION(xiarraymax3)::coco
-    INTEGER,DIMENSION(5)::lor
+    !REAL(KIND(1d0)),DIMENSION(84)::coco
+    INTEGER,DIMENSION(MAXRANK_IREGI)::lor
     coefs(0:NCOEFS-1,1:4)=DCMPLX(0d0)
     j=1
     DO i=1,NLOOPLINE
@@ -423,9 +474,9 @@ CONTAINS
              init=init+sol(j,4)
           ENDIF
           nj(0:nt)=0
-          jlist(0:nt,1:5)=0
+          jlist(0:nt,1:MAXRANK_IREGI)=0
           CALL recursive_symmetry(nt,1,r,PCLL(1:nt,0:3),sy(i,-1:nt),lor(1:r),&
-               nj(0:nt),jlist(0:nt,1:5),res)
+               nj(0:nt),jlist(0:nt,1:MAXRANK_IREGI),res)
           lzero=lzero.AND.(ABS(res).LT.EPS)
           IF(.NOT.ML5_CONVENTION)THEN
              coco(j)=res*factor(j)
@@ -495,7 +546,7 @@ CONTAINS
     REAL(KIND(1d0)),INTENT(INOUT)::res
     REAL(KIND(1d0))::temp,temp2
     INTEGER,DIMENSION(0:n),INTENT(INOUT)::njj
-    INTEGER,DIMENSION(0:n,5),INTENT(INOUT)::jjlist
+    INTEGER,DIMENSION(0:n,MAXRANK_IREGI),INTENT(INOUT)::jjlist
     REAL(KIND(1d0)),DIMENSION(n,0:3),INTENT(IN)::PCL
     INTEGER,DIMENSION(-1:n),INTENT(IN)::sy
     INTEGER,DIMENSION(r),INTENT(IN)::lor
@@ -575,18 +626,26 @@ CONTAINS
     INTEGER,DIMENSION(nn),INTENT(IN)::lor2
     INTEGER,DIMENSION(nnj),INTENT(IN)::jlist
     INTEGER::ifirst=0,i,j,k,l,t
-    INTEGER,PARAMETER::maxrank=2,maxrank2=16 ! 2*maxrank*4
-    REAL(KIND(1d0)),DIMENSION(0:maxrank,0:maxrank,0:maxrank,0:maxrank)::gfsave
-    INTEGER,DIMENSION(maxrank2)::lor
+    INTEGER::maxgrank,maxgrank2 ! maxrank2=2*maxrank*4
+    REAL(KIND(1d0)),DIMENSION(:,:,:,:),ALLOCATABLE::gfsave
+    INTEGER,DIMENSION(:),ALLOCATABLE::lor
     INTEGER::n
     INTEGER,DIMENSION(0:3)::indexnum
     REAL(KIND(1d0))::gfunction
     SAVE ifirst,gfsave
     IF(ifirst.EQ.0)THEN
-       DO i=0,maxrank
-          DO j=0,maxrank
-             DO k=0, maxrank
-                DO l=0, maxrank
+       maxgrank=MAXRANK_IREGI/2
+       maxgrank2=2*maxgrank*4
+       IF(.NOT.ALLOCATED(gfsave))THEN
+          ALLOCATE(gfsave(0:maxgrank,0:maxgrank,0:maxgrank,0:maxgrank))
+       ENDIF
+       IF(.NOT.ALLOCATED(lor))THEN
+          ALLOCATE(lor(maxgrank2))
+       ENDIF
+       DO i=0,maxgrank
+          DO j=0,maxgrank
+             DO k=0, maxgrank
+                DO l=0, maxgrank
                    n=2*i+2*j+2*k+2*l
                    IF(n.EQ.0)THEN
                       gfsave(i,j,k,l)=1d0
@@ -644,7 +703,7 @@ CONTAINS
     IMPLICIT NONE
     INTEGER,DIMENSION(0:3),INTENT(IN)::pos
     INTEGER::calc_pos
-    INTEGER,PARAMETER::maxrank=5
+    INTEGER,PARAMETER::maxrank=MAXRANK_IREGI
     INTEGER,DIMENSION(0:maxrank,0:maxrank,0:maxrank,0:maxrank)::possave
     INTEGER::ifirst=0,i,j,k,l,rk,init
     SAVE possave,ifirst
