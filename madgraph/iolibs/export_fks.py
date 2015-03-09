@@ -2040,9 +2040,10 @@ c     this subdir has no soft singularities
     #===============================================================================
     def write_nfksconfigs_file(self, writer, fksborn, fortran_model):
         """Writes the content of nFKSconfigs.inc, which just gives the
-        total FKS dirs as a parameter"""
+        total FKS dirs as a parameter.
+        nFKSconfigs is always >=1 (use a fake configuration for LOonly)"""
         replace_dict = {}
-        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
+        replace_dict['nconfs'] = max(len(fksborn.get_fks_info_list()), 1)
         content = \
 """      INTEGER FKS_CONFIGS
       PARAMETER (FKS_CONFIGS=%(nconfs)d)
@@ -2057,43 +2058,67 @@ c     this subdir has no soft singularities
     #===============================================================================
     def write_fks_info_file(self, writer, fksborn, fortran_model): #test_written
         """Writes the content of fks_info.inc, which lists the informations on the 
-        possible splittings of the born ME"""
+        possible splittings of the born ME.
+        nconfs is always >=1 (use a fake configuration for LOonly).
+        The fake configuration use an 'antigluon' (id -21, color=8) as i_fks and 
+        the last colored particle as j_fks."""
 
         replace_dict = {}
         fks_info_list = fksborn.get_fks_info_list()
-        replace_dict['nconfs'] = len(fks_info_list)
-        fks_i_values = ', '.join(['%d' % info['fks_info']['i'] \
-                                                 for info in fks_info_list]) 
-        fks_j_values = ', '.join(['%d' % info['fks_info']['j'] \
-                                                 for info in fks_info_list]) 
-        if fks_i_values:
-            replace_dict['fks_i_line'] = "data fks_i_D / %s /" % fks_i_values
+        replace_dict['nconfs'] = max(len(fks_info_list), 1)
+
+        # this is for processes with 'real' or 'all' as NLO mode 
+        if len(fks_info_list) > 0:
+            fks_i_values = ', '.join(['%d' % info['fks_info']['i'] \
+                                                     for info in fks_info_list]) 
+            fks_j_values = ', '.join(['%d' % info['fks_info']['j'] \
+                                                     for info in fks_info_list]) 
+
+            col_lines = []
+            pdg_lines = []
+            charge_lines = []
+            fks_j_from_i_lines = []
+            for i, info in enumerate(fks_info_list):
+                col_lines.append( \
+                    'DATA (PARTICLE_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                    % (i + 1, ', '.join('%d' % col for col in fksborn.real_processes[info['n_me']-1].colors) ))
+                pdg_lines.append( \
+                    'DATA (PDG_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                    % (i + 1, ', '.join('%d' % pdg for pdg in info['pdgs'])))
+                charge_lines.append(\
+                    'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
+                    % (i + 1, ', '.join('%19.15fd0' % charg\
+                                        for charg in fksborn.real_processes[info['n_me']-1].charges) ))
+                fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
+                                                                       i + 1))
         else:
-            replace_dict['fks_i_line'] = ''
+        # this is for 'LOonly', generate a fake FKS configuration with
+        # - i_fks = nexternal, pdg type = -21 and color =8
+        # - j_fks = the last colored particle
+            bornproc = fksborn.born_matrix_element.get('processes')[0]
+            pdgs = [l.get('id') for l in bornproc.get('legs')] + [-21]
+            colors = [l.get('color') for l in bornproc.get('legs')] + [8]
+            charges = [0.] * len(colors) 
 
-        if fks_j_values:
-            replace_dict['fks_j_line'] = "data fks_j_D / %s /" % fks_j_values
-        else:
-            replace_dict['fks_j_line'] = ''
+            fks_i = len(colors)
+            for cpos, col in enumerate(colors):
+                if col != 1:
+                    fks_j = cpos+1
 
-        col_lines = []
-        pdg_lines = []
-        charge_lines = []
-        fks_j_from_i_lines = []
-        for i, info in enumerate(fks_info_list):
-            col_lines.append( \
-                'DATA (PARTICLE_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
-                % (i + 1, ', '.join('%d' % col for col in fksborn.real_processes[info['n_me']-1].colors) ))
-            pdg_lines.append( \
-                'DATA (PDG_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
-                % (i + 1, ', '.join('%d' % pdg for pdg in info['pdgs'])))
-            charge_lines.append(\
-                'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
-                % (i + 1, ', '.join('%19.15fd0' % charg\
-                                    for charg in fksborn.real_processes[info['n_me']-1].charges) ))
-            fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
-                                                                   i + 1))
+            fks_i_values = str(fks_i)
+            fks_j_values = str(fks_j)
+            col_lines = ['DATA (PARTICLE_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                            % ', '.join([str(col) for col in colors])]
+            pdg_lines = ['DATA (PDG_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                            % ', '.join([str(pdg) for pdg in pdgs])]
+            charge_lines = ['DATA (PARTICLE_CHARGE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                            % ', '.join('%19.15fd0' % charg for charg in charges)]
+            fks_j_from_i_lines = ['DATA((FKS_J_FROM_I_D(1, %d, JPOS), JPOS = 0, 1)  / 1, %d /' \
+                            % (fks_i, fks_j)]
+            
 
+        replace_dict['fks_i_line'] = "data fks_i_D / %s /" % fks_i_values
+        replace_dict['fks_j_line'] = "data fks_j_D / %s /" % fks_j_values
         replace_dict['col_lines'] = '\n'.join(col_lines)
         replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
         replace_dict['charge_lines'] = '\n'.join(charge_lines)
