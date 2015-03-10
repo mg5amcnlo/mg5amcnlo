@@ -1758,7 +1758,7 @@ Parameters              %(params)s\n\
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
     
         # Extract the number of FKS process
-        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
+        replace_dict['nconfs'] = max(len(fksborn.get_fks_info_list()),1)
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/born_fks.inc')).read()
