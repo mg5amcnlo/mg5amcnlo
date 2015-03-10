@@ -40,6 +40,7 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.various.q_polynomial as q_polynomial
+import madgraph.various.banner as banner_mod
 
 import aloha.create_aloha as create_aloha
 
@@ -128,7 +129,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                                         link_tir_libs,tir_libs)
         
         # Duplicate run_card and FO_analyse_card
-        for card in ['run_card', 'FO_analyse_card', 'shower_card']:
+        for card in ['FO_analyse_card', 'shower_card']:
             try:
                 shutil.copy(pjoin(self.dir_path, 'Cards',
                                          card + '.dat'),
@@ -153,6 +154,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+        if os.path.exists(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat')):          
+                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 
+                                                  'Cards', 'MadLoopParams.dat'))
+                # write the output file
+                self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
+                                                           "MadLoopParams.dat"))
                                        
         # We need minimal editing of MadLoopCommons.f
         MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
@@ -244,13 +251,13 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         cp(_file_path+'../models/check_param_card.py', 
                               self.dir_path+'/bin/internal/check_param_card.py')
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
-        cp(_file_path+'/various/gen_crossxhtml.py', 
+        cp(_file_path+'/madevent/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
         cp(_file_path+'/various/banner.py', 
                                    self.dir_path+'/bin/internal/banner.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
-        cp(_file_path+'/various/sum_html.py', 
+        cp(_file_path+'/madevent/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
         cp(_file_path+'/various/lhe_parser.py', 
                                        self.dir_path+'/bin/internal/lhe_parser.py') 
@@ -381,7 +388,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ff.write(text)
         ff.close()
 
-    def get_ME_identifier(self, matrix_element):
+    def get_ME_identifier(self, matrix_element, *args, **opts):
         """ A function returning a string uniquely identifying the matrix 
         element given in argument so that it can be used as a prefix to all
         MadLoop5 subroutines and common blocks related to it. This allows
@@ -592,6 +599,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'reweight_xsec_events_pdf_dummy.f',
                      'iproc_map.f',
                      'run.inc',
+                     'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
                      'symmetry_fks_test_MC.f',
@@ -650,6 +658,24 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         return calls
 
+    #===========================================================================
+    #  create the run_card 
+    #===========================================================================
+    def create_run_card(self, matrix_elements, history):
+        """ """
+ 
+        run_card = banner_mod.RunCardNLO()
+        
+        processes = [me.get('processes') 
+                                 for me in matrix_elements['matrix_elements']]
+        
+        run_card.create_default_for_process(self.proc_characteristic, 
+                                            history,
+                                            processes)
+        
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+
 
     def finalize_fks_directory(self, matrix_elements, history, makejpg = False,
             online = False, 
@@ -658,6 +684,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """Finalize FKS directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
+        self.proc_characteristic['grouped_matrix'] = False
+        
+        self.create_run_card(matrix_elements, history)
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
 #            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
@@ -1479,7 +1508,7 @@ end
 
         # We should move to MadLoop5_resources directory from the SubProcesses
 
-        ln(pjoin('../../..','Cards','MadLoopParams.dat'),
+        ln(pjoin(os.path.pardir,os.path.pardir,'MadLoopParams.dat'),
                                               pjoin('..','MadLoop5_resources'))
 
         for file in linkfiles:
@@ -2991,6 +3020,12 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+        if os.path.exists(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat')):          
+                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.dir_path, 
+                                                  'Cards', 'MadLoopParams.dat'))
+                # write the output file
+                self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
+                                                           "MadLoopParams.dat"))
 
         # We need minimal editing of MadLoopCommons.f
         MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
@@ -3054,7 +3089,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         
         # The born matrix element, if needed
         filename = 'born_matrix.f'
@@ -3110,7 +3145,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         os.system("ln -s ../../makefile_loop makefile")
         
 # We should move to MadLoop5_resources directory from the SubProcesses
-        ln(pjoin('../../..','Cards','MadLoopParams.dat'),
+        ln(pjoin(os.path.pardir,os.path.pardir,'MadLoopParams.dat'),
                                               pjoin('..','MadLoop5_resources'))        
 
         linkfiles = ['mpmodule.mod']

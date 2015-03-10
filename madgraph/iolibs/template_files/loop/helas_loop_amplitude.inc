@@ -1,4 +1,4 @@
-      SUBROUTINE %(proc_prefix)sLOOP_%(nloopline)d%(nwfsargs_header)s_%(ncplsargs)d( LID, %(pairingargs)s%(wfsargs)s%(margs)s%(cplsargs)s RANK, LSYMFACT, AMPLN, RES, STABLE)
+      SUBROUTINE %(proc_prefix)sLOOP_%(nloopline)d%(nwfsargs_header)s_%(ncplsargs)d( LID, %(pairingargs)s%(wfsargs)s%(margs)s%(cplsargs)s RANK, LSYMFACT, LMULTIPLIER, AMPLN, RES, STABLE)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
@@ -20,7 +20,7 @@ C
       %(complex_mp_format)s %(mp_cplsdecl)s	  
       %(pairingdecl)s
       %(complex_dp_format)s RES(3)
-      INTEGER LID, RANK, LSYMFACT
+      INTEGER LID, RANK, LSYMFACT, LMULTIPLIER
 	  INTEGER AMPLN
 	  LOGICAL STABLE
 C
@@ -34,8 +34,8 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER WE(NEXTERNAL)  
-      INTEGER ID, SYMFACT, AMPLNUM
-      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT, AMPLNUM
+      INTEGER ID, SYMFACT, MULTIPLIER, AMPLNUM 
+      common/%(proc_prefix)sLOOP/WE,ID, SYMFACT, MULTIPLIER,AMPLNUM
 
 	  %(complex_dp_format)s LC(MAXLCOUPLINGS)	  
       %(mass_dp_format)s ML(NEXTERNAL+2)	
@@ -62,6 +62,7 @@ C ----------
 	  AMPLNUM=AMPLN
       ID=LID
 	  SYMFACT=LSYMFACT
+	  MULTIPLIER=LMULTIPLIER
       DO I=0,3
         TEMP=1
         DO J=1,NLOOPLINE

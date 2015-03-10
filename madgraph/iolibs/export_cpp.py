@@ -834,7 +834,7 @@ class ProcessExporterCPP(object):
         helicity_line = "static const int helicities[ncomb][nexternal] = {";
         helicity_line_list = []
 
-        for helicities in matrix_element.get_helicity_matrix():
+        for helicities in matrix_element.get_helicity_matrix(allow_reverse=False):
             helicity_line_list.append("{"+",".join(['%d'] * len(helicities)) % \
                                        tuple(helicities) + "}")
 

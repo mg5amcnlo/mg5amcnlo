@@ -1,12 +1,16 @@
+## if(not AmplitudeReduction){
 C THE SUBROUTINE TO CREATE THE COEFFICIENTS FROM LAST LOOP WF AND 
 C MULTIPLY BY THE BORN
 
-      SUBROUTINE %(mp_prefix)s%(proc_prefix)sCREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE,LOOP_GROUP_NUMBER,SYMFACT,COLOR_ID,HELCONFIG)
+      SUBROUTINE %(mp_prefix)s%(proc_prefix)sCREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER,COLOR_ID,HELCONFIG)
 	  implicit none
 C  
 C CONSTANTS 
 C 
-	  %(nbornamps_decl)s
+## if (not LoopInduced) {
+	  INTEGER NBORNAMPS
+      PARAMETER (NBORNAMPS=%(nbornamps)d)
+## }
 	  %(real_format)s ZERO,ONE
 	  PARAMETER (ZERO=%(zero_def)s,ONE=%(one_def)s)
 	  %(complex_format)s IMAG1
@@ -30,7 +34,7 @@ C
 C ARGUMENTS 
 C  
       %(complex_format)s LOOP_WF(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-	  INTEGER RANK, COLOR_ID, SYMFACT, LCUT_SIZE, HELCONFIG, LOOP_GROUP_NUMBER
+	  INTEGER RANK, COLOR_ID, SYMFACT, MULTIPLIER, LCUT_SIZE, HELCONFIG, LOOP_GROUP_NUMBER
 C  
 C LOCAL VARIABLES 
 C
@@ -62,8 +66,11 @@ C
 
 	  INTEGER HELPICKED
 	  common/%(proc_prefix)sHELCHOICE/HELPICKED
-
-	  %(born_amps_decl)s
+      
+## if(not LoopInduced) {
+	  %(complex_format)s AMP(NBORNAMPS)
+	  common/%(proc_prefix)s%(mp_prefix)sAMPS/AMP
+## }
       
 	  DO I=1,NAMPSO
 	    CONST(I)=CMPLX_ZERO
@@ -77,7 +84,7 @@ C
 	  
       DO I=1,NAMPSO
 	    IF (CONST(I).NE.CMPLX_ZERO) THEN
-	      CONST(I)=CONST(I)/SYMFACT
+	      CONST(I)=(CONST(I)*MULTIPLIER)/SYMFACT
 	      IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
 	        CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
 	      ENDIF
@@ -86,3 +93,51 @@ C
       ENDDO
 
 	  END
+## }else{
+C The subroutine to create the loop coefficients form the last loop wf.
+C In this case of loop-induced process, the reduction is performed at the loop
+C amplitude level so that no multiplication is performed.
+
+      SUBROUTINE %(mp_prefix)s%(proc_prefix)sCREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER)
+	  implicit none
+C  
+C CONSTANTS 
+C 
+	  %(real_format)s ZERO,ONE
+	  PARAMETER (ZERO=%(zero_def)s,ONE=%(one_def)s)
+	  %(complex_format)s IMAG1
+      PARAMETER (IMAG1=(ZERO,ONE))
+	  %(complex_format)s CMPLX_ZERO
+	  PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
+	  INTEGER MAXLWFSIZE
+	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+	  INTEGER LOOPMAXCOEFS
+	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+	  INTEGER    NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
+	  INTEGER    NCOMB
+      PARAMETER (NCOMB=%(ncomb)d)
+C  
+C ARGUMENTS 
+C  
+      %(complex_format)s LOOP_WF(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+	  INTEGER RANK, SYMFACT, LCUT_SIZE, LOOP_GROUP_NUMBER, MULTIPLIER
+C  
+C LOCAL VARIABLES 
+C
+      %(complex_format)s CONST
+      INTEGER I,J
+C
+C GLOBAL VARIABLES
+C
+      %(complex_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+	  common/%(proc_prefix)s%(mp_prefix)sLCOEFS/LOOPCOEFS
+C
+C BEGIN CODE
+C
+	  CONST=CMPLX((ONE*MULTIPLIER)/SYMFACT,ZERO,KIND=16)
+
+      CALL %(mp_prefix)s%(proc_prefix)sMERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST,LOOPCOEFS(0,LOOP_GROUP_NUMBER))
+
+	  END
+## }

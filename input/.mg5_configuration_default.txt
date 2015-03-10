@@ -89,8 +89,10 @@
 
 #! Cluster Type [pbs|sge|condor|lsf|ge|slurm|htcaas|htcaas2] Use for cluster run only
 #!  And cluster queue (or partition for slurm)
+#!  And size of the cluster (some part of the code can adapt splitting accordingly)
 # cluster_type = condor
 # cluster_queue = madgraph
+# cluster_size = 150 
 
 #! Path to a node directory to avoid direct writting on the central disk
 #!  Note that condor cluster avoid direct writting by default (therefore this

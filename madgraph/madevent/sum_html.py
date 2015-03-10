@@ -21,9 +21,13 @@ logger = logging.getLogger('madevent.stdout') # -> stdout
 
 pjoin = os.path.join
 try:
-    import madgraph.various.cluster as cluster
+    import madgraph
 except ImportError:
     import internal.cluster as cluster
+    import internal.misc as misc
+else:
+    import madgraph.various.cluster as cluster
+    import madgraph.various.misc as misc
 
 class OneResult(object):
     
@@ -31,12 +35,13 @@ class OneResult(object):
         """Initialize all data """
         
         self.name = name
+        self.parent_name = ''
         self.axsec = 0  # Absolute cross section = Sum(abs(wgt))
         self.xsec = 0 # Real cross section = Sum(wgt)
         self.xerru = 0  # uncorrelated error
         self.xerrc = 0  # correlated error
         self.nevents = 0
-        self.nw = 0     # Don't know
+        self.nw = 0     # number of events after the primary unweighting
         self.maxit = 0  # 
         self.nunwgt = 0  # number of unweighted events
         self.luminosity = 0
@@ -46,14 +51,28 @@ class OneResult(object):
         self.yasec_iter = []
         self.eff_iter = []
         self.maxwgt_iter = []
+        self.maxwgt = 0 # weight used for the secondary unweighting.
+        self.th_maxwgt= 0 # weight that should have been use for secondary unweighting
+                          # this can happen if we force maxweight
+        self.th_nunwgt = 0 # associated number of event with th_maxwgt 
+                           #(this is theoretical do not correspond to a number of written event)
         return
     
-    @cluster.multiple_try(nb_try=5,sleep=20)
+    #@cluster.multiple_try(nb_try=5,sleep=20)
     def read_results(self, filepath):
         """read results.dat and fullfill information"""
         
+        if isinstance(filepath, str):
+            finput = open(filepath)
+        elif isinstance(filepath, file):
+            finput = filepath
+        else:
+            raise Exception, "filepath should be a path or a file descriptor"
+        
+        
+        
         i=0
-        for line in open(filepath):
+        for line in finput:
             i+=1
             if i == 1:
                 def secure_float(d):
@@ -64,14 +83,14 @@ class OneResult(object):
                         if m:
                             return float(m.group(1))*10**(float(m.group(2)))
                         return 
-                    
                 data = [secure_float(d) for d in line.split()]
                 self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
-                         self.maxit, self.nunwgt, self.luminosity, self.wgt, self.xsec = data[:10]
+                         self.maxit, self.nunwgt, self.luminosity, self.wgt, \
+                         self.xsec = data[:10]
+                if len(data) > 10:
+                    self.maxwgt, self.th_maxwgt, self.th_nunwgt = data[10:13]
                 if self.mfactor > 1:
                     self.luminosity /= self.mfactor
-                    #self.ysec_iter.append(self.axsec)
-                    #self.yerr_iter.append(0)
                 continue
             try:
                 l, sec, err, eff, maxwgt, asec = line.split()
@@ -115,7 +134,23 @@ class OneResult(object):
         
         self.ysec_iter = ysec
         self.yerr_iter = yerr
-
+    
+    def get(self, name):
+        
+        if name in ['xsec', 'xerru','xerrc']:
+            return getattr(self, name) * self.mfactor
+        elif name in ['luminosity']:
+            #misc.sprint("use unsafe luminosity definition")
+            #raise Exception
+            return getattr(self, name) #/ self.mfactor
+        elif (name == 'eff'):
+            return self.xerr*math.sqrt(self.nevents/(self.xsec+1e-99))
+        elif name == 'xerr':
+            return math.sqrt(self.xerru**2+self.xerrc**2)
+        elif name == 'name':
+            return pjoin(self.parent_name, self.name)
+        else:
+            return getattr(self, name)
 
 class Combine_results(list, OneResult):
     
@@ -129,6 +164,7 @@ class Combine_results(list, OneResult):
         oneresult = OneResult(name)
         oneresult.set_mfactor(mfactor)
         oneresult.read_results(filepath)
+        oneresult.parent_name = self.name
         self.append(oneresult)
     
     
@@ -170,12 +206,15 @@ class Combine_results(list, OneResult):
         self.luminosity = sum([one.luminosity for one in self])
         self.ysec_iter = []
         self.yerr_iter = []
+        self.th_maxwgt = 0.0
+        self.th_nunwgt = 0 
         for result in self:
             self.ysec_iter+=result.ysec_iter
             self.yerr_iter+=result.yerr_iter
             self.yasec_iter += result.yasec_iter
             self.eff_iter += result.eff_iter
             self.maxwgt_iter += result.maxwgt_iter
+
 
     
     def compute_iterations(self):
@@ -277,7 +316,7 @@ class Combine_results(list, OneResult):
                     'mod_P_link': mod_link,
                     'cross': '%.4g' % oneresult.xsec,
                     'error': '%.3g' % oneresult.xerru,
-                    'events': oneresult.nevents,
+                    'events': oneresult.nevents/1000.0,
                     'unweighted': oneresult.nunwgt,
                     'luminosity': '%.3g' % oneresult.luminosity
                    }
@@ -327,9 +366,10 @@ class Combine_results(list, OneResult):
             power = int(power) + 1
             return '%.5fE%+03i' %(nb,power)
 
-        line = '%s %s %s %i %i %i %i %s %s %s\n' % (fstr(self.axsec), fstr(self.xerru), 
+        line = '%s %s %s %i %i %i %i %s %s %s %s %s %i\n' % (fstr(self.axsec), fstr(self.xerru), 
                 fstr(self.xerrc), self.nevents, self.nw, self.maxit, self.nunwgt,
-                 fstr(self.luminosity), fstr(self.wgt), fstr(self.xsec))        
+                 fstr(self.luminosity), fstr(self.wgt), fstr(self.xsec), fstr(self.maxwgt),
+                 fstr(self.th_maxwgt), self.th_nunwgt)        
         fsock = open(output_path,'w') 
         fsock.writelines(line)
         for i in range(len(self.ysec_iter)):
@@ -375,20 +415,11 @@ function check_link(url,alt, id){
 """ 
 
 
+def collect_result(cmd, folder_names):
+    """ """ 
 
-
-
-
-def make_all_html_results(cmd, folder_names = []):
-    """ folder_names has been added for the amcatnlo runs """
     run = cmd.results.current['run_name']
-    if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
-        os.mkdir(pjoin(cmd.me_dir, 'HTML', run))
-    
-    unit = cmd.results.unit
-            
     all = Combine_results(run)
-    P_text = ""
     
     for Pdir in open(pjoin(cmd.me_dir, 'SubProcesses','subproc.mg')):
         Pdir = Pdir.strip()
@@ -415,19 +446,37 @@ def make_all_html_results(cmd, folder_names = []):
                     else:
                         dir = folder.replace('*', '_G' + name)
                     P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
-
         P_comb.compute_values()
-        P_text += P_comb.get_html(run, unit, cmd.me_dir)
-        P_comb.write_results_dat(pjoin(P_path, '%s_results.dat' % run))
         all.append(P_comb)
     all.compute_values()
-    all.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))
+    return all
 
+
+def make_all_html_results(cmd, folder_names = []):
+    """ folder_names has been added for the amcatnlo runs """
+    run = cmd.results.current['run_name']
+    if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
+        os.mkdir(pjoin(cmd.me_dir, 'HTML', run))
+    
+    unit = cmd.results.unit
+    P_text = ""      
+    Presults = collect_result(cmd, folder_names=folder_names)
+            
+    
+    for P_comb in Presults:
+        P_text += P_comb.get_html(run, unit, cmd.me_dir) 
+        P_comb.compute_values()
+        P_comb.write_results_dat(pjoin(cmd.me_dir, 'SubProcesses', P_comb.name,
+                                        '%s_results.dat' % run))
+
+    
+    Presults.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))   
+    
     fsock = open(pjoin(cmd.me_dir, 'HTML', run, 'results.html'),'w')
     fsock.write(results_header)
-    fsock.write('%s <dl>' % all.get_html(run, unit, cmd.me_dir))
-    fsock.write('%s </dl></body>' % P_text)
+    fsock.write('%s <dl>' % Presults.get_html(run, unit, cmd.me_dir))
+    fsock.write('%s </dl></body>' % P_text)         
+    
+    return Presults.xsec, Presults.xerru   
+            
 
-
-          
-    return all.xsec, all.xerru

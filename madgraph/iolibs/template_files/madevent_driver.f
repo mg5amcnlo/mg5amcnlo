@@ -97,7 +97,6 @@ c     in first iteration for gridpacks
       call setrun                !Sets up run parameters
       call setpara(param_card_name %(secondparam)s)   !Sets up couplings and masses
       include 'pmass.inc'        !Sets up particle masses
-      include 'qmass.inc'        !Sets up particle masses inside onium state
       call setcuts               !Sets up cuts 
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
@@ -137,6 +136,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
+      call init_good_hel()
       call get_user_params(ncall,itmax,itmin,mincfig)
       maxcfig=mincfig
       minvar(1,1) = 0              !This tells it to map things invarients
@@ -163,7 +163,6 @@ c
       if (twgt .gt. 0d0) maxwgt=maxwgt/twgt
       write(lun,'(a,f20.5)') 'Summary', maxwgt
       
-c      call store_events
 
 c      write(*,'(a34,20I7)'),'Color flows originally chosen:   ',
 c     &     (ncolflow(i),i=1,ncols)
@@ -185,12 +184,16 @@ c
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
+      use DiscreteSampler
+
       implicit none
 c
 c     Constants
 c
       include 'nexternal.inc'
       include 'maxparticles.inc'
+      integer NCOMB
+      parameter (NCOMB=%(ncomb)i)
 c
 c     Arguments
 c
@@ -228,8 +231,14 @@ c-----
       write(*,'(a)') 'Enter 0 for fixed, 2 for adjustable grid: '
       read(*,*) use_cut
       if (use_cut .lt. 0 .or. use_cut .gt. 2) then
-         write(*,*) 'Bad choice, using 2',use_cut
-         use_cut = 2
+         if (use_cut.ne.-2) then
+            write(*,*) 'Bad choice, using 2',use_cut
+            use_cut = 2
+         else if (use_cut.eq.-2)then
+            itmax= 1
+            itmin=1
+         endif
+
       endif
 
       write(*,10) 'Suppress amplitude (0 no, 1 yes)? '
@@ -249,7 +258,13 @@ c-----
          write(*,*) 'Explicitly summing over helicities'
       else
          isum_hel= i
-         write(*,*) 'Summing over',i,' helicities/event'
+         write(*,*) 'Monte-Carlo over helicities'
+c        initialize the discrete sampler module
+         call DS_register_dimension('Helicity',NCOMB)
+c        Also set the minimum number of points for which each helicity
+c        should be probed before the grid is used for sampling.
+C        Typically 10 * n_matrix<i>
+         call DS_set_min_points(%(hel_init_points)d,'Helicity')
       endif
 
       write(*,10) 'Enter Configuration Number: '
