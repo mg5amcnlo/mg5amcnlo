@@ -3440,13 +3440,13 @@ Integrated cross-section
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
 
         # File for the loop (might not be present if MadLoop is not used)
-        if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
+        if os.path.exists(pjoin(cwd,'MadLoop5_resources')) and \
+                                            cluster.need_transfer(self.options):
             input_files.append(pjoin(cwd, 'MadLoop5_resources.tar.gz'))
-            if not os.path.exists(pjoin(cwd,'MadLoop5_resources.tar.gz')):
-                tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar.gz'),'w:gz',
-                                                                 dereference=True)
-                tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
-                tf.close()
+            tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar.gz'),'w:gz',
+                                                           dereference=True)
+            tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
+            tf.close()
 
         Ire = re.compile("for i in ([\d\s]*) ; do")
         try : 
