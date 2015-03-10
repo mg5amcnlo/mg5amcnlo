@@ -5468,7 +5468,7 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
 
          ngluons_FKS(nFKSprocess)=0
          do i=nincoming+1,nexternal
-            if (abs(pdg_type(i)).eq.21) ngluons_FKS(nFKSprocess)
+            if (pdg_type(i).eq.21) ngluons_FKS(nFKSprocess)
      $           =ngluons_FKS(nFKSprocess)+1
          enddo
 
@@ -5521,14 +5521,18 @@ c Set matrices used by MC counterterms
       fac_j=fac_j_FKS(nFKSprocess)
       ngluons=ngluons_FKS(nFKSprocess)
 c Setup the FKS symmetry factors. 
-      if (nbody.and.abs(pdg_type(i_fks)).eq.21) then
+      if (nbody.and.pdg_type(i_fks).eq.21) then
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
          fkssymmetryfactorBorn=dble(ngluons)
+      elseif(pdg_type(i_fks).eq.-21) then
+         fkssymmetryfactor=1d0
+         fkssymmetryfactorDeg=1d0
+         fkssymmetryfactorBorn=1d0
       else
          fkssymmetryfactor=dble(fac_i*fac_j)
          fkssymmetryfactorDeg=dble(fac_i*fac_j)
-         if (abs(pdg_type(i_fks)).eq.21) then
+         if (pdg_type(i_fks).eq.21) then
             fkssymmetryfactorBorn=dble(fac_i*fac_j)
          else
             fkssymmetryfactorBorn=0d0
