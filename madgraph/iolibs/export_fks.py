@@ -155,7 +155,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
         if os.path.exists(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat')):          
-                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 
+                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.dir_path, 
                                                   'Cards', 'MadLoopParams.dat'))
                 # write the output file
                 self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
@@ -1461,7 +1461,7 @@ end
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         # The born matrix element, if needed
         filename = 'born_matrix.f'
         calls = self.write_bornmatrix(
