@@ -911,9 +911,12 @@ class OneTagResults(dict):
                 elif exists(pjoin(self.me_dir, 'Events', self['run_name'], 'events.lhe')) or\
                   exists(pjoin(self.me_dir, 'Events', self['run_name'], 'events.lhe.gz')):
                     link = './Events/%(run_name)s/events.lhe'
-                level = 'parton'
-                name = 'LHE'
-                out += self.special_link(link, level, name) 
+                else:
+                    link = None
+                if link:
+                    level = 'parton'
+                    name = 'LHE'
+                    out += self.special_link(link, level, name) 
             if 'root' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/unweighted_events.root">rootfile</a>'
             if 'plot' in self.parton:

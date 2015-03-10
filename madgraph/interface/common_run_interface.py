@@ -1481,6 +1481,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
 
         self.cluster_mode = run_mode
+        self.options['run_mode'] = run_mode
 
         if run_mode == 2:
             if not self.options['nb_core']:
@@ -1496,7 +1497,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.cluster = cluster.MultiCore(
                              **self.options)
             self.cluster.nb_core = nb_core
-                             #cluster_temp_path=self.options['cluster_temp_path'],
+        #cluster_temp_path=self.options['cluster_temp_path'],
 
         if self.cluster_mode == 1:
             opt = self.options
@@ -2085,7 +2086,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
                     % (filename, pdfsets_dir)
-
+c
 
     def get_lhapdf_pdfsets_list(self, pdfsets_dir):
         """read the PDFsets.index file, which should be located in the same
