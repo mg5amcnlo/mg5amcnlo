@@ -116,8 +116,11 @@ class Banner(dict):
     def read_banner(self, input_path):
         """read a banner"""
 
-        if isinstance(input_path, str) and input_path.find('\n') ==-1:
-            input_path = open(input_path)
+        if isinstance(input_path, str):
+            if input_path.find('\n') ==-1:
+                input_path = open(input_path)
+            else:
+                input_path = input_path.split('\n')
 
         text = ''
         store = False
@@ -154,6 +157,22 @@ class Banner(dict):
             raise Exception, "Not Supported version"
         self.lhe_version = version
     
+    def get_cross(self):
+        """return the cross-section of the file"""
+
+        if "init" not in self:
+            misc.sprint(self.keys())
+            raise Exception
+        
+        text = self["init"].split('\n')
+        cross = 0
+        for line in text:
+            s = line.split()
+            if len(s)==4:
+                cross += float(s[0])
+        return cross
+        
+
     
     def modify_init_cross(self, cross):
         """modify the init information with the associate cross-section"""
@@ -182,7 +201,28 @@ class Banner(dict):
             new_data.append(line)
         self['init'] = '\n'.join(new_data)
     
-    
+    def scale_init_cross(self, ratio):
+        """modify the init information with the associate scale"""
+
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        new_data = []
+        new_data.append(all_lines[0])
+        for i in range(1, len(all_lines)):
+            line = all_lines[i]
+            split = line.split()
+            if len(split) == 4:
+                xsec, xerr, xmax, pid = split 
+            else:
+                new_data += all_lines[i:]
+                break
+            pid = int(pid)
+            
+            line = "   %+13.7e %+13.7e %+13.7e %i" % \
+                (ratio*float(xsec), ratio* float(xerr), ratio*float(xmax), pid)
+            new_data.append(line)
+        self['init'] = '\n'.join(new_data)
     
     def load_basic(self, medir):
         """ Load the proc_card /param_card and run_card """
@@ -408,10 +448,10 @@ class Banner(dict):
     def get_detail(self, tag, *arg, **opt):
         """return a specific """
                 
-        if tag == 'param_card':
+        if tag in ['param_card', 'param']:
             tag = 'slha'
             attr_tag = 'param_card'
-        elif tag == 'run_card':
+        elif tag in ['run_card', 'run']:
             tag = 'mgruncard' 
             attr_tag = 'run_card'
         elif tag == 'proc_card':
@@ -428,11 +468,11 @@ class Banner(dict):
         elif tag == 'shower_card':
             tag = 'mgshowercard'
             attr_tag = 'shower_card'
-        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'shower_card'], 'not recognized'
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'shower_card'], '%s not recognized' % tag
         
         if not hasattr(self, attr_tag):
             self.charge_card(attr_tag) 
-        
+
         card = getattr(self, attr_tag)
         if len(arg) == 1:
             if tag == 'mg5proccard':

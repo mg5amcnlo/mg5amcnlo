@@ -34,10 +34,12 @@ import madgraph.interface.master_interface as master_interface
 import madgraph.various.misc as misc
 import madgraph.iolibs.files as files
 import madgraph.various.banner as banner
+import madgraph.various.lhe_parser as lhe_parser
 
 import models.import_ufo as import_ufo
 import models.check_param_card as check_param_card
 import MadSpin.decay as madspin
+
 
 logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
@@ -508,7 +510,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s.dat'%evt_name)
             count = 0    
             while os.path.exists(ms_card_to_copy):
-                count +=1
+                count += 1
                 ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s_%d.dat'%\
                                                                (evt_name,count))
             files.cp(str(ms_card_path),str(ms_card_to_copy))
@@ -587,11 +589,79 @@ class MadSpinInterface(extended_cmd.Cmd):
         # 2. Generate the events requested
         # 3. perform the merge of the events.
         #    if not enough events. re-generate the missing one.
+                
+        # First define an utility function for generating events when needed
+        def generate_events(pdg, nb_event, mg5, restrict_file=None, cumul=False):
+            """generate new events for this particle
+               restrict_file allow to only generate a subset of the definition
+               cumul allow to merge all the definition in one run (add process)
+                     to generate events according to cross-section
+            """
+            part = self.model.get_particle(pdg)
+            name = part.get_name()
+            out = {}
+            if cumul == False:
+                for i,proc in enumerate(self.list_branches[name]):
+                    if restrict_file and i not in restrict_file:
+                        continue
+                    decay_dir = pjoin(self.path_me, "decay_%s_%s" %(str(pdg).replace("-","x"),i))
+                    if not os.path.exists(decay_dir):
+                        mg5.exec_cmd("generate %s" % proc)
+                        mg5.exec_cmd("output %s -f" % decay_dir)
+                    options = dict(mg5.options)
+                    options["automatic_html_opening"] = False
+                    import madgraph.interface.madevent_interface as madevent_interface
+                    me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                                                    decay_dir), options=options)
+                    me5_cmd.options["automatic_html_opening"] = False
+                    run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+                    run_card["nevents"] = int(1.2*nb_event)
+                    run_card["iseed"] = self.seed
+                    run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                    self.seed += 1
+                    me5_cmd.exec_cmd("generate_events run_01 -f")
+                    me5_cmd.exec_cmd("exit")     
+                    out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))
+            else:
+                for i,proc in enumerate(self.list_branches[name]):
+                    if restrict_file and i not in restrict_file:
+                        continue
+                    decay_dir = pjoin(self.path_me, "decay_%s_%s" %(str(pdg).replace("-","x"),i))
+                    if not os.path.exists(decay_dir):
+                        mg5.exec_cmd("add process %s" % proc)
+                mg5.exec_cmd("output %s -f" % decay_dir)
+                options = dict(mg5.options)
+                options["automatic_html_opening"] = False
+                import madgraph.interface.madevent_interface as madevent_interface
+                me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                                                decay_dir), options=options)
+                me5_cmd.options["automatic_html_opening"] = False
+                run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+                run_card["nevents"] = int(1.2*nb_event)
+                run_card["iseed"] = self.seed
+                run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                self.seed += 1
+                me5_cmd.exec_cmd("generate_events run_01 -f")
+                me5_cmd.exec_cmd("exit")     
+                out[0] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))
+              
+            return out
+
         
         args = self.split_arg(line)
         self.check_launch(args)
-        
-        import madgraph.various.lhe_parser as lhe_parser
+
+        #0. Define the path where to write the file
+        self.path_me = os.path.realpath(self.options['curr_dir']) 
+        if self.options['ms_dir']:
+            self.path_me = os.path.realpath(self.options['ms_dir'])
+            if not os.path.exists(self.path_me):
+                os.mkdir(self.path_me) 
+        else:
+            # cleaning
+            for name in glob.glob(pjoin(self.path_me, "decay_*_*")):
+                shutil.rmtree(name)
+
         self.events_file.close()
         orig_lhe = lhe_parser.EventFile(self.events_file.name)
         
@@ -603,106 +673,168 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if particle.status == 1 and particle.pdg in self.final_state:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
-        print to_decay
-        # 2. Generate the events requested  
-        with misc.MuteLogger(["madgraph"], [50]):
+
+        # Handle the banner of the output file
+        if not self.seed:
+            import random
+            self.seed = random.randint(0, int(30081*30081))
+            self.do_set('seed %s' % self.seed)
+            logger.info('Will use seed %s' % self.seed)
+            self.history.insert(0, 'set seed %s' % self.seed)
+
+        if self.seed > 30081*30081: # can't use too big random number
+            msg = 'Random seed too large ' + str(self.seed) + ' > 30081*30081'
+            raise Exception, msg
+
+        self.options['seed'] = self.seed
+        
+        text = '%s\n' % '\n'.join([ line for line in self.history if line])
+        self.banner.add_text('madspin' , text)
+
+
+        # 2. Generate the events requested
+        with misc.MuteLogger(["madgraph", "madevent"], [50,50]):
             mg5 = self.mg5cmd
             modelpath = self.model.get('modelpath')
             mg5.exec_cmd("import model %s" % modelpath)      
-            
+            to_event = {}
             for pdg, nb_needed in to_decay.items():
-                part = self.model.get_particle(pdg)
-                name = part.get_name()
-                print pdg, name, nb_needed, self.list_branches[name]
-                for i,proc in enumerate(self.list_branches[name]):
-                    mg5.exec_cmd("generate %s" % proc)
-                    mg5.exec_cmd("output decay_%s_%s -f" %(str(pdg).replace("-","x"), i))
-                    options = dict(mg5.options)
-                    misc.sprint(options)
-                    options["automatic_html_opening"] = False
-                    import madgraph.interface.madevent_interface as madevent_interface
-                    me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
-                                "decay_%s_%s" %(str(pdg).replace("-","x"), i)),
-                                                              options=options)
-                    me5_cmd.options["automatic_html_opening"] = False
-                    run_card = banner.RunCard("decay_%s_%s/Cards/run_card.dat" %(str(pdg).replace("-","x"), i))
-                    run_card["nevents"] = int(nb_needed)
-                    me5_cmd.exec_cmd("generate_events -f")
+                #check if a spitting is needed
+                if nb_needed == nb_event:
+                    to_event[pdg] = generate_events(pdg, nb_needed, mg5)
+                elif nb_needed %  nb_event == 0:
+                    nb_mult = nb_needed // nb_event
+                    part = self.model.get_particle(pdg)
+                    name = part.get_name()
+                    if len(self.list_branches[name]) == nb_mult:
+                        to_event[pdg] = generate_events(pdg, nb_event, mg5)
+                    else:
+                        to_event[pdg] = generate_events(pdg, nb_needed, mg5, cumul=True)
                     
-
+                     
+                
+        
+        # Compute the branching ratio.
+        br = 1
+        for (pdg, event_files) in to_event.items():
+            totwidth = float(self.banner.get('param', 'decay', abs(pdg)).value)
+            if to_decay[pdg] == nb_event:
+                pwidth = sum([f.cross for f in event_files])
+                if pwidth > 1.01 * totwidth:
+                    logger.critical("Brancing ratio larger than one for %s " % pdg) 
+                br *= pwidth / totwidth
+            elif to_decay[pdg] % nb_event == 0:
+                nb_mult = to_decay[pdg] // nb_event
+                misc.sprint(nb_mult, len(event_files))
+                if nb_mult == len(event_files):
+                    for k in event_files:
+                        pwidth = event_files[k].cross
+                        if pwidth > 1.01 * totwidth:
+                            logger.critical("Brancing ratio larger than one for %s " % pdg)                       
+                        br *= pwidth / totwidth
+                else:
+                    pwidth = sum(event_files[k].cross for k in event_files)
+                    misc.sprint(pwidth)
+                    if pwidth > 1.01 * totwidth:
+                        logger.critical("Brancing ratio larger than one for %s " % pdg) 
+                    br *= (pwidth / totwidth)**nb_mult
+            else:
+                raise Exception
+        self.branching_ratio = br
+        misc.sprint(self.branching_ratio)
+        # modify the cross-section in the init block of the banner
+        self.banner.scale_init_cross(self.branching_ratio)
                     
-            
-
-            
-            
-            
         
         
         
         
+        # 3. Merge the various file together.
+        misc.sprint(orig_lhe.name)
+        output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.lhe', '_decayed.lhe.gz'), 'w')
+        misc.sprint(output_lhe.name)
+        self.banner.write(output_lhe, close_tag=False)
         
+        # initialise object which store not use event due to wrong helicity
+        bypassed_decay = {}
+        for pdg in to_event:
+            bypassed_decay[pdg] = [{}] * len(to_event[pdg])
         
-        
-        
-        
-        
-        
-        
-        
-        
-            # Example 2: Adding the decay of one particle (Bridge Method).
-    if False:
-        orig_lhe = EventFile('unweighted_events.lhe')
-        decay_lhe = EventFile('unweighted_decay.lhe')
-        output = open('output_events.lhe', 'w')
-        output.write(orig_lhe.banner) #need to be modified by hand!
-        pid_to_decay  = 15 #which particle to decay
-        bypassed_decay = {} # not yet use decay due to wrong helicity
-        
-        counter = 0
+        import time
         start = time.time()
+        counter = 0
+        orig_lhe.seek(0)
         for event in orig_lhe:
-            if counter % 1000 == 1:
+            if counter % 100 == 1:
                 print "decaying event number %s [%s s]" % (counter, time.time()-start)
             counter +=1
-            for particle in event:
-                if particle.pid == pid_to_decay:
-                    #ok we have to decay this particle!
-                    helicity = particle.helicity
-                    # use the already parsed_event if any
-                    done = False
-                    if helicity in bypassed_decay and bypassed_decay[helicity]:
-                        # use one of the already parsed (but not used) decay event
-                        for decay in bypassed_decay[helicity]:
-                            if decay[0].helicity == helicity:
-                                particle.add_decay(decay)
-                                bypassed_decay[helicity].remove(decay)
-                                done = True
-                                break
-                    # read the decay event up to find one valid decay
-                    while not done:
-                        try:
-                            decay = decay_lhe.next()
-                        except StopIteration:
-                            raise Exception, "not enoug event in the decay file"
-                        
-                        if helicity == decay[0].helicity or helicity==9:
-                            particle.add_decay(decay)
-                            done=True
-                        elif decay[0].helicity in bypassed_decay:
-                            if len(bypassed_decay[decay[0].helicity]) < 100:
-                                bypassed_decay[decay[0].helicity].append(decay)
-                            #limit to 100 to avoid huge increase of memory if only 
-                            #one helicity is present in the production sample.
+            ids = [particle.pid for particle in event]
+            for i,particle in enumerate(event):
+                # check if we need to decay the particle 
+                if particle.pdg not in self.final_state:
+                    continue # nothing to do for this particle
+                # check how the decay need to be done
+                nb_decay = len(to_event[particle.pdg])
+                if nb_decay == 1:
+                    decay_file = to_event[particle.pdg][0]
+                    decay_file_nb = 0
+                elif ids.count(particle.pdg) == nb_decay:
+                   decay_file = to_event[particle.pdg][ids[:i].count(particle.pdg)]
+                   decay_file_nb = ids[:i].count(particle.pdg)
+                else:
+                    #need to select the file according to the associate cross-section
+                    r = random.random()
+                    tot = sum(events.cross for events in to_event[particle.pdg])
+                    r = r * tot
+                    cumul = 0
+                    for j,events in enumerate(to_event[particle.pdg]):
+                        cumul += events.cross
+                        if r < cumul:
+                            decay_file = events
+                            decay_file_nb = j
                         else:
-                            bypassed_decay[decay[0].helicity] = [decay]
-
-            output.write(str(event))
-        output.write('</LesHouchesEvent>\n')
-        
-        
-        
-        
+                            break
+                # ok start the procedure
+                helicity = particle.helicity
+                bypassed = bypassed_decay[particle.pdg][decay_file_nb]
+                
+                # now that we have the file to read. find the associate event
+                # checks if we have one event in memory
+                if helicity in bypassed and bypassed[helicity]:
+                    decay = bypassed[helicity].pop()
+                else:
+                    # read the event file up to completion
+                    while 1:
+                        try:
+                            decay = decay_file.next()
+                        except StopIteration:
+                            # check how far we are
+                            ratio = counter / nb_event 
+                            needed = 1.05 * to_decay[particle.pdg]/ratio - counter
+                            needed = min(1000, max(needed, 1000))
+                            new_file = generate_events(particle.pdg, needed, mg5, [decay_file_nb])
+                            to_event[particle.pdg].update(new_file)
+                            decay_file = to_event[particle.pdg][decay_file_nb]
+                            continue
+                        if helicity == decay[0].helicity or helicity==9 or \
+                                            self.options["spinmode"] == "none":
+                            break # use that event
+                        # not valid event store it for later
+                        if helicity not in bypassed:
+                            bypassed[helicity] = [decay]
+                        else:
+                            bypassed[helicity].append(decay)
+                # now that we have the event make the merge
+                particle.add_decay(decay)
+            # change the weight associate to the event
+            event.wgt *= self.branching_ratio
+            wgts = event.parse_reweight()
+            for key in wgts:
+                wgts[key] *= self.branching_ratio
+            # all particle have been decay if needed
+            output_lhe.write(str(event))
+        output_lhe.write('</LesHouchesEvent>\n')        
+                    
     
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""

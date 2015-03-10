@@ -2513,7 +2513,7 @@ zeor by MadLoop.""")
 
         x_improve = gen_ximprove.gen_ximprove(self, refine_opt)
         x_improve.launch() # create the ajob for the refinment.
-        if 'refine' not in self.history[-1]:
+        if not self.history or 'refine' not in self.history[-1]:
             cross, error = x_improve.update_html() #update html results for survey
             if  cross == 0:
                 return

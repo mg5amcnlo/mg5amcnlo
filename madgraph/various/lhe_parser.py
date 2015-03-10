@@ -192,8 +192,21 @@ class EventFile(object):
             return self.banner
         
         output = banner.Banner()
+        misc.sprint("<init>"  in self.banner)
         output.read_banner(self.banner)
         return output
+
+    @property
+    def cross(self):
+        """return the cross-section of the file #from the banner"""
+        try:
+            return self._cross
+        except Exception:
+            pass
+
+        onebanner = self.get_banner()
+        self._cross = onebanner.get_cross()
+        return self._cross
     
     def __len__(self):
         if hasattr(self,"len"):
@@ -241,6 +254,7 @@ class EventFile(object):
             nb_event +=1
             wgt = get_wgt(event)
             cross['all'] += wgt
+            cross['abs'] += abs(wgt)
             cross[event.ievent] += wgt
             all_wgt.append(abs(wgt))
             # avoid all_wgt to be too large
@@ -292,7 +306,7 @@ class EventFile(object):
             
             xsum = 0
             i=1 
-            while (xsum - all_wgt[-i] * (i-1) <= cross['all'] * trunc):
+            while (xsum - all_wgt[-i] * (i-1) <= cross['abs'] * trunc):
                 max_wgt = all_wgt[-i]
                 xsum += all_wgt[-i]
                 i +=1
@@ -455,10 +469,14 @@ class MultiEventFile(EventFile):
                 self.add(p)
         self.configure = False
         
-    def add(self, path, cross=0, error=0,across=0):
-        """ add a file to the pool, cross allow to reweight the sum of weight 
+    def add(self, path, cross, error, across):
+        """ add a file to the pool, across allow to reweight the sum of weight 
         in the file to the given cross-section 
         """
+        
+        if across == 0:
+            # No event linked to this channel -> so no need to include it
+            return 
         
         obj = EventFile(path)
         if len(self.files) == 0 and not self.banner:
@@ -578,6 +596,7 @@ class MultiEventFile(EventFile):
                 event.sample_scale = 1
                 wgt = getwgt(event)
                 cross['all'] += wgt
+                cross['abs'] += abs(wgt)
                 cross[event.ievent] += wgt
                 new_wgt.append(abs(wgt))
                 # avoid all_wgt to be too large
@@ -590,7 +609,7 @@ class MultiEventFile(EventFile):
                 raise Exception
             # store the information
             self.initial_nb_events[i] = nb_event
-            self.scales[i] = self.cross[i]/cross['all'] if self.cross[i] else 1
+            self.scales[i] = self.across[i]/cross['abs'] if self.across[i] else 1
             misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
                         % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
             for key in cross:
@@ -722,11 +741,11 @@ class Event(list):
             try:
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
                                            if not self.reweight_order.append(pid)])
-                      # the if is to create the order file on the flight
+            # the if is to create the order file on the flight
             except ValueError, error:
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]
-
+        return self.reweight_data
 
     def add_decay_to_particle(self, position, decay_event):
         """define the decay of the particle id by the event pass in argument"""
@@ -1240,7 +1259,7 @@ class FourMomentum(object):
         pt = self.pt2()
         if pt:
             s3product = self.px * mom.px + self.py * mom.py + self.pz * mom.pz
-            mass = self.mass()
+            mass = self.mass
             lf = (self.E + (self.E - mass) * s3product / pt ) / mass
             return FourMomentum(E=(self.E*mom.E+s3product)/mass,
                            px=mom.px + self.px * lf,

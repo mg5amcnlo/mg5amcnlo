@@ -479,7 +479,7 @@ C     arrays since these are not the most optimized sorting algorithms.
      $           //'                                                 '
      $           //'     .JMML.     '//CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//CHAR(27)/
-     $           /'[0m'//'v2.2.3 (2015-02-10), Ref: arXiv:1103.0621v'
+     $           /'[0m'//'v%(version)s (%(date)s), Ref: arXiv:1103.0621v'
      $           //'2, arXiv:1405.0301'//CHAR(27)//'[32m'//'         '
      $           //'       '//CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
