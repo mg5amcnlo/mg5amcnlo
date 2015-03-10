@@ -2086,7 +2086,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
                     % (filename, pdfsets_dir)
-c
+
 
     def get_lhapdf_pdfsets_list(self, pdfsets_dir):
         """read the PDFsets.index file, which should be located in the same
