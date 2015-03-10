@@ -66,6 +66,9 @@ c convert momenta to pythia8 c++ format
 
       if (npart.eq.nexternal) then
          call get_ID_H(id)
+         do i=1,nexternal
+            if (id(i).eq.-21) id(1)=21
+         enddo
       elseif (npart.eq.nexternal-1) then
          call get_ID_S(id)
       endif
