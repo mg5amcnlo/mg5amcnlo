@@ -1034,7 +1034,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             for iconf, configs in enumerate(s_and_t_channels):
                 for vertex in configs[0] + configs[1][:-1]:
                     leg = vertex.get('legs')[-1]
-                    if leg.get('id') == 21 and 21 not in particle_dict:
+                    if leg.get('id') not in particle_dict:
                         # Fake propagator used in multiparticle vertices
                         pow_part = 0
                     else:
@@ -2833,7 +2833,7 @@ c           This is dummy particle used in multiparticle vertices
         for iconf, configs in enumerate(s_and_t_channels):
             for vertex in configs[0] + configs[1][:-1]:
                 leg = vertex.get('legs')[-1]
-                if leg.get('id') == 21 and 21 not in particle_dict:
+                if leg.get('id') not in particle_dict:
                     # Fake propagator used in multiparticle vertices
                     mass = 'zero'
                     width = 'zero'
