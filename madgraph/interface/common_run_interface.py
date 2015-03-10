@@ -2028,7 +2028,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
             any((os.path.exists(pjoin(d, pdfsetname)) for d in lhapdf_cluster_possibilities)):
 
-            os.environ["LHAPDF"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfsetname))][0]
+            os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfsetname))][0]
             # no need to copy it
             if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
                 try:
