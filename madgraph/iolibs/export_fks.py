@@ -155,7 +155,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
         if os.path.exists(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat')):          
-                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 
+                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.dir_path, 
                                                   'Cards', 'MadLoopParams.dat'))
                 # write the output file
                 self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
@@ -234,38 +234,32 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def copy_python_files(self):
         """copy python files required for the Template"""
 
-        cp(_file_path+'/interface/amcatnlo_run_interface.py',
-                            self.dir_path+'/bin/internal/amcatnlo_run_interface.py')
-        cp(_file_path+'/interface/extended_cmd.py',
-                                  self.dir_path+'/bin/internal/extended_cmd.py')
-        cp(_file_path+'/interface/common_run_interface.py',
-                            self.dir_path+'/bin/internal/common_run_interface.py')
-        cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
-        cp(_file_path+'/various/shower_card.py', self.dir_path+'/bin/internal/shower_card.py')        
-        cp(_file_path+'/various/FO_analyse_card.py', self.dir_path+'/bin/internal/FO_analyse_card.py')        
-        cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
-        cp(_file_path+'/iolibs/save_load_object.py', 
-                              self.dir_path+'/bin/internal/save_load_object.py') 
-        cp(_file_path+'/iolibs/file_writers.py', 
-                              self.dir_path+'/bin/internal/file_writers.py')
-        cp(_file_path+'../models/check_param_card.py', 
-                              self.dir_path+'/bin/internal/check_param_card.py')
-        cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
-        cp(_file_path+'/madevent/gen_crossxhtml.py', 
-                                self.dir_path+'/bin/internal/gen_crossxhtml.py')                
-        cp(_file_path+'/various/banner.py', 
-                                   self.dir_path+'/bin/internal/banner.py')
-        cp(_file_path+'/various/cluster.py', 
-                                       self.dir_path+'/bin/internal/cluster.py') 
-        cp(_file_path+'/madevent/sum_html.py', 
-                                       self.dir_path+'/bin/internal/sum_html.py') 
-        cp(_file_path+'/various/lhe_parser.py', 
-                                       self.dir_path+'/bin/internal/lhe_parser.py') 
+        files_to_copy = [ \
+          pjoin('interface','amcatnlo_run_interface.py'),
+          pjoin('interface','extended_cmd.py'),
+          pjoin('interface','common_run_interface.py'),
+          pjoin('interface','coloring_logging.py'),
+          pjoin('various','misc.py'),
+          pjoin('various','shower_card.py'),
+          pjoin('various','FO_analyse_card.py'),
+          pjoin('various','histograms.py'),      
+          pjoin('various','banner.py'),          
+          pjoin('various','cluster.py'),          
+          pjoin('various','lhe_parser.py'),
+          pjoin('madevent','sum_html.py'),
+          pjoin('madevent','gen_crossxhtml.py'),          
+          pjoin('iolibs','files.py'),
+          pjoin('iolibs','save_load_object.py'),
+          pjoin('iolibs','file_writers.py'),
+          pjoin('..','models','check_param_card.py'),
+          pjoin('__init__.py')
+        ]
         cp(_file_path+'/interface/.mg5_logging.conf', 
-                                 self.dir_path+'/bin/internal/me5_logging.conf') 
-        cp(_file_path+'/interface/coloring_logging.py', 
-                                 self.dir_path+'/bin/internal/coloring_logging.py') 
-
+                                 self.dir_path+'/bin/internal/me5_logging.conf')
+        
+        for cp_file in files_to_copy:
+            cp(pjoin(_file_path,cp_file),
+                pjoin(self.dir_path,'bin','internal',os.path.basename(cp_file)))
 
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
@@ -569,6 +563,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_Sij.f',
                      'fks_powers.inc',
                      'fks_singular.f',
+                     'veto_xsec.f',
+                     'veto_xsec.inc',
                      'c_weight.inc',
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
@@ -579,6 +575,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'madfks_mcatnlo.inc',
                      'open_output_files.f',
                      'open_output_files_dummy.f',
+                     'HwU_dummy.f',
                      'madfks_plot.f',
                      'analysis_dummy.f',
                      'mint-integrator2.f',
@@ -1037,7 +1034,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             for iconf, configs in enumerate(s_and_t_channels):
                 for vertex in configs[0] + configs[1][:-1]:
                     leg = vertex.get('legs')[-1]
-                    if leg.get('id') == 21 and 21 not in particle_dict:
+                    if leg.get('id') not in particle_dict:
                         # Fake propagator used in multiparticle vertices
                         pow_part = 0
                     else:
@@ -1464,7 +1461,7 @@ end
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         # The born matrix element, if needed
         filename = 'born_matrix.f'
         calls = self.write_bornmatrix(
@@ -1474,7 +1471,7 @@ end
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
+                             nexternal, ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -2836,7 +2833,7 @@ c           This is dummy particle used in multiparticle vertices
         for iconf, configs in enumerate(s_and_t_channels):
             for vertex in configs[0] + configs[1][:-1]:
                 leg = vertex.get('legs')[-1]
-                if leg.get('id') == 21 and 21 not in particle_dict:
+                if leg.get('id') not in particle_dict:
                     # Fake propagator used in multiparticle vertices
                     mass = 'zero'
                     width = 'zero'
@@ -3100,7 +3097,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
+                             nexternal, ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),

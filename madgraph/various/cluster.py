@@ -74,6 +74,14 @@ def store_input(arg=''):
         return deco_f_store
     return deco_store
 
+def need_transfer(options):
+    """ This function checks whether compression of input files are necessary
+    given the running options given. """
+    
+    if options['run_mode'] != 1 and options['cluster_temp_path'] is None:
+        return False
+    else:
+        return True
 
 class Cluster(object):
     """Basic Class for all cluster type submission"""
@@ -493,7 +501,6 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
         """ """
         logger.warning("""This cluster didn't support job removal, 
     the jobs are still running on the cluster.""")
-
 
 class Packet(object):
     """ an object for handling packet of job, it is designed to be thread safe

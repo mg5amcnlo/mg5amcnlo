@@ -2407,9 +2407,10 @@ zeor by MadLoop.""")
         P_zero_result = [] # check the number of times where they are no phase-space
 
         # File for the loop (for loop induced)
-        if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources')):
-            tf=tarfile.open(pjoin(self.me_dir, 'SubProcesses', 'MadLoop5_resources.tar'),'w',
-                                                               dereference=True)
+        if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
+                 'MadLoop5_resources')) and cluster.need_transfer(self.options):
+            tf=tarfile.open(pjoin(self.me_dir, 'SubProcesses', 
+                         'MadLoop5_resources.tar.gz'), 'w:gz', dereference=True)
             tf.add(pjoin(self.me_dir,'SubProcesses','MadLoop5_resources'),
                                                    arcname='MadLoop5_resources')
             tf.close()
@@ -2435,7 +2436,7 @@ zeor by MadLoop.""")
                 
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
-        if 'survey' in self.history[-1] or self.ninitial ==1  or \
+        if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
            self.run_card['gridpack']:
             #will be done during the refine (more precisely in gen_ximprove)
             cross, error = sum_html.make_all_html_results(self)
@@ -2610,12 +2611,12 @@ zeor by MadLoop.""")
         self.update_status('Combining Events', level='parton')
 
         
-        if self.refine_mode == "old":
+        if not hasattr(self, "refine_mode") or self.refine_mode == "old":
             try:
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
                 pass
-            if self.options['run_mode'] ==1 and self.options['cluster_tmp_path']:
+            if self.options['run_mode'] ==1 and self.options['cluster_temp_path']:
                 tmpcluster = cluster.MultiCore(nb_core=1)
                 tmpcluster.launch_and_wait('../bin/internal/run_combine', 
                                             cwd=pjoin(self.me_dir,'SubProcesses'),
@@ -3363,8 +3364,9 @@ zeor by MadLoop.""")
             if 'ajob' in exe: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
-                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar')):
-                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar'))
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
+                  'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar.gz'))
                 
                 output_files = []
                 required_output = []
@@ -3406,8 +3408,10 @@ zeor by MadLoop.""")
             elif 'survey' in exe:
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
-                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar')):
-                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar'))
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
+                  'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 
+                                                   'MadLoop5_resources.tar.gz'))
 
                 #Find the correct PDF input file
                 input_files.append(self.get_pdf_input_filename())
@@ -3452,8 +3456,10 @@ zeor by MadLoop.""")
                 input_files = ['madevent','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 
-                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar')):
-                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar'))
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses',
+                  'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 
+                                                   'MadLoop5_resources.tar.gz'))
 
                 #Find the correct PDF input file
                 input_files.append(self.get_pdf_input_filename())

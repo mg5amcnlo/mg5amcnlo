@@ -1,0 +1,35 @@
+This folder ("VetoPrefactors/") which contains the various ingredients
+for the resummation using scheme A as described in arXiv:1412.8408
+[hep-ph].
+
+The Files AnomalyAndH.f BeamCorr.f and mstwpdf.f contain the
+subroutines to each reweighting factor. Further the Grid files of the
+PDFs and beam Functions are in the folder Grids. In "parameters.inc"
+some parameters used in the files are included. 
+
+To use:
+
+* Generate a LO event file (but using the NLO process generation),
+and unzip it once it is done.
+
+* Make sure to set the ickkw parameter to -1 in the run_card and use
+  the MSTW2008nnlo PDF set (lhapdf code is 21200) before the
+  generation of the event file.
+
+* Put this folder (as a subfolder of) the Events/run_XXX/ directory.
+
+* Move the virt_reweighter.py and resum_reweighter.py files to the
+bin/internal/ directory.
+
+* From the bin/internal/ directory, execute
+
+./virt_reweighter.py ../../Events/run_XXX/events.lhe
+./resum_reweighter.py ../../Events/run_XXX/events_rwgt.lhe
+
+and you should get the event file with weights that are
+LO+NNLL(jet-veto) correct. The veto and scales can be changed in the
+resum_driver.f file, and it is only needed to re-run the
+resum_reweighter (not the virt_reweighter)
+
+In the include file JetVetoParameters.inc the reweighting parameters
+(such as jet definition parameters) can be changed.

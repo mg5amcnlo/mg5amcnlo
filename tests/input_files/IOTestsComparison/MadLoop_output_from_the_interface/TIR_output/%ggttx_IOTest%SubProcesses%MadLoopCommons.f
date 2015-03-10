@@ -30,6 +30,30 @@
 
       END
 
+      SUBROUTINE SET_FORBID_HEL_DOUBLECHECK(ONOFF)
+C     
+C     Give the possibility to overwrite the value of MadLoopParams.dat
+C     for the helicity double checking.
+C     Make sure to call this subroutine before the first time you 
+C     call MadLoop.
+C     
+      IMPLICIT NONE
+C     
+C     ARGUMENT
+C     
+      LOGICAL ONOFF
+C     
+C     GLOBAL VARIABLES
+C     
+      LOGICAL FORBID_HEL_DOUBLECHECK
+      DATA FORBID_HEL_DOUBLECHECK/.FALSE./
+      COMMON/FORBID_HEL_DOUBLECHECK/FORBID_HEL_DOUBLECHECK
+C     ----------
+C     BEGIN CODE
+C     ----------
+      FORBID_HEL_DOUBLECHECK = ONOFF
+      END
+
       SUBROUTINE SETMADLOOPPATH(PATH)
 
       CHARACTER(512) PATH
@@ -479,7 +503,7 @@ C     arrays since these are not the most optimized sorting algorithms.
      $           //'                                                 '
      $           //'     .JMML.     '//CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//CHAR(27)/
-     $           /'[0m'//'v2.2.3 (2015-02-10), Ref: arXiv:1103.0621v'
+     $           /'[0m'//'v%(version)s (%(date)s), Ref: arXiv:1103.0621v'
      $           //'2, arXiv:1405.0301'//CHAR(27)//'[32m'//'         '
      $           //'       '//CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '

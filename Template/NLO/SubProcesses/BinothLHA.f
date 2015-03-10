@@ -51,7 +51,8 @@ c general MadFKS parameters
       double precision madfks_single, madfks_double
       double precision tolerance, prec_found
       double precision, allocatable :: accuracies(:)
-      integer i,j
+      integer i,j,IOErr, IOErrCounter
+      integer dt(8)
       integer nbad, nbadmax
       double precision target,ran2,accum
       external ran2
@@ -75,6 +76,8 @@ c statistics for MadLoop
 c masses
       include 'pmass.inc'
       data nbad / 0 /
+
+      IOErrCounter = 0
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
       mu_r = sqrt(QES2)
@@ -86,6 +89,11 @@ c Ellis-Sexton scale)
       double  = 0d0
       prec_found = 1.0d0
       if (firsttime_run) then
+c The helicity double check should have been performed during the
+c pole check, so we skip it here. It also makes sure that there is
+c no conflict on the write access to HelFilter.dat when running
+c locally in multicore without a cluster_tmp_path
+         call set_forbid_hel_doublecheck(.True.)
          call get_nsqso_loop(nsqso)
          call get_answer_dimension(MLResArrayDim)
          allocate(accuracies(0:nsqso))
@@ -207,6 +215,7 @@ c MadLoop initialization PS points.
             write(*,*) "---- POLES CANCELLED ----"
             firsttime = .false.
             if (mc_hel.ne.0) then
+198            continue
 c Set-up the MC over helicities. This assumes that the 'HelFilter.dat'
 c exists, which should be the case when firsttime is false.
                if (NHelForMCoverHels.lt.0) then
@@ -214,7 +223,7 @@ c exists, which should be the case when firsttime is false.
                    goto 203
                endif
                open (unit=67,file='../MadLoop5_resources/HelFilter.dat',
-     $   status='old',err=201)
+     $   status='old',action='read',iostat=IOErr, err=201)
                hel(0)=0
                j=0
 c optimized loop output
@@ -229,6 +238,14 @@ c optimized loop output
                enddo
                goto 203
 201            continue
+               if (IOErr.eq.2.and.IOErrCounter.lt.10) then
+                 IOErrCounter = IOErrCounter+1
+                 write(*,*) "File HelFilter.dat busy, retrying for"//
+     &           " the ",IOErrCounter," time."
+                 call date_and_time(values=dt)
+                 call sleep(1+(dt(8)/200))
+                 goto 198
+               endif
                write (*,*) 'Cannot do MC over hel:'/
      &     /' "HelFilter.dat" does not exist'/
      &     /' or does not have the correct format.'/

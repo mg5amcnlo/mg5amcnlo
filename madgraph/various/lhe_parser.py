@@ -62,6 +62,7 @@ class Particle(object):
         self.mass = 0
         self.vtim = 0
         self.helicity = 9
+        self.rwgt = 0
         self.comment = ''
 
         if line:
@@ -76,24 +77,12 @@ class Particle(object):
         for key, value in obj.groupdict().items():
             if key not in  ['comment','pid']:
                 setattr(self, key, float(value))
-            elif key in ['pid']:
+            elif key in ['pid', 'mother1', 'mother2']:
                 setattr(self, key, int(value))
             else:
                 self.comment = value
-        # assign the mother:
-        if self.mother1:
-            try:
-                self.mother1 = self.event[int(self.mother1) -1]
-            except KeyError:
-                raise Exception, 'Wrong Events format: a daughter appears before it\'s mother'
-        if self.mother2:
-            try:
-                self.mother2 = self.event[int(self.mother2) -1]
-            except KeyError:
-                raise Exception, 'Wrong Events format: a daughter appears before it\'s mother'
-    
-    
-    
+        # Note that mother1/mother2 will be modified by the Event parse function to replace the
+        # integer by a pointer to the actual particle object.
     
     def __str__(self):
         """string representing the particles"""
@@ -235,6 +224,7 @@ class EventFile(object):
             nb_event +=1
             wgt = get_wgt(event)
             cross['all'] += wgt
+            cross['abs'] += abs(wgt)
             cross[event.ievent] += wgt
             all_wgt.append(abs(wgt))
             # avoid all_wgt to be too large
@@ -286,7 +276,7 @@ class EventFile(object):
             
             xsum = 0
             i=1 
-            while (xsum - all_wgt[-i] * (i-1) <= cross['all'] * trunc):
+            while (xsum - all_wgt[-i] * (i-1) <= cross['abs'] * trunc):
                 max_wgt = all_wgt[-i]
                 xsum += all_wgt[-i]
                 i +=1
@@ -449,10 +439,14 @@ class MultiEventFile(EventFile):
                 self.add(p)
         self.configure = False
         
-    def add(self, path, cross=0, error=0,across=0):
-        """ add a file to the pool, cross allow to reweight the sum of weight 
+    def add(self, path, cross, error, across):
+        """ add a file to the pool, across allow to reweight the sum of weight 
         in the file to the given cross-section 
         """
+        
+        if across == 0:
+            # No event linked to this channel -> so no need to include it
+            return 
         
         obj = EventFile(path)
         if len(self.files) == 0 and not self.banner:
@@ -572,6 +566,7 @@ class MultiEventFile(EventFile):
                 event.sample_scale = 1
                 wgt = getwgt(event)
                 cross['all'] += wgt
+                cross['abs'] += abs(wgt)
                 cross[event.ievent] += wgt
                 new_wgt.append(abs(wgt))
                 # avoid all_wgt to be too large
@@ -584,7 +579,7 @@ class MultiEventFile(EventFile):
                 raise Exception
             # store the information
             self.initial_nb_events[i] = nb_event
-            self.scales[i] = self.cross[i]/cross['all'] if self.cross[i] else 1
+            self.scales[i] = self.across[i]/cross['abs'] if self.across[i] else 1
             misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
                         % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
             for key in cross:
@@ -655,6 +650,8 @@ class MultiEventFile(EventFile):
 class Event(list):
     """Class storing a single event information (list of particles + global information)"""
 
+    warning_order = True # raise a warning if the order of the particle are not in accordance of child/mother
+
     def __init__(self, text=None):
         """The initialization of an empty Event (or one associate to a text file)"""
         list.__init__(self)
@@ -674,10 +671,10 @@ class Event(list):
         
         if text:
             self.parse(text)
+
             
     def parse(self, text):
         """Take the input file and create the structured information"""
-        
         text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
         for line in text.split('\n'):
@@ -699,24 +696,35 @@ class Event(list):
                 self.append(Particle(line, event=self))
             else:
                 self.tag += '%s\n' % line
-                
+
+        # assign the mother:
+        for i,particle in enumerate(self):
+            if self.warning_order:
+                if i < particle.mother1 or i < particle.mother2:
+                    logger.warning("Order of particle in the event did not agree with parent/child order. This might be problematic for some code.")
+                    Event.warning_order = False
+                                   
+            if particle.mother1:
+                particle.mother1 = self[int(particle.mother1) -1]
+            if particle.mother2:
+                particle.mother2 = self[int(particle.mother2) -1]
+
+   
     def parse_reweight(self):
         """Parse the re-weight information in order to return a dictionary
            {key: value}. If no group is define group should be '' """
-        
         if self.reweight_data:
             return
-        
         self.reweight_data = {}
         self.reweight_order = []
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
         if start != -1 != stop :
-            pattern = re.compile(r'''<\s*wgt id=\'(?P<id>[^\']+)\'\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
+            pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
             data = pattern.findall(self.tag)
             try:
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
                                            if not self.reweight_order.append(pid)])
-                      # the if is to create the order file on the flight
+                             # the if is to create the order file on the flight
             except ValueError, error:
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]
@@ -1099,7 +1107,7 @@ class Event(list):
             if set(self.reweight_data.keys()) != set(self.reweight_order):
                 self.reweight_order += [k for k in self.reweight_data.keys() \
                                                 if k not in self.reweight_order]
-                
+
             reweight_str = '<rwgt>\n%s\n</rwgt>' % '\n'.join(
                         '<wgt id=\'%s\'> %+13.7e </wgt>' % (i, float(self.reweight_data[i]))
                         for i in self.reweight_order)

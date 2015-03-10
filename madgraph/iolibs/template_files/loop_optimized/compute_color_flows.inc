@@ -431,6 +431,9 @@ C
 C LOCAL VARIABLES 
 C
 	  INTEGER I, J, M, N, K, SQSOINDEX, DOUBLEFACT
+## if(LoopInduced) {
+	  INTEGER LOWERBOUND
+## }
 	  INTEGER ORDERS_A(NSO), ORDERS_B(NSO)
 	  %(complex_dp_format)s COLOR_COEF
 	  %(real_dp_format)s TEMP(3)
@@ -540,13 +543,20 @@ C It may be that this AmpSO index does not receive contribution by the Loop amps
 C Same for contributions of split order index N by the Born amps
       IF(ABS(JAMPB(J,N)).eq.0.0d0) CYCLE
 ## } else {
-      DO N=M,NLOOPAMPSO
+      IF (I.eq.J) THEN
+	    LOWERBOUND = M
+	  ELSE
+	    LOWERBOUND = 1
+	  ENDIF
+      DO N=LOWERBOUND,NLOOPAMPSO
 ## }
         SQSOINDEX = %(proc_prefix)sML5SQSOINDEX(M,N)
 ## if(LoopInduced){
         IF(J.ne.I) THEN
           DOUBLEFACT=2 
-        ELSE 
+        ELSEIF (M.ne.N) THEN
+          DOUBLEFACT=2
+		ELSE
           DOUBLEFACT=1
         ENDIF
         TEMP(1) = DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL(1,I,M)*DCONJG(JAMPL(1,J,N))))

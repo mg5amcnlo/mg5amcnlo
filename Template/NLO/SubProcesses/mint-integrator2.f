@@ -342,6 +342,7 @@ c Add the PS point to the result of this iteration
             vtot(i)=vtot(i)+f(i)
             etot(i)=etot(i)+f(i)**2
          enddo
+         if (f(1).ne.0d0) call HwU_add_points
       enddo
       do i=1,nintegrals
 c Number of phase-space points used
@@ -385,6 +386,7 @@ C including it in the accumalated results and plots.
       if (efrac(1).gt.0.3d0 .and. iappl.eq.0) then
 c Do not include the results in the plots
          if (fixed_order) call accum(.false.)
+         if (fixed_order) call HwU_accum_iter(.false.,ntotcalls(1))
       endif
       if (efrac(1).gt.0.3d0 .and. nit.gt.3 .and. iappl.eq.0) then
 c Do not include the results in the updating of the grids.
@@ -592,6 +594,7 @@ c Quit if the desired accuracy has been reached
             nit=nitmax
 c Improve the stats in the plots
             if (fixed_order) call accum(.true.)
+            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
             goto 10
          elseif(unc_l3(1)/ans_l3(1)*max(1d0,chi2_l3(1)).lt.accuracy)
      $           then
@@ -605,6 +608,7 @@ c Improve the stats in the plots
             enddo
 c Improve the stats in the plots
             if (fixed_order) call accum(.true.)
+            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
             goto 10
          endif
       endif
@@ -624,6 +628,7 @@ c double the number of points for the next iteration
       if (double_events) ncalls0=ncalls0*2
 c Also improve stats in plots
       if (fixed_order) call accum(.true.)
+      if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
 c Do next iteration
       goto 10
       end

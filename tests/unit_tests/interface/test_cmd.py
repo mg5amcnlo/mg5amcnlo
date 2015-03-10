@@ -23,7 +23,7 @@ import madgraph.various.misc as misc
 import os
 import logging
 
-import tests.unit_tests.various.test_aloha as test_aloha
+import tests.parallel_tests.test_aloha as test_aloha
 class TestValidCmd(unittest.TestCase):
     """ check if the ValidCmd works correctly """
     

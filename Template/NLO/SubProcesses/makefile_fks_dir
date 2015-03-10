@@ -30,7 +30,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 fks_inc_chooser.o leshouche_inc_chooser.o genps_fks.o		\
 	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
 	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
-	 $(fastjetfortran_madfks) fks_singular.o			\
+	 $(fastjetfortran_madfks) fks_singular.o veto_xsec.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
 	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
 	 reweight.o get_color.o FKSParamReader.o iproc_map.o		\
@@ -69,7 +69,7 @@ SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
-	cuts.o $(fastjetfortran_madfks) boostwdir2.o 			\
+	cuts.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	reweight.o get_color.o iproc_map.o fks_inc_chooser.o 		\
 	leshouche_inc_chooser.o pythia_unlops.o recluster.o

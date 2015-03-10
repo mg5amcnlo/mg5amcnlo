@@ -73,7 +73,7 @@ class TestVariable(unittest.TestCase):
         self.var3 = 11 * aloha_lib.Variable('var3')
         
     
-    def test_power(self):
+    def test_short_power(self):
         """check that the power is correctly update"""
         
         a = aloha_lib.Variable('P3_0')
@@ -472,7 +472,7 @@ class TestAddVariable(unittest.TestCase):
                 self.assertEqual(data.__class__, aloha_lib.MultVariable)
                 self.assertEqual(data.prefactor, 12)
         
-    def test_replace(self):
+    def test_short_replace(self):
         """test that the replace command works"""
         
         id = self.var1.get_id()
@@ -509,7 +509,7 @@ class TestAddVariable(unittest.TestCase):
             self.assertNotEqual(i,id)
         
            
-    def test_factorization(self):
+    def test_short_factorization(self):
         """test the factorization"""
         
         p1 = aloha_lib.Variable('p1')
@@ -537,7 +537,7 @@ class TestAddVariable(unittest.TestCase):
         self.assertEqual(len(sum),2)
         self.assertEqual(str(sum), '(p1 * ( (p2 * 2 * ( 0.5 + (p4) )) + ( (p3) + 2 ) ))')
 
-    def test_factorization2(self):
+    def test_short_factorization2(self):
         """test the factorization with power and constant"""
         
         p1 = aloha_lib.Variable('p1')
@@ -549,7 +549,7 @@ class TestAddVariable(unittest.TestCase):
         #Should return p2*(2*p3-2)-2*p1**2
         self.assertEqual(str(sum), '( (p2 * 2 * ( -1.0 + (p3) )) + (-2 * p1 * p1) )')
 
-    def test_factorization3(self):
+    def test_short_factorization3(self):
         """test factorization with prefactor"""
         
         p1 = aloha_lib.Variable('p1')
@@ -561,7 +561,7 @@ class TestAddVariable(unittest.TestCase):
         self.assertEqual(str(sum), '(2 * p2 * ( (p2) + (p1) ))')
         
     
-    def test_factorization4(self):
+    def test_short_factorization4(self):
         """test the factorization with constant factor"""
         
         P1_0 = aloha_lib.Variable('p1')
@@ -579,7 +579,7 @@ class TestAddVariable(unittest.TestCase):
         self.assertEqual(eval(str(expr1)), value)
 
 
-    def test_factorization5(self):
+    def test_short_factorization5(self):
         """check that P [gamma + P/M] == (/p+M) [Onshell]"""
 
         P1_0 = aloha_lib.Variable('p1')
@@ -758,7 +758,7 @@ class TestMultVariable(unittest.TestCase):
         self.assertEqual((-288+2016j), eval(str(expr.get_rep([3]))))
         
     
-    def test_obj_are_not_modified(self):
+    def test_short_obj_are_not_modified(self):
         """Check that a sum-product-... doesn't change part of the objects"""
         
         sum = self.mult1 + self.mult2
@@ -931,7 +931,7 @@ class testLorentzObject(unittest.TestCase):
         self.assertEqual(len(new2), 2)
         self.assertNotEqual(new, new2)
     
-    def test_power(self):
+    def test_short_power(self):
         """ Test that we can take a square of an object --fully auto contracted"""
 
         product = self.p2 * self.p2
@@ -948,7 +948,7 @@ class testLorentzObject(unittest.TestCase):
         
         self.assertEqual(str(power[(0,)]), solution)
         
-    def test_equality(self):
+    def test_short_equality(self):
         """test the equality of Lorentz Object"""
         
         self.assertEqual(self.p1,self.p1)
@@ -1078,7 +1078,7 @@ class testLorentzObject(unittest.TestCase):
             expression = obj.get_rep(ind)
             self.assertEqual(expression.prefactor, 36)  
   
-    def test_expand_veto(self):
+    def test_short_expand_veto(self):
         
         Metric = aloha_obj.Metric
         P = aloha_obj.P
@@ -1135,7 +1135,7 @@ class testLorentzObject(unittest.TestCase):
                                  aloha_lib.Variable('P2_%s' % ind[0])* aloha_lib.Variable('M3'))
     
     
-    def test_spin32propagator(self):
+    def test_short_spin32propagator(self):
         """check various property of the spin3/2 propagator"""
         
         Metric = aloha_obj.Metric
@@ -1164,7 +1164,7 @@ class testLorentzObject(unittest.TestCase):
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0) 
      
-    def test_mass_overmass(self):
+    def test_short_mass_overmass(self):
         """check various property of the spin3/2 propagator"""
         
         Metric = aloha_obj.Metric
@@ -1200,7 +1200,7 @@ class testLorentzObject(unittest.TestCase):
  
         
 
-    def test_part_spin32propagator(self):
+    def test_short_part_spin32propagator(self):
         P = aloha_obj.P
         OM = aloha_obj.OverMass2
         Gamma = aloha_obj.Gamma
@@ -1237,7 +1237,7 @@ class testLorentzObject(unittest.TestCase):
 
     
     
-    def test_spin2propagator(self):
+    def test_short_spin2propagator(self):
         """Check that the two definition are coherent"""
         
         obj = aloha_obj
@@ -1264,7 +1264,7 @@ class testLorentzObject(unittest.TestCase):
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str(data)), 0)    
  
-    def test_spin2propagator2(self):
+    def test_short_spin2propagator2(self):
         """test the spin2 propagator is coherent with it's expanded expression"""
         
         Metric = aloha_obj.Metric
@@ -1301,7 +1301,7 @@ class testLorentzObject(unittest.TestCase):
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
 
-    def test_spin2propagator3(self):
+    def test_short_spin2propagator3(self):
         """test the spin2 propagator property (contraction gives zero)"""
         
         Metric = aloha_obj.Metric
@@ -1330,7 +1330,7 @@ class testLorentzObject(unittest.TestCase):
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0) 
     
-    def test_spin2propagator4(self):
+    def test_short_spin2propagator4(self):
         """test the spin2 propagator is correctly contracted (even offshell)"""
         
         Metric = aloha_obj.Metric
@@ -1359,7 +1359,7 @@ class testLorentzObject(unittest.TestCase):
             data2 = analytical.get_rep(ind)
             self.assertAlmostEqual(eval(str( data1 )),eval(str(data2)))
             
-    def test_spin2propagator5(self):
+    def test_short_spin2propagator5(self):
         """test the spin2 propagator is correctly contracted --part by part --"""
         
         Metric = aloha_obj.Metric
@@ -1579,7 +1579,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             already_use.append(list(ind))
         self.assertEqual(len(already_use), 1)    
         
-    def test_split(self):
+    def test_short_split(self):
         """check that we can split correctly an expression"""
         p2rho = aloha_obj.P(3,2)
         p2rho = p2rho.expand()
@@ -1616,7 +1616,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             self.assertEquals(repr4.get_rep(ind), 49)
 
 
-    def test_sum_with4ind(self):
+    def test_short_sum_with4ind(self):
         """ check non standard operation with contraction of ()*() """
         
         Metric = aloha_obj.Metric
@@ -1987,7 +1987,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertEqual(new.get_rep([3]).prefactor, 1)       
       
       
-    def test_sumofLorentzObj(self):
+    def test_short_sumofLorentzObj(self):
         """ Check the sumation of LorentzObject"""
         
         sum = self.p1nu + self.p2nu
@@ -2252,7 +2252,7 @@ class TestSomeObjectProperty(unittest.TestCase):
                              (zero.get_rep(ind), ind))  
 
 
-    def test_other(self):
+    def test_short_other(self):
         """ test that all object are defined"""        
         Gamma = aloha_obj.Gamma
         Gamma5 = aloha_obj.Gamma5
@@ -2262,7 +2262,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         Identity = aloha_obj.Identity
         Metric = aloha_obj.Metric  
     
-    def test_projector(self):
+    def test_short_projector(self):
         """test that projector are correctly define"""
         
         ProjM = aloha_obj.ProjM
@@ -2277,7 +2277,7 @@ class TestSomeObjectProperty(unittest.TestCase):
                              (zero.get_rep(ind), ind))  
     
     
-    def test_Pslashproperty(self):
+    def test_short_Pslashproperty(self):
         """Test Pslash"""
     
         Gamma = aloha_obj.Gamma
@@ -2442,7 +2442,7 @@ class TestSomeObjectProperty(unittest.TestCase):
             self.assertEqual(zero.get_rep(ind), 0)         
         
         
-    def test_complex_equality(self):
+    def test_short_complex_equality(self):
         """Is this really equal?"""
         Gamma = aloha_obj.Gamma
         Gamma5 = aloha_obj.Gamma5
@@ -2539,7 +2539,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         
         
         
-    def test_parity_for_epsilon(self):
+    def test_short_parity_for_epsilon(self):
 
         # usefull shortcut
         Epsilon = aloha_obj.Epsilon
@@ -2818,7 +2818,7 @@ class test_aloha_creation(unittest.TestCase):
             for (option, value) in opt.items():
                 setattr(self, option, value)
             
-    def test_aloha_VVS(self):
+    def test_short_aloha_VVS(self):
         """ Test the VVS creation of vertex """
         
         VVS_15 = self.Lorentz(name = 'VVS_15',
@@ -2830,7 +2830,7 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(abstract.expr.nb_lor, 0)
         self.assertEqual(abstract.expr.nb_spin, 0)
         
-    def test_aloha_ZPZZ(self):
+    def test_short_aloha_ZPZZ(self):
         """ Check the validity of Funny Zp coupling to z z """
                 
         ZPZZ = self.Lorentz(name = 'ZPZZ',
@@ -2854,7 +2854,7 @@ class test_aloha_creation(unittest.TestCase):
         for ind in expr.listindices():
             self.assertEqual(eval(str(expr.get_rep(ind))), 178727040j)
 
-    def test_regular_expression_propa(self):
+    def test_short_regular_expression_propa(self):
 
         mod_numerator = create_aloha.AbstractRoutineBuilder.mod_propagator_expression
             
@@ -2878,7 +2878,7 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(mod_numerator(tag, text),
                "P('mu', 3) * P('mu', 3) - Mass(3) * Mass(3) + complex(0,1) * Mass(3) * Width(3)")
 
-    def test_use_of_library_spin2(self):
+    def test_short_use_of_library_spin2(self):
         """ check that use the library or the usual definition is the same """
         
         
@@ -2924,7 +2924,7 @@ class test_aloha_creation(unittest.TestCase):
         for ind in one_exp.listindices():
             self.assertAlmostEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind))))
 
-    def test_aloha_FFT2(self):
+    def test_short_aloha_FFT2(self):
         """ test the FFT2 creation of vertex"""
 
         FFT2 = self.Lorentz(name = 'FFT2',
@@ -2959,7 +2959,7 @@ class test_aloha_creation(unittest.TestCase):
         for ind in zero.listindices():
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)
              
-    def test_aloha_get_rank(self):
+    def test_short_aloha_get_rank(self):
         """ test the FFV creation of vertex """
         
         FFV_4 = self.Lorentz(name = 'FFV_4',
@@ -2983,7 +2983,7 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(rank_massive, 2)
         self.assertEqual(rank_massless, 0)
    
-    def test_aloha_FFV(self):
+    def test_short_aloha_FFV(self):
         """ test the FFV creation of vertex """
         
         FFV_M = self.Lorentz(name = 'FFV_4',
@@ -3023,7 +3023,7 @@ class test_aloha_creation(unittest.TestCase):
         for ind in abstract.expr.listindices():
             self.assertEqual(eval(str(zero.get_rep(ind))),0,'fail')
 
-    def test_aloha_FFV_MG4(self):
+    def test_short_aloha_FFV_MG4(self):
         """ test the FFV creation of vertex against MG4 """ 
         
         aloha_lib.KERNEL.clean()
@@ -3076,7 +3076,7 @@ class test_aloha_creation(unittest.TestCase):
         for ind in zero.listindices():
             self.assertEqual(eval(str(zero.get_rep(ind))),0)
         
-    def test_aloha_symmetries_and_get_info(self):
+    def test_short_aloha_symmetries_and_get_info(self):
         """ test that the symmetries of particles works """
     
         # Check that full identification symmetry works
@@ -3111,7 +3111,7 @@ class test_aloha_creation(unittest.TestCase):
         self.assertRaises(AssertionError, helas_suite.get_info, 'rank', 'VVVV2', 0, ['L1'])
         
         
-    def test_has_symmetries(self):
+    def test_short_has_symmetries(self):
         """Check that functions returning symmetries works"""
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
@@ -3135,7 +3135,7 @@ class test_aloha_creation(unittest.TestCase):
         base = helas_suite.has_symmetries('VVS1', 3, valid_output=(1, 2))
         self.assertEqual(base, None)   
 
-    def test_aloha_multiple_lorentz(self):
+    def test_short_aloha_multiple_lorentz(self):
         """ check if the detection of multiple lorentz work """
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
@@ -3144,7 +3144,7 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(solution, helas_suite.multiple_lor)
         
 
-    def test_aloha_multiple_lorentz_and_symmetry(self):
+    def test_short_aloha_multiple_lorentz_and_symmetry(self):
         """ check if the detection of multiple lorentz work """
         
         aloha_lib.KERNEL.clean()
@@ -3361,7 +3361,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         self.assertEqual(text.split('\n'),goal.split('\n'))
         
         
-    def test_full_sm_aloha(self):
+    def test_short_full_sm_aloha(self):
         """test that the full SM seems to work"""
         # Note that this test check also some of the routine define inside this
         #because of use of some global.
@@ -3388,7 +3388,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
             self.assertEqual(abstract.expr.nb_spin, spin_solution, \
                              error % name)
             
-    def test_multiple_lorentz_subset(self):
+    def test_short_multiple_lorentz_subset(self):
         """test if we create the correct set of routine/files for multiple lorentz"""
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
@@ -3440,7 +3440,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         
         
     
-    def test_mssm_subset_creation(self):
+    def test_short_mssm_subset_creation(self):
         """ test the creation of subpart of ALOHA routines 
         including clash routines """
         helas_suite = create_aloha.AbstractALOHAModel('mssm')
@@ -3476,7 +3476,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
             
         raise Exception('the test is confuse by name %s' % name)     
 
-    def test_aloha_FFVC(self):
+    def test_short_aloha_FFVC(self):
         """ test the FFV creation of vertex """
         from models.mssm.object_library import Lorentz
 
@@ -3497,7 +3497,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         self.assertEqual(amp.name, conjg_amp.name)
         self.assertEqual(amp.tag + ['C1'], conjg_amp.tag)
         
-    def test_aloha_expr_FFFF3(self):
+    def test_short_aloha_expr_FFFF3(self):
         """Test analytical expression for four fermion (provide by Tim M).
         it's particularity is about to have contraction A and 4*A """
         
@@ -3530,7 +3530,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         for out,sol in zip(ufo_value,solution):
             self.assertAlmostEqual(out, sol)
 
-    def test_aloha_expr_VVS1(self):
+    def test_short_aloha_expr_VVS1(self):
         """Test analytical expression for VVS from SILH. 
         This checks that P(-1,1)**2 is correct."""
         
@@ -3594,7 +3594,7 @@ end
 
 
         
-    def test_aloha_expr_FFV2C1(self):
+    def test_short_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""
         
         from models.mssm.object_library import Lorentz
@@ -3646,7 +3646,7 @@ end
                
         self.assertEqual(complex(0,-1)*ufo_value, v4_value)
         
-    def test_aloha_expr_FFFF(self):
+    def test_short_aloha_expr_FFFF(self):
         """Test analytical expression for fermion clash routine"""
         
         from models.mssm.object_library import Lorentz
@@ -3814,7 +3814,7 @@ class TestAlohaWriter(unittest.TestCase):
         self.assertEqual(['F1', 'V3', 'S4'], new_call)        
     
     
-    def test_change_number_format_fortran(self):
+    def test_short_change_number_format_fortran(self):
         """ Check that the number are correctly written in fortranwriter """
         
         SSS = UFOLorentz(name = 'SSS',
@@ -3835,7 +3835,7 @@ class TestAlohaWriter(unittest.TestCase):
             self.assertEqual(value, solution[i])
         #map(self.assertEqual, converted, solution)
  
-    def test_change_number_format_python(self):
+    def test_short_change_number_format_python(self):
         """ Check that the number are correctly written in fortranwriter """
         
         SSS = UFOLorentz(name = 'SSS',
@@ -3855,7 +3855,7 @@ class TestAlohaWriter(unittest.TestCase):
             value = writer.change_number_format(number)
             self.assertEqual(value, solution[i]) 
 
-    def test_change_number_format_cpp(self):
+    def test_short_change_number_format_cpp(self):
         """ Check that the number are correctly written in fortranwriter """
         
         SSS = UFOLorentz(name = 'SSS',
@@ -3874,7 +3874,7 @@ class TestAlohaWriter(unittest.TestCase):
             value = writer.change_number_format(number)
             self.assertEqual(value, solution[i]) 
  
-    def test_pythonwriter(self):
+    def test_short_pythonwriter(self):
         """ test that python writer works """
         
         solution ="""import cmath
@@ -3918,7 +3918,7 @@ def SSS1_3(S2,S3,COUP,M1,W1):
 
     
     @set_global()
-    def test_pythonwriter_spin3half(self):
+    def test_short_pythonwriter_spin3half(self):
         """ test that python writer works """
 
 
@@ -4011,7 +4011,7 @@ def RFSC1_2(F2,S3,COUP,M1,W1):
         self.assertEqual(len(split_routine), len(split_solution))        
         
 
-    def test_Fortranwriter_spin3half(self):
+    def test_short_Fortranwriter_spin3half(self):
         """ test that python writer works """
         
         aloha_lib.KERNEL.clean()
@@ -4133,7 +4133,7 @@ end
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
-    def test_pythonwriter_C(self):
+    def test_short_pythonwriter_C(self):
         """ test that python writer works """
         aloha_lib.KERNEL.clean()
         solution ="""import cmath
@@ -4233,7 +4233,7 @@ def FFV1_2C1_1(F1,V3,COUP1,COUP2,M2,W2):
 
 
        
-    def test_pythonwriter_4_fermion(self):
+    def test_short_pythonwriter_4_fermion(self):
         """ test that python writer works """
         aloha_lib.KERNEL.clean()
         solution ="""import cmath
@@ -4328,7 +4328,7 @@ def FFFF1C2_1(F2,F4,F3,COUP,M1,W1):
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))       
 
-    def test_pythonwriter_Plorentz(self):
+    def test_short_pythonwriter_Plorentz(self):
         """ test that python writer works """
         
         aloha_lib.KERNEL.clean()
@@ -4426,7 +4426,7 @@ end
         self.assertEqual(text.split('\n'), target.split('\n'))
             
     @set_global(loop=False, unitary=True, mp=True, cms=False)
-    def test_aloha_get_name(self):
+    def test_short_aloha_get_name(self):
 
         FFV_M = UFOLorentz(name = 'FFVM',
                  spins = [ 2, 2, 3 ],
@@ -4442,7 +4442,7 @@ end
         self.assertEqual(name, 'FFVMC1P0_3')
     
     @set_global(loop=True, unitary=True, mp=True, cms=False)
-    def test_aloha_MP_mode(self):
+    def test_short_aloha_MP_mode(self):
         """ """
         aloha_lib.KERNEL.clean()
 
@@ -4592,7 +4592,7 @@ end
             self.assertEqual(text.split('\n'), target.split('\n'))         
         except Exception:
             self.assertEqual(text.split('\n'), target2.split('\n'))         
-    def test_fortranwriter_C(self):
+    def test_short_fortranwriter_C(self):
         """ test that python writer works """
 
         solution = """subroutine FFV1C1_1(F1, V3, COUP, M2, W2,F2)
@@ -4669,7 +4669,7 @@ end
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
-    def test_Cppwriter_C(self):
+    def test_short_Cppwriter_C(self):
         """ test that python writer works """
 
  
@@ -4821,7 +4821,7 @@ P1[3] = -F1[0].imag();
         self.assertEqual(len(split_routine), len(split_solution))
 
     @set_global(cms=True)
-    def test_pythonwriter_complex_mass_scheme(self):
+    def test_short_pythonwriter_complex_mass_scheme(self):
         """ test that python writer works """
         
         solution ="""import cmath
@@ -4864,7 +4864,7 @@ def SSS1_3(S2,S3,COUP,M1):
         self.assertEqual(len(split_routine), len(split_solution))
 
     @set_global(cms=True)
-    def test_F77writer_complex_mass_scheme(self):
+    def test_short_F77writer_complex_mass_scheme(self):
         """ test that python writer works """
         
         solution = """subroutine SSS1_1(S2, S3, COUP, M1,S1)
@@ -4913,7 +4913,7 @@ end
 
 
     @set_global(cms=True)
-    def test_Cwriter_complex_mass_scheme(self):
+    def test_short_Cwriter_complex_mass_scheme(self):
         """ test that python writer works """
         
         assert aloha.complex_mass
@@ -4978,7 +4978,7 @@ void SSS1_3(complex<double> S2[], complex<double> S3[], complex<double> COUP, co
         self.assertEqual(len(split_routine), len(split_solution))
 
     @set_global(unitary=False)
-    def test_F77writer_feynman(self):
+    def test_short_F77writer_feynman(self):
         """ test that python writer works """
         
         solution = """subroutine FFV1_3(F1, F2, COUP, M3, W3,V3)
@@ -5056,7 +5056,7 @@ end
 
 
 
-    def test_python_routine_are_exec(self):
+    def test_short_python_routine_are_exec(self):
         """ check if the python routine can be call """
         
         aloha_lib.KERNEL.clean()
@@ -5091,7 +5091,7 @@ class test_aloha_wavefunctions(unittest.TestCase):
     """ test the python wavefunctions against hardcoded value obtained with 
     the HELAS version (fortran)"""  
     
-    def test_IR(self):
+    def test_short_IR(self):
         """check that spin32 wavefunctions IR returns correct results"""
 
         import aloha.template_files.wavefunctions as wf
@@ -5209,7 +5209,7 @@ class test_aloha_wavefunctions(unittest.TestCase):
             self.assertAlmostEqual(results[i], Results[i])
 
 
-    def test_OR(self):
+    def test_short_OR(self):
         """check that spin32 wavefunctions IR returns correct results"""
 
         import aloha.template_files.wavefunctions as wf       

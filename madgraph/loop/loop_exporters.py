@@ -76,21 +76,23 @@ class LoopExporterFortran(object):
         ProcessExporterFortran but give access to arguments like dir_path and
         clean using options. This avoids method resolution object ambiguity"""
 
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madloop', 'mp':True,
+                        'loop_dir':'', 'cuttools_dir':'', 
+                        'fortran_compiler':'gfortran',
+                        'SubProc_prefix': 'P',
+                        'output_dependencies': 'external',
+                        'compute_color_flows': False}
+
+
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
+        self.opt = dict(self.default_opt)
         if opt:
-            self.opt = opt
-        else: 
-            self.opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madloop', 'mp':True,
-                        'loop_dir':'', 'cuttools_dir':'', 
-                        'fortran_compiler':'gfortran',
-                        'output_dependencies':'external',
-                        'SubProc_prefix':'P',
-                        'compute_color_flows':False}
-        
+            self.opt.update(opt)
+
         self.SubProc_prefix = self.opt['SubProc_prefix']
         self.loop_dir = self.opt['loop_dir']
         self.cuttools_dir = self.opt['cuttools_dir']
@@ -1411,7 +1413,6 @@ C               ENDIF""")%replace_dict
         # This is to decide wether once to reuse old wavefunction to store new
         # ones (provided they are not used further in the code.)
         bornME.optimization = True
-        
         return super(LoopProcessExporterFortranSA,self).write_matrix_element_v4(
                                                   writer, bornME, fortran_model, 
                            proc_prefix=self.general_replace_dict['proc_prefix'])
@@ -1555,7 +1556,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         golem_include = misc.find_includes_path(trgt_path,'.mod')
                         if golem_include is None:
                             logger.error(
-'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
+'Could not find the include directory for golem, looking in %s.\n' % str(trgt_path)+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
                             golem_include = '<Not_found_define_it_yourself>'                
                         tir_include.append('-I %s'%str(golem_include))
@@ -1565,6 +1566,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         # place here an easy handle on the golem includes
                         ln(golem_include, starting_dir=pjoin(self.dir_path,'lib'),
                                             name='golem95_include',abspath=True)
+                        ln(libpath, starting_dir=pjoin(self.dir_path,'lib'),
+                                            name='golem95_lib',abspath=True)
                         
                 else :
                     link_tir_libs.append('-l%s'%tir)
@@ -2484,8 +2487,42 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
             writer.writelines(file,context=context)
             return number_of_calls
         else:
-            # The single file 'matrix only' output not available for loops.
-            raise MadGraph5Error,"Single-file 'matrix only' output not available for loops."
+            # Return it to be written along with the others
+            return number_of_calls, file
+
+#===============================================================================
+# LoopProcessExporterFortranSA
+#===============================================================================
+class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
+                                      export_v4.ProcessExporterFortranMatchBox):                                  
+    """Class to take care of exporting a set of loop matrix elements in the
+       Fortran format."""
+
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madloop_matchbox', 'mp':True,
+                        'loop_dir':'', 'cuttools_dir':'', 
+                        'fortran_compiler':'gfortran',
+                        'output_dependencies':'external',
+                        'sa_symmetry':True}
+
+
+
+    def get_color_string_lines(self, matrix_element):
+        """Return the color matrix definition lines for this matrix element. Split
+        rows in chunks of size n."""
+
+        return export_v4.ProcessExporterFortranMatchBox.get_color_string_lines(matrix_element)
+
+
+    def get_JAMP_lines(self, *args, **opts):
+        """Adding leading color part of the colorflow"""
+            
+        return export_v4.ProcessExporterFortranMatchBox.get_JAMP_lines(self, *args, **opts)
+      
+    def get_ME_identifier(self, matrix_element, group_number = None, group_elem_number = None):
+        """ To not mix notations between borns and virtuals we call it here also MG5 """
+        return 'MG5_%d_'%matrix_element.get('processes')[0].get('id')         
+      
 
 #===============================================================================
 # LoopInducedExporter
@@ -2890,4 +2927,5 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
             ret_lines.append(line)
 
         return len(matrix_element.get('diagrams')), ret_lines
+
 
