@@ -483,6 +483,13 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         nfksconfs,maxproc,maxflow,nexternal=\
                 self.write_leshouche_info_file(filename,matrix_element)
 
+        # if no corrections are generated ([LOonly] mode), get 
+        # these variables from the born
+        if nfksconfs == maxproc == maxflow == 0:
+            nfksconfs = 1
+            (dummylines, maxproc, maxflow) = self.get_leshouche_lines(
+                    matrix_element.born_matrix_element, 1)
+
         filename = 'leshouche_decl.inc'
         self.write_leshouche_info_declarations(
                               writers.FortranWriter(filename), 
