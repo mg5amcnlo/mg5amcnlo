@@ -192,7 +192,6 @@ class EventFile(object):
             return self.banner
         
         output = banner.Banner()
-        misc.sprint("<init>"  in self.banner)
         output.read_banner(self.banner)
         return output
 
@@ -764,7 +763,7 @@ class Event(list):
         assert max(decay_particle.px, decay_particle.py, decay_particle.pz) < thres,\
             "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
         
-        self.nexternal += decay_event.nexternal -2
+        self.nexternal += decay_event.nexternal -1
         
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
@@ -785,7 +784,10 @@ class Event(list):
                         setattr(new_particle, tag, this_particle)
                     else:
                         setattr(new_particle, tag, self[nb_part + mother_id -1]) 
-
+                elif tag == "mother2" and isinstance(particle.mother1, Particle):
+                    new_particle.mother2 = this_particle
+                else:
+                    misc.sprint("Need to understan why", particle)
             
         # Need to correct the color information of the particle
         # first find the first available color index
@@ -922,7 +924,7 @@ class Event(list):
             abspy += abs(particle.py)
             abspz += abs(particle.pz)
         # check that relative error is under control
-        threshold = 5e-11
+        threshold = 5e-7
         if E/absE > threshold:
             logger.critical(self)
             raise Exception, "Do not conserve Energy %s, %s" % (E/absE, E)
@@ -1260,7 +1262,7 @@ class FourMomentum(object):
         if pt:
             s3product = self.px * mom.px + self.py * mom.py + self.pz * mom.pz
             mass = self.mass
-            lf = (self.E + (self.E - mass) * s3product / pt ) / mass
+            lf = (mom.E + (self.E - mass) * s3product / pt ) / mass
             return FourMomentum(E=(self.E*mom.E+s3product)/mass,
                            px=mom.px + self.px * lf,
                            py=mom.py + self.py * lf,

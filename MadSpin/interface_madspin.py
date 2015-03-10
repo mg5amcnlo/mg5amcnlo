@@ -78,7 +78,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         'nb_sigma':0,
                         'ms_dir':None,
                         'max_running_process':100,
-                        'onlyhelicity': False}
+                        'onlyhelicity': False,
+                        'spinmode': "madspin"}
         
 
         
@@ -600,6 +601,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             part = self.model.get_particle(pdg)
             name = part.get_name()
             out = {}
+            if name not in self.list_branches:
+                return out
             if cumul == False:
                 for i,proc in enumerate(self.list_branches[name]):
                     if restrict_file and i not in restrict_file:
@@ -717,9 +720,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Compute the branching ratio.
         br = 1
         for (pdg, event_files) in to_event.items():
+            if not event_files:
+                continue
             totwidth = float(self.banner.get('param', 'decay', abs(pdg)).value)
             if to_decay[pdg] == nb_event:
-                pwidth = sum([f.cross for f in event_files])
+                pwidth = sum([event_files[k].cross for k in event_files])
                 if pwidth > 1.01 * totwidth:
                     logger.critical("Brancing ratio larger than one for %s " % pdg) 
                 br *= pwidth / totwidth
@@ -746,13 +751,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.banner.scale_init_cross(self.branching_ratio)
                     
         
-        
-        
-        
         # 3. Merge the various file together.
-        misc.sprint(orig_lhe.name)
         output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.lhe', '_decayed.lhe.gz'), 'w')
-        misc.sprint(output_lhe.name)
         self.banner.write(output_lhe, close_tag=False)
         
         # initialise object which store not use event due to wrong helicity
@@ -765,7 +765,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         counter = 0
         orig_lhe.seek(0)
         for event in orig_lhe:
-            if counter % 100 == 1:
+            if counter and counter % 1000 == 0 and float(str(counter)[1:]) ==0:
                 print "decaying event number %s [%s s]" % (counter, time.time()-start)
             counter +=1
             ids = [particle.pid for particle in event]
@@ -775,12 +775,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                     continue # nothing to do for this particle
                 # check how the decay need to be done
                 nb_decay = len(to_event[particle.pdg])
+                if nb_decay == 0:
+                    continue #nothing to do for this particle
                 if nb_decay == 1:
                     decay_file = to_event[particle.pdg][0]
                     decay_file_nb = 0
                 elif ids.count(particle.pdg) == nb_decay:
-                   decay_file = to_event[particle.pdg][ids[:i].count(particle.pdg)]
-                   decay_file_nb = ids[:i].count(particle.pdg)
+                    decay_file = to_event[particle.pdg][ids[:i].count(particle.pdg)]
+                    decay_file_nb = ids[:i].count(particle.pdg)
                 else:
                     #need to select the file according to the associate cross-section
                     r = random.random()
@@ -794,6 +796,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             decay_file_nb = j
                         else:
                             break
+                        
                 # ok start the procedure
                 helicity = particle.helicity
                 bypassed = bypassed_decay[particle.pdg][decay_file_nb]
