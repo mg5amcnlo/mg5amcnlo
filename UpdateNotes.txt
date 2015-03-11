@@ -17,6 +17,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		RF+VH: Replaced the default topdrawer histograms with HwU histograms for f(N)LO runs
                     and allow it also for aMC@NLO runs.
 		RF+VB: Allow for variable bin-sizes in MG5_aMC+aMCfast+ApplGrid runs.
+		RF: Added support for the computation of NLO+NNLL jet veto cross sections
 
 2.2.3(10/02/15) RF: Re-factoring of the structure of the code for fNLO computations.
                 OM: Fix a bug in MadWeight (correlated param_card was not creating the correct input file)
