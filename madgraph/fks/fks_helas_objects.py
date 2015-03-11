@@ -326,6 +326,16 @@ class FKSHelasProcess(object):
         if self.virt_matrix_element:
             coupl_list.extend(self.virt_matrix_element.get_used_couplings())
         return coupl_list    
+
+    def get_nexternal_ninitial(self):
+        """the nexternal_ninitial function references to the real emissions if they have been
+        generated, otherwise to the born"""
+        if self.real_processes:
+            (nexternal, ninitial) = self.real_processes[0].matrix_element.get_nexternal_ninitial()
+        else:
+            (nexternal, ninitial) = self.born_matrix_element.get_nexternal_ninitial()
+            nexternal += 1
+        return (nexternal, ninitial)
     
     def __eq__(self, other):
         """the equality between two FKSHelasProcesses is defined up to the 

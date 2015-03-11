@@ -5806,7 +5806,6 @@ This implies that with decay chains:
 
     def do_output(self, line):
         """Main commands: Initialize a new Template or reinitialize one"""
-        print 'MAD'
 
         args = self.split_arg(line)
         # Check Argument validity

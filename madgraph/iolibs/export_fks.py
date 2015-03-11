@@ -292,12 +292,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def write_maxparticles_file(self, writer, matrix_elements):
         """Write the maxparticles.inc file for MadEvent"""
 
-        try:
-            maxparticles = max([me.get_nexternal_ninitial()[0] \
-                              for me in matrix_elements['real_matrix_elements']])
-        except ValueError:
-            maxparticles = max([me.born_matrix_element.get_nexternal_ninitial()[0] \
-                              for me in matrix_elements['matrix_elements'] ])+ 1
+        maxparticles = max([me.get_nexternal_ninitial()[0] \
+                              for me in matrix_elements['matrix_elements']])
 
         lines = "integer max_particles, max_branch\n"
         lines += "parameter (max_particles=%d) \n" % maxparticles
@@ -533,11 +529,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                matrix_element)
 
         filename = 'nexternal.inc'
-        try:
-            (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
-        except IndexError:
-            (nexternal, ninitial) = matrix_element.born_matrix_element.get_nexternal_ninitial()
-            nexternal+= 1
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
     
@@ -980,11 +972,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         lines.append("# P -> POW_D") 
         lines2 = []
         nconfs = len(matrix_element.get_fks_info_list())
-        try:
-            (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
-        except IndexError:
-            (nexternal, ninitial) = matrix_element.born_matrix_element.get_nexternal_ninitial()
-            nexternal+= 1
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         max_iconfig=0
         max_leg_number=0
@@ -1104,11 +1092,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         lines.append("# M -> MOTHUP_D")
         lines.append("# C -> ICOLUP_D")
         nfksconfs = len(matrix_element.get_fks_info_list())
-        try:
-            (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
-        except IndexError:
-            (nexternal, ninitial) = matrix_element.born_matrix_element.get_nexternal_ninitial()
-            nexternal+= 1
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         maxproc = 0
         maxflow = 0
@@ -1137,7 +1121,7 @@ integer nfksprocess
 common/c_nfksprocess/nfksprocess
 call cpu_time(tbefore)
 """
-        if matrix_element.get_fks_info_list():
+        if matrix_element.real_processes:
             for n, info in enumerate(matrix_element.get_fks_info_list()):
                 file += \
 """if (nfksprocess.eq.%(n)d) then
@@ -1185,7 +1169,7 @@ common/c_nfksprocess/nfksprocess
 call smatrix_%(n_me)d(p, wgt)
 else""" % {'n': n + 1, 'n_me' : info['n_me']}
 
-        if matrix_element.get_fks_info_list():
+        if matrix_element.real_processes:
             file += \
 """
 write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
@@ -1629,7 +1613,7 @@ end
             QCD=orders['QCD']
         else:
             QED, QCD = self.get_qed_qcd_orders_from_weighted(\
-                    fksborns[0].born_matrix_element.get_nexternal_ninitial()[0],
+                    fksborns[0].get_nexternal_ninitial()[0]-1, # -1 is because the function returns nexternal of the real emission
                     orders['WEIGHTED'])
 
         replace_dict = {}
