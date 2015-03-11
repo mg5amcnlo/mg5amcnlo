@@ -606,6 +606,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("        default: take value from the model")
         logger.info("  --output=X: path where to write the resulting card. ")
         logger.info("        default: overwrite input file. If no input file, write it in the model directory")
+        logger.info("  --nlo: Compute NLO width [if the model support it]")
         logger.info("")
         logger.info(" example: calculate_width h --body_decay=2 --output=./param_card")
 
@@ -1439,6 +1440,8 @@ This will take effect only in a NEW terminal
             elif arg in self._multiparticles:
                 particles.update([abs(id) for id in self._multiparticles[args[0]]])
             else:
+                if not self._curr_model['case_sensitive']:
+                    arg = arg.lower()                
                 for p in self._curr_model['particles']:
                     if p['name'] == arg or p['antiname'] == arg:
                         particles.add(abs(p.get_pdg_code()))
@@ -1861,7 +1864,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             completion = {}
             completion['options'] = self.list_completion(text,
                             ['--path=', '--output=', '--min_br=0.\$',
-                             '--precision_channel=0.\$', '--body_decay='])
+                             '--precision_channel=0.\$', '--body_decay=', '--nlo'])
             completion['particles'] = self.model_completion(text, '', line)
 
         return self.deal_multiple_categories(completion)
@@ -6555,7 +6558,7 @@ This implies that with decay chains:
             currmodel = model
 
         if not os.path.exists(pjoin(model_path, 'SMWidth')):
-            raise InvalidCmd, "Model %s is not valid for computing NLO width with SMWidth"%model_name
+            raise self.InvalidCmd, "Model %s is not valid for computing NLO width with SMWidth"%model_name
 
         # determine the EW scheme
         externparam = [(param.lhablock.lower(),param.name.lower()) for param \

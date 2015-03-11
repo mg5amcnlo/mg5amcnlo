@@ -213,6 +213,37 @@ class TestMECmdShell(unittest.TestCase):
 #    5.626776e-02   2    -13  13 # 0.083965
 # #
 # #      PDG        Width""".split('\n'), data.strip().split('\n'))
+
+    def test_width_nlocomputation(self):
+        """test the param_card created is correct"""
+        
+        cmd = os.getcwd()
+        
+        interface = MGCmd.MasterCmd()
+        interface.exec_cmd("import model loop_qcd_qed_sm", errorhandling=False, 
+                                                        printcmd=False, 
+                                                        precmd=True, postcmd=False)
+        interface.exec_cmd("compute_widths H Z  --nlo --output=%s" % \
+                           pjoin(self.path, "param_card.dat")
+                           , errorhandling=False, 
+                                                        printcmd=False, 
+                                                        precmd=True, postcmd=False)      
+        
+        # test the param_card is correctly written
+        self.assertTrue(os.path.exists('%s/param_card.dat' % self.path))
+        print self.path
+        text = open('%s/param_card.dat' % self.path).read()
+        print text
+        pattern = re.compile(r"decay\s+23\s+([+-.\de]*)", re.I)
+        value = float(pattern.search(text).group(1))
+        self.assertAlmostEqual(2.42862,value, delta=1e-4)
+        pattern = re.compile(r"decay\s+25\s+([+-.\de]*)", re.I)
+        value = float(pattern.search(text).group(1))
+        self.assertAlmostEqual(4.074640e-03,value, delta=1e-4)        
+        
+
+
+
         
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works and the systematics as well"""
