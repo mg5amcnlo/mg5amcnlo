@@ -22,6 +22,7 @@ class grid_information(object):
 
     def __init__(self, mc_hel):
         # information that we need to get to create a new grid
+        self.oneFail = False # check if one splitted job fails to pass cuts
         self.mc_hel= mc_hel 
         self.grid_base = collections.defaultdict(int)
         self.original_grid = collections.defaultdict(int) 
@@ -67,9 +68,20 @@ class grid_information(object):
             try:
                 self.nonzero, self.ng, self.maxinvar = [int(i) for i in line.split()]
             except ValueError:
+                self.nb_ps_point += 500000
+                self.onefail = True
                 return
         else:
-            nonzero, ng, maxinvar = [self.convert_to_number(i) for i in line.split()]
+            info =  [self.convert_to_number(i) for i in line.split()]
+            if len(info) == 0: 
+                #file empty (should be due to no point pass cuts)
+                self.nb_ps_point += 500000
+                self.oneFail = True
+                return
+            elif len(info) !=3:
+                raise Exception, "wrong formatting of %s"% finput.name
+            
+            nonzero, ng, maxinvar = info
             self.nonzero+=nonzero
             assert ng == self.ng
             assert maxinvar == self.maxinvar
@@ -357,10 +369,15 @@ class grid_information(object):
         
     def get_cross_section(self):
         """return the cross-section error"""
-
+        misc.sprint(self.nonzero)
         if self.nb_ps_point == 0:
             return 0, 0, 0
-                
+        elif self.oneFail: #one of the split fail due to cut but not all of them
+            misc.sprint(self.nonzero)
+            if self.nonzero < 20:
+                # no real success in any of the run. Declare failure.
+                return 0, 0 , 0 
+            
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
         rmean =  self.sum_abs_wgt*self.target_evt/self.nb_ps_point
         
@@ -368,6 +385,8 @@ class grid_information(object):
         sigma = self.sum_wgt_square/vol**2
         sigma -= self.nonzero * mean**2
         sigma /= self.nb_ps_point*(self.nb_ps_point -1)
+
+
 
         return mean, rmean, math.sqrt(abs(sigma))
         
