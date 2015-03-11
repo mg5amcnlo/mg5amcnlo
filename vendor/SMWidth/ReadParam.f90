@@ -1,5 +1,7 @@
 MODULE ReadParam
   USE ParamModule
+  IMPLICIT NONE
+  CHARACTER*20::prefix='mdl_'
 CONTAINS
   SUBROUTINE ReadParamCard(paramcard)
     IMPLICIT NONE
@@ -21,10 +23,10 @@ CONTAINS
     ENDIF
     CALL LHA_loadcard(paramcard,npara,param,value)
     CALL LHA_get_real(npara,param,value,'mu_r',Decay_MU_R,9.118800D+01)
-    CALL LHA_get_real(npara,param,value,'mt',Decay_MT,173.3d0)
-    CALL LHA_get_real(npara,param,value,'mh',Decay_MH,125.0d0)
-    CALL LHA_get_real(npara,param,value,'mz',Decay_MZ,91.188d0)
-    CALL LHA_get_real(npara,param,value,'mw',Decay_MW,80.409d0)
+    CALL LHA_get_real(npara,param,value,TRIM(prefix)//'mt',Decay_MT,173.3d0)
+    CALL LHA_get_real(npara,param,value,TRIM(prefix)//'mh',Decay_MH,125.0d0)
+    CALL LHA_get_real(npara,param,value,TRIM(prefix)//'mz',Decay_MZ,91.188d0)
+    CALL LHA_get_real(npara,param,value,TRIM(prefix)//'mw',Decay_MW,80.409d0)
     IF(Decay_scheme.EQ.1)THEN
        CALL LHA_get_real(npara,param,value,'aewm1',Decay_aEWM1,1.325070D+02)
     ELSE
@@ -103,15 +105,14 @@ CONTAINS
     WRITE(iunit,*)" "
     WRITE(iunit,*)"sminputs 2 aS"
     WRITE(iunit,*)" "
-    WRITE(iunit,*)"mass 6 MT"
+    WRITE(iunit,*)"mass 6 "//TRIM(prefix)//"MT"
     WRITE(iunit,*)" "
-    WRITE(iunit,*)"mass 23 MZ"
+    WRITE(iunit,*)"mass 23 "//TRIM(prefix)//"MZ"
     WRITE(iunit,*)" "
-    WRITE(iunit,*)"mass 24 MW"
+    WRITE(iunit,*)"mass 24 "//TRIM(prefix)//"MW"
     WRITE(iunit,*)" "
-    WRITE(iunit,*)"mass 25 MH"
+    WRITE(iunit,*)"mass 25 "//TRIM(prefix)//"MH"
     WRITE(iunit,*)" "
-    WRITE(iunit,*)"mass 6 MT"
     CLOSE(iunit)
   END SUBROUTINE WriteIdenCard
 END MODULE ReadParam

@@ -6,12 +6,11 @@
   
  sminputs 2 aS
   
- mass 6 MT
+ mass 6 mdl_MT
   
- mass 23 MZ
+ mass 23 mdl_MZ
   
- mass 24 MW
+ mass 24 mdl_MW
   
- mass 25 MH
+ mass 25 mdl_MH
   
- mass 6 MT
