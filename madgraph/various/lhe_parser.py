@@ -189,7 +189,6 @@ class EventFile(object):
             nb_event +=1
         self.len = nb_event
         self.seek(init_pos)
-        print "len of file is", self.len, "init_pos is ", init_pos
         return self.len
         
     
@@ -338,12 +337,9 @@ class EventFile(object):
                     if max_wgt == last_max_wgt:
                         if nb_keep <= event_target:
                             logger.warning("fail to reach target")
-                            break
+                            break   
                         else:
-                            logger.info("Job Done! %s", nb_keep)
-                            break     
-                logger.log(log_level, "Max_wgt use is %s previous nb_keep was %s" %(max_wgt, nb_keep))
-
+                            break
             #create output file (here since we are sure that we have to rewrite it)
             outfile = EventFile(outputpath, "w")
             # need to write banner information
@@ -363,23 +359,23 @@ class EventFile(object):
                     nb_keep += 1
                     event.wgt = written_weight(max(wgt, max_wgt))
                     
-                    if abs(wgt) != max_wgt:
-                        trunc_cross += event.wgt - max_wgt 
+                    if abs(wgt) > max_wgt:
+                        trunc_cross += abs(wgt) - max_wgt 
                     if event_target ==0 or nb_keep <= event_target:                         
                         outfile.write(str(event))
 
                 elif wgt < 0:
                     nb_keep += 1
                     event.wgt = -1 * max(abs(wgt), max_wgt)
-                    if abs(wgt) != max_wgt:
-                        trunc_cross += event.wgt - max_wgt
+                    if abs(wgt) > max_wgt:
+                        trunc_cross += abs(wgt) - max_wgt
                     if event_target ==0 or nb_keep <= event_target: 
                         outfile.write(str(event))
             
             if nb_keep > event_target:
                 if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
                     outfile.close()
-                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
+#                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
                     continue
                 else:
                     outfile.write("</LesHouchesEvents>\n")
@@ -387,13 +383,13 @@ class EventFile(object):
                 break
             else:
                 outfile.close()
-                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
+#                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
         else:
             # pass here if event_target > 0 and all the attempt fail.
             logger.warning("fail to reach target event")
         
-        logger.log(log_level, "Final maximum weight used for final "+\
-                    "unweighting is %s yielding %s events." % (max_wgt,nb_keep))
+#        logger.log(log_level, "Final maximum weight used for final "+\
+#                    "unweighting is %s yielding %s events." % (max_wgt,nb_keep))
             
         if event_target:
             nb_events_unweighted = nb_keep
@@ -401,8 +397,8 @@ class EventFile(object):
         else:
             nb_events_unweighted = nb_keep
 
-        logger.log(log_level, "write %i event in %s (efficiency %.2g %%, truncation %s %%)" % 
-          (nb_keep, outputpath, nb_events_unweighted/nb_event*100, trunc_cross/cross['all']*100))
+        logger.info("write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
+          nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
      
         return nb_keep
         
@@ -559,7 +555,7 @@ class MultiEventFile(EventFile):
             # We need to loop over the event file to get some information about the 
             # new cross-section/ wgt of event.
             cross = collections.defaultdict(int)
-            new_wgt =[]
+            new_wgt =[] 
             for event in f:
                 nb_event += 1
                 total_event += 1
@@ -580,11 +576,11 @@ class MultiEventFile(EventFile):
             # store the information
             self.initial_nb_events[i] = nb_event
             self.scales[i] = self.across[i]/cross['abs'] if self.across[i] else 1
-            misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
-                        % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
+            #misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
+            #            % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
             for key in cross:
                 sum_cross[key] += cross[key]* self.scales[i]
-            all_wgt += [self.scales[i] * w for w in new_wgt]
+            all_wgt +=[self.scales[i] * w for w in new_wgt]
             all_wgt.sort()
             nb_keep = max(20, int(total_event*trunc_error*10))
             all_wgt = all_wgt[-nb_keep:] 
