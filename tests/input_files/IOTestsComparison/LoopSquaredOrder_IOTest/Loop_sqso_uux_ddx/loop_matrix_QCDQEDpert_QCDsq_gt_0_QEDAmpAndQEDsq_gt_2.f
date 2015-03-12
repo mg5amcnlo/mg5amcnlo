@@ -313,13 +313,20 @@ C      the rest can be skipped.
      $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_S
      $ O_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
+C     Allows to forbid the zero helicity double check, no matter the
+C      value in MadLoopParams.dat
+C     This can be accessed with the SET_FORBID_HEL_DOUBLECHECK
+C      subroutine of MadLoopCommons.dat
+      LOGICAL FORBID_HEL_DOUBLECHECK
+      COMMON/FORBID_HEL_DOUBLECHECK/FORBID_HEL_DOUBLECHECK
+
       INTEGER I_SO
       DATA I_SO/1/
       COMMON/ML5_0_I_SO/I_SO
       INTEGER I_LIB
       DATA I_LIB/1/
       COMMON/ML5_0_I_LIB/I_LIB
-C     TILL NOW, ONLY CUTTOOLS PROVIDE QP
+C     UTIL NOW, ONLY CUTTOOLS PROVIDE QP
       LOGICAL QP_TOOLS_AVAILABLE
       DATA QP_TOOLS_AVAILABLE/.FALSE./
       INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
@@ -394,6 +401,9 @@ C     ----------
         CALL SETMADLOOPPATH(TMP)
         CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
         CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
+        IF (FORBID_HEL_DOUBLECHECK) THEN
+          DOUBLECHECKHELICITYFILTER = .FALSE.
+        ENDIF
 
 C       Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero
 C        if AUTOMATIC_TIR_CACHE_CLEARING is disabled.

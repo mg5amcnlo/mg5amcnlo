@@ -785,13 +785,14 @@ class OneTagResults(dict):
                                     exists(pjoin(path, "%s_parton_syscalc.log" %self['tag'])):
                 self.parton.append('syst')
 
-            if glob.glob(pjoin(path,"*.top")):
-                if self['run_mode'] in ['LO', 'NLO']:
-                    self.parton.append('top')
+            for kind in ['top','HwU','pdf','ps']:
+                if glob.glob(pjoin(path,"*.%s" % kind)):
+                    if self['run_mode'] in ['LO', 'NLO']:
+                        self.parton.append('%s' % kind)
 
         if level in ['shower','all'] and 'shower' not in nolevel \
           and self['run_mode'] != 'madevent':
-            # this is for hep/top files from amcatnlo
+            # this is for hep/top/HwU files from amcatnlo
             if glob.glob(pjoin(path,"*.hep")) + \
                glob.glob(pjoin(path,"*.hep.gz")):
                 self.shower.append('hep')
@@ -804,12 +805,12 @@ class OneTagResults(dict):
                glob.glob(pjoin(path,"*.hepmc.gz")):
                 self.shower.append('hepmc')
 
-            if glob.glob(pjoin(path,"*.top")):
-                if self['run_mode'] in ['LO', 'NLO']:
-                    self.parton.append('top')
-                else:
-                    self.shower.append('top')
-
+            for kind in ['top','HwU','pdf','ps']:
+                if glob.glob(pjoin(path,'*.' + kind)):
+                    if self['run_mode'] in ['LO', 'NLO']:
+                        self.parton.append('%s' % kind)
+                    else:
+                        self.shower.append('%s' % kind)
 
                 
         if level in ['pythia', 'all']:
@@ -923,11 +924,19 @@ class OneTagResults(dict):
                 out += ' <a href="./HTML/%(run_name)s/plots_parton.html">plots</a>'
             if 'param_card' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/param_card.dat">param_card</a>'
-            if 'top' in self.parton:
+            for kind in ['top', 'pdf', 'ps']:
+                if kind in self.parton:
+            # fixed order plots
+                    for f in \
+                        glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)):
+                        out += " <a href=\"%s\">%s</a> " % (f, '%s' % kind.upper())
+            if 'HwU' in self.parton:
             # fixed order plots
                 for f in \
-                  glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.top')):
-                    out += " <a href=\"%s\">%s</a> " % (f, 'TOP')
+                  glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.HwU')):
+                    out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
+                    out += " <a href=\"%s\">%s</a> " % \
+                                           (f.replace('.HwU','.gnuplot'), 'GnuPlot')
             #if 'rwt' in self.parton:
             #    out += ' <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematic variation</a>'
 
@@ -994,12 +1003,17 @@ class OneTagResults(dict):
 
         if level == 'shower':
         # this is to add the link to the results after shower for amcatnlo
-            for kind in ['hep', 'hepmc', 'top']:
+            for kind in ['hep', 'hepmc', 'top', 'HwU', 'pdf', 'ps']:
                 if kind in self.shower:
                     for f in \
                       glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)) + \
                       glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind + '.gz')):
-                        out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
+                        if kind == 'HwU':
+                            out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
+                            out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.gnuplot'), 'GnuPlot')
+                        else:
+                            out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
+
             if 'plot' in self.shower:
                 out += """ <a href="./HTML/%(run_name)s/plots_shower_%(tag)s.html">plots</a>"""
             

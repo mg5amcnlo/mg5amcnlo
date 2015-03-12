@@ -1,5 +1,6 @@
-      subroutine HwU_output(idummy)
+      subroutine HwU_output(idummy,dummy)
       integer idummy
+      double precision dummy
       write (*,*) 'HwU_output should not be called',idummy
       stop 1
       end

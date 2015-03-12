@@ -1803,6 +1803,9 @@ class RunCardNLO(RunCard):
         if self['pdlabel'] not in possible_set:
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
     
+        # check that we use lhapdf if reweighting is ON
+        if self['reweight_pdf'] and self['pdlabel'] != "lhapdf":
+            raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

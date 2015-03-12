@@ -1,8 +1,9 @@
 #!/bin/bash
 
-if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then
-tar -xf MadLoop5_resources.tar;
+if [[ -e MadLoop5_resources.tar.gz && ! -e MadLoop5_resources ]]; then
+tar -xzf MadLoop5_resources.tar.gz;
 fi
+
 k=run1_app.log;
 script=ajob1;                      
 offset=$1;
@@ -54,5 +55,19 @@ for i in $@ ; do
 #     rm -f ftn26
      echo "" >> $k; echo "ls status:" >> $k; ls >> $k;
      cp $k log.txt;
+# Perform some cleaning to keep less file on disk/transfer less file.
+     if [[ $subdir -ne 1 &&  -s results.dat && $MG5DEBUG -ne true ]]; then
+	 rm -f ftn25 &> /dev/null
+         rm -f ftn26 &> /dev/null
+	 rm -f log.txt &> /dev/null
+         rm -f *.log &> /dev/null
+	 rm -f moffset.dat &> /dev/null
+     fi
      cd ../;
+ 
 done;
+
+# Cleaning 
+
+
+
