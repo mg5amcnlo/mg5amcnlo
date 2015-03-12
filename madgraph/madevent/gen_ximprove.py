@@ -1277,14 +1277,11 @@ class gen_ximprove_share(gen_ximprove, gensym):
         
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)
 
-<<<<<<< TREE
         misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
         grid_calculator.results.compute_values()
         self.warnings_from_madloop(G, grid_calculator.results.madloop_stats)
         self.print_madloop_statistics(G, grid_calculator.results.madloop_stats)
         
-=======
->>>>>>> MERGE-SOURCE
         # check what to do
         if nunwgt > needed_event+1:
             # We did it.
