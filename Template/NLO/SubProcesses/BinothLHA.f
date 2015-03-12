@@ -89,6 +89,11 @@ c Ellis-Sexton scale)
       double  = 0d0
       prec_found = 1.0d0
       if (firsttime_run) then
+c The helicity double check should have been performed during the
+c pole check, so we skip it here. It also makes sure that there is
+c no conflict on the write access to HelFilter.dat when running
+c locally in multicore without a cluster_tmp_path
+         call set_forbid_hel_doublecheck(.True.)
          call get_nsqso_loop(nsqso)
          call get_answer_dimension(MLResArrayDim)
          allocate(accuracies(0:nsqso))

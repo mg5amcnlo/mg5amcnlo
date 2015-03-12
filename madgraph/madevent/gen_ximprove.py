@@ -326,7 +326,12 @@ class gensym(object):
             #check for luminosity
             raise Exception, "Not Implemented"
         else:   
+            across = self.abscross[(Pdir,G)]/self.sigma[(Pdir,G)]
+            tot_across = self.get_current_axsec()
+            misc.sprint(across, tot_across, across / tot_across)
             if cross == 0:
+                need_submit = False
+            elif across / tot_across < 1e-5:
                 need_submit = False
             elif error >  self.cmd.opts['accuracy']:
                 need_submit = True
@@ -413,6 +418,12 @@ class gensym(object):
  
         return grid_calculator, cross, error
     
+    def get_current_axsec(self):
+        
+        across = 0
+        for (Pdir,G) in self.abscross:
+            across += self.abscross[(Pdir,G)]/self.sigma[(Pdir,G)]
+        return across
     
     def write_results(self, grid_calculator, cross, error, Pdir, G, step):
         
@@ -1162,13 +1173,6 @@ class gen_ximprove_share(gen_ximprove, gensym):
             Gdirs.append(path)
         assert len(grid_calculator.results) == len(Gdirs) == self.splitted_for_dir(Pdir, G)
         
-        try:
-            output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'a')
-        except IOError:
-            output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'w')
-                
-        misc.call(["cat"] + [pjoin(d, "events.lhe") for d in Gdirs],
-                  stdout=output_file)
                 
         # Check how many events are going to be kept after un-weighting.
         needed_event = cross * self.goal_lum
@@ -1182,6 +1186,30 @@ class gen_ximprove_share(gen_ximprove, gensym):
         efficiency = new_evt / sum([R.nevents for R in grid_calculator.results])
         nunwgt = old_nunwgt * old_maxwgt / maxwgt
         nunwgt += new_evt
+
+        # check the number of event for this iteration alone
+        one_iter_nb_event = grid_calculator.get_nunwgt()
+        drop_previous_iteration = False
+        if one_iter_nb_event > nunwgt and step < self.min_iter + 1:
+            # the last iteration alone has more event that the combine iteration.
+            # it is therefore interesting to drop previous iteration.  
+            misc.sprint("reset maxwgt", one_iter_nb_event, nunwgt )          
+            drop_previous_iteration = True
+            nunwgt = one_iter_nb_event
+            maxwgt = grid_calculator.get_max_wgt()
+            new_evt = nunwgt
+        else:
+            misc.sprint("no need to reset %s %s %s" % (one_iter_nb_event, nunwgt, step))
+            
+        try:
+            if drop_previous_iteration:
+                raise IOError
+            output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'a')
+        except IOError:
+            output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'w')
+                
+        misc.call(["cat"] + [pjoin(d, "events.lhe") for d in Gdirs],
+                  stdout=output_file)
         
         
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)
