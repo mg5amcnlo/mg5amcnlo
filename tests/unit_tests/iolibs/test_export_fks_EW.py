@@ -109,7 +109,7 @@ class IOExportFKSEWTest(unittest.TestCase,\
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_maxconfigs_file(\
             writers.FortranWriter(self.give_pos(self.created_files[0])),\
-            self.myreals)
+            self.myfkshelasmulti)
         self.assertFileContains(self.created_files[0], goal)
     
     @PostponeToEW

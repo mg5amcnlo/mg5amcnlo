@@ -1232,10 +1232,10 @@ c PDG codes
             if (k.lt.fks_j_d(iFKS)) then
                parton_pdg_uborn(k,j,ict)=idup_d(iFKS,k,j)
             elseif(k.eq.fks_j_d(iFKS)) then
-               if (abs(idup_d(iFKS,fks_i_d(iFKS),j)) .eq.
-     &              abs(idup_d(iFKS,fks_j_d(iFKS) ,j))) then
+               if ( abs(idup_d(iFKS,fks_i_d(iFKS),j)) .eq.
+     &              abs(idup_d(iFKS,fks_j_d(iFKS),j)) ) then
                  parton_pdg_uborn(k,j,ict)=21
-               elseif (idup_d(iFKS,fks_i_d(iFKS),j).eq.21) then
+               elseif (abs(idup_d(iFKS,fks_i_d(iFKS),j)).eq.21) then
                  parton_pdg_uborn(k,j,ict)=idup_d(iFKS,fks_j_d(iFKS),j)
                elseif (idup_d(iFKS,fks_j_d(iFKS),j).eq.21) then
                  parton_pdg_uborn(k,j,ict)=-idup_d(iFKS,fks_i_d(iFKS),j)
@@ -1582,11 +1582,11 @@ c mother and the extra (n+1) parton is given the PDG code of the gluon.
          if (k.lt.fks_j_d(iFKS)) then
             pdg_uborn(k,ict)=pdg(k,ict)
          elseif(k.eq.fks_j_d(iFKS)) then
-            if (abs(pdg(fks_i_d(iFKS),ict)) .eq.
-     &           abs(pdg(fks_j_d(iFKS),ict))) then
+            if ( abs(pdg(fks_i_d(iFKS),ict)) .eq.
+     &           abs(pdg(fks_j_d(iFKS),ict)) ) then
 c gluon splitting:  g -> XX
                pdg_uborn(k,ict)=21
-            elseif (pdg(fks_i_d(iFKS),ict).eq.21) then
+            elseif (abs(pdg(fks_i_d(iFKS),ict)).eq.21) then
 c final state gluon radiation:  X -> Xg
                pdg_uborn(k,ict)=pdg(fks_j_d(iFKS),ict)
             elseif (pdg(fks_j_d(iFKS),ict).eq.21) then
@@ -1837,7 +1837,7 @@ c that has a soft singularity. We set it to 'i_soft'.
          else
             found_S=.true.
          endif
-         if (pdg_type_d(nFKS(i),fks_i_d(nFKS(i))).eq.21) then
+         if (abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.21) then
             i_soft=i
             exit
          endif
@@ -5459,7 +5459,7 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
      &                 particle_type(j_fks),pdg_type(i_fks),pdg_type(j_fks)
                   stop
                endif
-            elseif(i_fks_pdg.ne.21) then ! if not already above, it MUST be a gluon
+            elseif(abs(i_fks_pdg).ne.21) then ! if not already above, it MUST be a gluon
                write (*,*) 'ERROR, i_fks is not a gluon and falls not'//
      $              ' in other categories',i_fks,j_fks,i_fks_pdg
      $              ,j_fks_pdg
@@ -5525,6 +5525,10 @@ c Setup the FKS symmetry factors.
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
          fkssymmetryfactorBorn=dble(ngluons)
+      elseif(pdg_type(i_fks).eq.-21) then
+         fkssymmetryfactor=1d0
+         fkssymmetryfactorDeg=1d0
+         fkssymmetryfactorBorn=1d0
       else
          fkssymmetryfactor=dble(fac_i*fac_j)
          fkssymmetryfactorDeg=dble(fac_i*fac_j)

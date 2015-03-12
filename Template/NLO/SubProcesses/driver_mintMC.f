@@ -514,6 +514,9 @@ c
       include 'nexternal.inc'
       include 'genps.inc'
       include 'mint.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'run.inc'
 c
 c     Arguments
 c
@@ -676,6 +679,18 @@ c These should be ignored (but kept for 'historical reasons')
         nbody=.false.
       endif
       abrv=abrvinput(1:4)
+      if (fks_configs.eq.1) then
+         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
+            write (*,*) 'Process generated with [LOonly=QCD]. '/
+     $           /'Setting abrv to "born".'
+            abrv='born'
+            if (ickkw.eq.3) then
+               write (*,*) 'FxFx merging not possible with'/
+     $              /' [LOonly=QCD] processes'
+               stop 1
+            endif
+         endif
+      endif
       if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
@@ -1005,7 +1020,7 @@ c First find all the nFKSprocesses that have a soft singularity and put
 c them in the process map
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (PDG_type(i_fks).eq.21) then
+            if (abs(PDG_type(i_fks)).eq.21) then
                proc_map(0,0)=proc_map(0,0)+1
                proc_map(proc_map(0,0),0)=proc_map(proc_map(0,0),0)+1
                proc_map(proc_map(0,0),proc_map(proc_map(0,0),0))
@@ -1021,34 +1036,34 @@ c state all gluon
          found_ini2=.false.
          found_fnl=.false.
          do i=1,proc_map(0,0)
-            if (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.1 .and.
-     $           .not.found_ini1) then
+            if (abs(i_fks_pdg_proc(i)).eq.21 .and. j_fks_proc(i).eq.1
+     $           .and. .not.found_ini1) then
                found_ini1=.true.
-            elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.1
-     $              .and. found_ini1) then
+            elseif (abs(i_fks_pdg_proc(i)).eq.21 .and.
+     $              j_fks_proc(i).eq.1.and. found_ini1) then
                write (*,*)'Initial state 1 g->gg already'/
      $              /' found in driver_mintMC'
                write (*,*) i_fks_pdg_proc
                write (*,*) j_fks_pdg_proc
                write (*,*) j_fks_proc
                stop
-            elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.2
-     $              .and. .not.found_ini2) then
+            elseif (abs(i_fks_pdg_proc(i)).eq.21 .and.
+     $              j_fks_proc(i).eq.2.and. .not.found_ini2) then
                found_ini2=.true.
-            elseif (i_fks_pdg_proc(i).eq.21 .and. j_fks_proc(i).eq.2
-     $              .and. found_ini2) then
+            elseif (abs(i_fks_pdg_proc(i)).eq.21 .and.
+     $              j_fks_proc(i).eq.2.and. found_ini2) then
                write (*,*)'Initial state 2 g->gg already'/
      $              /' found in driver_mintMC'
                write (*,*) i_fks_pdg_proc
                write (*,*) j_fks_pdg_proc
                write (*,*) j_fks_proc
                stop
-            elseif (i_fks_pdg_proc(i).eq.21 .and.
+            elseif (abs(i_fks_pdg_proc(i)).eq.21 .and.
      $              j_fks_pdg_proc(i).eq.21 .and.
      $              j_fks_proc(i).gt.nincoming .and. .not.found_fnl)
      $              then
                found_fnl=.true.
-            elseif (i_fks_pdg_proc(i).eq.21 .and.
+            elseif (abs(i_fks_pdg_proc(i)).eq.21 .and.
      $              j_fks_pdg_proc(i).eq.21 .and.
      $              j_fks_proc(i).gt.nincoming .and. found_fnl) then
                write (*,*)
@@ -1064,10 +1079,10 @@ c singularity and put them together with the corresponding gluon to
 c gluons splitting
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (PDG_type(i_fks).ne.21) then
+            if (abs(PDG_type(i_fks)).ne.21) then
                if (j_fks.eq.1 .and. found_ini1) then
                   do i=1,proc_map(0,0)
-                     if (i_fks_pdg_proc(i).eq.21 .and.
+                     if (abs(i_fks_pdg_proc(i)).eq.21 .and.
      $                    j_fks_proc(i).eq.1) then
                         proc_map(i,0)=proc_map(i,0)+1
                         proc_map(i,proc_map(i,0))=nFKSprocess
@@ -1076,7 +1091,7 @@ c gluons splitting
                   enddo
                elseif (j_fks.eq.2 .and. found_ini2) then
                   do i=1,proc_map(0,0)
-                     if (i_fks_pdg_proc(i).eq.21 .and.
+                     if (abs(i_fks_pdg_proc(i)).eq.21 .and.
      $                    j_fks_proc(i).eq.2) then
                         proc_map(i,0)=proc_map(i,0)+1
                         proc_map(i,proc_map(i,0))=nFKSprocess
@@ -1085,7 +1100,7 @@ c gluons splitting
                   enddo
                elseif (j_fks.gt.nincoming .and. found_fnl) then
                   do i=1,proc_map(0,0)
-                     if (i_fks_pdg_proc(i).eq.21 .and.
+                     if (abs(i_fks_pdg_proc(i)).eq.21 .and.
      $                    j_fks_pdg_proc(i).eq.21.and.
      $                    j_fks_proc(i).gt.nincoming) then
                         proc_map(i,0)=proc_map(i,0)+1
@@ -1161,7 +1176,7 @@ c "npNLO".
          npLO=-1
          do i=nincoming+1,nexternal
 c     include all quarks (except top quark) and the gluon.
-            if(abs(idup(i,1)).le.5 .or. idup(i,1).eq.21)
+            if(abs(idup(i,1)).le.5 .or. abs(idup(i,1)).eq.21)
      &           npNLO=npNLO+1
          enddo
          npNLO=npNLO-1

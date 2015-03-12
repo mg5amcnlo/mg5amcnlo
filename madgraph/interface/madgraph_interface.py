@@ -2434,7 +2434,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme',
                     'gauge',
                     'EWscheme']
-    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn']
+    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=']
     _OLP_supported = ['MadLoop', 'GoSam']
@@ -2546,7 +2546,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
         self._comparisons = None
-        self._nlo_modes_for_completion = ['all','virt','real']
+        self._nlo_modes_for_completion = ['all','virt','real','LOonly']
 
         # Load the configuration file,i.e.mg5_configuration.txt
         self.set_configuration()
@@ -3764,7 +3764,7 @@ This implies that with decay chains:
             # then empty the perturbation_couplings_list at this stage.
             if LoopOption=='tree':
                 perturbation_couplings_list = []
-            if perturbation_couplings_list and LoopOption!='real':
+            if perturbation_couplings_list and LoopOption not in ['real', 'LOonly']:
                 if not isinstance(self._curr_model,loop_base_objects.LoopModel):
                     raise self.InvalidCmd(\
                       "The current model does not allow for loop computations.")
@@ -3774,7 +3774,6 @@ This implies that with decay chains:
                             raise self.InvalidCmd(\
                                 "Perturbation order %s is not among" % pert_order + \
                                 " the perturbation orders allowed for by the loop model.")
-
             if not self.options['loop_optimized_output'] and \
                          LoopOption not in ['tree','real'] and split_orders!=[]:
                 logger.info('The default output mode (loop_optimized_output'+\
@@ -3817,8 +3816,7 @@ This implies that with decay chains:
                   "At most one negative squared order constraint can be specified.")
             
             sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
-            
-            
+                        
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
