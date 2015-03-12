@@ -111,6 +111,9 @@ def compile_dir(*arguments):
         #compile everything
         # compile and run tests
         for test in tests:
+            # skip check_poles for LOonly dirs
+            if test == 'check_poles' and os.path.exists(pjoin(this_dir, 'parton_lum_0.f')):
+                continue
             misc.compile([test], cwd = this_dir, job_specs = False)
             input = pjoin(me_dir, '%s_input.txt' % test)
             #this can be improved/better written to handle the output
@@ -3924,10 +3927,11 @@ Integrated cross-section
 
 
     def check_tests(self, test, dir):
-        """just call the correct parser for the test log"""
+        """just call the correct parser for the test log.
+        Skip check_poles for LOonly folders"""
         if test in ['test_ME', 'test_MC']:
             return self.parse_test_mx_log(pjoin(dir, '%s.log' % test)) 
-        elif test == 'check_poles':
+        elif test == 'check_poles' and not os.path.exists(pjoin(dir,'parton_lum_0.f')):
             return self.parse_check_poles_log(pjoin(dir, '%s.log' % test)) 
 
 
