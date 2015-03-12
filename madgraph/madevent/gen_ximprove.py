@@ -412,9 +412,7 @@ class gensym(object):
         else:
             error = 0
 
-        self.warnings_from_madloop(G, grid_calculator.results.madloop_stats)
-
-        if True and __debug__ :
+        if False and __debug__ :
             # make the unweighting to compute the number of events:
             maxwgt = grid_calculator.get_max_wgt(0.01)
             if maxwgt:
@@ -423,9 +421,11 @@ class gensym(object):
                 primary_event = sum([R.nw for R in grid_calculator.results])
                 written_event = sum([R.nunwgt for R in grid_calculator.results])
                 misc.sprint(G, cross, error*cross, nunwgt, written_event, primary_event, luminosity)
-            grid_calculator.results.compute_values()
-            self.print_madloop_statistics(G, grid_calculator.results.madloop_stats)
  
+        grid_calculator.results.compute_values() 
+        self.warnings_from_madloop(G, grid_calculator.results.madloop_stats)        
+        self.print_madloop_statistics(G, grid_calculator.results.madloop_stats)
+
         return grid_calculator, cross, error
 
     def warnings_from_madloop(self,G,ml_stats):
@@ -1277,7 +1277,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
         
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)
 
-        misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
+        # misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
         grid_calculator.results.compute_values()
         self.warnings_from_madloop(G, grid_calculator.results.madloop_stats)
         self.print_madloop_statistics(G, grid_calculator.results.madloop_stats)
