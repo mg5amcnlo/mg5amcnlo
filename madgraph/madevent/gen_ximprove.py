@@ -463,7 +463,7 @@ class gensym(object):
           ,('Avg. timing = %i ms'%int(1.0e3*ml_stats['averaged_timing'])) if
             ml_stats['averaged_timing'] > 0.001 else
             ('Avg. timing = %i mus'%int(1.0e6*ml_stats['averaged_timing']))
-          ,'Precision min/max=%.2g/%.2g'%(ml_stats['min_precision'],
+          ,'Precision min/max=%.2e/%.2e'%(ml_stats['min_precision'],
                                                      ml_stats['max_precision'])
           ,'Stability %s'%dict(stability)
           ,'Red. tools usage in %% %s'%dict(tools_used)
