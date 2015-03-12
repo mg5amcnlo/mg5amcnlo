@@ -2700,7 +2700,6 @@ zeor by MadLoop.""")
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                               log_level=logging.DEBUG)
             
-            misc.sprint(nb_event)
             self.results.add_detail('nb_event', nb_event)
         
         eradir = self.options['exrootanalysis_path']
