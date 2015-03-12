@@ -17,6 +17,8 @@ import os
 import math
 import logging
 import re
+import xml.dom.minidom as minidom
+
 logger = logging.getLogger('madevent.stdout') # -> stdout
 
 pjoin = os.path.join
@@ -33,6 +35,26 @@ class OneResult(object):
     
     def __init__(self, name):
         """Initialize all data """
+        
+        self.madloop_stats = {
+          'unknown_stability'  : 0,
+          'stable_points'      : 0,
+          'unstable_points'    : 0,
+          'exceptional_points' : 0,
+          'DP_usage'           : 0,
+          'QP_usage'           : 0,
+          'DP_init_usage'      : 0,
+          'QP_init_usage'      : 0,
+          'CutTools_DP_usage'  : 0,
+          'CutTools_QP_usage'  : 0,          
+          'PJFry_usage'        : 0,
+          'Golem_usage'        : 0,
+          'IREGI_usage'        : 0,
+          'max_precision'      : 0.0,
+          'min_precision'      : 0.0,
+          'averaged_timing'    : 0.0,
+          'n_madloop_calls'    : 0
+          }
         
         self.name = name
         self.parent_name = ''
@@ -69,10 +91,13 @@ class OneResult(object):
         else:
             raise Exception, "filepath should be a path or a file descriptor"
         
-        
-        
         i=0
+        found_xsec_line = False
         for line in finput:
+            # Exit as soon as we hit the xml part. Not elegant, but the part
+            # below should eventually be xml anyway.
+            if '<' in line:
+                break
             i+=1
             if i == 1:
                 def secure_float(d):
@@ -96,13 +121,27 @@ class OneResult(object):
                 continue
             try:
                 l, sec, err, eff, maxwgt, asec = line.split()
+                found_xsec_line = True
             except:
-                return
+                break
             self.ysec_iter.append(secure_float(sec))
             self.yerr_iter.append(secure_float(err))
             self.yasec_iter.append(secure_float(asec))
             self.eff_iter.append(secure_float(eff))
             self.maxwgt_iter.append(secure_float(maxwgt))
+
+        finput.seek(0)
+        xml = []
+        for line in finput:
+            if re.match('^.*<.*>',line):
+                xml.append(line)
+                break
+        for line in finput:
+            xml.append(line)
+
+        if xml:
+            self.parse_xml_results('\n'.join(xml))        
+        
         # this is for amcatnlo: the number of events has to be read from another file
         if self.nevents == 0 and self.nunwgt == 0 and \
                 os.path.exists(pjoin(os.path.split(filepath)[0], 'nevts')): 
@@ -110,7 +149,57 @@ class OneResult(object):
             self.nevents = nevts
             self.nunwgt = nevts
         
+    def parse_xml_results(self, xml):
+        """ Parse the xml part of the results.dat file."""
+
+        def getData(Node):
+            return Node.childNodes[0].data
+
+        dom = minidom.parseString(xml)
         
+        def handleMadLoopNode(ml_node):
+            u_return_code = ml_node.getElementsByTagName('u_return_code')
+            u_codes = [int(_) for _ in getData(u_return_code[0]).split(',')]
+            self.madloop_stats['CutTools_DP_usage'] = u_codes[1]
+            self.madloop_stats['PJFry_usage']       = u_codes[2]
+            self.madloop_stats['IREGI_usage']       = u_codes[3]
+            self.madloop_stats['Golem_usage']       = u_codes[4]
+            self.madloop_stats['CutTools_QP_usage'] = u_codes[9]
+            t_return_code = ml_node.getElementsByTagName('t_return_code')
+            t_codes = [int(_) for _ in getData(t_return_code[0]).split(',')]
+            self.madloop_stats['DP_usage']          = t_codes[1]
+            self.madloop_stats['QP_usage']          = t_codes[2]
+            self.madloop_stats['DP_init_usage']     = t_codes[3]
+            self.madloop_stats['DP_init_usage']     = t_codes[4]
+            h_return_code = ml_node.getElementsByTagName('h_return_code')
+            h_codes = [int(_) for _ in getData(h_return_code[0]).split(',')]
+            self.madloop_stats['unknown_stability']  = h_codes[1]
+            self.madloop_stats['stable_points']      = h_codes[2]
+            self.madloop_stats['unstable_points']    = h_codes[3]
+            self.madloop_stats['exceptional_points'] = h_codes[4]
+            average_time = ml_node.getElementsByTagName('average_time')
+            avg_time = float(getData(average_time[0]))
+            self.madloop_stats['averaged_timing']    = avg_time 
+            max_prec = ml_node.getElementsByTagName('max_prec')
+            max_prec = float(getData(max_prec[0]))
+            # The minimal precision corresponds to the maximal value for PREC
+            self.madloop_stats['min_precision']      = max_prec  
+            min_prec = ml_node.getElementsByTagName('min_prec')
+            min_prec = float(getData(min_prec[0]))
+            # The maximal precision corresponds to the minimal value for PREC
+            self.madloop_stats['max_precision']      = min_prec              
+            n_evals = ml_node.getElementsByTagName('n_evals')
+            n_evals = int(getData(n_evals[0]))
+            self.madloop_stats['n_madloop_calls']    = n_evals
+            
+        madloop_node = dom.getElementsByTagName("madloop_statistics")
+        
+        if madloop_node:
+            try:
+                handleMadLoopNode(madloop_node[0])
+            except ValueError, IndexError:
+                logger.warning('Fail to read MadLoop statistics from results.dat')
+
     def set_mfactor(self, value):
         self.mfactor = int(value)    
         
@@ -185,10 +274,24 @@ class Combine_results(list, OneResult):
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
         self.luminosity = min([0]+[one.luminosity for one in self])
-        
-        
-        
-        
+
+
+        if len(self)!=0 and sum(_.madloop_stats['n_madloop_calls'] for _ in self)!=0:
+            for key in self[0].madloop_stats:
+                if key=='max_precision':
+                    # The minimal precision corresponds to the maximal value for PREC
+                    self.madloop_stats[key] = min( _.madloop_stats[key] for _ in self)
+                elif key=='min_precision':
+                    # The maximal precision corresponds to the minimal value for PREC
+                    self.madloop_stats[key] = max( _.madloop_stats[key] for _ in self)
+                elif key=='averaged_timing':
+                    self.madloop_stats[key] = (sum(
+                    _.madloop_stats[key]*_.madloop_stats['n_madloop_calls'] 
+                      for _ in self)/sum(_.madloop_stats['n_madloop_calls'] 
+                                                                 for _ in self))
+                else:
+                    self.madloop_stats[key] = sum(_.madloop_stats[key] for _ in self)
+
     def compute_average(self):
         """compute the value associate to this combination"""
 

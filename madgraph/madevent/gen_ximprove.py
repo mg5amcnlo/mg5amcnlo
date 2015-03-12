@@ -405,6 +405,8 @@ class gensym(object):
         else:
             error = 0
 
+        self.warnings_from_madloop(G, grid_calculator.results.madloop_stats)
+
         if True and __debug__ :
             # make the unweighting to compute the number of events:
             maxwgt = grid_calculator.get_max_wgt(0.01)
@@ -414,9 +416,66 @@ class gensym(object):
                 primary_event = sum([R.nw for R in grid_calculator.results])
                 written_event = sum([R.nunwgt for R in grid_calculator.results])
                 misc.sprint(G, cross, error*cross, nunwgt, written_event, primary_event, luminosity)
-
+            grid_calculator.results.compute_values()
+            self.print_madloop_statistics(G, grid_calculator.results.madloop_stats)
  
         return grid_calculator, cross, error
+
+    def warnings_from_madloop(self,G,ml_stats):
+        """Possible warn user for worrying MadLoop stats for this channel."""
+
+        if ml_stats['n_madloop_calls']==0:
+            return
+
+        EPS_fraction = float(ml_stats['exceptional_points'])/ml_stats['n_madloop_calls']
+        if EPS_fraction > 0.001:
+            logger.warning('Channel %s has encountered a fraction of %.3g'%EPS_fraction+
+              ' of numerically unstable loop matrix element computations '+
+              '(which could not be rescued using quadruple precision).'+\
+                                           ' The results might not be trusted.')
+
+    def print_madloop_statistics(self,G,ml_stats):
+        """Prints out a summary of the madloop statistics gathered for this channel."""
+        
+        if ml_stats['n_madloop_calls']==0:
+            return
+
+        stability = [
+          ('tot#',ml_stats['n_madloop_calls']),
+          ('unkwn#',ml_stats['unknown_stability']),
+          ('UPS%',float(ml_stats['unstable_points'])/ml_stats['n_madloop_calls']),
+          ('EPS#',ml_stats['exceptional_points'])]
+
+        stability = [_ for _ in stability if _[1] > 0 or _[0] in ['UPS%','EPS#']]
+        stability = [(_[0],'%i'%_[1]) if isinstance(_[1], int) else
+                     (_[0],'%.3g'%(100.0*_[1])) for _ in stability]
+        
+        tools_used = [
+          ('CT_DP',float(ml_stats['CutTools_DP_usage'])/ml_stats['n_madloop_calls']),
+          ('CT_QP',float(ml_stats['CutTools_QP_usage'])/ml_stats['n_madloop_calls']),
+          ('PJFry',float(ml_stats['PJFry_usage'])/ml_stats['n_madloop_calls']),
+          ('Golem',float(ml_stats['Golem_usage'])/ml_stats['n_madloop_calls']),
+          ('IREGI',float(ml_stats['IREGI_usage'])/ml_stats['n_madloop_calls'])]
+
+        tools_used = [(_[0],'%.3g'%(100.0*_[1])) for _ in tools_used if _[1] > 0.0 ]
+
+        to_print = ['MadLoop stats for chann. %s:'%G
+          ,('Avg. timing = %i ms'%int(1.0e3*ml_stats['averaged_timing'])) if
+            ml_stats['averaged_timing'] > 0.001 else
+            ('Avg. timing = %i mus'%int(1.0e6*ml_stats['averaged_timing']))
+          ,'Precision min/max=%.2g/%.2g'%(ml_stats['min_precision'],
+                                                     ml_stats['max_precision'])
+          ,'Stability %s'%dict(stability)
+          ,'Red. tools usage in %% %s'%dict(tools_used)
+#         I like the display above better after all
+#          ,'Stability %s'%(str([_[0] for _ in stability]),
+#                             str([_[1] for _ in stability]))
+#          ,'Red. tools usage in %% %s'%(str([_[0] for _ in tools_used]),
+#                                      str([_[1] for _ in tools_used]))
+        ]
+
+        __ = ', '.join(to_print)
+        misc.sprint(__)
     
     def get_current_axsec(self):
         
@@ -1215,6 +1274,10 @@ class gen_ximprove_share(gen_ximprove, gensym):
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)
 
         misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
+        grid_calculator.results.compute_values()
+        self.warnings_from_madloop(G, grid_calculator.results.madloop_stats)
+        self.print_madloop_statistics(G, grid_calculator.results.madloop_stats)
+        
         # check what to do
         if nunwgt > needed_event+1:
             # We did it.
