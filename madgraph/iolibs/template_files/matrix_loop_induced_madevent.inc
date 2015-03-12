@@ -151,7 +151,7 @@ C Of course this option can also not be used for polarized beams.
 
 	    call cpu_time(t_before)
         CALL %(ml_prefix)sSLOOPMATRIX_THRES(P,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
-		CALL PROCESS_MADLOOP_OUTPUT(t_before,ANS,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
+		CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(t_before,ANS,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
     
 	ELSE
     IF (ISUM_HEL.EQ.0.or.(DS_get_dim_status('Helicity').eq.0)) THEN
@@ -160,7 +160,7 @@ C Of course this option can also not be used for polarized beams.
 	            
 			    call cpu_time(t_before)
 				CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
-		        CALL PROCESS_MADLOOP_OUTPUT(t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
+		        CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
                 
 				DO JJ=1,JAMP2(0)
                   JAMP2(JJ) = JAMP2(JJ) + ML_JAMP2(JJ)
@@ -221,7 +221,7 @@ C           The helicity configuration was chosen already by genps and put in a 
 	        
 			call cpu_time(t_before) 
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
-		    CALL PROCESS_MADLOOP_OUTPUT(t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
+		    CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
 
             DO JJ=1,JAMP2(0)
               JAMP2(JJ) = JAMP2(JJ) + ML_JAMP2(JJ)
@@ -277,7 +277,7 @@ C Amplitude(s) for diagram number %(n_tot_diags)d
 C This last line is a tag do not remove it. 
     END
  
-	SUBROUTINE PROCESS_MADLOOP_OUTPUT(time_before, me_answer, finite, OneEps, TwoEps, prec, return_code)
+	SUBROUTINE PROCESS_MADLOOP_OUTPUT%(proc_id)s(time_before, me_answer, finite, OneEps, TwoEps, prec, return_code)
 c
 c   Simply registers the madloop return code and timing into the
 C   global variables
