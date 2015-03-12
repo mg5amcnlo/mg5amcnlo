@@ -134,7 +134,6 @@ def compile_dir(*arguments):
         logger.info('    %s done.' % p_dir) 
         return 0
     except MadGraph5Error, msg:
-        print msg
         return msg
 
 
