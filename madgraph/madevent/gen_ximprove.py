@@ -370,9 +370,12 @@ class gensym(object):
             self.write_results(grid_calculator, cross, error, Pdir, G, step)
         else:
             logger.info("Survey finished for %s/G%s [0 cross]", os.path.basename(Pdir),G)
+            
+            Gdir = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
+            if not os.path.exists(Gdir):
+                os.mkdir(Gdir)
             # copy one log
-            files.cp(pjoin(Gdirs[0], 'log.txt'), 
-                         pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
+            files.cp(pjoin(Gdirs[0], 'log.txt'), Gdir)
             # create the appropriate results.dat
             self.write_results(grid_calculator, cross, error, Pdir, G, step)
             
@@ -385,13 +388,17 @@ class gensym(object):
         
         for i in range(self.splitted_for_dir(Pdir, G)):
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
+            one_result = grid_calculator.add_results_information(fsock)
+            fsock.close()
+            if one_result.axsec == 0:
+                grid_calculator.onefail = True
+                continue # grid_information might not exists
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
             os.remove(pjoin(path, 'grid_information'))
-            fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
-            grid_calculator.add_results_information(fsock)
-            fsock.close()
+
              
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory
@@ -694,7 +701,7 @@ class gen_ximprove(object):
         for C in all_channels:
             if C.get('axsec') == 0:
                 continue
-            if goal_lum/C.get('luminosity') >= 1 + (self.gen_events_security-1)/2:
+            if goal_lum/(C.get('luminosity')+1e-99) >= 1 + (self.gen_events_security-1)/2:
                 logger.debug("channel %s is at %s (%s) (%s pb)", C.name,  C.get('luminosity'), goal_lum/C.get('luminosity'), C.get('xsec'))
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('axsec'), 0.01*all_channels[0].get('axsec')):
