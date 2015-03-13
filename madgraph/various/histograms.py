@@ -1810,11 +1810,11 @@ if __name__ == "__main__":
             continue
         
         if any(_ in sys.argv for _ in ['--sum','--average']):
-            for i, hist in enumerate(histo_list):
+            for j, hist in enumerate(histo_list):
                  # First make sure the plots have the same weight labels and such
-                 hist.test_plot_compability(histo_list[i])
+                 hist.test_plot_compability(histo_list[j])
                  # Now let the histogram module do the magic and add them.
-                 histo_list[i] += hist*histo_norm
+                 histo_list[j] += hist*histo_norm
         
     log("A total of %i histograms were found."%len(histo_list))
     log("=======")
