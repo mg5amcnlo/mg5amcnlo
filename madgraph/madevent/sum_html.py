@@ -168,6 +168,7 @@ class Combine_results(list, OneResult):
         oneresult.read_results(filepath)
         oneresult.parent_name = self.name
         self.append(oneresult)
+        return oneresult
     
     
     def compute_values(self):

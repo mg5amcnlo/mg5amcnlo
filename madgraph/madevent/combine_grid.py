@@ -156,7 +156,8 @@ class grid_information(object):
             raise Exception, "path should be a path or a file descriptor"
          
         
-        self.results.add_results(fname,finput)
+        return self.results.add_results(fname,finput)
+        
 
     def write_grid_for_submission(self, Pdir, G, n_split, nb_events, mode='survey',
                                                      conservative_factor = 1.0):
@@ -373,7 +374,6 @@ class grid_information(object):
         if self.nb_ps_point == 0 or self.nonzero == 0:
             return 0, 0, 0
         elif self.oneFail: #one of the split fail due to cut but not all of them
-            misc.sprint(self.nonzero)
             if self.nonzero < 10*len(self.results):
                 # no real success in any of the run. Declare failure.
                 return 0, 0 , 0 
