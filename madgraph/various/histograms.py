@@ -104,7 +104,9 @@ class Bin(object):
         """ Initializes an empty bin, necessarily with boundaries. """
 
         self.boundaries = boundaries
-        self.wgts       = wgts
+        # Make sure that this instance has its own dictionary wgts not shared
+        # with any other bin instance.
+        self.wgts       = copy.copy(wgts)
   
     def __setattr__(self, name, value):
         if name=='boundaries':
@@ -127,8 +129,7 @@ class Bin(object):
                                           "'wgts' must be a dictionary."%str(value)
             if not 'central' in value.keys(): 
                 raise MadGraph5Error, "The keys of the dictionary specifying "+\
-                    "the weights of the bin must include the keyword 'central'."\
-                                                                         %str(value)
+                    "the weights of the bin must include the keyword 'central'."
             for val in value.values():
                 if not isinstance(val,float):
                     raise MadGraph5Error, "The bin weight value '%s' is not a "+\
@@ -972,28 +973,30 @@ class HwU(Histogram):
         elif n_rebin==1:
             return
         
+        if 'NOREBIN' in self.type.upper():
+            return
+
         rebinning_list = list(range(0,len(self.bins),n_rebin))+[len(self.bins),]
         concat_list = [self.bins[rebinning_list[i]:rebinning_list[i+1]] for \
                                               i in range(len(rebinning_list)-1)]
         
-        new_bins = HwUList(self.bins)
+        new_bins = copy.copy(self.bins)
         del new_bins[:]
 
         for bins_to_merge in concat_list:
             if len(bins_to_merge)==0:
                 continue
-            new_bin = Bin(boundaries=(bins_to_merge[0].boundaries[0],
-                                               bins_to_merge[-1].boundaries[1]))
+            new_bins.append(Bin(boundaries=(bins_to_merge[0].boundaries[0],
+              bins_to_merge[-1].boundaries[1]),wgts={'central':0.0}))
             for weight in self.bins.weight_labels:
                 if weight != 'stat_error':
-                    new_bin.wgts[weight] = \
+                    new_bins[-1].wgts[weight] = \
                                       sum(b.wgts[weight] for b in bins_to_merge)
                 else:
-                    new_bin.wgts['stat_error'] = \
+                    new_bins[-1].wgts['stat_error'] = \
                         math.sqrt(sum(b.wgts['stat_error']**2 for b in\
                                                                  bins_to_merge))
-            new_bins.append(new_bin)
-        
+
         self.bins = new_bins
     
     @classmethod
@@ -1779,7 +1782,7 @@ if __name__ == "__main__":
     n_files    = len([_ for _ in sys.argv[1:] if not _.startswith('--')])
     histo_norm = 1.0
     if '--average' in sys.argv:
-        histo_norm = float(n_files)
+        histo_norm = 1.0/float(n_files)
         
     log("=======")
     histo_list = HwUList([])
@@ -1809,9 +1812,9 @@ if __name__ == "__main__":
         if any(_ in sys.argv for _ in ['--sum','--average']):
             for i, hist in enumerate(histo_list):
                  # First make sure the plots have the same weight labels and such
-                 histo.test_plot_compability(histo_list[i])
+                 hist.test_plot_compability(histo_list[i])
                  # Now let the histogram module do the magic and add them.
-                 histo_list[ii] += histo*histo_norm
+                 histo_list[i] += hist*histo_norm
         
     log("A total of %i histograms were found."%len(histo_list))
     log("=======")

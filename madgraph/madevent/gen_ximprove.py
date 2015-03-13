@@ -303,11 +303,7 @@ class gensym(object):
         
         # Compute the number of events used for this run.                      
         nb_events = grid_calculator.target_evt
-        grid_calculator.write_grid_for_submission(Pdir,G,
-                        self.splitted_for_dir(Pdir, G),
-                        nb_events,mode=self.mode,
-                        conservative_factor=5.0)
-        
+
         Gdirs = [] #build the the list of directory
         for i in range(self.splitted_for_dir(Pdir, G)):
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
@@ -325,11 +321,12 @@ class gensym(object):
         elif self.cmd.opts['accuracy'] < 0:
             #check for luminosity
             raise Exception, "Not Implemented"
+        elif self.abscross[(Pdir,G)] == 0:
+            need_submit = False 
         else:   
-            across = self.abscross[(Pdir,G)]/self.sigma[(Pdir,G)]
+            across = self.abscross[(Pdir,G)]/(self.sigma[(Pdir,G)]+1e-99)
             tot_across = self.get_current_axsec()
-            misc.sprint(across, tot_across, across / tot_across)
-            if cross == 0:
+            if across == 0:
                 need_submit = False
             elif across / tot_across < 1e-5:
                 need_submit = False
@@ -337,10 +334,19 @@ class gensym(object):
                 need_submit = True
             else:
                 need_submit = False
-           
+        
+        
+        if cross:
+            grid_calculator.write_grid_for_submission(Pdir,G,
+                        self.splitted_for_dir(Pdir, G),
+                        nb_events,mode=self.mode,
+                        conservative_factor=5.0)
+        
         if need_submit:
+            logger.info("%s/G%s is at %s+-%s pb. Submit next iteration", os.path.basename(Pdir), G, cross, error)
             self.resubmit_survey(Pdir,G, Gdirs, step)
         elif cross:
+            logger.info("Survey finished for %s/G%s", os.path.basename(Pdir),G)
             # prepare information for refine
             newGpath = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
             if not os.path.exists(newGpath):
@@ -363,6 +369,7 @@ class gensym(object):
             # create the appropriate results.dat
             self.write_results(grid_calculator, cross, error, Pdir, G, step)
         else:
+            logger.info("Survey finished for %s/G%s [0 cross]", os.path.basename(Pdir),G)
             # copy one log
             files.cp(pjoin(Gdirs[0], 'log.txt'), 
                          pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
@@ -405,7 +412,7 @@ class gensym(object):
         else:
             error = 0
 
-        if True and __debug__ :
+        if False and __debug__ :
             # make the unweighting to compute the number of events:
             maxwgt = grid_calculator.get_max_wgt(0.01)
             if maxwgt:
@@ -422,7 +429,7 @@ class gensym(object):
         
         across = 0
         for (Pdir,G) in self.abscross:
-            across += self.abscross[(Pdir,G)]/self.sigma[(Pdir,G)]
+            across += self.abscross[(Pdir,G)]/(self.sigma[(Pdir,G)]+1e-99)
         return across
     
     def write_results(self, grid_calculator, cross, error, Pdir, G, step):
@@ -1192,14 +1199,11 @@ class gen_ximprove_share(gen_ximprove, gensym):
         drop_previous_iteration = False
         if one_iter_nb_event > nunwgt and step < self.min_iter + 1:
             # the last iteration alone has more event that the combine iteration.
-            # it is therefore interesting to drop previous iteration.  
-            misc.sprint("reset maxwgt", one_iter_nb_event, nunwgt )          
+            # it is therefore interesting to drop previous iteration.          
             drop_previous_iteration = True
             nunwgt = one_iter_nb_event
             maxwgt = grid_calculator.get_max_wgt()
             new_evt = nunwgt
-        else:
-            misc.sprint("no need to reset %s %s %s" % (one_iter_nb_event, nunwgt, step))
             
         try:
             if drop_previous_iteration:
@@ -1214,7 +1218,6 @@ class gen_ximprove_share(gen_ximprove, gensym):
         
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)
 
-        misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
         # check what to do
         if nunwgt > needed_event+1:
             # We did it.
@@ -1239,22 +1242,19 @@ class gen_ximprove_share(gen_ximprove, gensym):
             done_job = job_at_first_iter * (2**step-1)
             expected_remaining_job = expected_total_job - done_job
 
-            misc.sprint("status", need_job, expected_remaining_job)            
+            logger.debug("efficiency status (smaller is better): %s", need_job/expected_remaining_job)            
             # increase if needed but not too much
             need_job = min(need_job, expected_remaining_job*1.25)
             
             nb_job = (need_job-0.5)//(2**(self.min_iter-step)-1) + 1
-            misc.sprint("resubmit %s job for iteration number %s" % (nb_job, step+1))
             grid_calculator.write_grid_for_submission(Pdir,G,
                 self.splitted_for_dir(Pdir, G), nb_job*nevents ,mode=self.mode,
                                               conservative_factor=self.max_iter)
-            
+            logger.info("%s/G%s is at %i/%i event. Resubmit %i job at iteration %i." % (os.path.basename(Pdir), G, int(nunwgt),int(needed_event)+1, nb_job, step))
             self.create_resubmit_one_iter(Pdir, G, nevents, nb_job, step)
             #self.create_job(Pdir, G, nb_job, nevents, step)
         
         elif step < self.max_iter:
-            misc.sprint("need extra iteration")
-
             if step + 1 == self.max_iter:
                 need_job = 1.20 * need_job # avoid to have just too few event.
 
@@ -1263,6 +1263,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 self.splitted_for_dir(Pdir, G), nb_job*nevents ,mode=self.mode,
                                               conservative_factor=self.max_iter)
             
+            
+            logger.info("%s/G%s is at %i/%i event. Resubmit %i job at iteration %i." % (os.path.basename(Pdir), G, int(nunwgt),int(needed_event)+1, nb_job, step))
             self.create_resubmit_one_iter(Pdir, G, nevents, nb_job, step)
             
             

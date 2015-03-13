@@ -369,12 +369,12 @@ class grid_information(object):
         
     def get_cross_section(self):
         """return the cross-section error"""
-        misc.sprint(self.nonzero)
-        if self.nb_ps_point == 0:
+
+        if self.nb_ps_point == 0 or self.nonzero == 0:
             return 0, 0, 0
         elif self.oneFail: #one of the split fail due to cut but not all of them
             misc.sprint(self.nonzero)
-            if self.nonzero < 20:
+            if self.nonzero < 10*len(self.results):
                 # no real success in any of the run. Declare failure.
                 return 0, 0 , 0 
             
@@ -385,8 +385,6 @@ class grid_information(object):
         sigma = self.sum_wgt_square/vol**2
         sigma -= self.nonzero * mean**2
         sigma /= self.nb_ps_point*(self.nb_ps_point -1)
-
-
 
         return mean, rmean, math.sqrt(abs(sigma))
         
