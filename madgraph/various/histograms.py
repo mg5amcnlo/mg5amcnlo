@@ -962,6 +962,40 @@ class HwU(Histogram):
             # of the two new weight label added.
             return position                 
     
+    def rebin(self, n_rebin):
+        """ Rebin the x-axis so as to merge n_rebin consecutive bins into a 
+        single one. """
+        
+        if n_rebin < 1 or not isinstance(n_rebin, int):
+            raise MadGraph5Error, "The argument 'n_rebin' of the HwU function"+\
+              " 'rebin' must be larger or equal to 1, not '%s'."%str(n_rebin)
+        elif n_rebin==1:
+            return
+        
+        rebinning_list = list(range(0,len(self.bins),n_rebin))+[len(self.bins),]
+        concat_list = [self.bins[rebinning_list[i]:rebinning_list[i+1]] for \
+                                              i in range(len(rebinning_list)-1)]
+        
+        new_bins = HwUList(self.bins)
+        del new_bins[:]
+
+        for bins_to_merge in concat_list:
+            if len(bins_to_merge)==0:
+                continue
+            new_bin = Bin(boundaries=(bins_to_merge[0].boundaries[0],
+                                               bins_to_merge[-1].boundaries[1]))
+            for weight in self.bins.weight_labels:
+                if weight != 'stat_error':
+                    new_bin.wgts[weight] = \
+                                      sum(b.wgts[weight] for b in bins_to_merge)
+                else:
+                    new_bin.wgts['stat_error'] = \
+                        math.sqrt(sum(b.wgts['stat_error']**2 for b in\
+                                                                 bins_to_merge))
+            new_bins.append(new_bin)
+        
+        self.bins = new_bins
+    
     @classmethod
     def get_x_optimal_range(cls, histo_list, weight_labels=None):
         """ Function to determine the optimal x-axis range when plotting 
@@ -1695,6 +1729,9 @@ if __name__ == "__main__":
            '--show_full'     to show the complete output of what was read.
            '--show_short'    to show a summary of what was read.
            '--simple_ratios' to turn off correlations and error propagation in the ratio.
+           '--sum'           To sum all diagrams together
+           '--average'       To average all diagrams together
+           '--rebin=<n>'     Rebin the plots by merging n-consecutive bins together.     
     """
     
     n_ratios   = -1
@@ -1739,9 +1776,15 @@ if __name__ == "__main__":
     if '--no_stat' in sys.argv:
         uncertainties.remove('statistical')        
 
+    n_files    = len([_ for _ in sys.argv[1:] if not _.startswith('--')])
+    histo_norm = 1.0
+    if '--average' in sys.argv:
+        histo_norm = float(n_files)
+        
     log("=======")
     histo_list = HwUList([])
     for i, arg in enumerate(sys.argv[1:]):
+        n_files += 1
         if arg.startswith('--'):
             break
         log("Loading histograms from '%s'."%arg)
@@ -1758,10 +1801,29 @@ if __name__ == "__main__":
             #                       (os.path.basename(arg).split('.')[0][:3],i+1)
             # But it is more elegant to give just the number.
             histo.type += "#%d"%(i+1)
-
-        histo_list.extend(new_histo_list)
+        
+        if i==0 or all(_ not in ['--sum','--average'] for _ in sys.argv):
+            histo_list.extend(new_histo_list)
+            continue
+        
+        if any(_ in sys.argv for _ in ['--sum','--average']):
+            for i, hist in enumerate(histo_list):
+                 # First make sure the plots have the same weight labels and such
+                 histo.test_plot_compability(histo_list[i])
+                 # Now let the histogram module do the magic and add them.
+                 histo_list[ii] += histo*histo_norm
+        
     log("A total of %i histograms were found."%len(histo_list))
     log("=======")
+
+    n_rebin = 1
+    for arg in sys.argv[1:]:
+        if arg.startswith('--rebin='):
+            n_rebin = int(arg[8:])
+    
+    if n_rebin > 1:
+        for hist in histo_list:
+            hist.rebin(n_rebin)
 
     if '--gnuplot' in sys.argv or all(arg not in ['--HwU'] for arg in sys.argv):
         histo_list.output(OutName, format='gnuplot', number_of_ratios = n_ratios, 
