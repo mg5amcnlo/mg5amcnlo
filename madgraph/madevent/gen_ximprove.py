@@ -73,6 +73,9 @@ class gensym(object):
         except TypeError:
             pass
         
+        # Run statistics, a dictionary of RunStatistics(), with 
+        self.run_statistics = {}
+        
         self.cmd = cmd
         self.run_card = cmd.run_card
         self.me_dir = cmd.me_dir
@@ -297,8 +300,7 @@ class gensym(object):
                                     packet_member=packet)
 
     def combine_iteration(self, Pdir, G, step):
-        
-        
+
         grid_calculator, cross, error = self.combine_grid(Pdir, G, step)
         
         # Compute the number of events used for this run.                      
@@ -343,7 +345,11 @@ class gensym(object):
                         conservative_factor=5.0)
         
         if need_submit:
-            logger.info("%s/G%s is at %s+-%s pb. Submit next iteration", os.path.basename(Pdir), G, cross, error)
+            xsec_format = '.%ig'%(max(3,int(math.log10(float(cross)/float(error)))+2) 
+                                                      if float(cross)!=0 else 8)
+            message = "%%s/G%%s is at %%%s +- %%.3g pb. Submit next iteration"%xsec_format
+            logger.info(message%\
+                        (os.path.basename(Pdir), G, float(cross), float(error)))
             self.resubmit_survey(Pdir,G, Gdirs, step)
         elif cross:
             logger.info("Survey finished for %s/G%s", os.path.basename(Pdir),G)
@@ -370,9 +376,12 @@ class gensym(object):
             self.write_results(grid_calculator, cross, error, Pdir, G, step)
         else:
             logger.info("Survey finished for %s/G%s [0 cross]", os.path.basename(Pdir),G)
+            
+            Gdir = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
+            if not os.path.exists(Gdir):
+                os.mkdir(Gdir)
             # copy one log
-            files.cp(pjoin(Gdirs[0], 'log.txt'), 
-                         pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
+            files.cp(pjoin(Gdirs[0], 'log.txt'), Gdir)
             # create the appropriate results.dat
             self.write_results(grid_calculator, cross, error, Pdir, G, step)
             
@@ -385,13 +394,17 @@ class gensym(object):
         
         for i in range(self.splitted_for_dir(Pdir, G)):
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
+            one_result = grid_calculator.add_results_information(fsock)
+            fsock.close()
+            if one_result.axsec == 0:
+                grid_calculator.onefail = True
+                continue # grid_information might not exists
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
             os.remove(pjoin(path, 'grid_information'))
-            fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
-            grid_calculator.add_results_information(fsock)
-            fsock.close()
+
              
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory
@@ -422,67 +435,42 @@ class gensym(object):
                 written_event = sum([R.nunwgt for R in grid_calculator.results])
                 misc.sprint(G, cross, error*cross, nunwgt, written_event, primary_event, luminosity)
  
-        grid_calculator.results.compute_values() 
-        self.warnings_from_madloop(G, grid_calculator.results.madloop_stats)        
-        self.print_madloop_statistics(G, grid_calculator.results.madloop_stats)
+        grid_calculator.results.compute_values()
+        misc.sprint(grid_calculator.results.run_statistics)
+        if (str(os.path.basename(Pdir)), G) in self.run_statistics:
+            self.run_statistics[(str(os.path.basename(Pdir)), G)]\
+                   .aggregate_statistics(grid_calculator.results.run_statistics)
+        else:
+            self.run_statistics[(str(os.path.basename(Pdir)), G)] = \
+                                          grid_calculator.results.run_statistics
+        
+        misc.sprint(self.run_statistics[(str(os.path.basename(Pdir)), G)])
+    
+        self.warnings_from_statistics(G, grid_calculator.results.run_statistics) 
+        stats_msg = grid_calculator.results.run_statistics.nice_output(G)
+        if stats_msg:
+            logger.log(5, stats_msg)
 
         return grid_calculator, cross, error
 
-    def warnings_from_madloop(self,G,ml_stats):
+    def warnings_from_statistics(self,G,stats):
         """Possible warn user for worrying MadLoop stats for this channel."""
 
-        if ml_stats['n_madloop_calls']==0:
+        if stats['n_madloop_calls']==0:
             return
 
-        EPS_fraction = float(ml_stats['exceptional_points'])/ml_stats['n_madloop_calls']
-        if EPS_fraction > 0.001:
-            logger.warning('Channel %s has encountered a fraction of %.3g'%EPS_fraction+
-              ' of numerically unstable loop matrix element computations '+
-              '(which could not be rescued using quadruple precision).'+\
-                                           ' The results might not be trusted.')
-
-    def print_madloop_statistics(self,G,ml_stats):
-        """Prints out a summary of the madloop statistics gathered for this channel."""
+        EPS_fraction = float(stats['exceptional_points'])/stats['n_madloop_calls']
         
-        if ml_stats['n_madloop_calls']==0:
-            return
+        msg =  "Channel %s has encountered a fraction of %.3g\n"+ \
+         "of numerically unstable loop matrix element computations\n"+\
+         "(which could not be rescued using quadruple precision).\n"+\
+         "The results might not be trusted."
 
-        stability = [
-          ('tot#',ml_stats['n_madloop_calls']),
-          ('unkwn#',ml_stats['unknown_stability']),
-          ('UPS%',float(ml_stats['unstable_points'])/ml_stats['n_madloop_calls']),
-          ('EPS#',ml_stats['exceptional_points'])]
-
-        stability = [_ for _ in stability if _[1] > 0 or _[0] in ['UPS%','EPS#']]
-        stability = [(_[0],'%i'%_[1]) if isinstance(_[1], int) else
-                     (_[0],'%.3g'%(100.0*_[1])) for _ in stability]
-        
-        tools_used = [
-          ('CT_DP',float(ml_stats['CutTools_DP_usage'])/ml_stats['n_madloop_calls']),
-          ('CT_QP',float(ml_stats['CutTools_QP_usage'])/ml_stats['n_madloop_calls']),
-          ('PJFry',float(ml_stats['PJFry_usage'])/ml_stats['n_madloop_calls']),
-          ('Golem',float(ml_stats['Golem_usage'])/ml_stats['n_madloop_calls']),
-          ('IREGI',float(ml_stats['IREGI_usage'])/ml_stats['n_madloop_calls'])]
-
-        tools_used = [(_[0],'%.3g'%(100.0*_[1])) for _ in tools_used if _[1] > 0.0 ]
-
-        to_print = ['MadLoop stats for chann. %s:'%G
-          ,('Avg. timing = %i ms'%int(1.0e3*ml_stats['averaged_timing'])) if
-            ml_stats['averaged_timing'] > 0.001 else
-            ('Avg. timing = %i mus'%int(1.0e6*ml_stats['averaged_timing']))
-          ,'Precision min/max=%.2e/%.2e'%(ml_stats['min_precision'],
-                                                     ml_stats['max_precision'])
-          ,'Stability %s'%dict(stability)
-          ,'Red. tools usage in %% %s'%dict(tools_used)
-#         I like the display above better after all
-#          ,'Stability %s'%(str([_[0] for _ in stability]),
-#                             str([_[1] for _ in stability]))
-#          ,'Red. tools usage in %% %s'%(str([_[0] for _ in tools_used]),
-#                                      str([_[1] for _ in tools_used]))
-        ]
-
-        __ = ', '.join(to_print)
-        misc.sprint(__)
+        if 0.01 > EPS_fraction > 0.001:
+             msg.warning(msg%(G,EPS_fraction))
+        elif EPS_fraction > 0.01:
+             logger.critical((msg%(G,EPS_fraction)).replace('might', 'can'))
+             raise Exception, (msg%(G,EPS_fraction)).replace('might', 'can')
     
     def get_current_axsec(self):
         
@@ -654,7 +642,7 @@ class gen_ximprove(object):
         except TypeError:
             pass
         
-        
+        self.run_statistics = {}
         self.cmd = cmd
         self.run_card = cmd.run_card
         run_card = self.run_card
@@ -753,7 +741,7 @@ class gen_ximprove(object):
         for C in all_channels:
             if C.get('axsec') == 0:
                 continue
-            if goal_lum/C.get('luminosity') >= 1 + (self.gen_events_security-1)/2:
+            if goal_lum/(C.get('luminosity')+1e-99) >= 1 + (self.gen_events_security-1)/2:
                 logger.debug("channel %s is at %s (%s) (%s pb)", C.name,  C.get('luminosity'), goal_lum/C.get('luminosity'), C.get('xsec'))
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('axsec'), 0.01*all_channels[0].get('axsec')):
@@ -1279,8 +1267,18 @@ class gen_ximprove_share(gen_ximprove, gensym):
 
         # misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
         grid_calculator.results.compute_values()
-        self.warnings_from_madloop(G, grid_calculator.results.madloop_stats)
-        self.print_madloop_statistics(G, grid_calculator.results.madloop_stats)
+        stat_key = (str(os.path.basename(Pdir)), G)    
+        if stat_key in self.run_statistics:
+            self.run_statistics[stat_key].aggregate_statistics(
+                                         grid_calculator.results.run_statistics)
+        else:
+            self.run_statistics[stat_key] = grid_calculator.results.run_statistics
+        
+        misc.sprint(self.run_statistics[stat_key])
+        self.warnings_from_statistics(G, grid_calculator.results.run_statistics)        
+        stats_msg = grid_calculator.results.run_statistics.nice_output(G)
+        if stats_msg:
+            logger.log(5, stats_msg)
         
         # check what to do
         if nunwgt > needed_event+1:
@@ -1314,7 +1312,10 @@ class gen_ximprove_share(gen_ximprove, gensym):
             grid_calculator.write_grid_for_submission(Pdir,G,
                 self.splitted_for_dir(Pdir, G), nb_job*nevents ,mode=self.mode,
                                               conservative_factor=self.max_iter)
-            logger.info("%s/G%s is at %i/%i event. Resubmit %i job at iteration %i." % (os.path.basename(Pdir), G, int(nunwgt),int(needed_event)+1, nb_job, step))
+            logger.info("%s/G%s is at %i/%i (%.2g%%) event. Resubmit %i job at iteration %i." \
+                 % (os.path.basename(Pdir), G, int(nunwgt),int(needed_event)+1,
+                 (float(nunwgt)/needed_event)*100.0 if needed_event>0.0 else 0.0,
+                                                                  nb_job, step))
             self.create_resubmit_one_iter(Pdir, G, nevents, nb_job, step)
             #self.create_job(Pdir, G, nb_job, nevents, step)
         
@@ -1328,7 +1329,10 @@ class gen_ximprove_share(gen_ximprove, gensym):
                                               conservative_factor=self.max_iter)
             
             
-            logger.info("%s/G%s is at %i/%i event. Resubmit %i job at iteration %i." % (os.path.basename(Pdir), G, int(nunwgt),int(needed_event)+1, nb_job, step))
+            logger.info("%s/G%s is at %i/%i ('%.2g%%') event. Resubmit %i job at iteration %i." \
+              % (os.path.basename(Pdir), G, int(nunwgt),int(needed_event)+1,
+                 (float(nunwgt)/needed_event)*100.0 if needed_event>0.0 else 0.0,
+                                                                  nb_job, step))
             self.create_resubmit_one_iter(Pdir, G, nevents, nb_job, step)
             
             

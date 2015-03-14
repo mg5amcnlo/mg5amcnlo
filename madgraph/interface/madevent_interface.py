@@ -1970,8 +1970,18 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
         data should be of type: gen_crossxhtml.OneTagResults"""
+
         if not data:
             return
+
+        if data['run_statistics']:
+            logger.info(" " )
+            logger.debug(" === Run statistics summary ===")
+            for key, value in data['run_statistics'].items():
+                logger.debug(value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).\
+                  replace('Run stats for c','C'))
+            logger.info(" " )
+            
         logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
         if self.ninitial == 1:
             logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
@@ -1988,7 +1998,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")
             
         logger.info(" " )
-
+        
     def print_results_in_file(self, data, path, mode='w'):
         """Have a nice results prints in the shell,
         data should be of type: gen_crossxhtml.OneTagResults"""
@@ -1996,6 +2006,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             return
         
         fsock = open(path, mode)
+        
+        if data['run_statistics']:
+            logger.debug(" === Run statistics summary ===")
+            for key, value in data['run_statistics'].items():
+                logger.debug(value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).\
+                  replace('Run stats for c','C'))
+            logger.info(" " )
+
         
         fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
                     (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
@@ -2400,10 +2418,9 @@ zeor by MadLoop.""")
             logger.info('Creating Jobs')
 
         self.total_jobs = 0
-        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
-                                                                 'subproc.mg'))]
+        subproc = [l.strip() for l in open(pjoin(self.me_dir,
+                                                 'SubProcesses', 'subproc.mg'))]
 
-          
         P_zero_result = [] # check the number of times where they are no phase-space
 
         # File for the loop (for loop induced)
@@ -2441,8 +2458,9 @@ zeor by MadLoop.""")
             #will be done during the refine (more precisely in gen_ximprove)
             cross, error = sum_html.make_all_html_results(self)
             self.results.add_detail('cross', cross)
-            self.results.add_detail('error', error)            
-              
+            self.results.add_detail('error', error)        
+        
+        self.results.add_detail('run_statistics', dict(ajobcreator.run_statistics))
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################
@@ -2513,6 +2531,11 @@ zeor by MadLoop.""")
                     os.remove(match)
 
         x_improve = gen_ximprove.gen_ximprove(self, refine_opt)
+        # Load the run statistics from the 
+        survey_statistics = dict(self.results.get_detail('run_statistics'))
+        if survey_statistics:
+            x_improve.run_statistics = survey_statistics
+        
         x_improve.launch() # create the ajob for the refinment.
         if 'refine' not in self.history[-1]:
             cross, error = x_improve.update_html() #update html results for survey
@@ -2569,7 +2592,17 @@ zeor by MadLoop.""")
             
         cross, error = sum_html.make_all_html_results(self)
         self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error)   
+        self.results.add_detail('error', error)
+        
+        global_run_statistics = self.results.get_detail('run_statistics')
+        for key, value in x_improve.run_statistics.items():
+            misc.sprint('treating',key)
+            if key in global_run_statistics:
+                global_run_statistics[key].aggregate_statistics(value)
+            else:
+                global_run_statistics[key] = value
+
+        self.results.add_detail('run_statistics', dict(global_run_statistics))
 
         self.update_status('finish refine', 'parton', makehtml=False)
         devnull.close()

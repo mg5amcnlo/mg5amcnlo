@@ -443,7 +443,7 @@ c-----
         return
       endif
       
-      write(outUnit,*) '<madloop_statistics> '
+      write(outUnit,*) '<run_statistics> '
       write(outUnit,33) '<u_return_code>',U_RETURN_CODES,'</u_return_code>'
       write(outUnit,33) '<t_return_code>',T_RETURN_CODES,'</t_return_code>'
       write(outUnit,33) '<h_return_code>',H_RETURN_CODES,'</h_return_code>'
@@ -452,7 +452,7 @@ c-----
       write(outUnit,*) '<max_prec>'//trim(toStr_real(MAX_PREC))//'</max_prec>'
       write(outUnit,*) '<min_prec>'//trim(toStr_real(MIN_PREC))//'</min_prec>'
       write(outUnit,*) '<n_evals>'//trim(toStr_int(N_EVALS))//'</n_evals>'   
-      write(outUnit,*) '</madloop_statistics>'
+      write(outUnit,*) '</run_statistics>'
       
 33    FORMAT( a15,i12,',',i12',',i12',',i12',',i12',
      &        ',i12',',i12',',i12',',i12',',i12,a16)

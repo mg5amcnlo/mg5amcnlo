@@ -345,7 +345,8 @@ class AllResults(dict):
     def add_detail(self, name, value, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia',
-                        'nb_event_pythia','error_pythia', 'run_mode']
+                        'nb_event_pythia','error_pythia', 'run_mode',
+                        'run_statistics']
 
         if not run and not self.current:
             return
@@ -361,10 +362,26 @@ class AllResults(dict):
             run[name] = int(value)
         elif name == 'nb_event_pythia':
             run[name] = int(value)
-        elif name == 'run_mode':
+        elif name in ['run_mode','run_statistics']:
             run[name] = value
         else:    
             run[name] = float(value)    
+    
+    def get_detail(self, name, run=None, tag=None):
+        """ add information to current run (cross/error/event)"""
+        assert name in ['cross', 'error', 'nb_event', 'cross_pythia',
+                        'nb_event_pythia','error_pythia', 'run_mode',
+                        'run_statistics']
+
+        if not run and not self.current:
+            return None
+
+        if not run:
+            run = self.current
+        else:
+            run = self[run].return_tag(tag)
+            
+        return run[name]
     
     def output(self):
         """ write the output file """
@@ -495,6 +512,7 @@ class RunResults(list):
         
         self.info = {'run_name': run_name,'me_dir':path}
         self.tags = [run_card['run_tag']]
+        
         # Set the collider information
         data = process.split('>',1)[0].split()
         if len(data) == 2:
@@ -737,6 +755,9 @@ class OneTagResults(dict):
         # data 
         self.status = ''
 
+        # Dictionary with (Pdir,G) as keys and sum_html.RunStatistics instances
+        # as values
+        self['run_statistics'] = {}
     
     
     def update_status(self, level='all', nolevel=[]):

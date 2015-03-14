@@ -31,12 +31,14 @@ else:
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
 
-class OneResult(object):
+class RunStatistics(dict):
+    """ A class to store statistics about a MadEvent run. """
     
-    def __init__(self, name):
-        """Initialize all data """
+    def __init__(self, *args, **opts):
+        """ Initialize the run dictionary. For now, the same as a regular
+        dictionary, except that we specify some default statistics. """
         
-        self.madloop_stats = {
+        madloop_statiatics = {
           'unknown_stability'  : 0,
           'stable_points'      : 0,
           'unstable_points'    : 0,
@@ -51,11 +53,140 @@ class OneResult(object):
           'Golem_usage'        : 0,
           'IREGI_usage'        : 0,
           'max_precision'      : 0.0,
-          'min_precision'      : 0.0,
+          'min_precision'      : 1.0e99,
           'averaged_timing'    : 0.0,
           'n_madloop_calls'    : 0
           }
         
+        for key, value in madloop_statiatics.items():
+            self[key] = value
+
+        super(dict,self).__init__(*args, **opts)
+    
+    def aggregate_statistics(self, new_stats):
+        """ Update the current statitistics with the new_stats specified."""
+        
+        if isinstance(new_stats,RunStatistics):
+            new_stats = [new_stats, ]
+        elif isinstance(new_stats,list):
+            if any(not isinstance(_,RunStatistics) for _ in new_stats):
+                raise MadGraph5Error, "The 'new_stats' argument of the function "+\
+                        "'updtate_statistics' must be a (possibly list of) "+\
+                                                       "RunStatistics instance."
+
+        if any(set(self.keys())!=set(_.keys()) for _ in new_stats):
+            raise MadGraph5Error, "All run statistics provided to the function"+\
+                                 " 'update_statistics' must have the same keys."
+        
+        new_stats = new_stats+[self,]
+        for key in self:
+            # Define special rules
+            if key=='max_precision':
+                # The minimal precision corresponds to the maximal value for PREC
+                self[key] = min( _[key] for _ in new_stats)
+            elif key=='min_precision':
+                # The maximal precision corresponds to the minimal value for PREC
+                self[key] = max( _[key] for _ in new_stats)
+            elif key=='averaged_timing':
+                n_madloop_calls = sum(_['n_madloop_calls'] for _ in new_stats)
+                if n_madloop_calls > 0 :
+                    self[key] = sum(_[key]*_['n_madloop_calls'] 
+                                             for _ in new_stats)/n_madloop_calls
+            else:
+                # Now assume all other quantities are cumulative
+                self[key] = sum(_[key] for _ in new_stats)
+    
+    def load_statistics(self, xml_node):
+        """ Load the statistics from an xml node. """
+        
+        def getData(Node):
+            return Node.childNodes[0].data
+        
+        u_return_code = xml_node.getElementsByTagName('u_return_code')
+        u_codes = [int(_) for _ in getData(u_return_code[0]).split(',')]
+        self['CutTools_DP_usage'] = u_codes[1]
+        self['PJFry_usage']       = u_codes[2]
+        self['IREGI_usage']       = u_codes[3]
+        self['Golem_usage']       = u_codes[4]
+        self['CutTools_QP_usage'] = u_codes[9]
+        t_return_code = xml_node.getElementsByTagName('t_return_code')
+        t_codes = [int(_) for _ in getData(t_return_code[0]).split(',')]
+        self['DP_usage']          = t_codes[1]
+        self['QP_usage']          = t_codes[2]
+        self['DP_init_usage']     = t_codes[3]
+        self['DP_init_usage']     = t_codes[4]
+        h_return_code = xml_node.getElementsByTagName('h_return_code')
+        h_codes = [int(_) for _ in getData(h_return_code[0]).split(',')]
+        self['unknown_stability']  = h_codes[1]
+        self['stable_points']      = h_codes[2]
+        self['unstable_points']    = h_codes[3]
+        self['exceptional_points'] = h_codes[4]
+        average_time = xml_node.getElementsByTagName('average_time')
+        avg_time = float(getData(average_time[0]))
+        self['averaged_timing']    = avg_time 
+        max_prec = xml_node.getElementsByTagName('max_prec')
+        max_prec = float(getData(max_prec[0]))
+        # The minimal precision corresponds to the maximal value for PREC
+        self['min_precision']      = max_prec  
+        min_prec = xml_node.getElementsByTagName('min_prec')
+        min_prec = float(getData(min_prec[0]))
+        # The maximal precision corresponds to the minimal value for PREC
+        self['max_precision']      = min_prec              
+        n_evals = xml_node.getElementsByTagName('n_evals')
+        n_evals = int(getData(n_evals[0]))
+        self['n_madloop_calls']    = n_evals
+    
+    def nice_output(self,G):
+        """Returns a one-line string summarizing the run statistics 
+        gathered for the channel G."""
+        
+        # Do not return anythign for now if there is no madloop calls. This can
+        # change of course if more statistics are gathered, unrelated to MadLoop.
+        if self['n_madloop_calls']==0:
+            return ''
+
+        stability = [
+          ('tot#',self['n_madloop_calls']),
+          ('unkwn#',self['unknown_stability']),
+          ('UPS%',float(self['unstable_points'])/self['n_madloop_calls']),
+          ('EPS#',self['exceptional_points'])]
+
+        stability = [_ for _ in stability if _[1] > 0 or _[0] in ['UPS%','EPS#']]
+        stability = [(_[0],'%i'%_[1]) if isinstance(_[1], int) else
+                     (_[0],'%.3g'%(100.0*_[1])) for _ in stability]
+        
+        tools_used = [
+          ('CT_DP',float(self['CutTools_DP_usage'])/self['n_madloop_calls']),
+          ('CT_QP',float(self['CutTools_QP_usage'])/self['n_madloop_calls']),
+          ('PJFry',float(self['PJFry_usage'])/self['n_madloop_calls']),
+          ('Golem',float(self['Golem_usage'])/self['n_madloop_calls']),
+          ('IREGI',float(self['IREGI_usage'])/self['n_madloop_calls'])]
+
+        tools_used = [(_[0],'%.3g'%(100.0*_[1])) for _ in tools_used if _[1] > 0.0 ]
+
+        to_print = [('Run stats for channel %s:'%(G if isinstance(G,str) else
+                                                    str(os.path.join(list(G))))\
+          +((', Avg. timing = %i ms'%int(1.0e3*self['averaged_timing'])) if
+            self['averaged_timing'] > 0.001 else
+            (', Avg. timing = %i mus'%int(1.0e6*self['averaged_timing']))) \
+          +', Min precision = %.2e'%self['min_precision'])
+          ,'   -> Stability %s'%dict(stability)
+          ,'   -> Red. tools usage in %% %s'%dict(tools_used)
+#         I like the display above better after all
+#          ,'Stability %s'%(str([_[0] for _ in stability]),
+#                             str([_[1] for _ in stability]))
+#          ,'Red. tools usage in %% %s'%(str([_[0] for _ in tools_used]),
+#                                      str([_[1] for _ in tools_used]))
+        ]
+
+        return ('\n'.join(to_print)).replace("'"," ")
+    
+class OneResult(object):
+    
+    def __init__(self, name):
+        """Initialize all data """
+        
+        self.run_statistics = RunStatistics()
         self.name = name
         self.parent_name = ''
         self.axsec = 0  # Absolute cross section = Sum(abs(wgt))
@@ -78,6 +209,7 @@ class OneResult(object):
                           # this can happen if we force maxweight
         self.th_nunwgt = 0 # associated number of event with th_maxwgt 
                            #(this is theoretical do not correspond to a number of written event)
+
         return
     
     #@cluster.multiple_try(nb_try=5,sleep=20)
@@ -152,56 +284,18 @@ class OneResult(object):
     def parse_xml_results(self, xml):
         """ Parse the xml part of the results.dat file."""
 
-        def getData(Node):
-            return Node.childNodes[0].data
-
         dom = minidom.parseString(xml)
+                    
+        statistics_node = dom.getElementsByTagName("run_statistics")
         
-        def handleMadLoopNode(ml_node):
-            u_return_code = ml_node.getElementsByTagName('u_return_code')
-            u_codes = [int(_) for _ in getData(u_return_code[0]).split(',')]
-            self.madloop_stats['CutTools_DP_usage'] = u_codes[1]
-            self.madloop_stats['PJFry_usage']       = u_codes[2]
-            self.madloop_stats['IREGI_usage']       = u_codes[3]
-            self.madloop_stats['Golem_usage']       = u_codes[4]
-            self.madloop_stats['CutTools_QP_usage'] = u_codes[9]
-            t_return_code = ml_node.getElementsByTagName('t_return_code')
-            t_codes = [int(_) for _ in getData(t_return_code[0]).split(',')]
-            self.madloop_stats['DP_usage']          = t_codes[1]
-            self.madloop_stats['QP_usage']          = t_codes[2]
-            self.madloop_stats['DP_init_usage']     = t_codes[3]
-            self.madloop_stats['DP_init_usage']     = t_codes[4]
-            h_return_code = ml_node.getElementsByTagName('h_return_code')
-            h_codes = [int(_) for _ in getData(h_return_code[0]).split(',')]
-            self.madloop_stats['unknown_stability']  = h_codes[1]
-            self.madloop_stats['stable_points']      = h_codes[2]
-            self.madloop_stats['unstable_points']    = h_codes[3]
-            self.madloop_stats['exceptional_points'] = h_codes[4]
-            average_time = ml_node.getElementsByTagName('average_time')
-            avg_time = float(getData(average_time[0]))
-            self.madloop_stats['averaged_timing']    = avg_time 
-            max_prec = ml_node.getElementsByTagName('max_prec')
-            max_prec = float(getData(max_prec[0]))
-            # The minimal precision corresponds to the maximal value for PREC
-            self.madloop_stats['min_precision']      = max_prec  
-            min_prec = ml_node.getElementsByTagName('min_prec')
-            min_prec = float(getData(min_prec[0]))
-            # The maximal precision corresponds to the minimal value for PREC
-            self.madloop_stats['max_precision']      = min_prec              
-            n_evals = ml_node.getElementsByTagName('n_evals')
-            n_evals = int(getData(n_evals[0]))
-            self.madloop_stats['n_madloop_calls']    = n_evals
-            
-        madloop_node = dom.getElementsByTagName("madloop_statistics")
-        
-        if madloop_node:
+        if statistics_node:
             try:
-                handleMadLoopNode(madloop_node[0])
+                self.run_statistics.load_statistics(statistics_node[0])
             except ValueError, IndexError:
-                logger.warning('Fail to read MadLoop statistics from results.dat')
+                logger.warning('Fail to read run statistics from results.dat')
 
     def set_mfactor(self, value):
-        self.mfactor = int(value)    
+        self.mfactor = int(value)
         
     def change_iterations_number(self, nb_iter):
         """Change the number of iterations for this process"""
@@ -257,6 +351,7 @@ class Combine_results(list, OneResult):
         oneresult.read_results(filepath)
         oneresult.parent_name = self.name
         self.append(oneresult)
+        return oneresult
     
     
     def compute_values(self):
@@ -274,23 +369,8 @@ class Combine_results(list, OneResult):
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
         self.luminosity = min([0]+[one.luminosity for one in self])
-
-
-        if len(self)!=0 and sum(_.madloop_stats['n_madloop_calls'] for _ in self)!=0:
-            for key in self[0].madloop_stats:
-                if key=='max_precision':
-                    # The minimal precision corresponds to the maximal value for PREC
-                    self.madloop_stats[key] = min( _.madloop_stats[key] for _ in self)
-                elif key=='min_precision':
-                    # The maximal precision corresponds to the minimal value for PREC
-                    self.madloop_stats[key] = max( _.madloop_stats[key] for _ in self)
-                elif key=='averaged_timing':
-                    self.madloop_stats[key] = (sum(
-                    _.madloop_stats[key]*_.madloop_stats['n_madloop_calls'] 
-                      for _ in self)/sum(_.madloop_stats['n_madloop_calls'] 
-                                                                 for _ in self))
-                else:
-                    self.madloop_stats[key] = sum(_.madloop_stats[key] for _ in self)
+        
+        self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
 
     def compute_average(self):
         """compute the value associate to this combination"""
@@ -518,7 +598,6 @@ function check_link(url,alt, id){
 }
 </script>
 """ 
-
 
 def collect_result(cmd, folder_names):
     """ """ 

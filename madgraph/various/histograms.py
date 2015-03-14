@@ -593,7 +593,7 @@ class HwU(Histogram):
     class ParseError(MadGraph5Error):
         """a class for histogram data parsing errors"""
     
-    def __init__(self, file_path=None, weight_header=None):
+    def __init__(self, file_path=None, weight_header=None, **opts):
         """ Read one plot from a file_path or a stream. Notice that this
         constructor only reads one, and the first one, of the plots specified.
         If file_path was a path in argument, it would then close the opened stream.
@@ -601,7 +601,7 @@ class HwU(Histogram):
         The option weight_header specifies an ordered list of weight names 
         to appear in the file specified."""
         
-        super(HwU, self).__init__()
+        super(HwU, self).__init__(**opts)
 
         self.dimension = 2
         
