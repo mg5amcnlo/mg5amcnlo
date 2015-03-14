@@ -104,7 +104,7 @@ class OneResult(object):
             self.eff_iter.append(secure_float(eff))
             self.maxwgt_iter.append(secure_float(maxwgt))
         # this is for amcatnlo: the number of events has to be read from another file
-        if self.nevents == 0 and self.nunwgt == 0 and \
+        if self.nevents == 0 and self.nunwgt == 0 and isinstance(filepath, str) and \
                 os.path.exists(pjoin(os.path.split(filepath)[0], 'nevts')): 
             nevts = int(open(pjoin(os.path.split(filepath)[0], 'nevts')).read())
             self.nevents = nevts
