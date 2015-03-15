@@ -100,11 +100,15 @@ class Bin(object):
     """A class to store Bin related features and function.
     """
   
-    def __init__(self, boundaries=(0.0,0.0), wgts={'central':0.0}):
+    def __init__(self, boundaries=(0.0,0.0), wgts=None, n_entries = 0):
         """ Initializes an empty bin, necessarily with boundaries. """
 
         self.boundaries = boundaries
-        self.wgts       = wgts
+        self.n_entries  = n_entries
+        if not wgts:
+            self.wgts       = {'central':0.0}
+        else:
+            self.wgts       = wgts
   
     def __setattr__(self, name, value):
         if name=='boundaries':
@@ -157,6 +161,30 @@ class Bin(object):
             raise MadGraph5Error, "Weight with ID '%s' is not defined for"+\
                                                             " this bin"%str(key)                                                
 
+    def addEvent(self, weights = 1.0):
+        """ Add an event to this bin. """
+        
+        
+        if isinstance(weights, float):
+            weights = {'central': weights}
+        
+        self.n_entries += 1
+        
+        if 'stat_error' not in weights:
+            self.wgts['stat_error'] = 1.0/math.sqrt(float(self.n_entries))
+        else:
+            self.wgts['stat_error'] = math.sqrt( self.wgts['stat_error']**2 + 
+                                                      weights['stat_error']**2 )
+        
+        for key in weights:
+            if key == 'stat_error':
+                continue
+            try:
+                self.wgts[key] += weights[key]
+            except KeyError:
+                raise MadGraph5Error('The event added defines the weight '+
+                  '%s which was not '%key+'registered in this histogram.')
+
     def nice_string(self, order=None, short=True):
         """ Nice representation of this Bin. 
         One can order the weight according to the argument if provided."""
@@ -207,11 +235,24 @@ class Bin(object):
 class BinList(histograms_PhysicsObjectList):
     """ A class implementing features related to a list of Bins. """
 
-    def __init__(self, list = [], weight_labels = None):
-        """ Initialize a list of Bins """
+    def __init__(self, list = [], bin_range = None, 
+                                     weight_labels = ['central', 'stat_error']):
+        """ Initialize a list of Bins. It is possible to define the range
+        as a list of three floats: [min_x, max_x, bin_width]"""
         
         self.weight_labels = weight_labels
-        super(BinList, self).__init__(list)
+        if bin_range:
+            if len(bin_range)!=3 or any(not isinstance(f, float) for f in bin_range):
+                raise MadGraph5Error, "The range argument to build a BinList"+\
+                  " must be a list of exactly three floats."
+            current = bin_range[0]
+            while current < bin_range[1]:
+                self.append(Bin(boundaries =
+                            (current, min(current+bin_range[2],bin_range[1])),
+                            wgts = dict((wgt,0.0) for wgt in weight_labels)))
+                current += bin_range[2]
+        else:
+            super(BinList, self).__init__(list)
 
     def is_valid_element(self, obj):
         """Test whether specified object is of the right type for this list."""
@@ -269,7 +310,7 @@ class Histogram(object):
     allowed_axis_modes  = ['LOG','LIN'] 
 
     def __init__(self, title = "NoName", n_dimensions = 2, type=None,
-                 x_axis_mode = 'LIN', y_axis_mode = 'LOG'):
+                 x_axis_mode = 'LIN', y_axis_mode = 'LOG', bins=None):
         """ Initializes an empty histogram, possibly specifying 
               > a title 
               > a number of dimensions
@@ -278,7 +319,10 @@ class Histogram(object):
         
         self.title       = title
         self.dimension   = n_dimensions
-        self.bins        = BinList([])
+        if not bins:
+            self.bins    = BinList([])
+        else:
+            self.bins    = bins
         self.type        = type
         self.x_axis_mode = x_axis_mode
         self.y_axis_mode = y_axis_mode        
@@ -627,6 +671,13 @@ class HwU(Histogram):
         # Explicitly close the opened stream for clarity.
         if isinstance(file_path, str):
             stream.close()
+    
+    def addEvent(self, x_value, weights = 1.0):
+        """ Add an event to the current plot. """
+        
+        for bin in self.bins:
+            if bin.boundaries[0] <= x_value < bin.boundaries[1]:
+                bin.addEvent(weights = weights)
     
     def get_formatted_header(self):
         """ Return a HwU formatted header for the weight label definition."""
