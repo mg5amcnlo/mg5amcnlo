@@ -168,14 +168,6 @@ class Bin(object):
         if isinstance(weights, float):
             weights = {'central': weights}
         
-        self.n_entries += 1
-        
-        if 'stat_error' not in weights:
-            self.wgts['stat_error'] = 1.0/math.sqrt(float(self.n_entries))
-        else:
-            self.wgts['stat_error'] = math.sqrt( self.wgts['stat_error']**2 + 
-                                                      weights['stat_error']**2 )
-        
         for key in weights:
             if key == 'stat_error':
                 continue
@@ -184,6 +176,14 @@ class Bin(object):
             except KeyError:
                 raise MadGraph5Error('The event added defines the weight '+
                   '%s which was not '%key+'registered in this histogram.')
+        
+        self.n_entries += 1
+        
+        if 'stat_error' not in weights:
+            self.wgts['stat_error'] = self.wgts['central']/math.sqrt(float(self.n_entries))
+        else:
+            self.wgts['stat_error'] = math.sqrt( self.wgts['stat_error']**2 + 
+                                                      weights['stat_error']**2 )
 
     def nice_string(self, order=None, short=True):
         """ Nice representation of this Bin. 
