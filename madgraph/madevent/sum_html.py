@@ -52,8 +52,8 @@ class RunStatistics(dict):
           'PJFry_usage'        : 0,
           'Golem_usage'        : 0,
           'IREGI_usage'        : 0,
-          'max_precision'      : 0.0,
-          'min_precision'      : 1.0e99,
+          'max_precision'      : 1.0e99,
+          'min_precision'      : 0.0,
           'averaged_timing'    : 0.0,
           'n_madloop_calls'    : 0
           }
@@ -164,9 +164,9 @@ class RunStatistics(dict):
 
         tools_used = [(_[0],'%.3g'%(100.0*_[1])) for _ in tools_used if _[1] > 0.0 ]
 
-        to_print = [('Run stats for channel %s:'%(G if isinstance(G,str) else
+        to_print = [('%s statistics:'%(G if isinstance(G,str) else
                                                     str(os.path.join(list(G))))\
-          +((', Avg. timing = %i ms'%int(1.0e3*self['averaged_timing'])) if
+          +((' Avg. timing = %i ms'%int(1.0e3*self['averaged_timing'])) if
             self['averaged_timing'] > 0.001 else
             (', Avg. timing = %i mus'%int(1.0e6*self['averaged_timing']))) \
           +', Min precision = %.2e'%self['min_precision'])
@@ -275,7 +275,7 @@ class OneResult(object):
             self.parse_xml_results('\n'.join(xml))        
         
         # this is for amcatnlo: the number of events has to be read from another file
-        if self.nevents == 0 and self.nunwgt == 0 and \
+        if self.nevents == 0 and self.nunwgt == 0 and isinstance(filepath, str) and \
                 os.path.exists(pjoin(os.path.split(filepath)[0], 'nevts')): 
             nevts = int(open(pjoin(os.path.split(filepath)[0], 'nevts')).read())
             self.nevents = nevts

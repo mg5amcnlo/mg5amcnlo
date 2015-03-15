@@ -116,9 +116,14 @@ class Banner(dict):
     def read_banner(self, input_path):
         """read a banner"""
 
-        if isinstance(input_path, str) and input_path.find('\n') ==-1:
-            input_path = open(input_path)
-
+        if isinstance(input_path, str):
+            if input_path.find('\n') ==-1:
+                input_path = open(input_path)
+            else:
+                def split_iter(string):
+                    return (x.groups(0)[0] for x in re.finditer(r"([^\n]*\n)", string, re.DOTALL))
+                input_path = split_iter(input_path)
+                
         text = ''
         store = False
         for line in input_path:

@@ -1979,7 +1979,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             logger.debug(" === Run statistics summary ===")
             for key, value in data['run_statistics'].items():
                 logger.debug(value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).\
-                  replace('Run stats for c','C'))
+                  replace(' statistics',''))
             logger.info(" " )
             
         logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
@@ -2011,7 +2011,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             logger.debug(" === Run statistics summary ===")
             for key, value in data['run_statistics'].items():
                 logger.debug(value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).\
-                  replace('Run stats for c','C'))
+                  replace(' statistics',''))
             logger.info(" " )
 
         
@@ -2596,7 +2596,6 @@ zeor by MadLoop.""")
         
         global_run_statistics = self.results.get_detail('run_statistics')
         for key, value in x_improve.run_statistics.items():
-            misc.sprint('treating',key)
             if key in global_run_statistics:
                 global_run_statistics[key].aggregate_statistics(value)
             else:

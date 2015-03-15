@@ -132,9 +132,14 @@ import internal.coloring_logging
 try:
     if __debug__ and options.logging == 'INFO':
         options.logging = 'DEBUG'    
+    if options.logging.isdigit():
+        level = int(options.logging)
+    else:
+        level = eval('logging.' + options.logging)
+
     logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
-    logging.root.setLevel(eval('logging.' + options.logging))
-    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+    logging.root.setLevel(level)
+    logging.getLogger('madgraph').setLevel(level)
 except:
     pass
 import internal.amcatnlo_run_interface as cmd_interface

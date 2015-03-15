@@ -436,18 +436,16 @@ class gensym(object):
                 misc.sprint(G, cross, error*cross, nunwgt, written_event, primary_event, luminosity)
  
         grid_calculator.results.compute_values()
-        misc.sprint(grid_calculator.results.run_statistics)
         if (str(os.path.basename(Pdir)), G) in self.run_statistics:
             self.run_statistics[(str(os.path.basename(Pdir)), G)]\
                    .aggregate_statistics(grid_calculator.results.run_statistics)
         else:
             self.run_statistics[(str(os.path.basename(Pdir)), G)] = \
                                           grid_calculator.results.run_statistics
-        
-        misc.sprint(self.run_statistics[(str(os.path.basename(Pdir)), G)])
     
         self.warnings_from_statistics(G, grid_calculator.results.run_statistics) 
-        stats_msg = grid_calculator.results.run_statistics.nice_output(G)
+        stats_msg = grid_calculator.results.run_statistics.nice_output(
+                                     '/'.join([os.path.basename(Pdir),'G%s'%G]))
         if stats_msg:
             logger.log(5, stats_msg)
 
@@ -1266,20 +1264,6 @@ class gen_ximprove_share(gen_ximprove, gensym):
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)
 
         # misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
-        grid_calculator.results.compute_values()
-        stat_key = (str(os.path.basename(Pdir)), G)    
-        if stat_key in self.run_statistics:
-            self.run_statistics[stat_key].aggregate_statistics(
-                                         grid_calculator.results.run_statistics)
-        else:
-            self.run_statistics[stat_key] = grid_calculator.results.run_statistics
-        
-        misc.sprint(self.run_statistics[stat_key])
-        self.warnings_from_statistics(G, grid_calculator.results.run_statistics)        
-        stats_msg = grid_calculator.results.run_statistics.nice_output(G)
-        if stats_msg:
-            logger.log(5, stats_msg)
-        
         # check what to do
         if nunwgt > needed_event+1:
             # We did it.
