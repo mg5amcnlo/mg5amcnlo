@@ -148,6 +148,39 @@ class testFKSHelasObjects(unittest.TestCase):
 
         for me in my_helas_mp['matrix_elements']:
             self.assertEqual(len(me.born_matrix_element['color_basis']), 1)
+            self.assertEqual(me.get_nexternal_ninitial(), (4,2))
+
+
+    def test_fks_helas_multi_process_ppz_loonly(self):
+        """tests the LOonly NLO mode. In particular test that no
+        reals are generated and that the get_nexternal_ninitial funciton
+        returns the values as if the reals were generated.
+        """
+        p= [21, 1, 2, 3, 4, -1, -2, -3, -4]
+        z_leg= MG.MultiLeg({'ids':[23], 'state': True})
+        p_leg = MG.MultiLeg({'ids': p, 'state': False});
+
+        # Define the multiprocess
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [p_leg] * 2] \
+                    + MG.MultiLegList([z_leg]))
+
+        my_process_definition = MG.ProcessDefinition({ \
+                        'orders': {'QED':1},
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'NLO_mode': 'LOonly',
+                        'model': self.mymodel})
+        my_process_definitions = MG.ProcessDefinitionList(\
+            [my_process_definition])
+
+        my_multi_process = fks_base.FKSMultiProcess(\
+                {'process_definitions': my_process_definitions})
+        my_helas_mp = fks_helas.FKSHelasMultiProcess(my_multi_process, gen_color = True)
+
+        for me in my_helas_mp['matrix_elements']:
+            #
+            self.assertEqual(len(me.real_processes), 0)
+            self.assertEqual(me.get_nexternal_ninitial(), (4,2))
 
 
     def test_fks_ppzz_in_RS(self):

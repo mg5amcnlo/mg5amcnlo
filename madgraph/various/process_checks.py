@@ -722,7 +722,15 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     if len(value)==0:
                         ml_reds = '1'
                     else:
-                        ml_reds="|".join([str(vl) for vl in value]) 
+                        ml_reds="|".join([str(vl) for vl in value])
+                elif isinstance(value, str):
+                    ml_reds = value
+                elif isinstance(value, int):
+                    ml_reds = str(value)
+                else:
+                    raise MadGraph5Error, 'The argument %s '%str(value)+\
+                      ' in fix_MadLoopParamCard must be a string, integer'+\
+                      ' or a list.'
                 MLCard.set("MLReductionLib",ml_reds)      
             elif key == 'ImprovePS':
                 MLCard.set('ImprovePSPoint',2 if value else -1)
@@ -1962,6 +1970,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         StabChecker.stdin.write('%.16E\n'%mu_r) 
         StabChecker.stdin.write('%d\n'%hel)
         StabChecker.stdin.write('%d\n'%split_orders)
+
         try:
             while True:
                 output = StabChecker.stdout.readline()  

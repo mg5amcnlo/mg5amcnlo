@@ -2407,9 +2407,10 @@ zeor by MadLoop.""")
         P_zero_result = [] # check the number of times where they are no phase-space
 
         # File for the loop (for loop induced)
-        if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources')):
-            tf=tarfile.open(pjoin(self.me_dir, 'SubProcesses', 'MadLoop5_resources.tar'),'w',
-                                                               dereference=True)
+        if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
+                 'MadLoop5_resources')) and cluster.need_transfer(self.options):
+            tf=tarfile.open(pjoin(self.me_dir, 'SubProcesses', 
+                         'MadLoop5_resources.tar.gz'), 'w:gz', dereference=True)
             tf.add(pjoin(self.me_dir,'SubProcesses','MadLoop5_resources'),
                                                    arcname='MadLoop5_resources')
             tf.close()
@@ -2699,7 +2700,6 @@ zeor by MadLoop.""")
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                               log_level=logging.DEBUG)
             
-            misc.sprint(nb_event)
             self.results.add_detail('nb_event', nb_event)
         
         eradir = self.options['exrootanalysis_path']
@@ -3363,8 +3363,9 @@ zeor by MadLoop.""")
             if 'ajob' in exe: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
-                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar')):
-                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar'))
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
+                  'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar.gz'))
                 
                 output_files = []
                 required_output = []
@@ -3406,8 +3407,10 @@ zeor by MadLoop.""")
             elif 'survey' in exe:
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
-                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar')):
-                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar'))
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
+                  'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 
+                                                   'MadLoop5_resources.tar.gz'))
 
                 #Find the correct PDF input file
                 input_files.append(self.get_pdf_input_filename())
@@ -3452,8 +3455,10 @@ zeor by MadLoop.""")
                 input_files = ['madevent','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 
-                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar')):
-                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar'))
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses',
+                  'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 
+                                                   'MadLoop5_resources.tar.gz'))
 
                 #Find the correct PDF input file
                 input_files.append(self.get_pdf_input_filename())

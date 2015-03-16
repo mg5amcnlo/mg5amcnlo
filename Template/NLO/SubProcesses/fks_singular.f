@@ -37,7 +37,8 @@ c value to the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2,g22
+      double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
+     &     ,g22
       parameter (pi=3.1415926535897932385d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -62,6 +63,17 @@ c value to the list of weights using the add_wgt subroutine
       wgt1=wgtnstmp*f_nb/g22
       if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0) then
          wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
+      elseif (ickkw.eq.-1) then
+         if (wgtbpower.ne.0) then
+            write (*,*) 'ERROR in VETO XSec: bpower should'/
+     $           /' be zero (no QCD partons at the'/
+     $           /' Born allowed)', wgtbpower
+         endif
+         H1_factor_virt=virt_wgt/(g22/(4d0*pi))/born_wgt
+         born_wgt_veto=born_wgt/g2
+         call compute_veto_compensating_factor(H1_factor_virt
+     $        ,born_wgt_veto,1d0,1d0,veto_compensating_factor)
+         call add_wgt(7,-veto_compensating_factor*f_nb,0d0,0d0)
       endif
       wgt2=wgtwnstmpmur*f_nb/g22
       wgt3=wgtwnstmpmuf*f_nb/g22
@@ -298,7 +310,6 @@ c value to the list of weights using the add_wgt subroutine
       tCount=tCount+(tAfter-tBefore)
       return
       end
-
 
       subroutine compute_MC_subt_term(p,gfactsf,gfactcl,probne)
       implicit none
@@ -848,7 +859,7 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
          f_s_MC_S=prefact*jac_cnt(0)*enhance
      $        *unwgtfun*fkssymmetryfactor*vegas_wgt
          f_s_MC_H=f_s_MC_S
-         
+
          if (pmass(j_fks).eq.0d0) then
             prefact_c=xinorm_cnt(1)/xi_i_fks_cnt(1)/(1-y_ij_fks_ev)
             prefact_coll=xinorm_cnt(1)/xi_i_fks_cnt(1)*log(delta_used
@@ -936,6 +947,7 @@ c     type=3 : integrated counter terms
 c     type=4 : soft counter-term
 c     type=5 : collinear counter-term
 c     type=6 : soft-collinear counter-term
+c     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO
 c     type=8 : soft counter-term (with n+1-body kin.)
 c     type=9 : collinear counter-term (with n+1-body kin.)
 c     type=10: soft-collinear counter-term (with n+1-body kin.)
@@ -1075,7 +1087,7 @@ c     matrix elements of this contribution.
             enddo
          enddo
          H_event(icontr)=.true.
-      elseif(type.ge.2 .and. type.le.6 .or. type.eq.11 .or. type.eq.12
+      elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
      $        .or. type.eq.14)then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
 c and MC subtraction terms.
@@ -1109,6 +1121,27 @@ c     matrix elements of this contribution.
       return
       end
 
+      subroutine include_veto_multiplier
+      implicit none
+c Multiply all the weights by the NNLL-NLO jet veto Sudakov factors,
+c i.e., the term on the 2nd line of Eq.(20) of arXiv:1412.8408.
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'reweight.inc'
+      integer i,j
+      if (H1_factor_virt.ne.0d0) then
+         call compute_veto_multiplier(H1_factor_virt,1d0,1d0
+     &        ,veto_multiplier)
+         do i=1,icontr
+            do j=1,3
+               wgt(j,i)=wgt(j,i)*veto_multiplier
+            enddo
+         enddo
+      else
+         veto_multiplier=1d0
+      endif
+      end
+      
       subroutine include_PDF_and_alphas
 c Multiply the saved wgt() info by the PDFs, alpha_S and the scale
 c dependence and saves the weights in the wgts() array. The weights in
@@ -1199,10 +1232,10 @@ c PDG codes
             if (k.lt.fks_j_d(iFKS)) then
                parton_pdg_uborn(k,j,ict)=idup_d(iFKS,k,j)
             elseif(k.eq.fks_j_d(iFKS)) then
-               if (abs(idup_d(iFKS,fks_i_d(iFKS),j)) .eq.
-     &              abs(idup_d(iFKS,fks_j_d(iFKS) ,j))) then
+               if ( abs(idup_d(iFKS,fks_i_d(iFKS),j)) .eq.
+     &              abs(idup_d(iFKS,fks_j_d(iFKS),j)) ) then
                  parton_pdg_uborn(k,j,ict)=21
-               elseif (idup_d(iFKS,fks_i_d(iFKS),j).eq.21) then
+               elseif (abs(idup_d(iFKS,fks_i_d(iFKS),j)).eq.21) then
                  parton_pdg_uborn(k,j,ict)=idup_d(iFKS,fks_j_d(iFKS),j)
                elseif (idup_d(iFKS,fks_j_d(iFKS),j).eq.21) then
                  parton_pdg_uborn(k,j,ict)=-idup_d(iFKS,fks_i_d(iFKS),j)
@@ -1282,6 +1315,92 @@ c add the weights to the array
      &              **QCDpower(i)
                wgts(iwgt,i)=wgts(iwgt,i)
      &              *rwgt_muR_dep_fac(sqrt(mu2_r(kr)))
+            enddo
+         enddo
+      enddo
+      call cpu_time(tAfter)
+      tr_s=tr_s+(tAfter-tBefore)
+      return
+      end
+
+      subroutine reweight_scale_NNLL
+c Use the saved c_weight info to perform scale reweighting. Extends the
+c wgts() array to include the weights. Special for the NNLL+NLO jet-veto
+c computations (ickkw.eq.-1).
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'c_weight.inc'
+      include 'reweight.inc'
+      include 'reweightNLO.inc'
+      include 'timing_variables.inc'
+      integer i,ks,kh,iwgt_save
+      double precision xlum(maxscales),dlum,pi,mu2_r(maxscales)
+     &     ,mu2_f(maxscales),mu2_q,alphas,g(maxscales),rwgt_muR_dep_fac
+     &     ,veto_multiplier_new(maxscales,maxscales)
+     &     ,veto_compensating_factor_new
+      external rwgt_muR_dep_fac
+      parameter (pi=3.1415926535897932385d0)
+      external dlum,alphas
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      call cpu_time(tBefore)
+      if (icontr.eq.0) return
+c currently we have 'iwgt' weights in the wgts() array.
+      iwgt_save=iwgt
+c compute the new veto multiplier factor      
+      do ks=1,numscales
+         do kh=1,numscales
+            if (H1_factor_virt.ne.0d0) then
+               call compute_veto_multiplier(H1_factor_virt,yfactR(ks)
+     &              ,yfactF(kh),veto_multiplier_new(ks,kh))
+               veto_multiplier_new(ks,kh)=veto_multiplier_new(ks,kh)
+     &              /veto_multiplier
+            else
+               veto_multiplier_new(ks,kh)=1d0
+            endif
+         enddo
+      enddo
+c loop over all the contributions in the c_weights common block
+      do i=1,icontr
+         iwgt=iwgt_save
+         nFKSprocess=nFKS(i)
+         xbk(1) = bjx(1,i)
+         xbk(2) = bjx(2,i)
+         mu2_q=scales2(1,i)
+c soft scale variation
+         do ks=1,numscales
+            mu2_r(ks)=scales2(2,i)*yfactR(ks)**2
+            g(ks)=sqrt(4d0*pi*alphas(sqrt(mu2_r(ks))))
+            mu2_f(ks)=scales2(2,i)*yfactR(ks)**2
+            q2fact(1)=mu2_f(ks)
+            q2fact(2)=mu2_f(ks)
+            xlum(ks) = dlum()
+c Hard scale variation
+            do kh=1,numscales
+               iwgt=iwgt+1 ! increment the iwgt for the wgts() array
+               if (iwgt.gt.max_wgt) then
+                  write (*,*) 'ERROR too many weights in reweight_scale'
+     &                 ,iwgt,max_wgt
+                  stop 1
+               endif
+c add the weights to the array
+               if (itype(i).ne.7) then
+                  wgts(iwgt,i)=xlum(ks) * (wgt(1,i)+wgt(2,i)
+     &                 *log(mu2_r(ks)/mu2_q)+wgt(3,i)*log(mu2_f(ks)
+     &                 /mu2_q))*g(ks)**QCDpower(i)
+               else
+c special for the itype=7 (i.e, the veto-compensating factor)                  
+                  call compute_veto_compensating_factor(H1_factor_virt
+     &                 ,born_wgt_veto,yfactR(ks),yfactF(kh)
+     &                 ,veto_compensating_factor_new)
+                  wgts(iwgt,i)=xlum(ks) * wgt(1,i)*g(ks)**QCDpower(i)
+     &                 /veto_compensating_factor
+     &                 *veto_compensating_factor_new
+               endif
+               wgts(iwgt,i)=wgts(iwgt,i)
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r(ks)))
+               wgts(iwgt,i)=wgts(iwgt,i)*veto_multiplier_new(ks,kh)
             enddo
          enddo
       enddo
@@ -1463,11 +1582,11 @@ c mother and the extra (n+1) parton is given the PDG code of the gluon.
          if (k.lt.fks_j_d(iFKS)) then
             pdg_uborn(k,ict)=pdg(k,ict)
          elseif(k.eq.fks_j_d(iFKS)) then
-            if (abs(pdg(fks_i_d(iFKS),ict)) .eq.
-     &           abs(pdg(fks_j_d(iFKS),ict))) then
+            if ( abs(pdg(fks_i_d(iFKS),ict)) .eq.
+     &           abs(pdg(fks_j_d(iFKS),ict)) ) then
 c gluon splitting:  g -> XX
                pdg_uborn(k,ict)=21
-            elseif (pdg(fks_i_d(iFKS),ict).eq.21) then
+            elseif (abs(pdg(fks_i_d(iFKS),ict)).eq.21) then
 c final state gluon radiation:  X -> Xg
                pdg_uborn(k,ict)=pdg(fks_j_d(iFKS),ict)
             elseif (pdg(fks_j_d(iFKS),ict).eq.21) then
@@ -1488,7 +1607,6 @@ c initial state gluon splitting (gluon is j_fks):  g -> XX
       enddo
       return
       end
-
       
       subroutine get_wgt_nbody(sig)
 c Sums all the central weights that contribution to the nbody cross
@@ -1501,7 +1619,8 @@ c section
       sig=0d0
       if (icontr.eq.0) return
       do i=1,icontr
-         if (itype(i).eq.2 .or. itype(i).eq.3 .or. itype(i).eq.14) then
+         if (itype(i).eq.2 .or. itype(i).eq.3 .or. itype(i).eq.14 .or.
+     &        itype(i).eq.7) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -1519,7 +1638,8 @@ c excluding the nbody contributions.
       sig=0d0
       if (icontr.eq.0) return
       do i=1,icontr
-         if (itype(i).ne.2.and. itype(i).ne.3.and. itype(i).ne.14) then
+         if (itype(i).ne.2 .and. itype(i).ne.3 .and. itype(i).ne.14
+     &        .and. itype(i).ne.7) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -1717,7 +1837,7 @@ c that has a soft singularity. We set it to 'i_soft'.
          else
             found_S=.true.
          endif
-         if (pdg_type_d(nFKS(i),fks_i_d(nFKS(i))).eq.21) then
+         if (abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.21) then
             i_soft=i
             exit
          endif
@@ -4384,7 +4504,8 @@ c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                call cpu_time(tAfter)
                tOLP=tOLP+(tAfter-tBefore)
                virtual_over_born=virt_wgt/(born_wgt*ao2pi)
-               virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
+               if (ickkw.ne.-1)
+     &              virt_wgt=virt_wgt-average_virtual*born_wgt*ao2pi
                if (abrv.ne.'virt') then
                   virt_wgt=virt_wgt/virtual_fraction
                endif
@@ -4395,7 +4516,7 @@ c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
             virt_wgt=virt_wgt_save
 c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
          endif
-         if (abrv(1:4).ne.'virt')
+         if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1)
      &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*ao2pi
 
 c eq.(MadFKS.C.13)
@@ -5338,7 +5459,7 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
      &                 particle_type(j_fks),pdg_type(i_fks),pdg_type(j_fks)
                   stop
                endif
-            elseif(i_fks_pdg.ne.21) then ! if not already above, it MUST be a gluon
+            elseif(abs(i_fks_pdg).ne.21) then ! if not already above, it MUST be a gluon
                write (*,*) 'ERROR, i_fks is not a gluon and falls not'//
      $              ' in other categories',i_fks,j_fks,i_fks_pdg
      $              ,j_fks_pdg
@@ -5404,6 +5525,10 @@ c Setup the FKS symmetry factors.
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
          fkssymmetryfactorBorn=dble(ngluons)
+      elseif(pdg_type(i_fks).eq.-21) then
+         fkssymmetryfactor=1d0
+         fkssymmetryfactorDeg=1d0
+         fkssymmetryfactorBorn=1d0
       else
          fkssymmetryfactor=dble(fac_i*fac_j)
          fkssymmetryfactorDeg=dble(fac_i*fac_j)
@@ -5794,3 +5919,4 @@ c
       IF(SEED.LE.0) SEED = SEED + M
       FK88RANDOM = SEED*MINV
       END
+

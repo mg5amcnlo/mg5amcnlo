@@ -365,7 +365,7 @@ c
                elseif(jpart(1,i_fks).eq.jpart(1,j_fks)
      &                 .and.j_fks.le.nincoming) then
                   jpart(1,i)=21
-               elseif(jpart(1,i_fks).eq.21) then
+               elseif(abs(jpart(1,i_fks)).eq.21) then
                   jpart(1,i)=jpart(1,j_fks)
                elseif(jpart(1,j_fks).eq.21.and.j_fks.le.nincoming) then
                   jpart(1,i)=-jpart(1,i_fks)
@@ -1076,7 +1076,7 @@ c S events
                idpart=21
             elseif(idparti.eq.idpartj.and.j_fks.le.nincoming) then
                idpart=21
-            elseif(idparti.eq.21) then
+            elseif(abs(idparti).eq.21) then
                idpart=idpartj
             elseif(idpartj.eq.21.and.j_fks.le.nincoming) then
                idpart=-idparti
@@ -1092,7 +1092,7 @@ c S events
               xmj=mcmass(idpart)
             else
 c j_fks is an heavy particle
-              if(idparti.ne.21)then
+              if(abs(idparti).ne.21)then
                 write(*,*)'Error #3 in put_on_MC_mshell',
      &            i_fks,j_fks,i,pmass(j_fks)
                 stop

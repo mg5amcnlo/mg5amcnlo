@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then
-tar -xf MadLoop5_resources.tar
+if [[ -e MadLoop5_resources.tar.gz && ! -e MadLoop5_resources ]]; then
+tar -xzf MadLoop5_resources.tar.gz
 fi
 k=run1_app.log
 script=refine_splitted.sh
@@ -55,5 +55,14 @@ do
     fi
 done
 echo "" >> $k; echo "ls status:" >> $k; ls >> $k
+# Perform some cleaning to keep less file on disk/transfer less file.
+subdir=${grid_directory##*_}
+if [[ $subdir -ne 1 &&  -s results.dat && $MG5DEBUG != true ]]; then
+	 rm -f ftn25 &> /dev/null
+         rm -f ftn26 &> /dev/null
+	 rm -f log.txt &> /dev/null
+         rm -f *.log &> /dev/null
+	 rm -f moffset.dat &> /dev/null
+	 rm -f fail.log &> /dev/null
+fi
 cd ../
-

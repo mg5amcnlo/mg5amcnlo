@@ -120,8 +120,10 @@ class Banner(dict):
             if input_path.find('\n') ==-1:
                 input_path = open(input_path)
             else:
-                input_path = input_path.split('\n')
-
+                def split_iter(string):
+                    return (x.groups(0)[0] for x in re.finditer(r"([^\n]*\n)", string, re.DOTALL))
+                input_path = split_iter(input_path)
+                
         text = ''
         store = False
         for line in input_path:
@@ -1789,12 +1791,12 @@ class RunCardNLO(RunCard):
         self.add_param('pdf_set_max', 244700)
         #merging
         self.add_param('ickkw', 0)
-        self.add_param('bwcutoff', 15)
+        self.add_param('bwcutoff', 15.0)
         #cuts        
-        self.add_param('jetalgo', 1)
+        self.add_param('jetalgo', 1.0)
         self.add_param('jetradius', 0.7, hidden=True)         
         self.add_param('ptj', 10.0 , cut=True)
-        self.add_param('etaj', -1, cut=True)        
+        self.add_param('etaj', -1.0, cut=True)        
         self.add_param('ptl', 0.0, cut=True)
         self.add_param('etal', -1.0, cut=True) 
         self.add_param('drll', 0.0, cut=True)
@@ -1843,6 +1845,9 @@ class RunCardNLO(RunCard):
         if self['pdlabel'] not in possible_set:
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
     
+        # check that we use lhapdf if reweighting is ON
+        if self['reweight_pdf'] and self['pdlabel'] != "lhapdf":
+            raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

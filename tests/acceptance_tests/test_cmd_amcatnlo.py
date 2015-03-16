@@ -218,7 +218,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('calculate_xsect -f LO')
         self.do('quit')
 
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
@@ -452,7 +452,7 @@ class MECmdShell(IOTests.IOTestManager):
 
         self.do('launch NLO -f')
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
@@ -469,7 +469,7 @@ class MECmdShell(IOTests.IOTestManager):
                 stdout = open(os.devnull, 'w'))
 
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
@@ -776,7 +776,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('calculate_xsect NLO -f')        
         
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
@@ -792,7 +792,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('calculate_xsect LO -f')        
         
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
@@ -805,12 +805,12 @@ class MECmdShell(IOTests.IOTestManager):
         
         cwd = os.getcwd()
         try:
-            shutil.rmtree('%s/' % self.path)
+            os.remove('%s/test.log' % self.tmpdir)
         except Exception, error:
             pass
         import subprocess
         
-        stdout = open('%s/test.log' % self.path,'w')
+        stdout = open('%s/test.log' % self.tmpdir,'w')
         if logging.getLogger('madgraph').level <= 20:
             stderr=None
         else:
@@ -821,10 +821,10 @@ class MECmdShell(IOTests.IOTestManager):
             
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_amcatnlo')],
-                         cwd=pjoin(MG5DIR),
+                         cwd=self.tmpdir,
                         stdout=stdout,stderr=stderr)
         stdout.close()
-        text = open('%s/test.log' % self.path,'r').read()
+        text = open('%s/test.log' % self.tmpdir,'r').read()
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
@@ -842,7 +842,32 @@ class MECmdShell(IOTests.IOTestManager):
 
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])
-        
+
+
+    def test_jet_veto_xsec(self):
+        """tests the jet-veto cross section at NNLL+NLO"""
+        self.generate_production()
+        cmd = """generate_events NLO
+                 set ickkw -1
+                 set ptj 10
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        self.assertFalse(self.cmd_line.options['automatic_html_opening'])
+        self.cmd_line.import_command_file('/tmp/mg5_cmd')
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        text=open('%s/Events/run_01/summary.txt' % self.path,'r').read()
+        data=text.split('\n')
+        for i,line in enumerate(data):
+            if 'Process' in line:
+                break
+        #      Run at p-p collider (6500 + 6500 GeV)
+        self.assertTrue('Run at p-p collider (6500 + 6500 GeV)' in data[i+1])
+        cross_section = data[i+2]
+        cross_section = float(cross_section.split(':')[1].split('+-')[0])
+        try:
+            self.assertAlmostEqual(6011.0, cross_section,delta=50)
+        except TypeError:
+            self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 
     def load_result(self, run_name):
         

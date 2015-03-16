@@ -122,6 +122,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         # Check the validity of the banner:
         if 'slha' not in self.banner:
+            misc.sprint(self.banner)
             self.events_file = None
             raise self.InvalidCmd('Event file does not contain model information')
         elif 'mg5proccard' not in self.banner:
@@ -346,7 +347,7 @@ class ReweightInterface(extended_cmd.Cmd):
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
-
+        self.lhe_input.seek(0)
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),1000)==0): 

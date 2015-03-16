@@ -123,7 +123,9 @@ c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
       average_virtual=0d0
-      virtual_fraction=virt_fraction
+      virtual_fraction=max(virt_fraction,min_virt_fraction)
+      
+      
 c
 c     Read process number
 c
@@ -240,6 +242,11 @@ c Update the number of PS points based on unc(1), ncall and accuracy
          endif
 c
          write (*,*) 'imode is ',imode
+
+         if (ickkw.eq.-1) then
+            min_virt_fraction=1d0
+            virtual_fraction=1d0
+         endif
 c
 c Setup for parton-level NLO reweighting
          if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
@@ -419,6 +426,7 @@ c timing statistics
       virt_wgt_mint=0d0
       born_wgt_mint=0d0
       virtual_over_born=0d0
+      if (ickkw.eq.-1) H1_factor_virt=0d0
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       call update_vegas_x(xx,x)
       call get_MC_integer(1,fks_configs,nFKS_picked,vol)
@@ -489,13 +497,22 @@ c The n+1-body contributions (including counter terms)
       
  12   continue
 c Include PDFs and alpha_S and reweight to include the uncertainties
+      if (ickkw.eq.-1) call include_veto_multiplier
       call include_PDF_and_alphas
       if (doreweight) then
-         if (do_rwgt_scale) call reweight_scale
+         if (do_rwgt_scale .and. ickkw.ne.-1) call reweight_scale
+         if (do_rwgt_scale .and. ickkw.eq.-1) call reweight_scale_NNLL
          if (do_rwgt_pdf) call reweight_pdf
       endif
       
-      if (iappl.ne.0) call fill_applgrid_weights(vegas_wgt)
+      if (iappl.ne.0) then
+         if (sum) then
+            write (*,*) 'ERROR: applgrid only possible '/
+     &           /'with MC over FKS directories',iappl,sum
+            stop 1
+         endif
+         call fill_applgrid_weights(vegas_wgt)
+      endif
 
 c Importance sampling for FKS configurations
       if (sum) then
@@ -615,6 +632,9 @@ c     Constants
 c
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'run.inc'
 c
 c     Arguments
 c
@@ -750,6 +770,18 @@ c
         nbody=.false.
       endif
       abrv=abrvinput(1:4)
+      if (fks_configs.eq.1) then
+         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
+            write (*,*) 'Process generated with [LOonly=QCD]. '/
+     $           /'Setting abrv to "born".'
+            abrv='born'
+            if (ickkw.eq.3) then
+               write (*,*) 'FxFx merging not possible with'/
+     $              /' [LOonly=QCD] processes'
+               stop 1
+            endif
+         endif
+      endif
 c Options are way too many: make sure we understand all of them
       if ( abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
      &     abrv.ne.'virt'.and.

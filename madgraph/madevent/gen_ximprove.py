@@ -304,11 +304,7 @@ class gensym(object):
         
         # Compute the number of events used for this run.                      
         nb_events = grid_calculator.target_evt
-        grid_calculator.write_grid_for_submission(Pdir,G,
-                        self.splitted_for_dir(Pdir, G),
-                        nb_events,mode=self.mode,
-                        conservative_factor=5.0)
-        
+
         Gdirs = [] #build the the list of directory
         for i in range(self.splitted_for_dir(Pdir, G)):
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
@@ -326,17 +322,32 @@ class gensym(object):
         elif self.cmd.opts['accuracy'] < 0:
             #check for luminosity
             raise Exception, "Not Implemented"
+        elif self.abscross[(Pdir,G)] == 0:
+            need_submit = False 
         else:   
-            if cross == 0:
+            across = self.abscross[(Pdir,G)]/(self.sigma[(Pdir,G)]+1e-99)
+            tot_across = self.get_current_axsec()
+            if across == 0:
+                need_submit = False
+            elif across / tot_across < 1e-5:
                 need_submit = False
             elif error >  self.cmd.opts['accuracy']:
                 need_submit = True
             else:
                 need_submit = False
-           
+        
+        
+        if cross:
+            grid_calculator.write_grid_for_submission(Pdir,G,
+                        self.splitted_for_dir(Pdir, G),
+                        nb_events,mode=self.mode,
+                        conservative_factor=5.0)
+        
         if need_submit:
+            logger.info("%s/G%s is at %s+-%s pb. Submit next iteration", os.path.basename(Pdir), G, cross, error)
             self.resubmit_survey(Pdir,G, Gdirs, step)
         elif cross:
+            logger.info("Survey finished for %s/G%s", os.path.basename(Pdir),G)
             # prepare information for refine
             newGpath = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
             if not os.path.exists(newGpath):
@@ -359,9 +370,13 @@ class gensym(object):
             # create the appropriate results.dat
             self.write_results(grid_calculator, cross, error, Pdir, G, step)
         else:
+            logger.info("Survey finished for %s/G%s [0 cross]", os.path.basename(Pdir),G)
+            
+            Gdir = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
+            if not os.path.exists(Gdir):
+                os.mkdir(Gdir)
             # copy one log
-            files.cp(pjoin(Gdirs[0], 'log.txt'), 
-                         pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G))
+            files.cp(pjoin(Gdirs[0], 'log.txt'), Gdir)
             # create the appropriate results.dat
             self.write_results(grid_calculator, cross, error, Pdir, G, step)
             
@@ -374,13 +389,17 @@ class gensym(object):
         
         for i in range(self.splitted_for_dir(Pdir, G)):
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
+            one_result = grid_calculator.add_results_information(fsock)
+            fsock.close()
+            if one_result.axsec == 0:
+                grid_calculator.onefail = True
+                continue # grid_information might not exists
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
             os.remove(pjoin(path, 'grid_information'))
-            fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
-            grid_calculator.add_results_information(fsock)
-            fsock.close()
+
              
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory
@@ -401,7 +420,7 @@ class gensym(object):
         else:
             error = 0
 
-        if True and __debug__ :
+        if False and __debug__ :
             # make the unweighting to compute the number of events:
             maxwgt = grid_calculator.get_max_wgt(0.01)
             if maxwgt:
@@ -414,6 +433,12 @@ class gensym(object):
  
         return grid_calculator, cross, error
     
+    def get_current_axsec(self):
+        
+        across = 0
+        for (Pdir,G) in self.abscross:
+            across += self.abscross[(Pdir,G)]/(self.sigma[(Pdir,G)]+1e-99)
+        return across
     
     def write_results(self, grid_calculator, cross, error, Pdir, G, step):
         
@@ -677,7 +702,7 @@ class gen_ximprove(object):
         for C in all_channels:
             if C.get('axsec') == 0:
                 continue
-            if goal_lum/C.get('luminosity') >= 1 + (self.gen_events_security-1)/2:
+            if goal_lum/(C.get('luminosity')+1e-99) >= 1 + (self.gen_events_security-1)/2:
                 logger.debug("channel %s is at %s (%s) (%s pb)", C.name,  C.get('luminosity'), goal_lum/C.get('luminosity'), C.get('xsec'))
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('axsec'), 0.01*all_channels[0].get('axsec')):
@@ -1134,7 +1159,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
         
         if self.cmd.options["run_mode"] == 1:
             if self.cmd.options["cluster_size"]:
-                nb_ps_by_job = total_ps_points /self.cmd.options["cluster_size"]
+                nb_ps_by_job = total_ps_points /int(self.cmd.options["cluster_size"])
             else:
                 nb_ps_by_job = self.nb_ps_by_job
         elif self.cmd.options["run_mode"] == 2:
@@ -1163,13 +1188,6 @@ class gen_ximprove_share(gen_ximprove, gensym):
             Gdirs.append(path)
         assert len(grid_calculator.results) == len(Gdirs) == self.splitted_for_dir(Pdir, G)
         
-        try:
-            output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'a')
-        except IOError:
-            output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'w')
-                
-        misc.call(["cat"] + [pjoin(d, "events.lhe") for d in Gdirs],
-                  stdout=output_file)
                 
         # Check how many events are going to be kept after un-weighting.
         needed_event = cross * self.goal_lum
@@ -1183,11 +1201,31 @@ class gen_ximprove_share(gen_ximprove, gensym):
         efficiency = new_evt / sum([R.nevents for R in grid_calculator.results])
         nunwgt = old_nunwgt * old_maxwgt / maxwgt
         nunwgt += new_evt
+
+        # check the number of event for this iteration alone
+        one_iter_nb_event = grid_calculator.get_nunwgt()
+        drop_previous_iteration = False
+        if one_iter_nb_event > nunwgt and step < self.min_iter + 1:
+            # the last iteration alone has more event that the combine iteration.
+            # it is therefore interesting to drop previous iteration.          
+            drop_previous_iteration = True
+            nunwgt = one_iter_nb_event
+            maxwgt = grid_calculator.get_max_wgt()
+            new_evt = nunwgt
+            
+        try:
+            if drop_previous_iteration:
+                raise IOError
+            output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'a')
+        except IOError:
+            output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'w')
+                
+        misc.call(["cat"] + [pjoin(d, "events.lhe") for d in Gdirs],
+                  stdout=output_file)
         
         
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)
 
-        misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
         # check what to do
         if nunwgt > needed_event+1:
             # We did it.
@@ -1212,22 +1250,19 @@ class gen_ximprove_share(gen_ximprove, gensym):
             done_job = job_at_first_iter * (2**step-1)
             expected_remaining_job = expected_total_job - done_job
 
-            misc.sprint("status", need_job, expected_remaining_job)            
+            logger.debug("efficiency status (smaller is better): %s", need_job/expected_remaining_job)            
             # increase if needed but not too much
             need_job = min(need_job, expected_remaining_job*1.25)
             
             nb_job = (need_job-0.5)//(2**(self.min_iter-step)-1) + 1
-            misc.sprint("resubmit %s job for iteration number %s" % (nb_job, step+1))
             grid_calculator.write_grid_for_submission(Pdir,G,
                 self.splitted_for_dir(Pdir, G), nb_job*nevents ,mode=self.mode,
                                               conservative_factor=self.max_iter)
-            
+            logger.info("%s/G%s is at %i/%i event. Resubmit %i job at iteration %i." % (os.path.basename(Pdir), G, int(nunwgt),int(needed_event)+1, nb_job, step))
             self.create_resubmit_one_iter(Pdir, G, nevents, nb_job, step)
             #self.create_job(Pdir, G, nb_job, nevents, step)
         
         elif step < self.max_iter:
-            misc.sprint("need extra iteration")
-
             if step + 1 == self.max_iter:
                 need_job = 1.20 * need_job # avoid to have just too few event.
 
@@ -1236,6 +1271,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 self.splitted_for_dir(Pdir, G), nb_job*nevents ,mode=self.mode,
                                               conservative_factor=self.max_iter)
             
+            
+            logger.info("%s/G%s is at %i/%i event. Resubmit %i job at iteration %i." % (os.path.basename(Pdir), G, int(nunwgt),int(needed_event)+1, nb_job, step))
             self.create_resubmit_one_iter(Pdir, G, nevents, nb_job, step)
             
             

@@ -25,6 +25,7 @@ import logging
 
 import tests.parallel_tests.test_aloha as test_aloha
 
+
 class TestValidCmd(unittest.TestCase):
     """ check if the ValidCmd works correctly """
     
