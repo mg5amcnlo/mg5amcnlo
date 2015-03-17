@@ -447,10 +447,10 @@ class Histogram(object):
                 new_wgts[label] = wgt_operation(wgt, wgtsB[label])
             else:
                 new_wgts[label] = stat_error_operation(wgt, wgtsB[label])
-                if new_wgts[label]>1.0e+10:
-                    print "stat_error_operation is ",stat_error_operation.__name__
-                    print " inputs were ",wgt, wgtsB[label]
-                    print "for label", label
+#                if new_wgts[label]>1.0e+10:
+#                    print "stat_error_operation is ",stat_error_operation.__name__
+#                    print " inputs were ",wgt, wgtsB[label]
+#                    print "for label", label
         
         return new_wgts
 
