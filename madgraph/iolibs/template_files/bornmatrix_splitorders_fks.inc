@@ -103,15 +103,17 @@ do i = 1, amp_split_size
 enddo
 
 do i = 1, nsqampso
+ max_val = max(max_val, abs(ans(1,I)))
+enddo
+do i = 1, nsqampso
  if (keep_order(i)) then
     ANS_SUMMED = ANS_SUMMED + ANS(1,I)
 C   keep track of the separate pieces correspoinding to different coupling combinations
     do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
     enddo
-    amp_split(orders_to_amp_split_pos(amp_orders)) = ans(1,i)
+    if(abs(ans(1,i)).gt.max_val*tiny) amp_split(orders_to_amp_split_pos(amp_orders)) = ans(1,i)
  endif
- max_val = max(max_val, abs(ans(1,I)))
 enddo
 C this is to avoid fake non-zero contributions 
 if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
@@ -131,8 +133,9 @@ C take into account the fact that the counterterm for a given split order
 C will be multiplied by the corresponding squared coupling
       if (k.eq.j) amp_orders(k) = amp_orders(k) + 2
    enddo
-   amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,j) = ans(1,I)
-   amp_split_cnt(orders_to_amp_split_pos(amp_orders),2,j) = ans(2,I)
+C this is to avoid fake non-zero contributions 
+   if (abs(ans(1,I)).gt.max_val*tiny) amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,j) = ans(1,I)
+   if (abs(ans(2,I)).gt.max_val*tiny) amp_split_cnt(orders_to_amp_split_pos(amp_orders),2,j) = ans(2,I)
   endif
  enddo
 C this is to avoid fake non-zero contributions 

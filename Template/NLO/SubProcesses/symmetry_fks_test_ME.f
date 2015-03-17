@@ -362,7 +362,7 @@ c x_to_f_arg subroutine
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
            do iamp=1, amp_split_size
-             if (limit_split(1,iamp).ne.0d0) then
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
                write(*,*) '   Split-order', iamp
                call amp_split_pos_to_orders(iamp,orders)
                do i = 1, nsplitorders
@@ -371,6 +371,10 @@ c x_to_f_arg subroutine
                do i=1,imax
                   call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
                enddo
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               write(*,*) 'RETURN CODE', iret
              endif
            enddo
            
@@ -393,6 +397,16 @@ c
            call checkres(limit,fxl,wlimit,jac_cnt(0),xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
            nerr=nerr+iret
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               nerr=nerr+iret
+             endif
+           enddo
         endif
 
       enddo
@@ -477,8 +491,8 @@ c in genps_fks_test.f
          wlimit(1)=wgt
          ! keep track of the separate splitorders
          do iamp=1,amp_split_size
-           limit_split(1,iamp) = amp_split(iamp)*fx
-           wlimit_split(1,iamp) = amp_split(iamp)
+              limit_split(1,iamp) = amp_split(iamp)*wgt
+              wlimit_split(1,iamp) = wgt
          enddo
 
          do k=1,nexternal
@@ -503,8 +517,8 @@ c in genps_fks_test.f
             wlimit(i)=wgt
             ! keep track of the separate splitorders
             do iamp=1,amp_split_size
-              limit_split(i,iamp) = amp_split(iamp)*fx
-              wlimit_split(i,iamp) = amp_split(iamp)
+              limit_split(i,iamp) = amp_split(iamp)*wgt
+              wlimit_split(i,iamp) = wgt
             enddo
             do k=1,nexternal
                do l=0,3
@@ -524,7 +538,7 @@ c in genps_fks_test.f
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
            do iamp=1, amp_split_size
-             if (limit_split(1,iamp).ne.0d0) then
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
                write(*,*) '   Split-order', iamp
                call amp_split_pos_to_orders(iamp,orders)
                do i = 1, nsplitorders
@@ -533,6 +547,10 @@ c in genps_fks_test.f
                do i=1,imax
                   call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
                enddo
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               write(*,*) 'RETURN CODE', iret
              endif
            enddo
 c
@@ -554,6 +572,16 @@ c
             call checkres(limit,fxl,wlimit,jac_cnt(1),xp,lxp,
      &                    iflag,imax,j,nexternal,i_fks,j_fks,iret)
             nerr=nerr+iret
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               nerr=nerr+iret
+             endif
+           enddo
          endif
       enddo
       if(ncolltests.gt.10)then

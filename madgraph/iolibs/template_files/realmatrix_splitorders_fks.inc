@@ -64,13 +64,16 @@ enddo
 
 do i = 1, nsqampso
  ans_max = max(dabs(ans(i)),ans_max)
+enddo
+
+do i = 1, nsqampso
  if (keep_order(i)) then
     ANS_SUMMED = ANS_SUMMED + ANS(I)
 C   keep track of the separate pieces correspoinding to different coupling combinations
     do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX%(proc_prefix)s(j, i)
     enddo
-    amp_split(orders_to_amp_split_pos(amp_orders)) = ans(i)
+    if (abs(ans(i)).gt.ans_max*tiny) amp_split(orders_to_amp_split_pos(amp_orders)) = ans(i)
  endif
 enddo
 
