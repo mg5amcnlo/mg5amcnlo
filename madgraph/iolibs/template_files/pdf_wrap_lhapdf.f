@@ -21,8 +21,6 @@ c-------------------
 c     initialize the pdf set
       call FindPDFPath(LHAPath)
       CALL SetPDFPath(LHAPath)
-c     security set LHAPATH variable
-      call SETENVQQ("LHAPATH="//LHAPath)
       value(1)=lhaid
       parm(1)='DEFAULT'
       call pdfset(parm,value)
