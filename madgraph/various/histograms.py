@@ -1892,8 +1892,13 @@ if __name__ == "__main__":
             #histo.type += " %s, #%d"%\
             #                       (os.path.basename(arg).split('.')[0][:3],i+1)
             # But it is more elegant to give just the number.
-            histo.type += "#%d"%(i+1)
-        
+            # Overwrite existing number if present. We assume here that one never
+            # uses the '#' in its custom-defined types, which is a fair assumptions.
+            try:
+                histo.type = histo.type[:histo.type.index('#')] + "#%d"%(i+1)
+            except ValueError:
+                histo.type += "#%d"%(i+1)
+
         if i==0 or all(_ not in ['--sum','--average'] for _ in sys.argv):
             histo_list.extend(new_histo_list)
             continue
