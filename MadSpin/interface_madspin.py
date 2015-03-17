@@ -300,7 +300,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         """checking the validity of the set command"""
         
         if len(args) < 2:
+            if args and '=' in args[0]
+            name, value = args[0].split('=')
+            args[0]= name
+            args.append(value)
             raise self.InvalidCmd('set command requires at least two argument.')
+        
+        if args[1].strip() == '=':
+            args.pop(1)
         
         valid = ['max_weight','seed','curr_dir', 'spinmode']
         if args[0] not in self.options and args[0] not in valid:

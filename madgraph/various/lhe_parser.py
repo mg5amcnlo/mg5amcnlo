@@ -444,7 +444,7 @@ class MultiEventFile(EventFile):
         self.initial_nb_events = []
         self.total_event_in_files = 0
         self.curr_nb_events = []
-        self.cross = []
+        self.allcross = []
         self.error = []
         self.across = []
         self.scales = []
@@ -467,7 +467,7 @@ class MultiEventFile(EventFile):
             self.banner = obj.banner
         self.curr_nb_events.append(0)
         self.initial_nb_events.append(0)
-        self.cross.append(cross)
+        self.allcross.append(cross)
         self.across.append(across)
         self.error.append(error)
         self.scales.append(1)
@@ -513,10 +513,10 @@ class MultiEventFile(EventFile):
             Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')][-1]
             group = Pdir.split("_")[0][1:]
             if group in grouped_cross:
-                grouped_cross[group] += self.cross[i]
+                grouped_cross[group] += self.allcross[i]
                 grouped_error[group] += self.error[i]**2 
             else:
-                grouped_cross[group] = self.cross[i]
+                grouped_cross[group] = self.allcross[i]
                 grouped_error[group] = self.error[i]**2                
                 
         nb_group = len(grouped_cross)
@@ -595,7 +595,7 @@ class MultiEventFile(EventFile):
             self.initial_nb_events[i] = nb_event
             self.scales[i] = self.across[i]/cross['abs'] if self.across[i] else 1
             #misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
-            #            % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
+            #            % (i, cross['all'], self.allcross[i], self.scales[i], nb_event))
             for key in cross:
                 sum_cross[key] += cross[key]* self.scales[i]
             all_wgt +=[self.scales[i] * w for w in new_wgt]
