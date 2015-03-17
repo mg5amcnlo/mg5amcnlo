@@ -23,6 +23,8 @@ C the charge-linked if it is a color singlet
       common /c_need_links/need_color_links, need_charge_links
       double precision pmass(nexternal), zero
       parameter (zero=0d0)
+      double precision amp_split_soft(amp_split_size)
+      common /to_amp_split_soft/amp_split_soft
 
       chargeprod = 0d0
 
@@ -34,9 +36,9 @@ C check if need color or charge links, and include the gs/w**2 term here
       if (need_color_links) then
 %(iflines_col)s
       wgt = wgt_col * g**2
-C update the amp_split, which has to be set to 0 !!BEFORE!! computing the sum of the color/charge linked borns
+C update the amp_split_soft, which is summed in sbornsoft
       do i = 1, amp_split_size
-        amp_split_cnt(i,1,qcd_pos) = dble(amp_split_cnt(i,1,qcd_pos)) * g**2
+        amp_split_soft(i) = dble(amp_split_cnt(i,1,qcd_pos)) * g**2
       enddo
 
       else if (need_charge_links) then
@@ -45,9 +47,9 @@ C update the amp_split, which has to be set to 0 !!BEFORE!! computing the sum of
 C add a factor 1/2 for the self-eikonal soft link
       if (m.eq.n) chargeprod = chargeprod / 2d0
       wgt = dble(ans_cnt(1, qed_pos)) * chargeprod * dble(gal(1))**2
-C update the amp_split, which has to be set to 0 !!BEFORE!! computing the sum of the color/charge linked borns
+C update the amp_split_soft, which is summed in sbornsoft
       do i = 1, amp_split_size
-        amp_split_cnt(i,1,qed_pos) = dble(amp_split_cnt(i,1,qed_pos)) * chargeprod * dble(gal(1))**2
+        amp_split_soft(i) = dble(amp_split_cnt(i,1,qed_pos)) * chargeprod * dble(gal(1))**2
       enddo
       endif
 

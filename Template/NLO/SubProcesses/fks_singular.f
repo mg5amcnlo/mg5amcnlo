@@ -3170,6 +3170,8 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       common /c_need_links/need_color_links, need_charge_links
 
       double precision pmass(nexternal)
+      include 'orders.inc'
+
       include "pmass.inc"
 
       if (softtest.or.colltest) then
@@ -3211,6 +3213,9 @@ c has soft singularities
       else
          call smatrix_real(pp,wgt)
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
+         do i=1,amp_split_size
+           amp_split(i) = amp_split(i)*xi_i_fks**2*(1d0-y_ij_fks)
+         enddo
       endif
 
 c      if(wgt.lt.0.d0)then
@@ -3949,6 +3954,8 @@ c      include "fks.inc"
       common /c_need_links/need_color_links, need_charge_links
       integer ipos_ord
       include 'orders.inc'
+      double precision amp_split_soft(amp_split_size)
+      common /to_amp_split_soft/amp_split_soft
 
       include "pmass.inc"
 c
@@ -3981,7 +3988,7 @@ C wgt includes the gs/w^2
                   if (need_charge_links) ipos_ord = qed_pos
                   do k=1,amp_split_size
                     amp_split(k) = 
-     $                   amp_split(k) - 2d0 * eik * amp_split_cnt(k,1,ipos_ord)
+     $                   amp_split(k) - 2d0 * eik * amp_split_soft(k)
                   enddo
                endif
             endif

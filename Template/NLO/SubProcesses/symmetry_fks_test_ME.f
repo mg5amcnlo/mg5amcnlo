@@ -129,6 +129,13 @@ c helicity stuff
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
+C split orders stuff
+      include 'orders.inc'
+      integer iamp
+      integer orders(nsplitorders)
+      double precision fxl_split(amp_split_size)
+      double precision limit_split(15,amp_split_size), wlimit_split(15,amp_split_size)
+
 c born configuration stuff
       include 'born_ngraphs.inc'
       include 'born_conf.inc'
@@ -262,6 +269,13 @@ c x_to_f_arg subroutine
       imax=10
       do j=1,nsofttests
       call get_helicity(i_fks,j_fks)
+         do iamp=1,amp_split_size
+           fxl_split(iamp) = 0d0
+           do i = 1,imax
+             limit_split(i,iamp) = 0d0
+             wlimit_split(i,iamp) = 0d0
+           enddo
+         enddo
 
          if(nsofttests.le.10)then
            write (*,*) ' '
@@ -289,11 +303,20 @@ c x_to_f_arg subroutine
          call set_cms_stuff(0)
          call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl) 
          fxl=fxl*jac_cnt(0)
+         ! keep track of the separate splitorders
+         do iamp=1,amp_split_size
+           fxl_split(iamp) = amp_split(iamp)*jac_cnt(0)
+         enddo
 
          call set_cms_stuff(-100)
          call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
          limit(1)=fx*wgt
          wlimit(1)=wgt
+         ! keep track of the separate splitorders
+         do iamp=1,amp_split_size
+           limit_split(1,iamp) = amp_split(iamp)*wgt
+           wlimit_split(1,iamp) = wgt
+         enddo
 
          do k=1,nexternal
             do l=0,3
@@ -315,6 +338,11 @@ c x_to_f_arg subroutine
             call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
             limit(i)=fx*wgt
             wlimit(i)=wgt
+            ! keep track of the separate splitorders
+            do iamp=1,amp_split_size
+              limit_split(i,iamp) = amp_split(iamp)*wgt
+              wlimit_split(i,iamp) = wgt
+            enddo
             do k=1,nexternal
                do l=0,3
                   xp(i,l,k)=p(l,k)
@@ -327,9 +355,25 @@ c x_to_f_arg subroutine
 
          if(nsofttests.le.10)then
            write (*,*) 'Soft limit:'
+           write (*,*) '   Sum of all contributions:'
            do i=1,imax
               call xprintout(6,limit(i),fxl)
            enddo
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0) then
+               write(*,*) '   Split-order', iamp
+               call amp_split_pos_to_orders(iamp,orders)
+               do i = 1, nsplitorders
+                  write(*,*) '      ',ordernames(i), ':', orders(i)
+               enddo
+               do i=1,imax
+                  call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
+               enddo
+             endif
+           enddo
+           
 c
            write(80,*)'  '
            write(80,*)'****************************'
@@ -388,6 +432,13 @@ c in genps_fks_test.f
       imax=10
       do j=1,ncolltests
          call get_helicity(i_fks,j_fks)
+         do iamp=1,amp_split_size
+           fxl_split(iamp) = 0d0
+           do i = 1,imax
+             limit_split(i,iamp) = 0d0
+             wlimit_split(i,iamp) = 0d0
+           enddo
+         enddo
 
          if(ncolltests.le.10)then
             write (*,*) ' '
@@ -415,11 +466,20 @@ c in genps_fks_test.f
          call set_cms_stuff(1)
          call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl) 
          fxl=fxl*jac_cnt(1)
+         ! keep track of the separate splitorders
+         do iamp=1,amp_split_size
+           fxl_split(iamp) = amp_split(iamp)*jac_cnt(1)
+         enddo
 
          call set_cms_stuff(-100)
          call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
          limit(1)=fx*wgt
          wlimit(1)=wgt
+         ! keep track of the separate splitorders
+         do iamp=1,amp_split_size
+           limit_split(1,iamp) = amp_split(iamp)*fx
+           wlimit_split(1,iamp) = amp_split(iamp)
+         enddo
 
          do k=1,nexternal
             do l=0,3
@@ -441,6 +501,11 @@ c in genps_fks_test.f
             call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
             limit(i)=fx*wgt
             wlimit(i)=wgt
+            ! keep track of the separate splitorders
+            do iamp=1,amp_split_size
+              limit_split(i,iamp) = amp_split(iamp)*fx
+              wlimit_split(i,iamp) = amp_split(iamp)
+            enddo
             do k=1,nexternal
                do l=0,3
                   xp(i,l,k)=p(l,k)
@@ -452,9 +517,24 @@ c in genps_fks_test.f
          enddo
          if(ncolltests.le.10)then
             write (*,*) 'Collinear limit:'
+           write (*,*) '   Sum of all contributions:'
             do i=1,imax
                call xprintout(6,limit(i),fxl)
             enddo
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0) then
+               write(*,*) '   Split-order', iamp
+               call amp_split_pos_to_orders(iamp,orders)
+               do i = 1, nsplitorders
+                  write(*,*) '      ',ordernames(i), ':', orders(i)
+               enddo
+               do i=1,imax
+                  call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
+               enddo
+             endif
+           enddo
 c
             write(80,*)'  '
             write(80,*)'****************************'

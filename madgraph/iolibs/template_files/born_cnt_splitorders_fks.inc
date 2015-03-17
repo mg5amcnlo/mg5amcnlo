@@ -24,10 +24,12 @@ C
       save keep_order_cnt 
       integer ord_subtract
       data firsttime / .TRUE. /
+      integer amp_orders(nsplitorders)
 C
 C     FUNCTIONS
 C
       integer GETORDPOWFROMINDEX_B_CNT%(proc_prefix)s
+      integer orders_to_amp_split_pos
 C
 C BEGIN CODE
 C
@@ -68,6 +70,14 @@ endif
 
 CALL SBORN_CNT%(proc_prefix)s_SPLITORDERS(P,ANS)
 
+C reset the amp_split array
+do i = 1, amp_split_size
+  do j = 1, nsplitorders
+    amp_split_cnt(i,1,j) = 0d0
+    amp_split_cnt(i,2,j) = 0d0
+  enddo
+enddo
+
 C quantities for the counterterms
 do j = 1, nsplitorders
  ans_cnt(1,j) = dcmplx(0d0, 0d0)
@@ -76,6 +86,15 @@ do j = 1, nsplitorders
   if (keep_order_cnt(j,i)) then 
    ANS_CNT(1,j) = ANS_CNT(1,J) + ANS(1,I)
    ANS_CNT(2,j) = ANS_CNT(2,J) + ANS(2,I)
+C   keep track of the separate pieces also for counterterms
+   do k = 1, nsplitorders
+      amp_orders(k) = GETORDPOWFROMINDEX_B_CNT%(proc_prefix)s(k, i)
+C take into account the fact that the counterterm for a given split order
+C will be multiplied by the corresponding squared coupling
+      if (k.eq.j) amp_orders(k) = amp_orders(k) + 2
+   enddo
+   amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,j) = ans(1,I)
+   amp_split_cnt(orders_to_amp_split_pos(amp_orders),2,j) = ans(2,I)
   endif
  enddo
 enddo
