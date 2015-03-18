@@ -6048,11 +6048,15 @@ c      include "fks.inc"
       double precision wgt1
       double precision born,wgt,kikj,dot,vij,aso2pi,aeo2pi
       double precision contr1, contr2
-      integer aj,i,j,m,n,ilink
+      integer aj,i,j,m,n,ilink,k
       double precision pmass(nexternal),zero,pi
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
       include 'orders.inc'
+      double precision amp_split_poles_FKS(amp_split_size,2)
+      common /to_amp_split_poles_FKS/amp_split_poles_FKS
+      double precision amp_split_soft(amp_split_size)
+      common /to_amp_split_soft/amp_split_soft
       complex*16 ans_cnt(2, nsplitorders)
       common /c_born_cnt/ ans_cnt
       logical need_color_links, need_charge_links
@@ -6063,6 +6067,7 @@ c      include "fks.inc"
       INTEGER nFKSprocess, nFKSprocess_save, nFKSprocess_col, nFKSprocess_chg
       COMMON/c_nFKSprocess/nFKSprocess
       logical need_color_links_used, need_charge_links_used
+      double precision soft_fact
 
       include "pmass.inc"
 
@@ -6090,6 +6095,11 @@ C links
 
       double=0.d0
       single=0.d0
+      ! reset the amp_split_poles_FKS
+      do i=1,amp_split_size
+        amp_split_poles_FKS(i,1)=0d0
+        amp_split_poles_FKS(i,2)=0d0
+      enddo
       aso2pi=g**2/(8*pi**2)
       aeo2pi=dble(gal(1))**2/(8*pi**2)
       call sborn(p_born,wgt1)
@@ -6112,8 +6122,16 @@ c QCD Born terms
           endif
         endif
       enddo
+
       double=double+contr2*born*aso2pi
       single=single+contr1*born*aso2pi
+
+      do i=1,amp_split_size
+        amp_split_poles_FKS(i,1) = amp_split_poles_FKS(i,1)+
+     %      dble(amp_split_cnt(i,1,qcd_pos))*contr1*aso2pi
+        amp_split_poles_FKS(i,2) = amp_split_poles_FKS(i,2)+
+     %      dble(amp_split_cnt(i,1,qcd_pos))*contr2*aso2pi
+      enddo
 
 c QED Born terms
       contr1 = 0d0
@@ -6133,8 +6151,16 @@ c QED Born terms
           endif
         endif
       enddo
+
       double=double+contr2*born*aeo2pi
       single=single+contr1*born*aeo2pi
+
+      do i=1,amp_split_size
+        amp_split_poles_FKS(i,1) = amp_split_poles_FKS(i,1)+
+     %      dble(amp_split_cnt(i,1,qed_pos))*contr1*aeo2pi
+        amp_split_poles_FKS(i,2) = amp_split_poles_FKS(i,2)+
+     %      dble(amp_split_cnt(i,1,qed_pos))*contr2*aeo2pi
+      enddo
 
 c Colour and charge-linked Born terms
       nFKSprocess_save = nFKSprocess
@@ -6169,23 +6195,26 @@ c The factor -2 compensate for that missing in sborn_sf
               if(wgt.ne.0.d0)then
                 if(pmass(m).eq.zero.and.pmass(n).eq.zero)then
                   kikj=dot(p(0,n),p(0,m))
-                  contr1=contr1+log(2*kikj/QES2)*wgt
+                  soft_fact=log(2*kikj/QES2)
                 elseif(pmass(m).ne.zero.and.pmass(n).eq.zero)then
-                  contr1=contr1-0.5d0*log(pmass(m)**2/QES2)*wgt
                   kikj=dot(p(0,n),p(0,m))
-                  contr1=contr1+log(2*kikj/QES2)*wgt
+                  soft_fact=-0.5d0*log(pmass(m)**2/QES2)+log(2*kikj/QES2)
                 elseif(pmass(m).eq.zero.and.pmass(n).ne.zero)then
-                  contr1=contr1-0.5d0*log(pmass(n)**2/QES2)*wgt
                   kikj=dot(p(0,n),p(0,m))
-                  contr1=contr1+log(2*kikj/QES2)*wgt
+                  soft_fact=-0.5d0*log(pmass(n)**2/QES2)+log(2*kikj/QES2)
                 elseif(pmass(m).ne.zero.and.pmass(n).ne.zero)then
                   kikj=dot(p(0,n),p(0,m))
                   vij=sqrt(1-(pmass(n)*pmass(m)/kikj)**2)
-                  contr1=contr1+0.5d0*1/vij*log((1+vij)/(1-vij))*wgt
+                  soft_fact=0.5d0*1/vij*log((1+vij)/(1-vij))
                 else
                   write(*,*)'Error in getpoles',i,j,n,m,pmass(n),pmass(m)
                   stop
                 endif
+                contr1=contr1+soft_fact*wgt
+                do k=1,amp_split_size
+                  amp_split_poles_FKS(k,1)=amp_split_poles_FKS(k,1)+
+     $             amp_split_soft(k)*(-2d0)*soft_fact*oneo8pi2
+                enddo
               endif
             endif
           enddo

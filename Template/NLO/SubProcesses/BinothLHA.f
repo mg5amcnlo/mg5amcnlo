@@ -86,6 +86,12 @@ c statistics for MadLoop
       logical, allocatable, save :: keep_order(:)
       include 'orders.inc'
       integer amp_orders(nsplitorders)
+      integer split_amp_orders(nsplitorders), iamp
+      double precision amp_split_poles_ML(amp_split_size,2),
+     $ amp_split_poles_FKS(amp_split_size,2)
+      common /to_amp_split_poles_FKS/amp_split_poles_FKS
+      logical force_polecheck, polecheck_passed
+      common /to_polecheck/force_polecheck, polecheck_passed
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -101,6 +107,8 @@ c Ellis-Sexton scale)
 C     reset the amp_split array
       do i = 1, amp_split_size
         amp_split(i) = 0d0
+        amp_split_poles_ML(i,1) = 0d0
+        amp_split_poles_ML(i,2) = 0d0
       enddo
       prec_found = 1.0d0
       symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
@@ -117,6 +125,7 @@ c splips unnoticed.
          CALL FORCE_STABILITY_CHECK(.TRUE.)
          firsttime_run = .false.
       endif
+      firsttime=firsttime.or.force_polecheck
       if (firsttime) then
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
@@ -150,7 +159,9 @@ C          different coupling combinations
            do j = 1, nsplitorders
             amp_orders(j) = getordpowfromindex_ML5(j, i)
            enddo
-           amp_split(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i)
+           amp_split(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
+           amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
+           amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i) / symfactvirt
         enddo
       else
          tolerance=PrecisionVirtualAtRunTime
@@ -168,9 +179,11 @@ c once the initial pole check is performed.
 C         keep track of the separate pieces correspoinding to
 C          different coupling combinations
                 do j = 1, nsplitorders
-                 amp_orders(j) = getordpowfromindex_ML5(j, i)
+                 amp_orders(j) = getordpowfromindex_ML5(j, i) / symfactvirt
                 enddo
-                amp_split(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i)
+                amp_split(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i) / symfactvirt
               endif
             enddo
          elseif (mc_hel.eq.1) then
@@ -246,23 +259,59 @@ c MadLoop initialization PS points.
       if ((firsttime .or. mc_hel.eq.0) .and. mod(ret_code,100)/10.ne.3
      $     .and. mod(ret_code,100)/10.ne.4) then 
          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
-         avgPoleRes(1)=(single+madfks_single)/2.0d0
-         avgPoleRes(2)=(double+madfks_double)/2.0d0
-         PoleDiff(1)=dabs(single - madfks_single)
-         PoleDiff(2)=dabs(double - madfks_double)
-         if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
+         ! loop over the full result and each of the amp_split
+         ! contribution
+         do iamp=0,amp_split_size
+          ! skip 0 contributions in the ap_split array
+          if (iamp.ne.0.and.amp_split_poles_FKS(iamp,1).eq.0d0.and.
+     $     amp_split_poles_FKS(iamp,1).eq.0d0) cycle
+          if (iamp.eq.0) then
+            write(*,*) ''
+            write(*,*) 'Sum of all split-orders'
+          else
+            write(*,*) ''
+            write(*,*) 'Splitorders', iamp
+             call amp_split_pos_to_orders(iamp,split_amp_orders)
+             do i = 1, nsplitorders
+               write(*,*) '      ',ordernames(i), ':', split_amp_orders(i)
+             enddo
+             single=amp_split_poles_ML(iamp,1)
+             double=amp_split_poles_ML(iamp,2)
+             madfks_single=amp_split_poles_FKS(iamp,1)
+             madfks_double=amp_split_poles_FKS(iamp,2)
+          endif
+          avgPoleRes(1)=(single+madfks_single)/2.0d0
+          avgPoleRes(2)=(double+madfks_double)/2.0d0
+          PoleDiff(1)=dabs(single - madfks_single)
+          PoleDiff(2)=dabs(double - madfks_double)
+          if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
             cpol = .not. (((PoleDiff(1)+PoleDiff(2))/
      $           (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
      $           tolerance*10d0)
-         else
+          else
             cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0)
-         endif
-         if (tolerance.lt.0.0d0) then
+          endif
+          if (tolerance.lt.0.0d0) then
             cpol = .false.
-         endif
-         if (.not. cpol .and. firsttime) then
+          endif
+          if (.not. cpol .and. firsttime) then
             write(*,*) "---- POLES CANCELLED ----"
-            firsttime = .false.
+            write(*,*) " COEFFICIENT DOUBLE POLE:"
+            write(*,*) "       MadFKS: ", madfks_double,
+     &           "          OLP: ", double
+            write(*,*) " COEFFICIENT SINGLE POLE:"
+            write(*,*) "       MadFKS: ",madfks_single,
+     &           "          OLP: ",single
+            if (iamp.eq.0) then
+                write(*,*) " FINITE:"
+                write(*,*) "          OLP: ",virt_wgt
+                write(*,*) "          BORN: ",born_wgt
+                write(*,*) " MOMENTA (Exyzm): "
+                do i = 1, nexternal-1
+                   write(*,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
+                enddo
+            endif
+            polecheck_passed = .true.
             if (mc_hel.ne.0) then
 c Set-up the MC over helicities. This assumes that the 'HelFilter.dat'
 c exists, which should be the case when firsttime is false.
@@ -321,7 +370,8 @@ c or more non-zero (independent) helicities
                endif
                close(67)
             endif
-         elseif(cpol .and. firsttime) then
+          elseif(cpol .and. firsttime) then
+            polecheck_passed = .false.
             write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
      &           tolerance*10d0
             write(*,*) " COEFFICIENT DOUBLE POLE:"
@@ -330,13 +380,15 @@ c or more non-zero (independent) helicities
             write(*,*) " COEFFICIENT SINGLE POLE:"
             write(*,*) "       MadFKS: ",madfks_single,
      &           "          OLP: ",single
-            write(*,*) " FINITE:"
-            write(*,*) "          OLP: ",virt_wgt
-            write(*,*) 
-            write(*,*) " MOMENTA (Exyzm): "
-            do i = 1, nexternal-1
-               write(*,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
-            enddo
+            if (iamp.eq.0) then
+                write(*,*) " FINITE:"
+                write(*,*) "          OLP: ",virt_wgt
+                write(*,*) "          BORN: ",born_wgt
+                write(*,*) " MOMENTA (Exyzm): "
+                do i = 1, nexternal-1
+                   write(*,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
+                enddo
+            endif
             write(*,*) 
             write(*,*) " SCALE**2: ", QES2
             if (nbad .lt. nbadmax) then
@@ -346,7 +398,9 @@ c or more non-zero (independent) helicities
                write(*,*) " TOO MANY FAILURES, QUITTING"
                stop
             endif
-         endif
+          endif
+         enddo
+         firsttime = .false.
       endif
 c Update the statistics using the MadLoop return code (ret_code)
       ntot = ntot+1             ! total number of PS

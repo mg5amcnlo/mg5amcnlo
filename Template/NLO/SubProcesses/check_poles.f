@@ -26,7 +26,7 @@ C
       double precision fks_double, fks_single
       double precision, allocatable :: virt_wgts(:,:)
       double precision double, single, finite
-      double precision born
+      double precision born, virt_wgt
       double precision totmass
       logical calculatedborn
       common/ccalculatedborn/calculatedborn
@@ -60,11 +60,14 @@ cc
       include 'orders.inc'
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
+      logical force_polecheck, polecheck_passed
+      common /to_polecheck/force_polecheck, polecheck_passed
       include 'FKSParams.inc'
       
 C-----
 C  BEGIN CODE
 C-----  
+      force_polecheck = .true.
       if (first_time) then
           call get_nsqso_loop(nsqso)          
           allocate(virt_wgts(0:3,0:nsqso))
@@ -188,34 +191,12 @@ c initialization
               p_born(j,k) = prambo(j,k-nincoming)
             enddo
           enddo
-
           call sborn(p_born, born)
-          call sloopmatrix_thres(p_born,virt_wgts,tolerance,
-     1 accuracies,return_code)
-          accuracy=accuracies(0)
-
-C        look for orders which match the nlo order constraint 
-         do i = 1, nsqso
-           keep_order(i) = .true.
-           do j = 1, nsplitorders
-             if(getordpowfromindex_ML5(j, i) .gt. nlo_orders(j)) then
-               keep_order(i) = .false.
-               exit
-             endif
-           enddo
-           if (keep_order(i)) then
-             write(*,*) 'VIRT: keeping split order ', i
-           else
-             write(*,*) 'VIRT: not keeping split order ', i
-           endif
-         enddo
-         do i = 1, nsqso
-           if (keep_order(i)) then
-             finite  = finite + virt_wgts(1,i) / symfactvirt
-             single  = single + virt_wgts(2,i) / symfactvirt
-             double  = double + virt_wgts(3,i) / symfactvirt
-           endif
-         enddo
+          ! extra initialisation call
+          if (npointsChecked.eq.0)call BinothLHA(p_born, born, virt_wgt)
+          call BinothLHA(p_born, born, virt_wgt)
+          write(*,*) 'MU_R    = ', ren_scale
+          write(*,*) 'ALPHA_S = ', G**2/4d0/pi
 
 C         If MadLoop was still in initialization mode, then skip this
 C         point for the checks
@@ -230,59 +211,26 @@ C         Otherwise, perform the check
             p(j, nexternal) = 0d0
           enddo
 
-          call getpoles(p, mu_r**2, fks_double, fks_single, fksprefact)
-
           if ( tolerance.lt.0.0d0 ) then
-                write(*,*) 'PASSED', tolerance
+               write(*,*) 'PASSED', tolerance
           else
-          if ( dabs(double).gt.dabs(single)*tiny ) then
-             if ((dabs((double-fks_double)/double).gt.tolerance).or. 
-     1            (dabs((single-fks_single)/single).gt.tolerance)) then
-                nfail = nfail + 1
-                write(*,*) 'FAILED', tolerance
-             else
+              if (polecheck_passed) then
                 write(*,*) 'PASSED', tolerance
-             endif
-          elseif ( fks_double.ne.0d0 ) then
-             if ((dabs((double-fks_double)/fks_double).gt.tolerance).or. 
-     1            (dabs((single-fks_single)/single).gt.tolerance)) then
-                nfail = nfail + 1
+              else
                 write(*,*) 'FAILED', tolerance
-             else
-                write(*,*) 'PASSED', tolerance
-             endif
-          else
-             if (dabs((single-fks_single)/single).gt.tolerance) then
-                nfail = nfail + 1
-                write(*,*) 'FAILED', tolerance
-             else
-                write(*,*) 'PASSED', tolerance
-             endif
+                nfail=nfail+1
+                stop
+              endif
           endif
-          endif
-          write(*,*) 'MU_R    = ', ren_scale
-          write(*,*) 'ALPHA_S = ', G**2/4d0/pi
-          write(*,*) 'BORN                 ', born
-          write(*,*) 'SINGLE POLE (MadFKS) ', fks_single 
-          write(*,*) 'DOUBLE POLE (MadFKS) ', fks_double 
-          write(*,*) 'SINGLE POLE (MadLoop)', single 
-          write(*,*) 'DOUBLE POLE (MadLoop)', double 
-          write(*,*) 'FINITE PART (MadLoop)', finite 
-          do j = 1, nexternal - 1
-            write(*,*) p(0,j), p(1,j), p(2,j), p(3,j), pmass(j)
-          enddo
           write(*,*)
 
       if (npointsChecked.lt.npoints) goto 200 
-
 
           write(*,*) 'NUMBER OF POINTS PASSING THE CHECK', 
      1     npoints - nfail
           write(*,*) 'NUMBER OF POINTS FAILING THE CHECK', 
      1     nfail
           write(*,*) 'TOLERANCE ', tolerance
-
-
 
       return
       end
