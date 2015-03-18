@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# For support of LHAPATH in cluster mode
+if [ $CLUSTER_LHAPATH ]; then 
+  export LHAPATH=$CLUSTER_LHAPATH;
+fi
+
 if [[ -e MadLoop5_resources.tar.gz && ! -e MadLoop5_resources ]]; then
 tar -xzf MadLoop5_resources.tar.gz;
 fi
