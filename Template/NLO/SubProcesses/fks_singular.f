@@ -3202,6 +3202,9 @@ c entering this function
             call sborncol_fsr(pp,xi_i_fks,y_ij_fks,wgt)
          else
             wgt=0d0
+            do i=1,amp_split_size
+              amp_split(i) = 0d0
+            enddo
          endif
       elseif (xi_i_fks.lt.tiny)then
          if (need_color_links.or.need_charge_links)then
@@ -3209,6 +3212,9 @@ c has soft singularities
             call sbornsoft(pp,xi_i_fks,y_ij_fks,wgt)
          else
             wgt=0d0
+            do i=1,amp_split_size
+              amp_split(i) = 0d0
+            enddo
          endif
       else
          call smatrix_real(pp,wgt)
