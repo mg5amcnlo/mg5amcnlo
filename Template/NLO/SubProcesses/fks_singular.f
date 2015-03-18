@@ -4141,18 +4141,21 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 
-      double precision amp_split_deg_xi(amp_split_size), 
-                       amp_split_deg_lxi(amp_split_size)
 C keep track of each split orders
+      integer iamp
+      double precision amp_split_deg_xi(amp_split_size), 
+     $                  amp_split_deg_lxi(amp_split_size)
       common /to_amp_split_deg/amp_split_deg_xi,amp_split_deg_lxi
 
       if(j_fks.gt.nincoming)then
 c Do not include this contribution for final-state branchings
          collrem_xi=0.d0
          collrem_lxi=0.d0
-         wgtdegrem_xi=0.d0
-         wgtdegrem_lxi=0.d0
-         wgtdegrem_muF=0.d0
+         if(doreweight)then
+           wgtdegrem_xi=0.d0
+           wgtdegrem_lxi=0.d0
+           wgtdegrem_muF=0.d0
+         endif
          return
       endif
 
@@ -4161,9 +4164,11 @@ c Unphysical kinematics: set matrix elements equal to zero
          write (*,*) "No born momenta in sreal_deg"
          collrem_xi=0.d0
          collrem_lxi=0.d0
-         wgtdegrem_xi=0.d0
-         wgtdegrem_lxi=0.d0
-         wgtdegrem_muF=0.d0
+         if(doreweight)then
+           wgtdegrem_xi=0.d0
+           wgtdegrem_lxi=0.d0
+           wgtdegrem_muF=0.d0
+         endif
          return
       endif
 
@@ -4176,9 +4181,9 @@ c entering this function
         stop
       endif
 
-      do i = 1, amp_split_size
-        amp_split_deg_xi(i) = 0d0
-        amp_split_deg_lxi(i) = 0d0
+      do iamp = 1, amp_split_size
+        amp_split_deg_xi(iamp) = 0d0
+        amp_split_deg_lxi(iamp) = 0d0
       enddo
 
 c A factor gS^2 is included in the Altarelli-Parisi kernels
@@ -4233,20 +4238,30 @@ c factor z (implicit in the flux of the reduced Born in FKS)
 c has to be inserted here
         xnorm=1.d0/z
 
-        collrem_xi=oo2pi * dble(wgt1(1)) * collrem_xi * xnorm
-        collrem_lxi=oo2pi *dble(wgt1(1)) * collrem_lxi * xnorm
-        do iamp=1,amp_split_size
+        collrem_xi=collrem_xi + oo2pi*dble(wgt1(1))*collrem_xi_tmp*
+     &       xnorm
+        collrem_lxi=collrem_lxi + oo2pi*dble(wgt1(1))*collrem_lxi_tmp*
+     &       xnorm
 
-        wgtdegrem_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
+        do iamp = 1, amp_split_size
+          amp_split_deg_xi(iamp) = amp_split_deg_xi(iamp)+ 
+     &     dble(amp_split_cnt(iamp,1,iord))*oo2pi*collrem_xi_tmp*xnorm
+          amp_split_deg_lxi(iamp) = amp_split_deg_lxi(iamp)+
+     &     dble(amp_split_cnt(iamp,1,iord))*oo2pi*collrem_lxi_tmp*xnorm
+        enddo
+
+        if(doreweight)then
+          wgtdegrem_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
      #               apprime(iap) - xkkern 
-        wgtdegrem_xi=oo2pi * dble(wgt1(1)) * wgtdegrem_xi * xnorm
-        wgtdegrem_lxi=collrem_lxi
-        wgtdegrem_muF= - oo2pi * dble(wgt1(1)) * ap(iap) * xnorm
+          wgtdegrem_xi=oo2pi * dble(wgt1(1)) * wgtdegrem_xi * xnorm
+          wgtdegrem_lxi=collrem_lxi
+          wgtdegrem_muF= - oo2pi * dble(wgt1(1)) * ap(iap) * xnorm
+        endif
       enddo
       calculatedborn=.false.
 
       return
-
+      end
 
 
       subroutine set_cms_stuff(icountevts)
@@ -5155,6 +5170,16 @@ c For the MINT folding
       COMMON/c_nFKSprocess/nFKSprocess
       data nFKSprocess_col / 0 /
       data nFKSprocess_chg / 0 /
+C to keep track of the various split orders
+      integer iamp
+      double precision amp_split_bsv(amp_split_size)
+      double precision amp_split_soft(amp_split_size)
+      common /to_amp_split_soft/amp_split_soft
+      double precision amp_split_virt_save(amp_split_size)
+      save amp_split_virt_save
+      double precision amp_split_virt(amp_split_size)
+      common /to_amp_split_virt/amp_split_virt
+
       include "pmass.inc"
       
       if (firsttime) then
@@ -5193,6 +5218,11 @@ C links
       aso2pi=g**2/(8*pi**2)
       aeo2pi=dble(gal(1))**2/(8*pi**2)
 
+      do iamp=1,amp_split_size
+        amp_split_bsv(iamp)=0d0
+        amp_split_virt(iamp)=0d0
+      enddo
+
       if (.not.(need_color_links_used.or.need_charge_links_used
      #    .or.abrv.eq.'grid')) then
 C just return 0
@@ -5222,6 +5252,9 @@ c Born contribution:
       bsv_wgt=wgt1
       born_wgt=wgt1
       virt_wgt=0d0
+      do iamp=1,amp_split_size
+        amp_split_bsv(iamp)=amp_split_bsv(iamp)+amp_split(iamp)
+      enddo
 
       if (abrv.eq.'born' .or. abrv.eq.'grid') goto 549
       if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
@@ -5340,11 +5373,20 @@ c 1+2+3+4
             endif
          enddo
 C end of the external particle loop
-         if (ipos_ord.eq.qcd_pos) bsv_wgt =
-     $      bsv_wgt+aso2pi*Q*dble(ans_cnt(1,qcd_pos))
-         if (ipos_ord.eq.qed_pos) bsv_wgt =
-     $      bsv_wgt+aeo2pi*Q*dble(ans_cnt(1,qed_pos))
-
+         if (ipos_ord.eq.qcd_pos) then 
+           bsv_wgt = bsv_wgt+aso2pi*Q*dble(ans_cnt(1,qcd_pos))
+           do iamp=1,amp_split_size
+             amp_split_bsv(iamp)=amp_split_bsv(iamp)+aso2pi*Q*
+     $          dble(amp_split_cnt(iamp,1,qcd_pos))
+           enddo
+         endif
+         if (ipos_ord.eq.qed_pos) then
+           bsv_wgt = bsv_wgt+aeo2pi*Q*dble(ans_cnt(1,qed_pos))
+           do iamp=1,amp_split_size
+             amp_split_bsv(iamp)=amp_split_bsv(iamp)+aeo2pi*Q*
+     $          dble(amp_split_cnt(iamp,1,qed_pos))
+           enddo
+         endif
       enddo
 
 
@@ -5389,6 +5431,10 @@ C wgt includes the gs/w^2
                  if (wgt.ne.0d0) then
                     call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
                     contr=contr+wgt*eikIreg
+                    do k=1,amp_split_size
+                      amp_split_bsv(k) = amp_split_bsv(k) - 
+     &                 2d0 * eikIreg * oneo8pi2 * amp_split_soft(k)
+                    enddo
                  endif
               endif
            enddo
@@ -5418,6 +5464,9 @@ c convert to Binoth Les Houches Accord standards
                Call BinothLHA(p_born,born_wgt,virt_wgt)
 c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                call cpu_time(tAfter)
+               do iamp=1,amp_split_size
+                 amp_split_virt(iamp)=amp_split(iamp)
+               enddo
                tOLP=tOLP+(tAfter-tBefore)
                virtual_over_born=virt_wgt/(born_wgt*aso2pi)
                virt_wgt=(virt_wgt-average_virtual*born_wgt*aso2pi)
@@ -5485,6 +5534,10 @@ CMZ         else
 CMZ            wgtnstmp=0d0
 CMZ            wgtwnstmpmur=0.d0
 CMZ         endif
+
+      do iamp=1,amp_split_size
+        amp_split(iamp)=amp_split_bsv(iamp)
+      enddo
 
       if (abrv(1:2).eq.'vi') then
         bsv_wgt=bsv_wgt-born_wgt
