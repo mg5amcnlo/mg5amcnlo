@@ -4141,6 +4141,11 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 
+      double precision amp_split_deg_xi(amp_split_size), 
+                       amp_split_deg_lxi(amp_split_size)
+C keep track of each split orders
+      common /to_amp_split_deg/amp_split_deg_xi,amp_split_deg_lxi
+
       if(j_fks.gt.nincoming)then
 c Do not include this contribution for final-state branchings
          collrem_xi=0.d0
@@ -4171,10 +4176,10 @@ c entering this function
         stop
       endif
 
-      calculatedborn=.false.
-      call sborn(p_born,wgt_born)
-      if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
-      calculatedborn=.false.
+      do i = 1, amp_split_size
+        amp_split_deg_xi(i) = 0d0
+        amp_split_deg_lxi(i) = 0d0
+      enddo
 
 c A factor gS^2 is included in the Altarelli-Parisi kernels
       oo2pi=one/(8d0*PI**2)
@@ -4187,6 +4192,7 @@ c A factor gS^2 is included in the Altarelli-Parisi kernels
 
       collrem_xi=0.d0
       collrem_lxi=0.d0
+      calculatedborn=.false.
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
 
@@ -4194,10 +4200,12 @@ C check if any extra_cnt is needed
         if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
             ! this is the contribution from the born ME
+               call sborn(p_born,wgt_born)
                wgt1(1) = ans_cnt(1,iord)
                wgt1(2) = ans_cnt(2,iord)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
+               call extra_cnt(p_born,iextra_cnt,ans_extra_cnt)
                wgt1(1) = ans_extra_cnt(1,iord)
                wgt1(2) = ans_extra_cnt(2,iord)
             else
@@ -4205,6 +4213,7 @@ C check if any extra_cnt is needed
                stop
             endif
         else
+           call sborn(p_born,wgt_born)
            wgt1(1) = ans_cnt(1,iord)
            wgt1(2) = ans_cnt(2,iord)
         endif
@@ -4226,6 +4235,7 @@ c has to be inserted here
 
         collrem_xi=oo2pi * dble(wgt1(1)) * collrem_xi * xnorm
         collrem_lxi=oo2pi *dble(wgt1(1)) * collrem_lxi * xnorm
+        do iamp=1,amp_split_size
 
         wgtdegrem_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
      #               apprime(iap) - xkkern 
@@ -4233,9 +4243,10 @@ c has to be inserted here
         wgtdegrem_lxi=collrem_lxi
         wgtdegrem_muF= - oo2pi * dble(wgt1(1)) * ap(iap) * xnorm
       enddo
+      calculatedborn=.false.
 
       return
-      end
+
 
 
       subroutine set_cms_stuff(icountevts)
