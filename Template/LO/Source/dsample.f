@@ -221,6 +221,8 @@ c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
          write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
+c     Write out MadLoop statistics, if any
+      call output_madloop_statistics(66)
       flush(66)
       close(66, status='KEEP')
       else
@@ -228,6 +230,8 @@ c      do i=1,cur_it-1
          write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,kevent,nw,
      &     1,0,0.,0.,0.,0.,0.,0
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
+c        Write out MadLoop statistics, if any
+         call output_madloop_statistics(66)
          flush(66)
          close(66, status='KEEP')
 
@@ -385,6 +389,8 @@ c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
          write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
+c     Write out MadLoop statistics, if any
+      call output_madloop_statistics(66)      
       flush(66)
       close(66, status='KEEP')
       else
@@ -392,12 +398,66 @@ c      do i=1,cur_it-1
          write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,kevent,nw,
      &     1,0,0.,0.,0.,0.,0.,0
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
+c        Write out MadLoop statistics, if any
+         call output_madloop_statistics(66)
          flush(66)
          close(66, status='KEEP')
 
       endif      
 
       end
+
+      subroutine output_madloop_statistics(outUnit)
+c***********************************************************************
+c     Writes out the madloop runtime statistics to the unit in argument
+c***********************************************************************
+      use StringCast
+      implicit none
+c
+c     Arguments
+c
+      integer outUnit
+c
+c     Global
+c
+      INTEGER U_RETURN_CODES(0:9)
+      INTEGER T_RETURN_CODES(0:9)
+      INTEGER H_RETURN_CODES(0:9)
+      DOUBLE PRECISION AVG_TIMING
+      DOUBLE PRECISION MAX_PREC, MIN_PREC
+      INTEGER N_EVALS
+      DATA U_RETURN_CODES/10*0/
+      DATA T_RETURN_CODES/10*0/
+      DATA H_RETURN_CODES/10*0/
+      DATA MAX_PREC /-1.0d0/
+      DATA MIN_PREC /1.0d99/
+      DATA AVG_TIMING/0.0d0/
+      DATA N_EVALS/0/
+      COMMON/MADLOOPSTATS/AVG_TIMING,MAX_PREC,MIN_PREC,N_EVALS,
+     &       U_RETURN_CODES,T_RETURN_CODES,H_RETURN_CODES
+
+c-----
+c  Begin Code
+c-----
+      if (N_EVALS.eq.0) then
+        return
+      endif
+      
+      write(outUnit,*) '<run_statistics> '
+      write(outUnit,33) '<u_return_code>',U_RETURN_CODES,'</u_return_code>'
+      write(outUnit,33) '<t_return_code>',T_RETURN_CODES,'</t_return_code>'
+      write(outUnit,33) '<h_return_code>',H_RETURN_CODES,'</h_return_code>'
+      write(outUnit,*) '<average_time>'//trim(toStr_real(AVG_TIMING))
+     & //'</average_time>'
+      write(outUnit,*) '<max_prec>'//trim(toStr_real(MAX_PREC))//'</max_prec>'
+      write(outUnit,*) '<min_prec>'//trim(toStr_real(MIN_PREC))//'</min_prec>'
+      write(outUnit,*) '<n_evals>'//trim(toStr_int(N_EVALS))//'</n_evals>'   
+      write(outUnit,*) '</run_statistics>'
+      
+33    FORMAT( a15,i12,',',i12',',i12',',i12',',i12',
+     &        ',i12',',i12',',i12',',i12',',i12,a16)
+
+      end subroutine
 
       subroutine sample_writehtm()
 c***********************************************************************
@@ -2166,6 +2226,8 @@ c 23   close(22)
       write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,0,0,
      &     0,1,0.,0.,0.,0.,0.,0
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
+c     Write out MadLoop statistics, if any
+      call output_madloop_statistics(66)
       flush(66)
       close(66, status='KEEP')
 

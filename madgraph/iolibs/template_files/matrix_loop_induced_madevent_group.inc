@@ -52,6 +52,8 @@ C
         DATA NGOOD /0,0/
         DATA ISHEL/0,0/
 
+		real t_before
+
 C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
 	    type(SampledDimension) ref_helicity_grid
 
@@ -155,8 +157,9 @@ C Of course this option can also not be used for polarized beams.
 
     IF(Force_ML_Helicity_Sum )THEN
         
+	    call cpu_time(t_before)
 	    CALL %(ml_prefix)sSLOOPMATRIX_THRES(P,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
-		ANS = ANS_ML(1,0)
+		CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(t_before,ANS,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
 
     ELSE
 !   If the helicity grid status is 0, this means that it is not yet initialized.
@@ -164,10 +167,12 @@ C Of course this option can also not be used for polarized beams.
     IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       	 DO I=1,NCOMB
          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.OR.ISUM_HEL.ne.0) THEN
-	    	
+	        
+		    call cpu_time(t_before)
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
-			T = ANS_ML(1,0)
-            DO JJ=1,JAMP2(0)
+			CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
+            
+			DO JJ=1,JAMP2(0)
               JAMP2(JJ) = JAMP2(JJ) + ML_JAMP2(JJ)
             ENDDO
             DO JJ=1,NLOOPDIAGRAMS
@@ -226,9 +231,11 @@ C Of course this option can also not be used for polarized beams.
       ELSE ! random helicity
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
-            
+	        
+			call cpu_time(t_before)            
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
-			T = ANS_ML(1,0)
+			CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
+	
             DO JJ=1,JAMP2(0)
               JAMP2(JJ) = JAMP2(JJ) + ML_JAMP2(JJ)
             ENDDO
@@ -284,3 +291,81 @@ c         Set right sign for ANS, based on sign of chosen helicity
 C Amplitude(s) for diagram number %(n_tot_diags)d
 C This last line is a tag do not remove it. 
 	END
+
+	SUBROUTINE PROCESS_MADLOOP_OUTPUT%(proc_id)s(time_before, me_answer, finite, OneEps, TwoEps, prec, return_code)
+c
+c   Simply registers the madloop return code and timing into the
+C   global variables
+c
+    implicit none
+C
+C	Arguments
+C
+	real time_before
+	integer return_code
+	double precision me_answer, finite, OneEps, TwoEps, prec
+C
+C	Local variables
+C
+	real time_after
+	integer u,t,h
+c
+c	Global variables
+c
+c   To monitor MadLoop computational aspects.
+    INTEGER U_RETURN_CODES(0:9)
+    INTEGER T_RETURN_CODES(0:9)
+    INTEGER H_RETURN_CODES(0:9)
+    DOUBLE PRECISION AVG_TIMING
+    DOUBLE PRECISION MAX_PREC, MIN_PREC	
+    INTEGER N_EVALS
+    COMMON/MADLOOPSTATS/AVG_TIMING,MAX_PREC,MIN_PREC,N_EVALS,U_RETURN_CODES,T_RETURN_CODES,H_RETURN_CODES
+
+    INTEGER WARNING_COUNTERS(2)
+	DATA WARNING_COUNTERS/2*0/
+
+c   ----
+c   Begin code
+c   ----
+
+	call cpu_time(time_after)
+    AVG_TIMING = (AVG_TIMING * N_EVALS + (time_after-time_before)) / DBLE(N_EVALS+1)
+	N_EVALS = N_EVALS + 1
+
+	U = mod(RETURN_CODE,10)
+	U_RETURN_CODES(U) = U_RETURN_CODES(U)+1
+	T = (mod(RETURN_CODE,100)-U)/10
+	T_RETURN_CODES(T) = T_RETURN_CODES(T)+1	
+	H = (mod(RETURN_CODE,1000)-10*T-U)/100
+	H_RETURN_CODES(H) = H_RETURN_CODES(H)+1
+
+	MAX_PREC = max(PREC, MAX_PREC)
+	MIN_PREC = min(PREC, MIN_PREC)
+
+	IF (H.eq.4) THEN
+	  WARNING_COUNTERS(1) = WARNING_COUNTERS(1) + 1
+	  IF (WARNING_COUNTERS(1).le.10) THEN
+	    WRITE(*,*) "WARNING :: MadLoop encountered an exceptional unstable PS point. Its weight is set to 0. Details should be provided by MadLoop before in this log file."
+      ENDIF
+	  IF (WARNING_COUNTERS(1).eq.10) THEN
+	    WRITE(*,*) "WARNING :: Further warnings about exceptional unstable PS points now suppressed (past the first 10)."
+	  ENDIF
+	  me_answer = 0.0d0
+	  RETURN
+	ENDIF
+
+	me_answer = FINITE
+
+	IF (((OneEps+TwoEps)/finite).gt.(1000d0*PREC)) THEN
+	  WARNING_COUNTERS(2) = WARNING_COUNTERS(2) + 1
+	  IF (WARNING_COUNTERS(2).le.10) THEN
+	    WRITE(*,*) "WARNING : The residue of the single and double pole of the loop matrix element being integrated does not seem to vanish."
+		WRITE(*,*) "          Its contribution relative to the finite part is : ",((OneEps+TwoEps)/finite)
+		WRITE(*,*) "          while the estimated numerical accuracy is       : ",PREC
+	  ENDIF
+	  IF (WARNING_COUNTERS(2).eq.10) THEN
+	    WRITE(*,*) "WARNING :: Further warnings about the relative size of pole residues are now suppressed (past first 10)."
+	  ENDIF
+	ENDIF
+
+    END 
