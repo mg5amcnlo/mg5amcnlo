@@ -329,9 +329,12 @@ class SubProcessGroup(base_objects.PhysicsObject):
             diagram_maps[ime] = []
             
             for diagram in diagrams:
-                # Only use diagrams with all vertices == min_legs
+                # Only use diagrams with all vertices == min_legs, but do not
+                # consider artificial vertices, such as those coming from a
+                # contracted loop for example, which should be considered as new
+                # topologies (the contracted vertex has id == -2.)
                 if any([len(v.get('legs')) > max_legs for v in \
-                        diagram.get('vertices') if not v.get('id') in [0, -1]]):
+                        diagram.get('vertices') if not v.get('id') in [0, -1, -2]]):
                     diagram_maps[ime].append(0)
                     continue
                 # Create the equivalent diagram, in the format

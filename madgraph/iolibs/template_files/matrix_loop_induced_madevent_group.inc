@@ -29,6 +29,10 @@ C
     PARAMETER (THEL=2*NCOMB)
     INTEGER Hel_Average_Factor
     PARAMETER (Hel_Average_Factor=%(hel_avg_factor)d)
+C   The full matrix element is included in each of the multichanneling factor '|A_i|^2' so that it is sensitive to the interference and also solves problematic cases where all '|A_i|^2' are zero, like in g g > a n*g because the A_i are color stripped so that Furry theorem basically applies to all summed amplitudes in a topology.
+C   However, we want to control the magnitude of the distortion to the original multichanneling we bring by including part of the full matrix element. So we divide its contribution by this MULTICHANNEL_FUDGE factor. When set to 1000+, it basically serves no other purpose than fixing the pathological cases of all '|A_i|^2' being zero.
+	DOUBLE PRECISION MULTICHANNEL_FUDGE
+	PARAMETER (MULTICHANNEL_FUDGE=1000.0d0)
 c
 c global (due to reading writting) 
 c
@@ -51,6 +55,8 @@ C
   		INTEGER JHEL(2)	
         DATA NGOOD /0,0/
         DATA ISHEL/0,0/
+C   This stores the different between the full matrix element squared and the sum of multi-channeling factors '|A_i|^2'.
+	DOUBLE PRECISION INTERFERENCE_CONTRIB
 
 		real t_before
 
@@ -119,6 +125,8 @@ C So that TIR integrals can be reused accross helicity configuration.
 C Notice that ITR integrals for rotated PS points (i.e. which is part of MadLoop's default stabiliy test procedure), will not work. This is why one should always keep the MadLoop parameter 'NRotations_DP' set to 0.
 	  CALL %(ml_prefix)sSET_AUTOMATIC_TIR_CACHE_CLEARING(.FALSE.)
       CALL %(ml_prefix)sGET_ANSWER_DIMENSION(ML_ANS_DIMENSION)
+C In case there is an initialization phase for MadLoop (i.e. everytime except when MC over helicity and disabling the Loop filter, which is the default.
+	  CALL %(ml_prefix)sFORCE_STABILITY_CHECK(.TRUE.)
       ALLOCATE(ANS_ML(0:3,0:ML_ANS_DIMENSION))
 	  ALLOCATE(PREC_FOUND(0:ML_ANS_DIMENSION))
 	ENDIF
@@ -277,6 +285,12 @@ c         Set right sign for ANS, based on sign of chosen helicity
         XTOT=0D0
         DO I=1,NLOOPDIAGRAMS
             XTOT=XTOT+AMP2(I)
+        ENDDO
+	    INTERFERENCE_CONTRIB  = DABS(ANS - XTOT) / MULTICHANNEL_FUDGE
+		XTOT=0.0d0
+        DO I=1,NLOOPDIAGRAMS
+            AMP2(I)=AMP2(I)+INTERFERENCE_CONTRIB
+			XTOT = XTOT+AMP2(I)
         ENDDO
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s

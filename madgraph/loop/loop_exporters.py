@@ -2781,9 +2781,6 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
               ' necessary for the MadEvent Loop-induced output with grouping.'
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
-        # Get minimum legs in a vertex
-        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
-                       matrix_element.get('diagrams')])
 
         ret_lines = []
         # In this case, we need to sum up all amplitudes that have
@@ -2823,7 +2820,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
             amps = '+'.join(CT_amp_list+Loop_amp_list)
 
             # Not using \sum |M|^2 anymore since this creates troubles
-            # when ckm is not diagonal due to the JIM mechanism.
+            # when ckm is not diagonal due to the GIM mechanism.
             line += "HEL_MULT*DBLE((%s)*dconjg(%s))" % (amps, amps)
             ret_lines.append(line)
 
