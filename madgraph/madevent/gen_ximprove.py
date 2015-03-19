@@ -38,6 +38,7 @@ except ImportError:
     import internal.cluster as cluster
     import internal.combine_grid as combine_grid
     import internal.combine_runs as combine_runs
+    import internal.lhe_parser as lhe_parser
 else:
     MADEVENT= False
     import madgraph.madevent.sum_html as sum_html
@@ -47,6 +48,7 @@ else:
     import madgraph.various.cluster as cluster
     import madgraph.madevent.combine_grid as combine_grid
     import madgraph.madevent.combine_runs as combine_runs
+    import madgraph.various.lhe_parser as lhe_parser
 
 logger = logging.getLogger('madgraph.madevent.gen_ximprove')
 pjoin = os.path.join
@@ -1259,8 +1261,16 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 
         misc.call(["cat"] + [pjoin(d, "events.lhe") for d in Gdirs],
                   stdout=output_file)
+        output_file.close()
+        # For large number of iteration. check the number of event by doing the
+        # real unweighting.
+        if True:# nunwgt < needed_event and step > self.min_iter:            
+            lhe = lhe_parser.EventFile(output_file.name)
+            old_nunwgt =nunwgt
+            nunwgt = lhe.unweight(None, trunc_error=0.01)
+            misc.sprint(old_nunwgt, nunwgt)
         
-        
+    
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)
 
         # misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))

@@ -242,7 +242,7 @@ class EventFile(object):
         return all_wgt, cross, nb_event
             
     
-    def unweight(self, outputpath, get_wgt, max_wgt=0, trunc_error=0, event_target=0, 
+    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, event_target=0, 
                  log_level=logging.DEBUG):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
@@ -251,8 +251,11 @@ class EventFile(object):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
-
-        if isinstance(get_wgt, str):
+        if not get_wgt:
+            def weight(event):
+                return event.wgt
+            get_wgt  = weight
+        elif isinstance(get_wgt, str):
             unwgt_name =get_wgt 
             def get_wgt(event):
                 event.parse_reweight()
@@ -341,10 +344,11 @@ class EventFile(object):
                         else:
                             break
             #create output file (here since we are sure that we have to rewrite it)
-            outfile = EventFile(outputpath, "w")
+            if outputpath:
+                outfile = EventFile(outputpath, "w")
             # need to write banner information
             # need to see what to do with rwgt information!
-            if self.banner:
+            if self.banner and outputpath:
                 banner.write(outfile, close_tag=False)
 
             # scan the file
@@ -361,8 +365,9 @@ class EventFile(object):
                     
                     if abs(wgt) > max_wgt:
                         trunc_cross += abs(wgt) - max_wgt 
-                    if event_target ==0 or nb_keep <= event_target:                         
-                        outfile.write(str(event))
+                    if event_target ==0 or nb_keep <= event_target:
+                        if outputpath:                         
+                            outfile.write(str(event))
 
                 elif wgt < 0:
                     nb_keep += 1
@@ -377,11 +382,14 @@ class EventFile(object):
                     outfile.close()
 #                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
                     continue
+                elif not outputpath:
+                    #no outputpath define -> wants only the nb of unweighted events
+                    continue
                 else:
                     outfile.write("</LesHouchesEvents>\n")
                     outfile.close()
                 break
-            else:
+            elif outputpath:
                 outfile.close()
 #                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
         else:

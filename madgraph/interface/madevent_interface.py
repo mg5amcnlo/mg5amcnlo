@@ -1998,8 +1998,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")
             
         logger.info(" " )
-        
-    def print_results_in_file(self, data, path, mode='w'):
+
+    def print_results_in_file(self, data, path, mode='w', format='full'):
         """Have a nice results prints in the shell,
         data should be of type: gen_crossxhtml.OneTagResults"""
         if not data:
@@ -2014,23 +2014,32 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                   replace(' statistics',''))
             logger.info(" " )
 
-        
-        fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
-                    (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
-        
-        if self.ninitial == 1:
-            fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
-        else:
-            fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
-        fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
-        if data['cross_pythia'] and data['nb_event_pythia']:
+        if format == "full":
+            fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
+                        (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
+            
             if self.ninitial == 1:
-                fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
+                fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
             else:
-                fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
-            fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
-        fsock.write(" \n" )
-    
+                fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
+            fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
+            if data['cross_pythia'] and data['nb_event_pythia']:
+                if self.ninitial == 1:
+                    fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
+                else:
+                    fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
+                fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
+            fsock.write(" \n" )
+        elif format == "short":
+            if mode == "w":
+                fsock.write("# run_name tag cross error Nb_event cross_after_matching nb_event_after matching\n")
+                
+            if data['cross_pythia'] and data['nb_event_pythia']:
+                text = "%(run_name)s %(tag)s %(cross)s %(error)s %(nb_event)s %(cross_pythia)s %(nb_event_pythia)s\n"
+            else:
+                text = "%(run_name)s %(tag)s %(cross)s %(error)s %(nb_event)s\n"
+            fsock.write(text % data)
+                
     ############################################################################      
     def do_calculate_decay_widths(self, line):
         """Main Commands: launch decay width calculation and automatic inclusion of

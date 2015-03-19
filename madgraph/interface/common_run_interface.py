@@ -1132,7 +1132,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Not in help:Print the cross-section/ number of events for a given run"""
         
         args = self.split_arg(line)
-        options={'path':None, 'mode':'w'}
+        options={'path':None, 'mode':'w', 'format':'full'}
         for arg in list(args):
             if arg.startswith('--') and '=' in arg:
                 name,value=arg.split('=',1)
@@ -1144,10 +1144,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if len(args) > 0:
             run_name = args[0]
         else:
-            if not self.results.current:
-                raise self.InvalidCmd('no run currently defined. Please specify one.')
-            else:
-                run_name = self.results.current['run_name']
+            for i, run_name in enumerate(self.results.order):
+                for j, one_result in enumerate(self.results[run_name]):
+                    if i or j:
+                        options['mode'] = "a"
+                    if options['path']:
+                        self.print_results_in_file(one_result, options['path'], options['mode'], options['format'])
+                    else:
+                        self.print_results_in_shell(one_result)
+            return
+
         if run_name not in self.results:
             raise self.InvalidCmd('%s is not a valid run_name or it doesn\'t have any information' \
                                   % run_name)
@@ -1167,7 +1173,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             data = self.results[run_name].return_tag(None) # return the last
         
         if options['path']:
-            self.print_results_in_file(data, options['path'], options['mode'])
+            self.print_results_in_file(data, options['path'], options['mode'], options['format'])
         else:
             self.print_results_in_shell(data)
 
@@ -1830,6 +1836,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
             data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
+            data += ["--mode=a", "--mode=w", "--path=", "--format=short"]
             tmp1 =  self.list_completion(text, data)
             return tmp1
             
@@ -1838,7 +1845,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("-- show in text format the status of the run (cross-section/nb-event/...)")
         logger.info("--path= defines the path of the output file.")
         logger.info("--mode=a allow to add the information at the end of the file.")
-
+        logger.info("--format=short (only if --path is define)")
+        logger.info("        allows to have a multi-column output easy to parse")
 
     ############################################################################
     def do_check_events(self, line):
