@@ -482,6 +482,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'cluster_type': 'condor',
                        'cluster_status_update': (600, 30),
                        'cluster_nb_retry':1,
+                       'cluster_local_path': "/cvmfs/cp3.uclouvain.be/madgraph/",
                        'cluster_retry_wait':300}
 
     options_madgraph= {'stdout_level':None}
@@ -1292,6 +1293,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_pdf_input_filename(self):
         """return the name of the file which is used by the pdfset"""
 
+        if self.options["cluster_local_path"] and self.options['run_mode'] ==1:
+            # no need to transfer the pdf.
+            return ''
+        
+        def check_cluster(path):
+            if not self.options["cluster_local_path"] or self.options['run_mode'] !=1:
+                return path
+            main = self.options["cluster_local_path"]
+            if os.path.isfile(path):
+                filename = os.path.basename(path)
+            possible_path = [pjoin(main, filename),
+                             pjoin(main, "lhadpf", filename),
+                             pjoin(main, "Pdfdata", filename)]
+            if any(os.path.exists(p) for p in possible_path):
+                return " "
+            else:
+                return path
+                             
+
         if hasattr(self, 'pdffile') and self.pdffile:
             return self.pdffile
         else:
@@ -1300,11 +1320,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if len(data) < 4:
                     continue
                 if data[1].lower() == self.run_card['pdlabel'].lower():
-                    self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
+                    self.pdffile = check_cluster(pjoin(self.me_dir, 'lib', 'Pdfdata', data[2]))
                     return self.pdffile
             else:
                 # possible when using lhapdf
-                self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                path = pjoin(self.me_dir, 'lib', 'PDFsets')
+                if os.path.exists(path):
+                    self.pdffile = path
+                else:
+                    self.pdffile = " "
                 return self.pdffile
                 
     def do_quit(self, line):
@@ -1463,6 +1487,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
 
         self.cluster_mode = run_mode
+        self.options['run_mode'] = run_mode
 
         if run_mode == 2:
             if not self.options['nb_core']:
@@ -1478,12 +1503,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.cluster = cluster.MultiCore(
                              **self.options)
             self.cluster.nb_core = nb_core
-                             #cluster_temp_path=self.options['cluster_temp_path'],
+        #cluster_temp_path=self.options['cluster_temp_path'],
 
         if self.cluster_mode == 1:
             opt = self.options
             cluster_name = opt['cluster_type']
             self.cluster = cluster.from_name[cluster_name](**opt)
+
 
     def check_param_card(self, path, run=True):
         """Check that all the width are define in the param_card.
@@ -1645,6 +1671,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # read the file and extract information
         logger.info('load configuration from %s ' % config_file.name)
         for line in config_file:
+            
             if '#' in line:
                 line = line.split('#',1)[0]
             line = line.replace('\n','').replace('\r\n','')
@@ -1655,7 +1682,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 name = name.strip()
                 value = value.strip()
-                if name.endswith('_path'):
+                if name.endswith('_path') and not name.startswith('cluster'):
                     path = value
                     if os.path.isdir(path):
                         self.options[name] = os.path.realpath(path)
@@ -1674,12 +1701,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not final:
             return self.options # the return is usefull for unittest
 
-
         # Treat each expected input
         # delphes/pythia/... path
         for key in self.options:
             # Final cross check for the path
-            if key.endswith('path'):
+            if key.endswith('path') and not key.startswith("cluster"):
                 path = self.options[key]
                 if path is None:
                     continue
@@ -1698,7 +1724,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.options[key] = None
             elif key.startswith('cluster') and key != 'cluster_status_update':
                 if key in ('cluster_nb_retry','cluster_wait_retry'):
-                    self.options[key] = int(self.options[key])
+                    self.options[key] = int(self.options[key]) 
                 if hasattr(self,'cluster'):
                     del self.cluster
                 pass
@@ -1715,9 +1741,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                    % key)
 
         # Configure the way to open a file:
-        misc.open_file.configure(self.options)
         self.configure_run_mode(self.options['run_mode'])
-
         return self.options
 
     @staticmethod
@@ -1988,9 +2012,44 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 os.mkdir(pdfsets_dir)
             except OSError:
                 pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
+        else:
+            #clean previous set of pdf used
+            for name in os.listdir(pdfsets_dir):
+                if name != pdfsetname:
+                    try:
+                        if os.path.isdir(pjoin(pdfsets_dir, name)):
+                            shutil.rmtree(pjoin(pdfsets_dir, name))
+                        else:
+                            os.remove(pjoin(pdfsets_dir, name))
+                    except Exception, error:
+                        logger.debug('%s', error)
+        
+        lhapdf_cluster_possibilities = [self.options["cluster_local_path"],
+                                      pjoin(self.options["cluster_local_path"], "lhapdf"),
+                                      pjoin(self.options["cluster_local_path"], "lhapdf", "pdfsets"),
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf"),
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf", "pdfsets"),
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf","pdfsets", "6.1")
+                                      ]
+        
+        # Check if we need to copy the pdf
+        if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
+            any((os.path.exists(pjoin(d, pdfsetname)) for d in lhapdf_cluster_possibilities)):
 
+            os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfsetname))][0]
+            os.environ["CLUSTER_LHAPATH"] = os.environ["LHAPATH"]
+            # no need to copy it
+            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+                try:
+                    if os.path.isdir(pjoin(pdfsets_dir, name)):
+                        shutil.rmtree(pjoin(pdfsets_dir, name))
+                    else:
+                        os.remove(pjoin(pdfsets_dir, name))
+                except Exception, error:
+                    logger.debug('%s', error)
+        
         #check that the pdfset is not already there
-        if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
+        elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
            not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)):
 
             if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
@@ -2001,7 +2060,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
                 files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
             
-
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
         lhapdf_version = self.get_lhapdf_version()

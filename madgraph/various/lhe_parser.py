@@ -728,7 +728,7 @@ class Event(list):
             try:
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
                                            if not self.reweight_order.append(pid)])
-            # the if is to create the order file on the flight
+                                      # the if is to create the order file on the flight
             except ValueError, error:
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]

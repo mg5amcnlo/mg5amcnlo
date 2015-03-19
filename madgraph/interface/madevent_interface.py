@@ -1653,15 +1653,17 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         super(MadEventCmd,self).set_configuration(amcatnlo=amcatnlo, 
                                                             final=final, **opt)
+
         if not final:
             return self.options # the return is usefull for unittest
+
 
         # Treat each expected input
         # delphes/pythia/... path
         # ONLY the ONE LINKED TO Madevent ONLY!!!
         for key in (k for k in self.options if k.endswith('path')):
             path = self.options[key]
-            if path is None:
+            if path is None or key.startswith("cluster"):
                 continue
             if not os.path.isdir(path):
                 path = pjoin(self.me_dir, self.options[key])

@@ -718,6 +718,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         for key, value in MLOptions.items():
             if key == "MLReductionLib":
+                if isinstance(value, int):
+                    ml_reds = str(value)
                 if isinstance(value,list):
                     if len(value)==0:
                         ml_reds = '1'

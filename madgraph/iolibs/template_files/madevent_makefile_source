@@ -17,7 +17,7 @@ GENERIC = $(alfas_functions).o transpole.o invarients.o hfill.o pawgraphs.o ran1
           rw_events.o rw_routines.o kin_functions.o open_file.o basecode.o setrun.o \
           run_printout.o dgauss.o readgrid.o getissud.o
 INCLUDEF= coupl.inc genps.inc hbook.inc DECAY/decay.inc psample.inc cluster.inc sudgrid.inc
-COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw_routines.o alfas_functions.o setrun.o
+COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw_routines.o
 GENSUDGRID = gensudgrid.o is-sud.o setrun_gen.o rw_routines.o open_file.o
 
 # Locally compiled libraries
@@ -50,8 +50,8 @@ $(LIBDIR)libcernlib.$(libext): CERNLIB
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 
 	$(FC) $(FFLAGS) -o $@ $^
-$(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) run_card.inc
-	$(FC) $(FFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(lhapdf)
+$(BINDIR)combine_events: $(COMBINE)  run_card.inc
+	$(FC) $(FFLAGS) -o $@ $(COMBINE)
 $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libcernlib.$(libext)
 	$(FC) $(FFLAGS) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(lhapdf)
 
