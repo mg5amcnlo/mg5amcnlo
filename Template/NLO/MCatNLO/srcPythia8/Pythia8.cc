@@ -43,7 +43,6 @@ int main() {
   if (!matching) return 1;
   pythia.setUserHooksPtr(matching);
 
-  pythia.init();
   string filename = pythia.word("Beams:LHEF");
 
   MyReader read(filename);
@@ -76,6 +75,8 @@ int main() {
       return 0;
     }
   }
+
+  pythia.init();
 
   HepMC::IO_BaseClass *_hepevtio;
   HepMC::Pythia8ToHepMC ToHepMC;
