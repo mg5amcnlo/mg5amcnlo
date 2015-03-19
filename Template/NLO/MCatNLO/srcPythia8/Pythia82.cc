@@ -42,7 +42,6 @@ int main() {
   CombineMatchingInput* combined = NULL;
   UserHooks* matching            = NULL;
 
-  pythia.init();
   string filename = pythia.word("Beams:LHEF");
 
   MyReader read(filename);
@@ -82,6 +81,8 @@ int main() {
       return 0;
     }
   }
+
+  pythia.init();
 
   HepMC::IO_BaseClass *_hepevtio;
   HepMC::Pythia8ToHepMC ToHepMC;
