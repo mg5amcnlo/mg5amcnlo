@@ -235,12 +235,15 @@ class BinList(histograms_PhysicsObjectList):
     """ A class implementing features related to a list of Bins. """
 
     def __init__(self, list = [], bin_range = None, 
-                                     weight_labels = ['central', 'stat_error']):
+                                     weight_labels = None):
         """ Initialize a list of Bins. It is possible to define the range
         as a list of three floats: [min_x, max_x, bin_width]"""
         
         self.weight_labels = weight_labels
         if bin_range:
+            # Set the default weight_labels to something meaningful
+            if not self.weight_labels:
+                self.weight_labels = ['central', 'stat_error']
             if len(bin_range)!=3 or any(not isinstance(f, float) for f in bin_range):
                 raise MadGraph5Error, "The range argument to build a BinList"+\
                   " must be a list of exactly three floats."
