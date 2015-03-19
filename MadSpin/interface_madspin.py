@@ -300,11 +300,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         """checking the validity of the set command"""
         
         if len(args) < 2:
-            if args and '=' in args[0]
-            name, value = args[0].split('=')
-            args[0]= name
-            args.append(value)
-            raise self.InvalidCmd('set command requires at least two argument.')
+            if args and '=' in args[0]:
+                name, value = args[0].split('=')
+                args[0]= name
+                args.append(value)
+            else:
+                raise self.InvalidCmd('set command requires at least two argument.')
         
         if args[1].strip() == '=':
             args.pop(1)
@@ -608,40 +609,26 @@ class MadSpinInterface(extended_cmd.Cmd):
             part = self.model.get_particle(pdg)
             name = part.get_name()
             out = {}
+            logger.info("generate %s decay event for particle %s" % (nb_event, name))
             if name not in self.list_branches:
                 return out
-            if cumul == False:
-                for i,proc in enumerate(self.list_branches[name]):
-                    if restrict_file and i not in restrict_file:
-                        continue
-                    decay_dir = pjoin(self.path_me, "decay_%s_%s" %(str(pdg).replace("-","x"),i))
-                    if not os.path.exists(decay_dir):
+            for i,proc in enumerate(self.list_branches[name]):
+                if restrict_file and i not in restrict_file:
+                    continue
+                decay_dir = pjoin(self.path_me, "decay_%s_%s" %(str(pdg).replace("-","x"),i))
+                if not os.path.exists(decay_dir):
+                    if cumul:
+                        mg5.exec_cmd("generate %s" % proc)
+                        for j,proc2 in enumerate(self.list_branches[name][1:]):
+                            if restrict_file and j not in restrict_file:
+                                raise Exception # Do not see how this can happen
+                            mg5.exec_cmd("add process %s" % proc)
+                        mg5.exec_cmd("output %s -f" % decay_dir)
+
+                    else:
                         mg5.exec_cmd("generate %s" % proc)
                         mg5.exec_cmd("output %s -f" % decay_dir)
-                    options = dict(mg5.options)
-                    options["automatic_html_opening"] = False
-                    import madgraph.interface.madevent_interface as madevent_interface
-                    me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
-                                                    decay_dir), options=options)
-                    me5_cmd.options["automatic_html_opening"] = False
-                    run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
-                    run_card["nevents"] = int(1.2*nb_event)
-                    run_card["iseed"] = self.seed
-                    run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
-                    self.seed += 1
-                    me5_cmd.exec_cmd("generate_events run_01 -f")
-                    me5_cmd.exec_cmd("exit")     
-                    out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))
-            else:
-                for i,proc in enumerate(self.list_branches[name]):
-                    if restrict_file and i not in restrict_file:
-                        continue
-                    decay_dir = pjoin(self.path_me, "decay_%s_%s" %(str(pdg).replace("-","x"),i))
-                    if not os.path.exists(decay_dir):
-                        mg5.exec_cmd("add process %s" % proc)
-                mg5.exec_cmd("output %s -f" % decay_dir)
                 options = dict(mg5.options)
-                options["automatic_html_opening"] = False
                 import madgraph.interface.madevent_interface as madevent_interface
                 me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
                                                 decay_dir), options=options)
@@ -653,8 +640,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 self.seed += 1
                 me5_cmd.exec_cmd("generate_events run_01 -f")
                 me5_cmd.exec_cmd("exit")     
-                out[0] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))
-              
+                out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
+                if cumul:
+                    break
+            
             return out
 
         
@@ -703,23 +692,31 @@ class MadSpinInterface(extended_cmd.Cmd):
 
 
         # 2. Generate the events requested
-        with misc.MuteLogger(["madgraph", "madevent"], [50,50]):
+        with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
             modelpath = self.model.get('modelpath')
             mg5.exec_cmd("import model %s" % modelpath)      
             to_event = {}
             for pdg, nb_needed in to_decay.items():
-                #check if a spitting is needed
+                #check if a splitting is needed
                 if nb_needed == nb_event:
                     to_event[pdg] = generate_events(pdg, nb_needed, mg5)
                 elif nb_needed %  nb_event == 0:
                     nb_mult = nb_needed // nb_event
                     part = self.model.get_particle(pdg)
                     name = part.get_name()
-                    if len(self.list_branches[name]) == nb_mult:
+                    if name not in self.list_branches:
+                        continue
+                    elif len(self.list_branches[name]) == nb_mult:
                         to_event[pdg] = generate_events(pdg, nb_event, mg5)
                     else:
                         to_event[pdg] = generate_events(pdg, nb_needed, mg5, cumul=True)
+                else:
+                    part = self.model.get_particle(pdg)
+                    name = part.get_name()
+                    if name not in self.list_branches or len(self.list_branches[name]) == 0:
+                        continue
+                    raise self.InvalidCmd("This mode do not support file where the decaying particle are event dependent.")
                     
                      
                 
@@ -731,29 +728,31 @@ class MadSpinInterface(extended_cmd.Cmd):
                 continue
             totwidth = float(self.banner.get('param', 'decay', abs(pdg)).value)
             if to_decay[pdg] == nb_event:
+                # Exactly one particle of this type to decay by event
                 pwidth = sum([event_files[k].cross for k in event_files])
                 if pwidth > 1.01 * totwidth:
-                    logger.critical("Brancing ratio larger than one for %s " % pdg) 
+                    logger.critical("Branching ratio larger than one for %s " % pdg) 
                 br *= pwidth / totwidth
             elif to_decay[pdg] % nb_event == 0:
+                # More than one particle of this type to decay by event
+                # Need to check the number of event file to check if we have to 
+                # make separate type of decay or not.
                 nb_mult = to_decay[pdg] // nb_event
-                misc.sprint(nb_mult, len(event_files))
                 if nb_mult == len(event_files):
                     for k in event_files:
                         pwidth = event_files[k].cross
                         if pwidth > 1.01 * totwidth:
-                            logger.critical("Brancing ratio larger than one for %s " % pdg)                       
+                            logger.critical("Branching ratio larger than one for %s " % pdg)                       
                         br *= pwidth / totwidth
                 else:
                     pwidth = sum(event_files[k].cross for k in event_files)
                     misc.sprint(pwidth)
                     if pwidth > 1.01 * totwidth:
-                        logger.critical("Brancing ratio larger than one for %s " % pdg) 
+                        logger.critical("Branching ratio larger than one for %s " % pdg) 
                     br *= (pwidth / totwidth)**nb_mult
             else:
-                raise Exception
+                raise self.InvalidCmd("This mode do not support file where the decaying particle are event dependent")
         self.branching_ratio = br
-        misc.sprint(self.branching_ratio)
         # modify the cross-section in the init block of the banner
         self.banner.scale_init_cross(self.branching_ratio)
                     
@@ -763,9 +762,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.banner.write(output_lhe, close_tag=False)
         
         # initialise object which store not use event due to wrong helicity
-        bypassed_decay = {}
+        bufferedEvents_decay = {}
         for pdg in to_event:
-            bypassed_decay[pdg] = [{}] * len(to_event[pdg])
+            bufferedEvents_decay[pdg] = [{}] * len(to_event[pdg])
         
         import time
         start = time.time()
@@ -778,7 +777,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             ids = [particle.pid for particle in event]
             for i,particle in enumerate(event):
                 # check if we need to decay the particle 
-                if particle.pdg not in self.final_state:
+                if particle.pdg not in self.final_state or particle.pdg not in to_event:
                     continue # nothing to do for this particle
                 # check how the decay need to be done
                 nb_decay = len(to_event[particle.pdg])
@@ -806,12 +805,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                         
                 # ok start the procedure
                 helicity = particle.helicity
-                bypassed = bypassed_decay[particle.pdg][decay_file_nb]
+                bufferedEvents = bufferedEvents_decay[particle.pdg][decay_file_nb]
                 
                 # now that we have the file to read. find the associate event
                 # checks if we have one event in memory
-                if helicity in bypassed and bypassed[helicity]:
-                    decay = bypassed[helicity].pop()
+                if helicity in bufferedEvents and bufferedEvents[helicity]:
+                    decay = bufferedEvents[helicity].pop()
                 else:
                     # read the event file up to completion
                     while 1:
@@ -822,7 +821,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                             ratio = counter / nb_event 
                             needed = 1.05 * to_decay[particle.pdg]/ratio - counter
                             needed = min(1000, max(needed, 1000))
-                            new_file = generate_events(particle.pdg, needed, mg5, [decay_file_nb])
+                            with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
+                                new_file = generate_events(particle.pdg, needed, mg5, [decay_file_nb])
                             to_event[particle.pdg].update(new_file)
                             decay_file = to_event[particle.pdg][decay_file_nb]
                             continue
@@ -830,10 +830,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                                             self.options["spinmode"] == "none":
                             break # use that event
                         # not valid event store it for later
-                        if helicity not in bypassed:
-                            bypassed[helicity] = [decay]
-                        else:
-                            bypassed[helicity].append(decay)
+                        if helicity not in bufferedEvents:
+                            bufferedEvents[helicity] = [decay]
+                        elif len(bufferedEvents[helicity]) < 200:
+                            # only add to the buffering if the buffer is not too large
+                            bufferedEvents[helicity].append(decay)
                 # now that we have the event make the merge
                 particle.add_decay(decay)
             # change the weight associate to the event
