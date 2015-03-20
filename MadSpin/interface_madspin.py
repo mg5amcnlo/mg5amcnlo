@@ -379,7 +379,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                    if a.endswith(os.path.sep)])
             return self.path_completion(text, curr_path, only_dirs = True)
         elif args[1] == "spinmode":
-            return self.list_completion(text, ["full", "bridge", "none"], line)
+            return self.list_completion(text, ["full", "none"], line)
          
     def help_set(self):
         """help the set command"""
@@ -396,6 +396,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         print '       It has a period of 2**19937-1.'
         print '   - set max_running_process VALUE: allow to limit the number of open file used by the code'
         print '       The number of running is raising like 2*VALUE'
+        print '   - set spinmode=none: mode with simple file merging. No spin correlation attempt.'
+        print '       This mode allows 3 (and more) body decay.'
     
     def do_define(self, line):
         """ """
@@ -442,8 +444,10 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_launch(self, line):
         """end of the configuration launched the code"""
         
-        if self.options["spinmode"] in ["bridge", "none"]:
+        if self.options["spinmode"] in ["none"]:
             return self.run_bridge(line)
+        elif self.options["spinmode"] == "bridge":
+            raise Exception, "Bridge mode not yet available due to lack of validation."
         
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'madspin.pkl')):
             return self.run_from_pickle()
@@ -649,7 +653,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         
         args = self.split_arg(line)
-        self.check_launch(args)
 
         #0. Define the path where to write the file
         self.path_me = os.path.realpath(self.options['curr_dir']) 
