@@ -91,11 +91,15 @@ def find_symmetry(matrix_element):
     base_model = process.get('model')
     diagrams = matrix_element.get('diagrams')
     base_diagrams = matrix_element.get_base_amplitude().get('diagrams')
-    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
+    vert_list = [max(diag.get_vertex_leg_numbers()) for diag in diagrams if \
+                                        diag.get_vertex_leg_numbers()!=[]]
+    minvert = min(vert_list) if vert_list!=[] else 0
+    
     for diag in matrix_element.get('diagrams'):
         diagram_numbers.append(diag.get('number'))
         permutations.append(range(nexternal))
-        if max(diag.get_vertex_leg_numbers()) > min_vert:
+        if diag.get_vertex_leg_numbers()!=[] and \
+                                  max(diag.get_vertex_leg_numbers()) > min_vert:
             # Ignore any diagrams with 4-particle vertices
             symmetry.append(0)
         else:
@@ -177,12 +181,17 @@ def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
         raise TimeOutError
 
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-
+    vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+            matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
+    minvert = min(vert_list) if vert_list!=[] else 0
     # Prepare the symmetry vector with non-used amp2s (due to
     # multiparticle vertices)
     symmetry = []
     for diag in matrix_element.get('diagrams'):
-        if max(diag.get_vertex_leg_numbers()) > 3:
+        # It used to be hardcoded to three instead of min_vert. Need to check
+        # if it is ok to use the general min_vert instead.
+        if diag.get_vertex_leg_numbers()!=[] and \
+                                  max(diag.get_vertex_leg_numbers()) > min_vert:
             # Ignore any diagrams with 4-particle vertices
             symmetry.append(0)
         else:
@@ -347,12 +356,15 @@ def find_symmetry_subproc_group(subproc_group):
                subproc_group.get('matrix_elements')[0].get_nexternal_ninitial()
     model = subproc_group.get('matrix_elements')[0].get('processes')[0].\
             get('model')
-    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
+    vert_list = [max(diag.get_vertex_leg_numbers()) for diag in diagrams if \
+                                        diag.get_vertex_leg_numbers()!=[]]
+    min_vert = min(vert_list) if vert_list!=[] else 0
 
     for idiag,diag in enumerate(diagrams):
         diagram_numbers.append(idiag+1)
         permutations.append(range(nexternal))
-        if max(diag.get_vertex_leg_numbers()) > min_vert:
+        if diag.get_vertex_leg_numbers()!=[] and \
+                                  max(diag.get_vertex_leg_numbers()) > min_vert:
             # Ignore any diagrams with 4-particle vertices
             symmetry.append(0)
         else:
@@ -368,8 +380,8 @@ def find_symmetry_subproc_group(subproc_group):
     diagram_classes = []
     perms = []
     for idiag, diag in enumerate(diagrams):
-        if any([vert > min_vert for vert in
-                diag.get_vertex_leg_numbers()]):
+        if diag.get_vertex_leg_numbers()!=[] and \
+                                  max(diag.get_vertex_leg_numbers()) > min_vert:
             # Only include vertices up to min_vert
             continue
         tag = IdentifySGConfigTag(diag, model)

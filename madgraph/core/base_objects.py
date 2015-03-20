@@ -2401,12 +2401,18 @@ class Diagram(PhysicsObject):
         state_dict = {True:'T',False:'F'}
         return new_diag
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, veto_inter_id=[0,-1,-2]):
         """Return a list of the number of legs in the vertices for
-        this diagram"""
+        this diagram. 
+        This function is only used for establishing the multi-channeling, so that
+        we exclude from it all the fake vertices and the vertices resulting from
+        shrunk loops (id=-2)"""
 
-        return [len(v.get('legs')) for v in self.get('vertices')]
-
+        res = [len(v.get('legs')) for v in self.get('vertices') if v.get('id') \
+                                                           not in veto_inter_id]
+    
+        return res
+    
     def get_num_configs(self, model, ninitial):
         """Return the maximum number of configs from this diagram,
         given by 2^(number of non-zero width s-channel propagators)"""

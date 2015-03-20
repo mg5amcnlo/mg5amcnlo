@@ -1063,9 +1063,11 @@ class AllMatrixElement(dict):
 
         s_and_t_channels = []
 
-        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
-                                             for config in configs])
-
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+          for config in configs if [d for d in config if d][0].\
+                                             get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
+    
         # Number of subprocesses
         #    nsubprocs = len(configs[0])
 
@@ -1075,7 +1077,7 @@ class AllMatrixElement(dict):
 
         for iconfig, helas_diags in enumerate(configs):
             if any([vert > minvert for vert in
-                            [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
+                    [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
                     # Only 3-vertices allowed in configs.inc
                     continue
             nconfigs += 1

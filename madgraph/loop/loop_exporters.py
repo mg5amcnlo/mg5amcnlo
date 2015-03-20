@@ -2895,14 +2895,15 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
         # Get minimum legs in a vertex
-        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
-                                                matrix_element.get('diagrams')])
+        vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+        matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
 
         ret_lines = []
 
         for idiag, diag in enumerate(matrix_element.get('diagrams')):
             # Ignore any diagrams with 4-particle vertices.
-            if max(diag.get_vertex_leg_numbers()) > minvert:
+            if diag.get_vertex_leg_numbers()!=[] and max(diag.get_vertex_leg_numbers()) > minvert:
                 continue
 
             # Now write out the expression for AMP2, meaning the sum of

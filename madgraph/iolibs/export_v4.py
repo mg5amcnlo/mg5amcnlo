@@ -995,8 +995,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
         # Get minimum legs in a vertex
-        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
-                       matrix_element.get('diagrams')])
+        vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+       matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
 
         ret_lines = []
         if config_map:
@@ -1037,7 +1038,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
                 # Ignore any diagrams with 4-particle vertices.
-                if max(diag.get_vertex_leg_numbers()) > minvert:
+                if diag.get_vertex_leg_numbers()!=[] and max(diag.get_vertex_leg_numbers()) > minvert:
                     continue
                 # Now write out the expression for AMP2, meaning the sum of
                 # squared amplitudes belonging to the same diagram
@@ -1452,8 +1453,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         s_and_t_channels = []
 
-        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
-                       for config in configs])
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+            for config in configs if [d for d in config if d][0].\
+                                             get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
 
         # Number of subprocesses
         nsubprocs = len(configs[0])
@@ -1463,9 +1466,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         new_pdg = model.get_first_non_pdg()
 
         for iconfig, helas_diags in enumerate(configs):
-            if any([vert > minvert for vert in
-                    [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
-                # Only 3-vertices allowed in configs.inc
+            if any(vert > minvert for vert in [d for d in helas_diags if d]\
+              [0].get_vertex_leg_numbers()) :
+                # Only 3-vertices allowed in configs.inc except for vertices
+                # which originate from a shrunk loop.
                 continue
             nconfigs += 1
 
@@ -2919,9 +2923,10 @@ c     channel position
 
         s_and_t_channels = []
 
-        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
-                       for config in configs])
-
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+                       for config in configs if [d for d in config if d][0].\
+                                                  get_vertex_leg_numbers()!=[]]
+        min_vert = min(vert_list) if vert_list!=[] else 0
         # Number of subprocesses
         nsubprocs = len(configs[0])
 
@@ -3984,8 +3989,10 @@ c           This is dummy particle used in multiparticle vertices
 
         nqcd_list = []
 
-        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
-                       for config in configs])
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+                       for config in configs if [d for d in config if d][0].\
+                                                  get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
 
         # Number of subprocesses
         nsubprocs = len(configs[0])

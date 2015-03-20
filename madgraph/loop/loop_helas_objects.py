@@ -386,12 +386,14 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             self['mothers'].extend(mothersList)
             self['pairing'].append(len(mothersList))
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, veto_inter_id=[0,-1,-2]):
         """Get a list of the number of legs in vertices in this diagram"""
 
-        vertex_leg_numbers = [len(self.get('mothers'))]
+        vertex_leg_numbers = [len(self.get('mothers'))] if \
+                         self.get('interaction_id') not in veto_inter_id else []
         for mother in self.get('mothers'):
-            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
+                                                   veto_inter_id=veto_inter_id))
 
         return vertex_leg_numbers
 
