@@ -349,7 +349,7 @@ class gensym(object):
         if need_submit:
             xsec_format = '.%ig'%(max(3,int(math.log10(float(cross)/float(error)))+2) 
                                                       if float(cross)!=0 else 8)
-            message = "%%s/G%%s is at %%%s +- %%.3g pb. Submit next iteration"%xsec_format
+            message = "%%s/G%%s is at %%%s +- %%.3g pb. Submit iteration %s " % (xsec_format, step+1)
             logger.info(message%\
                         (os.path.basename(Pdir), G, float(cross), float(error)))
             self.resubmit_survey(Pdir,G, Gdirs, step)
@@ -1264,11 +1264,10 @@ class gen_ximprove_share(gen_ximprove, gensym):
         output_file.close()
         # For large number of iteration. check the number of event by doing the
         # real unweighting.
-        if True:# nunwgt < needed_event and step > self.min_iter:            
+        if nunwgt < 0.6 * needed_event and step > self.min_iter:            
             lhe = lhe_parser.EventFile(output_file.name)
             old_nunwgt =nunwgt
-            nunwgt = lhe.unweight(None, trunc_error=0.01)
-            misc.sprint(old_nunwgt, nunwgt)
+            nunwgt = lhe.unweight(None, trunc_error=0.01, log_level=0)
         
     
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)

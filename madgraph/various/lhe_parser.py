@@ -243,7 +243,7 @@ class EventFile(object):
             
     
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, event_target=0, 
-                 log_level=logging.DEBUG):
+                 log_level=logging.INFO):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
@@ -339,7 +339,7 @@ class EventFile(object):
                     max_wgt = min(max_wgt, all_wgt[-1])
                     if max_wgt == last_max_wgt:
                         if nb_keep <= event_target:
-                            logger.warning("fail to reach target")
+                            logger.log(log_level+10,"fail to reach target %s", event_target)
                             break   
                         else:
                             break
@@ -377,7 +377,7 @@ class EventFile(object):
                     if event_target ==0 or nb_keep <= event_target: 
                         outfile.write(str(event))
             
-            if nb_keep > event_target:
+            if event_target and nb_keep > event_target:
                 if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
                     outfile.close()
 #                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
@@ -389,12 +389,18 @@ class EventFile(object):
                     outfile.write("</LesHouchesEvents>\n")
                     outfile.close()
                 break
+            elif event_target == 0:
+                if outputpath:
+                    outfile.write("</LesHouchesEvents>\n")
+                    outfile.close()
+                break                    
             elif outputpath:
                 outfile.close()
 #                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
+            
         else:
             # pass here if event_target > 0 and all the attempt fail.
-            logger.warning("fail to reach target event")
+            logger.log(log_level+10,"fail to reach target event %s (iteration=%s)", event_target,i)
         
 #        logger.log(log_level, "Final maximum weight used for final "+\
 #                    "unweighting is %s yielding %s events." % (max_wgt,nb_keep))
@@ -405,7 +411,7 @@ class EventFile(object):
         else:
             nb_events_unweighted = nb_keep
 
-        logger.info("write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
+        logger.log(log_level, "write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
           nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
      
         return nb_keep
