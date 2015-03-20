@@ -18,6 +18,7 @@ import collections
 import logging
 import math
 import os
+import random
 import re
 import shutil
 import glob
@@ -606,6 +607,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                cumul allow to merge all the definition in one run (add process)
                      to generate events according to cross-section
             """
+            
             part = self.model.get_particle(pdg)
             name = part.get_name()
             out = {}
@@ -622,9 +624,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         for j,proc2 in enumerate(self.list_branches[name][1:]):
                             if restrict_file and j not in restrict_file:
                                 raise Exception # Do not see how this can happen
-                            mg5.exec_cmd("add process %s" % proc)
+                            mg5.exec_cmd("add process %s" % proc2)
                         mg5.exec_cmd("output %s -f" % decay_dir)
-
                     else:
                         mg5.exec_cmd("generate %s" % proc)
                         mg5.exec_cmd("output %s -f" % decay_dir)
@@ -716,7 +717,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     name = part.get_name()
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
-                    raise self.InvalidCmd("This mode do not support file where the decaying particle are event dependent.")
+                    raise self.InvalidCmd("The bridge mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
                     
                      
                 
@@ -744,14 +745,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                         if pwidth > 1.01 * totwidth:
                             logger.critical("Branching ratio larger than one for %s " % pdg)                       
                         br *= pwidth / totwidth
+                    br *= math.factorial(nb_mult)
                 else:
                     pwidth = sum(event_files[k].cross for k in event_files)
-                    misc.sprint(pwidth)
                     if pwidth > 1.01 * totwidth:
                         logger.critical("Branching ratio larger than one for %s " % pdg) 
                     br *= (pwidth / totwidth)**nb_mult
             else:
-                raise self.InvalidCmd("This mode do not support file where the decaying particle are event dependent")
+                raise self.InvalidCmd("The bridge mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
         self.branching_ratio = br
         # modify the cross-section in the init block of the banner
         self.banner.scale_init_cross(self.branching_ratio)
@@ -774,8 +775,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             if counter and counter % 1000 == 0 and float(str(counter)[1:]) ==0:
                 print "decaying event number %s [%s s]" % (counter, time.time()-start)
             counter +=1
-            ids = [particle.pid for particle in event]
-            for i,particle in enumerate(event):
+            
+            # use random order for particles to avoid systematics when more than 
+            # one type of decay is asked.
+            particles = [p for p in event if int(p.status) == 1.0]
+            random.shuffle(particles)
+            ids = [particle.pid for particle in particles]
+            for i,particle in enumerate(particles):
                 # check if we need to decay the particle 
                 if particle.pdg not in self.final_state or particle.pdg not in to_event:
                     continue # nothing to do for this particle
