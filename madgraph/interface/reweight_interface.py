@@ -234,7 +234,10 @@ class ReweightInterface(extended_cmd.Cmd):
         """check the validity of the launch command"""
         
         if not self.lhe_input:
-            raise self.InvalidCmd("No events files defined.")
+            if isinstance(self.lhe_input, lhe_parser.EventFile):
+                self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
+            else:
+                raise self.InvalidCmd("No events files defined.")
 
     def help_launch(self):
         """help for the launch command"""

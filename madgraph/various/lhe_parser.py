@@ -179,6 +179,8 @@ class EventFile(object):
         return output
     
     def __len__(self):
+        if self.closed:
+            return 0
         if hasattr(self,"len"):
             return self.len
 
