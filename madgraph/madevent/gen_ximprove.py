@@ -1173,7 +1173,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
             try:
                 os.remove(pjoin(self.me_dir, "SubProcesses",C.parent_name, C.name, "events.lhe"))
             except:
-                raise
+                pass
             
             #1. Compute the number of points are needed to reach target
             needed_event = goal_lum*C.get('axsec')
