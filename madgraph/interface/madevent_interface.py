@@ -2551,7 +2551,7 @@ zeor by MadLoop.""")
             x_improve.run_statistics = survey_statistics
         
         x_improve.launch() # create the ajob for the refinment.
-        if 'refine' not in self.history[-1]:
+        if not self.history or 'refine' not in self.history[-1]:
             cross, error = x_improve.update_html() #update html results for survey
             if  cross == 0:
                 return
@@ -3484,14 +3484,19 @@ zeor by MadLoop.""")
                         if os.path.exists(pjoin(cwd, G, 'input_app.txt')):
                             os.remove(pjoin(cwd, G, 'input_app.txt'))
                     
-                    if os.path.exists(pjoin(cwd, G, 'ftn25')):
-                        if offset ==0 or offset == int(float(argument[0])):
+                    if os.path.exists(os.path.realpath(pjoin(cwd, G, 'ftn25'))):
+                        if offset == 0 or offset == int(float(argument[0])):
                             os.remove(pjoin(cwd, G, 'ftn25'))
                             continue
                         else:
                             input_files.append(pjoin(cwd, G, 'ftn25'))
                             input_files.remove('input_app.txt')
                             input_files.append(pjoin(cwd, G, 'input_app.txt'))
+                    elif os.path.exists(pjoin(cwd, G, 'ftn25')):
+                        try:
+                            os.remove(pjoin(cwd,G,'ftn25'))
+                        except:
+                            pass
                     
                 #submitting
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  

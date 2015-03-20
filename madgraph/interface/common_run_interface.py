@@ -1775,7 +1775,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             import MadSpin.decay as decay
             import MadSpin.interface_madspin as interface_madspin
         except ImportError:
-            raise self.ConfigurationError, '''Can\'t load MadSpin
+            if __debug__:
+                raise
+            else:
+                raise self.ConfigurationError, '''Can\'t load MadSpin
             The variable mg5_path might not be correctly configured.'''
 
         self.update_status('Running MadSpin', level='madspin')
@@ -1893,7 +1896,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         args = self.split_arg(line) 
         self.check_check_events(args) 
         # args now alway content the path to the valid files
-        reweight_cmd = reweight_interface.ReweightInterface(args[0])
+        reweight_cmd = reweight_interface.ReweightInterface(args[0], allow_madspin=True)
         reweight_cmd.mother = self
         self.update_status('Running check on events', level='check')
         

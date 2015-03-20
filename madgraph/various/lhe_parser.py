@@ -7,6 +7,7 @@ import time
 import os
 
 
+
 if '__main__' == __name__:
     import sys
     sys.path.append('../../')
@@ -50,7 +51,7 @@ class Particle(object):
         self.event_id = len(event) #not yet in the event
         # LHE information
         self.pid = 0
-        self.status = 0
+        self.status = 0 # -1:initial. 1:final. 2: propagator
         self.mother1 = None
         self.mother2 = None
         self.color1 = 0
@@ -67,6 +68,11 @@ class Particle(object):
 
         if line:
             self.parse(line)
+          
+    @property
+    def pdg(self):
+        "convenient alias"
+        return self.pid
             
     def parse(self, line):
         """parse the line"""
@@ -142,7 +148,7 @@ class EventFile(object):
 
     def __new__(self, path, mode='r', *args, **opt):
 
-        if path.endswith(".gz"):
+        if  path.endswith(".gz"):
             return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
         else:
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
@@ -177,6 +183,18 @@ class EventFile(object):
         output = banner.Banner()
         output.read_banner(self.banner)
         return output
+
+    @property
+    def cross(self):
+        """return the cross-section of the file #from the banner"""
+        try:
+            return self._cross
+        except Exception:
+            pass
+
+        onebanner = self.get_banner()
+        self._cross = onebanner.get_cross()
+        return self._cross
     
     def __len__(self):
         if self.closed:
@@ -442,7 +460,7 @@ class MultiEventFile(EventFile):
         self.initial_nb_events = []
         self.total_event_in_files = 0
         self.curr_nb_events = []
-        self.cross = []
+        self.allcross = []
         self.error = []
         self.across = []
         self.scales = []
@@ -465,7 +483,7 @@ class MultiEventFile(EventFile):
             self.banner = obj.banner
         self.curr_nb_events.append(0)
         self.initial_nb_events.append(0)
-        self.cross.append(cross)
+        self.allcross.append(cross)
         self.across.append(across)
         self.error.append(error)
         self.scales.append(1)
@@ -511,10 +529,10 @@ class MultiEventFile(EventFile):
             Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')][-1]
             group = Pdir.split("_")[0][1:]
             if group in grouped_cross:
-                grouped_cross[group] += self.cross[i]
+                grouped_cross[group] += self.allcross[i]
                 grouped_error[group] += self.error[i]**2 
             else:
-                grouped_cross[group] = self.cross[i]
+                grouped_cross[group] = self.allcross[i]
                 grouped_error[group] = self.error[i]**2                
                 
         nb_group = len(grouped_cross)
@@ -593,7 +611,7 @@ class MultiEventFile(EventFile):
             self.initial_nb_events[i] = nb_event
             self.scales[i] = self.across[i]/cross['abs'] if self.across[i] else 1
             #misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
-            #            % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
+            #            % (i, cross['all'], self.allcross[i], self.scales[i], nb_event))
             for key in cross:
                 sum_cross[key] += cross[key]* self.scales[i]
             all_wgt +=[self.scales[i] * w for w in new_wgt]
@@ -760,7 +778,7 @@ class Event(list):
         assert max(decay_particle.px, decay_particle.py, decay_particle.pz) < thres,\
             "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
         
-        self.nexternal += decay_event.nexternal -2
+        self.nexternal += decay_event.nexternal -1
         
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
@@ -781,7 +799,10 @@ class Event(list):
                         setattr(new_particle, tag, this_particle)
                     else:
                         setattr(new_particle, tag, self[nb_part + mother_id -1]) 
-
+                elif tag == "mother2" and isinstance(particle.mother1, Particle):
+                    new_particle.mother2 = this_particle
+                else:
+                    misc.sprint("Need to understan why", particle)
             
         # Need to correct the color information of the particle
         # first find the first available color index
@@ -918,7 +939,7 @@ class Event(list):
             abspy += abs(particle.py)
             abspz += abs(particle.pz)
         # check that relative error is under control
-        threshold = 5e-11
+        threshold = 5e-7
         if E/absE > threshold:
             logger.critical(self)
             raise Exception, "Do not conserve Energy %s, %s" % (E/absE, E)
@@ -1202,7 +1223,7 @@ class FourMomentum(object):
         self.px = px
         self.py = py
         self.pz =pz
-    
+
     @property
     def mass(self):
         """return the mass"""    
@@ -1211,7 +1232,7 @@ class FourMomentum(object):
     def mass_sqr(self):
         """return the mass square"""    
         return self.E**2 - self.px**2 - self.py**2 - self.pz**2
-    
+
     @property
     def pt(self):
         return math.sqrt(max(0, self.pt2()))
@@ -1255,8 +1276,8 @@ class FourMomentum(object):
         pt = self.pt2()
         if pt:
             s3product = self.px * mom.px + self.py * mom.py + self.pz * mom.pz
-            mass = self.mass()
-            lf = (self.E + (self.E - mass) * s3product / pt ) / mass
+            mass = self.mass
+            lf = (mom.E + (self.E - mass) * s3product / pt ) / mass
             return FourMomentum(E=(self.E*mom.E+s3product)/mass,
                            px=mom.px + self.px * lf,
                            py=mom.py + self.py * lf,
@@ -1284,55 +1305,7 @@ if '__main__' == __name__:
             output.write(str(event))
         output.write('</LesHouchesEvent>\n')
     
-    # Example 2: Adding the decay of one particle (Bridge Method).
-    if False:
-        orig_lhe = EventFile('unweighted_events.lhe')
-        decay_lhe = EventFile('unweighted_decay.lhe')
-        output = open('output_events.lhe', 'w')
-        output.write(orig_lhe.banner) #need to be modified by hand!
-        pid_to_decay  = 15 #which particle to decay
-        bypassed_decay = {} # not yet use decay due to wrong helicity
-        
-        counter = 0
-        start = time.time()
-        for event in orig_lhe:
-            if counter % 1000 == 1:
-                print "decaying event number %s [%s s]" % (counter, time.time()-start)
-            counter +=1
-            for particle in event:
-                if particle.pid == pid_to_decay:
-                    #ok we have to decay this particle!
-                    helicity = particle.helicity
-                    # use the already parsed_event if any
-                    done = False
-                    if helicity in bypassed_decay and bypassed_decay[helicity]:
-                        # use one of the already parsed (but not used) decay event
-                        for decay in bypassed_decay[helicity]:
-                            if decay[0].helicity == helicity:
-                                particle.add_decay(decay)
-                                bypassed_decay[helicity].remove(decay)
-                                done = True
-                                break
-                    # read the decay event up to find one valid decay
-                    while not done:
-                        try:
-                            decay = decay_lhe.next()
-                        except StopIteration:
-                            raise Exception, "not enoug event in the decay file"
-                        
-                        if helicity == decay[0].helicity or helicity==9:
-                            particle.add_decay(decay)
-                            done=True
-                        elif decay[0].helicity in bypassed_decay:
-                            if len(bypassed_decay[decay[0].helicity]) < 100:
-                                bypassed_decay[decay[0].helicity].append(decay)
-                            #limit to 100 to avoid huge increase of memory if only 
-                            #one helicity is present in the production sample.
-                        else:
-                            bypassed_decay[decay[0].helicity] = [decay]
 
-            output.write(str(event))
-        output.write('</LesHouchesEvent>\n')
         
     # Example 3: Plotting some variable
     if True:
@@ -1350,12 +1323,12 @@ if '__main__' == __name__:
             for particle in event:
                 if particle.status<0:
                     E+=particle.E
-
             event.parse_reweight()
 
             if 2 < event.reweight_data["mg_reweight_1"]/event.wgt:            
                 data.append(event.reweight_data["mg_reweight_1"]/event.wgt)
                 nb_pass +=1
+
             
         print nb_pass
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])

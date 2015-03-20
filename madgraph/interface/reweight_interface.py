@@ -56,7 +56,7 @@ class ReweightInterface(extended_cmd.Cmd):
     debug_output = 'Reweight_debug'
     
     @misc.mute_logger()
-    def __init__(self, event_path=None, *completekey, **stdin):
+    def __init__(self, event_path=None, allow_madspin=False, *completekey, **stdin):
         """initialize the interface with potentially an event_path"""
         
         if not event_path:
@@ -79,7 +79,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         if event_path:
             logger.info("Extracting the banner ...")
-            self.do_import(event_path)
+            self.do_import(event_path, allow_madspin=allow_madspin)
             
         # dictionary to fortan evaluator
         self.calculator = {}
@@ -88,7 +88,7 @@ class ReweightInterface(extended_cmd.Cmd):
         #all the cross-section for convenience
         self.all_cross_section = {}
             
-    def do_import(self, inputfile):
+    def do_import(self, inputfile, allow_madspin=False):
         """import the event file"""
         
         # change directory where to write the output
@@ -129,7 +129,7 @@ class ReweightInterface(extended_cmd.Cmd):
             self.events_file = None
             raise self.InvalidCmd('Event file does not contain generation information')
 
-        if 'madspin' in self.banner:
+        if 'madspin' in self.banner and not allow_madspin:
             raise self.InvalidCmd('Reweight should be done before running MadSpin')
                 
                 
