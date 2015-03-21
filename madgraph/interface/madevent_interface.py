@@ -2424,7 +2424,7 @@ Beware that this can be dangerous for local multicore runs.""")
     than four external legs, so this is not recommended (especially not for g g > z z).""")
                 self.MadLoopparam.set('MLStabThres',1.0e-7,ifnotdefault=False)
             else:
-                self.MadLoopparam.set('MLStabThres',1.0e-4,ifnotdefault=False)            
+                self.MadLoopparam.set('MLStabThres',1.0e-3,ifnotdefault=False)            
 
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
