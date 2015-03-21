@@ -495,6 +495,19 @@ def rm_old_compile_file():
                                  if os.path.exists(os.path.join(lib_pos, lib))]
 
 
+def format_time(n_secs):
+    m, s = divmod(n_secs, 60)
+    h, m = divmod(m, 60)
+    d, h = divmod(h, 24)
+    if d > 0:
+        return "%d day%s,%dh%02dm%02d" % (d,'' if d<=1 else 's',h, m, s)
+    elif h > 0:
+        return "%dh%02dm%02d" % (h, m, s)
+    elif m > 0:
+        return "%dm%02d" % (m, s)                
+    else:
+        return "%d second%s" % (s, '' if s<=1 else 's')   
+
 def rm_file_extension( ext, dirname, names):
 
     [os.remove(os.path.join(dirname, name)) for name in names if name.endswith(ext)]

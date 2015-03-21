@@ -55,7 +55,8 @@ class RunStatistics(dict):
           'max_precision'      : 1.0e99,
           'min_precision'      : 0.0,
           'averaged_timing'    : 0.0,
-          'n_madloop_calls'    : 0
+          'n_madloop_calls'    : 0,
+          'cumulative_timing'  : 0.0,
           }
         
         for key, value in madloop_statiatics.items():
@@ -124,6 +125,9 @@ class RunStatistics(dict):
         average_time = xml_node.getElementsByTagName('average_time')
         avg_time = float(getData(average_time[0]))
         self['averaged_timing']    = avg_time 
+        average_time = xml_node.getElementsByTagName('cumulated_time')
+        cumulated_time = float(getData(average_time[0]))
+        self['cumulative_timing']  = cumulated_time 
         max_prec = xml_node.getElementsByTagName('max_prec')
         max_prec = float(getData(max_prec[0]))
         # The minimal precision corresponds to the maximal value for PREC
@@ -166,9 +170,11 @@ class RunStatistics(dict):
 
         to_print = [('%s statistics:'%(G if isinstance(G,str) else
                                                     str(os.path.join(list(G))))\
-          +((' Avg. timing = %i ms'%int(1.0e3*self['averaged_timing'])) if
+          +(' %s,'%misc.format_time(int(self['cumulative_timing'])) if
+                                     int(self['cumulative_timing']) > 0 else '')
+          +((' Avg. ML timing = %i ms'%int(1.0e3*self['averaged_timing'])) if
             self['averaged_timing'] > 0.001 else
-            (', Avg. timing = %i mus'%int(1.0e6*self['averaged_timing']))) \
+            (' Avg. ML timing = %i mus'%int(1.0e6*self['averaged_timing']))) \
           +', Min precision = %.2e'%self['min_precision'])
           ,'   -> Stability %s'%dict(stability)
           ,'   -> Red. tools usage in %% %s'%dict(tools_used)
@@ -354,7 +360,7 @@ class Combine_results(list, OneResult):
         return oneresult
     
     
-    def compute_values(self):
+    def compute_values(self, update_statistics=False):
         """compute the value associate to this combination"""
 
         self.compute_iterations()
@@ -369,8 +375,8 @@ class Combine_results(list, OneResult):
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
         self.luminosity = min([0]+[one.luminosity for one in self])
-        
-        self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
+        if update_statistics:
+            self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
 
     def compute_average(self):
         """compute the value associate to this combination"""

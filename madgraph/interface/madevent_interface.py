@@ -1985,6 +1985,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             logger.info(" " )
             
         logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
+        
+        total_time = int(sum(_['cumulative_timing'] for _ in data['run_statistics'].values()))
+        if total_time > 0:
+            logger.info("     Cumulative sequential time for this run: %s"%misc.format_time(total_time))
+        
         if self.ninitial == 1:
             logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
         else:
@@ -2561,7 +2566,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     os.remove(match)
 
         x_improve = gen_ximprove.gen_ximprove(self, refine_opt)
-        # Load the run statistics from the 
+        # Load the run statistics from the survey
         survey_statistics = dict(self.results.get_detail('run_statistics'))
         if survey_statistics:
             x_improve.run_statistics = survey_statistics
@@ -2623,15 +2628,9 @@ Beware that this can be dangerous for local multicore runs.""")
         cross, error = sum_html.make_all_html_results(self)
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
-        
-        global_run_statistics = self.results.get_detail('run_statistics')
-        for key, value in x_improve.run_statistics.items():
-            if key in global_run_statistics:
-                global_run_statistics[key].aggregate_statistics(value)
-            else:
-                global_run_statistics[key] = value
 
-        self.results.add_detail('run_statistics', dict(global_run_statistics))
+        self.results.add_detail('run_statistics', 
+                                dict(self.results.get_detail('run_statistics')))
 
         self.update_status('finish refine', 'parton', makehtml=False)
         devnull.close()

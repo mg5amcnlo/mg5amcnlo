@@ -439,7 +439,7 @@ class gensym(object):
                 written_event = sum([R.nunwgt for R in grid_calculator.results])
                 misc.sprint(G, cross, error*cross, nunwgt, written_event, primary_event, luminosity)
  
-        grid_calculator.results.compute_values()
+        grid_calculator.results.compute_values(update_statistics=True)
         if (str(os.path.basename(Pdir)), G) in self.run_statistics:
             self.run_statistics[(str(os.path.basename(Pdir)), G)]\
                    .aggregate_statistics(grid_calculator.results.run_statistics)

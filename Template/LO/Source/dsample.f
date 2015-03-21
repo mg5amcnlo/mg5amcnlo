@@ -222,7 +222,7 @@ c      do i=1,cur_it-1
          write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
 c     Write out MadLoop statistics, if any
-      call output_madloop_statistics(66)
+      call output_run_statistics(66)
       flush(66)
       close(66, status='KEEP')
       else
@@ -231,7 +231,7 @@ c     Write out MadLoop statistics, if any
      &     1,0,0.,0.,0.,0.,0.,0
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c        Write out MadLoop statistics, if any
-         call output_madloop_statistics(66)
+         call output_run_statistics(66)
          flush(66)
          close(66, status='KEEP')
 
@@ -390,7 +390,7 @@ c      do i=1,cur_it-1
          write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
 c     Write out MadLoop statistics, if any
-      call output_madloop_statistics(66)      
+      call output_run_statistics(66)      
       flush(66)
       close(66, status='KEEP')
       else
@@ -399,7 +399,7 @@ c     Write out MadLoop statistics, if any
      &     1,0,0.,0.,0.,0.,0.,0
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c        Write out MadLoop statistics, if any
-         call output_madloop_statistics(66)
+         call output_run_statistics(66)
          flush(66)
          close(66, status='KEEP')
 
@@ -407,7 +407,7 @@ c        Write out MadLoop statistics, if any
 
       end
 
-      subroutine output_madloop_statistics(outUnit)
+      subroutine output_run_statistics(outUnit)
 c***********************************************************************
 c     Writes out the madloop runtime statistics to the unit in argument
 c***********************************************************************
@@ -417,6 +417,10 @@ c
 c     Arguments
 c
       integer outUnit
+C
+C     Local
+C
+      double precision t_after
 c
 c     Global
 c
@@ -436,9 +440,16 @@ c
       COMMON/MADLOOPSTATS/AVG_TIMING,MAX_PREC,MIN_PREC,N_EVALS,
      &       U_RETURN_CODES,T_RETURN_CODES,H_RETURN_CODES
 
+      DOUBLE PRECISION CUMULATED_TIMING
+      DATA CUMULATED_TIMING/0.0d0/
+      COMMON/GENERAL_STATS/CUMULATED_TIMING
+
 c-----
 c  Begin Code
 c-----
+      call cpu_time(t_after)
+      CUMULATED_TIMING = t_after - CUMULATED_TIMING
+
       if (N_EVALS.eq.0) then
         return
       endif
@@ -449,6 +460,8 @@ c-----
       write(outUnit,33) '<h_return_code>',H_RETURN_CODES,'</h_return_code>'
       write(outUnit,*) '<average_time>'//trim(toStr_real(AVG_TIMING))
      & //'</average_time>'
+      write(outUnit,*) '<cumulated_time>'//trim(toStr_real(CUMULATED_TIMING))
+     & //'</cumulated_time>'
       write(outUnit,*) '<max_prec>'//trim(toStr_real(MAX_PREC))//'</max_prec>'
       write(outUnit,*) '<min_prec>'//trim(toStr_real(MIN_PREC))//'</min_prec>'
       write(outUnit,*) '<n_evals>'//trim(toStr_int(N_EVALS))//'</n_evals>'   
@@ -2227,7 +2240,7 @@ c 23   close(22)
      &     0,1,0.,0.,0.,0.,0.,0
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c     Write out MadLoop statistics, if any
-      call output_madloop_statistics(66)
+      call output_run_statistics(66)
       flush(66)
       close(66, status='KEEP')
 
