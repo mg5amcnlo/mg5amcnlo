@@ -386,7 +386,8 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             self['mothers'].extend(mothersList)
             self['pairing'].append(len(mothersList))
 
-    def get_vertex_leg_numbers(self, veto_inter_id=[0,-1,-2]):
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram"""
 
         vertex_leg_numbers = [len(self.get('mothers'))] if \

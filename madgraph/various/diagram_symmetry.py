@@ -93,7 +93,7 @@ def find_symmetry(matrix_element):
     base_diagrams = matrix_element.get_base_amplitude().get('diagrams')
     vert_list = [max(diag.get_vertex_leg_numbers()) for diag in diagrams if \
                                         diag.get_vertex_leg_numbers()!=[]]
-    minvert = min(vert_list) if vert_list!=[] else 0
+    min_vert = min(vert_list) if vert_list!=[] else 0
     
     for diag in matrix_element.get('diagrams'):
         diagram_numbers.append(diag.get('number'))
@@ -183,7 +183,7 @@ def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
     vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
             matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
-    minvert = min(vert_list) if vert_list!=[] else 0
+    min_vert = min(vert_list) if vert_list!=[] else 0
     # Prepare the symmetry vector with non-used amp2s (due to
     # multiparticle vertices)
     symmetry = []

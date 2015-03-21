@@ -31,8 +31,9 @@ C
     PARAMETER (Hel_Average_Factor=%(hel_avg_factor)d)
 C   The full matrix element is included in each of the multichanneling factor '|A_i|^2' so that it is sensitive to the interference and also solves problematic cases where all '|A_i|^2' are zero, like in g g > a n*g because the A_i are color stripped so that Furry theorem basically applies to all summed amplitudes in a topology.
 C   However, we want to control the magnitude of the distortion to the original multichanneling we bring by including part of the full matrix element. So we divide its contribution by this MULTICHANNEL_FUDGE factor. When set to 1000+, it basically serves no other purpose than fixing the pathological cases of all '|A_i|^2' being zero.
+C   When set to zero, the modification to the multichanneling described above is removed
 	DOUBLE PRECISION MULTICHANNEL_FUDGE
-	PARAMETER (MULTICHANNEL_FUDGE=1000.0d0)
+	PARAMETER (MULTICHANNEL_FUDGE=0.0d0)
 c
 c global (due to reading writting) 
 c
@@ -115,6 +116,9 @@ C ----------
 C BEGIN CODE
 C ----------
 
+C  Notice that when forcing helicity sum directly in MadLoop then one doesn't have access to the weights of individual Hel. Configs so that they cannot be specified in the event file. We turned this option off by default.
+    FORCE_ML_Helicity_Sum = (ISUM_HEL.eq.0.AND..False.)
+
 	IF(NLOOPDIAGRAMS.GT.MAXAMPS) THEN
 	   STOP 'MAXAMPS smaller than NLOOPDIAGRAMS in matrix.f'
 	ENDIF
@@ -122,16 +126,23 @@ C ----------
 	IF(.NOT.INIT_MADLOOP) THEN
 	  INIT_MADLOOP = .TRUE.
 C So that TIR integrals can be reused accross helicity configuration.
-C Notice that ITR integrals for rotated PS points (i.e. which is part of MadLoop's default stabiliy test procedure), will not work. This is why one should always keep the MadLoop parameter 'NRotations_DP' set to 0.
-	  CALL %(ml_prefix)sSET_AUTOMATIC_TIR_CACHE_CLEARING(.FALSE.)
+C Notice that ITR integrals for rotated PS points (i.e. which is part of MadLoop's default stabiliy test procedure), will not work. This is why one should always keep the MadLoop parameter 'NRotations_DP' set to 0 in this case.
+C Of course this is only necessary when using MadLoop for several helicity for the same PS point
+      IF ((.not.FORCE_ML_Helicity_Sum).and.ISUM_HEL.eq.0) THEN
+	    CALL %(ml_prefix)sSET_AUTOMATIC_TIR_CACHE_CLEARING(.FALSE.)
+	  ENDIF
       CALL %(ml_prefix)sGET_ANSWER_DIMENSION(ML_ANS_DIMENSION)
 C In case there is an initialization phase for MadLoop (i.e. everytime except when MC over helicity and disabling the Loop filter, which is the default.
 	  CALL %(ml_prefix)sFORCE_STABILITY_CHECK(.TRUE.)
       ALLOCATE(ANS_ML(0:3,0:ML_ANS_DIMENSION))
 	  ALLOCATE(PREC_FOUND(0:ML_ANS_DIMENSION))
 	ENDIF
-C But then we must clear the cache by hand at the beginning of the computation of each new PS point
-	CALL %(ml_prefix)sCLEAR_TIR_CACHE()
+
+    IF ((.not.FORCE_ML_Helicity_Sum).and.ISUM_HEL.eq.0) THEN
+C     But then we must clear the cache by hand at the beginning of the computation of each new PS point
+C     This is of course only necessary if the automatic TIR Cache clearing was turned off.
+	  CALL %(ml_prefix)sCLEAR_TIR_CACHE()
+    ENDIF
 
     NTRY(IMIRROR)=NTRY(IMIRROR)+1
 
@@ -153,8 +164,6 @@ C But then we must clear the cache by hand at the beginning of the computation o
        TS(I)=0d0
     ENDDO
 
-C  Notice that when forcing helicity sum directly in MadLoop then one doesn't have access to the weights of individual Hel. Configs so that they cannot be specified in the event file. We turned this option off by default.
-    FORCE_ML_Helicity_Sum = (ISUM_HEL.eq.0.AND..False.)
     if (FORCE_ML_Helicity_Sum)then
 C Of course this option can also not be used for polarized beams.
       do JJ=1,NINCOMING
@@ -258,6 +267,7 @@ C           The helicity configuration was chosen already by genps and put in a 
                 T=T*(2d0-ABS(POL(JJ)))
               ENDIF
             ENDDO
+
 c           Always one helicity at a time
             ANS = T
 c           Include the Jacobian from helicity sampling
@@ -286,12 +296,14 @@ c         Set right sign for ANS, based on sign of chosen helicity
         DO I=1,NLOOPDIAGRAMS
             XTOT=XTOT+AMP2(I)
         ENDDO
-	    INTERFERENCE_CONTRIB  = DABS(ANS - XTOT) / MULTICHANNEL_FUDGE
-		XTOT=0.0d0
-        DO I=1,NLOOPDIAGRAMS
+		IF (MULTICHANNEL_FUDGE.ne.0.0d0) then
+	      INTERFERENCE_CONTRIB  = DABS(ANS - XTOT) / MULTICHANNEL_FUDGE
+		  XTOT=0.0d0
+          DO I=1,NLOOPDIAGRAMS
             AMP2(I)=AMP2(I)+INTERFERENCE_CONTRIB
 			XTOT = XTOT+AMP2(I)
-        ENDDO
+          ENDDO
+		ENDIF
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s
         ELSE
@@ -370,7 +382,7 @@ c   ----
 
 	me_answer = FINITE
 
-	IF (((OneEps+TwoEps)/finite).gt.(1000d0*PREC)) THEN
+	IF (((OneEps+TwoEps)/finite).gt.(1000d0*PREC).AND.(((OneEps+TwoEps)/finite).gt.1.0d-5)) THEN
 	  WARNING_COUNTERS(2) = WARNING_COUNTERS(2) + 1
 	  IF (WARNING_COUNTERS(2).le.10) THEN
 	    WRITE(*,*) "WARNING : The residue of the single and double pole of the loop matrix element being integrated does not seem to vanish."

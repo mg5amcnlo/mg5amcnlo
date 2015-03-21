@@ -345,16 +345,18 @@ class gensym(object):
                         self.splitted_for_dir(Pdir, G),
                         nb_events,mode=self.mode,
                         conservative_factor=5.0)
-        
+
+        xsec_format = '.%ig'%(max(3,int(math.log10(float(cross)/float(error)))+2) 
+                                                      if float(cross)!=0 else 8)        
         if need_submit:
-            xsec_format = '.%ig'%(max(3,int(math.log10(float(cross)/float(error)))+2) 
-                                                      if float(cross)!=0 else 8)
             message = "%%s/G%%s is at %%%s +- %%.3g pb. Submit next iteration"%xsec_format
             logger.info(message%\
                         (os.path.basename(Pdir), G, float(cross), float(error)))
             self.resubmit_survey(Pdir,G, Gdirs, step)
         elif cross:
-            logger.info("Survey finished for %s/G%s", os.path.basename(Pdir),G)
+            logger.info("Survey finished for %s/G%s at %s"%(
+                    os.path.basename(Pdir),G,('%%%s +- %%.3g pb'%xsec_format))%
+                                                   (float(cross), float(error)))
             # prepare information for refine
             newGpath = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
             if not os.path.exists(newGpath):
@@ -448,6 +450,7 @@ class gensym(object):
         self.warnings_from_statistics(G, grid_calculator.results.run_statistics) 
         stats_msg = grid_calculator.results.run_statistics.nice_output(
                                      '/'.join([os.path.basename(Pdir),'G%s'%G]))
+
         if stats_msg:
             logger.log(5, stats_msg)
 
@@ -1264,7 +1267,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
         output_file.close()
         # For large number of iteration. check the number of event by doing the
         # real unweighting.
-        if True:# nunwgt < needed_event and step > self.min_iter:            
+        # exact efficieny computation beyon min_iter
+        if nunwgt < needed_event and step > self.min_iter:            
             lhe = lhe_parser.EventFile(output_file.name)
             old_nunwgt =nunwgt
             nunwgt = lhe.unweight(None, trunc_error=0.01)

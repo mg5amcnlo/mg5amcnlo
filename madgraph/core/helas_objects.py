@@ -2033,7 +2033,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return tuple(sorted(indices))
 
-    def get_vertex_leg_numbers(self, veto_inter_id = [0,-1,-2]):
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram"""
 
         if not self.get('mothers'):
@@ -2993,7 +2994,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 
         return tuple(sorted(indices))
 
-    def get_vertex_leg_numbers(self, veto_inter_id=[0,-1,-2]):
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram,
         This function is only used for establishing the multi-channeling, so that
         we exclude from it all the fake vertices and the vertices resulting from
@@ -3163,7 +3165,8 @@ class HelasDiagram(base_objects.PhysicsObject):
 
         return coupling_orders
 
-    def get_vertex_leg_numbers(self, veto_inter_id=[0,-1,-2]):
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram"""
 
         return self.get('amplitudes')[0].get_vertex_leg_numbers(

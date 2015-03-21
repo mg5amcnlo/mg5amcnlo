@@ -2377,32 +2377,51 @@ Beware that this can be dangerous for local multicore runs.""")
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','1|2|3', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','1|2|3|4', ifnotdefault=False)
+
+            # Also TIR cache will only work when NRotations_DP=0 (but only matters
+            # when not MC-ing over helicities) so it will be hard-reset by MadLoop
+            # to zero when not MC-ing over helicities, unless the parameter
+            # Force_ML_Helicity_Sum is set to True in the matrix<i>.f codes.
+            if self.run_card['nhel'] == 0:
+                if ('NRotations_DP' in self.MadLoopparam.user_set and \
+                                     self.MadLoopparam.get('NRotations_DP')!=0) or \
+                   ('NRotations_QP' in self.MadLoopparam.user_set and \
+                                         self.MadLoopparam.get('NRotations_QP')!=0):
+                    logger.warning(
+    """You chose to also use a lorentz rotation for stability tests (see parameter NRotations_[DP|QP]).
+    Beware that, for optimization purposes, MadEvent uses manual TIR cache clearing which is not compatible
+    with the lorentz rotation stability test. The number of these rotations to be used will be reset to 
+    zero by MadLoop. You can avoid this by changing the parameter 'FORCE_ML_HELICITY_SUM' int he matrix<i>.f
+    files to be .TRUE. so that the sum over helicity configurations is performed within MadLoop (in which case
+    the helicity of final state particles cannot be speicfied in the LHE file.""")
+                self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
+                self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)
+            else:
+                # When MC-ing over helicities, the manual TIR cache clearing is
+                # not necessary, so that one can use the lorentz check
+                self.MadLoopparam.set('NRotations_DP',1,ifnotdefault=False)
+                self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)                
             
-            
-            # MadLoop runtime speed is important for loop-induced processes.
-            # We therefore chose here to only have the minimal numerical stability
-            # test which includes only two independent computations, not three.
-            # Also TIR cache will only work when NRotations_DP=0, so if one 
-            # doesn't keep it this way, then LoopInduced+MadEvent could be up to
-            # NHelicity slower!
-            if ('NRotations_DP' in self.MadLoopparam.user_set and \
-                                 self.MadLoopparam.get('NRotations_DP')!=0) or \
-               ('NRotations_QP' in self.MadLoopparam.user_set and \
-                                     self.MadLoopparam.get('NRotations_QP')!=0):
-                logger.warning(
-"""You chose to also use a lorentz rotation for stability tests (see parameter NRotations_[DP|QP]).
-Beware that, for optimization purposes, MadEvent uses manual TIR cache clearing which is not compatible
-with the lorentz rotation stability test. These number of these rotations to be used will be reset to 
-zeor by MadLoop.""")
-            self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
-            self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)
+            # Finally, the stability tests are slightly less reliable for process
+            # with less or equal than 4 final state particles because the 
+            # accessible kinematic is very limited (i.e. lorentz rotations don't
+            # shuffle invariants numerics much). In these cases, we therefore
+            # increase the required accuracy to 10^-7.
+            # This is important for getting g g > z z [QCD] working with a
+            # ptheavy cut as low as 1 GeV.  
+            if self.proc_characteristics['nexternal']<=4:
+                if ('MLStabThres' in self.MadLoopparam.user_set and \
+                                   self.MadLoopparam.get('MLStabThres')>1.0e-7):
+                    logger.warning(
+    """You chose to increase the default value of the MadLoop parameter 'MLStabThres' above 1.0e-7.
+    Stability tests can be less reliable on the limited kinematic of processes with less or equal
+    than four external legs, so this is not recommended (especially not for g g > z z).""")
+                self.MadLoopparam.set('MLStabThres',1.0e-7,ifnotdefault=False)
             
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
                                           "MadLoopParams.dat"))
-             
          
     ############################################################################      
     def do_survey(self, line):

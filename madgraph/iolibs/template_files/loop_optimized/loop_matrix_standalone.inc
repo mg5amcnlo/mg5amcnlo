@@ -27,6 +27,7 @@ C        ME_COMPUTATION_FROM_JAMP = Amplitudes are first projected onto color fl
 C     When setting both computation method to .TRUE., their systematic comparisons will be printed out.
 ## if(LoopInduced) {
       DATA DIRECT_ME_COMPUTATION/.FALSE./
+c     When using this MadLoop output for integration with MadEvent, ME_COMPUTATION_FROM_JAMP *must* be set to .True. because it is necessary to compute the AMP2 setting up the multichanneling. 
       DATA ME_COMPUTATION_FROM_JAMP/.TRUE./
 ## } else {
       DATA DIRECT_ME_COMPUTATION/.TRUE./
@@ -1030,7 +1031,7 @@ ENDIF
 C We should compute the color flow either if it contributes to the final result (i.e. not used just for the filtering), or if the computation is only done from the color flows
 IF (((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP).OR.(H.EQ.USERHEL.OR.USERHEL.EQ.-1)) THEN
 C The cumulative quantities must only be computed if that helicity contributes according to user request (second argument of the subroutine below).
-  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT,(H.EQ.USERHEL.OR.USERHEL.EQ.-1))
+  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)
   IF(ME_COMPUTATION_FROM_JAMP) THEN
     CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(BUFFRES,HEL_MULT)
     IF(((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP)) THEN
@@ -1061,6 +1062,9 @@ C     If both computational method is used, then we must just update RES_FROM_JA
         ENDDO
       ENDDO
     ENDIF
+	IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
+	  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+	ENDIF
   ENDIF
 ENDIF
 ## }
