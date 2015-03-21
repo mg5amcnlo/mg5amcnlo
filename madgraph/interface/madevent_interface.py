@@ -2423,7 +2423,9 @@ Beware that this can be dangerous for local multicore runs.""")
     Stability tests can be less reliable on the limited kinematic of processes with less or equal
     than four external legs, so this is not recommended (especially not for g g > z z).""")
                 self.MadLoopparam.set('MLStabThres',1.0e-7,ifnotdefault=False)
-            
+            else:
+                self.MadLoopparam.set('MLStabThres',1.0e-4,ifnotdefault=False)            
+
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
                                           "MadLoopParams.dat"))
