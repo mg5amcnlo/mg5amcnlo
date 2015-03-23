@@ -555,11 +555,19 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         if not hasattr(self.banner, 'param_card'):
             self.banner.charge_card('slha')
+        
+        # Special treatment for the mssm. Convert the param_card to the correct
+        # format
+        if self.banner.get('model').startswith('mssm-') or self.banner.get('model')=='mssm':
+            self.banner.param_card = check_param_card.convert_to_mg5card(\
+                    self.banner.param_card, writting=False)
+            
         for name, block in self.banner.param_card.items():
             if name.startswith('decay'):
                 continue
+                        
             orig_block = generate_all.banner.param_card[name]
-            if block != orig_block:
+            if block != orig_block:                
                 raise Exception, """The directory %s is specific to a mass spectrum. 
                 Your event file is not compatible with this one. (Different param_card: %s different)
                 orig block:
