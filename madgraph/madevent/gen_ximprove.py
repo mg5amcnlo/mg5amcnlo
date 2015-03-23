@@ -391,12 +391,17 @@ class gensym(object):
             
         return 0
 
-    def combine_grid(self, Pdir, G, step):
+    def combine_grid(self, Pdir, G, step, exclude_sub_jobs=[]):
+        """ exclude_sub_jobs is to remove some of the subjobs if a numerical
+            issue is detected in one of them. Warning is issue when this occurs.
+        """
         
         # 1. create an object to combine the grid information and fill it
         grid_calculator = combine_grid.grid_information(self.run_card['nhel'])
         
         for i in range(self.splitted_for_dir(Pdir, G)):
+            if i in exclude_sub_jobs:
+                continue
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
             fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
             one_result = grid_calculator.add_results_information(fsock)
@@ -408,12 +413,28 @@ class gensym(object):
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
             os.remove(pjoin(path, 'grid_information'))
-
              
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory
         cross, across, sigma = grid_calculator.get_cross_section()
-        one_iter_cross, one_iter_sigma = cross, sigma
+
+        #3. Try to avoid one single PS point which ruins the integration
+        #   Should be related to loop evaluation instability.
+        maxwgt = grid_calculator.get_max_wgt(0.01)
+        if maxwgt:
+            nunwgt = grid_calculator.get_nunwgt(maxwgt)
+        if nunwgt < 2 and len(grid_calculator.results) > 1 and step > 1:
+            # check the ratio between the different submit
+            th_maxwgt = [(r.th_maxwgt,i) for i,r in enumerate(grid_calculator.results)]
+            th_maxwgt.sort()
+            ratio = th_maxwgt[-1][0]/th_maxwgt[-2][0]
+            if ratio > 1e4:
+                logger.warning("One Event with large weight have been found. This is likely due to numerical un-stability. We will discard the associate job to recover.")
+                exclude_sub_jobs = list(exclude_sub_jobs)
+                exclude_sub_jobs.append(th_maxwgt[-1][1])
+                return self.combine_grid(self,  Pdir, G, step, exclude_sub_jobs)
+
+ 
         if cross !=0:
             self.cross[(Pdir,G)] += cross**3/sigma**2
             self.abscross[(Pdir,G)] += across * cross**2/sigma**2
@@ -428,16 +449,6 @@ class gensym(object):
                 error = sigma/cross
         else:
             error = 0
-
-        if False and __debug__ :
-            # make the unweighting to compute the number of events:
-            maxwgt = grid_calculator.get_max_wgt(0.01)
-            if maxwgt:
-                nunwgt = grid_calculator.get_nunwgt(maxwgt) 
-                luminosity = nunwgt/(cross+1e-99)
-                primary_event = sum([R.nw for R in grid_calculator.results])
-                written_event = sum([R.nunwgt for R in grid_calculator.results])
-                misc.sprint(G, cross, error*cross, nunwgt, written_event, primary_event, luminosity)
  
         grid_calculator.results.compute_values(update_statistics=True)
         if (str(os.path.basename(Pdir)), G) in self.run_statistics:
