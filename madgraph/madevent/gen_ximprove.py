@@ -481,7 +481,7 @@ class gensym(object):
          "The results might not be trusted."
 
         if 0.01 > EPS_fraction > 0.001:
-             msg.warning(msg%(G,EPS_fraction))
+             logger.warning(msg%(G,EPS_fraction))
         elif EPS_fraction > 0.01:
              logger.critical((msg%(G,EPS_fraction)).replace('might', 'can'))
              raise Exception, (msg%(G,EPS_fraction)).replace('might', 'can')
