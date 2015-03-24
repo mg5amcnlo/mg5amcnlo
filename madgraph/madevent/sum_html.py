@@ -127,7 +127,7 @@ class RunStatistics(dict):
         self['averaged_timing']    = avg_time 
         cumulated_time = xml_node.getElementsByTagName('cumulated_time')
         cumul_time = float(getData(cumulated_time[0]))
-        self['cumulative_timing']  = cum_time 
+        self['cumulative_timing']  = cumul_time 
         max_prec = xml_node.getElementsByTagName('max_prec')
         max_prec = float(getData(max_prec[0]))
         # The minimal precision corresponds to the maximal value for PREC
