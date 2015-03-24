@@ -172,6 +172,7 @@ C
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
+      integer step_hel
 %(ij_lines)s
 C  
 C COLOR DATA
@@ -186,7 +187,12 @@ C ----------
       back_hel = nhel(glu_ij)
       borns(1) = 0d0
       borns(2) = 0d0
-      DO IHEL=back_hel,-back_hel,(-2*back_hel)
+      if (back_hel.ne.0) then
+        step_hel=-2*back_hel
+      else
+        step_hel=1
+      endif
+      DO IHEL=back_hel,-back_hel,step_hel
          IF (IHEL.EQ.back_hel.OR.NHEL(GLU_IJ).NE.0) THEN
         if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         if (.not. calculatedBorn) then
