@@ -1727,6 +1727,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         content = ''
 
+        outfile = open(log_file, 'w')
+
         content += '<HTML><BODY>\n<font face="courier" size=2>'
         for log in log_files:
             channel_dict[os.path.dirname(log)] = [istep]
@@ -1744,9 +1746,11 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             #the PRE tag prints everything verbatim
             content += '<PRE>\n' + open(log).read() + '\n</PRE>'
             content +='<br>\n'
+            outfile.write(content)
+            content=''
 
-        content += '</font>\n</BODY></HTML>\n'
-        open(log_file, 'w').write(content)
+        outfile.write('</font>\n</BODY></HTML>\n')
+        outfile.close()
 
 
     def read_results(self, output, mode):
