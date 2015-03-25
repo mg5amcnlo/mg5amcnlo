@@ -1237,6 +1237,11 @@ class FourMomentum(object):
     def pt(self):
         return math.sqrt(max(0, self.pt2()))
     
+    @property
+    def pseudorapidity(self):
+        norm = math.sqrt(self.px**2 + self.py**2+self.pz**2)
+        return  0.5* math.log((norm - self.pz) / (norm + self.pz))
+    
     def pt2(self):
         """ return the pt square """
         
@@ -1290,7 +1295,7 @@ if '__main__' == __name__:
     
     # Example 1: adding some missing information to the event (here distance travelled)
     if False: 
-        lhe = EventFile('unweighted_events.lhe')
+        lhe = EventFile('unweighted_events.lhe.gz')
         output = open('output_events.lhe', 'w')
         #write the banner to the output file
         output.write(lhe.banner)
@@ -1309,7 +1314,7 @@ if '__main__' == __name__:
         
     # Example 3: Plotting some variable
     if True:
-        lhe = EventFile('unweighted_events.lhe')
+        lhe = EventFile('unweighted_events.lhe.gz')
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
         nbins = 100
@@ -1317,19 +1322,20 @@ if '__main__' == __name__:
         nb_pass = 0
         data = []
         for event in lhe:
-            if nb_pass > 10000:
-                break
-            E=0
+            etaabs = 0 
+            etafinal = 0
             for particle in event:
-                if particle.status<0:
-                    E+=particle.E
-            event.parse_reweight()
+                if particle.status==1:
+                    p = FourMomentum(particle)
+                    eta = p.pseudorapidity
+                    if abs(eta) > etaabs:
+                        etafinal = eta
+                        etaabs = abs(eta)
+            if etaabs < 4:
+                data.append(etafinal)
+                nb_pass +=1     
 
-            if 2 < event.reweight_data["mg_reweight_1"]/event.wgt:            
-                data.append(event.reweight_data["mg_reweight_1"]/event.wgt)
-                nb_pass +=1
-
-            
+                        
         print nb_pass
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
         gs1.update(wspace=0, hspace=0) # set the spacing between axes. 
@@ -1341,6 +1347,9 @@ if '__main__' == __name__:
         ax_c.yaxis.set_label_coords(1.01, 0.25)
         ax_c.set_yticks(ax.get_yticks())
         ax_c.set_yticklabels([])
+        ax.set_xlim([-4,4])
+        print "bin value:", n
+        print "start/end point of bins", bins
         plt.axis('on')
         plt.xlabel('weight ratio')
         plt.show()

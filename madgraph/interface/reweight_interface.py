@@ -20,6 +20,7 @@ import math
 import os
 import re
 import shutil
+import tempfile
 import time
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
@@ -267,8 +268,12 @@ class ReweightInterface(extended_cmd.Cmd):
         ff.close()        
         cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
                                    ask=self.ask, pwd=pjoin(self.me_dir,'rw_me'))
-        new_card = open(pjoin(self.me_dir, 'rw_me', 'Cards', 'param_card.dat')).read()        
 
+        new_card = open(pjoin(self.me_dir, 'rw_me', 'Cards', 'param_card.dat')).read()        
+        # check if "Auto" is present for a width parameter
+        if "auto" in new_card.lower():            
+            self.mother.check_param_card(pjoin(self.me_dir, 'rw_me', 'Cards', 'param_card.dat'))
+            new_card = open(pjoin(self.me_dir, 'rw_me', 'Cards', 'param_card.dat')).read() 
         
 
         # Find new tag in the banner and add information if needed
@@ -294,6 +299,9 @@ class ReweightInterface(extended_cmd.Cmd):
             header_rwgt_other = ''
             mg_rwgt_info = []
             rewgtid = 1
+        
+
+        
         
         # add the reweighting in the banner information:
         #starts by computing the difference in the cards.
