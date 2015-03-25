@@ -1965,6 +1965,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def do_launch(self, line, *args, **opt):
         """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
         if self.ninitial == 1:
+            logger.info("Note that since 2.3. The launch for 1>N pass in event generation\n"+
+                           "    To have the previous behavior use the calculate_decay_widths function")
             self.do_calculate_decay_widths(line, *args, **opt)
         else:
             self.do_generate_events(line, *args, **opt)
@@ -2082,6 +2084,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.exec_cmd('store_events', postcmd=False)
         
         self.collect_decay_widths()
+        self.print_results_in_shell(self.results.current)
         self.update_status('calculate_decay_widths done', 
                                                  level='parton', makehtml=False)   
 
@@ -2574,7 +2577,7 @@ Beware that this can be dangerous for local multicore runs.""")
             x_improve.run_statistics = survey_statistics
         
         x_improve.launch() # create the ajob for the refinment.
-        if 'refine' not in self.history[-1]:
+        if not self.history or 'refine' not in self.history[-1]:
             cross, error = x_improve.update_html() #update html results for survey
             if  cross == 0:
                 return
@@ -3501,14 +3504,19 @@ Beware that this can be dangerous for local multicore runs.""")
                         if os.path.exists(pjoin(cwd, G, 'input_app.txt')):
                             os.remove(pjoin(cwd, G, 'input_app.txt'))
                     
-                    if os.path.exists(pjoin(cwd, G, 'ftn25')):
-                        if offset ==0 or offset == int(float(argument[0])):
+                    if os.path.exists(os.path.realpath(pjoin(cwd, G, 'ftn25'))):
+                        if offset == 0 or offset == int(float(argument[0])):
                             os.remove(pjoin(cwd, G, 'ftn25'))
                             continue
                         else:
                             input_files.append(pjoin(cwd, G, 'ftn25'))
                             input_files.remove('input_app.txt')
                             input_files.append(pjoin(cwd, G, 'input_app.txt'))
+                    elif os.path.lexists(pjoin(cwd, G, 'ftn25')):
+                        try:
+                            os.remove(pjoin(cwd,G,'ftn25'))
+                        except:
+                            pass
                     
                 #submitting
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  

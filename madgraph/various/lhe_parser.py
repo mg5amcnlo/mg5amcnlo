@@ -7,6 +7,7 @@ import time
 import os
 
 
+
 if '__main__' == __name__:
     import sys
     sys.path.append('../../')
@@ -50,7 +51,7 @@ class Particle(object):
         self.event_id = len(event) #not yet in the event
         # LHE information
         self.pid = 0
-        self.status = 0
+        self.status = 0 # -1:initial. 1:final. 2: propagator
         self.mother1 = None
         self.mother2 = None
         self.color1 = 0
@@ -67,6 +68,11 @@ class Particle(object):
 
         if line:
             self.parse(line)
+          
+    @property
+    def pdg(self):
+        "convenient alias"
+        return self.pid
             
     def parse(self, line):
         """parse the line"""
@@ -142,7 +148,7 @@ class EventFile(object):
 
     def __new__(self, path, mode='r', *args, **opt):
 
-        if path.endswith(".gz"):
+        if  path.endswith(".gz"):
             return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
         else:
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
@@ -177,8 +183,22 @@ class EventFile(object):
         output = banner.Banner()
         output.read_banner(self.banner)
         return output
+
+    @property
+    def cross(self):
+        """return the cross-section of the file #from the banner"""
+        try:
+            return self._cross
+        except Exception:
+            pass
+
+        onebanner = self.get_banner()
+        self._cross = onebanner.get_cross()
+        return self._cross
     
     def __len__(self):
+        if self.closed:
+            return 0
         if hasattr(self,"len"):
             return self.len
 
@@ -243,7 +263,7 @@ class EventFile(object):
             
     
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, event_target=0, 
-                 log_level=logging.DEBUG):
+                 log_level=logging.INFO):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
@@ -339,7 +359,7 @@ class EventFile(object):
                     max_wgt = min(max_wgt, all_wgt[-1])
                     if max_wgt == last_max_wgt:
                         if nb_keep <= event_target:
-                            logger.warning("fail to reach target")
+                            logger.log(log_level+10,"fail to reach target %s", event_target)
                             break   
                         else:
                             break
@@ -377,7 +397,7 @@ class EventFile(object):
                     if event_target ==0 or nb_keep <= event_target: 
                         outfile.write(str(event))
             
-            if nb_keep > event_target:
+            if event_target and nb_keep > event_target:
                 if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
                     outfile.close()
 #                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
@@ -389,12 +409,18 @@ class EventFile(object):
                     outfile.write("</LesHouchesEvents>\n")
                     outfile.close()
                 break
+            elif event_target == 0:
+                if outputpath:
+                    outfile.write("</LesHouchesEvents>\n")
+                    outfile.close()
+                break                    
             elif outputpath:
                 outfile.close()
 #                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
+            
         else:
             # pass here if event_target > 0 and all the attempt fail.
-            logger.warning("fail to reach target event")
+            logger.log(log_level+10,"fail to reach target event %s (iteration=%s)", event_target,i)
         
 #        logger.log(log_level, "Final maximum weight used for final "+\
 #                    "unweighting is %s yielding %s events." % (max_wgt,nb_keep))
@@ -405,7 +431,7 @@ class EventFile(object):
         else:
             nb_events_unweighted = nb_keep
 
-        logger.info("write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
+        logger.log(log_level, "write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
           nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
      
         return nb_keep
@@ -434,7 +460,7 @@ class MultiEventFile(EventFile):
         self.initial_nb_events = []
         self.total_event_in_files = 0
         self.curr_nb_events = []
-        self.cross = []
+        self.allcross = []
         self.error = []
         self.across = []
         self.scales = []
@@ -457,7 +483,7 @@ class MultiEventFile(EventFile):
             self.banner = obj.banner
         self.curr_nb_events.append(0)
         self.initial_nb_events.append(0)
-        self.cross.append(cross)
+        self.allcross.append(cross)
         self.across.append(across)
         self.error.append(error)
         self.scales.append(1)
@@ -503,10 +529,10 @@ class MultiEventFile(EventFile):
             Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')][-1]
             group = Pdir.split("_")[0][1:]
             if group in grouped_cross:
-                grouped_cross[group] += self.cross[i]
+                grouped_cross[group] += self.allcross[i]
                 grouped_error[group] += self.error[i]**2 
             else:
-                grouped_cross[group] = self.cross[i]
+                grouped_cross[group] = self.allcross[i]
                 grouped_error[group] = self.error[i]**2                
                 
         nb_group = len(grouped_cross)
@@ -585,7 +611,7 @@ class MultiEventFile(EventFile):
             self.initial_nb_events[i] = nb_event
             self.scales[i] = self.across[i]/cross['abs'] if self.across[i] else 1
             #misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
-            #            % (i, cross['all'], self.cross[i], self.scales[i], nb_event))
+            #            % (i, cross['all'], self.allcross[i], self.scales[i], nb_event))
             for key in cross:
                 sum_cross[key] += cross[key]* self.scales[i]
             all_wgt +=[self.scales[i] * w for w in new_wgt]
@@ -752,7 +778,7 @@ class Event(list):
         assert max(decay_particle.px, decay_particle.py, decay_particle.pz) < thres,\
             "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
         
-        self.nexternal += decay_event.nexternal -2
+        self.nexternal += decay_event.nexternal -1
         
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
@@ -773,7 +799,10 @@ class Event(list):
                         setattr(new_particle, tag, this_particle)
                     else:
                         setattr(new_particle, tag, self[nb_part + mother_id -1]) 
-
+                elif tag == "mother2" and isinstance(particle.mother1, Particle):
+                    new_particle.mother2 = this_particle
+                else:
+                    misc.sprint("Need to understan why", particle)
             
         # Need to correct the color information of the particle
         # first find the first available color index
@@ -910,7 +939,7 @@ class Event(list):
             abspy += abs(particle.py)
             abspz += abs(particle.pz)
         # check that relative error is under control
-        threshold = 5e-11
+        threshold = 5e-7
         if E/absE > threshold:
             logger.critical(self)
             raise Exception, "Do not conserve Energy %s, %s" % (E/absE, E)
@@ -1194,7 +1223,7 @@ class FourMomentum(object):
         self.px = px
         self.py = py
         self.pz =pz
-    
+
     @property
     def mass(self):
         """return the mass"""    
@@ -1203,10 +1232,15 @@ class FourMomentum(object):
     def mass_sqr(self):
         """return the mass square"""    
         return self.E**2 - self.px**2 - self.py**2 - self.pz**2
-    
+
     @property
     def pt(self):
         return math.sqrt(max(0, self.pt2()))
+    
+    @property
+    def pseudorapidity(self):
+        norm = math.sqrt(self.px**2 + self.py**2+self.pz**2)
+        return  0.5* math.log((norm - self.pz) / (norm + self.pz))
     
     def pt2(self):
         """ return the pt square """
@@ -1247,8 +1281,8 @@ class FourMomentum(object):
         pt = self.pt2()
         if pt:
             s3product = self.px * mom.px + self.py * mom.py + self.pz * mom.pz
-            mass = self.mass()
-            lf = (self.E + (self.E - mass) * s3product / pt ) / mass
+            mass = self.mass
+            lf = (mom.E + (self.E - mass) * s3product / pt ) / mass
             return FourMomentum(E=(self.E*mom.E+s3product)/mass,
                            px=mom.px + self.px * lf,
                            py=mom.py + self.py * lf,
@@ -1261,7 +1295,7 @@ if '__main__' == __name__:
     
     # Example 1: adding some missing information to the event (here distance travelled)
     if False: 
-        lhe = EventFile('unweighted_events.lhe')
+        lhe = EventFile('unweighted_events.lhe.gz')
         output = open('output_events.lhe', 'w')
         #write the banner to the output file
         output.write(lhe.banner)
@@ -1276,59 +1310,11 @@ if '__main__' == __name__:
             output.write(str(event))
         output.write('</LesHouchesEvent>\n')
     
-    # Example 2: Adding the decay of one particle (Bridge Method).
-    if False:
-        orig_lhe = EventFile('unweighted_events.lhe')
-        decay_lhe = EventFile('unweighted_decay.lhe')
-        output = open('output_events.lhe', 'w')
-        output.write(orig_lhe.banner) #need to be modified by hand!
-        pid_to_decay  = 15 #which particle to decay
-        bypassed_decay = {} # not yet use decay due to wrong helicity
-        
-        counter = 0
-        start = time.time()
-        for event in orig_lhe:
-            if counter % 1000 == 1:
-                print "decaying event number %s [%s s]" % (counter, time.time()-start)
-            counter +=1
-            for particle in event:
-                if particle.pid == pid_to_decay:
-                    #ok we have to decay this particle!
-                    helicity = particle.helicity
-                    # use the already parsed_event if any
-                    done = False
-                    if helicity in bypassed_decay and bypassed_decay[helicity]:
-                        # use one of the already parsed (but not used) decay event
-                        for decay in bypassed_decay[helicity]:
-                            if decay[0].helicity == helicity:
-                                particle.add_decay(decay)
-                                bypassed_decay[helicity].remove(decay)
-                                done = True
-                                break
-                    # read the decay event up to find one valid decay
-                    while not done:
-                        try:
-                            decay = decay_lhe.next()
-                        except StopIteration:
-                            raise Exception, "not enoug event in the decay file"
-                        
-                        if helicity == decay[0].helicity or helicity==9:
-                            particle.add_decay(decay)
-                            done=True
-                        elif decay[0].helicity in bypassed_decay:
-                            if len(bypassed_decay[decay[0].helicity]) < 100:
-                                bypassed_decay[decay[0].helicity].append(decay)
-                            #limit to 100 to avoid huge increase of memory if only 
-                            #one helicity is present in the production sample.
-                        else:
-                            bypassed_decay[decay[0].helicity] = [decay]
 
-            output.write(str(event))
-        output.write('</LesHouchesEvent>\n')
         
     # Example 3: Plotting some variable
     if True:
-        lhe = EventFile('unweighted_events.lhe')
+        lhe = EventFile('unweighted_events.lhe.gz')
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
         nbins = 100
@@ -1336,19 +1322,20 @@ if '__main__' == __name__:
         nb_pass = 0
         data = []
         for event in lhe:
-            if nb_pass > 10000:
-                break
-            E=0
+            etaabs = 0 
+            etafinal = 0
             for particle in event:
-                if particle.status<0:
-                    E+=particle.E
+                if particle.status==1:
+                    p = FourMomentum(particle)
+                    eta = p.pseudorapidity
+                    if abs(eta) > etaabs:
+                        etafinal = eta
+                        etaabs = abs(eta)
+            if etaabs < 4:
+                data.append(etafinal)
+                nb_pass +=1     
 
-            event.parse_reweight()
-
-            if 2 < event.reweight_data["mg_reweight_1"]/event.wgt:            
-                data.append(event.reweight_data["mg_reweight_1"]/event.wgt)
-                nb_pass +=1
-            
+                        
         print nb_pass
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
         gs1.update(wspace=0, hspace=0) # set the spacing between axes. 
@@ -1360,6 +1347,9 @@ if '__main__' == __name__:
         ax_c.yaxis.set_label_coords(1.01, 0.25)
         ax_c.set_yticks(ax.get_yticks())
         ax_c.set_yticklabels([])
+        ax.set_xlim([-4,4])
+        print "bin value:", n
+        print "start/end point of bins", bins
         plt.axis('on')
         plt.xlabel('weight ratio')
         plt.show()

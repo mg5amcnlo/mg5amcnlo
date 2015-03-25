@@ -729,7 +729,7 @@ c                special case for g > g h remove also the hardest gluon
            endif
            if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c             The ishft gives the FS particle corresponding to imocl
-              if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21.and.
+              if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21.or.
      $                                   ipdgcl(imocl(n),igraphs(1),iproc).ne.21) then
 c                 The second condition is to prevent the case of ggh where the gluon split in quark later.
 c                 The first quark is already remove so we shouldn't remove this one.      

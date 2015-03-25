@@ -1259,8 +1259,8 @@ class HwUList(histograms_PhysicsObjectList):
             for histo in self[1:]:
                 HwU_output_list.extend(histo.get_HwU_source())
                 HwU_output_list.extend(['',''])
-            stream.write('\n'.join(HwU_output_list))
-            stream.close()
+            HwU_stream.write('\n'.join(HwU_output_list))
+            HwU_stream.close()
             return
         
         # Now we consider that we are attempting a gnuplot output.
@@ -1921,6 +1921,7 @@ if __name__ == "__main__":
         uncertainties.remove('statistical')        
 
     n_files    = len([_ for _ in sys.argv[1:] if not _.startswith('--')])
+    print "n_files=",n_files
     histo_norm = 1.0
     if '--average' in sys.argv:
         histo_norm = 1.0/float(n_files)
@@ -1935,6 +1936,8 @@ if __name__ == "__main__":
         if OutName=="":
             OutName = os.path.basename(arg).split('.')[0]+'_output'
         new_histo_list = HwUList(arg, accepted_types_order=accepted_types)
+        if n_files==1:
+            continue
         for histo in new_histo_list:
             if not histo.type is None:
                 histo.type += ' '

@@ -164,7 +164,8 @@ class AllResults(dict):
             if recreateold:
                 for run in runs:
                     self.readd_old_run(run)
-                self.current = self[run]
+                if self.order:
+                    self.current = self[self.order[-1]]
             else:
                 logger.warning("Previous runs exists but they will not be present in the html output.")
     

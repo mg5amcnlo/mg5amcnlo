@@ -82,6 +82,7 @@ class gensym(object):
         self.run_card = cmd.run_card
         self.me_dir = cmd.me_dir
         
+        
         # dictionary to keep track of the precision when combining iteration
         self.cross = collections.defaultdict(int)
         self.abscross = collections.defaultdict(int)
@@ -208,7 +209,7 @@ class gensym(object):
     def submit_to_cluster_no_splitting(self, job_list):
         """submit the survey without the parralelization.
            This is the old mode which is still usefull in single core"""
-       
+     
         # write the template file for the parameter file   
         self.write_parameter(parralelization=False, Pdirs=job_list.keys())
         
@@ -349,7 +350,7 @@ class gensym(object):
         xsec_format = '.%ig'%(max(3,int(math.log10(1.0/float(error)))+2) 
                                                       if float(cross)!=0.0 else 8)        
         if need_submit:
-            message = "%%s/G%%s is at %%%s +- %%.3g pb. Submit next iteration"%xsec_format
+            message = "%%s/G%%s is at %%%s +- %%.3g pb. Now submitting iteration #%s."%(xsec_format, step+1)
             logger.info(message%\
                         (os.path.basename(Pdir), G, float(cross), 
                                                      float(error)*float(cross)))
@@ -614,7 +615,7 @@ class gensym(object):
             Pdirs = self.subproc
                
         for Pdir in Pdirs:
-            path =pjoin(self.me_dir, 'SubProcesses', Pdir, 'input_app.txt') 
+            path =pjoin(Pdir, 'input_app.txt') 
             self.write_parameter_file(path, options)
 
         
@@ -1187,7 +1188,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
             try:
                 os.remove(pjoin(self.me_dir, "SubProcesses",C.parent_name, C.name, "events.lhe"))
             except:
-                raise
+                pass
             
             #1. Compute the number of points are needed to reach target
             needed_event = goal_lum*C.get('axsec')
@@ -1279,12 +1280,10 @@ class gen_ximprove_share(gen_ximprove, gensym):
         output_file.close()
         # For large number of iteration. check the number of event by doing the
         # real unweighting.
-        # exact efficieny computation beyon min_iter
-        if nunwgt < needed_event and step > self.min_iter:            
+        if nunwgt < 0.6 * needed_event and step > self.min_iter:            
             lhe = lhe_parser.EventFile(output_file.name)
             old_nunwgt =nunwgt
-            nunwgt = lhe.unweight(None, trunc_error=0.01)
-            misc.sprint(old_nunwgt, nunwgt)
+            nunwgt = lhe.unweight(None, trunc_error=0.01, log_level=0)
         
     
         self.generated_events[(Pdir, G)] = (nunwgt, maxwgt)

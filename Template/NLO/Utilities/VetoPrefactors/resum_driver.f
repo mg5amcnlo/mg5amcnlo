@@ -3,7 +3,7 @@
       INTEGER iset,f1,f2,alphaSorder
       DOUBLE PRECISION x1,x2,GetOnePDF,tst
       DOUBLE PRECISION BCorr0, BCorr1, BCorrm0, BCorrm1
-      DOUBLE PRECISION mu, muMad, muhREAL, muh2
+      DOUBLE PRECISION mu, muMad, muhREAL, muh2, mum
       COMPLEX muh, alphaC, alphamC, alphah, ALPHASCOMP
       DOUBLE PRECISION alphaSMZ, ALPHAS, alphaSQ0,mCharm,mBottom
       DOUBLE PRECISION alpha,alpham,alphahREAL
@@ -47,7 +47,8 @@ c     High scale, should be of order Q (REAL or IMAGINARY)
       muh = MuHScalefactor*Q
       muhREAL=REAL(muh)
       muh2=ABS(REAL(muh**2))
-c
+      mum= MuMScalefactor*Q ! matching scale
+c     
 C-----MSTW alpha_s routine-----------------------------------------
       mcharm=1.5
       mbottom=4.25

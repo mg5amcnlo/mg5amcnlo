@@ -648,10 +648,11 @@ class MELauncher(ExtLauncher):
             warning_text = '''\
 This command will create a new param_card with the computed width. 
 This param_card makes sense only if you include all processes for
-the computation of the width.'''
+the computation of the width. For more efficient width computation:
+see arXiv:1402.1178.'''
             logger.warning(warning_text)
 
-            command = 'calculate_decay_widths %s' % self.name
+            command = 'generate_events %s' % self.name
         if mode == "1":
             command += " --cluster"
         elif mode == "2":

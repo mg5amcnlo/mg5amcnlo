@@ -1727,6 +1727,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         content = ''
 
+        outfile = open(log_file, 'w')
+
         content += '<HTML><BODY>\n<font face="courier" size=2>'
         for log in log_files:
             channel_dict[os.path.dirname(log)] = [istep]
@@ -1744,9 +1746,11 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             #the PRE tag prints everything verbatim
             content += '<PRE>\n' + open(log).read() + '\n</PRE>'
             content +='<br>\n'
+            outfile.write(content)
+            content=''
 
-        content += '</font>\n</BODY></HTML>\n'
-        open(log_file, 'w').write(content)
+        outfile.write('</font>\n</BODY></HTML>\n')
+        outfile.close()
 
 
     def read_results(self, output, mode):
@@ -4256,9 +4260,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)
     #                    raise aMCatNLOError(error)
-            elif int(self.run_card['ickkw']) == -1 and mode in ['aMC@NLO', 'noshower', 'LO', 'noshowerLO']:
+            elif int(self.run_card['ickkw']) == -1 and mode in ['aMC@NLO', 'noshower']:
                     # NNLL+NLO jet-veto only possible for LO event generation or fNLO runs.
-                raise self.InvalidCmd("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO.""")
+                raise self.InvalidCmd("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO or LO.""")
         if 'aMC@' in mode or mode == 'onlyshower':
             self.shower_card = self.banner.charge_card('shower_card')
             
