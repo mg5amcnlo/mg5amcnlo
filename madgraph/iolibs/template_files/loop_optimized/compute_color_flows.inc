@@ -487,11 +487,14 @@ C
 	  common/%(proc_prefix)sJAMPB/JAMPB
 ## }
 ## if(LoopInduced and MadEventOutput){
-      %(real_dp_format)s AMP2_ALL(3,NCONFIGS)	  
+      %(real_dp_format)s AMP2_ALL(3,NCONFIGS,0:NSQUAREDSO)	  
       common/%(proc_prefix)sAMP2_ALL/AMP2_ALL
 	  %(complex_dp_format)s JAMPL_FOR_AMP2(3,NLOOPFLOWS,NLOOPAMPSO,NCONFIGS)
 	  common/%(proc_prefix)sJAMPL_FOR_AMP2/JAMPL_FOR_AMP2
 ## }
+
+	  LOGICAL UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+	  common/%(proc_prefix)sSO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
 C Now a more advanced data structure for storing the projection coefficient
 C This is of course not F77 standard but widely supported by now.
@@ -555,7 +558,7 @@ C Now figure out to which SQSOINDEX these orders together correspond to *in the 
         ENDIF
         TEMP(1) = DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*JAMPB(I,M)*DCONJG(JAMPB(J,N)))
         RES(0,SQSOINDEX) = RES(0,SQSOINDEX) + TEMP(1)
-        IF(SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
+        IF((.not.FILTER_SO).or.SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
           RES(0,0) = RES(0,0) + TEMP(1)
         ENDIF
       ENDDO
@@ -608,9 +611,9 @@ C It is however a good cross-check.
 		    TEMP_AMP2(K,config_i) = 0.0d0
 	      ENDDO
 C For the multi-channeling, to choose to square against only among a given configuration, use the do loop below
-		  DO config_j=config_i,config_i
+c		  DO config_j=config_i,config_i
 C For the multi-channeling, to choose to square against all other configuration, use the do loop below
-c         DO config_j=1,nconfigs
+          DO config_j=1,nconfigs
 		    TEMP_AMP2(1,config_i) = TEMP_AMP2(1,config_i) + DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL_FOR_AMP2(1,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(1,J,N,config_j))))
         	TEMP_AMP2(2,config_i) = TEMP_AMP2(2,config_i) + DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL_FOR_AMP2(2,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(1,J,N,config_j)) + JAMPL_FOR_AMP2(1,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(2,J,N,config_j))))
         	TEMP_AMP2(3,config_i) = TEMP_AMP2(3,config_i) + DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL_FOR_AMP2(3,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(1,J,N,config_j)) + JAMPL_FOR_AMP2(1,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(3,J,N,config_j))+JAMPL_FOR_AMP2(2,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(2,J,N,config_j))))
@@ -624,14 +627,19 @@ c         DO config_j=1,nconfigs
           TEMP(K) = 2.0d0*HEL_MULT*DBLE(COLOR_COEF*JAMPL(K,I,M)*DCONJG(JAMPB(J,N)))
 ## }
           RES(K,SQSOINDEX) = RES(K,SQSOINDEX) + TEMP(K)
+## if(LoopInduced and MadEventOutput){
+		  DO config_i=1,nconfigs
+            AMP2_ALL(K,config_i,SQSOINDEX) = AMP2_ALL(K,config_i,SQSOINDEX) + TEMP_AMP2(K,config_i)
+		  ENDDO
+## }
         ENDDO
-        IF(SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
+        IF((.NOT.FILTER_SO).OR.SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
           DO K=1,3
             RES(K,0) = RES(K,0) + TEMP(K)
 ## if(LoopInduced and MadEventOutput){
 C           Notice here that the squared order constraints will apply to the determination of the AMP2 for multichanneling. Place it outside the corresponding statement if this is not desirable.
             do config_i=1,nconfigs
-	          AMP2_ALL(K,config_i) = AMP2_ALL(K,config_i) + TEMP_AMP2(K,config_i)
+	          AMP2_ALL(K,config_i,0) = AMP2_ALL(K,config_i,0) + TEMP_AMP2(K,config_i)
 	        enddo
 ## }
           ENDDO
@@ -654,10 +662,12 @@ C
       PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
 	  INTEGER    NCONFIGS
 	  PARAMETER (NCONFIGS=%(nmultichannels)i)
+      INTEGER    NSQUAREDSO, NLOOPAMPSO, NSO
+	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d, NLOOPAMPSO=%(nAmpSO)d, NSO=%(nSO)d)
 C  
 C LOCAL VARIABLES 
 C
-	  INTEGER I, SOINDEX
+	  INTEGER I,J, SOINDEX
       integer config_index_map(NCONFIGS)
 	  %(config_index_map_definition)s
 C
@@ -669,14 +679,20 @@ C GLOBAL VARIABLES
 C
       %(real_dp_format)s AMP2(NLOOPDIAGRAMS)
 	  common/%(proc_prefix)sAMP2/AMP2
-      %(real_dp_format)s AMP2_ALL(3,NCONFIGS)	  
+      %(real_dp_format)s  AMP2_ALL(3,NCONFIGS,0:NSQUAREDSO)	  
 	  common/%(proc_prefix)sAMP2_ALL/AMP2_ALL
+      LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
+      COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
 C ----------
 C BEGIN CODE
 C ----------
 
       do i=1,nconfigs
-	    AMP2(config_index_map(i))=AMP2(config_index_map(i))+DABS(AMP2_ALL(1,i))
+	    DO J=1,NSQUAREDSO
+  		  IF (CHOSEN_SO_CONFIGS(I)) THEN
+	        AMP2(config_index_map(i))=AMP2(config_index_map(i))+DABS(AMP2_ALL(1,i,J))
+		  ENDIF
+		ENDDO
 	  enddo
 
       END SUBROUTINE
@@ -764,6 +780,8 @@ implicit none
 C  
 C CONSTANTS 
 C 
+      INTEGER    NSQUAREDSO, NLOOPAMPSO, NSO
+	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d, NLOOPAMPSO=%(nAmpSO)d, NSO=%(nSO)d)
 	  %(real_dp_format)s ZERO
       PARAMETER (ZERO=0.0d0)
       INTEGER NCONFIGS
@@ -771,11 +789,11 @@ C
 C
 C LOCAL VARIABLES
 C
-      INTEGER I,K
+      INTEGER I,K,L
 C
 C GLOBAL VARIABLES
 C
-      %(real_dp_format)s AMP2_ALL(3,NCONFIGS)	  
+      %(real_dp_format)s AMP2_ALL(3,NCONFIGS,0:NSQUAREDSO)
 	  common/%(proc_prefix)sAMP2_ALL/AMP2_ALL
 C ----------
 C BEGIN CODE
@@ -783,7 +801,9 @@ C ----------
 
 DO I=1,NCONFIGS
   DO K=1,3
-    AMP2_ALL(K,I)=ZERO
+    DO L=0,NSQUAREDSO
+      AMP2_ALL(K,I,L)=ZERO
+	ENDDO
   ENDDO
 ENDDO
 
