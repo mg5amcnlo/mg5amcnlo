@@ -9,6 +9,8 @@ C
       double precision zero
       parameter       (ZERO = 0d0)
       include 'genps.inc'
+      data HEL_PICKED/-1/
+      data hel_jacobian/1.0d0/
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       INTEGER    ITMAX, ITMIN, NCALL

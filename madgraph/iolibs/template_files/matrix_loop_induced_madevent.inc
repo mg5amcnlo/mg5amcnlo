@@ -29,11 +29,11 @@ C
     PARAMETER (THEL=NCOMB)
     INTEGER Hel_Average_Factor
     PARAMETER (Hel_Average_Factor=%(hel_avg_factor)d)
-C   The full matrix element is included in each of the multichanneling factor '|A_i|^2' so that it is sensitive to the interference and also solves problematic cases where all '|A_i|^2' are zero, like in g g > a n*g because the A_i are color stripped so that Furry theorem basically applies to all summed amplitudes in a topology.
-C   However, we want to control the magnitude of the distortion to the original multichanneling we bring by including part of the full matrix element. So we divide its contribution by this MULTICHANNEL_FUDGE factor. When set to 1000+, it basically serves no other purpose than fixing the pathological cases of all '|A_i|^2' being zero.
-C   When set to zero, the modification to the multichanneling described above is removed
-	DOUBLE PRECISION MULTICHANNEL_FUDGE
-	PARAMETER (MULTICHANNEL_FUDGE=0.0d0)
+C   It can be that all '|A_i|^2' are zero, in which case one wants to effectively set multichannel factors to be flat.
+C   This behavior will occur when  Sum_i(|A_i|^2)/Full_ME < MULTICHANNEL_THRES. 
+C   When set negative, the security above is removed
+	DOUBLE PRECISION MULTICHANNEL_THRES
+	PARAMETER (MULTICHANNEL_THRES=1.0d-5)
 C  
 C ARGUMENTS 
 C  
@@ -284,13 +284,14 @@ c           Include the Jacobian from helicity sampling
         DO I=1,NLOOPDIAGRAMS
             XTOT=XTOT+AMP2(I)
         ENDDO
-		IF (MULTICHANNEL_FUDGE.ne.0.0d0) then
-	      INTERFERENCE_CONTRIB  = DABS(ANS - XTOT) / MULTICHANNEL_FUDGE
-     	  XTOT=0.0d0
-          DO I=1,NLOOPDIAGRAMS
-            AMP2(I)=AMP2(I)+INTERFERENCE_CONTRIB
-			XTOT = XTOT+AMP2(I)
-          ENDDO
+		IF (MULTICHANNEL_THRES.ge.0.0d0) then
+		  IF (((XTOT/hel_jacobian)/DABS(ANS)).lt.MULTICHANNEL_THRES) THEN
+		    XTOT=0.0d0
+            DO I=1,NLOOPDIAGRAMS
+              AMP2(I)=AMP2(I)+ MULTICHANNEL_THRES*(DABS(ANS)/hel_jacobian)
+			  XTOT = XTOT+AMP2(I)
+            ENDDO
+		  ENDIF 
 		ENDIF
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s

@@ -346,17 +346,18 @@ class gensym(object):
                         nb_events,mode=self.mode,
                         conservative_factor=5.0)
 
-        xsec_format = '.%ig'%(max(3,int(math.log10(float(cross)/float(error)))+2) 
-                                                      if float(cross)!=0 else 8)        
+        xsec_format = '.%ig'%(max(3,int(math.log10(1.0/float(error)))+2) 
+                                                      if float(cross)!=0.0 else 8)        
         if need_submit:
             message = "%%s/G%%s is at %%%s +- %%.3g pb. Submit next iteration"%xsec_format
             logger.info(message%\
-                        (os.path.basename(Pdir), G, float(cross), float(error)))
+                        (os.path.basename(Pdir), G, float(cross), 
+                                                     float(error)*float(cross)))
             self.resubmit_survey(Pdir,G, Gdirs, step)
         elif cross:
             logger.info("Survey finished for %s/G%s at %s"%(
                     os.path.basename(Pdir),G,('%%%s +- %%.3g pb'%xsec_format))%
-                                                   (float(cross), float(error)))
+                                      (float(cross), float(error)*float(cross)))
             # prepare information for refine
             newGpath = pjoin(self.me_dir,'SubProcesses' , Pdir, 'G%s' % G)
             if not os.path.exists(newGpath):

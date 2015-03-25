@@ -611,9 +611,9 @@ C It is however a good cross-check.
 		    TEMP_AMP2(K,config_i) = 0.0d0
 	      ENDDO
 C For the multi-channeling, to choose to square against only among a given configuration, use the do loop below
-c		  DO config_j=config_i,config_i
-C For the multi-channeling, to choose to square against all other configuration, use the do loop below
-          DO config_j=1,nconfigs
+		  DO config_j=config_i,config_i
+c For the multi-channeling, to choose to square against all other configuration, use the do loop below
+c          DO config_j=1,nconfigs
 		    TEMP_AMP2(1,config_i) = TEMP_AMP2(1,config_i) + DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL_FOR_AMP2(1,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(1,J,N,config_j))))
         	TEMP_AMP2(2,config_i) = TEMP_AMP2(2,config_i) + DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL_FOR_AMP2(2,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(1,J,N,config_j)) + JAMPL_FOR_AMP2(1,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(2,J,N,config_j))))
         	TEMP_AMP2(3,config_i) = TEMP_AMP2(3,config_i) + DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL_FOR_AMP2(3,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(1,J,N,config_j)) + JAMPL_FOR_AMP2(1,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(3,J,N,config_j))+JAMPL_FOR_AMP2(2,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(2,J,N,config_j))))
@@ -689,9 +689,12 @@ C ----------
 
       do i=1,nconfigs
 	    DO J=1,NSQUAREDSO
-  		  IF (CHOSEN_SO_CONFIGS(I)) THEN
+C For the multi-channeling, it is in general better to ignore the squared order constraints (which, if they are any, would restrict the AMP2 quantities to be coming from the interference terms only).  
+         IF (.TRUE.) THEN
+C Chosing the if statement below instead would as a result to apply the squared order constraints to the AMP2 quantities given to MadEvent for the multichanneling.
+c  		  IF (CHOSEN_SO_CONFIGS(I)) THEN
 	        AMP2(config_index_map(i))=AMP2(config_index_map(i))+DABS(AMP2_ALL(1,i,J))
-		  ENDIF
+ 		  ENDIF
 		ENDDO
 	  enddo
 
