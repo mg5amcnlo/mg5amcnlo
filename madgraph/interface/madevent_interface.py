@@ -3492,7 +3492,7 @@ zeor by MadLoop.""")
                             input_files.append(pjoin(cwd, G, 'ftn25'))
                             input_files.remove('input_app.txt')
                             input_files.append(pjoin(cwd, G, 'input_app.txt'))
-                    elif os.path.exists(pjoin(cwd, G, 'ftn25')):
+                    elif os.path.lexists(pjoin(cwd, G, 'ftn25')):
                         try:
                             os.remove(pjoin(cwd,G,'ftn25'))
                         except:
