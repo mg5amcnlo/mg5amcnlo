@@ -2359,8 +2359,21 @@ Beware that this can be dangerous for local multicore runs.""")
             # helicity configuration
 #            self.MadLoopparam.set('ZeroThres',1.0e-11, ifnotdefault=False)
 
-            self.MadLoopparam.set('HelicityFilterLevel',2, ifnotdefault=False)            
-            self.MadLoopparam.set('DoubleCheckHelicityFilter',True,
+#           It is a bit superficial to use the level 2 which tries to numerically
+#           map matching helicities (because of CP symmetry typically) together.
+#           It is useless in the context of MC over helicities and it can 
+#           potentially make the helicity double checking fail.
+            self.MadLoopparam.set('HelicityFilterLevel',1, ifnotdefault=False)
+            
+#           To be on the safe side however, we ask for 5 consecutive matching
+#           helicity filters.
+            self.MadLoopparam.set('CheckCycle',5, ifnotdefault=False)
+            
+            # For now it is tricky to have eahc channel performing the helicity
+            # double check. What we will end up doing is probably some kind
+            # of new initialization round at the beginning of each launch
+            # command, to reset the filters.    
+            self.MadLoopparam.set('DoubleCheckHelicityFilter',False,
                                                              ifnotdefault=False)
           
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced

@@ -121,10 +121,11 @@ C  Notice that when forcing helicity sum directly in MadLoop then one doesn't ha
 	IF(.NOT.INIT_MADLOOP) THEN
 	  INIT_MADLOOP = .TRUE.
 C Unless this is the first iteration, make sure to never double check the helicity filter again
-      IF (read_grid_file) THEN 
+      IF (read_grid_file) THEN
         CALL SET_FORBID_HEL_DOUBLECHECK(.True.)
 	  ELSE
-        CALL SET_FORBID_HEL_DOUBLECHECK(.False.)
+C       The double check is turned off here even for the first iteration because the further iteration would anyway be wrong since the new HelFilter is not output. We keep it here as it can be used for diagnostics, for example by triggering a crash if the double-check fails instead of trying to recompute the filter.
+        CALL SET_FORBID_HEL_DOUBLECHECK(.True.)
 	  ENDIF
 C So that TIR integrals can be reused accross helicity configuration.
 C Notice that ITR integrals for rotated PS points (i.e. which is part of MadLoop's default stabiliy test procedure), will not work. This is why one should always keep the MadLoop parameter 'NRotations_DP' set to 0 in this case.

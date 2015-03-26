@@ -2607,7 +2607,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         misc.compile(arg=['libdhelas'],cwd=pjoin(self.dir_path,'Source'))        
         
         # Now initialize the MadLoop outputs
-        logger.info('Initializing the MadLoop loop-induced matrix elements '+\
+        logger.info('Initializing MadLoop loop-induced matrix elements '+\
                                                 '(this can take some time) ...')
         for v_folder in glob.iglob(pjoin(self.dir_path,'SubProcesses',
                                                     '%s*'%self.SubProc_prefix)):
