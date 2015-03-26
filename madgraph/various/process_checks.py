@@ -1097,7 +1097,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
     @classmethod    
     def run_initialization(cls, run_dir=None, SubProc_dir=None, infos=None,\
                             req_files = ['HelFilter.dat','LoopFilter.dat'],
-                            attempts = [3,15]):
+                            attempts = [4,15]):
         """ Run the initialization of the process in 'run_dir' with success 
         characterized by the creation of the files req_files in this directory.
         The directory containing the driving source code 'check_sa.f'.
@@ -1106,7 +1106,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         Returns the number of PS points which were necessary for the init.
         Notice at least run_dir or SubProc_dir must be provided.
         A negative attempt number given in input means that quadprec will be
-        forced for initialisation."""
+        forced for initialization."""
         
         # If the user does not want detailed info, then set the dictionary
         # to a dummy one.
@@ -1153,6 +1153,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if not cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter']:
             try:
                 my_req_files.pop(my_req_files.index('LoopFilter.dat'))
+            except ValueError:
+                pass
+        
+        if cls.get_MadLoop_Params(MLCardPath)['HelicityFilterLevel']==0:
+            try:
+                my_req_files.pop(my_req_files.index('HelFilter.dat'))
             except ValueError:
                 pass
         

@@ -47,12 +47,11 @@ c
 C  
 C LOCAL VARIABLES 
 C  
-    INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+    INTEGER NHEL(NEXTERNAL,NCOMB)
     REAL*8 T,MATRIX%(proc_id)s
     REAL*8 R,SUMHEL,TS(NCOMB)
     INTEGER I,IDEN
     INTEGER IPROC,JC(NEXTERNAL),II
-    LOGICAL GOODHEL(NCOMB)
     REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
     INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
     REAL     XRAN1
@@ -95,7 +94,10 @@ C
     
     REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
-    
+
+    logical read_grid_file
+    common/read_grid_file/read_grid_file
+
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
@@ -118,6 +120,12 @@ C  Notice that when forcing helicity sum directly in MadLoop then one doesn't ha
 
 	IF(.NOT.INIT_MADLOOP) THEN
 	  INIT_MADLOOP = .TRUE.
+C Unless this is the first iteration, make sure to never double check the helicity filter again
+      IF (read_grid_file) THEN 
+        CALL SET_FORBID_HEL_DOUBLECHECK(.True.)
+	  ELSE
+        CALL SET_FORBID_HEL_DOUBLECHECK(.False.)
+	  ENDIF
 C So that TIR integrals can be reused accross helicity configuration.
 C Notice that ITR integrals for rotated PS points (i.e. which is part of MadLoop's default stabiliy test procedure), will not work. This is why one should always keep the MadLoop parameter 'NRotations_DP' set to 0 in this case.
 C Of course this is only necessary when using MadLoop for several helicity for the same PS point
@@ -228,7 +236,7 @@ C Of course this option can also not be used for polarized beams.
           IF(NTRY.EQ.MAXTRIES)THEN
               ISUM_HEL=MIN(ISUM_HEL,NGOOD)
           ENDIF
-        IF(NTRY(IMIRROR).EQ.(MAXTRIES+1)) THEN
+        IF(NTRY.EQ.(MAXTRIES+1)) THEN
            call reset_cumulative_variable() ! avoid biais of the initialization
         ENDIF
 

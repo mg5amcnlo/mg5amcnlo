@@ -2594,17 +2594,40 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         """
         
         self.proc_characteristic['loop_induced'] = True
-        super(LoopInducedExporterME, self).finalize_v4_directory(matrix_elements,
-                            history=history, makejpg=makejpg, online=online, 
-                            compiler=compiler)
-
-
-        if self.proc_characteristic['nexternal'] > 3:
-            misc.sprint("Use more splitting for gen_ximprove")
-            files.cp(pjoin(self.mgme_dir,'madgraph/iolibs/template_files/loop/gen_ximprove_loop_induced.f'),
-                     pjoin(self.dir_path, 'Source/gen_ximprove.f'))
-        else:
-            misc.sprint('Use standard splitting')
+            
+        # Initialize all the virtuals directory, so as to generate the necessary
+        # filters (essentially Helcity filter).
+        # First make sure that IREGI and CUTTOOLS are compiled if needed
+        if os.path.exists(pjoin(self.dir_path,'Source','CUTTOOLS')):
+            misc.compile(arg=['libcuttools'],cwd=pjoin(self.dir_path,'Source'))
+        if os.path.exists(pjoin(self.dir_path,'Source','IREGI')):
+            misc.compile(arg=['libiregi'],cwd=pjoin(self.dir_path,'Source'))
+        # Then make sure DHELAS and MODEL are compiled
+        misc.compile(arg=['libmodel'],cwd=pjoin(self.dir_path,'Source'))
+        misc.compile(arg=['libdhelas'],cwd=pjoin(self.dir_path,'Source'))        
+        
+        # Now initialize the MadLoop outputs
+        logger.info('Initializing the MadLoop loop-induced matrix elements '+\
+                                                '(this can take some time) ...')
+        for v_folder in glob.iglob(pjoin(self.dir_path,'SubProcesses',
+                                                    '%s*'%self.SubProc_prefix)):
+            # Make sure it is a valid MadLoop directory
+            if not os.path.isdir(v_folder) or not os.path.isfile(\
+                                               pjoin(v_folder,'loop_matrix.f')):
+                continue
+            init_info = {}
+            logger.debug("Initializing MadLoop matrix element in '%s'..."%\
+                                                     os.path.basename(v_folder))
+            init_info['nPS']=process_checks.LoopMatrixElementTimer.\
+                    run_initialization(run_dir=pjoin(v_folder), infos=init_info)
+            if init_info['nPS']:
+                logger.debug('...done using '+
+                  '%d PS points (%s), in %.3g(compil.) + %.3g(init.) secs.'%(
+                  abs(init_info['nPS']),'DP' if init_info['nPS']>0 else 'QP',
+                  init_info['Process_compilation'],init_info['Initialization']))
+            else:
+                raise InvalidCmd('Failed the initializaiton of the MadLoop'+\
+                  " loop-induced matrix element '%s'."%os.path.basename(v_folder))
 
     def write_tir_cache_size_include(self, writer):
         """Write the file 'tir_cache_size.inc' which sets the size of the TIR
@@ -2749,11 +2772,15 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         """
         # Call specifically what finalize_v4_directory must be used, so that the
         # MRO doesn't interfere.
-        
+
         self.proc_characteristic['loop_induced'] = True
         
         export_v4.ProcessExporterFortranMEGroup.finalize_v4_directory(
                                                               self,*args,**opts)
+        
+        # And the finilize_v4 from LoopInducedExporterME which essentially takes
+        # care of MadLoop virtuals initialization
+        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
         
     def generate_subprocess_directory_v4(self, subproc_group,
                                                     fortran_model,group_number):
@@ -2903,6 +2930,10 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         # MRO doesn't interfere.
         export_v4.ProcessExporterFortranME.finalize_v4_directory(
                                                               self,*args,**opts)
+
+        # And the finilize_v4 from LoopInducedExporterME which essentially takes
+        # care of MadLoop virtuals initialization
+        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
 
     def generate_subprocess_directory_v4(self, matrix_element, fortran_model, me_number):
         """Generate the Pn directory for a subprocess group in MadEvent,

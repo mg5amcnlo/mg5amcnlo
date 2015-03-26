@@ -105,6 +105,9 @@ C
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 
+    logical read_grid_file
+    common/read_grid_file/read_grid_file
+
 %(define_iconfigs_lines)s
 %(helicity_lines)s
 
@@ -125,6 +128,12 @@ C  Notice that when forcing helicity sum directly in MadLoop then one doesn't ha
 
 	IF(.NOT.INIT_MADLOOP) THEN
 	  INIT_MADLOOP = .TRUE.
+C Unless this is the first iteration, make sure to never double check the helicity filter again
+      IF (read_grid_file) THEN 
+        CALL SET_FORBID_HEL_DOUBLECHECK(.True.)
+	  ELSE
+        CALL SET_FORBID_HEL_DOUBLECHECK(.False.)
+	  ENDIF
 C So that TIR integrals can be reused accross helicity configuration.
 C Notice that ITR integrals for rotated PS points (i.e. which is part of MadLoop's default stabiliy test procedure), will not work. This is why one should always keep the MadLoop parameter 'NRotations_DP' set to 0 in this case.
 C Of course this is only necessary when using MadLoop for several helicity for the same PS point

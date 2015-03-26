@@ -1184,9 +1184,13 @@ C   TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING CHECK PHASE
 	ENDDO
   ENDIF
 C SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING THE HELICITY FILTER SETUP
-  HELSAVED(1,HELPICKED)=ANS(1,0)
-  HELSAVED(2,HELPICKED)=ANS(2,0)
-  HELSAVED(3,HELPICKED)=ANS(3,0)
+  DO I=1,NSQUAREDSO
+    IF (CHOSEN_SO_CONFIGS(I)) THEN
+      HELSAVED(1,HELPICKED)=HELSAVED(1,HELPICKED)+ANS(1,I)
+      HELSAVED(2,HELPICKED)=HELSAVED(2,HELPICKED)+ANS(2,I)
+      HELSAVED(3,HELPICKED)=HELSAVED(3,HELPICKED)+ANS(3,I)
+	ENDIF
+  ENDDO
 
 ## if(LoopInduced){
 C We make sure not to perform any check when NTRY is 0 because this means that
@@ -1196,7 +1200,7 @@ C the REF scale has not been set to the result of the evaluation for the first P
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
 	  HEL_INCONSISTENT=.FALSE.
-      IF(%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+      IF(%(proc_prefix)sIsZero(DABS(HELSAVED(1,HELPICKED))+DABS(HELSAVED(2,HELPICKED))+DABS(HELSAVED(3,HELPICKED)),REF/DBLE(NCOMB),-1,-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
@@ -1212,7 +1216,7 @@ C   SET THE HELICITY FILTER
 	    DO H=1,HELPICKED-1
 		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C           Be looser for helicity check, bring a factor 100
-		    DUMMY=%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,H),REF,.FALSE.)
+		    DUMMY=%(proc_prefix)sISSAME(HELSAVED(1,HELPICKED),HELSAVED(1,H),REF,.FALSE.)
 		    IF(DUMMY.NE.0) THEN
               IF(NTRY.EQ.1) THEN
 C               Set the matching helicity to be contributing once more
@@ -1284,7 +1288,7 @@ C   SET THE LOOP FILTER
   ELSEIF (.NOT.HELDOUBLECHECKED.AND.NTRY.NE.0)THEN
 C   DOUBLE CHECK THE HELICITY FILTER
     IF (GOODHEL(HELPICKED).EQ.-HELOFFSET) THEN
-	  IF (.NOT.%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+	  IF (.NOT.%(proc_prefix)sIsZero(DABS(HELSAVED(1,HELPICKED))+DABS(HELSAVED(2,HELPICKED))+DABS(HELSAVED(2,HELPICKED)),REF/DBLE(NCOMB),-1,-1)) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected what are the zero helicity configurations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -1295,7 +1299,7 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	  ENDIF
 	ENDIF
 	IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-	  IF(%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
+	  IF(%(proc_prefix)sISSAME(DABS(HELSAVED(1,HELPICKED)),HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'

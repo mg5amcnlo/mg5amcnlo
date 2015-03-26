@@ -2343,8 +2343,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 """You chose to have MadLoop writing out filters. 
 Beware that this can be dangerous for local multicore runs.""")
             self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
-            self.MadLoopparam.set('DoubleCheckHelicityFilter',False,
-                                                             ifnotdefault=False)
             
             # The conservative settings below for 'CTModeInit' and 'ZeroThres'
             # help adress issues for processes like g g > h z, and g g > h g
@@ -2360,15 +2358,11 @@ Beware that this can be dangerous for local multicore runs.""")
             # Consequently, we can allow for a finer threshold for vanishing
             # helicity configuration
 #            self.MadLoopparam.set('ZeroThres',1.0e-11, ifnotdefault=False)
-            
-            # The method above still significantly increases the initialization
-            # time of MadLoop only because the check of "matching helicities"
-            # can be unreliable in double prec. We therefore prefer here to turn
-            # off this feature and keep only the check of vanishing helicity which
-            # is anyway done directly by MadEvent, so that we can turn the
-            # whole feature off here to avoid initialization overhead.
-            self.MadLoopparam.set('HelicityFilterLevel',0, ifnotdefault=False)            
-                        
+
+            self.MadLoopparam.set('HelicityFilterLevel',2, ifnotdefault=False)            
+            self.MadLoopparam.set('DoubleCheckHelicityFilter',True,
+                                                             ifnotdefault=False)
+          
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
             # processes, so that we place OPP last.
             if self.run_card['nhel'] == 0:

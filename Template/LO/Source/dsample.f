@@ -79,6 +79,7 @@ c
       integer th_nunwgt
       double precision th_maxwgt
       common/theoretical_unwgt_max/th_maxwgt, th_nunwgt
+
 c
 c     External
 c
@@ -610,6 +611,10 @@ c
       logical               zooming
       common /to_zoomchoice/zooming
 
+      logical read_grid_file
+      data read_grid_file/.False./
+      common/read_grid_file/read_grid_file
+
       data use_cut/2/            !Grid: 0=fixed , 1=standard, 2=non-zero
       data ituple/1/             !1=htuple, 2=sobel 
       data Minvar(1,1)/-1/       !No special variable mapping
@@ -714,6 +719,7 @@ c
       read(25,*) twgt, force_max_wgt
       call read_discrete_grids(25)
       write(*,*) 'Grid read from file'
+      read_grid_file=.true.
       flat_grid=.false.
       close(25)
 c
@@ -756,6 +762,7 @@ c
 c     Unable to read grid, using uniform grid and equal points in
 c     each configuration
 c
+      read_grid_file=.false.
       write(*,*) 'Using Uniform Grid!', maxinvar
       force_max_wgt = -1d0
       do j = 1, maxinvar
