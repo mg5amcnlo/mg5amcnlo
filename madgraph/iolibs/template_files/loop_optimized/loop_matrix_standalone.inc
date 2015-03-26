@@ -575,7 +575,7 @@ CLOSE(1)
 IF (HelicityFilterLevel.eq.1) then
 C We must make sure to remove the matching-helicity optimisation, as requested by the user.
   DO J=1,NCOMB
-    IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.HELOFFSET)) THEN
+    IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.-HELOFFSET)) THEN
 	  GOODHEL(J)=1
 	ENDIF
   ENDDO
