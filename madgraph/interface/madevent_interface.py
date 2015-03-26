@@ -682,7 +682,7 @@ class CheckValidForCmd(object):
                         opt[key] = pjoin(self.me_dir, value)
                     else:
                         raise self.InvalidCmd('No such directory: %s' % value)
-            elif arg in ['param','run','all']:
+            elif arg in ['loop','param','run','all']:
                 mode = arg
             else:
                 self.help_treatcards()
@@ -2274,7 +2274,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             mode,  opt  = self.check_treatcards(args)
         #check if no 'Auto' are present in the file
         self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
-    
         
         if mode in ['param', 'all']:
             model = self.find_model_name()
@@ -2364,10 +2363,10 @@ Beware that this can be dangerous for local multicore runs.""")
 #           It is useless in the context of MC over helicities and it can 
 #           potentially make the helicity double checking fail.
             self.MadLoopparam.set('HelicityFilterLevel',1, ifnotdefault=False)
-            
-#           To be on the safe side however, we ask for 5 consecutive matching
+
+#           To be on the safe side however, we ask for 4 consecutive matching
 #           helicity filters.
-            self.MadLoopparam.set('CheckCycle',5, ifnotdefault=False)
+            self.MadLoopparam.set('CheckCycle',4, ifnotdefault=False)
             
             # For now it is tricky to have eahc channel performing the helicity
             # double check. What we will end up doing is probably some kind
@@ -2378,7 +2377,11 @@ Beware that this can be dangerous for local multicore runs.""")
           
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
             # processes, so that we place OPP last.
-            if self.run_card['nhel'] == 0:
+            if not hasattr(self, 'run_card'):
+                run_card = banner_mod.RunCard(opt['run_card'])
+            else:
+                run_card = self.run_card
+            if run_card['nhel'] == 0:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
                             self.MadLoopparam.get('MLReductionLib').startswith('1'):
                     logger.warning(
@@ -2398,7 +2401,7 @@ Beware that this can be dangerous for local multicore runs.""")
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop
             # to zero when not MC-ing over helicities, unless the parameter
             # Force_ML_Helicity_Sum is set to True in the matrix<i>.f codes.
-            if self.run_card['nhel'] == 0:
+            if run_card['nhel'] == 0:
                 if ('NRotations_DP' in self.MadLoopparam.user_set and \
                                      self.MadLoopparam.get('NRotations_DP')!=0) or \
                    ('NRotations_QP' in self.MadLoopparam.user_set and \

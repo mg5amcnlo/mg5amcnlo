@@ -2605,6 +2605,8 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         # Then make sure DHELAS and MODEL are compiled
         misc.compile(arg=['libmodel'],cwd=pjoin(self.dir_path,'Source'))
         misc.compile(arg=['libdhelas'],cwd=pjoin(self.dir_path,'Source'))        
+        # Finally make sure that the MadLoopCard has the loop induced settings
+        misc.compile(arg=['treatCards'],cwd=pjoin(self.dir_path,'Source'))
         
         # Now initialize the MadLoop outputs
         logger.info('Initializing MadLoop loop-induced matrix elements '+\

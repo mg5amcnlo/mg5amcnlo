@@ -85,6 +85,9 @@ libiregi: $(LIBDIR)libiregi.a
 
 libcuttools: $(LIBDIR)libcts.a
 
+treatCards:
+	../bin/madevent treatcards all
+
 libmodel: $(LIBDIR)libmodel.$(libext)
 
 libdhelas: $(LIBDIR)libdhelas.$(libext)
