@@ -189,11 +189,10 @@ class MadLoopLauncher(ExtLauncher):
                 shell_name = path.split('_')[1]+' > '+path.split('_')[2]
                 curr_path = os.path.join(sub_path, path)
                 infos = {}
-                attempts = [3,15]
                 logger.info("Initializing process %s."%shell_name)
-                nps = evaluator.run_initialization(curr_path, sub_path, infos,
-                                req_files = ['HelFilter.dat','LoopFilter.dat'],
-                                attempts = attempts)
+                nps = me_cmd.MadLoopInitializer.run_initialization(
+                                curr_path, sub_path, infos,
+                                req_files = ['HelFilter.dat','LoopFilter.dat'])
                 if nps == None:
                     raise MadGraph5Error,("Could not initialize the process %s"+\
                       " with %s PS points.")%(shell_name,max(attempts))
@@ -208,11 +207,11 @@ class MadLoopLauncher(ExtLauncher):
                                                              dir_path=curr_path)
                 # We use mu_r=-1.0 to use the one defined by the user in the
                 # param_car.dat
-                evaluator.fix_PSPoint_in_check(sub_path, 
+                me_cmd.MadLoopInitializer(sub_path, 
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
                   npoints = 1, mu_r=-1.0)
                 # check
-                t1, t2, ram_usage = evaluator.make_and_run(curr_path)
+                t1, t2, ram_usage = me_cmd.MadLoopInitializer(curr_path)
                 if t1==None or t2==None:
                     raise MadGraph5Error,"Error while running process %s."\
                                                                      %shell_name

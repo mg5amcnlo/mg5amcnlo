@@ -692,6 +692,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return 'trigger'
             elif path == 'input.lhco':
                 return 'lhco'
+            elif path == 'MadLoopParams.dat':
+                return 'MadLoopParams'
             else:
                 raise Exception, 'Unknow cards name %s' % path
 

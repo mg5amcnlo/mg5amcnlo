@@ -356,7 +356,7 @@ class HelpToCmd(object):
         
 
     def help_generate_events(self):
-        logger.info("syntax: generate_events [run_name] [options])")
+        logger.info("syntax: generate_events [run_name] [options]",)
         logger.info("-- Launch the full chain of script for the generation of events")
         logger.info("   Including possible plotting, shower and detector resolution.")
         logger.info("   Those steps are performed if the related program are installed")
@@ -364,7 +364,17 @@ class HelpToCmd(object):
         self.run_options_help([('-f', 'Use default for all questions.'),
                                ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
-    
+    def help_initMadLoop(self):
+        logger.info("syntax: initMadLoop [options]",'$MG:color:GREEN')
+        logger.info(
+"""-- Command only useful when MadEvent simulates loop-induced processes. This command compiles and run
+   the MadLoop output for the matrix element computation so as to initialize the filter for analytically
+   zero helicity configurations and loop topologies. If you suspect that a change you made in the model
+   parameters can have affected these filters, this command allows you to automatically refresh them. """)
+        logger.info("   The available options are:",'$MG:color:BLUE')
+        logger.info("     -f          : Force the refresh of the filters (erasing them if already present).",'$MG:color:BLUE')
+        logger.info("     --nPS=<int> : Specify how many phase-space points should be tried to set up the filters.",'$MG:color:BLUE')
+        
     def help_add_time_of_flight(self):
         logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--treshold=]")
         logger.info('-- Add in the lhe files the information')
@@ -643,7 +653,25 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('No default path for this file')
         elif not os.path.isfile(args[0]):
             raise self.InvalidCmd('No default path for this file') 
-    
+   
+    def check_initMadLoop(self, args):
+        """ check initMadLoop command arguments are valid."""
+        
+        opt = {'force': False, 'nPS': None}
+        
+        for arg in args:
+            if arg in ['-f','--force']:
+                opt['force'] = True
+            elif arg.startswith('--nPS='):
+                n_attempts = arg.split('=')[1]
+                try:
+                    opt['nPS'] = int(n_attempts)
+                except ValueError:
+                    raise InvalidCmd("The number of attempts specified "+
+                                      "'%s' is not a valid integer."%n_attempts)
+        
+        return opt
+        
     def check_treatcards(self, args):
         """check that treatcards arguments are valid
            [param|run|all] [--output_dir=] [--param_card=] [--run_card=]
@@ -1397,6 +1425,20 @@ class CompleteForCmd(CheckValidForCmd):
         opts = self._run_options + self._generate_options
         return  self.list_completion(text, opts, line)
 
+
+    def complete_initMadLoop(self, text, line, begidx, endidx):
+        "Complete the initMadLoop command"
+       
+        numbers = [str(i) for i in range(10)]
+        opts    = ['-f','--nPS=']
+       
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(line) >=6 and line[begidx-6:begidx]=='--nPS=':
+            return self.list_completion(text, numbers, line)
+        else:
+            return self.list_completion(text, [opt for opt in opts if not opt in
+                                                                    line], line)
+
     def complete_launch(self, *args, **opts):
 
         if self.ninitial == 1:
@@ -1562,6 +1604,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     _clean_mode = _plot_mode
     _display_opts = ['run_name', 'options', 'variable', 'results']
     _save_opts = ['options']
+    _initMadLoop_opts = ['-f, --nPS=']
     # survey options, dict from name to type, default value, and help text
     _survey_options = {'points':('int', 1000,'Number of points for first iteration'),
                        'iterations':('int', 5, 'Number of iterations'),
@@ -1960,8 +2003,36 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
-            
     
+    def do_initMadLoop(self,line):
+        """Compile and run MadLoop for a certain number of PS point so as to 
+        initialize MadLoop (setup the zero helicity and loop filter.)"""
+        
+        args = line.split()
+        # Check argument's validity
+        options = self.check_initMadLoop(args)
+        
+        self.ask_edit_cards(['MadLoopParams.dat'], mode='fixed', plot=False)
+        self.exec_cmd('treatcards loop')
+        if options['force']:
+            for filter in glob.glob(pjoin(
+                   self.me_dir,'SubProcesses','MadLoop5_resources','*Filter*')):
+                logger.debug("Resetting filter '%s'."%os.path.basename(filter))
+                os.remove(filter)
+
+        MLCard = banner_mod.MadLoopParam(pjoin(self.me_dir,
+                                                   'Cards','MadLoopParams.dat'))
+        if options['nPS'] is None:
+            options['nPS'] = MLCard['CheckCycle']+2
+        elif options['nPS'] < MLCard['CheckCycle']+2:
+            new_n_PS = MLCard['CheckCycle']+2
+            logger.debug('Hard-setting user-defined n_PS (%d) to %d, because '\
+              %(options['nPS'],new_n_PS)+"of the 'CheckCycle' value (%d) "%MLCard['CheckCycle']+\
+                                             "specified in the ML param card.")
+            options['nPS'] = new_n_PS
+        MadLoopInitializer.init_MadLoop(self.me_dir,n_PS=options['nPS'],
+                                                            subproc_prefix='PV')
+
     def do_launch(self, line, *args, **opt):
         """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
         if self.ninitial == 1:
@@ -4483,6 +4554,316 @@ class GridPackCmd(MadEventCmd):
         devnull.close()
 
 
+class MadLoopInitializer(object):
+    """ A container class for the various methods for initializing MadLoop. It is
+    placed in MadEventInterface because it is used by Madevent for loop-induced 
+    simulations. """
+
+    @staticmethod
+    def make_and_run(dir_name,checkRam=False):
+        """ Compile the check program in the directory dir_name.
+        Return the compilation and running time. """
+
+        # Make sure to recreate the executable and modified source
+        # (The time stamps are sometimes not actualized if it is too fast)
+        if os.path.isfile(pjoin(dir_name,'check')):
+            os.remove(pjoin(dir_name,'check'))
+            os.remove(pjoin(dir_name,'check_sa.o'))
+            os.remove(pjoin(dir_name,'loop_matrix.o'))            
+        # Now run make
+        devnull = open(os.devnull, 'w')
+        start=time.time()
+        retcode = subprocess.call(['make','check'],
+                                   cwd=dir_name, stdout=devnull, stderr=devnull)
+        compilation_time = time.time()-start
+        if retcode != 0:
+            logging.info("Error while executing make in %s" % dir_name)
+            return None, None, None
+
+        if not checkRam:
+            start=time.time()
+            retcode = subprocess.call('./check',
+                                   cwd=dir_name, stdout=devnull, stderr=devnull)
+
+            run_time = time.time()-start
+            ram_usage = None
+        else:
+            ptimer = misc.ProcessTimer(['./check'], cwd=dir_name, shell=False, \
+                                 stdout=devnull, stderr=devnull, close_fds=True)
+            try:
+                ptimer.execute()
+                #poll as often as possible; otherwise the subprocess might 
+                # "sneak" in some extra memory usage while you aren't looking
+                # Accuracy of .2 seconds is enough for the timing.
+                while ptimer.poll():
+                    time.sleep(.2)
+            finally:
+                #make sure that we don't leave the process dangling.
+                ptimer.close()
+            # Notice that ptimer.max_vms_memory is also available if needed.
+            ram_usage = ptimer.max_rss_memory
+            # Unfortunately the running time is less precise than with the
+            # above version
+            run_time = (ptimer.t1 - ptimer.t0)
+            retcode = ptimer.p.returncode
+
+        devnull.close()
+
+        if retcode != 0:
+            logging.warning("Error while executing ./check in %s" % dir_name)
+            return None, None, None
+
+        return compilation_time, run_time, ram_usage
+
+    @staticmethod
+    def fix_PSPoint_in_check(dir_path, read_ps = True, npoints = 1,
+                             hel_config = -1, mu_r=0.0, split_orders=-1):
+        """Set check_sa.f to be reading PS.input assuming a working dir dir_name.
+        if hel_config is different than -1 then check_sa.f is configured so to
+        evaluate only the specified helicity.
+        If mu_r > 0.0, then the renormalization constant value will be hardcoded
+        directly in check_sa.f, if is is 0 it will be set to Sqrt(s) and if it
+        is < 0.0 the value in the param_card.dat is used.
+        If the split_orders target (i.e. the target squared coupling orders for 
+        the computation) is != -1, it will be changed in check_sa.f via the
+        subroutine CALL SET_COUPLINGORDERS_TARGET(split_orders)."""
+
+        file_path = dir_path
+        if not os.path.isfile(dir_path) or \
+                                   not os.path.basename(dir_path)=='check_sa.f':
+            file_path = pjoin(dir_path,'check_sa.f')
+            if not os.path.isfile(file_path):
+                directories = [d for d in glob.glob(pjoin(dir_path,'P*_*')) \
+                         if (re.search(r'.*P\d+_\w*$', d) and os.path.isdir(d))]
+                if len(directories)>0:
+                     file_path = pjoin(directories[0],'check_sa.f')
+        if not os.path.isfile(file_path):
+            raise MadGraph5Error('Could not find the location of check_sa.f'+\
+                                  ' from the specified path %s.'%str(file_path))    
+
+        file = open(file_path, 'r')
+        check_sa = file.read()
+        file.close()
+        
+        file = open(file_path, 'w')
+        check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
+                                                      else '.FALSE.'), check_sa)
+        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = %d"%npoints, check_sa)
+        if hel_config != -1:
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                      "SLOOPMATRIXHEL_THRES(P,%d,MATELEM,"%hel_config, check_sa)
+        else:
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                                        "SLOOPMATRIX_THRES(P,MATELEM,",check_sa)
+        if mu_r > 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
+                                        (("%.17e"%mu_r).replace('e','d')),check_sa)
+        elif mu_r < 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","",check_sa)
+        
+        if split_orders > 0:
+            check_sa = re.sub(r"SET_COUPLINGORDERS_TARGET\(-?\d+\)",
+                     "SET_COUPLINGORDERS_TARGET(%d)"%split_orders,check_sa) 
+        
+        file.write(check_sa)
+        file.close()
+
+    @staticmethod    
+    def run_initialization(run_dir=None, SubProc_dir=None, infos=None,\
+                            req_files = ['HelFilter.dat','LoopFilter.dat'],
+                            attempts = [4,15]):
+        """ Run the initialization of the process in 'run_dir' with success 
+        characterized by the creation of the files req_files in this directory.
+        The directory containing the driving source code 'check_sa.f'.
+        The list attempt gives the successive number of PS points the 
+        initialization should be tried with before calling it failed.
+        Returns the number of PS points which were necessary for the init.
+        Notice at least run_dir or SubProc_dir must be provided.
+        A negative attempt number given in input means that quadprec will be
+        forced for initialization."""
+        
+        # If the user does not want detailed info, then set the dictionary
+        # to a dummy one.
+        if infos is None:
+            infos={}
+        
+        if SubProc_dir is None and run_dir is None:
+            raise MadGraph5Error, 'At least one of [SubProc_dir,run_dir] must'+\
+                                           ' be provided in run_initialization.'
+        
+        # If the user does not specify where is check_sa.f, then it is assumed
+        # to be one levels above run_dir
+        if SubProc_dir is None:
+            SubProc_dir = os.path.abspath(pjoin(run_dir,os.pardir))
+            
+        if run_dir is None:
+            directories =[ dir for dir in glob.glob(pjoin(SubProc_dir,\
+                                             'P[0-9]*')) if os.path.isdir(dir) ]
+            if directories:
+                run_dir = directories[0]
+            else:
+                raise MadGraph5Error, 'Could not find a valid running directory'+\
+                                                      ' in %s.'%str(SubProc_dir)
+
+        # Use the presence of the file born_matrix.f to decide if it is a 
+        # loop-induced process or not. It's not crucial, but just that because
+        # of the dynamic adjustment of the ref scale used for deciding what are
+        # the zero contributions, more points are neeeded for loop-induced.
+        if not os.path.isfile(pjoin(run_dir,'born_matrix.f')):
+            if len(attempts)>=1 and attempts[0]<8:
+                attempts[0]=8
+            if len(attempts)>=2 and attempts[1]<25:
+                attempts[1]=25
+
+        to_attempt = list(attempts)
+        to_attempt.reverse()
+        my_req_files = list(req_files)
+
+        MLCardPath = pjoin(SubProc_dir,os.pardir,'Cards','MadLoopParams.dat')
+        if not os.path.isfile(MLCardPath):
+            raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
+                                                                     %MLCardPath
+        else:
+            MLCard      = banner_mod.MadLoopParam(pjoin(SubProc_dir,'MadLoopParams.dat')) 
+            MLCard_orig = banner_mod.MadLoopParam(MLCard)
+
+        # Make sure that LoopFilter really is needed.
+        if not MLCard['UseLoopFilter']:
+            try:
+                my_req_files.pop(my_req_files.index('LoopFilter.dat'))
+            except ValueError:
+                pass
+        
+        if MLCard['HelicityFilterLevel']==0:
+            try:
+                my_req_files.pop(my_req_files.index('HelFilter.dat'))
+            except ValueError:
+                pass
+        
+        def need_init():
+            """ True if init not done yet."""
+            proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
+            proc_prefix = proc_prefix_file.read()
+            proc_prefix_file.close()
+            return any([not os.path.exists(pjoin(run_dir,'MadLoop5_resources',
+                            proc_prefix+fname)) for fname in my_req_files]) or \
+                         not os.path.isfile(pjoin(run_dir,'check')) or \
+                         not os.access(pjoin(run_dir,'check'), os.X_OK)
+        
+        # Check if this is a process without born by checking the presence of the
+        # file born_matrix.f
+        is_loop_induced = os.path.exists(pjoin(run_dir,'born_matrix.f'))
+        
+        # For loop induced processes, always attempt quadruple precision if
+        # double precision attempts fail and the user didn't specify himself
+        # quadruple precision initializations attempts
+        if not any(attempt<0 for attempt in to_attempt):
+            to_attempt = [-attempt for attempt in to_attempt] + to_attempt
+        use_quad_prec = 1
+        curr_attempt = 1
+
+        MLCard.set('WriteOutFilters',True)  
+        while to_attempt!=[] and need_init():
+            curr_attempt = to_attempt.pop()
+            # if the attempt is a negative number it means we must force 
+            # quadruple precision at initialization time
+            if curr_attempt < 0:
+                use_quad_prec = -1
+                # In quadruple precision we can lower the ZeroThres threshold
+                MLCard.set('CTModeInit',4)
+                MLCard.set('ZeroThres',1e-11)
+            else:
+                # Restore the default double precision intialization params
+                MLCard.set('CTModeInit',1)
+                MLCard.set('ZeroThres',1e-9)
+            # Plus one because the filter are written on the next PS point after
+            curr_attempt = abs(curr_attempt+1)
+            MLCard.set('MaxAttempts',curr_attempt) 
+            MLCard.write(pjoin(SubProc_dir,'MadLoopParams.dat'))
+
+            # initialization is performed.
+            MadLoopInitializer.fix_PSPoint_in_check(run_dir, read_ps = False, 
+                                                         npoints = curr_attempt)
+            compile_time, run_time, ram_usage = \
+                                        MadLoopInitializer.make_and_run(run_dir)
+            if compile_time==None:
+                logging.error("Failed at running the process in %s."%run_dir)
+                attempts = None
+                return None
+            # Only set process_compilation time for the first compilation.
+            if 'Process_compilation' not in infos.keys() or \
+                                             infos['Process_compilation']==None:
+                infos['Process_compilation'] = compile_time
+            infos['Initialization'] = run_time
+        
+        MLCard_orig.write(pjoin(SubProc_dir,'MadLoopParams.dat'))
+        if need_init():
+            return None
+        else:
+            return use_quad_prec*(curr_attempt-1)
+
+    @staticmethod
+    def init_MadLoop(proc_dir, n_PS=None, subproc_prefix='PV'):
+        """Advanced commands: Compiles and run MadLoop on RAMBO random PS points to initilize the
+        filters."""
+        
+        logger.info('Compiling Source materials necessary for MadLoop '+
+                                                              'initialization.')
+        # Initialize all the virtuals directory, so as to generate the necessary
+        # filters (essentially Helcity filter).
+        # Make sure that the MadLoopCard has the loop induced settings
+        misc.compile(arg=['treatCards'],cwd=pjoin(proc_dir,'Source'))
+        # First make sure that IREGI and CUTTOOLS are compiled if needed
+        if os.path.exists(pjoin(proc_dir,'Source','CUTTOOLS')):
+            misc.compile(arg=['libcuttools'],cwd=pjoin(proc_dir,'Source'))
+        if os.path.exists(pjoin(proc_dir,'Source','IREGI')):
+            misc.compile(arg=['libiregi'],cwd=pjoin(proc_dir,'Source'))
+        # Then make sure DHELAS and MODEL are compiled
+        misc.compile(arg=['libmodel'],cwd=pjoin(proc_dir,'Source'))
+        misc.compile(arg=['libdhelas'],cwd=pjoin(proc_dir,'Source'))        
+        
+        # Now initialize the MadLoop outputs
+        logger.info('Initializing MadLoop loop-induced matrix elements '+\
+                                                 '(this can take some time)...')
+
+        for v_folder in glob.iglob(pjoin(proc_dir,'SubProcesses',
+                                                         '%s*'%subproc_prefix)):
+            # Make sure it is a valid MadLoop directory
+            if not os.path.isdir(v_folder) or not os.path.isfile(\
+                                               pjoin(v_folder,'loop_matrix.f')):
+                continue
+            init_info = {}
+            logger.debug("Initializing MadLoop matrix element in '%s'..."%\
+                                                     os.path.basename(v_folder))
+            
+            # We try all multiples of n_PS from 1 to max_mult, first in DP and then
+            # in QP before giving up, or use default values if n_PS is None.
+            max_mult = 3
+            if n_PS is None:
+                # Then use the default list of number of PS points to try
+                init_info['nPS']=MadLoopInitializer.run_initialization(
+                                       run_dir=pjoin(v_folder), infos=init_info)
+            else:
+                init_info['nPS']=MadLoopInitializer.run_initialization(
+                                     run_dir=pjoin(v_folder), infos=init_info, 
+                  attempts = [n_PS*multiplier for multiplier in range(1,max_mult+1)])
+            
+            if init_info['nPS'] is None:
+                raise MadGraph5Error, 'Failed the initialization of'+\
+                  " loop-induced matrix element '%s'%s."%\
+                  (os.path.basename(v_folder),' (using default n_PS points)' if\
+                    n_PS is None else ' (trying with a maximum of %d PS points)'\
+                                                               %(max_mult*n_PS))
+            if init_info['nPS']==0:
+                logger.debug("...nothing to be done, all filters already "+\
+                   "present (use the '-f' option to force their recomputation)")
+            else:
+                logger.debug('...done using '+
+                  '%d PS points (%s), in %.3g(compil.) + %.3g(init.) secs.'%(
+                  abs(init_info['nPS']),'DP' if init_info['nPS']>0 else 'QP',
+                  init_info['Process_compilation'],init_info['Initialization']))
+        
+        logger.info('MadLoop initialization finished.')        
 
 AskforEditCard = common_run.AskforEditCard
 

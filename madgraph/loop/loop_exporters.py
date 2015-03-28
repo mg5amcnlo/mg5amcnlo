@@ -2594,42 +2594,13 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         """
         
         self.proc_characteristic['loop_induced'] = True
-            
-        # Initialize all the virtuals directory, so as to generate the necessary
-        # filters (essentially Helcity filter).
-        # First make sure that IREGI and CUTTOOLS are compiled if needed
-        if os.path.exists(pjoin(self.dir_path,'Source','CUTTOOLS')):
-            misc.compile(arg=['libcuttools'],cwd=pjoin(self.dir_path,'Source'))
-        if os.path.exists(pjoin(self.dir_path,'Source','IREGI')):
-            misc.compile(arg=['libiregi'],cwd=pjoin(self.dir_path,'Source'))
-        # Then make sure DHELAS and MODEL are compiled
-        misc.compile(arg=['libmodel'],cwd=pjoin(self.dir_path,'Source'))
-        misc.compile(arg=['libdhelas'],cwd=pjoin(self.dir_path,'Source'))        
-        # Finally make sure that the MadLoopCard has the loop induced settings
-        misc.compile(arg=['treatCards'],cwd=pjoin(self.dir_path,'Source'))
         
-        # Now initialize the MadLoop outputs
-        logger.info('Initializing MadLoop loop-induced matrix elements '+\
-                                                '(this can take some time) ...')
-        for v_folder in glob.iglob(pjoin(self.dir_path,'SubProcesses',
-                                                    '%s*'%self.SubProc_prefix)):
-            # Make sure it is a valid MadLoop directory
-            if not os.path.isdir(v_folder) or not os.path.isfile(\
-                                               pjoin(v_folder,'loop_matrix.f')):
-                continue
-            init_info = {}
-            logger.debug("Initializing MadLoop matrix element in '%s'..."%\
-                                                     os.path.basename(v_folder))
-            init_info['nPS']=process_checks.LoopMatrixElementTimer.\
-                    run_initialization(run_dir=pjoin(v_folder), infos=init_info)
-            if init_info['nPS']:
-                logger.debug('...done using '+
-                  '%d PS points (%s), in %.3g(compil.) + %.3g(init.) secs.'%(
-                  abs(init_info['nPS']),'DP' if init_info['nPS']>0 else 'QP',
-                  init_info['Process_compilation'],init_info['Initialization']))
-            else:
-                raise InvalidCmd('Failed the initializaiton of the MadLoop'+\
-                  " loop-induced matrix element '%s'."%os.path.basename(v_folder))
+        # This can be commented if one doesn't want to do the ML initialization
+        # at the output stage but knows that it is going to be performed later
+        # elsewhere. (i.e. compile stage for instance)
+        from madgraph.interface.madevent_interface import MadLoopInitializer
+        MadLoopInitializer.init_MadLoop(self.dir_path,
+                                             subproc_prefix=self.SubProc_prefix)
 
     def write_tir_cache_size_include(self, writer):
         """Write the file 'tir_cache_size.inc' which sets the size of the TIR

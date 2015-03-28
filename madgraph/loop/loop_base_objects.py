@@ -610,6 +610,7 @@ class LoopDiagram(base_objects.Diagram):
         """ Construct the tag of the diagram providing the loop structure 
         of it. """
        
+###        misc.sprint(self.nice_string())
         # Create the container for the new vertices which create the loop flow
         # It is dummy at this stage
         loopVertexList=base_objects.VertexList()
@@ -671,6 +672,9 @@ class LoopDiagram(base_objects.Diagram):
             # when building a canonical representation for the loop to perform 
             # the selection of the loop basis.
             self['canonical_tag']=[[t[0]['id'],t[1],t[2]] for t in canonical_tag]
+###            misc.sprint(self.nice_string())
+###            misc.sprint(self['tag'])
+###            stop
             return True
         else:
             raise self.PhysicsObjectError, \
