@@ -2050,12 +2050,23 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             return
 
         if data['run_statistics']:
+            globalstat = sum_html.RunStatistics()
+            
             logger.info(" " )
             logger.debug(" === Run statistics summary ===")
             for key, value in data['run_statistics'].items():
-                logger.debug(value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).\
+                globalstat.aggregate_statistics(value)
+                level = 5
+                if value.has_warning():
+                    level = 10
+                logger.log(level, value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).\
                   replace(' statistics',''))
             logger.info(" " )
+            logger.debug(globalstat.nice_output('combined', no_warning=True))
+            if globalstat.has_warning():
+                logger.warning(globalstat.get_warning_text())
+            logger.info(" ")
+
             
         logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
         

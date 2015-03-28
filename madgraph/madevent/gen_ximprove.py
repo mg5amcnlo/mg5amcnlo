@@ -431,10 +431,11 @@ class gensym(object):
             th_maxwgt.sort()
             ratio = th_maxwgt[-1][0]/th_maxwgt[-2][0]
             if ratio > 1e4:
-                logger.warning("One Event with large weight have been found. This is likely due to numerical un-stability. We will discard the associate job to recover.")
+                logger.warning("One Event with large weight have been found. This is likely due to numerical un-stability. We will discard the associated job to recover.")
                 exclude_sub_jobs = list(exclude_sub_jobs)
                 exclude_sub_jobs.append(th_maxwgt[-1][1])
-                return self.combine_grid(self,  Pdir, G, step, exclude_sub_jobs)
+                grid_calculator.results.run_statistics['skipped_subchannel'] += 1
+                return self.combine_grid(Pdir, G, step, exclude_sub_jobs)
 
  
         if cross !=0:
@@ -1318,6 +1319,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
             need_job = min(need_job, expected_remaining_job*1.25)
             
             nb_job = (need_job-0.5)//(2**(self.min_iter-step)-1) + 1
+            nb_job = max(1, nb_job)
             grid_calculator.write_grid_for_submission(Pdir,G,
                 self.splitted_for_dir(Pdir, G), nb_job*nevents ,mode=self.mode,
                                               conservative_factor=self.max_iter)

@@ -27,9 +27,11 @@ try:
 except ImportError:
     import internal.cluster as cluster
     import internal.misc as misc
+    from internal import MadGraph5Error
 else:
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
+    from madgraph import MadGraph5Error
 
 class RunStatistics(dict):
     """ A class to store statistics about a MadEvent run. """
@@ -38,7 +40,7 @@ class RunStatistics(dict):
         """ Initialize the run dictionary. For now, the same as a regular
         dictionary, except that we specify some default statistics. """
         
-        madloop_statiatics = {
+        madloop_statistics = {
           'unknown_stability'  : 0,
           'stable_points'      : 0,
           'unstable_points'    : 0,
@@ -57,9 +59,10 @@ class RunStatistics(dict):
           'averaged_timing'    : 0.0,
           'n_madloop_calls'    : 0,
           'cumulative_timing'  : 0.0,
+          'skipped_subchannel'  : 0, #number of times that a computation have been discarded due to abnormal weight.
           }
         
-        for key, value in madloop_statiatics.items():
+        for key, value in madloop_statistics.items():
             self[key] = value
 
         super(dict,self).__init__(*args, **opts)
@@ -140,7 +143,7 @@ class RunStatistics(dict):
         n_evals = int(getData(n_evals[0]))
         self['n_madloop_calls']    = n_evals
     
-    def nice_output(self,G):
+    def nice_output(self,G, no_warning=False):
         """Returns a one-line string summarizing the run statistics 
         gathered for the channel G."""
         
@@ -185,8 +188,34 @@ class RunStatistics(dict):
 #                                      str([_[1] for _ in tools_used]))
         ]
 
+        if self['skipped_subchannel'] > 0 and not no_warning:
+            to_print.append("WARNING: Some event with large weight have been discarded. This happens %s times." % self['skyped_subchannel'])
+
         return ('\n'.join(to_print)).replace("'"," ")
     
+    def has_warning(self):
+        """return if any stat needs to be reported as a warning
+           When this is True, the print_warning doit retourner un warning
+        """
+    
+        if self['skipped_subchannel'] > 0:
+            return True
+        elif self['exceptional_points'] > 0:
+            return True
+        else:
+            return False
+
+    def get_warning_text(self):
+        """get a string with all the identified warning"""
+        
+        to_print = []
+        if self['skipped_subchannel'] > 0:
+            to_print.append("Some event with large weight have been discarded. This happens %s times." % self['skyped_subchannel'])
+        if self['exceptional_points'] > 0:
+            to_print.append("Some PS with numerical unstability have been set to a zero matrix-element (%s)" % self['exceptional_points'])
+        
+        return ('\n'.join(to_print)).replace("'"," ") 
+
 class OneResult(object):
     
     def __init__(self, name):

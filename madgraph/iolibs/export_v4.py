@@ -2926,7 +2926,8 @@ c     channel position
         vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
                        for config in configs if [d for d in config if d][0].\
                                                   get_vertex_leg_numbers()!=[]]
-        min_vert = min(vert_list) if vert_list!=[] else 0
+        
+        minvert = min(vert_list) if vert_list!=[] else 0
         # Number of subprocesses
         nsubprocs = len(configs[0])
 
