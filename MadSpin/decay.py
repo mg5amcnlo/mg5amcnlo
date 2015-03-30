@@ -441,6 +441,7 @@ class dc_branch_from_me(dict):
             self['tree'][propa_id] = {'nbody': len(proc.get('legs'))-1,\
                                       'label':proc.get('legs')[0].get('id')}
             # loop over the child
+            child_propa_id = propa_id
             for c_nb,leg in enumerate(proc.get('legs')):
                 if c_nb == 0:
                     continue
@@ -449,12 +450,14 @@ class dc_branch_from_me(dict):
                 self["tree"][propa_id]["d%s" % c_nb]["label"] = c_pid
                 self["tree"][propa_id]["d%s" % c_nb]["labels"] = [c_pid]
                 if c_pid in to_decay:
-                    self["tree"][propa_id]["d%s" % c_nb]["index"] = propa_id-1
+                    child_propa_id -= 1
+                    self["tree"][propa_id]["d%s" % c_nb]["index"] = child_propa_id
                     self.nb_decays += 1
-                    add_decay(to_decay[c_pid].pop(), propa_id-1)
+                    child_propa_id = add_decay(to_decay[c_pid].pop(), child_propa_id)
                 else:
                     self.nexternal += 1
                     self["tree"][propa_id]["d%s" % c_nb]["index"] = self.nexternal
+            return child_propa_id
         
         # launch the recursive loop
         add_decay(process)
@@ -2855,6 +2858,7 @@ class decay_all_events(object):
         #to remove potential pointless decay in the diagram generation.
         resonances = decay_misc.get_all_resonances(self.banner, 
                          self.mgcmd, self.mscmd.list_branches.keys())
+
         logger.debug('List of resonances:%s' % resonances)
         path_me = os.path.realpath(self.path_me) 
         width = width_estimate(resonances, path_me, self.banner, self.model,
