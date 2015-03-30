@@ -2812,8 +2812,6 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
 
         for config in sorted(config_to_diag_dict.keys()):
             config_index_map[config] = (config_to_diag_dict[config][0] + 1)
-            line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
-                   {"num": (config_to_diag_dict[config][0] + 1)}
                    
             # First add the UV and R2 counterterm amplitudes of each selected
             # diagram for the multichannel config
@@ -2831,13 +2829,21 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
             
             for loop_amp_number in loop_amp_numbers:
                 loop_amp_ID_to_config[loop_amp_number] = config
+                
+        # Notice that the config_id's are not necessarily sequential here, so
+        # the size of the config_index_map array has to be the maximum over all
+        # config_ids.
+        # config_index_map should never be empty unless there was no diagram,
+        # so the expression below is ok.
+        n_configs = max(config_index_map.keys())
+        replace_dict['nmultichannels'] = n_configs
+        # We must fill the empty entries of the map with the dummy amplitude 
+        # number 0.
+        conf_list = [(config_index_map[i] if i in config_index_map else 0) \
+                                                  for i in range(1,n_configs+1)]
         
         # Now write the amp2 related inputs in the replacement dictionary
-        n_configs = len([k for k in config_index_map.keys() if k!=0])
-        replace_dict['nmultichannels'] = n_configs
-        
         res_list = []
-        conf_list = [config_index_map[i] for i in range(1,n_configs+1)]
         chunk_size = 6
         for k in xrange(0, len(conf_list), chunk_size):
             res_list.append("DATA (config_index_map(i),i=%6r,%6r) /%s/" % \
@@ -2848,7 +2854,8 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
 
         res_list = []
         n_loop_amps = max(loop_amp_ID_to_config.keys())
-        amp_list = [loop_amp_ID_to_config[i] for i in range(1,n_loop_amps+1)]
+        amp_list = [loop_amp_ID_to_config[i] for i in \
+                                   sorted(loop_amp_ID_to_config.keys()) if i!=0]
         chunk_size = 6
         for k in xrange(0, len(amp_list), chunk_size):
             res_list.append("DATA (CONFIG_MAP(i),i=%6r,%6r) /%s/" % \
@@ -2976,7 +2983,8 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         replace_dict['nmultichannels'] = n_configs
         
         res_list = []
-        conf_list = [config_index_map[i] for i in range(1,n_configs+1)]
+        conf_list = [config_index_map[i] for i in sorted(config_index_map.keys())
+                                                                        if i!=0]
         chunk_size = 6
         for k in xrange(0, len(conf_list), chunk_size):
             res_list.append("DATA (config_index_map(i),i=%6r,%6r) /%s/" % \
@@ -2987,7 +2995,8 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
 
         res_list = []
         n_loop_amps = max(loop_amp_ID_to_config.keys())
-        amp_list = [loop_amp_ID_to_config[i] for i in range(1,n_loop_amps+1)]
+        amp_list = [loop_amp_ID_to_config[i] for i in \
+                                   sorted(loop_amp_ID_to_config.keys()) if i!=0]
         chunk_size = 6
         for k in xrange(0, len(amp_list), chunk_size):
             res_list.append("DATA (CONFIG_MAP(i),i=%6r,%6r) /%s/" % \

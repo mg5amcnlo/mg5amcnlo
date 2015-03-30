@@ -688,6 +688,10 @@ C BEGIN CODE
 C ----------
 
       do i=1,nconfigs
+C The configurations are not necessarily consecutive when grouping subprocesses. So, here, we simply skip those which have no diagrams for this process.
+	    if (config_index_map(i).eq.0) then
+		  cycle
+		endif
 	    DO J=1,NSQUAREDSO
 C For the multi-channeling, it is in general better to ignore the squared order constraints (which, if they are any, would restrict the AMP2 quantities to be coming from the interference terms only).  
          IF (.TRUE.) THEN
