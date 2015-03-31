@@ -3530,7 +3530,8 @@ class decay_all_events(object):
                 else:
                     # now we need to write the decay products in the event
                     # follow the decay chain order, so that we can easily keep track of the mother index
-                        
+                       
+                    map_to_part_number={}
                     for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
                         index_res_for_mom=decay_struct[part]['mg_tree'][-res-1][0]
                         if (res==-1):
@@ -3552,8 +3553,8 @@ class decay_all_events(object):
                                 "mass":mass,"helicity":helicity}
                             decayed_event.event2mg[part_number]=part_number
 
-                        mothup1=part_number
-                        mothup2=part_number
+                            map_to_part_number[res]=part_number
+   
 #
 #             Extract color information so that we can write the color flow
 #
@@ -3658,7 +3659,10 @@ class decay_all_events(object):
                             decay_struct[part]["tree"][indexd1]["colup2"]=d1colup2
                             istup=2                    
                             mass=mom.m
-                        
+                            map_to_part_number[indexd1]=part_number 
+ 
+                        mothup1=map_to_part_number[res]
+                        mothup2=map_to_part_number[res]
                         decayed_event.particle[part_number]={"pid":pid,\
                                 "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
                                 "colup1":d1colup1,"colup2":d1colup2,"momentum":mom,\
@@ -3689,10 +3693,10 @@ class decay_all_events(object):
                             decay_struct[part]["tree"][indexd2]["colup1"]=d2colup1
                             decay_struct[part]["tree"][indexd2]["colup2"]=d2colup2
                             mass=mom.m
+                            map_to_part_number[indexd2]=part_number
 
-
-                        mothup1=part_number-2
-                        mothup2=part_number-2
+                        mothup1=map_to_part_number[res]
+                        mothup2=map_to_part_number[res]
                         decayed_event.particle[part_number]={"pid":pid,"istup":istup,\
                            "mothup1":mothup1,"mothup2":mothup2,"colup1":d2colup1,\
                            "colup2":d2colup2,\
