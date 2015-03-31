@@ -1741,6 +1741,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                    % key)
 
         # Configure the way to open a file:
+        misc.open_file.configure(self.options)
         self.configure_run_mode(self.options['run_mode'])
         return self.options
 
