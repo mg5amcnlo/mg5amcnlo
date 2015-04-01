@@ -59,7 +59,8 @@ class RunStatistics(dict):
           'averaged_timing'    : 0.0,
           'n_madloop_calls'    : 0,
           'cumulative_timing'  : 0.0,
-          'skipped_subchannel'  : 0, #number of times that a computation have been discarded due to abnormal weight.
+          'skipped_subchannel' : 0 # number of times that a computation have been 
+                                    # discarded due to abnormal weight.
           }
         
         for key, value in madloop_statistics.items():
@@ -190,7 +191,8 @@ class RunStatistics(dict):
         ]
 
         if self['skipped_subchannel'] > 0 and not no_warning:
-            to_print.append("WARNING: Some event with large weight have been discarded. This happens %s times." % self['skyped_subchannel'])
+            to_print.append("WARNING: Some event with large weight have been "+\
+               "discarded. This happened %s times." % self['skipped_subchannel'])
 
         return ('\n'.join(to_print)).replace("'"," ")
     
@@ -199,9 +201,14 @@ class RunStatistics(dict):
            When this is True, the print_warning doit retourner un warning
         """
     
+        if self['n_madloop_calls'] > 0:
+            fraction = self['exceptional_points']/float(self['n_madloop_calls'])
+        else:
+            fraction = 0.0
+            
         if self['skipped_subchannel'] > 0:
             return True
-        elif self['exceptional_points'] > 0:
+        elif fraction > 1.0e-4:
             return True
         else:
             return False
@@ -211,9 +218,13 @@ class RunStatistics(dict):
         
         to_print = []
         if self['skipped_subchannel'] > 0:
-            to_print.append("Some event with large weight have been discarded. This happens %s times." % self['skyped_subchannel'])
-        if self['exceptional_points'] > 0:
-            to_print.append("Some PS with numerical unstability have been set to a zero matrix-element (%s)" % self['exceptional_points'])
+            to_print.append("Some event with large weight have been discarded."+\
+                         " This happens %s times." % self['skipped_subchannel'])
+        if self['n_madloop_calls'] > 0:
+            fraction = self['exceptional_points']/float(self['n_madloop_calls'])
+            if fraction > 1.0e-4:
+                to_print.append("Some PS with numerical instability have been set "+\
+                   "to a zero matrix-element (%.3g%%)" % (100.0*fraction))
         
         return ('\n'.join(to_print)).replace("'"," ") 
 
