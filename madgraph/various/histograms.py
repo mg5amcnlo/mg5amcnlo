@@ -1873,7 +1873,9 @@ if __name__ == "__main__":
            '--simple_ratios' to turn off correlations and error propagation in the ratio.
            '--sum'           To sum all diagrams together
            '--average'       To average all diagrams together
-           '--rebin=<n>'     Rebin the plots by merging n-consecutive bins together.     
+           '--rebin=<n>'     Rebin the plots by merging n-consecutive bins together.  
+           '--assign_types=<type1>,<type2>,...' to assign a type to all histograms of the first, second, etc... files loaded.
+           '--no_suffix'     Do no add any suffix (like '#1, #2, etc..) to the histograms types.
     """
     
     n_ratios   = -1
@@ -1901,6 +1903,16 @@ if __name__ == "__main__":
             accepted_types = [(type if type!='None' else None) for type in \
                                                              arg[8:].split(',')]
 
+    assigned_types = []
+    for arg in sys.argv[1:]:
+        if arg.startswith('--assign_types='):
+            assigned_types = [(type if type!='None' else None) for type in \
+                                                             arg[15:].split(',')]
+
+    no_suffix = False
+    if '--no_suffix' in sys.argv:
+        no_suffix = True
+
     for arg in sys.argv[1:]:
         if arg.startswith('--n_ratios='):
             n_ratios = int(arg[11:])
@@ -1921,7 +1933,6 @@ if __name__ == "__main__":
         uncertainties.remove('statistical')        
 
     n_files    = len([_ for _ in sys.argv[1:] if not _.startswith('--')])
-    print "n_files=",n_files
     histo_norm = 1.0
     if '--average' in sys.argv:
         histo_norm = 1.0/float(n_files)
@@ -1939,8 +1950,10 @@ if __name__ == "__main__":
         if n_files==1:
             continue
         for histo in new_histo_list:
+            if no_suffix:
+                continue
             if not histo.type is None:
-                histo.type += ' '
+                histo.type += '|'
             else:
                 histo.type = ''
             # Firs option is to give a bit of the name of the source HwU file.     
@@ -1950,9 +1963,13 @@ if __name__ == "__main__":
             # Overwrite existing number if present. We assume here that one never
             # uses the '#' in its custom-defined types, which is a fair assumptions.
             try:
-                histo.type = histo.type[:histo.type.index('#')] + "#%d"%(i+1)
+                suffix = assigned_types[i]
+            except IndexError:
+                suffix = "#%d"%(i+1)
+            try:
+                histo.type = histo.type[:histo.type.index('#')] + suffix
             except ValueError:
-                histo.type += "#%d"%(i+1)
+                histo.type += suffix
 
         if i==0 or all(_ not in ['--sum','--average'] for _ in sys.argv):
             histo_list.extend(new_histo_list)

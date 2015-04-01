@@ -77,28 +77,29 @@ class RunStatistics(dict):
                 raise MadGraph5Error, "The 'new_stats' argument of the function "+\
                         "'updtate_statistics' must be a (possibly list of) "+\
                                                        "RunStatistics instance."
+ 
+        keys = set([])
+        for stat in [self,]+new_stats:
+            keys |= set(stat.keys())
 
-        if any(set(self.keys())!=set(_.keys()) for _ in new_stats):
-            raise MadGraph5Error, "All run statistics provided to the function"+\
-                                 " 'update_statistics' must have the same keys."
-        
         new_stats = new_stats+[self,]
-        for key in self:
+        for key in keys:
             # Define special rules
             if key=='max_precision':
                 # The minimal precision corresponds to the maximal value for PREC
-                self[key] = min( _[key] for _ in new_stats)
+                self[key] = min( _[key] for _ in new_stats if key in _)
             elif key=='min_precision':
                 # The maximal precision corresponds to the minimal value for PREC
-                self[key] = max( _[key] for _ in new_stats)
+                self[key] = max( _[key] for _ in new_stats if key in _)
             elif key=='averaged_timing':
-                n_madloop_calls = sum(_['n_madloop_calls'] for _ in new_stats)
+                n_madloop_calls = sum(_['n_madloop_calls'] for _ in new_stats if
+                                                         'n_madloop_calls' in _)
                 if n_madloop_calls > 0 :
-                    self[key] = sum(_[key]*_['n_madloop_calls'] 
-                                             for _ in new_stats)/n_madloop_calls
+                    self[key] = sum(_[key]*_['n_madloop_calls'] for _ in 
+                      new_stats if (key in _ and 'n_madloop_calls' in _) )/n_madloop_calls
             else:
                 # Now assume all other quantities are cumulative
-                self[key] = sum(_[key] for _ in new_stats)
+                self[key] = sum(_[key] for _ in new_stats if key in _)
     
     def load_statistics(self, xml_node):
         """ Load the statistics from an xml node. """
