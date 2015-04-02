@@ -186,7 +186,7 @@ C Of course this option can also not be used for polarized beams.
         
 	    call cpu_time(t_before)
 	    CALL %(ml_prefix)sSLOOPMATRIX_THRES(P,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
-		CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(t_before,ANS,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
+		CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(P,t_before,ANS,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
 
     ELSE
 !   If the helicity grid status is 0, this means that it is not yet initialized.
@@ -197,7 +197,7 @@ C Of course this option can also not be used for polarized beams.
 	        
 		    call cpu_time(t_before)
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
-			CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
+			CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(P,t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
             
 			DO JJ=1,JAMP2(0)
               JAMP2(JJ) = JAMP2(JJ) + ML_JAMP2(JJ)
@@ -261,7 +261,7 @@ C           The helicity configuration was chosen already by genps and put in a 
 	        
 			call cpu_time(t_before)            
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
-			CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
+			CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(P,t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
 	
             DO JJ=1,JAMP2(0)
               JAMP2(JJ) = JAMP2(JJ) + ML_JAMP2(JJ)
@@ -329,15 +329,20 @@ C Amplitude(s) for diagram number %(n_tot_diags)d
 C This last line is a tag do not remove it. 
 	END
 
-	SUBROUTINE PROCESS_MADLOOP_OUTPUT%(proc_id)s(time_before, me_answer, finite, OneEps, TwoEps, prec, return_code)
+	SUBROUTINE PROCESS_MADLOOP_OUTPUT%(proc_id)s(P,time_before, me_answer, finite, OneEps, TwoEps, prec, return_code)
 c
 c   Simply registers the madloop return code and timing into the
 C   global variables
 c
     implicit none
 C
+C   Constants
+C
+    Include 'nexternal.inc'
+C
 C	Arguments
 C
+    REAL*8 P(0:3,NEXTERNAL)
 	real time_before
 	integer return_code
 	double precision me_answer, finite, OneEps, TwoEps, prec
@@ -392,6 +397,10 @@ c   ----
 	ENDIF
 
 	me_answer = FINITE
+    
+	if (finite.eq.0.0d0) then
+	  return
+	endif
 
 	IF (((OneEps+TwoEps)/finite).gt.(1000d0*PREC).AND.(((OneEps+TwoEps)/finite).gt.1.0d-5)) THEN
 	  WARNING_COUNTERS(2) = WARNING_COUNTERS(2) + 1
@@ -399,6 +408,9 @@ c   ----
 	    WRITE(*,*) "WARNING : The residue of the single and double pole of the loop matrix element being integrated does not seem to vanish."
 		WRITE(*,*) "          Its contribution relative to the finite part is : ",((OneEps+TwoEps)/finite)
 		WRITE(*,*) "          while the estimated numerical accuracy is       : ",PREC
+		WRITE(*,*) "          MadLoop results (fin, 1eps, 2eps)               : ",finite, OneEps, TwoEps		
+		WRITE(*,*) " The warning above was triggered when processing the following phase space point:"
+        CALL %(ml_prefix)sWRITE_MOM(P)
 	  ENDIF
 	  IF (WARNING_COUNTERS(2).eq.10) THEN
 	    WRITE(*,*) "WARNING :: Further warnings about the relative size of pole residues are now suppressed (past first 10)."
