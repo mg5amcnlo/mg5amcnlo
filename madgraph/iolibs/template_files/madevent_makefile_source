@@ -88,6 +88,9 @@ libcuttools: $(LIBDIR)libcts.a
 treatCards:
 	../bin/madevent treatcards all
 
+treatCardsLoopNoInit:
+	../bin/madevent treatcards loop --no_MadLoopInit
+
 libmodel: $(LIBDIR)libmodel.$(libext)
 
 libdhelas: $(LIBDIR)libdhelas.$(libext)

@@ -372,7 +372,8 @@ class HelpToCmd(object):
    zero helicity configurations and loop topologies. If you suspect that a change you made in the model
    parameters can have affected these filters, this command allows you to automatically refresh them. """)
         logger.info("   The available options are:",'$MG:color:BLUE')
-        logger.info("     -f          : Force the refresh of the filters (erasing them if already present).",'$MG:color:BLUE')
+        logger.info("     -f          : Bypass the edition of MadLoopParams.dat.",'$MG:color:BLUE')
+        logger.info("     -r          : Refresh of the existing filters (erasing them if already present).",'$MG:color:BLUE')
         logger.info("     --nPS=<int> : Specify how many phase-space points should be tried to set up the filters.",'$MG:color:BLUE')
         
     def help_add_time_of_flight(self):
@@ -657,9 +658,11 @@ class CheckValidForCmd(object):
     def check_initMadLoop(self, args):
         """ check initMadLoop command arguments are valid."""
         
-        opt = {'force': False, 'nPS': None}
+        opt = {'refresh': False, 'nPS': None, 'force': False}
         
         for arg in args:
+            if arg in ['-r','--refresh']:
+                opt['refresh'] = True
             if arg in ['-f','--force']:
                 opt['force'] = True
             elif arg.startswith('--nPS='):
@@ -679,7 +682,8 @@ class CheckValidForCmd(object):
         
         opt = {'output_dir':pjoin(self.me_dir,'Source'),
                'param_card':pjoin(self.me_dir,'Cards','param_card.dat'),
-               'run_card':pjoin(self.me_dir,'Cards','run_card.dat')}
+               'run_card':pjoin(self.me_dir,'Cards','run_card.dat'),
+               'forbid_MadLoopInit': False}
         mode = 'all'
         for arg in args:
             if arg.startswith('--') and '=' in arg:
@@ -712,6 +716,8 @@ class CheckValidForCmd(object):
                         raise self.InvalidCmd('No such directory: %s' % value)
             elif arg in ['loop','param','run','all']:
                 mode = arg
+            elif arg == '--no_MadLoopInit':
+                opt['forbid_MadLoopInit'] = True
             else:
                 self.help_treatcards()
                 raise self.InvalidCmd('Unvalid argument %s' % arg)
@@ -1430,7 +1436,7 @@ class CompleteForCmd(CheckValidForCmd):
         "Complete the initMadLoop command"
        
         numbers = [str(i) for i in range(10)]
-        opts    = ['-f','--nPS=']
+        opts    = ['-f','-r','--nPS=']
        
         args = self.split_arg(line[0:begidx], error=False)
         if len(line) >=6 and line[begidx-6:begidx]=='--nPS=':
@@ -1604,7 +1610,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     _clean_mode = _plot_mode
     _display_opts = ['run_name', 'options', 'variable', 'results']
     _save_opts = ['options']
-    _initMadLoop_opts = ['-f, --nPS=']
+    _initMadLoop_opts = ['-f','-r','--nPS=']
     # survey options, dict from name to type, default value, and help text
     _survey_options = {'points':('int', 1000,'Number of points for first iteration'),
                        'iterations':('int', 5, 'Number of iterations'),
@@ -2012,9 +2018,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # Check argument's validity
         options = self.check_initMadLoop(args)
         
-        self.ask_edit_cards(['MadLoopParams.dat'], mode='fixed', plot=False)
-        self.exec_cmd('treatcards loop')
-        if options['force']:
+        if not options['force']:
+            self.ask_edit_cards(['MadLoopParams.dat'], mode='fixed', plot=False)
+            self.exec_cmd('treatcards loop --no_MadLoopInit')
+
+        if options['refresh']:
             for filter in glob.glob(pjoin(
                    self.me_dir,'SubProcesses','MadLoop5_resources','*Filter*')):
                 logger.debug("Resetting filter '%s'."%os.path.basename(filter))
@@ -2030,6 +2038,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
               %(options['nPS'],new_n_PS)+"of the 'CheckCycle' value (%d) "%MLCard['CheckCycle']+\
                                              "specified in the ML param card.")
             options['nPS'] = new_n_PS
+
         MadLoopInitializer.init_MadLoop(self.me_dir,n_PS=options['nPS'],
                                                             subproc_prefix='PV')
 
@@ -2354,6 +2363,31 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if not mode and not opt:
             args = self.split_arg(line)
             mode,  opt  = self.check_treatcards(args)
+            
+        # To decide whether to refresh MadLoop's helicity filters, it is necessary
+        # to check if the model parameters where modified or not, before doing
+        # anything else.        
+        need_MadLoopFilterUpdate = False
+        # Just to record what triggered the reinitialization of MadLoop for a 
+        # nice debug message.
+        type_of_change           = ''
+        if not opt['forbid_MadLoopInit'] and self.proc_characteristics['loop_induced'] \
+                                                    and mode in ['loop', 'all']:
+            paramDat = pjoin(self.me_dir, 'Cards','param_card.dat')
+            paramInc = pjoin(opt['output_dir'], 'param_card.inc')
+            if (not os.path.isfile(paramDat)) or (not os.path.isfile(paramInc)) or \
+               (os.path.getmtime(paramDat)-os.path.getmtime(paramInc)) > 0.0:
+                need_MadLoopFilterUpdate = True
+                type_of_change           = 'model'
+            
+            ML_in = pjoin(self.me_dir, 'Cards', 'MadLoopParams.dat')
+            ML_out = pjoin(self.me_dir,"SubProcesses",
+                                      "MadLoop5_resources", "MadLoopParams.dat")         
+            if (not os.path.isfile(ML_in)) or (not os.path.isfile(ML_out)) or \
+                (os.path.getmtime(ML_in)-os.path.getmtime(ML_out)) > 0.0:
+                need_MadLoopFilterUpdate = True
+                type_of_change           = 'MadLoop'
+
         #check if no 'Auto' are present in the file
         self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
         
@@ -2524,6 +2558,22 @@ Beware that this can be dangerous for local multicore runs.""")
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
                                           "MadLoopParams.dat"))
+            
+
+        # Now Update MadLoop filters if necessary (if modifications were made to
+        # the model parameters).
+        if need_MadLoopFilterUpdate:
+            logger.debug('Changes to the %s parameters have been detected. '%type_of_change+\
+                       'Madevent will then now reinitialize MadLoop filters.')
+            self.exec_cmd('initMadLoop -r -f')
+        # If one decides to not place the first initiatizationo of MadLoop at the
+        # output stage, then it can be added here. By not forcing the refreshing
+        # of the filter with '-r', one is guaranteed not to waste time if the
+        # filter would already exist. But I comment it here because for now
+        # the first initialization is done at the output stage and I'd prefer
+        # not to have the useless prinouts triggered by the command below. 
+#        elif not opt['forbid_MadLoopInit']:
+#            self.exec_cmd('initMadLoop -f')
          
     ############################################################################      
     def do_survey(self, line):
@@ -4817,13 +4867,13 @@ class MadLoopInitializer(object):
     def init_MadLoop(proc_dir, n_PS=None, subproc_prefix='PV'):
         """Advanced commands: Compiles and run MadLoop on RAMBO random PS points to initilize the
         filters."""
-        
-        logger.info('Compiling Source materials necessary for MadLoop '+
+
+        logger.debug('Compiling Source materials necessary for MadLoop '+
                                                               'initialization.')
         # Initialize all the virtuals directory, so as to generate the necessary
         # filters (essentially Helcity filter).
         # Make sure that the MadLoopCard has the loop induced settings
-        misc.compile(arg=['treatCards'],cwd=pjoin(proc_dir,'Source'))
+        misc.compile(arg=['treatCardsLoopNoInit'], cwd=pjoin(proc_dir,'Source'))
         # First make sure that IREGI and CUTTOOLS are compiled if needed
         if os.path.exists(pjoin(proc_dir,'Source','CUTTOOLS')):
             misc.compile(arg=['libcuttools'],cwd=pjoin(proc_dir,'Source'))
@@ -4867,7 +4917,7 @@ class MadLoopInitializer(object):
                                                                %(max_mult*n_PS))
             if init_info['nPS']==0:
                 logger.debug("...nothing to be done, all filters already "+\
-                   "present (use the '-f' option to force their recomputation)")
+                   "present (use the '-r' option to force their recomputation)")
             else:
                 logger.debug('...done using '+
                   '%d PS points (%s), in %.3g(compil.) + %.3g(init.) secs.'%(
