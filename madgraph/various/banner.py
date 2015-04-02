@@ -1410,6 +1410,8 @@ class RunCardLO(RunCard):
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
+        self.add_param("dynamical_scale_choice", -1)
+        
         #matching
         self.add_param("scalefact", 1.0)
         self.add_param("ickkw", 0)
@@ -1775,6 +1777,7 @@ class RunCardNLO(RunCard):
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', 91.118)
         self.add_param('muf2_ref_fixed', 91.118)
+        self.add_param("dynamical_scale_choice", 2)
         self.add_param('fixed_qes_scale', False)
         self.add_param('qes_ref_fixed', 91.118)
         self.add_param('mur_over_ref', 1.0)

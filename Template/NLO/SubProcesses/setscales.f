@@ -219,8 +219,9 @@ c a scale to be used as a reference for renormalization scale
       external pt,et,dot,sumdot
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
-      integer i,imurtype
-      parameter (imurtype=1)
+      integer i
+c,imurtype
+c      parameter (imurtype=1)
 c for 'geometric mean'
       integer j
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
