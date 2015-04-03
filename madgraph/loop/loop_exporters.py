@@ -2595,12 +2595,13 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         
         self.proc_characteristic['loop_induced'] = True
         
-        # This can be commented if one doesn't want to do the ML initialization
-        # at the output stage but knows that it is going to be performed later
-        # elsewhere. (i.e. compile stage for instance)
-        from madgraph.interface.madevent_interface import MadLoopInitializer
-        MadLoopInitializer.init_MadLoop(self.dir_path,
-                                             subproc_prefix=self.SubProc_prefix)
+        # This can be uncommented if one desires to have the MadLoop
+        # initialization performed at the end of the output phase.
+        # Alternatively, one can simply execute the command 'initMadLoop' in
+        # the madevent interactive interface after the output.
+        # from madgraph.interface.madevent_interface import MadLoopInitializer
+        # MadLoopInitializer.init_MadLoop(self.dir_path,
+        #                                     subproc_prefix=self.SubProc_prefix)
 
     def write_tir_cache_size_include(self, writer):
         """Write the file 'tir_cache_size.inc' which sets the size of the TIR

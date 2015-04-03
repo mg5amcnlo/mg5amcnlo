@@ -59,10 +59,10 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
           do i=3,nexternal
             rscale=rscale+dsqrt(max(0d0,(P(0,i)+P(3,i))*(P(0,i)-P(3,i))))
           enddo
-          rscale=rscale/2
+          rscale=rscale/2d0
       elseif(dynamical_scale_choice.eq.3) then
 c         \sqrt(s), partonic energy
-          rscale=dsqrt(2d0*dot(P(0,1),P(0,2)))
+          rscale=dsqrt(max(0d0,2d0*dot(P(0,1),P(0,2))))
       elseif(dynamical_scale_choice.eq.0) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: ENTER YOUR CODE HERE                                  cc

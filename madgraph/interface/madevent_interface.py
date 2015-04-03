@@ -2566,14 +2566,14 @@ Beware that this can be dangerous for local multicore runs.""")
             logger.debug('Changes to the %s parameters have been detected. '%type_of_change+\
                        'Madevent will then now reinitialize MadLoop filters.')
             self.exec_cmd('initMadLoop -r -f')
-        # If one decides to not place the first initiatizationo of MadLoop at the
-        # output stage, then it can be added here. By not forcing the refreshing
-        # of the filter with '-r', one is guaranteed not to waste time if the
-        # filter would already exist. But I comment it here because for now
-        # the first initialization is done at the output stage and I'd prefer
-        # not to have the useless prinouts triggered by the command below. 
-#        elif not opt['forbid_MadLoopInit']:
-#            self.exec_cmd('initMadLoop -f')
+        # The need_MadLoopInit condition is just there so as to avoid useless
+        # printout if there is not initialization to be performed. But even
+        # without it, and because we call 'initMadLoop' without the '-r' option
+        # no time would be wasted anyway, since the existing filters would not
+        # be overwritten.
+        elif not opt['forbid_MadLoopInit'] and \
+                               MadLoopInitializer.need_MadLoopInit(self.me_dir):
+            self.exec_cmd('initMadLoop -f')
          
     ############################################################################      
     def do_survey(self, line):
@@ -4780,24 +4780,24 @@ class MadLoopInitializer(object):
         to_attempt.reverse()
         my_req_files = list(req_files)
 
-        MLCardPath = pjoin(SubProc_dir,os.pardir,'Cards','MadLoopParams.dat')
+        MLCardPath = pjoin(SubProc_dir,'MadLoopParams.dat')
         if not os.path.isfile(MLCardPath):
             raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
                                                                      %MLCardPath
         else:
-            MLCard      = banner_mod.MadLoopParam(pjoin(SubProc_dir,'MadLoopParams.dat')) 
+            MLCard      = banner_mod.MadLoopParam(MLCardPath) 
             MLCard_orig = banner_mod.MadLoopParam(MLCard)
 
         # Make sure that LoopFilter really is needed.
         if not MLCard['UseLoopFilter']:
             try:
-                my_req_files.pop(my_req_files.index('LoopFilter.dat'))
+                my_req_files.remove('LoopFilter.dat')
             except ValueError:
                 pass
         
         if MLCard['HelicityFilterLevel']==0:
             try:
-                my_req_files.pop(my_req_files.index('HelFilter.dat'))
+                my_req_files.remove('HelFilter.dat')
             except ValueError:
                 pass
         
@@ -4862,6 +4862,49 @@ class MadLoopInitializer(object):
             return None
         else:
             return use_quad_prec*(curr_attempt-1)
+
+    @staticmethod
+    def need_MadLoopInit(proc_dir, subproc_prefix='PV'):
+        """Checks whether the necessary filters are present or not."""
+
+        def need_init(ML_resources_path, proc_prefix, r_files):
+            """ Returns true if not all required files are present. """
+            return any([not os.path.exists(pjoin(ML_resources_path,
+                            proc_prefix+fname)) for fname in r_files])
+
+        MLCardPath = pjoin(proc_dir,'SubProcesses','MadLoopParams.dat')
+        if not os.path.isfile(MLCardPath):
+            raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
+                                                                     %MLCardPath        
+        MLCard      = banner_mod.MadLoopParam(MLCardPath) 
+
+        req_files = ['HelFilter.dat','LoopFilter.dat']
+        # Make sure that LoopFilter really is needed.
+        if not MLCard['UseLoopFilter']:
+            try:
+                req_files.remove('LoopFilter.dat')
+            except ValueError:
+                pass
+        if MLCard['HelicityFilterLevel']==0:
+            try:
+                req_files.remove('HelFilter.dat')
+            except ValueError:
+                pass
+        
+        for v_folder in glob.iglob(pjoin(proc_dir,'SubProcesses',
+                                                         '%s*'%subproc_prefix)):        
+            # Make sure it is a valid MadLoop directory
+            if not os.path.isdir(v_folder) or not os.path.isfile(\
+                                               pjoin(v_folder,'loop_matrix.f')):
+                continue
+            proc_prefix_file = open(pjoin(v_folder,'proc_prefix.txt'),'r')
+            proc_prefix = proc_prefix_file.read()
+            proc_prefix_file.close()
+            if need_init(pjoin(proc_dir,'SubProcesses','MadLoop5_resources'),
+                                                        proc_prefix, req_files):
+                return True
+        
+        return False
 
     @staticmethod
     def init_MadLoop(proc_dir, n_PS=None, subproc_prefix='PV'):
