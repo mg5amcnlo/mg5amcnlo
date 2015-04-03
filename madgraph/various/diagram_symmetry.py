@@ -38,6 +38,10 @@ import models.import_ufo as import_ufo
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.core.base_objects as base_objects
+import madgraph.loop.loop_base_objects as loop_base_objects
+import madgraph.core.helas_objects as helas_objects
+import madgraph.loop.loop_helas_objects as loop_helas_objects
+
 import madgraph.core.color_algebra as color
 import madgraph.core.color_amp as color_amp
 import madgraph.core.helas_objects as helas_objects
@@ -89,8 +93,21 @@ def find_symmetry(matrix_element):
     ident_perms = []
     process = matrix_element.get('processes')[0]
     base_model = process.get('model')
-    diagrams = matrix_element.get('diagrams')
-    base_diagrams = matrix_element.get_base_amplitude().get('diagrams')
+    
+    if isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement):
+        # For loop induced processes we consider only the loops (no R2) and
+        # the shrunk diagram instead of the lcut one.
+        FDStructRepo = loop_base_objects.FDStructureList([])
+        base_diagrams = base_objects.DiagramList(
+                   [(d.get_contracted_loop_diagram(base_model,FDStructRepo) if  
+                   isinstance(d,loop_base_objects.LoopDiagram) else d) for d in
+               matrix_element.get('base_amplitude').get('loop_diagrams') \
+                                                            if d.get('type')>0])
+        diagrams = matrix_element.get_loop_diagrams()
+    else:
+        diagrams = matrix_element.get('diagrams')
+        base_diagrams = matrix_element.get_base_amplitude().get('diagrams')
+
     vert_list = [max(diag.get_vertex_leg_numbers()) for diag in diagrams if \
                                         diag.get_vertex_leg_numbers()!=[]]
     min_vert = min(vert_list) if vert_list!=[] else 0

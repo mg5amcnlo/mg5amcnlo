@@ -1041,8 +1041,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 (particle.is_perturbating(order, self['process']['model']) and \
                 particle.get_pdg_code() not in \
                                         self['process']['forbidden_particles'])]
-#            lcutPart = [lp for lp in lcutPart if abs(lp.get('pdg_code'))==1000021]
-#            print "lcutPart=",[part.get('name') for part in lcutPart]
+#            lcutPart = [lp for lp in lcutPart if abs(lp.get('pdg_code'))==6]
+#            misc.sprint("lcutPart=",[part.get('name') for part in lcutPart])
             for part in lcutPart:
                 if part.get_pdg_code() not in self.lcutpartemployed:
                     # First create the two L-cut particles to add to the process.
@@ -1093,7 +1093,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     # Accordingly update the totloopsuccessful tag
                     if loopsuccessful:
                         totloopsuccessful=True
-        
+
         # Reset the l-cut particle list
         self.lcutpartemployed=[]
 

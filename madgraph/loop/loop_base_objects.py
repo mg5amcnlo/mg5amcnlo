@@ -610,7 +610,6 @@ class LoopDiagram(base_objects.Diagram):
         """ Construct the tag of the diagram providing the loop structure 
         of it. """
        
-###        misc.sprint(self.nice_string())
         # Create the container for the new vertices which create the loop flow
         # It is dummy at this stage
         loopVertexList=base_objects.VertexList()
@@ -620,6 +619,7 @@ class LoopDiagram(base_objects.Diagram):
         # it is more efficient to create it here once only.
         external_legs = base_objects.LegList([l for l in 
                                 self.get_external_legs() if not l['loop_line']])
+        n_initial = len([1 for leg in external_legs if not leg['state']])
 
         if start_in is None or end_in is None:
             start_in = len(external_legs)+1
@@ -665,16 +665,13 @@ class LoopDiagram(base_objects.Diagram):
             # building this loop diagram. Keep in mind the the structures are 
             # factored out.
             if synchronize:
-                self.synchronize_loop_vertices_with_tag(model,
+                self.synchronize_loop_vertices_with_tag(model,n_initial,
                                                            struct_rep,start,end)
             # Now we just have to replace, in the canonical_tag, the legs with
             # the corresponding leg PDG since this is the only thing that matter
             # when building a canonical representation for the loop to perform 
             # the selection of the loop basis.
             self['canonical_tag']=[[t[0]['id'],t[1],t[2]] for t in canonical_tag]
-###            misc.sprint(self.nice_string())
-###            misc.sprint(self['tag'])
-###            stop
             return True
         else:
             raise self.PhysicsObjectError, \
@@ -683,7 +680,7 @@ class LoopDiagram(base_objects.Diagram):
 
 
     @classmethod
-    def generate_loop_vertex(cls,myleglist, model, vertID):
+    def generate_loop_vertex(cls,myleglist, model, n_initial, vertID):
         """ Generate a loop vertex from incoming legs myleglist and the 
         interaction with id vertID of the model given in argument """
         # Define easy access point
@@ -706,8 +703,9 @@ class LoopDiagram(base_objects.Diagram):
                     # 3) state is final, unless there is exactly 
                     #    one initial state particle involved in the
                     #    combination -> t-channel
-                    if len(myleglist)>1 and len(filter(lambda leg: \
-                            leg.get('state') == False, myleglist)) == 1:
+                    #    For a decay process there is of course no t-channel
+                    if n_initial>1 and len(myleglist)>1 and len(filter( \
+                        lambda leg: leg.get('state') == False, myleglist)) == 1:
                         state = False
                     else:
                         state = True
@@ -735,6 +733,7 @@ class LoopDiagram(base_objects.Diagram):
         vertPos=-2
         FDStructureIDList=[]
         vertFoundID=-1
+        n_initial = len([1 for leg in external_legs if not leg['state']])
 
         # Helper function to process a loop interaction once found
         def process_loop_interaction(i,j,k,pos):
@@ -926,13 +925,13 @@ class LoopDiagram(base_objects.Diagram):
             # as we reach this number, we reached the EXTERNAL outter leg 
             # which set the end of the tagging algorithm.
             loopVertexList.append(\
-                         self.generate_loop_vertex(myleglist,model,vertFoundID))
+               self.generate_loop_vertex(myleglist,model,n_initial,vertFoundID))
             # check that the particle/anti-particle is set correctly
 
         if nextLoopLeg.same(endLeg):
             # Now we can add the corresponding 'fake' amplitude vertex
             # with flagged id = -1
-            # If last vertex was dummy, then recuperate the original leg
+            # If last vertex was dummy, then recover the original leg
             if vertFoundID not in [0,-1]:
                 starting_Leg=copy.copy(myleglist[-1])
                 legid=model.get_particle(myleglist[-1]['id']).get_anti_pdg_code()
@@ -959,7 +958,7 @@ class LoopDiagram(base_objects.Diagram):
             return self.process_next_loop_leg(structRep, vertPos, legPos, \
                       nextLoopLeg, endLeg, loopVertexList, model, external_legs)
 
-    def synchronize_loop_vertices_with_tag(self,model,struct_rep,
+    def synchronize_loop_vertices_with_tag(self,model,n_initial,struct_rep,
                                          lcut_part_number,lcut_antipart_number):
         """ Construct the loop vertices from the tag of the loop diagram."""
         
@@ -1001,7 +1000,8 @@ class LoopDiagram(base_objects.Diagram):
                 starting_leg=loopVertexList[-1].get('legs')[-1]
             self['tag'][i][0]=starting_leg
             myleglist.append(starting_leg)
-            loopVertexList.append(self.generate_loop_vertex(myleglist,model,t[2]))
+            loopVertexList.append(self.generate_loop_vertex(myleglist,
+                                                          model,n_initial,t[2]))
         # Now we can add the corresponding 'fake' amplitude vertex
         # with flagged id = -1
         first_leg=copy.copy(loopVertexList[-1].get('legs')[-1])
@@ -1015,7 +1015,7 @@ class LoopDiagram(base_objects.Diagram):
              'id':-1}))
 
         self['type'] = abs(first_leg['id'])
-        self['vertices'] = loopVertexList
+        self['vertices'] = loopVertexList    
     
     def construct_FDStructure(self, fromVert, fromPos, currLeg, FDStruct):
         """ Construct iteratively a Feynman Diagram structure attached to a Loop, 
