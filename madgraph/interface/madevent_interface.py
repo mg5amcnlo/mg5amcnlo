@@ -2559,21 +2559,22 @@ Beware that this can be dangerous for local multicore runs.""")
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
                                           "MadLoopParams.dat"))
             
-
-        # Now Update MadLoop filters if necessary (if modifications were made to
-        # the model parameters).
-        if need_MadLoopFilterUpdate:
-            logger.debug('Changes to the %s parameters have been detected. '%type_of_change+\
-                       'Madevent will then now reinitialize MadLoop filters.')
-            self.exec_cmd('initMadLoop -r -f')
-        # The need_MadLoopInit condition is just there so as to avoid useless
-        # printout if there is not initialization to be performed. But even
-        # without it, and because we call 'initMadLoop' without the '-r' option
-        # no time would be wasted anyway, since the existing filters would not
-        # be overwritten.
-        elif not opt['forbid_MadLoopInit'] and \
-                               MadLoopInitializer.need_MadLoopInit(self.me_dir):
-            self.exec_cmd('initMadLoop -f')
+        if self.proc_characteristics['loop_induced']:
+            # Now Update MadLoop filters if necessary (if modifications were made to
+            # the model parameters).
+            if need_MadLoopFilterUpdate:
+                logger.debug('Changes to the %s parameters'%type_of_change+\
+                  ' have been detected. Madevent will then now reinitialize'+\
+                                                            ' MadLoop filters.')
+                self.exec_cmd('initMadLoop -r -f')
+            # The need_MadLoopInit condition is just there so as to avoid useless
+            # printout if there is not initialization to be performed. But even
+            # without it, and because we call 'initMadLoop' without the '-r' option
+            # no time would be wasted anyway, since the existing filters would not
+            # be overwritten.
+            elif not opt['forbid_MadLoopInit'] and \
+                                   MadLoopInitializer.need_MadLoopInit(self.me_dir):
+                self.exec_cmd('initMadLoop -f')
          
     ############################################################################      
     def do_survey(self, line):
