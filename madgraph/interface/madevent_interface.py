@@ -2640,7 +2640,9 @@ Beware that this can be dangerous for local multicore runs.""")
             #will be done during the refine (more precisely in gen_ximprove)
             cross, error = sum_html.make_all_html_results(self)
             self.results.add_detail('cross', cross)
-            self.results.add_detail('error', error)        
+            self.results.add_detail('error', error)  
+            self.exec_cmd("print_results %s" % self.run_name,
+                           errorhandling=False, printcmd=False, precmd=False, postcmd=False)      
         
         self.results.add_detail('run_statistics', dict(ajobcreator.run_statistics))
         self.update_status('End survey', 'parton', makehtml=False)
@@ -2723,6 +2725,8 @@ Beware that this can be dangerous for local multicore runs.""")
             cross, error = x_improve.update_html() #update html results for survey
             if  cross == 0:
                 return
+            logger.info("Current estimate of cross-section: %s +- %s" % (cross, error))
+        
 
         if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
             # Non splitted mode is based on writting ajob so need to track them
