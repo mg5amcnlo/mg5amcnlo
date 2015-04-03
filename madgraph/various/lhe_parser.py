@@ -5,8 +5,9 @@ import re
 import math
 import time
 import os
+import shutil
 
-
+pjoin = os.path.join
 
 if '__main__' == __name__:
     import sys
@@ -433,6 +434,23 @@ class EventFile(object):
 
         logger.log(log_level, "write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
           nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
+     
+        #correct the weight in the file if not the correct number of event
+        if nb_keep != event_target and hasattr(self, "written_weight"):
+            written_weight = lambda x: math.copysign(self.written_weight*event_target/nb_keep, float(x))
+            startfile = EventFile(outputpath)
+            tmpname = pjoin(os.path.dirname(outputpath), "wgtcorrected_"+ os.path.basename(outputpath))
+            outfile = EventFile(tmpname, "w")
+            outfile.write(startfile.banner)
+            for event in startfile:
+                event.wgt = written_weight(event.wgt)
+                outfile.write(str(event))
+            outfile.write("</LesHouchesEvents>\n")
+            startfile.close()
+            outfile.close()
+            shutil.move(tmpname, outputpath)
+            
+     
      
         return nb_keep
         

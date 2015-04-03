@@ -346,9 +346,9 @@ class gensym(object):
                         self.splitted_for_dir(Pdir, G),
                         nb_events,mode=self.mode,
                         conservative_factor=5.0)
-
+        
         xsec_format = '.%ig'%(max(3,int(math.log10(1.0/float(error)))+2) 
-                                                      if float(cross)!=0.0 else 8)        
+                              if float(cross)!=0.0 and float(error)!=0.0 else 8)        
         if need_submit:
             message = "%%s/G%%s is at %%%s +- %%.3g pb. Now submitting iteration #%s."%(xsec_format, step+1)
             logger.info(message%\
@@ -437,19 +437,28 @@ class gensym(object):
                 grid_calculator.results.run_statistics['skipped_subchannel'] += 1
                 return self.combine_grid(Pdir, G, step, exclude_sub_jobs)
 
- 
-        if cross !=0:
-            self.cross[(Pdir,G)] += cross**3/sigma**2
-            self.abscross[(Pdir,G)] += across * cross**2/sigma**2
-            self.sigma[(Pdir,G)] += cross**2/ sigma**2
-            self.chi2[(Pdir,G)] += cross**4/sigma**2
-            # and use those iteration to get the current estimator
-            cross = self.cross[(Pdir,G)]/self.sigma[(Pdir,G)]
-            if step > 1:
-                error = math.sqrt(abs((self.chi2[(Pdir,G)]/cross**2 - \
-                             self.sigma[(Pdir,G)])/(step-1))/self.sigma[(Pdir,G)])
+        
+        if across !=0:
+            if sigma != 0:
+                self.cross[(Pdir,G)] += cross**3/sigma**2
+                self.abscross[(Pdir,G)] += across * cross**2/sigma**2
+                self.sigma[(Pdir,G)] += cross**2/ sigma**2
+                self.chi2[(Pdir,G)] += cross**4/sigma**2
+                # and use those iteration to get the current estimator
+                cross = self.cross[(Pdir,G)]/self.sigma[(Pdir,G)]
+                if step > 1:
+                    error = math.sqrt(abs((self.chi2[(Pdir,G)]/cross**2 - \
+                                 self.sigma[(Pdir,G)])/(step-1))/self.sigma[(Pdir,G)])
+                else:
+                    error = sigma/cross
             else:
-                error = sigma/cross
+                self.cross[(Pdir,G)] = cross
+                self.abscross[(Pdir,G)] = across
+                self.sigma[(Pdir,G)] = 0
+                self.chi2[(Pdir,G)] = 0
+                cross = self.cross[(Pdir,G)]
+                error = 0
+                
         else:
             error = 0
  
