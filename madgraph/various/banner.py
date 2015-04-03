@@ -1825,9 +1825,16 @@ class RunCardNLO(RunCard):
             scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
             for scale in scales:
                 if self[scale]:
-                    logger.info('''For consistency in the FxFx merging, \'%s\' has been set to false'''
+                    logger.warning('''For consistency in the FxFx merging, \'%s\' has been set to false'''
                                 % scale,'$MG:color:BLACK')
                     self[scale]= False
+            #and left to default dynamical scale
+            if self["dynamical_scale_choice"] != -1:
+                self["dynamical_scale_choice"] = -1
+                logger.warning('''For consistency in the FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
+                                ,'$MG:color:BLACK')
+                
+                
             # 2. Use kT algorithm for jets with pseudo-code size R=1.0
             jetparams=['jetradius','jetalgo']
             for jetparam in jetparams:
@@ -1835,6 +1842,12 @@ class RunCardNLO(RunCard):
                     logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
                                 % jetparam ,'$MG:color:BLACK')
                     self[jetparam] = 1.0
+        elif self['ickkw'] == -1 and self["dynamical_scale_choice"] != -1:
+                self["dynamical_scale_choice"] = -1
+                self["dynamical_scale_choice"] = -1
+                logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
+                                ,'$MG:color:BLACK')            
+            
                                 
         # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
         if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':

@@ -61,6 +61,14 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
           enddo
           rscale=rscale/2d0
       elseif(dynamical_scale_choice.eq.3) then
+c         sum of the transverse mass divide by 2
+c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
+          rscale=0d0
+          do i=3,nexternal
+            rscale=rscale+dsqrt(max(0d0,(P(0,i)+P(3,i))*(P(0,i)-P(3,i))))
+          enddo
+          rscale=rscale
+      elseif(dynamical_scale_choice.eq.4) then
 c         \sqrt(s), partonic energy
           rscale=dsqrt(max(0d0,2d0*dot(P(0,1),P(0,2))))
       elseif(dynamical_scale_choice.eq.0) then
@@ -69,6 +77,7 @@ cc      USER DEFINE SCALE: ENTER YOUR CODE HERE                                 
 cc      to use this code you need to set                                         cc
 cc                 dymamical_scale_choice to 0 in the run_card                   cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+         write(*,*) "scale not define by the user"
          stop 21
 c
 c-some examples of dynamical scales
