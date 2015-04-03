@@ -1777,7 +1777,7 @@ class RunCardNLO(RunCard):
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', 91.118)
         self.add_param('muf2_ref_fixed', 91.118)
-        self.add_param("dynamical_scale_choice", 2)
+        self.add_param("dynamical_scale_choice", -1)
         self.add_param('fixed_qes_scale', False)
         self.add_param('qes_ref_fixed', 91.118)
         self.add_param('mur_over_ref', 1.0)

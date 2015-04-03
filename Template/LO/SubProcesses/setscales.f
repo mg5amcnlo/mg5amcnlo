@@ -53,13 +53,13 @@ c         Total transverse energy of the event.
              rscale=rscale+et(P(0,i))
           enddo      
       elseif(dynamical_scale_choice.eq.2) then
-c         sum of the transverse mass divide by 2
+c         sum of the transverse mass
 c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
           rscale=0d0
           do i=3,nexternal
             rscale=rscale+dsqrt(max(0d0,(P(0,i)+P(3,i))*(P(0,i)-P(3,i))))
           enddo
-          rscale=rscale/2d0
+          rscale=rscale
       elseif(dynamical_scale_choice.eq.3) then
 c         sum of the transverse mass divide by 2
 c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
@@ -67,7 +67,7 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
           do i=3,nexternal
             rscale=rscale+dsqrt(max(0d0,(P(0,i)+P(3,i))*(P(0,i)-P(3,i))))
           enddo
-          rscale=rscale
+          rscale=rscale/2d0
       elseif(dynamical_scale_choice.eq.4) then
 c         \sqrt(s), partonic energy
           rscale=dsqrt(max(0d0,2d0*dot(P(0,1),P(0,2))))

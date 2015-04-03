@@ -7,8 +7,15 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                       - The default value depends now of your running process
                       - cut_decays is now on False by default
                       - nhel can only take 0/1 value. 1 is a real MC over helicity (with importance sampling)
-                      - use_syst is set on by default (but for matching where it is keep off)                      
-                OM: Cuts are also applied for 1>N processes (but the default run_card doesn't have any cut).     
+                      - use_syst is set on by default (but for matching where it is keep off)                    
+                      - New options added: dynamical_scale_choice, it can take the following value
+		            -1 : MadGraph5_aMC@NLO default (different for LO/NLO/ ickkw mode) same as previous version. 
+                             0 : Tag reserved for user define dynamical scale (need to be added in setscales.f).
+                             1 : Total transverse energy of the event.
+                             2 : sum of the transverse mass 
+                             3 : sum of the transverse mass divide by 2 
+			     4 : \sqrt(s), partonic energy  
+                OM: Cuts are also applied for 1>N processes (but the default run_card doesn't have any cut).         
                 RF: Fixed a bug in the aMCfast/APPLGrid interface introduced in version 2.2.3
 		RF: Fixed a bug in the setting of the integration grids (LO process generation) for the minimum
 		    energy needed for photons. The bug did not lead to any bias in event generation.
