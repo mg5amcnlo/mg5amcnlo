@@ -23,6 +23,8 @@ C
     PARAMETER (             NCOMB=%(ncomb)d)
     INTEGER    NLOOPDIAGRAMS
     PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
+	INTEGER    NMULTICHANNELS
+    PARAMETER (NMULTICHANNELS=%(nmultichannels)d)
     INTEGER    NLOOPFLOWS
     PARAMETER (NLoopFlows=%(nLoopFlows)d) 
     INTEGER    THEL
@@ -295,15 +297,13 @@ c           Include the Jacobian from helicity sampling
         ENDDO
 		IF (MULTICHANNEL_THRES.ge.0.0d0) then
 		  IF (((XTOT/hel_jacobian)/DABS(ANS)).lt.MULTICHANNEL_THRES) THEN
-		    XTOT=0.0d0
-            DO I=1,NLOOPDIAGRAMS
-              AMP2(I)=AMP2(I)+ MULTICHANNEL_THRES*(DABS(ANS)/hel_jacobian)
-			  XTOT = XTOT+AMP2(I)
-            ENDDO
+			INTERFERENCE_CONTRIB = (MULTICHANNEL_THRES*(DABS(ANS)/hel_jacobian))
+            AMP2(%(configID_in_matrix)s) = AMP2(%(configID_in_matrix)s) + (INTERFERENCE_CONTRIB/NMULTICHANNELS)
+			XTOT = XTOT + INTERFERENCE_CONTRIB
 		  ENDIF 
 		ENDIF
         IF (XTOT.NE.0D0) THEN
-%(set_amp2_line)s
+		    ANS=ANS*AMP2(%(configID_in_matrix)s)/XTOT
         ELSE
             ANS=0D0
         ENDIF

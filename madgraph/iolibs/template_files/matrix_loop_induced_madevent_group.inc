@@ -21,6 +21,8 @@ C
     Include 'maxamps.inc'
     INTEGER    NLOOPDIAGRAMS
     PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
+	INTEGER    NMULTICHANNELS
+    PARAMETER (NMULTICHANNELS=%(nmultichannels)d)
     INTEGER    NLOOPFLOWS
     PARAMETER (NLoopFlows=%(nLoopFlows)d) 
     INTEGER                 NCOMB         
@@ -33,7 +35,7 @@ C   It can be that all '|A_i|^2' are zero, in which case one wants to effectivel
 C   This behavior will occur when  Sum_i(|A_i|^2)/Full_ME < MULTICHANNEL_THRES. 
 C   When set negative, the security above is removed
 	DOUBLE PRECISION MULTICHANNEL_THRES
-	PARAMETER (MULTICHANNEL_THRES=-1.0d0)
+	PARAMETER (MULTICHANNEL_THRES=1.0d-5)
 c
 c global (due to reading writting) 
 c
@@ -307,16 +309,14 @@ c         Set right sign for ANS, based on sign of chosen helicity
             XTOT=XTOT+AMP2(I)
         ENDDO
 		IF (MULTICHANNEL_THRES.ge.0.0d0) then
-		  IF ((XTOT/(DABS(ANS)/hel_jacobian)).lt.MULTICHANNEL_THRES) THEN
-		    XTOT=0.0d0
-            DO I=1,NLOOPDIAGRAMS
-              AMP2(I)=AMP2(I)+ MULTICHANNEL_THRES*(DABS(ANS)/hel_jacobian)
-			  XTOT = XTOT+AMP2(I)
-            ENDDO
-          ENDIF 
+		  IF (((XTOT/hel_jacobian)/DABS(ANS)).lt.MULTICHANNEL_THRES) THEN
+			INTERFERENCE_CONTRIB = (MULTICHANNEL_THRES*(DABS(ANS)/hel_jacobian))
+            AMP2(%(configID_in_matrix)s) = AMP2(%(configID_in_matrix)s) + (INTERFERENCE_CONTRIB/NMULTICHANNELS)
+			XTOT = XTOT + INTERFERENCE_CONTRIB
+		  ENDIF
 		ENDIF
         IF (XTOT.NE.0D0) THEN
-%(set_amp2_line)s
+		    ANS=ANS*AMP2(%(configID_in_matrix)s)/XTOT
         ELSE
             ANS=0D0
         ENDIF
