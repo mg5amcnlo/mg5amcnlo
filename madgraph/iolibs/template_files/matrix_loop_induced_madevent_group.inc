@@ -33,7 +33,7 @@ C   It can be that all '|A_i|^2' are zero, in which case one wants to effectivel
 C   This behavior will occur when  Sum_i(|A_i|^2)/Full_ME < MULTICHANNEL_THRES. 
 C   When set negative, the security above is removed
 	DOUBLE PRECISION MULTICHANNEL_THRES
-	PARAMETER (MULTICHANNEL_THRES=1.0d-5)
+	PARAMETER (MULTICHANNEL_THRES=-1.0d0)
 c
 c global (due to reading writting) 
 c
