@@ -985,8 +985,8 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},23,11,4,18),  # 37->23,12->11 remove external bubble and some triangle
-                       ({},['QCD'],{},15,5,2,10)]
+                       ({},['QCD','QED'],{},19,10,4,18), 
+                       ({},['QCD'],{},11,4,2,10)]
         
                 
         for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVmassGoal,nUVCTGoal) in ordersChoices:
