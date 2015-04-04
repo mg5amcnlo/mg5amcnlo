@@ -453,7 +453,33 @@ class EventFile(object):
      
      
         return nb_keep
+    
+    def apply_fct_on_event(self, *fcts, **opts):
+        """ apply one or more fct on all event. """
         
+        opt= {"print_step": 2000}
+        opt.update(opts)
+        
+        nb_fct = len(fcts)
+        out = []
+        for i in range(nb_fct):
+            out.append([])
+        self.seek(0)
+        nb_event = 0
+        for event in self:
+            nb_event += 1
+            if opt["print_step"] and nb_event % opt["print_step"] == 0:
+                if hasattr(self,"len"):
+                    logger.info("currently at %s/%s event" % (nb_event, self.len))
+                else:
+                    logger.info("currently at %s event" % nb_event)
+            for i in range(nb_fct):
+                out[i].append(fcts[i](event))
+        if nb_fct == 1:
+            return out[0]
+        else:
+            return out
+
     
 class EventFileGzip(EventFile, gzip.GzipFile):
     """A way to read/write a gzipped lhef event"""
@@ -1263,7 +1289,7 @@ class FourMomentum(object):
     def pt2(self):
         """ return the pt square """
         
-        return  self.px**2 + self.py**2 + self.pz**2
+        return  self.px**2 + self.py**2
     
     def __add__(self, obj):
         
@@ -1296,7 +1322,7 @@ class FourMomentum(object):
         function copied from HELAS routine."""
 
         
-        pt = self.pt2()
+        pt = self.px**2 + self.py**2 + self.pz**2
         if pt:
             s3product = self.px * mom.px + self.py * mom.py + self.pz * mom.pz
             mass = self.mass
