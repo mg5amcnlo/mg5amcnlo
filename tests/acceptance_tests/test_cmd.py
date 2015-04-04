@@ -175,7 +175,8 @@ class TestCmdShell1(unittest.TestCase):
                     'amcfast': 'amcfast-config',
                     'applgrid': 'applgrid-config',
                     'cluster_size': 100,
-                    'loop_color_flows': False
+                    'loop_color_flows': False,
+                    'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/'
                     }
 
         self.assertEqual(config, expected)
