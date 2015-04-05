@@ -1229,8 +1229,6 @@ class RunCard(ConfigFile):
                         text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
                     if nline[1].strip().lower() in to_write:
                         to_write.remove(nline[1].strip().lower())
-                    else:
-                        misc.sprint(to_write, nline[1].strip().lower())
                 else:
                     logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
                     text += line 
