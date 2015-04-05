@@ -326,7 +326,7 @@ class ProcessExporterFortran(object):
             open(IU,file=tempname,status='old',ERR=4)
             return              
  4          tempname='%(path)s/../lhapdf/pdfsets/6.1/'//Tablefile
-            open(IU,file=tempname,status='old',ERR=10)
+            open(IU,file=tempname,status='old',ERR=5)
             return  
             """ % {"path" : self.opt["cluster_local_path"]}
             

@@ -2169,6 +2169,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['config_map_definition'] = ''
             replace_dict['config_index_map_definition'] = ''            
             replace_dict['nmultichannels'] = 0
+            
+        # The nmultichannels entry will be used in the matrix<i> wrappers as 
+        # well, so we add it to the general_replace_dict too.
+        self.general_replace_dict['nmultichannels'] = replace_dict['nmultichannels']
 
         file = open(os.path.join(self.template_dir,\
                                  'compute_color_flows.inc')).read()%replace_dict
@@ -2673,12 +2677,11 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
                  """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
                  COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
             # Set set_amp2_line
-            replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(SUBDIAG(%s))/XTOT" % \
-                                            proc_id
+            replace_dict['configID_in_matrix'] = "SUBDIAG(%s)"%proc_id
         else:
             # Standard running
             # Set set_amp2_line
-            replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT"
+            replace_dict['configID_in_matrix'] = "MAPCONFIG(ICONFIG)"
         
         # If group_numer
         replace_dict['ml_prefix'] = \
