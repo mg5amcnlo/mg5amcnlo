@@ -48,6 +48,7 @@
  %(scale)s  = scale            ! fixed ren scale
  %(dsqrt_q2fact1)s  = dsqrt_q2fact1    ! fixed fact scale for pdf1
  %(dsqrt_q2fact2)s  = dsqrt_q2fact2    ! fixed fact scale for pdf2
+ %(dynamical_scale_choice)s = dynamical_scale_choice ! Select one of the preselect dynamical choice 
  %(scalefact)s  = scalefact        ! scale factor for event-by-event scales
 
 
