@@ -87,7 +87,7 @@ c        load the gridpack file
       endif
 c   Get information for the <init> block
       param_card_name = '%(param_card_name)s'
-c      call setrun
+      call setrun
 
 c      nreq = 10000
 c
