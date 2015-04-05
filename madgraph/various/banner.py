@@ -244,14 +244,36 @@ class Banner(dict):
             misc.sprint(len(data), self['init'])
             raise Exception, "init block has a wrong format"
         data[-2] = '%s' % value
-        all_lines[0] = ' '.join(data) + '\n'
+        all_lines[0] = ' '.join(data)
         self['init'] = '\n'.join(all_lines)
 
-        
-        
-        
+    def modify_init_cross(self, cross):
+        """modify the init information with the associate cross-section"""
 
-
+        assert isinstance(cross, dict)
+#        assert "all" in cross
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        new_data = []
+        new_data.append(all_lines[0])
+        for i in range(1, len(all_lines)):
+            line = all_lines[i]
+            split = line.split()
+            if len(split) == 4:
+                xsec, xerr, xmax, pid = split 
+            else:
+                new_data += all_lines[i:]
+                break
+            if int(pid) not in cross:
+                raise Exception
+            pid = int(pid)
+            ratio = cross[pid]/float(xsec)
+            line = "   %+13.7e %+13.7e %+13.7e %i" % \
+                (float(cross[pid]), ratio* float(xerr), ratio*float(xmax), pid)
+            new_data.append(line)
+        self['init'] = '\n'.join(new_data)
+                
     ############################################################################
     #  WRITE BANNER
     ############################################################################
@@ -1531,8 +1553,8 @@ class RunCardLO(RunCard):
                     self['mmjj'] = 0.0 
             if self['ickkw'] == 2:
                 # add warning if ckkw selected but the associate parameter are empty
-                self.get_default('highestmult', log=20)                   
-                self.get_default('issgridfile', 'issudgrid.dat', log=20)
+                self.get_default('highestmult', log_level=20)                   
+                self.get_default('issgridfile', 'issudgrid.dat', log_level=20)
 
         # check validity of the pdf set
         possible_set = ['lhapdf','mrs02nl','mrs02nn', 'mrs0119','mrs0117','mrs0121','mrs01_j', 'mrs99_1','mrs99_2','mrs99_3','mrs99_4','mrs99_5','mrs99_6', 'mrs99_7','mrs99_8','mrs99_9','mrs9910','mrs9911','mrs9912', 'mrs98z1','mrs98z2','mrs98z3','mrs98z4','mrs98z5','mrs98ht', 'mrs98l1','mrs98l2','mrs98l3','mrs98l4','mrs98l5', 'cteq3_m','cteq3_l','cteq3_d', 'cteq4_m','cteq4_d','cteq4_l','cteq4a1','cteq4a2', 'cteq4a3','cteq4a4','cteq4a5','cteq4hj','cteq4lq', 'cteq5_m','cteq5_d','cteq5_l','cteq5hj','cteq5hq', 'cteq5f3','cteq5f4','cteq5m1','ctq5hq1','cteq5l1', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo']
@@ -1540,7 +1562,7 @@ class RunCardLO(RunCard):
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
         if self['pdlabel'] == 'lhapdf':
             #add warning if lhaid not define
-            self.get_default('lhaid', log=20)
+            self.get_default('lhaid', log_level=20)
    
         for name in self.legacy_parameter:
             if self[name] != self.legacy_parameter[name]:

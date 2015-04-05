@@ -129,6 +129,17 @@ class ReweightInterface(extended_cmd.Cmd):
             self.lhe_input.banner = open(value).read()
         self.banner = self.lhe_input.get_banner()
         
+        #get original cross-section/error
+        if 'init' not in self.banner:
+            raise self.InvalidCmd('Event file does not contain init information')
+        for line in self.banner['init'].split('\n'):
+                split = line.split()
+                if len(split) == 4:
+                    cross, error = float(split[0]), float(split[1])
+        self.orig_cross = (cross, error)
+        
+        
+        
         # Check the validity of the banner:
         if 'slha' not in self.banner:
             self.events_file = None
@@ -371,6 +382,7 @@ class ReweightInterface(extended_cmd.Cmd):
         tag_name = 'mg_reweight_%s' % rewgtid
         start = time.time()
         cross = 0
+        ratio, ratio_square = 0, 0 # to compute the variance and associate error
         
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
@@ -398,6 +410,8 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 weight = self.calculate_weight(event)
                 cross += weight
+                ratio += weight/event.wgt
+                ratio_square += (weight/event.wgt)**2
                 if self.output_type == "default":
                     event.reweight_data[tag_name] = weight
                     #write this event with weight
@@ -437,7 +451,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 results.add_run(run_name, self.run_card, current=True)
                 results.add_detail('nb_event', event_nb+1)
                 results.add_detail('cross', cross)
-                results.add_detail('error', 'nan')
+                event_nb +=1
+                variance = ratio_square/event_nb - (ratio/event_nb)**2
+                orig_cross, orig_error = self.orig_cross
+                error = variance/math.sqrt(event_nb) * orig_cross + ratio/event_nb * orig_error
+                
+                results.add_detail('error', error)
                 self.mother.create_plot(mode='reweight', event_path=output2.name,
                                         tag=self.run_card['run_tag'])
                 #modify the html output to add the original run
@@ -472,10 +491,10 @@ class ReweightInterface(extended_cmd.Cmd):
             files.mv(output2.name, self.lhe_input.name)      
 
         logger.info('Event %s have now the additional weight' % self.lhe_input.name)
-        logger.info('new cross-section is : %g pb' % cross)
+        logger.info('new cross-section is : %g pb (indicative error: %g pb)' % (cross,error))
         self.terminate_fortran_executables(new_card_only=True)
         #store result
-        self.all_cross_section[rewgtid] = cross
+        self.all_cross_section[rewgtid] = (cross, error)
         
 
     def write_reweighted_event(self, event, tag_name, **opt):
@@ -611,7 +630,6 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             external.stdin.write('%i\n' % 0)
         me_value = external.stdout.readline()
-        
         if start:
             while 1:
                 try: 
@@ -621,6 +639,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     me_value = external.stdout.readline()             
         else:
             while 1:
+                me_value= me_value.strip()
                 try: 
                     if 'nan' in me_value.lower():
                         raise Exception
@@ -628,7 +647,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         logger.debug(me_value)
                         me_value = external.stdout.readline()
                         continue
-                    if me_value.strip().startswith("#"):
+                    if me_value.strip().startswith(("#", "setting it to default value")):
                         logger.debug(me_value)
                         me_value = external.stdout.readline()
                         continue
@@ -643,13 +662,14 @@ class ReweightInterface(extended_cmd.Cmd):
                         return self.calculate_matrix_element(event, hypp_id, space)
                     me_value = float(me_value)
                     break
-                except Exception:
+                except Exception, error:
                     print 'ZERO DETECTED for hypp', hypp_id
                     print stdin_text
                     print "RETURN VALUE IS", [me_value]
+                    print error
                     #os.system('lsof -p %s' % external.pid)
                     me_value = 0
-                    raise Exception
+                    raise 
         
         if me_value == 0:
             #print '%g' % event.aqcd
@@ -710,7 +730,7 @@ class ReweightInterface(extended_cmd.Cmd):
         keys = self.all_cross_section.keys()
         keys.sort()
         for key in keys:
-            logger.info('%s : %s' % (key,self.all_cross_section[key]))  
+            logger.info('%s : %s +- %s pb' % (key,self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
         self.terminate_fortran_executables()
             
     def __del__(self):
@@ -893,6 +913,14 @@ class ReweightInterface(extended_cmd.Cmd):
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
+        
+        matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
+        print "917 start print processes", len(matrix_elements)
+        for me in matrix_elements:
+            for proc in me.get('processes'):
+                print(proc.nice_string())
+        
+        
         commandline = 'output standalone_rw %s' % pjoin(path_me,'rw_me_second')
         mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))
@@ -904,17 +932,20 @@ class ReweightInterface(extended_cmd.Cmd):
         to_check = [] # list of tag that do not have a Pdir at creation time. 
         for me in matrix_elements:
             for proc in me.get('processes'):
+                misc.sprint(proc.nice_string())
                 initial = []    #filled in the next line
                 final = [l.get('id') for l in proc.get('legs')\
                       if l.get('state') or initial.append(l.get('id'))]
                 order = (initial, final)
                 tag = proc.get_initial_final_ids()
                 decay_finals = proc.get_final_ids_after_decay()
+                misc.sprint(tag, decay_finals)
 
                 if tag[1] != decay_finals:
                     order = (initial, list(decay_finals))
                     decay_finals.sort()
                     tag = (tag[0], tuple(decay_finals))
+                misc.sprint("final tag", tag)
                 Pdir = pjoin(path_me, 'rw_me_second', 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
                 if not os.path.exists(Pdir):
@@ -937,7 +968,8 @@ class ReweightInterface(extended_cmd.Cmd):
 
         for tag in to_check:
             if tag not in self.id_to_path:
-                raise self.InvalidCmd, "no valid path for %s" % (tag,)
+                logger.warning("no valid path for %s" % (tag,))
+                #raise self.InvalidCmd, "no valid path for %s" % (tag,)
         
         # 4. Check MadLoopParam
         if os.path.exists(pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat')):

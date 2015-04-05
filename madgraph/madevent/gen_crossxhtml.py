@@ -30,11 +30,13 @@ except ImportError:
     import internal.save_load_object as save_load_object
     import internal.lhe_parser as lhe_parser
     import internal.misc as misc
+    import internal.banner as bannerlib
 else:
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.various.lhe_parser as lhe_parser
     import madgraph.various.misc as misc
+    import madgraph.various.banner as bannerlib
 
 pjoin = os.path.join
 exists = os.path.exists
@@ -160,6 +162,9 @@ class AllResults(dict):
         # Check if some directory already exists and if so add them
         runs = [d for d in os.listdir(pjoin(path, 'Events')) if 
                                       os.path.isdir(pjoin(path, 'Events', d))]
+
+        misc.sprint("diable readd old run")
+        return
         if runs:
             if recreateold:
                 for run in runs:
@@ -173,7 +178,7 @@ class AllResults(dict):
         
         event_path = pjoin(self.path, "Events", run_name, "unweighted_events.lhe")
         
-        import banner as bannerlib
+
         
         if os.path.exists("%s.gz" % event_path):
             misc.gunzip(event_path, keep=True)
@@ -599,8 +604,8 @@ class RunResults(list):
      
         # No pythia only a single run:}
         if not tags:
-            self.current['nb_event'] = nb_event
-            self.current['cross'] = cross
+            self[-1]['nb_event'] = nb_event
+            self[-1]['cross'] = cross
           
         #Loop over pythia run
         for tag in tags:

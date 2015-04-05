@@ -960,7 +960,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             misc.sprint("try to do P dir")
             for i,proc in enumerate(matrix_element.get('processes')): 
                 misc.sprint(pjoin(self.dir_path, 'SubProcesses', \
-                               "P%s" % proc.shell_string()))               
+                               "P%s" % proc.shell_string()), proc.nice_string())  
+                             
                 initial = []    #filled in the next line
                 final = [l.get('id') for l in proc.get('legs')\
                       if l.get('state') or initial.append(l.get('id'))]
