@@ -2829,17 +2829,17 @@ Beware that this can be dangerous for local multicore runs.""")
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
                 pass
-            if self.options['run_mode'] ==1 and self.options['cluster_temp_path']:
-                tmpcluster = cluster.MultiCore(nb_core=1)
-                tmpcluster.launch_and_wait('../bin/internal/run_combine', 
-                                            cwd=pjoin(self.me_dir,'SubProcesses'),
-                                            stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-                                            required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-            else:
-                self.cluster.launch_and_wait('../bin/internal/run_combine', 
-                                            cwd=pjoin(self.me_dir,'SubProcesses'),
-                                            stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-                                            required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
+
+            tmpcluster = cluster.MultiCore(nb_core=1)
+            tmpcluster.launch_and_wait('../bin/internal/run_combine', 
+                                       cwd=pjoin(self.me_dir,'SubProcesses'),
+                                       stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
+                                       required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
+
+            #self.cluster.launch_and_wait('../bin/internal/run_combine', 
+            #                                cwd=pjoin(self.me_dir,'SubProcesses'),
+            #                                stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
+            #                                required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
             
             output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
             # Store the number of unweighted events for the results object

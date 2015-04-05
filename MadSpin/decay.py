@@ -441,6 +441,7 @@ class dc_branch_from_me(dict):
             self['tree'][propa_id] = {'nbody': len(proc.get('legs'))-1,\
                                       'label':proc.get('legs')[0].get('id')}
             # loop over the child
+            child_propa_id = propa_id
             for c_nb,leg in enumerate(proc.get('legs')):
                 if c_nb == 0:
                     continue
@@ -449,12 +450,14 @@ class dc_branch_from_me(dict):
                 self["tree"][propa_id]["d%s" % c_nb]["label"] = c_pid
                 self["tree"][propa_id]["d%s" % c_nb]["labels"] = [c_pid]
                 if c_pid in to_decay:
-                    self["tree"][propa_id]["d%s" % c_nb]["index"] = propa_id-1
+                    child_propa_id -= 1
+                    self["tree"][propa_id]["d%s" % c_nb]["index"] = child_propa_id
                     self.nb_decays += 1
-                    add_decay(to_decay[c_pid].pop(), propa_id-1)
+                    child_propa_id = add_decay(to_decay[c_pid].pop(), child_propa_id)
                 else:
                     self.nexternal += 1
                     self["tree"][propa_id]["d%s" % c_nb]["index"] = self.nexternal
+            return child_propa_id
         
         # launch the recursive loop
         add_decay(process)
@@ -2857,6 +2860,7 @@ class decay_all_events(object):
         #to remove potential pointless decay in the diagram generation.
         resonances = decay_misc.get_all_resonances(self.banner, 
                          self.mgcmd, self.mscmd.list_branches.keys())
+
         logger.debug('List of resonances:%s' % resonances)
         path_me = os.path.realpath(self.path_me) 
         width = width_estimate(resonances, path_me, self.banner, self.model,
@@ -3528,7 +3532,8 @@ class decay_all_events(object):
                 else:
                     # now we need to write the decay products in the event
                     # follow the decay chain order, so that we can easily keep track of the mother index
-                        
+                       
+                    map_to_part_number={}
                     for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
                         index_res_for_mom=decay_struct[part]['mg_tree'][-res-1][0]
                         if (res==-1):
@@ -3550,8 +3555,8 @@ class decay_all_events(object):
                                 "mass":mass,"helicity":helicity}
                             decayed_event.event2mg[part_number]=part_number
 
-                        mothup1=part_number
-                        mothup2=part_number
+                            map_to_part_number[res]=part_number
+   
 #
 #             Extract color information so that we can write the color flow
 #
@@ -3656,7 +3661,10 @@ class decay_all_events(object):
                             decay_struct[part]["tree"][indexd1]["colup2"]=d1colup2
                             istup=2                    
                             mass=mom.m
-                        
+                            map_to_part_number[indexd1]=part_number 
+ 
+                        mothup1=map_to_part_number[res]
+                        mothup2=map_to_part_number[res]
                         decayed_event.particle[part_number]={"pid":pid,\
                                 "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
                                 "colup1":d1colup1,"colup2":d1colup2,"momentum":mom,\
@@ -3687,10 +3695,10 @@ class decay_all_events(object):
                             decay_struct[part]["tree"][indexd2]["colup1"]=d2colup1
                             decay_struct[part]["tree"][indexd2]["colup2"]=d2colup2
                             mass=mom.m
+                            map_to_part_number[indexd2]=part_number
 
-
-                        mothup1=part_number-2
-                        mothup2=part_number-2
+                        mothup1=map_to_part_number[res]
+                        mothup2=map_to_part_number[res]
                         decayed_event.particle[part_number]={"pid":pid,"istup":istup,\
                            "mothup1":mothup1,"mothup2":mothup2,"colup1":d2colup1,\
                            "colup2":d2colup2,\
