@@ -431,7 +431,8 @@ PDF:useLHAPDF = off                ! Use of LHAPDF
 EOF
  fi
  cat <<EOF >> $ifile
-PDF:pSet = 7                       ! CTEQ6L
+#PDF:pSet = 7                       ! CTEQ6L
+PDF:pSet = 13                       ! NNPDF2.3 QCD+QED
 EOF
 fi
 

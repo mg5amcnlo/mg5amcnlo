@@ -3564,8 +3564,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                 self.total_jobs - remaining -1, run_type), level=None, force=False)
             start = time.time()
             #os.system('cd %s; ./%s' % (cwd,exe))
-            status = misc.call(['./'+exe] + argument, cwd=cwd, 
-                                                           stdout=stdout, **opt)
+            status = misc.call([exe] + argument, cwd=cwd, stdout=stdout, **opt)
             logger.info('%s run in %f s' % (exe, time.time() -start))
             if status:
                 raise MadGraph5Error, '%s didn\'t stop properly. Stop all computation' % exe

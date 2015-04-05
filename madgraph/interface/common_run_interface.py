@@ -1743,6 +1743,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                    % key)
 
         # Configure the way to open a file:
+        misc.open_file.configure(self.options)
         self.configure_run_mode(self.options['run_mode'])
         return self.options
 
@@ -2019,13 +2020,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
         else:
             #clean previous set of pdf used
-            for name in os.listdir(pdfsets_dir):
+            for name in os.listdir(pjoin(self.me_dir, 'lib', 'PDFsets')):
                 if name != pdfsetname:
                     try:
-                        if os.path.isdir(pjoin(pdfsets_dir, name)):
-                            shutil.rmtree(pjoin(pdfsets_dir, name))
+                        if os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', name)):
+                            shutil.rmtree(pjoin(self.me_dir, 'lib', 'PDFsets', name))
                         else:
-                            os.remove(pjoin(pdfsets_dir, name))
+                            os.remove(pjoin(self.me_dir, 'lib', 'PDFsets', name))
                     except Exception, error:
                         logger.debug('%s', error)
         

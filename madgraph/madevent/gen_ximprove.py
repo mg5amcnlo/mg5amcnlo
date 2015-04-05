@@ -895,12 +895,13 @@ class gen_ximprove_v4(gen_ximprove):
         # loop over the channel to refine
         for C in to_refine:
             #1. Compute the number of points are needed to reach target
-            needed_event = goal_lum*C.get('xsec')
+            needed_event = goal_lum*C.get('axsec')
             nb_split = int(max(1,((needed_event-1)// self.max_request_event) +1))
             if not self.split_channels:
                 nb_split = 1
             if nb_split > self.max_splitting:
                 nb_split = self.max_splitting
+            nb_split=min(1, nb_split)
 
             
             #2. estimate how many points we need in each iteration
