@@ -1320,12 +1320,12 @@ class width_estimate(object):
 
         # Maybe the branching fractions are already given in the banner:
         self.extract_br_from_banner(self.banner)
-        to_decay = [p for p in to_decay if not p in self.br]
+        to_decay = list(to_decay)
         for part in to_decay[:]:
             if part in mgcmd._multiparticles:
                 to_decay += [self.pid2label[id] for id in mgcmd._multiparticles[part]]
                 to_decay.remove(part)
-        to_decay = list(set(to_decay))
+        to_decay = list(set([p for p in to_decay if not p in self.br]))
         
         if to_decay:
             logger.info('We need to recalculate the branching fractions for %s' % ','.join(to_decay))
