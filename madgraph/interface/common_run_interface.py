@@ -2332,9 +2332,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.conflict.append(var)
                 if self.has_mw and var in self.mw_vars:
                     self.conflict.append(var)
-            
-
-
 
         #check if shower_card is present:
         self.has_shower = False
@@ -2534,8 +2531,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         return self.deal_multiple_categories(possibilities)
 
     def do_set(self, line):
-        """ edit the value of one parameter in the card"""
-
+      """ edit the value of one parameter in the card"""
+      try:
         args = self.split_arg(line)
         if '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=')
@@ -2821,7 +2818,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
 
         #### SHOWER CARD
-        elif args[start] in [l.lower() for l in self.shower_card.keys()] and card in ['', 'shower_card']:
+        elif self.has_shower and args[start] in [l.lower() for l in \
+                       self.shower_card.keys()] and card in ['', 'shower_card']:
             if args[start] not in self.shower_card:
                 args[start] = [l for l in self.shower_card if l.lower() == args[start]][0]
 
@@ -2869,7 +2867,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         else:            
             logger.warning('invalid set command %s ' % line)
             return            
-
+      except Exception,e:
+          print e
+          print traceback.print_exc(file=sys.stdout)
     def setM(self, block, name, value):
         
         if isinstance(value, list) and len(value) == 1:
@@ -3114,7 +3114,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = self.cards[int(answer)-1]
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
-                
+        
+        if 'MadLoopParams' in answer:
+            answer = pjoin(me_dir,'Cards','MadLoopParams.dat')
         if not '.dat' in answer and not '.lhco' in answer:
             if answer != 'trigger':
                 path = pjoin(me_dir,'Cards','%s_card.dat' % answer)
@@ -3158,6 +3160,8 @@ You can also copy/paste, your event file here.''')
                 logger.warning('using the \'set\' command without opening the file will discard all your manual change')
         elif path == pjoin(self.me_dir,'Cards','run_card.dat'):
             self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        elif path == pjoin(self.me_dir,'Cards','MadLoopParams.dat'):
+            self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
         elif path == pjoin(self.me_dir,'Cards','MadWeight_card.dat'):
             try:
                 import madgraph.madweight.Cards as mwcards
