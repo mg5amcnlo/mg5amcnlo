@@ -849,9 +849,11 @@ class CondorCluster(Cluster):
                 'stderr': stderr,'log': log,'argument': argument,
                 'requirement': requirement}
 
-        open('submit_condor','w').write(text % dico)
-        a = misc.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
-        output = a.stdout.read()
+        #open('submit_condor','w').write(text % dico)
+        a = misc.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE,
+                       stdin=subprocess.PIPE)
+        output, _ = a.communicate(text % dico)
+        #output = a.stdout.read()
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
@@ -934,9 +936,11 @@ class CondorCluster(Cluster):
                 'requirement': requirement, 'input_files':input_files, 
                 'output_files':output_files}
 
-        open('submit_condor','w').write(text % dico)
-        a = subprocess.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
-        output = a.stdout.read()
+        #open('submit_condor','w').write(text % dico)
+        a = subprocess.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE,
+                             stdin=subprocess.PIPE)
+        output, _ = a.communicate(text % dico)
+        #output = a.stdout.read()
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
