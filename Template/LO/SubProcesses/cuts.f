@@ -1013,6 +1013,7 @@ c     Do not duplicate it since some variable are set for syscalc in the fct
          passcuts=.false.
          return
        endif
+c      endif
 
 c     Set couplings in model files
       if(.not.fixed_ren_scale.or..not.fixed_couplings) then

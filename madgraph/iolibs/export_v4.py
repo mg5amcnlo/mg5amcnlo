@@ -180,7 +180,7 @@ class ProcessExporterFortran(object):
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # Duplicate run_card and plot_card
-            for card in ['run_card', 'plot_card']:
+            for card in ['plot_card']:
                 try:
                     shutil.copy(pjoin(self.dir_path, 'Cards',
                                              card + '.dat'),
@@ -2396,6 +2396,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
         cp(_file_path+'/various/banner.py', 
                                    self.dir_path+'/bin/internal/banner.py')
+        cp(_file_path+'/various/shower_card.py', 
+                                   self.dir_path+'/bin/internal/shower_card.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
         
@@ -2407,7 +2409,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
     #===========================================================================
-    # Make the Helas and Model directories for Standalone directory
+    # Change the version of cuts.f to the one compatible with MW
     #===========================================================================    
     def get_mw_cuts_version(self, outpath=None):
         """create the appropriate cuts.f
@@ -2535,7 +2537,6 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'),
                        template=pjoin(MG5DIR, 'Template', 'MadWeight', 'Cards', 'run_card.dat'),
                        python_template=True)
-
 
     #===========================================================================
     # export model files
