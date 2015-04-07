@@ -1008,6 +1008,8 @@ class CondorCluster(Cluster):
                     run += 1
                 elif status == 'resubmit':
                     idle += 1
+                else:
+                    self.submitted_ids.remove(id)
 
         return idle, run, self.submitted - (idle+run+fail), fail
     
