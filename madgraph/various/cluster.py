@@ -850,7 +850,7 @@ class CondorCluster(Cluster):
                 'requirement': requirement}
 
         #open('submit_condor','w').write(text % dico)
-        a = misc.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE,
+        a = misc.Popen(['condor_submit'], stdout=subprocess.PIPE,
                        stdin=subprocess.PIPE)
         output, _ = a.communicate(text % dico)
         #output = a.stdout.read()
@@ -937,7 +937,7 @@ class CondorCluster(Cluster):
                 'output_files':output_files}
 
         #open('submit_condor','w').write(text % dico)
-        a = subprocess.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE,
+        a = subprocess.Popen(['condor_submit'], stdout=subprocess.PIPE,
                              stdin=subprocess.PIPE)
         output, _ = a.communicate(text % dico)
         #output = a.stdout.read()
