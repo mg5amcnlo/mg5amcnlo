@@ -770,7 +770,7 @@ class gen_ximprove(object):
             if goal_lum/(C.get('luminosity')+1e-99) >= 1 + (self.gen_events_security-1)/2:
                 logger.debug("channel %s is at %s (%s) (%s pb)", C.name,  C.get('luminosity'), goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'))
                 to_refine.append(C)
-            elif C.get('xerr') > max(C.get('axsec'), 0.01*all_channels[0].get('axsec')):
+            elif C.get('xerr') > max(C.get('axsec'), 1e-4*all_channels[-1].get('axsec')):
                 to_refine.append(C)
          
         logger.info('need to improve %s channels' % len(to_refine))        
@@ -1238,6 +1238,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
         for C, nevents in channel_to_ps_point:
             nb_job = int(nevents // nb_ps_by_job +1)
             submit_ps = min(nevents, nb_ps_by_job)
+            if nb_job == 1:
+                submit_ps = max(submit_ps, self.min_event_in_iter)
             self.create_resubmit_one_iter(C.parent_name, C.name[1:], submit_ps, nb_job, step=0)
             needed_event = goal_lum*C.get('xsec')
             logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_job, submit_ps)
@@ -1314,7 +1316,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
         nb_split_before = len(grid_calculator.results)
         nevents = grid_calculator.results[0].nevents
         
-        need_ps_point = (needed_event - nunwgt)/efficiency
+        need_ps_point = (needed_event - nunwgt)/(efficiency+1e-99)
         need_job = need_ps_point // nevents + 1        
         
         if step < self.min_iter:
