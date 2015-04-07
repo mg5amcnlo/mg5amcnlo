@@ -1182,6 +1182,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
         super(gen_ximprove_share, self).__init__(*args, **opts)
         self.generated_events = {}
         self.splitted_for_dir = lambda x,y : self.splitted_Pdir[(x,y)]
+        
 
     def get_job_for_event(self):
         """generate the script in order to generate a given number of event"""
@@ -1229,14 +1230,22 @@ class gen_ximprove_share(gen_ximprove, gensym):
             else:
                 nb_ps_by_job = self.nb_ps_by_job
         elif self.cmd.options["run_mode"] == 2:
-            nb_ps_by_job = total_ps_points / self.cmd.options["nb_core"]
+            misc.sprint(total_ps_points)
+            remain = total_ps_points % self.cmd.options["nb_core"]
+            if remain:
+                nb_ps_by_job = 1 + (total_ps_points - remain) / self.cmd.options["nb_core"]
+            else:
+                nb_ps_by_job = total_ps_points / self.cmd.options["nb_core"]
         else:
             nb_ps_by_job = self.nb_ps_by_job
             
-        nb_ps_by_job = max(nb_ps_by_job, 500)
+        nb_ps_by_job = int(max(nb_ps_by_job, 500))
 
         for C, nevents in channel_to_ps_point:
-            nb_job = int(nevents // nb_ps_by_job +1)
+            if nevents % nb_ps_by_job:
+                nb_job = 1 + int(nevents // nb_ps_by_job)
+            else:
+                nb_job = int(nevents // nb_ps_by_job)
             submit_ps = min(nevents, nb_ps_by_job)
             if nb_job == 1:
                 submit_ps = max(submit_ps, self.min_event_in_iter)
@@ -1259,6 +1268,13 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 
         # Check how many events are going to be kept after un-weighting.
         needed_event = cross * self.goal_lum
+        
+        # check that the number of events requested is not higher than the actual
+        #  total number of events to generate.
+        if self.err_goal >=1:
+            if needed_event > self.gen_events_security * self.err_goal:
+                needed_event = int(self.gen_events_security * self.err_goal)
+        
         if (Pdir, G) in self.generated_events:
             old_nunwgt, old_maxwgt = self.generated_events[(Pdir, G)]
         else:
