@@ -2040,7 +2040,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             options['nPS'] = new_n_PS
 
         MadLoopInitializer.init_MadLoop(self.me_dir,n_PS=options['nPS'],
-                                                            subproc_prefix='PV')
+                                   subproc_prefix='PV', MG_options=self.options)
 
     def do_launch(self, line, *args, **opt):
         """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
@@ -4333,6 +4333,10 @@ Beware that this can be dangerous for local multicore runs.""")
         if switch['reweight'] == 'ON':
             cards.append('reweight_card.dat')
         self.keep_cards(cards)
+        
+        if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
+            cards.append('MadLoopParams.dat')
+        
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return
@@ -4913,7 +4917,7 @@ class MadLoopInitializer(object):
         return False
 
     @staticmethod
-    def init_MadLoop(proc_dir, n_PS=None, subproc_prefix='PV'):
+    def init_MadLoop(proc_dir, n_PS=None, subproc_prefix='PV', MG_options=None):
         """Advanced commands: Compiles and run MadLoop on RAMBO random PS points to initilize the
         filters."""
 
@@ -4936,13 +4940,34 @@ class MadLoopInitializer(object):
         logger.info('Initializing MadLoop loop-induced matrix elements '+\
                                                  '(this can take some time)...')
 
-        for v_folder in glob.iglob(pjoin(proc_dir,'SubProcesses',
-                                                         '%s*'%subproc_prefix)):
-            # Make sure it is a valid MadLoop directory
-            if not os.path.isdir(v_folder) or not os.path.isfile(\
-                                               pjoin(v_folder,'loop_matrix.f')):
-                continue
-            init_info = {}
+        # Setup parallelization
+        if MG_options:
+            mcore = cluster.MultiCore(MG_options)
+        else:
+            mcore = cluster.MultiCore(nb_core=1)
+        def run_initialization_wrapper(run_dir, infos, attempts):
+                if attempts is None:
+                    n_PS = MadLoopInitializer.run_initialization(
+                                                   run_dir=run_dir, infos=infos)
+                else:
+                    n_PS = MadLoopInitializer.run_initialization(
+                                run_dir=run_dir, infos=infos, attempts=attempts)                    
+                infos['nPS'] = n_PS
+                return 0
+    
+        def wait_monitoring(Idle, Running, Done):
+            if Idle+Running+Done == 0:
+                return
+            logger.debug('MadLoop initialization jobs: %d Idle, %d Running, %d Done'\
+                                                         %(Idle, Running, Done))
+
+        init_info = {}
+        # List all virtual folders while making sure they are valid MadLoop folders
+        VirtualFolders = [f for f in glob.iglob(pjoin(proc_dir,'SubProcesses',
+                    '%s*'%subproc_prefix)) if (os.path.isdir(f) or 
+                                      os.path.isfile(pjoin(f,'loop_matrix.f')))]
+        for v_folder in VirtualFolders:
+            init_info[v_folder] = {}
             logger.debug("Initializing MadLoop matrix element in '%s'..."%\
                                                      os.path.basename(v_folder))
             
@@ -4951,27 +4976,32 @@ class MadLoopInitializer(object):
             max_mult = 3
             if n_PS is None:
                 # Then use the default list of number of PS points to try
-                init_info['nPS']=MadLoopInitializer.run_initialization(
-                                       run_dir=pjoin(v_folder), infos=init_info)
+                mcore.submit(run_initialization_wrapper, 
+                                   [pjoin(v_folder), init_info[v_folder], None])
             else:
-                init_info['nPS']=MadLoopInitializer.run_initialization(
-                                     run_dir=pjoin(v_folder), infos=init_info, 
-                  attempts = [n_PS*multiplier for multiplier in range(1,max_mult+1)])
-            
-            if init_info['nPS'] is None:
+                # Use specific set of PS points
+                mcore.submit(run_initialization_wrapper, [pjoin(v_folder),
+                       init_info[v_folder],
+                       [n_PS*multiplier for multiplier in range(1,max_mult+1)]])
+
+        # Wait for all jobs to finish.
+        mcore.wait('',wait_monitoring,update_first=wait_monitoring)
+        for v_folder in VirtualFolders:
+            init = init_info[v_folder]
+            if init['nPS'] is None:
                 raise MadGraph5Error, 'Failed the initialization of'+\
                   " loop-induced matrix element '%s'%s."%\
                   (os.path.basename(v_folder),' (using default n_PS points)' if\
                     n_PS is None else ' (trying with a maximum of %d PS points)'\
                                                                %(max_mult*n_PS))
-            if init_info['nPS']==0:
+            if init['nPS']==0:
                 logger.debug("...nothing to be done, all filters already "+\
                    "present (use the '-r' option to force their recomputation)")
             else:
                 logger.debug('...done using '+
                   '%d PS points (%s), in %.3g(compil.) + %.3g(init.) secs.'%(
-                  abs(init_info['nPS']),'DP' if init_info['nPS']>0 else 'QP',
-                  init_info['Process_compilation'],init_info['Initialization']))
+                  abs(init['nPS']),'DP' if init['nPS']>0 else 'QP',
+                  init['Process_compilation'],init['Initialization']))
         
         logger.info('MadLoop initialization finished.')        
 

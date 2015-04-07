@@ -2605,7 +2605,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         # the madevent interactive interface after the output.
         # from madgraph.interface.madevent_interface import MadLoopInitializer
         # MadLoopInitializer.init_MadLoop(self.dir_path,
-        #                                     subproc_prefix=self.SubProc_prefix)
+        #                   subproc_prefix=self.SubProc_prefix, MG_options=None)
 
     def write_tir_cache_size_include(self, writer):
         """Write the file 'tir_cache_size.inc' which sets the size of the TIR
