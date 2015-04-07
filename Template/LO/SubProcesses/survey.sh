@@ -48,7 +48,7 @@ for i in $@ ; do
 
      for((try=1;try<=10;try+=1)); 
      do
-     ../madevent >> $k <input_app.txt;
+     ../madevent 2>&1 >> $k <input_app.txt | tee -a $k;
      if [ -s $k ]
      then
          break;

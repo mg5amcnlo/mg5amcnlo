@@ -50,7 +50,7 @@ j=%(directory)s
      # filesystem problem (executable not found)
      for((try=1;try<=16;try+=1)); 
      do
-         ../madevent >> $k <input_sg.txt
+         ../madevent 2>&1 >> $k <input_sg.txt | tee -a $k;
          if [ -s $k ]
          then
              break
