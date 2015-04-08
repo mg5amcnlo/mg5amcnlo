@@ -2531,8 +2531,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         return self.deal_multiple_categories(possibilities)
 
     def do_set(self, line):
-      """ edit the value of one parameter in the card"""
-      try:
+        """ edit the value of one parameter in the card"""
+        
         args = self.split_arg(line)
         if '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=')
@@ -2867,9 +2867,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         else:            
             logger.warning('invalid set command %s ' % line)
             return            
-      except Exception,e:
-          print e
-          print traceback.print_exc(file=sys.stdout)
+
     def setM(self, block, name, value):
         
         if isinstance(value, list) and len(value) == 1:

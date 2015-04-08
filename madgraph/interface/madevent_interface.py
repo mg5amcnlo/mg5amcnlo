@@ -4114,7 +4114,7 @@ Beware that this can be dangerous for local multicore runs.""")
     def run_syscalc(self, mode='parton', event_path=None, output=None):
         """create the syscalc output""" 
 
-        os.environ['LHAPATH']='/home/fynu/hirschi/scratch/lhapdf_full/share/lhapdf/PDFsets'
+        os.environ['LHAPATH']=''
 
         logger.info('running syscalc on mode %s' % mode)
         if self.run_card['use_syst'] not in self.true:

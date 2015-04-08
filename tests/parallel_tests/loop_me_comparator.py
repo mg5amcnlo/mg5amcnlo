@@ -46,6 +46,7 @@ import madgraph.interface.master_interface as cmd_interface
 from madgraph.interface.madevent_interface import MadLoopInitializer
 
 import madgraph.various.process_checks as process_checks
+import madgraph.various.misc as misc
 
 import me_comparator
 from madgraph.iolibs.files import mv
@@ -273,7 +274,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
     @staticmethod
     def get_me_value(proc, proc_id, working_dir, PSpoint=[], verbose=True,mu_r=0.0):
         """Compile and run ./check, then parse the output and return the result
-        for process with id = proc_id and PSpoint if specified."""  
+        for process with id = proc_id and PSpoint if specified.""" 
+ 
         if verbose:
             sys.stdout.write('.')
             sys.stdout.flush()
@@ -300,7 +302,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             os.remove(os.path.join(dir_name,'check_sa.o'))
         # Run make
         devnull = open(os.devnull, 'w')
-        retcode = subprocess.call('make',
+        retcode = subprocess.call(['make','check'],
                         cwd=dir_name,
                         stdout=devnull, stderr=devnull)
                         
