@@ -770,7 +770,8 @@ class gen_ximprove(object):
             if goal_lum/(C.get('luminosity')+1e-99) >= 1 + (self.gen_events_security-1)/2:
                 logger.debug("channel %s is at %s (%s) (%s pb)", C.name,  C.get('luminosity'), goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'))
                 to_refine.append(C)
-            elif C.get('xerr') > max(C.get('axsec'), 1e-4*all_channels[-1].get('axsec')):
+            elif C.get('xerr') > max(C.get('axsec'),
+              (1/(100*math.sqrt(self.err_goal)))*all_channels[-1].get('axsec')):
                 to_refine.append(C)
          
         logger.info('need to improve %s channels' % len(to_refine))        
@@ -1230,7 +1231,6 @@ class gen_ximprove_share(gen_ximprove, gensym):
             else:
                 nb_ps_by_job = self.nb_ps_by_job
         elif self.cmd.options["run_mode"] == 2:
-            misc.sprint(total_ps_points)
             remain = total_ps_points % self.cmd.options["nb_core"]
             if remain:
                 nb_ps_by_job = 1 + (total_ps_points - remain) / self.cmd.options["nb_core"]
