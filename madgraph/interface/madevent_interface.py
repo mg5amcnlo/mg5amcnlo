@@ -4970,10 +4970,12 @@ class MadLoopInitializer(object):
         VirtualFolders = [f for f in glob.iglob(pjoin(proc_dir,'SubProcesses',
                     '%s*'%subproc_prefix)) if (os.path.isdir(f) or 
                                       os.path.isfile(pjoin(f,'loop_matrix.f')))]
+        logger.debug("Now Initializing MadLoop matrix element in %d folder%s:"%\
+                         (len(VirtualFolders),'s' if len(VirtualFolders)>1 else ''))
+        logger.debug(', '.join("'%s'"%os.path.basename(v_folder) for v_folder in 
+                                                                    VirtualFolders))
         for v_folder in VirtualFolders:
             init_info[v_folder] = {}
-            logger.debug("Initializing MadLoop matrix element in '%s'..."%\
-                                                     os.path.basename(v_folder))
             
             # We try all multiples of n_PS from 1 to max_mult, first in DP and then
             # in QP before giving up, or use default values if n_PS is None.
@@ -4999,10 +5001,11 @@ class MadLoopInitializer(object):
                     n_PS is None else ' (trying with a maximum of %d PS points)'\
                                                                %(max_mult*n_PS))
             if init['nPS']==0:
-                logger.debug("...nothing to be done, all filters already "+\
+                logger.debug("Nothing to be done in '%s', all filters already "%\
+                             os.path.basename(v_folder)+\
                    "present (use the '-r' option to force their recomputation)")
             else:
-                logger.debug('...done using '+
+                logger.debug("'%s' finished using "%os.path.basename(v_folder)+
                   '%d PS points (%s), in %.3g(compil.) + %.3g(init.) secs.'%(
                   abs(init['nPS']),'DP' if init['nPS']>0 else 'QP',
                   init['Process_compilation'],init['Initialization']))
