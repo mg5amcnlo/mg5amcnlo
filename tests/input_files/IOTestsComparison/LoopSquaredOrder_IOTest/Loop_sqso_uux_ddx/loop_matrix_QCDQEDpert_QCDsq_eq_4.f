@@ -2253,8 +2253,8 @@ C         DOUBLE CHECK THE HELICITY FILTER
             ENDIF
           ENDIF
           IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-            IF(ML5_0_ISSAME(DABS(HELSAVED(1,HELPICKED)),HELSAVED(1
-     $       ,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
+            IF(ML5_0_ISSAME(HELSAVED(1,HELPICKED),HELSAVED(1,ABS(GOODHE
+     $       L(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
               WRITE(*,*) '##W15 Helicity filter could not be successfu'
      $         //'lly double checked.'
               WRITE(*,*) 'One reason for this is that you might hav'
