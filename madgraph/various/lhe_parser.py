@@ -5,8 +5,9 @@ import re
 import math
 import time
 import os
+import shutil
 
-
+pjoin = os.path.join
 
 if '__main__' == __name__:
     import sys
@@ -434,8 +435,51 @@ class EventFile(object):
         logger.log(log_level, "write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
           nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
      
+        #correct the weight in the file if not the correct number of event
+        if nb_keep != event_target and hasattr(self, "written_weight"):
+            written_weight = lambda x: math.copysign(self.written_weight*event_target/nb_keep, float(x))
+            startfile = EventFile(outputpath)
+            tmpname = pjoin(os.path.dirname(outputpath), "wgtcorrected_"+ os.path.basename(outputpath))
+            outfile = EventFile(tmpname, "w")
+            outfile.write(startfile.banner)
+            for event in startfile:
+                event.wgt = written_weight(event.wgt)
+                outfile.write(str(event))
+            outfile.write("</LesHouchesEvents>\n")
+            startfile.close()
+            outfile.close()
+            shutil.move(tmpname, outputpath)
+            
+     
+     
         return nb_keep
+    
+    def apply_fct_on_event(self, *fcts, **opts):
+        """ apply one or more fct on all event. """
         
+        opt= {"print_step": 2000}
+        opt.update(opts)
+        
+        nb_fct = len(fcts)
+        out = []
+        for i in range(nb_fct):
+            out.append([])
+        self.seek(0)
+        nb_event = 0
+        for event in self:
+            nb_event += 1
+            if opt["print_step"] and nb_event % opt["print_step"] == 0:
+                if hasattr(self,"len"):
+                    logger.info("currently at %s/%s event" % (nb_event, self.len))
+                else:
+                    logger.info("currently at %s event" % nb_event)
+            for i in range(nb_fct):
+                out[i].append(fcts[i](event))
+        if nb_fct == 1:
+            return out[0]
+        else:
+            return out
+
     
 class EventFileGzip(EventFile, gzip.GzipFile):
     """A way to read/write a gzipped lhef event"""
@@ -1245,7 +1289,7 @@ class FourMomentum(object):
     def pt2(self):
         """ return the pt square """
         
-        return  self.px**2 + self.py**2 + self.pz**2
+        return  self.px**2 + self.py**2
     
     def __add__(self, obj):
         
@@ -1278,7 +1322,7 @@ class FourMomentum(object):
         function copied from HELAS routine."""
 
         
-        pt = self.pt2()
+        pt = self.px**2 + self.py**2 + self.pz**2
         if pt:
             s3product = self.px * mom.px + self.py * mom.py + self.pz * mom.pz
             mass = self.mass

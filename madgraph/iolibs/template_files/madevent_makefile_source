@@ -81,9 +81,19 @@ cleanCT:
 cleanIR:
 	cd $(IREGIDIR); make clean; cd ..
 
-IREGI: $(LIBDIR)libiregi.a
+libiregi: $(LIBDIR)libiregi.a
 
-CutTools: $(LIBDIR)libcts.a
+libcuttools: $(LIBDIR)libcts.a
+
+treatCards:
+	../bin/madevent treatcards all
+
+treatCardsLoopNoInit:
+	../bin/madevent treatcards loop --no_MadLoopInit
+
+libmodel: $(LIBDIR)libmodel.$(libext)
+
+libdhelas: $(LIBDIR)libdhelas.$(libext)
 
 $(LIBDIR)libcts.a: $(CUTTOOLSDIR)
 	cd $(CUTTOOLSDIR); make

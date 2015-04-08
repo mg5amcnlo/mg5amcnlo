@@ -9,6 +9,8 @@ C
       double precision zero
       parameter       (ZERO = 0d0)
       include 'genps.inc'
+      data HEL_PICKED/-1/
+      data hel_jacobian/1.0d0/
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       INTEGER    ITMAX, ITMIN, NCALL
@@ -23,6 +25,7 @@ C
       character*130 buf
       integer NextUnopen
       external NextUnopen
+      double precision t_before
 c
 c     Global
 c
@@ -34,6 +37,10 @@ c
       integer ngroup
       common/to_group/ngroup
       data ngroup/0/
+
+      DOUBLE PRECISION CUMULATED_TIMING
+      COMMON/GENERAL_STATS/CUMULATED_TIMING
+
 c
 c     PARAM_CARD
 c
@@ -66,7 +73,9 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 
 C-----
 C  BEGIN CODE
-C-----  
+C----- 
+      call cpu_time(t_before)
+      CUMULATED_TIMING = t_before
 c
 c     Read process number
 c
@@ -157,6 +166,7 @@ c
       enddo
       write(*,*) "about to integrate ", ndim,ncall,itmax,itmin,ninvar,nconfigs
       call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
+
 c
 c     Now write out events to permanent file
 c

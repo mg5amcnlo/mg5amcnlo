@@ -2088,6 +2088,14 @@ class Vertex(PhysicsObject):
     
     sorted_keys = ['id', 'legs']
     
+    # This sets what are the ID's of the vertices that must be ignored for the
+    # purpose of the multi-channeling. 0 and -1 are ID's of various technical
+    # vertices which have no relevance from the perspective of the diagram 
+    # topology, while -2 is the ID of a vertex that results from a shrunk loop
+    # (for loop-induced integration with MadEvent) and one may or may not want
+    # to consider these higher point loops for the purpose of the multi-channeling.
+    ID_to_veto_for_multichanneling = [0,-1,-2]
+    
     def default_setup(self):
         """Default values for all properties"""
 
@@ -2401,12 +2409,19 @@ class Diagram(PhysicsObject):
         state_dict = {True:'T',False:'F'}
         return new_diag
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, 
+                           veto_inter_id=Vertex.ID_to_veto_for_multichanneling):
         """Return a list of the number of legs in the vertices for
-        this diagram"""
+        this diagram. 
+        This function is only used for establishing the multi-channeling, so that
+        we exclude from it all the fake vertices and the vertices resulting from
+        shrunk loops (id=-2)"""
 
-        return [len(v.get('legs')) for v in self.get('vertices')]
-
+        res = [len(v.get('legs')) for v in self.get('vertices') if v.get('id') \
+                                                           not in veto_inter_id]
+    
+        return res
+    
     def get_num_configs(self, model, ninitial):
         """Return the maximum number of configs from this diagram,
         given by 2^(number of non-zero width s-channel propagators)"""

@@ -538,9 +538,18 @@ c     Variables for keeping track of jets
       external isqcd, isjet, isparton, cluster, isjetvx, alphas, ifsno
       setclscales=.true.
 
-      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0)
-     $     return
-
+      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0) then
+         if(use_syst)then
+            s_scale=scale
+            n_qcd=nqcd(iconfig)
+            n_alpsem=0
+            do i=1,2
+               n_pdfrw(i)=0
+            enddo
+            s_rwfact=1d0
+         endif
+      return
+      endif
 c   
 c   Cluster the configuration
 c   
@@ -1175,7 +1184,7 @@ c   Since we use pdf reweighting, need to know particle identities
          write(*,*) 'Set process number ',ipsel
       endif
 
-      if (use_syst.and.igraphs(1).eq.0) igraphs(1) = 1 ! happens if use_syst=T BUT fix scale
+      if (use_syst.and.igraphs(1).eq.0) igraphs(1) = iconfig ! happens if use_syst=T BUT fix scale
 c     Set incoming particle identities
       ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
       ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)

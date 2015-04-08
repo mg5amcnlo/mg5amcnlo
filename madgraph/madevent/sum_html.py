@@ -27,9 +27,11 @@ try:
 except ImportError:
     import internal.cluster as cluster
     import internal.misc as misc
+    from internal import MadGraph5Error
 else:
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
+    from madgraph import MadGraph5Error
 
 class RunStatistics(dict):
     """ A class to store statistics about a MadEvent run. """
@@ -38,7 +40,7 @@ class RunStatistics(dict):
         """ Initialize the run dictionary. For now, the same as a regular
         dictionary, except that we specify some default statistics. """
         
-        madloop_statiatics = {
+        madloop_statistics = {
           'unknown_stability'  : 0,
           'stable_points'      : 0,
           'unstable_points'    : 0,
@@ -55,10 +57,13 @@ class RunStatistics(dict):
           'max_precision'      : 1.0e99,
           'min_precision'      : 0.0,
           'averaged_timing'    : 0.0,
-          'n_madloop_calls'    : 0
+          'n_madloop_calls'    : 0,
+          'cumulative_timing'  : 0.0,
+          'skipped_subchannel' : 0 # number of times that a computation have been 
+                                    # discarded due to abnormal weight.
           }
         
-        for key, value in madloop_statiatics.items():
+        for key, value in madloop_statistics.items():
             self[key] = value
 
         super(dict,self).__init__(*args, **opts)
@@ -73,28 +78,29 @@ class RunStatistics(dict):
                 raise MadGraph5Error, "The 'new_stats' argument of the function "+\
                         "'updtate_statistics' must be a (possibly list of) "+\
                                                        "RunStatistics instance."
+ 
+        keys = set([])
+        for stat in [self,]+new_stats:
+            keys |= set(stat.keys())
 
-        if any(set(self.keys())!=set(_.keys()) for _ in new_stats):
-            raise MadGraph5Error, "All run statistics provided to the function"+\
-                                 " 'update_statistics' must have the same keys."
-        
         new_stats = new_stats+[self,]
-        for key in self:
+        for key in keys:
             # Define special rules
             if key=='max_precision':
                 # The minimal precision corresponds to the maximal value for PREC
-                self[key] = min( _[key] for _ in new_stats)
+                self[key] = min( _[key] for _ in new_stats if key in _)
             elif key=='min_precision':
                 # The maximal precision corresponds to the minimal value for PREC
-                self[key] = max( _[key] for _ in new_stats)
+                self[key] = max( _[key] for _ in new_stats if key in _)
             elif key=='averaged_timing':
-                n_madloop_calls = sum(_['n_madloop_calls'] for _ in new_stats)
+                n_madloop_calls = sum(_['n_madloop_calls'] for _ in new_stats if
+                                                         'n_madloop_calls' in _)
                 if n_madloop_calls > 0 :
-                    self[key] = sum(_[key]*_['n_madloop_calls'] 
-                                             for _ in new_stats)/n_madloop_calls
+                    self[key] = sum(_[key]*_['n_madloop_calls'] for _ in 
+                      new_stats if (key in _ and 'n_madloop_calls' in _) )/n_madloop_calls
             else:
                 # Now assume all other quantities are cumulative
-                self[key] = sum(_[key] for _ in new_stats)
+                self[key] = sum(_[key] for _ in new_stats if key in _)
     
     def load_statistics(self, xml_node):
         """ Load the statistics from an xml node. """
@@ -124,6 +130,9 @@ class RunStatistics(dict):
         average_time = xml_node.getElementsByTagName('average_time')
         avg_time = float(getData(average_time[0]))
         self['averaged_timing']    = avg_time 
+        cumulated_time = xml_node.getElementsByTagName('cumulated_time')
+        cumul_time = float(getData(cumulated_time[0]))
+        self['cumulative_timing']  = cumul_time 
         max_prec = xml_node.getElementsByTagName('max_prec')
         max_prec = float(getData(max_prec[0]))
         # The minimal precision corresponds to the maximal value for PREC
@@ -136,7 +145,7 @@ class RunStatistics(dict):
         n_evals = int(getData(n_evals[0]))
         self['n_madloop_calls']    = n_evals
     
-    def nice_output(self,G):
+    def nice_output(self,G, no_warning=False):
         """Returns a one-line string summarizing the run statistics 
         gathered for the channel G."""
         
@@ -166,9 +175,11 @@ class RunStatistics(dict):
 
         to_print = [('%s statistics:'%(G if isinstance(G,str) else
                                                     str(os.path.join(list(G))))\
-          +((' Avg. timing = %i ms'%int(1.0e3*self['averaged_timing'])) if
+          +(' %s,'%misc.format_time(int(self['cumulative_timing'])) if
+                                     int(self['cumulative_timing']) > 0 else '')
+          +((' Avg. ML timing = %i ms'%int(1.0e3*self['averaged_timing'])) if
             self['averaged_timing'] > 0.001 else
-            (', Avg. timing = %i mus'%int(1.0e6*self['averaged_timing']))) \
+            (' Avg. ML timing = %i mus'%int(1.0e6*self['averaged_timing']))) \
           +', Min precision = %.2e'%self['min_precision'])
           ,'   -> Stability %s'%dict(stability)
           ,'   -> Red. tools usage in %% %s'%dict(tools_used)
@@ -179,8 +190,44 @@ class RunStatistics(dict):
 #                                      str([_[1] for _ in tools_used]))
         ]
 
+        if self['skipped_subchannel'] > 0 and not no_warning:
+            to_print.append("WARNING: Some event with large weight have been "+\
+               "discarded. This happened %s times." % self['skipped_subchannel'])
+
         return ('\n'.join(to_print)).replace("'"," ")
     
+    def has_warning(self):
+        """return if any stat needs to be reported as a warning
+           When this is True, the print_warning doit retourner un warning
+        """
+    
+        if self['n_madloop_calls'] > 0:
+            fraction = self['exceptional_points']/float(self['n_madloop_calls'])
+        else:
+            fraction = 0.0
+            
+        if self['skipped_subchannel'] > 0:
+            return True
+        elif fraction > 1.0e-4:
+            return True
+        else:
+            return False
+
+    def get_warning_text(self):
+        """get a string with all the identified warning"""
+        
+        to_print = []
+        if self['skipped_subchannel'] > 0:
+            to_print.append("Some event with large weight have been discarded."+\
+                         " This happens %s times." % self['skipped_subchannel'])
+        if self['n_madloop_calls'] > 0:
+            fraction = self['exceptional_points']/float(self['n_madloop_calls'])
+            if fraction > 1.0e-4:
+                to_print.append("Some PS with numerical instability have been set "+\
+                   "to a zero matrix-element (%.3g%%)" % (100.0*fraction))
+        
+        return ('\n'.join(to_print)).replace("'"," ") 
+
 class OneResult(object):
     
     def __init__(self, name):
@@ -354,7 +401,7 @@ class Combine_results(list, OneResult):
         return oneresult
     
     
-    def compute_values(self):
+    def compute_values(self, update_statistics=False):
         """compute the value associate to this combination"""
 
         self.compute_iterations()
@@ -369,8 +416,8 @@ class Combine_results(list, OneResult):
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
         self.luminosity = min([0]+[one.luminosity for one in self])
-        
-        self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
+        if update_statistics:
+            self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
 
     def compute_average(self):
         """compute the value associate to this combination"""

@@ -1005,13 +1005,15 @@ c
 c     Here we cluster event and reset factorization and renormalization
 c     scales on an event-by-event basis, as well as check xqcut for jets
 c
-      if(xqcut.gt.0d0.or.ickkw.gt.0.or.scale.eq.0.or.q2fact(1).eq.0)then
+c     Note the following condition is the first line of setclscales
+c      if(xqcut.gt.0d0.or.ickkw.gt.0.or.scale.eq.0.or.q2fact(1).eq.0)then
+c     Do not duplicate it since some variable are set for syscalc in the fct
         if(.not.setclscales(p))then
          if(debug) write (*,*) ' setclscales -> fails'
          passcuts=.false.
          return
        endif
-      endif
+c      endif
 
 c     Set couplings in model files
       if(.not.fixed_ren_scale.or..not.fixed_couplings) then

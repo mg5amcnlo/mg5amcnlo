@@ -189,30 +189,28 @@ class MadLoopLauncher(ExtLauncher):
                 shell_name = path.split('_')[1]+' > '+path.split('_')[2]
                 curr_path = os.path.join(sub_path, path)
                 infos = {}
-                attempts = [3,15]
                 logger.info("Initializing process %s."%shell_name)
-                nps = evaluator.run_initialization(curr_path, sub_path, infos,
-                                req_files = ['HelFilter.dat','LoopFilter.dat'],
-                                attempts = attempts)
+                nps = me_cmd.MadLoopInitializer.run_initialization(
+                                curr_path, sub_path, infos,
+                                req_files = ['HelFilter.dat','LoopFilter.dat'])
                 if nps == None:
-                    raise MadGraph5Error,("Could not initialize the process %s"+\
-                      " with %s PS points.")%(shell_name,max(attempts))
-                elif nps < 0 or nps > min(attempts):
-                    logger.warning(("Could not initialize the process %s"+\
-                        " with %d PS points (double precision). It needed %d (%s).")\
-                        %(shell_name,min(attempts),abs(nps),\
-                    'in double precision' if nps>0 else 'in quadruple precision'))
+                    raise MadGraph5Error,"MadLoop could not initialize the process %s"\
+                      %shell_name
+                logger.debug(("MadLoop initialization performed for %s"+\
+                        " using %d PS points (%s)")\
+                        %(shell_name,abs(nps),\
+                    'double precision' if nps>0 else 'quadruple precision'))
                 # Ask if the user wants to edit the PS point.
                 self.treat_input_file('PS.input', default='n', 
                   msg='Phase-space point for process %s.'%shell_name,\
                                                              dir_path=curr_path)
                 # We use mu_r=-1.0 to use the one defined by the user in the
                 # param_car.dat
-                evaluator.fix_PSPoint_in_check(sub_path, 
+                me_cmd.MadLoopInitializer.fix_PSPoint_in_check(sub_path, 
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
                   npoints = 1, mu_r=-1.0)
                 # check
-                t1, t2, ram_usage = evaluator.make_and_run(curr_path)
+                t1, t2, ram_usage = me_cmd.MadLoopInitializer.make_and_run(curr_path)
                 if t1==None or t2==None:
                     raise MadGraph5Error,"Error while running process %s."\
                                                                      %shell_name

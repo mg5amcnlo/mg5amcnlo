@@ -27,6 +27,7 @@ C        ME_COMPUTATION_FROM_JAMP = Amplitudes are first projected onto color fl
 C     When setting both computation method to .TRUE., their systematic comparisons will be printed out.
 ## if(LoopInduced) {
       DATA DIRECT_ME_COMPUTATION/.FALSE./
+c     When using this MadLoop output for integration with MadEvent, ME_COMPUTATION_FROM_JAMP *must* be set to .True. because it is necessary to compute the AMP2 setting up the multichanneling. 
       DATA ME_COMPUTATION_FROM_JAMP/.TRUE./
 ## } else {
       DATA DIRECT_ME_COMPUTATION/.TRUE./
@@ -574,7 +575,7 @@ CLOSE(1)
 IF (HelicityFilterLevel.eq.1) then
 C We must make sure to remove the matching-helicity optimisation, as requested by the user.
   DO J=1,NCOMB
-    IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.HELOFFSET)) THEN
+    IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.-HELOFFSET)) THEN
 	  GOODHEL(J)=1
 	ENDIF
   ENDDO
@@ -1030,7 +1031,7 @@ ENDIF
 C We should compute the color flow either if it contributes to the final result (i.e. not used just for the filtering), or if the computation is only done from the color flows
 IF (((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP).OR.(H.EQ.USERHEL.OR.USERHEL.EQ.-1)) THEN
 C The cumulative quantities must only be computed if that helicity contributes according to user request (second argument of the subroutine below).
-  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT,(H.EQ.USERHEL.OR.USERHEL.EQ.-1))
+  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)
   IF(ME_COMPUTATION_FROM_JAMP) THEN
     CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(BUFFRES,HEL_MULT)
     IF(((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP)) THEN
@@ -1061,6 +1062,9 @@ C     If both computational method is used, then we must just update RES_FROM_JA
         ENDDO
       ENDDO
     ENDIF
+	IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
+	  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+	ENDIF
   ENDIF
 ENDIF
 ## }
@@ -1180,9 +1184,13 @@ C   TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING CHECK PHASE
 	ENDDO
   ENDIF
 C SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING THE HELICITY FILTER SETUP
-  HELSAVED(1,HELPICKED)=ANS(1,0)
-  HELSAVED(2,HELPICKED)=ANS(2,0)
-  HELSAVED(3,HELPICKED)=ANS(3,0)
+  DO I=1,NSQUAREDSO
+    IF (CHOSEN_SO_CONFIGS(I)) THEN
+      HELSAVED(1,HELPICKED)=HELSAVED(1,HELPICKED)+ANS(1,I)
+      HELSAVED(2,HELPICKED)=HELSAVED(2,HELPICKED)+ANS(2,I)
+      HELSAVED(3,HELPICKED)=HELSAVED(3,HELPICKED)+ANS(3,I)
+	ENDIF
+  ENDDO
 
 ## if(LoopInduced){
 C We make sure not to perform any check when NTRY is 0 because this means that
@@ -1192,7 +1200,7 @@ C the REF scale has not been set to the result of the evaluation for the first P
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
 	  HEL_INCONSISTENT=.FALSE.
-      IF(%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+      IF(%(proc_prefix)sIsZero(DABS(HELSAVED(1,HELPICKED))+DABS(HELSAVED(2,HELPICKED))+DABS(HELSAVED(3,HELPICKED)),REF/DBLE(NCOMB),-1,-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
@@ -1208,7 +1216,7 @@ C   SET THE HELICITY FILTER
 	    DO H=1,HELPICKED-1
 		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C           Be looser for helicity check, bring a factor 100
-		    DUMMY=%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,H),REF,.FALSE.)
+		    DUMMY=%(proc_prefix)sISSAME(HELSAVED(1,HELPICKED),HELSAVED(1,H),REF,.FALSE.)
 		    IF(DUMMY.NE.0) THEN
               IF(NTRY.EQ.1) THEN
 C               Set the matching helicity to be contributing once more
@@ -1280,7 +1288,7 @@ C   SET THE LOOP FILTER
   ELSEIF (.NOT.HELDOUBLECHECKED.AND.NTRY.NE.0)THEN
 C   DOUBLE CHECK THE HELICITY FILTER
     IF (GOODHEL(HELPICKED).EQ.-HELOFFSET) THEN
-	  IF (.NOT.%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+	  IF (.NOT.%(proc_prefix)sIsZero(DABS(HELSAVED(1,HELPICKED))+DABS(HELSAVED(2,HELPICKED))+DABS(HELSAVED(2,HELPICKED)),REF/DBLE(NCOMB),-1,-1)) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected what are the zero helicity configurations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -1291,7 +1299,7 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	  ENDIF
 	ENDIF
 	IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-	  IF(%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
+	  IF(%(proc_prefix)sISSAME(DABS(HELSAVED(1,HELPICKED)),HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'

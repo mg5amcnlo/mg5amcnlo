@@ -386,12 +386,15 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             self['mothers'].extend(mothersList)
             self['pairing'].append(len(mothersList))
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram"""
 
-        vertex_leg_numbers = [len(self.get('mothers'))]
+        vertex_leg_numbers = [len(self.get('mothers'))] if \
+                         self.get('interaction_id') not in veto_inter_id else []
         for mother in self.get('mothers'):
-            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
+                                                   veto_inter_id=veto_inter_id))
 
         return vertex_leg_numbers
 
@@ -1243,7 +1246,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
 
             # Initialize here the loop helas diagram we are about to create
             helas_diagram = LoopHelasDiagram()
-
+            
             # List of dictionaries from leg number to wave function,
             # keeps track of the present position in the loop.
             # We only need to retain the last loop wavefunctions created
@@ -1273,8 +1276,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             external_loop_wf=helas_objects.HelasWavefunction(\
                                                 tag[0][0], 0, model, decay_ids)
 
-
-            
             # When on the optimized output mode, the starting loop wavefunction
             # can be recycled if it has the same pdg because whatever its pdg 
             # it has the same coefficients and loop momentum zero, 
@@ -1481,6 +1482,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     # Set the loop wavefunctions building this amplitude
                     # by tracking them from the last loop wavefunction
                     # added and its loop wavefunction among its mothers
+                    
                     loop_amp_wfs=helas_objects.HelasWavefunctionList(\
                                                                 [last_loop_wf,])
                     while loop_amp_wfs[-1].get('mothers'):
@@ -1505,7 +1507,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     loop_amp.set('orders',loop_amp.get_orders())
                     helas_diagram.get('amplitudes').append(loop_amp)
                     # here we check the two L-cut loop helas wavefunctions are                                                                                                                           
-                    # in consistent flow                                                                                                                                                                 
+                    # in consistent flow                    
                     check_lcut_fermion_flow_consistency(\
                         loop_amp_wfs[0],loop_amp_wfs[1])
                 return wfNumber, amplitudeNumber

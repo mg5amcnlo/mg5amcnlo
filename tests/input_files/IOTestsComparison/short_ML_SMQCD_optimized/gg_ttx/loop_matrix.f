@@ -545,7 +545,7 @@ C     IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
 C         We must make sure to remove the matching-helicity optimisatio
 C         n, as requested by the user.
           DO J=1,NCOMB
-            IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.HELOFFSET)) THEN
+            IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.-HELOFFSET)) THEN
               GOODHEL(J)=1
             ENDIF
           ENDDO
@@ -1533,16 +1533,21 @@ C          CHECK PHASE
         ENDIF
 C       SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING
 C        THE HELICITY FILTER SETUP
-        HELSAVED(1,HELPICKED)=ANS(1,0)
-        HELSAVED(2,HELPICKED)=ANS(2,0)
-        HELSAVED(3,HELPICKED)=ANS(3,0)
+        DO I=1,NSQUAREDSO
+          IF (CHOSEN_SO_CONFIGS(I)) THEN
+            HELSAVED(1,HELPICKED)=HELSAVED(1,HELPICKED)+ANS(1,I)
+            HELSAVED(2,HELPICKED)=HELSAVED(2,HELPICKED)+ANS(2,I)
+            HELSAVED(3,HELPICKED)=HELSAVED(3,HELPICKED)+ANS(3,I)
+          ENDIF
+        ENDDO
 
         IF (CHECKPHASE.AND.NTRY.NE.0) THEN
 C         SET THE HELICITY FILTER
           IF(.NOT.FOUNDHELFILTER) THEN
             HEL_INCONSISTENT=.FALSE.
-            IF(ML5_0_ISZERO(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0))
-     $       ,REF/DBLE(NCOMB),-1,-1)) THEN
+            IF(ML5_0_ISZERO(DABS(HELSAVED(1,HELPICKED))+DABS(HELSAVED(2
+     $       ,HELPICKED))+DABS(HELSAVED(3,HELPICKED)),REF/DBLE(NCOMB),
+     $       -1,-1)) THEN
               IF(NTRY.EQ.1) THEN
                 GOODHEL(HELPICKED)=-HELOFFSET
               ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
@@ -1561,8 +1566,8 @@ C         SET THE HELICITY FILTER
               DO H=1,HELPICKED-1
                 IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C                 Be looser for helicity check, bring a factor 100
-                  DUMMY=ML5_0_ISSAME(ANS(1,0),HELSAVED(1,H),REF
-     $             ,.FALSE.)
+                  DUMMY=ML5_0_ISSAME(HELSAVED(1,HELPICKED),HELSAVED(1
+     $             ,H),REF,.FALSE.)
                   IF(DUMMY.NE.0) THEN
                     IF(NTRY.EQ.1) THEN
 C                     Set the matching helicity to be contributing
@@ -1654,8 +1659,9 @@ C         SET THE LOOP FILTER
         ELSEIF (.NOT.HELDOUBLECHECKED.AND.NTRY.NE.0)THEN
 C         DOUBLE CHECK THE HELICITY FILTER
           IF (GOODHEL(HELPICKED).EQ.-HELOFFSET) THEN
-            IF (.NOT.ML5_0_ISZERO(ABS(ANS(1,0))+ABS(ANS(2,0))
-     $       +ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+            IF (.NOT.ML5_0_ISZERO(DABS(HELSAVED(1,HELPICKED))
+     $       +DABS(HELSAVED(2,HELPICKED))+DABS(HELSAVED(2,HELPICKED))
+     $       ,REF/DBLE(NCOMB),-1,-1)) THEN
               WRITE(*,*) '##W15 Helicity filter could not be successfu'
      $         //'lly double checked.'
               WRITE(*,*) 'One reason for this is that you might hav'
@@ -1670,8 +1676,8 @@ C         DOUBLE CHECK THE HELICITY FILTER
             ENDIF
           ENDIF
           IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-            IF(ML5_0_ISSAME(ANS(1,0),HELSAVED(1,ABS(GOODHEL(HELPICKED)
-     $       +HELOFFSET)),REF,.TRUE.).EQ.0) THEN
+            IF(ML5_0_ISSAME(DABS(HELSAVED(1,HELPICKED)),HELSAVED(1
+     $       ,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
               WRITE(*,*) '##W15 Helicity filter could not be successfu'
      $         //'lly double checked.'
               WRITE(*,*) 'One reason for this is that you might hav'

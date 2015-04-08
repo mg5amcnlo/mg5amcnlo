@@ -43,6 +43,7 @@ import madgraph.various.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.master_interface as cmd_interface
+from madgraph.interface.madevent_interface import MadLoopInitializer
 
 import madgraph.various.process_checks as process_checks
 
@@ -260,7 +261,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
 
-        init = process_checks.LoopMatrixElementTimer.run_initialization(\
+        init = MadLoopInitializer.run_initialization(\
           run_dir=dir_name, SubProc_dir=os.path.join(working_dir, 'SubProcesses'),
           attempts = [3,15,25])
        

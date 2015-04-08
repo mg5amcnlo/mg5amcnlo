@@ -4701,7 +4701,8 @@ This implies that with decay chains:
 
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
-                target = 'http://theory.fnal.gov/people/parke/TD/td_mac_intel.tar.gz'
+                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
+                print target
                 misc.call(['curl', target, '-otd.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
