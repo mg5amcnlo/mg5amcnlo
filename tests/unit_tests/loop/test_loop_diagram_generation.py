@@ -1791,7 +1791,7 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
         ordersChoices=[
                        ({},['QCD','QED'],{},363,136,108),
                        ({},['QCD'],{},28,18,52),
-                       ({},['QED'],{},329,118,56)]
+                       ({},['QED'],{},335,118,56)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
