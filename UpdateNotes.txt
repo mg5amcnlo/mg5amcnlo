@@ -1,8 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.3.0(XX/XX/XX) OM+VH: Adding the possibility to compute cross-section/generate events for loop-induced process
+2.3.0.GM(08/03/15) OM+VH: Adding the possibility to compute cross-section/generate events for loop-induced process
 		JB+OM: Addign matchbox output for matching in the Matchbox framework
-                OM: New MultiCore class with better thread support
                 OM+VH: Change the handling of the run_card.
                       - The default value depends now of your running process
                       - cut_decays is now on False by default
@@ -14,12 +13,13 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                              1 : Total transverse energy of the event.
                              2 : sum of the transverse mass 
                              3 : sum of the transverse mass divide by 2 
-			     4 : \sqrt(s), partonic energy  
+			     4 : \sqrt(s), partonic energy 
                 OM: Cuts are also applied for 1>N processes (but the default run_card doesn't have any cut).         
+                PT: Set command available for shower_card parameters
+                OM: New MultiCore class with better thread support
                 RF: Fixed a bug in the aMCfast/APPLGrid interface introduced in version 2.2.3
 		RF: Fixed a bug in the setting of the integration grids (LO process generation) for the minimum
 		    energy needed for photons. The bug did not lead to any bias in event generation.
-                PT: Set command available for shower_card parameters
 		RF: Re-factoring of the structure of the code for NLO+PS computations.
 		RF+VH: Replaced the default topdrawer histograms with HwU histograms for f(N)LO runs
                     and allow it also for aMC@NLO runs.
@@ -34,8 +34,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Possibility to not transfer pdf file to the node for each job. 
                        This is done via a new option (cluster_local_path) which should contain the pdf set.
                        This path is intented to point to a node specific filesystem.
+                    New way to submit job on cluster without writting the command file on the disk.
                 OM: Allowing MadSpin to have a mode without full spin-correlation but handling three (and more) 
                     body decay. (set spinmode=none).
+                OM+PA: Fixing various bug in MadSpin.
 
 2.2.3(10/02/15) RF: Re-factoring of the structure of the code for fNLO computations.
                 OM: Fix a bug in MadWeight (correlated param_card was not creating the correct input file)
