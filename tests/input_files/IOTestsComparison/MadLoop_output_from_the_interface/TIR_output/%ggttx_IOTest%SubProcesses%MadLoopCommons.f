@@ -30,6 +30,30 @@
 
       END
 
+      SUBROUTINE SET_FORBID_HEL_DOUBLECHECK(ONOFF)
+C     
+C     Give the possibility to overwrite the value of MadLoopParams.dat
+C     for the helicity double checking.
+C     Make sure to call this subroutine before the first time you 
+C     call MadLoop.
+C     
+      IMPLICIT NONE
+C     
+C     ARGUMENT
+C     
+      LOGICAL ONOFF
+C     
+C     GLOBAL VARIABLES
+C     
+      LOGICAL FORBID_HEL_DOUBLECHECK
+      DATA FORBID_HEL_DOUBLECHECK/.FALSE./
+      COMMON/FORBID_HEL_DOUBLECHECK/FORBID_HEL_DOUBLECHECK
+C     ----------
+C     BEGIN CODE
+C     ----------
+      FORBID_HEL_DOUBLECHECK = ONOFF
+      END
+
       SUBROUTINE SETMADLOOPPATH(PATH)
 
       CHARACTER(512) PATH
@@ -302,7 +326,7 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.7.OR.RANK.GE.7)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.8.OR.RANK.GE.8)LPASS=.FALSE.
       RETURN
       END
 
@@ -336,59 +360,161 @@ C     ----------
       RETURN
       END
 
-      SUBROUTINE PRINT_MADLOOP_BANNER()
+C     Now some sorting related routines. Only to be used for small 
+C     arrays since these are not the most optimized sorting algorithms.
 
-      WRITE(*,*) ' ==================================================='
-     $ //'======================================= '
-      WRITE(*,*) '{                                                  '
-     $ //'                                        }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
-     $ //'                                                       '/
-     $ /CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
-     $ //'          ,,                                           '/
-     $ /CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'`7MMM.     ,MMF'/
-     $ /CHAR(39)//'             `7MM  `7MMF'//CHAR(39)//'            '
-     $ //'                       '//CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  MMMb    dPMM       '
-     $ //'          MM    MM                                     '/
-     $ /CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M YM   ,M MM   ,6'/
-     $ /CHAR(34)//'Yb.   ,M'//CHAR(34)//''//CHAR(34)//'bMM    MM     '
-     $ //'    ,pW'//CHAR(34)//'Wq.   ,pW'//CHAR(34)//'Wq.`7MMpdMAo. '/
-     $ /CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  Mb  M'//CHAR(39)/
-     $ /' MM  8)   MM ,AP    MM    MM        6W'//CHAR(39)//'   `W'
-     $ //'b 6W'//CHAR(39)//'   `Wb MM   `Wb '//CHAR(27)//'[0m'/
-     $ /'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  YM.P'//CHAR(39)/
-     $ /'  MM   ,pm9MM 8MI    MM    MM      , 8M     M8 8M     M8 MM '
-     $ //'   M8 '//CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  `YM'//CHAR(39)/
-     $ /'   MM  8M   MM `Mb    MM    MM     ,M YA.   ,A9 YA.  '
-     $ //' ,A9 MM   ,AP '//CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'.JML. `'//CHAR(39)/
-     $ /'  .JMML.`Moo9^Yo.`Wbmd'//CHAR(34)//'MML..JMMmmmmMMM  `Ybmd9'/
-     $ /CHAR(39)//'   `Ybmd9'//CHAR(39)//'  MMbmmd'//CHAR(39)//'  '/
-     $ /CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
-     $ //'                                              MM       '/
-     $ /CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
-     $ //'                                            .JMML.     '/
-     $ /CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//CHAR(27)//'[0m'/
-     $ /'v2.3.0 (2015-02-05), Ref: arXiv:1103.0621v2, arXiv:1405.0301'
-     $ //CHAR(27)//'[32m'//'                '//CHAR(27)//'[0m'/
-     $ /'       }'
-      WRITE(*,*) '{       '//CHAR(27)//'[32m'//'                     '
-     $ //'                                                       '/
-     $ /CHAR(27)//'[0m'//'       }'
-      WRITE(*,*) '{                                                  '
-     $ //'                                        }'
-      WRITE(*,*) ' ==================================================='
-     $ //'======================================= '
+        ! --------------------------------------------------------------------
+        ! INTEGER FUNCTION  FindMinimum():
+        !    This function returns the location of the minimum in the section
+        ! between Start and End.
+        ! --------------------------------------------------------------------
 
-      END
+      INTEGER FUNCTION  FINDMINIMUM(X, MSTART, MEND)
+      IMPLICIT  NONE
+      INTEGER MAXNREF_EVALS
+      PARAMETER (MAXNREF_EVALS=30)
+      INTEGER, DIMENSION(MAXNREF_EVALS), INTENT(IN) :: X
+      INTEGER, INTENT(IN)							  :: MSTART, MEND
+      INTEGER										  :: MINIMUM
+      INTEGER										  :: LOCATION
+      INTEGER										  :: I
+
+      MINIMUM  = X(MSTART)  ! assume the first is the min
+      LOCATION = MSTART  ! record its position
+      DO I = MSTART+1, MEND  ! start with next elements
+        IF (X(I) < MINIMUM) THEN  !   if x(i) less than the min?
+          MINIMUM  = X(I)  !      Yes, a new minimum found
+          LOCATION = I  !      record its position
+          END IF
+          END DO
+          FINDMINIMUM = LOCATION  ! return the position
+          END FUNCTION  FINDMINIMUM
+
+            ! --------------------------------------------------------------------
+            ! SUBROUTINE  Swap():
+            !    This subroutine swaps the values of its two formal arguments.
+            ! --------------------------------------------------------------------
+
+          SUBROUTINE  SWAP(A, B)
+          IMPLICIT  NONE
+          REAL*8,  INTENT(INOUT) :: A, B
+          REAL*8                 :: TEMP
+
+          TEMP = A
+          A    = B
+          B    = TEMP
+          END SUBROUTINE  SWAP
+
+            ! --------------------------------------------------------------------
+            ! SUBROUTINE  Sort():
+            !    This subroutine receives an array x() and sorts it into ascending
+            ! order.
+            ! --------------------------------------------------------------------
+
+          SUBROUTINE  SORT(X, MSIZE)
+          IMPLICIT  NONE
+          INTEGER MAXNREF_EVALS
+          PARAMETER (MAXNREF_EVALS=30)
+          REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(INOUT)  :: X
+          INTEGER, INTENT(IN)							   :: MSIZE
+          INTEGER										   :: I
+          INTEGER										   :: LOCATION
+          INTEGER 										   :: FINDMINIMUM
+          DO I = 1, MSIZE-1  ! except for the last
+            LOCATION = FINDMINIMUM(X, I, MSIZE)  ! find min from this to last
+            CALL  SWAP(X(I), X(LOCATION))  ! swap this and the minimum
+            END DO
+            END SUBROUTINE  SORT
+
+              ! --------------------------------------------------------------------
+              ! REAL*8 FUNCTION  Median() :
+              !    This function receives an array X of N entries, copies its value
+              ! to a local array Temp(), sorts Temp() and computes the median.
+              !    The returned value is of REAL type.
+              ! --------------------------------------------------------------------
+
+            REAL*8 FUNCTION  MEDIAN(X, N)
+            IMPLICIT  NONE
+            INTEGER MAXNREF_EVALS
+            PARAMETER (MAXNREF_EVALS=30)
+            REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(IN)  :: X
+            INTEGER, INTENT(IN)                			  :: N
+            REAL*8, DIMENSION(MAXNREF_EVALS)              :: TEMP
+            INTEGER                                         :: I
+
+            DO I = 1, N  ! make a copy
+              TEMP(I) = X(I)
+              END DO
+              CALL  SORT(TEMP, N)  ! sort the copy
+              IF (MOD(N,2) == 0) THEN  ! compute the median
+                MEDIAN = (TEMP(N/2) + TEMP(N/2+1)) / 2.0D0
+              ELSE
+                MEDIAN = TEMP(N/2+1)
+                END IF
+                END FUNCTION  MEDIAN
+
+
+                SUBROUTINE PRINT_MADLOOP_BANNER()
+
+                WRITE(*,*) ' ========================================='
+     $           //'================================================= '
+                WRITE(*,*) '{                                        '
+     $           //'                                                '
+     $           //'  }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
+     $           //'                                                 '
+     $           //'                '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
+     $           //'                    ,,                           '
+     $           //'                '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'`7MMM.    '
+     $           //' ,MMF'//CHAR(39)//'             `7MM  `7MMF'/
+     $           /CHAR(39)//'                                   '/
+     $           /CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  MMMb  '
+     $           //'  dPMM                 MM    MM                  '
+     $           //'                   '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M YM  '
+     $           //' ,M MM   ,6'//CHAR(34)//'Yb.   ,M'//CHAR(34)//''/
+     $           /CHAR(34)//'bMM    MM         ,pW'//CHAR(34)/
+     $           /'Wq.   ,pW'//CHAR(34)//'Wq.`7MMpdMAo. '//CHAR(27)/
+     $           /'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  Mb  M'/
+     $           /CHAR(39)//' MM  8)   MM ,AP    MM    MM        6W'/
+     $           /CHAR(39)//'   `Wb 6W'//CHAR(39)//'   `Wb MM   `Wb '/
+     $           /CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  YM.P'/
+     $           /CHAR(39)//'  MM   ,pm9MM 8MI    MM    MM     '
+     $           //' , 8M     M8 8M     M8 MM    M8 '//CHAR(27)//'[0m'
+     $           //'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  `YM'/
+     $           /CHAR(39)//'   MM  8M   MM `Mb    MM    MM    '
+     $           //' ,M YA.   ,A9 YA.   ,A9 MM   ,AP '//CHAR(27)/
+     $           /'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'.JML. `'/
+     $           /CHAR(39)//'  .JMML.`Moo9^Yo.`Wbmd'//CHAR(34)/
+     $           /'MML..JMMmmmmMMM  `Ybmd9'//CHAR(39)//'   `Ybmd9'/
+     $           /CHAR(39)//'  MMbmmd'//CHAR(39)//'  '//CHAR(27)/
+     $           /'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
+     $           //'                                                 '
+     $           //'       MM       '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
+     $           //'                                                 '
+     $           //'     .JMML.     '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//CHAR(27)/
+     $           /'[0m'//'v%(version)s (%(date)s), Ref: arXiv:1103.06'
+     $           //'21v2, arXiv:1405.0301'//CHAR(27)//'[32m'/
+     $           /'           '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
+     $           //'                                                 '
+     $           //'                '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{                                        '
+     $           //'                                                '
+     $           //'  }'
+                WRITE(*,*) ' ========================================='
+     $           //'================================================= '
+
+                END
+
 

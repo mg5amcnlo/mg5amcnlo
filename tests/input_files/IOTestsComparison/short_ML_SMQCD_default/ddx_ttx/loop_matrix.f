@@ -28,7 +28,7 @@ C
 C     CONSTANTS
 C     
       INTEGER    NLOOPAMPS
-      PARAMETER (NLOOPAMPS=43)
+      PARAMETER (NLOOPAMPS=40)
 C     
 C     ARGUMENTS 
 C     
@@ -93,7 +93,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=1)
       INTEGER    NLOOPAMPS, NCTAMPS
-      PARAMETER (NLOOPAMPS=43, NCTAMPS=29)
+      PARAMETER (NLOOPAMPS=40, NCTAMPS=29)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NWAVEFUNCS
@@ -290,6 +290,13 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
       DATA RET_CODE_H,RET_CODE_T,RET_CODE_U/1,1,0/
       COMMON/ML5_0_ACC/ACCURACY,RET_CODE_H,RET_CODE_T,RET_CODE_U
 
+C     Allows to forbid the zero helicity double check, no matter the
+C      value in MadLoopParams.dat
+C     This can be accessed with the SET_FORBID_HEL_DOUBLECHECK
+C      subroutine of MadLoopCommons.dat
+      LOGICAL FORBID_HEL_DOUBLECHECK
+      COMMON/FORBID_HEL_DOUBLECHECK/FORBID_HEL_DOUBLECHECK
+
       LOGICAL MP_DONE_ONCE
       DATA MP_DONE_ONCE/.FALSE./
       COMMON/ML5_0_MP_DONE_ONCE/MP_DONE_ONCE
@@ -310,22 +317,63 @@ C     ----------
         CALL SETMADLOOPPATH(TMP)
         CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
         CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
+        IF (FORBID_HEL_DOUBLECHECK) THEN
+          DOUBLECHECKHELICITYFILTER = .FALSE.
+        ENDIF
         ML_INIT = .FALSE.
       ENDIF
 
+C     Setup the file paths
+      CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+      CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
+      CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
+      CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
+      CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
+      CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
+      CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
+
+      OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
+     $  ACTION='READ')
+      DO I=1,NLOOPAMPS
+        READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
+      ENDDO
+      GOTO 105
+ 104  CONTINUE
+      STOP 'Color factors could not be initialized from file ML5_0_Col'
+     $ //'orNumFactors.dat. File not found'
+ 105  CONTINUE
+      CLOSE(1)
+      OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
+     $  ACTION='READ')
+      DO I=1,NLOOPAMPS
+        READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
+      ENDDO
+      GOTO 107
+ 106  CONTINUE
+      STOP 'Color factors could not be initialized from file ML5_0_Col'
+     $ //'orDenomFactors.dat. File not found'
+ 107  CONTINUE
+      CLOSE(1)
+      OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',                
+     $   ACTION='READ')
+      DO H=1,NCOMB
+        READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
+      ENDDO
+      GOTO 109
+ 108  CONTINUE
+      STOP 'Color helictiy configurations could not be initialize'
+     $ //'d from file ML5_0_HelConfigs.dat. File not found'
+ 109  CONTINUE
+      CLOSE(1)
+      IF(BOOTANDSTOP) THEN
+        WRITE(*,*) 'Stopped by user request.'
+        STOP
+      ENDIF
+
       IF(NTRY.EQ.0) THEN
-
-C       Setup the file paths
-        CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
-        CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
-        CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
-        CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
-        CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
-        CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
-        CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
-
         CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
-        HELDOUBLECHECKED=.NOT.DOUBLECHECKHELICITYFILTER
+        HELDOUBLECHECKED=(.NOT.DOUBLECHECKHELICITYFILTER).OR.(HELICITYF
+     $   ILTERLEVEL.EQ.0)
         DO J=1,NCOMB
           DO I=1,NCTAMPS
             GOODAMP(I,J)=.TRUE.
@@ -346,6 +394,13 @@ C       Setup the file paths
         ENDDO
  101    CONTINUE
         CLOSE(1)
+        IF (HELICITYFILTERLEVEL.EQ.0) THEN
+          FOUNDHELFILTER=.TRUE.
+          DO J=1,NCOMB
+            GOODHEL(J)=.TRUE.
+          ENDDO
+          GOTO 122
+        ENDIF
         OPEN(1, FILE=HELFILTERFN, ERR=102, STATUS='OLD',          
      $    ACTION='READ')
         READ(1,*,END=103) (GOODHEL(I),I=1,NCOMB)
@@ -357,43 +412,7 @@ C       Setup the file paths
         ENDDO
  103    CONTINUE
         CLOSE(1)
-        OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
-     $    ACTION='READ')
-        DO I=1,NLOOPAMPS
-          READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
-        ENDDO
-        GOTO 105
- 104    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorNumFactors.dat. File not found'
- 105    CONTINUE
-        CLOSE(1)
-        OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
-     $    ACTION='READ')
-        DO I=1,NLOOPAMPS
-          READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
-        ENDDO
-        GOTO 107
- 106    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorDenomFactors.dat. File not found'
- 107    CONTINUE
-        CLOSE(1)
-        OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',              
-     $       ACTION='READ')
-        DO H=1,NCOMB
-          READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
-        ENDDO
-        GOTO 109
- 108    CONTINUE
-        STOP 'Color helictiy configurations could not be initialize'
-     $   //'d from file ML5_0_HelConfigs.dat. File not found'
- 109    CONTINUE
-        CLOSE(1)
-        IF(BOOTANDSTOP) THEN
-          WRITE(*,*) 'Stopped by user request.'
-          STOP
-        ENDIF
+ 122    CONTINUE
       ENDIF
 
       MP_DONE=.FALSE.
@@ -577,37 +596,34 @@ C         Amplitude(s) for born diagram with ID 1
           CALL FFV1P0_3(W(1,4,H),W(1,3,H),GC_5,ZERO,ZERO,W(1,6,H))
 C         Counter-term amplitude(s) for loop diagram number 2
           CALL R2_GG_1_0(W(1,5,H),W(1,6,H),R2_GGQ,AMPL(1,1))
+          CALL R2_GG_1_0(W(1,5,H),W(1,6,H),R2_GGQ,AMPL(1,2))
+          CALL R2_GG_1_0(W(1,5,H),W(1,6,H),R2_GGQ,AMPL(1,3))
+          CALL R2_GG_1_0(W(1,5,H),W(1,6,H),R2_GGQ,AMPL(1,4))
 C         Counter-term amplitude(s) for loop diagram number 5
           CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,2))
-          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,3))
-          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,4))
-          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQQ_1EPS,AMPL(2
      $     ,5))
-          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQB,AMPL(1,6))
+          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,6))
           CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQQ_1EPS,AMPL(2
      $     ,7))
-          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQT,AMPL(1,8))
           CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,9))
-          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQG_1EPS,AMPL(2
+     $     ,8))
+          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQB,AMPL(1,9))
+          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQQ_1EPS,AMPL(2
      $     ,10))
-          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),R2_GQQ,AMPL(1,11))
+          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQT,AMPL(1,11))
+          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,12))
+          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),UV_GQQG_1EPS,AMPL(2
+     $     ,13))
+          CALL FFV1_0(W(1,1,H),W(1,2,H),W(1,6,H),R2_GQQ,AMPL(1,14))
 C         Counter-term amplitude(s) for loop diagram number 7
-          CALL R2_GG_1_0(W(1,5,H),W(1,6,H),R2_GGQ,AMPL(1,12))
-C         Counter-term amplitude(s) for loop diagram number 8
-          CALL R2_GG_1_0(W(1,5,H),W(1,6,H),R2_GGQ,AMPL(1,13))
-C         Counter-term amplitude(s) for loop diagram number 9
-          CALL R2_GG_1_0(W(1,5,H),W(1,6,H),R2_GGQ,AMPL(1,14))
-C         Counter-term amplitude(s) for loop diagram number 10
           CALL R2_GG_1_R2_GG_3_0(W(1,5,H),W(1,6,H),R2_GGQ,R2_GGB
      $     ,AMPL(1,15))
-C         Counter-term amplitude(s) for loop diagram number 11
+C         Counter-term amplitude(s) for loop diagram number 8
           CALL R2_GG_1_R2_GG_3_0(W(1,5,H),W(1,6,H),R2_GGQ,R2_GGT
      $     ,AMPL(1,16))
-C         Counter-term amplitude(s) for loop diagram number 12
+C         Counter-term amplitude(s) for loop diagram number 9
           CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2
      $     ,17))
           CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2
@@ -625,13 +641,13 @@ C         Counter-term amplitude(s) for loop diagram number 12
           CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQG_1EPS,AMPL(2
      $     ,25))
           CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),R2_GQQ,AMPL(1,26))
-C         Counter-term amplitude(s) for loop diagram number 14
+C         Counter-term amplitude(s) for loop diagram number 11
           CALL R2_GG_1_R2_GG_2_0(W(1,5,H),W(1,6,H),R2_GGG_1,R2_GGG_2
      $     ,AMPL(1,27))
-C         Amplitude(s) for UVCT diagram with ID 16
+C         Amplitude(s) for UVCT diagram with ID 13
           CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(1,28))
           AMPL(1,28)=AMPL(1,28)*(2.0D0*UVWFCT_T_0)
-C         Amplitude(s) for UVCT diagram with ID 17
+C         Amplitude(s) for UVCT diagram with ID 14
           CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(2,29))
           AMPL(2,29)=AMPL(2,29)*(2.0D0*UVWFCT_B_0_1EPS)
  300      CONTINUE
@@ -664,67 +680,55 @@ C      automatically done.
 C     Loop amplitude for loop diagram with ID 2
       CALL ML5_0_LOOP_2_2(1,5,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,30,AMPL(1,30),S(30))
+     $ ,MP__GC_5,2,1,4,30,AMPL(1,30),S(30))
 C     Loop amplitude for loop diagram with ID 3
       CALL ML5_0_LOOP_4_4(2,1,2,4,3,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
      $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,2,1,31
-     $ ,AMPL(1,31),S(31))
+     $ ,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,2,1,1
+     $ ,31,AMPL(1,31),S(31))
 C     Loop amplitude for loop diagram with ID 4
       CALL ML5_0_LOOP_4_4(3,1,2,3,4,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
      $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,2,1,32
-     $ ,AMPL(1,32),S(32))
+     $ ,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,2,1,1
+     $ ,32,AMPL(1,32),S(32))
 C     Loop amplitude for loop diagram with ID 5
       CALL ML5_0_LOOP_3_3(4,1,2,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZER
-     $ O,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_4,MP__GC_4,2,1,33
+     $ O,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_4,MP__GC_4,2,1,1,33
      $ ,AMPL(1,33),S(33))
 C     Loop amplitude for loop diagram with ID 6
       CALL ML5_0_LOOP_3_3(5,1,2,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZER
-     $ O,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,2,1,34
+     $ O,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,2,1,1,34
      $ ,AMPL(1,34),S(34))
 C     Loop amplitude for loop diagram with ID 7
-      CALL ML5_0_LOOP_2_2(1,5,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,35,AMPL(1,35),S(35))
-C     Loop amplitude for loop diagram with ID 8
-      CALL ML5_0_LOOP_2_2(1,5,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,36,AMPL(1,36),S(36))
-C     Loop amplitude for loop diagram with ID 9
-      CALL ML5_0_LOOP_2_2(1,5,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,37,AMPL(1,37),S(37))
-C     Loop amplitude for loop diagram with ID 10
       CALL ML5_0_LOOP_2_2(1,5,6,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,2,1,38,AMPL(1,38),S(38))
-C     Loop amplitude for loop diagram with ID 11
+     $ ,MP__GC_5,GC_5,MP__GC_5,2,1,1,35,AMPL(1,35),S(35))
+C     Loop amplitude for loop diagram with ID 8
       CALL ML5_0_LOOP_2_2(1,5,6,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,2,1,39,AMPL(1,39),S(39))
-C     Loop amplitude for loop diagram with ID 12
+     $ ,MP__GC_5,GC_5,MP__GC_5,2,1,1,36,AMPL(1,36),S(36))
+C     Loop amplitude for loop diagram with ID 9
       CALL ML5_0_LOOP_3_3(6,3,4,5,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT)
      $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,40,AMPL(1,40),S(40))
-C     Loop amplitude for loop diagram with ID 13
+     $ ,MP__GC_5,2,1,1,37,AMPL(1,37),S(37))
+C     Loop amplitude for loop diagram with ID 10
       CALL ML5_0_LOOP_3_3(7,3,4,5,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_4
-     $ ,MP__GC_4,2,1,41,AMPL(1,41),S(41))
-C     Loop amplitude for loop diagram with ID 14
+     $ ,MP__GC_4,2,1,1,38,AMPL(1,38),S(38))
+C     Loop amplitude for loop diagram with ID 11
       CALL ML5_0_LOOP_2_2(8,5,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4
-     $ ,MP__GC_4,2,2,42,AMPL(1,42),S(42))
-C     Loop amplitude for loop diagram with ID 15
+     $ ,MP__GC_4,2,2,1,39,AMPL(1,39),S(39))
+C     Loop amplitude for loop diagram with ID 12
       CALL ML5_0_LOOP_2_2(9,5,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4
-     $ ,MP__GC_4,2,1,43,AMPL(1,43),S(43))
+     $ ,MP__GC_4,2,1,1,40,AMPL(1,40),S(40))
 
       DO I=NCTAMPS+1,NLOOPAMPS
         ANS(1)=ANS(1)+AMPL(1,I)

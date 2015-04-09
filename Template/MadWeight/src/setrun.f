@@ -262,7 +262,7 @@ c*********************************************************************
  	call get_real   (npara,param,value,"ptj3max",ptj3max,1d5)
  	call get_real   (npara,param,value,"ptj4min",ptj4min,0d0)
  	call get_real   (npara,param,value,"ptj4max",ptj4max,1d5)
-	call get_real   (npara,param,value,"cutuse",cutuse,0d0)
+	call get_integer   (npara,param,value,"cutuse",cutuse,0)
 
 c*********************************************************************
 c Check  Ht                                                          *

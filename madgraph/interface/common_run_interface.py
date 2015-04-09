@@ -55,27 +55,29 @@ logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
 
 
 try:
+    import madgraph
+except ImportError:    
+    # import from madevent directory
+    import internal.extended_cmd as cmd
+    import internal.banner as banner_mod
+    import internal.shower_card as shower_card_mod
+    import internal.misc as misc
+    import internal.cluster as cluster
+    import internal.check_param_card as check_param_card
+    import internal.files as files
+    from internal import InvalidCmd, MadGraph5Error
+    MADEVENT=True    
+else:
     # import from madgraph directory
     import madgraph.interface.extended_cmd as cmd
     import madgraph.various.banner as banner_mod
+    import madgraph.various.shower_card as shower_card_mod
     import madgraph.various.misc as misc
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
     import models.check_param_card as check_param_card
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
-except Exception, error:
-    if __debug__:
-        print error
-    # import from madevent directory
-    import internal.extended_cmd as cmd
-    import internal.banner as banner_mod
-    import internal.misc as misc
-    import internal.cluster as cluster
-    import internal.check_param_card as check_param_card
-    import internal.files as files
-    from internal import InvalidCmd, MadGraph5Error
-    MADEVENT=True
 
 #===============================================================================
 # HelpToCmd
@@ -208,8 +210,8 @@ class CheckValidForCmd(object):
             if self.mother and self.mother.options['complex_mass_scheme']:
                 model.change_mass_to_complex_scheme()
         else:
-            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
-                                        decay=True)
+            model = import_ufo.import_model(pjoin(
+                           self.me_dir,'bin','internal', 'ufomodel'),decay=True)
             #pattern for checking complex mass scheme.
             has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
             if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
@@ -358,7 +360,7 @@ class CheckValidForCmd(object):
                         opt[key] = pjoin(self.me_dir, value)
                     else:
                         raise self.InvalidCmd('No such directory: %s' % value)
-            elif arg in ['param','run','all']:
+            elif arg in ['MadLoop','param','run','all']:
                 mode = arg
             else:
                 self.help_treatcards()
@@ -480,6 +482,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'cluster_type': 'condor',
                        'cluster_status_update': (600, 30),
                        'cluster_nb_retry':1,
+                       'cluster_local_path': "/cvmfs/cp3.uclouvain.be/madgraph/",
                        'cluster_retry_wait':300}
 
     options_madgraph= {'stdout_level':None}
@@ -488,6 +491,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'cluster_time':None,
+                         'cluster_size':100,
                          'cluster_memory':None,
                          'nb_core': None,
                          'cluster_temp_path':None}
@@ -533,11 +537,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.set_configuration()
         self.configure_run_mode(self.options['run_mode'])
 
-
-        # Get number of initial states
-        nexternal = open(pjoin(self.me_dir,'Source','nexternal.inc')).read()
-        found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
-        self.ninitial = int(found.group(1))
+        # Define self.proc_characteristics
+        self.get_characteristics()
+        
+        if not  self.proc_characteristics['ninitial']:
+            # Get number of initial states
+            nexternal = open(pjoin(self.me_dir,'Source','nexternal.inc')).read()
+            found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
+            self.ninitial = int(found.group(1))
+        else:
+            self.ninitial = self.proc_characteristics['ninitial']
 
 
     ############################################################################
@@ -579,7 +588,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def do_treatcards(self, line, amcatnlo=False):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
-
         keepwidth = False
         if '--keepwidth' in line:
             keepwidth = True
@@ -597,6 +605,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 run_card = self.run_card
 
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+
+        if mode in ['MadLoop', 'all']:
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'MadLoopParams.dat')):          
+                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 
+                                                  'Cards', 'MadLoopParams.dat'))
+                # write the output file
+                self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses",
+                                                           "MadLoopParams.dat"))
 
         if mode in ['param', 'all']:
             if os.path.exists(pjoin(self.me_dir, 'Source', 'MODEL', 'mp_coupl.inc')):
@@ -676,6 +692,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return 'trigger'
             elif path == 'input.lhco':
                 return 'lhco'
+            elif path == 'MadLoopParams.dat':
+                return 'MadLoopParams'
             else:
                 raise Exception, 'Unknow cards name %s' % path
 
@@ -1033,7 +1051,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # now pass the event to a detector simulator and reconstruct objects
         ########################################################################
         if lock:
-            lock.acquire()
+            lock.wait()
         # Prepare the output file with the banner
         ff = open(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 'w')
         if os.path.exists(pjoin(self.me_dir, 'Source', 'banner_header.txt')):
@@ -1117,7 +1135,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Not in help:Print the cross-section/ number of events for a given run"""
         
         args = self.split_arg(line)
-        options={'path':None, 'mode':'w'}
+        options={'path':None, 'mode':'w', 'format':'full'}
         for arg in list(args):
             if arg.startswith('--') and '=' in arg:
                 name,value=arg.split('=',1)
@@ -1129,10 +1147,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if len(args) > 0:
             run_name = args[0]
         else:
-            if not self.results.current:
-                raise self.InvalidCmd('no run currently defined. Please specify one.')
-            else:
-                run_name = self.results.current['run_name']
+            for i, run_name in enumerate(self.results.order):
+                for j, one_result in enumerate(self.results[run_name]):
+                    if i or j:
+                        options['mode'] = "a"
+                    if options['path']:
+                        self.print_results_in_file(one_result, options['path'], options['mode'], options['format'])
+                    else:
+                        self.print_results_in_shell(one_result)
+            return
+
         if run_name not in self.results:
             raise self.InvalidCmd('%s is not a valid run_name or it doesn\'t have any information' \
                                   % run_name)
@@ -1152,7 +1176,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             data = self.results[run_name].return_tag(None) # return the last
         
         if options['path']:
-            self.print_results_in_file(data, options['path'], options['mode'])
+            self.print_results_in_file(data, options['path'], options['mode'], options['format'])
         else:
             self.print_results_in_shell(data)
 
@@ -1206,7 +1230,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.update_status('Running Delphes', level=None)
         # Wait that the gunzip of the files is finished (if any)
         if lock:
-            lock.acquire()
+            lock.wait()
 
 
 
@@ -1271,6 +1295,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_pdf_input_filename(self):
         """return the name of the file which is used by the pdfset"""
 
+        if self.options["cluster_local_path"] and self.options['run_mode'] ==1:
+            # no need to transfer the pdf.
+            return ''
+        
+        def check_cluster(path):
+            if not self.options["cluster_local_path"] or self.options['run_mode'] !=1:
+                return path
+            main = self.options["cluster_local_path"]
+            if os.path.isfile(path):
+                filename = os.path.basename(path)
+            possible_path = [pjoin(main, filename),
+                             pjoin(main, "lhadpf", filename),
+                             pjoin(main, "Pdfdata", filename)]
+            if any(os.path.exists(p) for p in possible_path):
+                return " "
+            else:
+                return path
+                             
+
         if hasattr(self, 'pdffile') and self.pdffile:
             return self.pdffile
         else:
@@ -1279,11 +1322,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if len(data) < 4:
                     continue
                 if data[1].lower() == self.run_card['pdlabel'].lower():
-                    self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
+                    self.pdffile = check_cluster(pjoin(self.me_dir, 'lib', 'Pdfdata', data[2]))
                     return self.pdffile
             else:
                 # possible when using lhapdf
-                self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                path = pjoin(self.me_dir, 'lib', 'PDFsets')
+                if os.path.exists(path):
+                    self.pdffile = path
+                else:
+                    self.pdffile = " "
                 return self.pdffile
                 
     def do_quit(self, line):
@@ -1381,7 +1428,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.options[args[0]] = args[1]
             # cluster (re)-initialization done later
             # self.cluster update at the end of the routine
-        elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait']:
+        elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait', 'cluster_size']:
             self.options[args[0]] = int(args[1])
             # self.cluster update at the end of the routine
         elif args[0] == 'nb_core':
@@ -1442,6 +1489,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
 
         self.cluster_mode = run_mode
+        self.options['run_mode'] = run_mode
 
         if run_mode == 2:
             if not self.options['nb_core']:
@@ -1457,12 +1505,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.cluster = cluster.MultiCore(
                              **self.options)
             self.cluster.nb_core = nb_core
-                             #cluster_temp_path=self.options['cluster_temp_path'],
+        #cluster_temp_path=self.options['cluster_temp_path'],
 
         if self.cluster_mode == 1:
             opt = self.options
             cluster_name = opt['cluster_type']
             self.cluster = cluster.from_name[cluster_name](**opt)
+
 
     def check_param_card(self, path, run=True):
         """Check that all the width are define in the param_card.
@@ -1624,6 +1673,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # read the file and extract information
         logger.info('load configuration from %s ' % config_file.name)
         for line in config_file:
+            
             if '#' in line:
                 line = line.split('#',1)[0]
             line = line.replace('\n','').replace('\r\n','')
@@ -1634,7 +1684,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 name = name.strip()
                 value = value.strip()
-                if name.endswith('_path'):
+                if name.endswith('_path') and not name.startswith('cluster'):
                     path = value
                     if os.path.isdir(path):
                         self.options[name] = os.path.realpath(path)
@@ -1653,12 +1703,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not final:
             return self.options # the return is usefull for unittest
 
-
         # Treat each expected input
         # delphes/pythia/... path
         for key in self.options:
             # Final cross check for the path
-            if key.endswith('path'):
+            if key.endswith('path') and not key.startswith("cluster"):
                 path = self.options[key]
                 if path is None:
                     continue
@@ -1677,7 +1726,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.options[key] = None
             elif key.startswith('cluster') and key != 'cluster_status_update':
                 if key in ('cluster_nb_retry','cluster_wait_retry'):
-                    self.options[key] = int(self.options[key])
+                    self.options[key] = int(self.options[key]) 
                 if hasattr(self,'cluster'):
                     del self.cluster
                 pass
@@ -1696,7 +1745,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # Configure the way to open a file:
         misc.open_file.configure(self.options)
         self.configure_run_mode(self.options['run_mode'])
-
         return self.options
 
     @staticmethod
@@ -1730,7 +1778,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             import MadSpin.decay as decay
             import MadSpin.interface_madspin as interface_madspin
         except ImportError:
-            raise self.ConfigurationError, '''Can\'t load MadSpin
+            if __debug__:
+                raise
+            else:
+                raise self.ConfigurationError, '''Can\'t load MadSpin
             The variable mg5_path might not be correctly configured.'''
 
         self.update_status('Running MadSpin', level='madspin')
@@ -1784,7 +1835,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.results.add_run( new_run, self.run_card)
             self.results.add_detail('nb_event', nb_event)
             self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
-            self.results.add_detail('error', error * madspin_cmd.branching_ratio)
+            self.results.add_detail('error', error * madspin_cmd.branching_ratio + cross * madspin_cmd.err_branching_ratio)
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run
@@ -1815,6 +1866,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
             data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
+            data += ["--mode=a", "--mode=w", "--path=", "--format=short"]
             tmp1 =  self.list_completion(text, data)
             return tmp1
             
@@ -1823,7 +1875,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("-- show in text format the status of the run (cross-section/nb-event/...)")
         logger.info("--path= defines the path of the output file.")
         logger.info("--mode=a allow to add the information at the end of the file.")
-
+        logger.info("--format=short (only if --path is define)")
+        logger.info("        allows to have a multi-column output easy to parse")
 
     ############################################################################
     def do_check_events(self, line):
@@ -1846,7 +1899,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         args = self.split_arg(line) 
         self.check_check_events(args) 
         # args now alway content the path to the valid files
-        reweight_cmd = reweight_interface.ReweightInterface(args[0])
+        reweight_cmd = reweight_interface.ReweightInterface(args[0], allow_madspin=True)
         reweight_cmd.mother = self
         self.update_status('Running check on events', level='check')
         
@@ -1919,6 +1972,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         os.environ['lhapdf_config'] = self.options['lhapdf']
 
 
+    def get_characteristics(self, path=None):
+        """reads the proc_characteristics file and initialises the correspondant
+        dictionary"""
+        
+        if not path:
+            path = os.path.join(self.me_dir, 'SubProcesses', 'proc_characteristics')
+        
+        self.proc_characteristics = banner_mod.ProcCharacteristic(path)
+        return self.proc_characteristics
+
+
     def copy_lhapdf_set(self, lhaid_list, pdfsets_dir):
         """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
         into lib/PDFsets"""
@@ -1954,9 +2018,47 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 os.mkdir(pdfsets_dir)
             except OSError:
                 pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
+        else:
+            #clean previous set of pdf used
+            for name in os.listdir(pjoin(self.me_dir, 'lib', 'PDFsets')):
+                if name != pdfsetname:
+                    try:
+                        if os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', name)):
+                            shutil.rmtree(pjoin(self.me_dir, 'lib', 'PDFsets', name))
+                        else:
+                            os.remove(pjoin(self.me_dir, 'lib', 'PDFsets', name))
+                    except Exception, error:
+                        logger.debug('%s', error)
+        
+        if self.options["cluster_local_path"]:
+            lhapdf_cluster_possibilities = [self.options["cluster_local_path"],
+                                      pjoin(self.options["cluster_local_path"], "lhapdf"),
+                                      pjoin(self.options["cluster_local_path"], "lhapdf", "pdfsets"),
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf"),
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf", "pdfsets"),
+                                      pjoin(self.options["cluster_local_path"], "..", "lhapdf","pdfsets", "6.1")
+                                      ]
+        else:
+            lhapdf_cluster_possibilities = []
 
+        # Check if we need to copy the pdf
+        if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
+            any((os.path.exists(pjoin(d, pdfsetname)) for d in lhapdf_cluster_possibilities)):
+
+            os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfsetname))][0]
+            os.environ["CLUSTER_LHAPATH"] = os.environ["LHAPATH"]
+            # no need to copy it
+            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+                try:
+                    if os.path.isdir(pjoin(pdfsets_dir, name)):
+                        shutil.rmtree(pjoin(pdfsets_dir, name))
+                    else:
+                        os.remove(pjoin(pdfsets_dir, name))
+                except Exception, error:
+                    logger.debug('%s', error)
+        
         #check that the pdfset is not already there
-        if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
+        elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
            not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)):
 
             if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
@@ -1967,7 +2069,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
                 files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
             
-
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
         lhapdf_version = self.get_lhapdf_version()
@@ -2104,10 +2205,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         # read the card
 
-        try:
-            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
-        except IOError:
-            self.run_card = {}
+
         try:
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         except (check_param_card.InvalidParamCard, ValueError) as e:
@@ -2117,6 +2215,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
+        
+        
+        try:
+            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        except IOError:
+            self.run_card = {}
         try:
             run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
         except IOError:
@@ -2211,6 +2315,43 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             for var in self.mw_vars:
                 if var in self.run_card:
                     self.conflict.append(var)
+                    
+        #check if MadLoopParams.dat is present:
+        self.has_ml = False
+        if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
+            self.has_ml = True
+            self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
+            self.MLcardDefault = banner_mod.MadLoopParam()
+            
+            self.ml_vars = [k.lower() for k in self.MLcard.keys()]
+            # check for conflict
+            for var in self.MLcard:
+                if var in self.run_card:
+                    self.conflict.append(var)
+                if var in self.pname2block:
+                    self.conflict.append(var)
+                if self.has_mw and var in self.mw_vars:
+                    self.conflict.append(var)
+
+        #check if shower_card is present:
+        self.has_shower = False
+        if 'shower_card.dat' in cards:
+            self.has_shower = True
+            try:
+                import madgraph.various.shower_card as showercards
+            except:
+                import internal.shower_card as showercards
+            self.shower_card = showercards.ShowerCard(pjoin(self.me_dir,'Cards','shower_card.dat'))
+            self.shower_vars = self.shower_card.keys()
+            
+            # check for conflict with run_card/param_card
+            for var in self.pname2block:                
+                if var in self.shower_vars:
+                    self.conflict.append(var)           
+            for var in self.shower_vars:
+                if var in self.run_card:
+                    self.conflict.append(var)
+
 
     def complete_set(self, text, line, begidx, endidx):
         """ Complete the set command"""
@@ -2232,6 +2373,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if self.has_mw:
                 allowed['madweight_card'] = ''
                 allowed['mw_block'] = 'all'
+            if self.has_shower:
+                allowed['shower_card'] = ''
+            if self.has_ml:
+                allowed['madloop_card'] = ''
         elif len(args) == 2:
             if args[1] == 'run_card':
                 allowed = {'run_card':'default'}
@@ -2243,16 +2388,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'block': 'decay'}
             elif args[1] == 'MadWeight_card':
                 allowed = {'madweight_card':'default', 'mw_block': 'all'}
+            elif args[1] == 'MadLoop_card':
+                allowed = {'madloop_card':'default'}
             elif self.has_mw and args[1] in self.mw_card.keys():
                 allowed = {'mw_block':args[1]}
+            elif args[1] == 'shower_card':
+                allowed = {'shower_card':'default'}
             else:
                 allowed = {'value':''}
         else:
             start = 1
-            if args[1] in  ['run_card', 'param_card', 'MadWeight_card']:
+            if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 'MadLoop_card']:
                 start = 2
             if args[-1] in self.pname2block.keys():
-                allowed['value'] = 'default'   
+                allowed['value'] = 'default'
             elif args[start] in self.param_card.keys() or args[start] == 'width':
                 if args[start] == 'width':
                     args[start] = 'decay'
@@ -2275,6 +2424,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             categories = ['run_card', 'param_card']
             if self.has_mw:
                 categories.append('MadWeight_card')
+            if self.has_shower:
+                categories.append('shower_card')
+            if self.has_ml:
+                categories.append('MadLoop_card')            
             
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -2300,7 +2453,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if allowed['madweight_card'] == 'default':
                 opts.append('default')
             possibilities['MadWeight Card'] = self.list_completion(text, opts)            
+
+        if 'madloop_card' in allowed.keys():
+            opts = self.ml_vars
+            if allowed['madloop_card'] == 'default':
+                opts.append('default')
+
+            possibilities['MadLoop Parameter'] = self.list_completion(text, opts)
                                 
+        if 'shower_card' in allowed.keys():
+            opts = self.shower_vars + [k for k in self.shower_card.keys() if k !='comment']
+            if allowed['shower_card'] == 'default':
+                opts.append('default')
+            possibilities['Shower Card'] = self.list_completion(text, opts)            
+
         if 'value' in allowed.keys():
             opts = ['default']
             if 'decay' in args:
@@ -2308,7 +2474,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
                 opts.append('Auto')
             possibilities['Special Value'] = self.list_completion(text, opts)
-
 
         if 'block' in allowed.keys():
             if allowed['block'] == 'all':
@@ -2367,12 +2532,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
-
-        args = self.split_arg(line.lower())
+        
+        args = self.split_arg(line)
         if '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=')
             args += [arg1, arg2]
-
+        args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:
             if len(args) == 1:
@@ -2445,7 +2610,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             args[0] = 'MadWeight_card'
         
-        if args[0] in ['run_card', 'param_card', 'MadWeight_card']:                                    
+        if args[0] == 'shower_card':
+            if not self.shower_card:
+                logger.warning('Invalid Command: No Shower card defined.')
+                return
+            args[0] = 'shower_card'
+
+        if args[0] == "madloop_card":
+            if not self.has_ml:
+                logger.warning('Invalid Command: No MadLoopParam card defined.')
+                return
+            args[0] = 'MadLoop_card'
+
+        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card']:
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
                 files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
@@ -2454,6 +2631,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
                 elif args[0] == 'run_card':
                     self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+                elif args[0] == 'shower_card':
+                    self.shower_card = shower_card_mod.ShowerCard(pjoin(self.me_dir,'Cards','shower_card.dat'))
+                return
+            else:
+                card = args[0]
+            start=1
+            if len(args) < 3:
+                logger.warning('Invalid set command: %s (not enough arguments)' % line)
+                return
+            
+        elif args[0] in ['MadLoop_card']:
+            if args[1] == 'default':
+                logging.info('replace MadLoopParams.dat by the default card')
+                self.MLcard = banner_mod.MadLoopParam(self.MLcardDefault)
+                self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
+                                  commentdefault=True)
                 return
             else:
                 card = args[0]
@@ -2467,10 +2660,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[start] not in self.run_set:
                 args[start] = [l for l in self.run_set if l.lower() == args[start]][0]
 
-            if args[start+1] in self.conflict and card == '':
-                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+            if args[start] in self.conflict and card == '':
+                text  = 'Ambiguous name (present in more than one card). Will assume it to be referred to run_card.\n'
+                text += 'If this is not intended, please reset it in the run_card and specify the relevant card to \n'
+                text += 'edit, in the format < set card parameter value >'
                 logger.warning(text)
-                return
 
             if args[start+1] == 'default':
                 default = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
@@ -2499,8 +2693,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
         elif (args[start] in self.param_card or args[start] == 'width') \
                                                   and card in ['','param_card']:
-            if args[start+1] in self.conflict and card == '':
-                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+            if args[start] in self.conflict and card == '':
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
             
@@ -2559,7 +2754,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # PARAM_CARD NO BLOCK NAME ---------------------------------------------
         elif args[start] in self.pname2block and card != 'run_card':
             if args[start] in self.conflict and card == '':
-                text = 'ambiguous name (present in both param_card and run_card. Please specify'
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
             
@@ -2579,7 +2775,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                               and card in ['','MadWeight_card']:
             
             if args[start] in self.conflict and card == '':
-                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
                        
@@ -2594,7 +2791,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                              and card in ['', 'MadWeight_card']:
             
             if args[start] in self.conflict and card == '':
-                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
                 logger.warning(text)
                 return
 
@@ -2610,7 +2808,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.setM(block, name, value)
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
              
-        # MadWeight_card New Block
+        # MadWeight_card New Block ---------------------------------------------
         elif self.has_mw and args[start].startswith('mw_') and len(args[start:]) == 3\
                                                     and card == 'MadWeight_card':
             block = args[start]
@@ -2618,8 +2816,55 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             value = args[start+2]
             self.setM(block, name, value)
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
+
+        #### SHOWER CARD
+        elif self.has_shower and args[start] in [l.lower() for l in \
+                       self.shower_card.keys()] and card in ['', 'shower_card']:
+            if args[start] not in self.shower_card:
+                args[start] = [l for l in self.shower_card if l.lower() == args[start]][0]
+
+            if args[start] in self.conflict and card == '':
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
+                logger.warning(text)
+                return
+
+            if args[start+1].lower() == 'default':
+                default = shower_card_mod.ShowerCard(pjoin(self.me_dir,'Cards','shower_card_default.dat'))
+                if args[start] in default.keys():
+                    self.shower_card.set_param(args[start],default[args[start]],pjoin(self.me_dir,'Cards','shower_card.dat'))
+                else:
+                    logger.info('remove information %s from the shower_card' % args[start])
+                    del self.shower_card[args[start]]
+            elif args[start+1].lower() in ['t','.true.','true']:
+                self.shower_card.set_param(args[start],'.true.',pjoin(self.me_dir,'Cards','shower_card.dat'))
+            elif args[start+1].lower() in ['f','.false.','false']:
+                self.shower_card.set_param(args[start],'.false.',pjoin(self.me_dir,'Cards','shower_card.dat'))
+            else:
+                args_str = ' '.join(str(a) for a in args[start+1:len(args)])
+                self.shower_card.set_param(args[start],args_str,pjoin(self.me_dir,'Cards','shower_card.dat'))
+     
+        # MadLoop Parameter  ---------------------------------------------------
+        elif self.has_ml and args[start] in self.ml_vars \
+                                               and card in ['', 'MadLoop_card']:
+        
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+
+            if args[start+1] == 'default':
+                value = self.MLcardDefault[args[start]]
+                default = True
+            else:
+                value = args[start+1]
+                default = False
+            self.setML(args[start], value, default=default)
+            self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
+                              commentdefault=True)
+                
         #INVALID --------------------------------------------------------------
-        else:
+        else:            
             logger.warning('invalid set command %s ' % line)
             return            
 
@@ -2645,7 +2890,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
         if value:
             logger.info('modify madweight_card information BLOCK "%s" with id "%s" set to %s' %\
-                    (block, name, value))
+                    (block, name, value), '$MG:color:BLACK')
         else:
             logger.value("Invalid command: No value. To set default value. Use \"default\" as value")
             return
@@ -2654,7 +2899,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     def setR(self, name, value):
         logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
-        self.run_card[name] = value
+        self.run_card.set(name,value, user=True)
+
+    def setML(self, name, value, default=False):
+        
+        try:
+            self.MLcard.set(name, value, user=True)
+        except Exception, error:
+            logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
+            return
+        logger.info('modify parameter %s of the MadLoopParam.dat to %s' % (name, value))
+        if default and name.lower() in self.MLcard.user_set:
+            self.MLcard.user_set.remove(name.lower())
 
     def setP(self, block, lhaid, value):
         if isinstance(value, str):
@@ -2675,7 +2931,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('Invalid input: \'%s\' not valid intput.'% value)
 
         logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
-                    (block, lhaid, value))
+                    (block, lhaid, value), '$MG:color:BLACK')
         self.param_card[block].param_dict[lhaid].value = value
     
     def reask(self, *args, **opt):
@@ -2727,6 +2983,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif os.path.exists(line):
             self.copy_file(line)
             self.value = 'repeat'
+        elif os.path.exists(pjoin(self.me_dir, line)):
+            self.copy_file(pjoin(self.me_dir,line))
+            self.value = 'repeat'            
         elif line.strip() != '0' and line.strip() != 'done' and \
             str(line) != 'EOF' and line.strip() in self.allow_arg:
             self.open_file(line)
@@ -2853,7 +3112,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = self.cards[int(answer)-1]
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
-                
+        
+        if 'MadLoopParams' in answer:
+            answer = pjoin(me_dir,'Cards','MadLoopParams.dat')
         if not '.dat' in answer and not '.lhco' in answer:
             if answer != 'trigger':
                 path = pjoin(me_dir,'Cards','%s_card.dat' % answer)
@@ -2897,6 +3158,8 @@ You can also copy/paste, your event file here.''')
                 logger.warning('using the \'set\' command without opening the file will discard all your manual change')
         elif path == pjoin(self.me_dir,'Cards','run_card.dat'):
             self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        elif path == pjoin(self.me_dir,'Cards','MadLoopParams.dat'):
+            self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
         elif path == pjoin(self.me_dir,'Cards','MadWeight_card.dat'):
             try:
                 import madgraph.madweight.Cards as mwcards

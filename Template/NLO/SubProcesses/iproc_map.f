@@ -51,7 +51,7 @@ c to get the unique IPROC's
                   if (abs(idup(i_fks,j)).eq.abs(idup(j_fks,j))) then
 c     gluon splitting
                      id_current(i,j)=21
-                  elseif(idup(i_fks,j).eq.21) then
+                  elseif(abs(idup(i_fks,j)).eq.21) then
 c     final state gluon emitted
                      id_current(i,j)=idup(j_fks,j)
                   elseif(idup(j_fks,j).eq.21) then 

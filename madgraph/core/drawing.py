@@ -2075,7 +2075,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         Compare to usual load we glue the cutted propagator of the Loop.
         """ 
 
-        if self.diagram['tag']:
+        if self.diagram['tag'] and not self.fdstructures is None:
             for pdg, list_struct_id, vertex_id in self.diagram['tag']:
                 for structure_id in list_struct_id:
                     for vertex in self.fdstructures[structure_id]['vertices']:
@@ -2267,20 +2267,21 @@ class LoopFeynmanDiagram(FeynmanDiagram):
             return False 
         
         # See the depth of each side 
-        for pdg, list_struct_id, vertex_id in self.diagram['tag']:
-            for structure_id in list_struct_id:
-                leg = self.fdstructures[structure_id].get('binding_leg')
-                if leg.get('number') < 3:
-                    continue # connecting to initial particles
-                #compute the number of vertex in the structure
-                nb_vertex = len(self.fdstructures[structure_id].get('vertices'))
-                if not binding_side.has_key(leg.get('number')):
-                    continue
-                    
-                if  binding_side[leg.get('number')]:
-                    side_weight += nb_vertex **2
-                else:
-                    side_weight -= nb_vertex **2
+        if not self.fdstructures is None:
+            for pdg, list_struct_id, vertex_id in self.diagram['tag']:
+                for structure_id in list_struct_id:
+                    leg = self.fdstructures[structure_id].get('binding_leg')
+                    if leg.get('number') < 3:
+                        continue # connecting to initial particles
+                    #compute the number of vertex in the structure
+                    nb_vertex = len(self.fdstructures[structure_id].get('vertices'))
+                    if not binding_side.has_key(leg.get('number')):
+                        continue
+                        
+                    if  binding_side[leg.get('number')]:
+                        side_weight += nb_vertex **2
+                    else:
+                        side_weight -= nb_vertex **2
         
         if side_weight == 0:
             return left_side > right_side

@@ -267,8 +267,11 @@ class ProcessExporterPython(object):
 
         ret_lines = []
         # Get minimum legs in a vertex
-        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
-                       matrix_element.get('diagrams')])
+        
+        vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+           matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
+
         if config_map:
             # In this case, we need to sum up all amplitudes that have
             # identical topologies, as given by the config_map (which
@@ -305,7 +308,8 @@ class ProcessExporterPython(object):
             optimization = 0
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
                 # Ignore any diagrams with 4-particle vertices.
-                if max(diag.get_vertex_leg_numbers()) > minvert:
+                if diag.get_vertex_leg_numbers()!=[] and \
+                                   max(diag.get_vertex_leg_numbers()) > minvert:
                     continue
                 # Now write out the expression for AMP2, meaning the sum of
                 # squared amplitudes belonging to the same diagram

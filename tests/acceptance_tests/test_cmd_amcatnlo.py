@@ -28,13 +28,15 @@ from cStringIO import StringIO
 logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
-from tests.unit_tests.various.test_aloha import set_global
+from tests.parallel_tests.test_aloha import set_global
+import tests.IOTests as IOTests
 
 import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.amcatnlo_run_interface as NLOCmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
+import madgraph.various.banner as banner
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -47,21 +49,30 @@ pjoin = os.path.join
 #===============================================================================
 # TestCmd
 #===============================================================================
-class TestMECmdShell(unittest.TestCase):
+class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
+    debugging = False
     
     def setUp(self):
         
-        self.tmpdir = tempfile.mkdtemp(prefix='amc')
-        #if os.path.exists(self.tmpdir):
-        #    shutil.rmtree(self.tmpdir)
-        #os.mkdir(self.tmpdir)
+        if not self.debugging:
+            self.tmpdir = tempfile.mkdtemp(prefix='amc')
+            #if os.path.exists(self.tmpdir):
+            #    shutil.rmtree(self.tmpdir)
+            #os.mkdir(self.tmpdir)
+            self.path = pjoin(self.tmpdir,'MGProcess')
+        else:
+            if os.path.exists(pjoin(MG5DIR, 'TEST_AMC')):
+                shutil.rmtree(pjoin(MG5DIR, 'TEST_AMC'))
+            os.mkdir(pjoin(MG5DIR, 'TEST_AMC'))
+            self.tmpdir = pjoin(MG5DIR, 'TEST_AMC')
+            
         self.path = pjoin(self.tmpdir,'MGProcess')
-
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        if not self.debugging:
+            shutil.rmtree(self.tmpdir)
     
     
     def generate(self, process, model, multiparticles=[]):
@@ -147,20 +158,23 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.top' % self.path))
 
-
-    def test_check_html_long_process_strings(self):
-        """check that the info.html file correctly lists all the subprocesses,
-        even when the process string has to be split on more lines (for length 
-        reasons)"""
+    @IOTests.createIOTest()
+    def testIO_check_html_long_process_strings(self):
+        """ target: info.html
+        """
+        #check that the info.html file correctly lists all the subprocesses,
+        #even when the process string has to be split on more lines (for length 
+        #reasons)
+        
         cmd = os.getcwd()
         self.generate(['p p > h w+ > ta+ ta- e+ ve [QCD]'], 'sm')
         self.assertEqual(cmd, os.getcwd())
 
-        info_html_target = open(os.path.join(cmd, 'tests', 'input_files',
-               'info_pp_to_hw_to_lvtata_nloqcd.html')).read()
+        #info_html_target = open(os.path.join(cmd, 'tests', 'input_files',
+        #       'info_pp_to_hw_to_lvtata_nloqcd.html')).read()
         info_html_this = open(os.path.join(self.path, 'HTML', 'info.html')).read()
-        self.assertEqual(info_html_target, info_html_this)
-
+        #self.assertEqual(info_html_target, info_html_this)
+        open(pjoin(self.IOpath, "info.html"),"w").write(info_html_this)
 
     def test_check_ppzjj(self):
         """test that p p > z j j is correctly output without raising errors"""
@@ -188,18 +202,23 @@ class TestMECmdShell(unittest.TestCase):
         self.assertEqual(cmd, os.getcwd())
 
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue('    1   = lpp' in card)
-        self.assertTrue('6500   = ebeam' in card)
-        self.assertTrue('nn23nlo   = pdlabel' in card)
-        card = card.replace('    1   = lpp', '    0   = lpp')
-        card = card.replace('6500   = ebeam', ' 500   = ebeam')
-        card = card.replace('nn23nlo   = pdlabel', '\'lhapdf\' = pdlabel')
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        # this check that the value of lpp/beam are change automatically
+        self.assertTrue('0   = lpp1' in card)
+        self.assertTrue('500   = ebeam' in card)
+        # pass to the object
+        card = banner.RunCardNLO(card)
+        card['pdlabel'] = "lhapdf"
+        self.assertEqual(card['lpp1'], 0)
+        self.assertEqual(card['lpp2'], 0)
+        self.assertEqual(card['ebeam1'], 500)
+        self.assertEqual(card['ebeam2'], 500)
+        card.write('%s/Cards/run_card.dat' % self.path)
+        
 
         self.do('calculate_xsect -f LO')
         self.do('quit')
 
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
@@ -300,9 +319,9 @@ class TestMECmdShell(unittest.TestCase):
         cmd = os.getcwd()
         self.generate(['p p > e+ e- [real=QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( ' -1 = nevt_job' in card)
+        self.assertTrue( '-1 = nevt_job' in card)
         self.assertTrue( '10000 = nevents' in card)
-        self.assertTrue( ' -1 = req_acc' in card)
+        self.assertTrue( '-1.0 = req_acc' in card)
         card = card.replace(' -1 = nevt_job', '1 = nevt_job')
         card = card.replace('10000 = nevents', '6 = nevents')
         card = card.replace(' -1 = req_acc', '0.1 = req_acc')
@@ -433,7 +452,7 @@ class TestMECmdShell(unittest.TestCase):
 
         self.do('launch NLO -f')
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
@@ -450,7 +469,7 @@ class TestMECmdShell(unittest.TestCase):
                 stdout = open(os.devnull, 'w'))
 
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
@@ -757,7 +776,7 @@ class TestMECmdShell(unittest.TestCase):
         self.do('calculate_xsect NLO -f')        
         
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
@@ -773,7 +792,7 @@ class TestMECmdShell(unittest.TestCase):
         self.do('calculate_xsect LO -f')        
         
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
@@ -786,12 +805,12 @@ class TestMECmdShell(unittest.TestCase):
         
         cwd = os.getcwd()
         try:
-            shutil.rmtree('%s/' % self.path)
+            os.remove('%s/test.log' % self.tmpdir)
         except Exception, error:
             pass
         import subprocess
         
-        stdout = open('/tmp/test.log','w')
+        stdout = open('%s/test.log' % self.tmpdir,'w')
         if logging.getLogger('madgraph').level <= 20:
             stderr=None
         else:
@@ -802,10 +821,10 @@ class TestMECmdShell(unittest.TestCase):
             
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_amcatnlo')],
-                         cwd=pjoin(MG5DIR),
+                         cwd=self.tmpdir,
                         stdout=stdout,stderr=stderr)
         stdout.close()
-        text = open('/tmp/test.log','r').read()
+        text = open('%s/test.log' % self.tmpdir,'r').read()
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
@@ -823,12 +842,37 @@ class TestMECmdShell(unittest.TestCase):
 
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])
-        
+
+
+    def test_jet_veto_xsec(self):
+        """tests the jet-veto cross section at NNLL+NLO"""
+        self.generate_production()
+        cmd = """generate_events NLO
+                 set ickkw -1
+                 set ptj 10
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        self.assertFalse(self.cmd_line.options['automatic_html_opening'])
+        self.cmd_line.import_command_file('/tmp/mg5_cmd')
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        text=open('%s/Events/run_01/summary.txt' % self.path,'r').read()
+        data=text.split('\n')
+        for i,line in enumerate(data):
+            if 'Process' in line:
+                break
+        #      Run at p-p collider (6500 + 6500 GeV)
+        self.assertTrue('Run at p-p collider (6500 + 6500 GeV)' in data[i+1])
+        cross_section = data[i+2]
+        cross_section = float(cross_section.split(':')[1].split('+-')[0])
+        try:
+            self.assertAlmostEqual(6011.0, cross_section,delta=50)
+        except TypeError:
+            self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 
     def load_result(self, run_name):
         
         import madgraph.iolibs.save_load_object as save_load_object
-        import madgraph.various.gen_crossxhtml as gen_crossxhtml
+        import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
         
         result = save_load_object.load_from_file('%s/HTML/results.pkl' % self.path)
         return result[run_name]

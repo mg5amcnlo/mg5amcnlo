@@ -77,6 +77,9 @@ c     read the run_card.dat
 c
       include 'run_card.inc'
 
+c     if no matching ensure that no pdfreweight are done
+      if (ickkw.eq.0) pdfwgt = .false.
+
       q2fact(1) = sf1**2      ! fact scale**2 for pdf1
       q2fact(2) = sf2**2      ! fact scale**2 for pdf2     
 

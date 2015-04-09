@@ -19,13 +19,15 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=1)
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
-      PARAMETER (NLOOPS=14, NLOOPGROUPS=8, NCTAMPS=29)
+      PARAMETER (NLOOPS=11, NLOOPGROUPS=8, NCTAMPS=29)
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=40)
       INTEGER    NCOLORROWS
-      PARAMETER (NCOLORROWS=43)
+      PARAMETER (NCOLORROWS=NLOOPAMPS)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
-      PARAMETER (NWAVEFUNCS=6,NLOOPWAVEFUNCS=32)
+      PARAMETER (NWAVEFUNCS=6,NLOOPWAVEFUNCS=26)
       INTEGER MAXLWFSIZE
       PARAMETER (MAXLWFSIZE=4)
       INTEGER LOOPMAXCOEFS, VERTEXMAXCOEFS
@@ -39,6 +41,8 @@ C
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
       PARAMETER (NSO=0, NSQUAREDSO=0, NAMPSO=0)
+
+
 C     
 C     ARGUMENTS 
 C     
@@ -47,7 +51,8 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER I,J,K,H,DUMMY,ITEMP
+      LOGICAL DPW_COPIED
+      INTEGER I,J,K,H,HEL_MULT,ITEMP
       REAL*16 TEMP2
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       REAL*16 P(0:3,NEXTERNAL)
@@ -77,6 +82,9 @@ C
       INTEGER HELPICKED
       COMMON/ML5_0_HELCHOICE/HELPICKED
 
+      INTEGER USERHEL
+      COMMON/ML5_0_USERCHOICE/USERHEL
+
       INTEGER SQSO_TARGET
       COMMON/ML5_0_SOCHOICE/SQSO_TARGET
 
@@ -89,6 +97,8 @@ C
 
       COMPLEX*32 AMP(NBORNAMPS)
       COMMON/ML5_0_MP_AMPS/AMP
+      COMPLEX*16 DP_AMP(NBORNAMPS)
+      COMMON/ML5_0_AMPS/DP_AMP
       COMPLEX*32 W(20,NWAVEFUNCS)
       COMMON/ML5_0_MP_W/W
 
@@ -103,8 +113,10 @@ C
       COMPLEX*32 LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
       COMMON/ML5_0_MP_LCOEFS/LOOPCOEFS
 
+
       COMPLEX*32 AMPL(3,NCTAMPS)
       COMMON/ML5_0_MP_AMPL/AMPL
+
 
       INTEGER CF_D(NCOLORROWS,NBORNAMPS)
       INTEGER CF_N(NCOLORROWS,NBORNAMPS)
@@ -156,6 +168,12 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
         ENDDO
       ENDDO
 
+
+      DO I=1, NBORNAMPS
+        DP_AMP(I) = (0.0D0,0.0D0)
+        AMP(I) = (ZERO, ZERO)
+      ENDDO
+
       DO I=1,NLOOPGROUPS
         DO J=0,LOOPMAXCOEFS-1
           DO K=1,NSQUAREDSO
@@ -171,6 +189,7 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
         ENDDO
       ENDDO
 
+      DPW_COPIED = .FALSE.
       DO H=1,NCOMB
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
      $   .NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHE
@@ -183,6 +202,14 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
           MP_CT_REQ_SO_DONE=.FALSE.
           MP_LOOP_REQ_SO_DONE=.FALSE.
 
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
+     $     -1) THEN
+            HEL_MULT=GOODHEL(H)
+          ELSE
+            HEL_MULT=1
+          ENDIF
+
+
           CALL MP_IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
           CALL MP_OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
           CALL MP_OXXXXX(P(0,3),MDL_MT,NHEL(3),+1*IC(3),W(1,3))
@@ -193,30 +220,27 @@ C         Amplitude(s) for born diagram with ID 1
           CALL MP_FFV1P0_3(W(1,4),W(1,3),GC_5,ZERO,ZERO,W(1,6))
 C         Counter-term amplitude(s) for loop diagram number 2
           CALL MP_R2_GG_1_0(W(1,5),W(1,6),R2_GGQ,AMPL(1,1))
+          CALL MP_R2_GG_1_0(W(1,5),W(1,6),R2_GGQ,AMPL(1,2))
+          CALL MP_R2_GG_1_0(W(1,5),W(1,6),R2_GGQ,AMPL(1,3))
+          CALL MP_R2_GG_1_0(W(1,5),W(1,6),R2_GGQ,AMPL(1,4))
 C         Counter-term amplitude(s) for loop diagram number 5
-          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,2))
-          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,3))
-          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,4))
           CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,5))
-          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQB,AMPL(1,6))
+          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,6))
           CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,7))
-          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQT,AMPL(1,8))
-          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,9))
-          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQG_1EPS,AMPL(2,10))
-          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),R2_GQQ,AMPL(1,11))
+          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,8))
+          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQB,AMPL(1,9))
+          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,10))
+          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQT,AMPL(1,11))
+          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQQ_1EPS,AMPL(2,12))
+          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),UV_GQQG_1EPS,AMPL(2,13))
+          CALL MP_FFV1_0(W(1,1),W(1,2),W(1,6),R2_GQQ,AMPL(1,14))
 C         Counter-term amplitude(s) for loop diagram number 7
-          CALL MP_R2_GG_1_0(W(1,5),W(1,6),R2_GGQ,AMPL(1,12))
-C         Counter-term amplitude(s) for loop diagram number 8
-          CALL MP_R2_GG_1_0(W(1,5),W(1,6),R2_GGQ,AMPL(1,13))
-C         Counter-term amplitude(s) for loop diagram number 9
-          CALL MP_R2_GG_1_0(W(1,5),W(1,6),R2_GGQ,AMPL(1,14))
-C         Counter-term amplitude(s) for loop diagram number 10
           CALL MP_R2_GG_1_R2_GG_3_0(W(1,5),W(1,6),R2_GGQ,R2_GGB,AMPL(1
      $     ,15))
-C         Counter-term amplitude(s) for loop diagram number 11
+C         Counter-term amplitude(s) for loop diagram number 8
           CALL MP_R2_GG_1_R2_GG_3_0(W(1,5),W(1,6),R2_GGQ,R2_GGT,AMPL(1
      $     ,16))
-C         Counter-term amplitude(s) for loop diagram number 12
+C         Counter-term amplitude(s) for loop diagram number 9
           CALL MP_FFV1_0(W(1,4),W(1,3),W(1,5),UV_GQQQ_1EPS,AMPL(2,17))
           CALL MP_FFV1_0(W(1,4),W(1,3),W(1,5),UV_GQQQ_1EPS,AMPL(2,18))
           CALL MP_FFV1_0(W(1,4),W(1,3),W(1,5),UV_GQQQ_1EPS,AMPL(2,19))
@@ -227,27 +251,21 @@ C         Counter-term amplitude(s) for loop diagram number 12
           CALL MP_FFV1_0(W(1,4),W(1,3),W(1,5),UV_GQQQ_1EPS,AMPL(2,24))
           CALL MP_FFV1_0(W(1,4),W(1,3),W(1,5),UV_GQQG_1EPS,AMPL(2,25))
           CALL MP_FFV1_0(W(1,4),W(1,3),W(1,5),R2_GQQ,AMPL(1,26))
-C         Counter-term amplitude(s) for loop diagram number 14
+C         Counter-term amplitude(s) for loop diagram number 11
           CALL MP_R2_GG_1_R2_GG_2_0(W(1,5),W(1,6),R2_GGG_1,R2_GGG_2
      $     ,AMPL(1,27))
  2000     CONTINUE
           MP_CT_REQ_SO_DONE=.TRUE.
 
-C         Amplitude(s) for UVCT diagram with ID 16
+C         Amplitude(s) for UVCT diagram with ID 13
           CALL MP_FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMPL(1,28))
           AMPL(1,28)=AMPL(1,28)*(2.0D0*UVWFCT_T_0)
-C         Amplitude(s) for UVCT diagram with ID 17
+C         Amplitude(s) for UVCT diagram with ID 14
           CALL MP_FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMPL(2,29))
           AMPL(2,29)=AMPL(2,29)*(2.0D0*UVWFCT_B_0_1EPS)
  3000     CONTINUE
           MP_UVCT_REQ_SO_DONE=.TRUE.
 
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
-            DUMMY=GOODHEL(H)
-          ELSE
-            DUMMY=1
-          ENDIF
           DO I=1,NCTAMPS
             DO J=1,NBORNAMPS
               CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16)
@@ -257,7 +275,7 @@ C         Amplitude(s) for UVCT diagram with ID 17
      $         I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
               IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
                 DO K=1,3
-                  TEMP2 = DUMMY*2.0E0_16*REAL(CFTOT*AMPL(K,I)
+                  TEMP2 = HEL_MULT*2.0E0_16*REAL(CFTOT*AMPL(K,I)
      $             *CONJG(AMP(J)),KIND=16)
                   ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
                   ANS(K,0)=ANS(K,0)+TEMP2
@@ -273,7 +291,7 @@ C         Coefficient construction for loop diagram with ID 2
           CALL MP_FFV1L2_1(PL(0,1),W(1,6),GC_5,ZERO,ZERO,PL(0,2),COEFS)
           CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,1),4,COEFS,4,4,WL(1,0,1
      $     ,2))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,2),2,4,1,1,30,H)
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,2),2,4,1,1,4,30,H)
 C         Coefficient construction for loop diagram with ID 3
           CALL MP_FFV1L3_2(PL(0,0),W(1,1),GC_5,ZERO,ZERO,PL(0,3),COEFS)
           CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
@@ -290,7 +308,7 @@ C         Coefficient construction for loop diagram with ID 3
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_2_0(WL(1,0,1,5),4,COEFS,4,4,WL(1,0,1
      $     ,6))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,6),2,4,2,1,31,H)
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,6),2,4,2,1,1,31,H)
 C         Coefficient construction for loop diagram with ID 4
           CALL MP_FFV1L3_1(PL(0,4),W(1,3),GC_5,MDL_MT,MDL_WT,PL(0,7)
      $     ,COEFS)
@@ -300,13 +318,13 @@ C         Coefficient construction for loop diagram with ID 4
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_2_0(WL(1,0,1,7),4,COEFS,4,4,WL(1,0,1
      $     ,8))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,8),2,4,3,1,32,H)
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,8),2,4,3,1,1,32,H)
 C         Coefficient construction for loop diagram with ID 5
           CALL MP_VVV1L2P0_1(PL(0,4),W(1,6),GC_4,ZERO,ZERO,PL(0,9)
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,4),4,COEFS,4,4,WL(1,0,1
      $     ,9))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,9),2,4,4,1,33,H)
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,9),2,4,4,1,1,33,H)
 C         Coefficient construction for loop diagram with ID 6
           CALL MP_FFV1L2P0_3(PL(0,0),W(1,1),GC_5,ZERO,ZERO,PL(0,10)
      $     ,COEFS)
@@ -320,117 +338,97 @@ C         Coefficient construction for loop diagram with ID 6
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,11),4,COEFS,4,4,WL(1,0
      $     ,1,12))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,12),2,4,4,1,34,H)
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,12),2,4,4,1,1,34,H)
 C         Coefficient construction for loop diagram with ID 7
-          CALL MP_FFV1L2_1(PL(0,0),W(1,5),GC_5,ZERO,ZERO,PL(0,13)
+          CALL MP_FFV1L2_1(PL(0,0),W(1,5),GC_5,MDL_MB,ZERO,PL(0,13)
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
      $     ,13))
-          CALL MP_FFV1L2_1(PL(0,13),W(1,6),GC_5,ZERO,ZERO,PL(0,14)
+          CALL MP_FFV1L2_1(PL(0,13),W(1,6),GC_5,MDL_MB,ZERO,PL(0,14)
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,13),4,COEFS,4,4,WL(1,0
      $     ,1,14))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,14),2,4,1,1,35,H)
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,14),2,4,5,1,1,35,H)
 C         Coefficient construction for loop diagram with ID 8
-          CALL MP_FFV1L2_1(PL(0,0),W(1,5),GC_5,ZERO,ZERO,PL(0,15)
+          CALL MP_FFV1L2_1(PL(0,0),W(1,5),GC_5,MDL_MT,MDL_WT,PL(0,15)
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
      $     ,15))
-          CALL MP_FFV1L2_1(PL(0,15),W(1,6),GC_5,ZERO,ZERO,PL(0,16)
+          CALL MP_FFV1L2_1(PL(0,15),W(1,6),GC_5,MDL_MT,MDL_WT,PL(0,16)
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,15),4,COEFS,4,4,WL(1,0
      $     ,1,16))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,16),2,4,1,1,36,H)
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,16),2,4,6,1,1,36,H)
 C         Coefficient construction for loop diagram with ID 9
-          CALL MP_FFV1L2_1(PL(0,0),W(1,5),GC_5,ZERO,ZERO,PL(0,17)
+          CALL MP_FFV1L1P0_3(PL(0,0),W(1,3),GC_5,ZERO,ZERO,PL(0,17)
      $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
+          CALL MP_ML5_0_UPDATE_WL_0_0(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
      $     ,17))
-          CALL MP_FFV1L2_1(PL(0,17),W(1,6),GC_5,ZERO,ZERO,PL(0,18)
+          CALL MP_FFV1L3_2(PL(0,17),W(1,4),GC_5,MDL_MT,MDL_WT,PL(0,18)
      $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,17),4,COEFS,4,4,WL(1,0
+          CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,17),4,COEFS,4,4,WL(1,0
      $     ,1,18))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,18),2,4,1,1,37,H)
+          CALL MP_FFV1L1_2(PL(0,18),W(1,5),GC_5,MDL_MT,MDL_WT,PL(0,19)
+     $     ,COEFS)
+          CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,18),4,COEFS,4,4,WL(1,0
+     $     ,1,19))
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,19),2,4,7,1,1,37,H)
 C         Coefficient construction for loop diagram with ID 10
-          CALL MP_FFV1L2_1(PL(0,0),W(1,5),GC_5,MDL_MB,ZERO,PL(0,19)
+          CALL MP_FFV1L3_1(PL(0,0),W(1,3),GC_5,MDL_MT,MDL_WT,PL(0,20)
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
-     $     ,19))
-          CALL MP_FFV1L2_1(PL(0,19),W(1,6),GC_5,MDL_MB,ZERO,PL(0,20)
+     $     ,20))
+          CALL MP_FFV1L2P0_3(PL(0,20),W(1,4),GC_5,ZERO,ZERO,PL(0,21)
      $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,19),4,COEFS,4,4,WL(1,0
-     $     ,1,20))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,20),2,4,5,1,38,H)
-C         Coefficient construction for loop diagram with ID 11
-          CALL MP_FFV1L2_1(PL(0,0),W(1,5),GC_5,MDL_MT,MDL_WT,PL(0,21)
-     $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
-     $     ,21))
-          CALL MP_FFV1L2_1(PL(0,21),W(1,6),GC_5,MDL_MT,MDL_WT,PL(0,22)
+          CALL MP_ML5_0_UPDATE_WL_1_0(WL(1,0,1,20),4,COEFS,4,4,WL(1,0
+     $     ,1,21))
+          CALL MP_VVV1L2P0_1(PL(0,21),W(1,5),GC_4,ZERO,ZERO,PL(0,22)
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,21),4,COEFS,4,4,WL(1,0
      $     ,1,22))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,22),2,4,6,1,39,H)
-C         Coefficient construction for loop diagram with ID 12
-          CALL MP_FFV1L1P0_3(PL(0,0),W(1,3),GC_5,ZERO,ZERO,PL(0,23)
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,22),2,4,8,1,1,38,H)
+C         Coefficient construction for loop diagram with ID 11
+          CALL MP_VVV1L2P0_1(PL(0,0),W(1,5),GC_4,ZERO,ZERO,PL(0,23)
      $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_0_0(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
+          CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
      $     ,23))
-          CALL MP_FFV1L3_2(PL(0,23),W(1,4),GC_5,MDL_MT,MDL_WT,PL(0,24)
+          CALL MP_VVV1L2P0_1(PL(0,23),W(1,6),GC_4,ZERO,ZERO,PL(0,24)
      $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,23),4,COEFS,4,4,WL(1,0
+          CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,23),4,COEFS,4,4,WL(1,0
      $     ,1,24))
-          CALL MP_FFV1L1_2(PL(0,24),W(1,5),GC_5,MDL_MT,MDL_WT,PL(0,25)
-     $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,24),4,COEFS,4,4,WL(1,0
-     $     ,1,25))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,25),2,4,7,1,40,H)
-C         Coefficient construction for loop diagram with ID 13
-          CALL MP_FFV1L3_1(PL(0,0),W(1,3),GC_5,MDL_MT,MDL_WT,PL(0,26)
-     $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
-     $     ,26))
-          CALL MP_FFV1L2P0_3(PL(0,26),W(1,4),GC_5,ZERO,ZERO,PL(0,27)
-     $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_1_0(WL(1,0,1,26),4,COEFS,4,4,WL(1,0
-     $     ,1,27))
-          CALL MP_VVV1L2P0_1(PL(0,27),W(1,5),GC_4,ZERO,ZERO,PL(0,28)
-     $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,27),4,COEFS,4,4,WL(1,0
-     $     ,1,28))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,28),2,4,8,1,41,H)
-C         Coefficient construction for loop diagram with ID 14
-          CALL MP_VVV1L2P0_1(PL(0,0),W(1,5),GC_4,ZERO,ZERO,PL(0,29)
-     $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
-     $     ,29))
-          CALL MP_VVV1L2P0_1(PL(0,29),W(1,6),GC_4,ZERO,ZERO,PL(0,30)
-     $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,29),4,COEFS,4,4,WL(1,0
-     $     ,1,30))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,30),2,4,1,2,42,H)
-C         Coefficient construction for loop diagram with ID 15
-          CALL MP_GHGHGL2_1(PL(0,0),W(1,5),GC_4,ZERO,ZERO,PL(0,31)
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,24),2,4,1,2,1,39,H)
+C         Coefficient construction for loop diagram with ID 12
+          CALL MP_GHGHGL2_1(PL(0,0),W(1,5),GC_4,ZERO,ZERO,PL(0,25)
      $     ,COEFS)
           CALL MP_ML5_0_UPDATE_WL_0_1(WL(1,0,1,0),1,COEFS,1,1,WL(1,0,1
-     $     ,31))
-          CALL MP_GHGHGL2_1(PL(0,31),W(1,6),GC_4,ZERO,ZERO,PL(0,32)
+     $     ,25))
+          CALL MP_GHGHGL2_1(PL(0,25),W(1,6),GC_4,ZERO,ZERO,PL(0,26)
      $     ,COEFS)
-          CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,31),1,COEFS,1,1,WL(1,0
-     $     ,1,32))
-          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,32),2,1,1,1,43,H)
+          CALL MP_ML5_0_UPDATE_WL_1_1(WL(1,0,1,25),1,COEFS,1,1,WL(1,0
+     $     ,1,26))
+          CALL MP_ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,26),2,1,1,1,1,40,H)
  4000     CONTINUE
           MP_LOOP_REQ_SO_DONE=.TRUE.
 
-        ENDIF
-      ENDDO
 
-C     Copy the qp wfs to the dp ones as they are used to setup the CT
-C      calls.
-      DO I=1,NWAVEFUNCS
-        DO J=1,MAXLWFSIZE+4
-          DPW(J,I)=W(J,I)
-        ENDDO
+C         Copy the qp wfs to the dp ones as they are used to setup the
+C          CT calls.
+C         This needs to be done once since only the momenta of these
+C          WF matters.
+          IF(.NOT.DPW_COPIED) THEN
+            DO I=1,NWAVEFUNCS
+              DO J=1,MAXLWFSIZE+4
+                DPW(J,I)=DBLE(W(J,I))
+              ENDDO
+            ENDDO
+            DPW_COPIED=.TRUE.
+          ENDIF
+
+
+
+
+
+        ENDIF
       ENDDO
 
       DO I=1,3

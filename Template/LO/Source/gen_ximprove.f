@@ -262,6 +262,7 @@ c
       double precision xt(lmaxconfigs),elimit
       double precision yerr,ysec,rerr
       logical fopened
+
 c-----
 c  Begin Code
 c-----
@@ -424,6 +425,10 @@ c      write(26,15) '#PBS -e /dev/null'
 c      write(26,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
 c      write(26,15) '    cd $PBS_O_WORKDIR'
 c      write(26,15) 'fi'
+      write(26,15) 'if [[ -e MadLoop5_resources.tar.gz && ! -e MadLoop5_resources ]]; then'
+      write(26,15) 'tar -xzf MadLoop5_resources.tar.gz'
+      write(26,15) 'fi'
+
       write(26,15) 'k=run1_app.log'
       write(lun,15) 'script=' // fname
 c      write(lun,15) 'rm -f wait.$script >& /dev/null'
@@ -613,9 +618,9 @@ c     Add loop to allow for multiple jobs on a single channel
 c
          mjobs = (goal_lum*xsec(io(np))*1000 / MaxEventsPerJob + 0.9)
 c         write(*,*) "Working on Channel ",i,io(np),xt(np), goal_lum*xsec(io(np))*1000 /maxeventsperjob
-         if (mjobs .gt. 26)  then
+         if (mjobs .gt. 130)  then
             write(*,*) 'Error in gen_ximprove.f, too many events requested ',mjobs*maxeventsperjob
-            mjobs=26
+            mjobs=130
          endif
          if (mjobs .lt. 1 .or. .not. split_channels)  mjobs=1
 c
@@ -651,9 +656,24 @@ c            if (ijob .eq. 1)  np = ifile !Only increment once / source channel
 
          ip = index(gn(io(np)),'/')
          if (mjobs .gt. 1) then
-            write(26,'(3a)') 'j=',gn(io(np))(1:ip-1),cjobs(ijob:ijob)
+
+            if (ip.eq.3) then
+                write(26,'(a2,a2,a,i1)') 'j=',gn(io(np))(1:ip-1),cjobs(MODULO(ijob-1,26)+1:MODULO(ijob-1,26)+1),
+     &                                              ijob/26
+            else if(ip.eq.4) then
+                write(26,'(a2,a3,a,i1)') 'j=',gn(io(np))(1:ip-1),cjobs(MODULO(ijob-1,26)+1:MODULO(ijob-1,26)+1),
+     &                                              ijob/26
+            else if(ip.eq.5) then
+               write(26,'(a2,a4,a,i1)') 'j=',gn(io(np))(1:ip-1),cjobs(MODULO(ijob-1,26)+1:MODULO(ijob-1,26)+1),
+     &                                              ijob/26
+            else if(ip.eq.6) then
+               write(26,'(a2,a5,a,i1)') 'j=',gn(io(np))(1:ip-1),cjobs(MODULO(ijob-1,26)+1:MODULO(ijob-1,26)+1),
+     &                                              ijob/26
+           else
+               stop 1
+           endif
          else
-            write(26,'(3a)') 'j=',gn(io(np))(1:ip-1)
+             write(26,'(3a)') 'j=',gn(io(np))(1:ip-1)
          endif
 c
 c     Now write the commands

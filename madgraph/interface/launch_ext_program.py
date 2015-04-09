@@ -28,6 +28,7 @@ import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madevent_interface as me_cmd
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
+import madgraph.various.banner as banner_mod
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 from madgraph.iolibs.files import cp
@@ -134,10 +135,8 @@ class MadLoopLauncher(ExtLauncher):
         self.cards = ['param_card.dat','MadLoopParams.dat']
 
     def prepare_run(self):
-        """ Usually the user will not want to doublecheck the helicity filter."""
-        process_checks.LoopMatrixElementTimer.set_MadLoop_Params(
-                                os.path.join(self.card_dir,'MadLoopParams.dat'),
-                                        {'DoubleCheckHelicityFilter':'.FALSE.'})
+        """ Possible preparatory actions to take."""
+        pass
 
     def treat_input_file(self, filename, default=None, msg='', dir_path=None):
         """ask to edit a file"""
@@ -170,7 +169,16 @@ class MadLoopLauncher(ExtLauncher):
                 self.edit_file(os.path.join(dir_path,'PS.input'))
         else:
             super(MadLoopLauncher,self).treat_input_file(filename,default,msg)
-    
+            if filename == 'MadLoopParams.dat':
+                # Make sure to update the changes
+                MadLoopparam = banner_mod.MadLoopParam(
+                               os.path.join(self.card_dir, 'MadLoopParams.dat'))   
+                # Unless user asked for it, don't doublecheck the helicity filter.
+                MadLoopparam.set('DoubleCheckHelicityFilter', False, 
+                                                             ifnotdefault=False)
+                MadLoopparam.write(os.path.join(self.card_dir,os.path.pardir, 
+                                           'SubProcesses', 'MadLoopParams.dat'))
+
     def launch_program(self):
         """launch the main program"""
         evaluator = process_checks.LoopMatrixElementTimer
@@ -181,29 +189,28 @@ class MadLoopLauncher(ExtLauncher):
                 shell_name = path.split('_')[1]+' > '+path.split('_')[2]
                 curr_path = os.path.join(sub_path, path)
                 infos = {}
-                attempts = [3,15]
                 logger.info("Initializing process %s."%shell_name)
-                nps = evaluator.run_initialization(curr_path, sub_path, infos,
-                                req_files = ['HelFilter.dat','LoopFilter.dat'],
-                                attempts = attempts)
+                nps = me_cmd.MadLoopInitializer.run_initialization(
+                                curr_path, sub_path, infos,
+                                req_files = ['HelFilter.dat','LoopFilter.dat'])
                 if nps == None:
-                    raise MadGraph5Error,("Could not initialize the process %s"+\
-                      " with %s PS points.")%(shell_name,max(attempts))
-                elif nps > min(attempts):
-                    logger.warning(("Could not initialize the process %s"+\
-                                   " with %d PS points. It needed %d.")\
-                                      %(shell_name,min(attempts),nps))
+                    raise MadGraph5Error,"MadLoop could not initialize the process %s"\
+                      %shell_name
+                logger.debug(("MadLoop initialization performed for %s"+\
+                        " using %d PS points (%s)")\
+                        %(shell_name,abs(nps),\
+                    'double precision' if nps>0 else 'quadruple precision'))
                 # Ask if the user wants to edit the PS point.
                 self.treat_input_file('PS.input', default='n', 
                   msg='Phase-space point for process %s.'%shell_name,\
                                                              dir_path=curr_path)
                 # We use mu_r=-1.0 to use the one defined by the user in the
                 # param_car.dat
-                evaluator.fix_PSPoint_in_check(sub_path, 
+                me_cmd.MadLoopInitializer.fix_PSPoint_in_check(sub_path, 
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
                   npoints = 1, mu_r=-1.0)
                 # check
-                t1, t2, ram_usage = evaluator.make_and_run(curr_path)
+                t1, t2, ram_usage = me_cmd.MadLoopInitializer.make_and_run(curr_path)
                 if t1==None or t2==None:
                     raise MadGraph5Error,"Error while running process %s."\
                                                                      %shell_name
@@ -537,8 +544,8 @@ class aMCatNLOLauncher(ExtLauncher):
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
                 if self.options[opt] and not opt in ['cluster', 'multicore', 'name', 'appl_start_grid']])
         if self.options['name']:
-            option_line += ' --name %s' %  self.options['name']  
-        if self.options['appl_start_grid']:
+            option_line += ' --name %s' %  self.options['name']
+        if 'appl_start_grid' in self.options and  self.options['appl_start_grid']:
             option_line += ' --appl_start_grid %s' %  self.options['appl_start_grid']
         command = 'launch ' + self.run_mode + ' ' + option_line
 
@@ -639,10 +646,11 @@ class MELauncher(ExtLauncher):
             warning_text = '''\
 This command will create a new param_card with the computed width. 
 This param_card makes sense only if you include all processes for
-the computation of the width.'''
+the computation of the width. For more efficient width computation:
+see arXiv:1402.1178.'''
             logger.warning(warning_text)
 
-            command = 'calculate_decay_widths %s' % self.name
+            command = 'generate_events %s' % self.name
         if mode == "1":
             command += " --cluster"
         elif mode == "2":

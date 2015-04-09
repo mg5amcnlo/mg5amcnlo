@@ -20,6 +20,7 @@ import math
 import os
 import re
 import shutil
+import tempfile
 import time
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
@@ -56,7 +57,7 @@ class ReweightInterface(extended_cmd.Cmd):
     debug_output = 'Reweight_debug'
     
     @misc.mute_logger()
-    def __init__(self, event_path=None, *completekey, **stdin):
+    def __init__(self, event_path=None, allow_madspin=False, *completekey, **stdin):
         """initialize the interface with potentially an event_path"""
         
         if not event_path:
@@ -79,7 +80,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         if event_path:
             logger.info("Extracting the banner ...")
-            self.do_import(event_path)
+            self.do_import(event_path, allow_madspin=allow_madspin)
             
         # dictionary to fortan evaluator
         self.calculator = {}
@@ -88,7 +89,7 @@ class ReweightInterface(extended_cmd.Cmd):
         #all the cross-section for convenience
         self.all_cross_section = {}
             
-    def do_import(self, inputfile):
+    def do_import(self, inputfile, allow_madspin=False):
         """import the event file"""
         
         # change directory where to write the output
@@ -122,13 +123,14 @@ class ReweightInterface(extended_cmd.Cmd):
         
         # Check the validity of the banner:
         if 'slha' not in self.banner:
+            misc.sprint(self.banner)
             self.events_file = None
             raise self.InvalidCmd('Event file does not contain model information')
         elif 'mg5proccard' not in self.banner:
             self.events_file = None
             raise self.InvalidCmd('Event file does not contain generation information')
 
-        if 'madspin' in self.banner:
+        if 'madspin' in self.banner and not allow_madspin:
             raise self.InvalidCmd('Reweight should be done before running MadSpin')
                 
                 
@@ -233,7 +235,10 @@ class ReweightInterface(extended_cmd.Cmd):
         """check the validity of the launch command"""
         
         if not self.lhe_input:
-            raise self.InvalidCmd("No events files defined.")
+            if isinstance(self.lhe_input, lhe_parser.EventFile):
+                self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
+            else:
+                raise self.InvalidCmd("No events files defined.")
 
     def help_launch(self):
         """help for the launch command"""
@@ -263,8 +268,12 @@ class ReweightInterface(extended_cmd.Cmd):
         ff.close()        
         cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
                                    ask=self.ask, pwd=pjoin(self.me_dir,'rw_me'))
-        new_card = open(pjoin(self.me_dir, 'rw_me', 'Cards', 'param_card.dat')).read()        
 
+        new_card = open(pjoin(self.me_dir, 'rw_me', 'Cards', 'param_card.dat')).read()        
+        # check if "Auto" is present for a width parameter
+        if "auto" in new_card.lower():            
+            self.mother.check_param_card(pjoin(self.me_dir, 'rw_me', 'Cards', 'param_card.dat'))
+            new_card = open(pjoin(self.me_dir, 'rw_me', 'Cards', 'param_card.dat')).read() 
         
 
         # Find new tag in the banner and add information if needed
@@ -290,6 +299,9 @@ class ReweightInterface(extended_cmd.Cmd):
             header_rwgt_other = ''
             mg_rwgt_info = []
             rewgtid = 1
+        
+
+        
         
         # add the reweighting in the banner information:
         #starts by computing the difference in the cards.
@@ -346,7 +358,7 @@ class ReweightInterface(extended_cmd.Cmd):
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
-
+        self.lhe_input.seek(0)
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),1000)==0): 

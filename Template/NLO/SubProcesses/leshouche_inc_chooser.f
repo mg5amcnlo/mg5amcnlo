@@ -15,7 +15,8 @@ c leshouche.inc information
       logical firsttime
       data firsttime /.true./
       include 'leshouche_decl.inc'
-      save idup_d, mothup_d, icolup_d
+      common/c_leshouche_idup_d/ idup_d
+      save mothup_d, icolup_d
       
 c
       if (maxproc_used.gt.maxproc) then
@@ -61,6 +62,38 @@ C read the various information from the configs_and_props_info.dat file
       integer i,j,k,l
       character *200 buff
       include 'leshouche_decl.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'born_maxamps.inc'
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
+      include 'born_leshouche.inc'
+      if (fks_configs.eq.1) then
+         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
+c SPECIAL for [LOonly=QCD] process. Simply use the information from the
+c born_leshouche.inc file.
+            do j=1,maxproc
+               do i=1,nexternal-1
+                  idup_d(1,i,j)=idup(i,j)
+                  mothup_d(1,1,i,j)=mothup(1,i,j)
+                  mothup_d(1,2,i,j)=mothup(2,i,j)
+               enddo
+               idup_d(1,nexternal,j)=-21
+               mothup_d(1,1,nexternal,j)=mothup(1,fks_j_d(1),j)
+               mothup_d(1,2,nexternal,j)=mothup(2,fks_j_d(1),j)
+            enddo
+            do j=1,maxflow
+               do i=1,nexternal-1
+                  icolup_d(1,1,i,j)=icolup(1,i,j)
+                  icolup_d(1,2,i,j)=icolup(2,i,j)
+               enddo
+               icolup_d(1,1,nexternal,j)=-99999 ! should not be used
+               icolup_d(1,2,nexternal,j)=-99999
+            enddo
+         endif
+         return
+      endif
 
       open(unit=78, file='leshouche_info.dat', status='old')
       do while (.true.)

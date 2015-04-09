@@ -254,17 +254,22 @@ c**********************************
 c     var_num=1 means that we generate a theta
        if (var_num.eq.1) then
 
+      if (gam.gt.0) then
       point_max=c_point +5d0*gam
       if (point_max.gt.pi) point_max=pi
       point_min=c_point -5d0*gam
       if (point_min.lt.0d0) point_min=0d0
+      else
+        point_max=pi
+        point_min=0d0
+      endif
 
        gen_point=(point_max-point_min)*x+point_min
 
 c     var_num=2 means that we generate a phi (note that phi is a cyclic variable) 
       elseif(var_num.eq.2) then
 
-      if(gam.lt.(2d0*pi/10)) then
+      if(gam.lt.(2d0*pi/10).and.gam.gt.0d0) then
       point_max=c_point +5d0*gam
       point_min=c_point -5d0*gam
       else

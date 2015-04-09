@@ -19,6 +19,8 @@ import os
 import re
 import sys
 
+import madgraph.various.misc as misc
+
 template_text= string.Template("""
 <HTML> 
 <HEAD> 
@@ -143,7 +145,9 @@ border-top: solid;
 class make_info_html:
 
     def __init__(self, cur_dir='./'):
+
         self.dir = cur_dir
+        
         
         self.rep_rule = {'nb_diag': 0, 'nb_gen_diag': 0}
         
@@ -228,8 +232,6 @@ class make_info_html:
                 line_dict['subprocesslist'] = ', <br>'.join([' </SPAN> , <SPAN style="white-space: nowrap;"> '.join(info) for info in names])
                 line_dict['postscript'] = self.check_postcript(proc, id)
                 
-                
-            
                 text += line_template.substitute(line_dict)
         return text
     
@@ -251,6 +253,7 @@ class make_info_html:
     def get_subprocesses_info(self, proc):
         """ return the list of processes with their name"""    
         
+        #no python information available (should not happen anymore)
         path = os.path.join(self.dir, 'SubProcesses', proc)        
         nb_sub = 0
         names = {}
@@ -275,7 +278,8 @@ class make_info_html:
                 names[main] += [sub_proccess.split(',')]
             else: 
                 names[main]= [sub_proccess.split(',')]
-                
+    
+
         return names
 
     def get_subprocess_info_v4(self, proc):
@@ -311,6 +315,7 @@ class make_info_html:
         </TR>"""
         else:
             return ''
+        
     def write(self):
         """write the info.html file"""
         
@@ -394,12 +399,16 @@ class make_info_html_nlo(make_info_html):
         if not os.path.exists(path):
             return []
         found = 0
+        start= 0
         for line in open(path):
             if line.startswith('C     Process:'):
                 found += 1
-                names[''][0].append(line[15:])
+                names[''][0].append(line[15:-1])
+                start =1
             elif found >0 and 'IMPLICIT NONE' in line:
                 break    
+            elif start:
+                names[''][0][-1] += line[2:-1].strip()
         return names    
 
 

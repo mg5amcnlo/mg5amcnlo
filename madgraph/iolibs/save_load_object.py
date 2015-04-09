@@ -76,6 +76,12 @@ class UnPickler(pickle.Unpickler):
         except Exception:
             pass        
 
+        newmodule = 'madgraph.madevent.%s' % module.rsplit('.',1)[1]
+        try:
+            return pickle.Unpickler.find_class(self, newmodule , name)
+        except Exception:
+            pass  
+
         newmodule = 'madgraph.various.%s' % module.rsplit('.',1)[1]
         try:
             return pickle.Unpickler.find_class(self, newmodule , name)

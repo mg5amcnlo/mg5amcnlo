@@ -1015,6 +1015,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.history:
             self.history.pop()
         
+        #avoid that command of other file interfere with this one.
+        previous_store_line = self.get_stored_line()
+        
         # Read the lines of the file and execute them
         if isinstance(filepath, str):
             commandline = open(filepath).readlines()
@@ -1043,7 +1046,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.child:
             self.child.exec_cmd('quit')        
         self.inputfile = oldinputfile
-        self.use_rawinput = oldraw       
+        self.use_rawinput = oldraw   
+        
+        # restore original store line
+        cmd = self
+        while hasattr(cmd, 'mother') and cmd.mother:
+            cmd = cmd.mother
+        cmd.stored_line = previous_store_line
         return
     
     def get_history_header(self):

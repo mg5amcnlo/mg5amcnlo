@@ -43,8 +43,11 @@ import madgraph.various.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.master_interface as cmd_interface
+from madgraph.interface.madevent_interface import MadLoopInitializer
 
 import madgraph.various.process_checks as process_checks
+import madgraph.various.misc as misc
+import madgraph.various.banner as banner_mod
 
 import me_comparator
 from madgraph.iolibs.files import mv
@@ -260,7 +263,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
 
-        init = process_checks.LoopMatrixElementTimer.run_initialization(\
+        init = MadLoopInitializer.run_initialization(\
           run_dir=dir_name, SubProc_dir=os.path.join(working_dir, 'SubProcesses'),
           attempts = [3,15,25])
        
@@ -272,7 +275,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
     @staticmethod
     def get_me_value(proc, proc_id, working_dir, PSpoint=[], verbose=True,mu_r=0.0):
         """Compile and run ./check, then parse the output and return the result
-        for process with id = proc_id and PSpoint if specified."""  
+        for process with id = proc_id and PSpoint if specified.""" 
         if verbose:
             sys.stdout.write('.')
             sys.stdout.flush()
@@ -299,7 +302,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             os.remove(os.path.join(dir_name,'check_sa.o'))
         # Run make
         devnull = open(os.devnull, 'w')
-        retcode = subprocess.call('make',
+        retcode = subprocess.call(['make','check'],
                         cwd=dir_name,
                         stdout=devnull, stderr=devnull)
                         
@@ -400,20 +403,15 @@ class LoopMG5Runner(me_comparator.MG5Runner):
     def fix_MadLoopParamCard(dir_name,mp=False):
         """ Set parameters in MadLoopParams.dat suited for these checks."""
 
-        file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'r')
-        MLParams = file.read()
-        file.close()
-        run_mode = 4 if mp else -1
-        init_mode = 4 if mp else 1
-        file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'w')
-        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%run_mode, MLParams)
-        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%init_mode, MLParams)
-        MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n.FALSE.", 
-                                                                       MLParams)                
-        MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
-                                 "#DoubleCheckHelicityFilter\n.FALSE.",MLParams)
-        file.write(MLParams)
-        file.close()
+        MLCardPath = os.path.join(dir_name,'Cards','MadLoopParams.dat')
+        MLOutPath  = os.path.join(dir_name,'SubProcesses','MadLoopParams.dat')
+        MLCard = banner_mod.MadLoopParam()
+        MLCard['CTModeRun'] = 4 if mp else -1
+        MLCard['CTModeInit'] = 4 if mp else 1
+        MLCard['UseLoopFilter'] = False
+        MLCard['DoubleCheckHelicityFilter'] = False
+        MLCard.write(MLCardPath)
+        MLCard.write(MLOutPath)
         
 class LoopMG5Runner_gauge(LoopMG5Runner):
     
