@@ -390,8 +390,6 @@ c Randomly pick the contribution that will be written in the event file
             call pick_unweight_contr(iFKS_picked)
             call update_fks_dir(iFKS_picked,iconfig)
             call fill_rwgt_lines
-c Determine if we are allowed to write the granny in the event file.
-            call need_to_write_granny(iFKS_picked)
             call finalize_event(x,weight,lunlhe,putonshell)
          enddo
          vn=-1

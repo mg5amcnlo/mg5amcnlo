@@ -708,6 +708,7 @@ c
       include 'genps.inc'
       include 'nexternal.inc'
       include 'run.inc'
+      include 'nFKSconfigs.inc'
 c
 c     Arguments
 c
@@ -732,6 +733,7 @@ c
 
 c Special for the phase-space mapping in which the grandmother mass is
 c kept fixed between events and counter events:
+      integer igranny
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       logical write_granny(fks_configs)

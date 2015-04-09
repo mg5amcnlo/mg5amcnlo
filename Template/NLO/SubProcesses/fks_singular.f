@@ -2143,14 +2143,14 @@ c fill tmp_wgt with the sum of weights per FKS configuration
 c Randomly select an FKS configuration
          sum_granny_wgt=0d0
          do i=1,fks_configs
-            sum_granny_wgt=sum_granny_wgt+abs(temp_wgt(i))
+            sum_granny_wgt=sum_granny_wgt+abs(tmp_wgt(i))
          enddo
          target=ran2()*sum_granny_wgt
          current=0d0
          i=0
          do while (current.le.target)
             i=i+1
-            current=current+abs(temp_wgt(i))
+            current=current+abs(tmp_wgt(i))
          enddo
 c Overwrite the granny information of the FKS configuration with the
 c soft singularity with the FKS configuration randomly chosen.
