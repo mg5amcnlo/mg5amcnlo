@@ -26,7 +26,7 @@ C
       REAL*8 DRBJmax,DRAJmax,DRJLmax,DRABmax,DRBLmax,DRALmax
       REAL*8 MMJJmax,MMLLmax,MMAAmax,MMBBmax !max inv mass 
       REAL*8 MMNL,MMNLMAX ! invariant mass of all leptons
-      REAL*8 cutuse
+      integer cutuse
       REAL*8 ptj1min,ptj2min,ptj3min,ptj4min
       REAL*8 ptj1max,ptj2max,ptj3max,ptj4max
       REAL*8 ptl1min,ptl2min,ptl3min,ptl4min

@@ -1002,7 +1002,7 @@ c     Take care of case when jcentral are zero
             q2fact(1) = pt2ijcl(jfirst(1))
       elseif(jcentral(2).eq.0)then
             q2fact(2) = pt2ijcl(jfirst(2))
-      elseif(ickkw.eq.2.or.pdfwgt)then
+      elseif(ickkw.eq.2.or.(pdfwgt.and.ickkw.gt.0))then
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
 c     Use the minimum scale found for fact scale in ME
@@ -1221,7 +1221,7 @@ c        ilast(i)=ishft(1,i)
      $              max(pt2min,p(0,i)**2-p(1,i)**2-p(2,i)**2-p(3,i)**2)
             endif
             pt2pdf(ishft(1,i-1))=pt2prev(ishft(1,i-1))
-         else if(pdfwgt) then
+         else if(pdfwgt.and.ickkw.gt.0) then
             pt2pdf(ishft(1,i-1))=0d0
          endif
          ipart(1,ishft(1,i-1))=i
@@ -1334,7 +1334,7 @@ c             Store information for systematics studies
               endif
            endif
         endif
-        if(ickkw.eq.2.or.pdfwgt) then
+        if(ickkw.eq.2.or.(pdfwgt.and.ickkw.gt.0)) then
 c       Perform PDF and, if ickkw=2, Sudakov reweighting
           isvx=.false.
           do i=1,2
@@ -1506,7 +1506,7 @@ c           fs sudakov weight
       if(ickkw.eq.2.and.lpp(1).eq.0.and.lpp(2).eq.0)then
          q2fact(1)=pt2min
          q2fact(2)=q2fact(1)
-      else if (ickkw.eq.1.and.pdfwgt) then
+      else if (ickkw.gt.0.and.pdfwgt) then
          q2fact(1)=q2bck(1)
          q2fact(2)=q2bck(2)         
          if (btest(mlevel,3))

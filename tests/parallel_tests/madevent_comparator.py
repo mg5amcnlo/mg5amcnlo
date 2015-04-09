@@ -491,6 +491,11 @@ class MG5Runner(MadEventRunner):
                      os.path.join(self.mg5_path, self.temp_dir_name)
         v5_string += "launch -i --multicore\n"
         v5_string += " set automatic_html_opening False\n"
+        v5_string += "edit_cards\n"
+        v5_string += "set ickkw 0\n"
+        v5_string += "set LHC 13\n"
+        v5_string += "set xqcut 0\n"
+        v5_string += "set cut_decays True\n"
         v5_string += "survey run_01; refine 0.01; refine 0.01" 
         return v5_string
     

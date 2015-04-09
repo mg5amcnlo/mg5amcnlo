@@ -1399,8 +1399,8 @@ class RunCardLO(RunCard):
         self.add_param("lpp2", 1, fortran_name="lpp(2)")
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
-        self.add_param("polbeam1", 0, fortran_name="pb1")
-        self.add_param("polbeam2", 0, fortran_name="pb2")
+        self.add_param("polbeam1", 0.0, fortran_name="pb1")
+        self.add_param("polbeam2", 0.0, fortran_name="pb2")
         self.add_param("pdlabel", "nn23lo1")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
@@ -1492,7 +1492,7 @@ class RunCardLO(RunCard):
         self.add_param("mmnlmax", -1.0, cut=True)
         #minimum/max pt for sum of leptons
         self.add_param("ptllmin", 0.0, cut=True)
-        self.add_param("ptllmax", -1, cut=True)
+        self.add_param("ptllmax", -1.0, cut=True)
         self.add_param("xptj", 0.0, cut=True)
         self.add_param("xptb", 0.0, cut=True)
         self.add_param("xpta", 0.0, cut=True) 
@@ -1554,7 +1554,6 @@ class RunCardLO(RunCard):
         self.add_param('d', 1.0, hidden=True)
         self.add_param('gseed', 0, hidden=True, include=False)
         self.add_param('issgridfile', '', hidden=True)
-        self.add_param('hightestmult', 0, hidden=True, fortran_name="nhmult")
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False)
         self.add_param('survey_splitting', -1, hidden=True, include=False)

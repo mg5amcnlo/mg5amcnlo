@@ -1942,7 +1942,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
  
 
 
+    def do_edit_cards(self, line):
+        """Advanced commands: Basic edition of the cards"""
+        args = self.split_arg(line)
+        # Check argument's validity
+        mode = self.check_generate_events(args)
+        self.ask_run_configuration(mode)
         
+        return
 
     ############################################################################
 
