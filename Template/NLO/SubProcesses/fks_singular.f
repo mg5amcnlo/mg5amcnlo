@@ -1920,6 +1920,7 @@ c include it here!
       return
       end
 
+      
       subroutine update_shower_scale_Sevents
 c When contributions from various FKS configrations are summed together
 c for the S-events (see the sum_identical_contributions subroutine), we
@@ -2079,6 +2080,11 @@ c PS point that should be written in the event file.
       common/c_nFKSprocess/nFKSprocess
       double precision     SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      double precision tmp_wgt(fks_configs),sum_granny_wgt
+      logical write_granny(fks_configs)
+      integer which_is_granny(fks_configs)
+      common/write_granny_resonance/which_is_granny,write_granny
+
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       tot_sum=0d0
@@ -2123,6 +2129,33 @@ c found the contribution that should be written:
             endif
          enddo
          SCALUP(iFKS_picked*2-1)=shower_scale(icontr_picked)
+c Determine if we need to write the granny (based only on the special
+c mapping in genps_fks) randomly, weighted by the seperate contributions
+c that are summed together in a single S-event.
+         do i=1,fks_configs
+            tmp_wgt(i)=0d0
+         enddo
+c fill tmp_wgt with the sum of weights per FKS configuration
+         do k=1,icontr_sum(0,icontr_picked)
+            ict=icontr_sum(k,icontr_picked)
+            tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+wgts(1,ict)
+         enddo
+c Randomly select an FKS configuration
+         sum_granny_wgt=0d0
+         do i=1,fks_configs
+            sum_granny_wgt=sum_granny_wgt+abs(temp_wgt(i))
+         enddo
+         target=ran2()*sum_granny_wgt
+         current=0d0
+         i=0
+         do while (current.le.target)
+            i=i+1
+            current=current+abs(temp_wgt(i))
+         enddo
+c Overwrite the granny information of the FKS configuration with the
+c soft singularity with the FKS configuration randomly chosen.
+         write_granny(iFKS_picked)=write_granny(i)
+         which_is_granny(iFKS_picked)=which_is_granny(i)
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
       call cpu_time(tAfter)

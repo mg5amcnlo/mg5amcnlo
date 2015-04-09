@@ -729,6 +729,16 @@ c
 c     External
 c
       double precision dot
+
+c Special for the phase-space mapping in which the grandmother mass is
+c kept fixed between events and counter events:
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      logical write_granny(fks_configs)
+      integer which_is_granny(fks_configs)
+      common/write_granny_resonance/which_is_granny,write_granny
+
+
 c-----
 c  Begin Code
 c-----      
@@ -752,6 +762,9 @@ c-----
             endif
          enddo
       enddo
+
+      igranny=which_is_granny(nFKSprocess)
+      if (Hevents .and. igranny.ne.0 )igranny=igranny-1
 c
       do i=-1,-iloop,-1                      !Loop over propagators
          onbw(i) = .false.
@@ -762,11 +775,22 @@ c Skip the t-channels
             xp(j,i) = xp(j,itree(1,i))+xp(j,itree(2,i))
          enddo
          if (pwidth(i) .gt. 0d0) then !This is B.W.
-c
+c If s-channel is the grandmother, check if we need to write this
+c resonance. In that case, ignore the bwcutoff parameter. In this case,
+c also ignore the special case where both mother and daughter could be
+c resonant.
+            if (i.eq.igranny .and. .not. write_granny(nFKSprocess))then
+               cycle
+            elseif(i.eq.igranny .and. write_granny(nFKSprocess))then
+               xmass = sqrt(dot(xp(0,i),xp(0,i)))
+               onshell=.true.
+            else
+               xmass = sqrt(dot(xp(0,i),xp(0,i)))
+               onshell = ( abs(xmass-pmass(i)) .lt. bwcutoff*pwidth(i) )
+            endif
+c     
 c     If the invariant mass is close to pole mass, set OnBW to true
 c
-            xmass = sqrt(dot(xp(0,i),xp(0,i)))
-            onshell = ( abs(xmass-pmass(i)) .lt. bwcutoff*pwidth(i) )
             if(onshell)then
                OnBW(i) = .true.
 c     If mother and daughter have the same ID, remove one of them

@@ -283,6 +283,7 @@ c
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
+      include 'nFKSconfigs.inc'
       integer ndim
       double precision jac,x(99),p(0:3,nexternal)
       integer itree(2,-max_branch:-1),i,j
@@ -339,14 +340,27 @@ c     debug stuff
       logical do_mapping_granny
       logical softtest,colltest
       common/sctests/softtest,colltest
-c     
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+c Common block with information to determine if we should not write a
+c possible resonance.
+      logical write_granny(fks_configs)
+      integer which_is_granny(fks_configs)
+      common/write_granny_resonance/which_is_granny,write_granny
+c
+      write_granny(nFKSprocess)=.true.
+      which_is_granny(nFKSprocess)=0
+c
       do i=-1,1
          granny_m2_red(i)=-99d99
       enddo
-c     FIXTHIS FIXTHIS
+c By default always try to do the mapping if need be. Change the logical
+c 'do_mapping_granny' to false to never do the phase-space mapping to
+c keep the invariant mass of the granny fixed.
       do_mapping_granny=.true.
 
       if (granny_is_res) then
+         which_is_granny(nFKSprocess)=igranny
          if (.not. do_mapping_granny) then
             compute_non_shifted=.true.
             compute_mapped=.false.
@@ -450,6 +464,9 @@ c integrate as normal
             enddo
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,itree,qmass,qwidth,p)
+c In this case, we should not write the grandmother in the event file,
+c because the shower should not keep its inv. mass fixed.
+            write_granny(nFKSprocess)=.false.
          endif
          if (compute_mapped) then
 c Special Phase-space generation for granny stuff: keep its invariant
