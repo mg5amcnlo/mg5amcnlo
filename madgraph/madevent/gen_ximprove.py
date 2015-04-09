@@ -1016,6 +1016,8 @@ class gen_ximprove_v4(gen_ximprove):
                     break
                 info = jobs[j]
                 info['script_name'] = 'ajob%i' % script_number
+                if "base_directory" not in info:
+                    info["base_directory"] = "./"
                 fsock.write(template_text % info)
             nb_use += nb_job 
 
@@ -1024,27 +1026,26 @@ class gen_ximprove_v4(gen_ximprove):
 
         
         assert self.err_goal <=1
-        xtot = self.results.xsec
+        xtot = abs(self.results.xsec)
         logger.info("Working on precision:  %s %%" %(100*self.err_goal))
         all_channels = sum([list(P) for P in self.results if P.mfactor],[])
         limit = self.err_goal * xtot / len(all_channels)
-                
         to_refine = []
         rerr = 0 #error of the job not directly selected
         for C in all_channels:
-            cerr = C.mfactor*(C.xerru+C.xerrc**2)
+            cerr = C.mfactor*(C.xerru + len(all_channels)*C.xerrc)
             if  cerr > abs(limit):
                 to_refine.append(C)
             else:
                 rerr += cerr
-        
+        rerr *=rerr
         if not len(to_refine):
             return
         
         # change limit since most don't contribute 
         limit = math.sqrt((self.err_goal * xtot)**2 - rerr/math.sqrt(len(to_refine)))
         for C in to_refine[:]:
-            cerr = C.mfactor*(C.xerru+C.xerrc**2)
+            cerr = C.mfactor*(C.xerru + len(to_refine)*C.xerrc)
             if cerr < limit:
                 to_refine.remove(C)
             
@@ -1059,10 +1060,11 @@ class gen_ximprove_v4(gen_ximprove):
         for C in to_refine:
             
             #1. Determine how many events we need in each iteration
-            yerr = C.get('xsec') + C.mfactor*(C.xerru+C.xerrc**2)
+            yerr = C.mfactor*(C.xerru+len(to_refine)*C.xerrc)
             nevents = 0.2*C.nevents*(yerr/limit)**2
             
             nb_split = int((nevents*(C.nunwgt/C.nevents)/self.max_request_event/ (2**self.min_iter-1))**(2/3))
+            nb_split = max(nb_split, 1)
             # **(2/3) to slow down the increase in number of jobs            
             if nb_split > self.max_splitting:
                 nb_split = self.max_splitting
@@ -1083,7 +1085,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'nevents': nevents,
                     'maxiter': self.max_iter,
                     'miniter': self.min_iter,
-                    'precision': max(limit/(C.get('xsec')+ yerr), 1e-4),
+                    'precision': yerr/math.sqrt(nb_split)/(C.get('xsec')+ yerr),
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
                     'grid_refinment' : 1
@@ -1097,7 +1099,6 @@ class gen_ximprove_v4(gen_ximprove):
                     new_info['offset'] = i+1
                     new_info['directory'] += self.alphabet[i % 26] + str((i+1)//26)
                     jobs.append(new_info)
-            
         self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs)            
         
     def update_html(self):
