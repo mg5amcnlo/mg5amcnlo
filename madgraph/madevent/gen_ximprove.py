@@ -403,8 +403,8 @@ class gensym(object):
         
         for i in range(self.splitted_for_dir(Pdir, G)):
             if i in exclude_sub_jobs:
-                continue
-            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+                    continue
+            path = pjoin(Pdir, "G%s_%s" % (G, i+1)) 
             fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
             one_result = grid_calculator.add_results_information(fsock)
             fsock.close()
@@ -414,7 +414,6 @@ class gensym(object):
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
-            os.remove(pjoin(path, 'grid_information'))
              
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory
@@ -425,16 +424,56 @@ class gensym(object):
         maxwgt = grid_calculator.get_max_wgt(0.01)
         if maxwgt:
             nunwgt = grid_calculator.get_nunwgt(maxwgt)
-        if nunwgt < 2 and len(grid_calculator.results) > 1 and step > 1:
+        # Make sure not to apply the security below during the first step of the
+        # survey. Also, disregard channels with a contribution relative to the 
+        # total cross-section smaller than 1e-8 since in this case it is unlikely
+        # that this channel will need more than 1 event anyway.
+        apply_instability_security = False
+        rel_contrib                = 0.0
+        if (self.__class__ != gensym or step > 1):            
+            Pdir_across = 0.0
+            Gdir_across = 0.0
+            for (mPdir,mG) in self.abscross.keys():
+                if mPdir == Pdir:
+                    Pdir_across += (self.abscross[(mPdir,mG)]/
+                                                   (self.sigma[(mPdir,mG)]+1e-99))
+                    if mG == G:
+                        Gdir_across += (self.abscross[(mPdir,mG)]/
+                                                   (self.sigma[(mPdir,mG)]+1e-99)) 
+            rel_contrib = abs(Gdir_across/(Pdir_across+1e-99))
+            if rel_contrib > (1.0e-8) and \
+                                nunwgt < 2 and len(grid_calculator.results) > 1:
+                apply_instability_security = True
+
+        if apply_instability_security:
             # check the ratio between the different submit
             th_maxwgt = [(r.th_maxwgt,i) for i,r in enumerate(grid_calculator.results)]
             th_maxwgt.sort()
             ratio = th_maxwgt[-1][0]/th_maxwgt[-2][0]
             if ratio > 1e4:
-                logger.warning("One Event with large weight have been found. This is likely due to numerical un-stability. We will discard the associated job to recover.")
+                logger.warning(
+""""One Event with large weight have been found (ratio = %.3g) in channel G%s (with rel.contrib=%.3g).
+This is likely due to numerical instabilities. The associated job is discarded to recover.
+For offline investigation, the problematic discarded events are stored in:
+%s"""%(ratio,G,rel_contrib,pjoin(Pdir,'DiscardedUnstableEvents')))
                 exclude_sub_jobs = list(exclude_sub_jobs)
                 exclude_sub_jobs.append(th_maxwgt[-1][1])
                 grid_calculator.results.run_statistics['skipped_subchannel'] += 1
+                
+                # Add some monitoring of the problematic events
+                gPath = pjoin(Pdir, "G%s_%s" % (G, th_maxwgt[-1][1]+1)) 
+                if os.path.isfile(pjoin(gPath,'events.lhe')):
+                    lhe_file = lhe_parser.EventFile(pjoin(gPath,'events.lhe'))
+                    discardedPath = pjoin(Pdir,'DiscardedUnstableEvents')
+                    if not os.path.exists(discardedPath):
+                        os.mkdir(discardedPath)    
+                    if os.path.isdir(discardedPath):
+                        # Keep only the event with a maximum weight, as it surely
+                        # is the problematic one.
+                        evtRecord = open(pjoin(discardedPath,'discarded_G%s.dat'%G),'a')
+                        evtRecord.write('\n'+str(max(lhe_file,key=lambda evt:abs(evt.wgt))))
+                        evtRecord.close()
+                
                 return self.combine_grid(Pdir, G, step, exclude_sub_jobs)
 
         
@@ -476,6 +515,11 @@ class gensym(object):
 
         if stats_msg:
             logger.log(5, stats_msg)
+
+        # Clean up grid_information to avoid border effects in case of a crash
+        for i in range(self.splitted_for_dir(Pdir, G)):
+            path = pjoin(Pdir, "G%s_%s" % (G, i+1)) 
+            os.remove(pjoin(path, 'grid_information'))
 
         return grid_calculator, cross, error
 

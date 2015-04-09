@@ -2545,7 +2545,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 # and is typically redundant with the Lorentz Rotation test
                 # self.MadLoopparam.set('NRotations_DP',1,ifnotdefault=False)
                 # Revert to the above if suspecting hidden numerical unstabilities
-                self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
+                self.MadLoopparam.set('NRotations_DP',1,ifnotdefault=False)
                 self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)                
             
             # Finally, the stability tests are slightly less reliable for process
@@ -2564,7 +2564,7 @@ Beware that this can be dangerous for local multicore runs.""")
     than four external legs, so this is not recommended (especially not for g g > z z).""")
                 self.MadLoopparam.set('MLStabThres',1.0e-7,ifnotdefault=False)
             else:
-                self.MadLoopparam.set('MLStabThres',1.0e-3,ifnotdefault=False)            
+                self.MadLoopparam.set('MLStabThres',1.0e-4,ifnotdefault=False)            
 
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
