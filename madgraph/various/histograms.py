@@ -1972,11 +1972,13 @@ if __name__ == "__main__":
                 histo.type += suffix
 
         if i==0 or all(_ not in ['--sum','--average'] for _ in sys.argv):
+            for j,hist in enumerate(new_histo_list):
+                new_histo_list[j]=hist*histo_norm
             histo_list.extend(new_histo_list)
             continue
         
         if any(_ in sys.argv for _ in ['--sum','--average']):
-            for j, hist in enumerate(histo_list):
+            for j, hist in enumerate(new_histo_list):
                  # First make sure the plots have the same weight labels and such
                  hist.test_plot_compability(histo_list[j])
                  # Now let the histogram module do the magic and add them.

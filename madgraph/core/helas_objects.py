@@ -2034,14 +2034,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return tuple(sorted(indices))
 
     def get_vertex_leg_numbers(self, 
-              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram"""
 
         if not self.get('mothers'):
             return []
 
         vertex_leg_numbers = [len(self.get('mothers')) + 1] if \
-                         self.get('interaction_id') not in veto_inter_id else []
+            (self.get('interaction_id') not in veto_inter_id) or\
+            (self.get('interaction_id')==-2 and len(self.get('mothers'))+1 > 
+                                                             max_n_loop) else []
         for mother in self.get('mothers'):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
                                                  veto_inter_id = veto_inter_id))
@@ -2995,14 +2998,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
         return tuple(sorted(indices))
 
     def get_vertex_leg_numbers(self, 
-              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram,
         This function is only used for establishing the multi-channeling, so that
         we exclude from it all the fake vertices and the vertices resulting from
         shrunk loops (id=-2)"""
 
         vertex_leg_numbers = [len(self.get('mothers'))] if \
-                             self['interaction_id'] not in veto_inter_id else []
+                             (self['interaction_id'] not in veto_inter_id) or \
+          (self['interaction_id']==-2 and len(self.get('mothers'))>max_n_loop) \
+                                                                         else []
         for mother in self.get('mothers'):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
                                                  veto_inter_id = veto_inter_id))
@@ -3166,11 +3172,12 @@ class HelasDiagram(base_objects.PhysicsObject):
         return coupling_orders
 
     def get_vertex_leg_numbers(self, 
-              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram"""
 
         return self.get('amplitudes')[0].get_vertex_leg_numbers(
-                                                    veto_inter_id=veto_inter_id)
+                             veto_inter_id=veto_inter_id, max_n_loop=max_n_loop)
 
     def get_regular_amplitudes(self):
         """ For regular HelasDiagrams, it is simply all amplitudes.
