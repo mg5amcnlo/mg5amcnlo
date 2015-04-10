@@ -701,6 +701,8 @@ class gen_ximprove(object):
             return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
         elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
             raise Exception, "Not implemented"
+        elif cmd.run_card["job_strategy"] == 2:
+            return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
         else:
             return super(gen_ximprove, cls).__new__(gen_ximprove_v4, cmd, opt)
             

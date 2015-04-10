@@ -989,7 +989,7 @@ class CheckValidForCmd(object):
         if  not os.path.exists('%s.gz' % input_file):
             if not os.path.exists(input_file):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
-            files.cp(input_file, output_file)
+            files.ln(input_file, os.path.dirname(output_file))
         else:
             misc.gunzip(input_file, keep=True, stdout=output_file)
         
@@ -1957,6 +1957,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def do_generate_events(self, line):
         """Main Commands: launch the full chain """
         
+        self.banner = None
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
@@ -2006,15 +2007,18 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 raise ZeroResult('See https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/FAQ-General-14')
 
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
+            
             self.exec_cmd('combine_events', postcmd=False)
             self.print_results_in_shell(self.results.current)
+
+            
             self.run_syscalc('parton')
-            self.create_plot('parton')
-            self.exec_cmd('store_events', postcmd=False)
-            self.exec_cmd('reweight -from_cards', postcmd=False)
-            self.exec_cmd('decay_events -from_cards', postcmd=False)
+            self.create_plot('parton')            
+            self.exec_cmd('store_events', postcmd=False)            
+            self.exec_cmd('reweight -from_cards', postcmd=False)            
+            self.exec_cmd('decay_events -from_cards', postcmd=False)            
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
-            # pythia launches pgs/delphes if needed
+            # pythia launches pgs/delphes if needed    
             self.store_result()
     
     def do_initMadLoop(self,line):
@@ -2156,6 +2160,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # Check argument's validity
         accuracy = self.check_calculate_decay_widths(args)
         self.ask_run_configuration('parton')
+        self.banner = None
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -2843,6 +2848,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
             tmpcluster = cluster.MultiCore(nb_core=1)
             tmpcluster.launch_and_wait('../bin/internal/run_combine', 
+                                       args=[self.run_name],
                                        cwd=pjoin(self.me_dir,'SubProcesses'),
                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
                                        required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
@@ -2871,6 +2877,7 @@ Beware that this can be dangerous for local multicore runs.""")
             
             # Define The Banner
             tag = self.run_card['run_tag']
+            
             # Update the banner with the pythia card
             if not self.banner:
                 self.banner = banner_mod.recover_banner(self.results, 'parton')
@@ -2885,8 +2892,10 @@ Beware that this can be dangerous for local multicore runs.""")
                                          '%s_%s_banner.txt' % (self.run_name, tag)))
             
             
-            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'))
-            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'))        
+            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'),
+                                    out=pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
+                                    out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
                     
         elif self.refine_mode == "new":
@@ -2936,10 +2945,6 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.create_root_file(output='%s/unweighted_events.root' % \
                                                                   self.run_name)
     
-
-
-
-    
     ############################################################################ 
     def do_store_events(self, line):
         """Advanced commands: Launch store events"""
@@ -2948,8 +2953,6 @@ Beware that this can be dangerous for local multicore runs.""")
         # Check argument's validity
         self.check_combine_events(args)
         self.update_status('Storing parton level results', level='parton')
-
-
 
         run = self.run_name
         tag = self.run_card['run_tag']
@@ -2964,6 +2967,7 @@ Beware that this can be dangerous for local multicore runs.""")
         input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
         output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
         files.cp(input, output) 
+
 
         # 2) Treat the files present in the P directory
         # Ensure that the number of events is different of 0 
@@ -3019,17 +3023,24 @@ Beware that this can be dangerous for local multicore runs.""")
         misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
                             cwd=pjoin(self.me_dir))
         
+        
         # 4) Move the Files present in Events directory
         E_path = pjoin(self.me_dir, 'Events')
         O_path = pjoin(self.me_dir, 'Events', run)
+        
         # The events file
         for name in ['events.lhe', 'unweighted_events.lhe']:
-            if os.path.exists(pjoin(E_path, name)):
-                if os.path.exists(pjoin(O_path, '%s.gz' % name)):
-                    os.remove(pjoin(O_path, '%s.gz' % name))
-                input = pjoin(E_path, name)
-                output = pjoin(O_path, name)
-                misc.gzip(input, stdout="%s.gz" % output, error=False)
+            finput = pjoin(E_path, name)
+            foutput = pjoin(O_path, name)
+            if os.path.exists(finput):
+                logger.debug("File %s exists BAAAAD. Not move anymore!" % pjoin(E_path, name))
+            if os.path.exists(foutput):
+                misc.gzip(foutput, stdout="%s.gz" % foutput, error=False)
+        #        if os.path.exists(pjoin(O_path, '%s.gz' % name)):
+        #            os.remove(pjoin(O_path, '%s.gz' % name))
+        #        input = pjoin(E_path, name)
+        ##        output = pjoin(O_path, name)
+              
 
         self.update_status('End Parton', level='parton', makehtml=False)
         devnull.close()
@@ -3128,6 +3139,7 @@ Beware that this can be dangerous for local multicore runs.""")
             self.configure_directory(html_opening =False)
             self.check_pythia(args)        
         
+        
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])
@@ -3148,7 +3160,7 @@ Beware that this can be dangerous for local multicore runs.""")
         try:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
         except Exception:
-            pass
+            pass        
         
         ## LAUNCHING PYTHIA
         tag = self.run_tag
@@ -3157,6 +3169,10 @@ Beware that this can be dangerous for local multicore runs.""")
                         argument= [pythia_src], stdout= pythia_log,
                         stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
+
+        os.remove(pjoin(self.me_dir, "Events", "unweighted_events.lhe"))
+
+
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
             logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
@@ -3204,6 +3220,8 @@ Beware that this can be dangerous for local multicore runs.""")
         td = self.options['td_path']
         
         
+ 
+        
         #Update the banner
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
         if int(self.run_card['ickkw']):
@@ -3219,8 +3237,7 @@ Beware that this can be dangerous for local multicore runs.""")
         self.run_hep2lhe(banner_path)
         if int(self.run_card['ickkw']):
             misc.gzip(pjoin(self.me_dir,'Events','beforeveto.tree'),
-                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
-                         
+                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))           
         if self.run_card['use_syst'] in self.true:
             # Calculate syscalc info based on syst.dat
             try:
@@ -3245,7 +3262,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.lhe')):
             misc.gzip(pjoin(self.me_dir,'Events','pythia_events.lhe'),
                       stdout=pjoin(self.me_dir,'Events', self.run_name,'%s_pythia_events.lhe.gz' % tag))
-        
+                
         self.update_status('finish', level='pythia', makehtml=False)
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
         if self.options['delphes_path']:
@@ -4123,10 +4140,11 @@ Beware that this can be dangerous for local multicore runs.""")
 
         os.environ['LHAPATH']=''
 
-        logger.info('running syscalc on mode %s' % mode)
+
         if self.run_card['use_syst'] not in self.true:
             return
         
+        logger.info('running syscalc on mode %s' % mode)        
         scdir = self.options['syscalc_path']
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')

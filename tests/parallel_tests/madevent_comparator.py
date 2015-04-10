@@ -505,7 +505,8 @@ class MG5Runner(MadEventRunner):
         dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
         SubProc=[name for name in os.listdir(dir_name + '/SubProcesses') 
                  if name[0]=='P' and 
-                 os.path.isdir(dir_name + '/SubProcesses/'+name)]
+                 os.path.isdir(dir_name + '/SubProcesses/'+name) and \
+                  name[1].isdigit()]
 
         output = {}
         

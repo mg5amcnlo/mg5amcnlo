@@ -547,13 +547,18 @@ class Banner(dict):
         
     
     @misc.multiple_try()
-    def add_to_file(self, path, seed=None):
+    def add_to_file(self, path, seed=None, out=None):
         """Add the banner to a file and change the associate seed in the banner"""
 
         if seed is not None:
             self.set("run_card", "iseed", seed)
-            
-        ff = self.write("%s.tmp" % path, close_tag=False,
+        
+        if not out:
+            path_out = "%s.tmp" % path
+        else:
+            path_out = out
+        
+        ff = self.write(path_out, close_tag=False,
                         exclude=['MGGenerationInfo', '/header', 'init'])
         ff.write("## END BANNER##\n")
         if self.lhe_version >= 3:
@@ -565,7 +570,10 @@ class Banner(dict):
             [ff.write(line) for line in open(path)]
         ff.write("</LesHouchesEvents>\n")
         ff.close()
-        files.mv("%s.tmp" % path, path)
+        if out:
+            os.remove(path)
+        else:
+            files.mv(path_out, path)
 
 
         

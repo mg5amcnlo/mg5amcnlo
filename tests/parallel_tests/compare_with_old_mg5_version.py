@@ -404,6 +404,7 @@ class OLDMG5Comparator(unittest.TestCase):
 
             # Do some cleanup
             my_comp.cleanup()   
+
     
     ############################################################################
     # Short test for the evaluation of the cross-section

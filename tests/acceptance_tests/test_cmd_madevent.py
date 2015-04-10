@@ -34,6 +34,8 @@ import madgraph.iolibs.files as files
 
 import madgraph.various.misc as misc
 import madgraph.various.lhe_parser as lhe_parser
+import madgraph.various.banner as banner_mod
+import madgraph.various.lhe_parser as lhe_parser
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -577,10 +579,31 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout,stderr=stdout)
         
         self.check_parton_output(cross=4.541638, error=0.035)
-        self.check_parton_output('run_02', cross=4.541638, error=0.035)
+        self.check_parton_output('run_02', cross=4.41887317, error=0.035)
         self.check_pythia_output()
         self.assertEqual(cwd, os.getcwd())
         #
+        
+        # Additional test: Check that the banner of the run_02 include correctly
+        # the ptheavy 50 information
+        banner = banner_mod.Banner(pjoin(self.run_dir, 'Events','run_01', 'run_01_fermi_banner.txt'))
+        run_card = banner.charge_card('run_card')
+        self.assertEqual(run_card['ptheavy'], 0)
+        
+        banner = banner_mod.Banner(pjoin(self.run_dir, 'Events','run_02', 'run_02_fermi_banner.txt'))
+        run_card = banner.charge_card('run_card')
+        self.assertEqual(run_card['ptheavy'], 50)
+        
+        events = lhe_parser.EventFile(pjoin(self.run_dir, 'Events','run_02', 'unweighted_events.lhe.gz'))
+        banner =  banner_mod.Banner(events.banner)
+        run_card = banner.charge_card('run_card')
+        self.assertEqual(run_card['ptheavy'], 50)
+        for event in events:
+            event.check()
+        
+        
+        
+        
 
     def load_result(self, run_name):
         
