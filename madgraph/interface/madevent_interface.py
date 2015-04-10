@@ -2547,9 +2547,9 @@ Beware that this can be dangerous for local multicore runs.""")
                 # When MC-ing over helicities, the manual TIR cache clearing is
                 # not necessary, so that one can use the lorentz check
                 # Using NRotations_DP=1 slows down the code by close to 100%
-                # and is typically redundant with the Lorentz Rotation test
-                # self.MadLoopparam.set('NRotations_DP',1,ifnotdefault=False)
-                # Revert to the above if suspecting hidden numerical unstabilities
+                # but it is typicaly safer.
+                # self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
+                # Revert to the above to be slightly less robust but twice faster.
                 self.MadLoopparam.set('NRotations_DP',1,ifnotdefault=False)
                 self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)                
             
