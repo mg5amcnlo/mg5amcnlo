@@ -26,6 +26,7 @@ C      the me
       PARAMETER (NEXTERNAL=4,NINCOMING=2)
 C     ---  particle masses
       REAL*8 PMASS(NEXTERNAL)
+      REAL*8 TOTALMASS
 C     ---  integer    n_max_cg
       INCLUDE 'ngraphs.inc'  !how many diagrams (could be useful to know...)
 
@@ -80,6 +81,11 @@ C     in coupl.inc .
       CALL SETPARA('param_card.dat')  !first call to setup the paramaters
       INCLUDE 'pmass.inc'  !set up masses
 
+      TOTALMASS = 0.0D0
+      DO I=1,NEXTERNAL
+        TOTALMASS = TOTALMASS + PMASS(I)
+      ENDDO
+
 C     ---  Now use a simple multipurpose PS generator (RAMBO) just to
 C      get a 
 C     RANDOM set of four momenta of given masses pmass(i) to be used
@@ -92,6 +98,9 @@ C
         SQRTS=PMASS(1)
       ELSE
         SQRTS=1000D0  !CMS energy in GEV
+        IF (SQRTS.LE.2.0D0*TOTALMASS) THEN
+          SQRTS = 2.0D0*TOTALMASS
+        ENDIF
       ENDIF
 
       CALL PRINTOUT()
