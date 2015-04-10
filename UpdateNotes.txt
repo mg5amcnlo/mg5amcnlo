@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.3.0.GM(09/03/15) OM+VH: Adding the possibility to compute cross-section/generate events for loop-induced process
+2.3.0.beta(10/04/15) OM+VH: Adding the possibility to compute cross-section/generate events for loop-induced process
 		JB+OM: Addign matchbox output for matching in the Matchbox framework
                 OM+VH: Change the handling of the run_card.
                       - The default value depends now of your running process
