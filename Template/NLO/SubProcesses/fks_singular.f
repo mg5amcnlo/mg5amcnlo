@@ -222,6 +222,9 @@ c the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'reweight0.inc'
       include 'timing_variables.inc'
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      integer iamp
       double precision wgt1,s_s,fks_Sij,fx_s,zero
       parameter (zero=0d0)
       external fks_Sij
@@ -243,8 +246,13 @@ c the list of weights using the add_wgt subroutine
       s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
       if (s_s.le.0d0) return
       call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s)
-      wgt1=-fx_s*s_s*f_s/g**(nint(2*wgtbpower+2))
-      call add_wgt(4,wgt1,0d0,0d0)
+      do iamp=1, amp_split_size
+        if (amp_split(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        wgt1=-amp_split(iamp)*s_s*f_s/g**(qcd_power)
+        call add_wgt(4,wgt1,0d0,0d0)
+      enddo
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
       return
@@ -259,6 +267,15 @@ c to the list of weights using the add_wgt subroutine
       include 'fks_powers.inc'
       include 'reweight.inc'
       include 'timing_variables.inc'
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      integer iamp
+      double precision amp_split_wgtdegrem_xi(amp_split_size),
+     $                 amp_split_wgtdegrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_muF(amp_split_size)
+      common /to_amp_split_deg/amp_split_wgtdegrem_xi,
+     $                         amp_split_wgtdegrem_lxi,
+     $                         amp_split_wgtdegrem_muF
       double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi_c,wgt1
      &     ,wgt3,g22
       external fks_Sij
@@ -282,15 +299,23 @@ c to the list of weights using the add_wgt subroutine
       if (y_ij_fks_ev.le.1d0-deltaS .or. pmass(j_fks).ne.0.d0) return
       s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(1),one)
       if (s_c.le.0d0) return
-      g22=g**(nint(2*wgtbpower+2))
-      call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c)
-      wgt1=-fx_c*s_c*f_c/g22
+      ! sreal_deg should be called **BEFORE** sreal 
+      ! in order not to overwrtie the amp_split array
       call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
      $     ,deg_lxi_c)
-      wgt1=wgt1+ ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)) )*
-     $     f_dc/g22
-      wgt3=wgtdegrem_muF*f_dc/g22
-      call add_wgt(5,wgt1,0d0,wgt3)
+      call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c)
+      do iamp=1, amp_split_size
+        if (amp_split(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        g22=g**(QCD_power)
+        wgt1=-amp_split(iamp)*s_c*f_c/g22
+        wgt1=wgt1+(amp_split_wgtdegrem_xi(iamp)+
+     $             amp_split_wgtdegrem_lxi(iamp)*log(xi_i_fks_cnt(1)))*
+     $       f_dc/g22
+        wgt3=amp_split_wgtdegrem_muF(iamp)*f_dc/g22
+        call add_wgt(5,wgt1,0d0,wgt3)
+      enddo
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
       return
@@ -305,6 +330,15 @@ c value to the list of weights using the add_wgt subroutine
       include 'reweight.inc'
       include 'fks_powers.inc'
       include 'timing_variables.inc'
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      integer iamp
+      double precision amp_split_wgtdegrem_xi(amp_split_size),
+     $                 amp_split_wgtdegrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_muF(amp_split_size)
+      common /to_amp_split_deg/amp_split_wgtdegrem_xi,
+     $                         amp_split_wgtdegrem_lxi,
+     $                         amp_split_wgtdegrem_muF
       double precision zero,one,s_sc,fks_Sij,fx_sc,wgt1,wgt3,deg_xi_sc
      $     ,deg_lxi_sc,g22
       external fks_Sij
@@ -332,14 +366,23 @@ c value to the list of weights using the add_wgt subroutine
      $     .or. pmass(j_fks).ne.0.d0 ) return
       s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
       if (s_sc.le.0d0) return
-      g22=g**(nint(2*wgtbpower+2))
-      call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
-      wgt1=fx_sc*s_sc*f_sc/g22
+      ! sreal_deg should be called **BEFORE** sreal 
+      ! in order not to overwrtie the amp_split array
       call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
-      wgt1=wgt1+(-(wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)))
-     &     *f_dsc(1)-(wgtdegrem_xi*f_dsc(2)+wgtdegrem_lxi*f_dsc(3)))/g22
-      wgt3=-wgtdegrem_muF*f_dsc(4)/g22
-      call add_wgt(6,wgt1,0d0,wgt3)
+      call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
+      do iamp=1, amp_split_size
+        if (amp_split(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        g22=g**(QCD_power)
+        wgt1=amp_split(iamp)*s_sc*f_sc/g22
+        wgt1=wgt1+(-(amp_split_wgtdegrem_xi(iamp)+
+     $               amp_split_wgtdegrem_lxi(iamp)*log(xi_i_fks_cnt(1)))*
+     $       f_dsc(1)-(amp_split_wgtdegrem_xi(iamp)*f_dsc(2)+
+     $                 amp_split_wgtdegrem_lxi(iamp)*f_dsc(3)))/g22
+        wgt3=-amp_split_wgtdegrem_muF(iamp)*f_dsc(4)/g22
+        call add_wgt(6,wgt1,0d0,wgt3)
+      enddo
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
       return
@@ -554,7 +597,6 @@ c Random numbers to be used in the plotting routine
       endif
       if (firsttime) then
 c Put here call to compute bpower
-CCCMZ         call compute_bpower(p_born,bpower)
          wgtbpower=bpower
 c Store the power of alphas of the Born events in the appl common block.
          if(iappl.ne.0) appl_bpower = wgtbpower
@@ -1887,7 +1929,6 @@ c
          fksmaxwgt=0.d0
          firsttime=.false.
 c Put here call to compute bpower
-CCCMZ         call compute_bpower(p_born,bpower)
          wgtbpower=bpower
 
 c Compute cpower done for bottom Yukawa, routine needs to be adopted
@@ -4154,9 +4195,15 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
 
 C keep track of each split orders
       integer iamp
-      double precision amp_split_deg_xi(amp_split_size), 
-     $                  amp_split_deg_lxi(amp_split_size)
-      common /to_amp_split_deg/amp_split_deg_xi,amp_split_deg_lxi
+      double precision amp_split_collrem_xi(amp_split_size), 
+     $                 amp_split_collrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_xi(amp_split_size),
+     $                 amp_split_wgtdegrem_lxi(amp_split_size),
+     $                 amp_split_wgtdegrem_muF(amp_split_size)
+      common /to_amp_split_deg/amp_split_wgtdegrem_xi,
+     $                         amp_split_wgtdegrem_lxi,
+     $                         amp_split_wgtdegrem_muF
+      double precision prefact_xi
 
       if(j_fks.gt.nincoming)then
 c Do not include this contribution for final-state branchings
@@ -4193,8 +4240,11 @@ c entering this function
       endif
 
       do iamp = 1, amp_split_size
-        amp_split_deg_xi(iamp) = 0d0
-        amp_split_deg_lxi(iamp) = 0d0
+        amp_split_collrem_xi(iamp) = 0d0
+        amp_split_collrem_lxi(iamp) = 0d0
+        amp_split_wgtdegrem_xi(iamp) = 0d0
+        amp_split_wgtdegrem_lxi(iamp) = 0d0
+        amp_split_wgtdegrem_muF(iamp) = 0d0
       enddo
 
 c A factor gS^2 is included in the Altarelli-Parisi kernels
@@ -4255,19 +4305,20 @@ c has to be inserted here
      &       xnorm
 
         do iamp = 1, amp_split_size
-          amp_split_deg_xi(iamp) = amp_split_deg_xi(iamp)+ 
+          amp_split_collrem_xi(iamp) = amp_split_collrem_xi(iamp)+ 
      &     dble(amp_split_cnt(iamp,1,iord))*oo2pi*collrem_xi_tmp*xnorm
-          amp_split_deg_lxi(iamp) = amp_split_deg_lxi(iamp)+
+          amp_split_collrem_lxi(iamp) = amp_split_collrem_lxi(iamp)+
      &     dble(amp_split_cnt(iamp,1,iord))*oo2pi*collrem_lxi_tmp*xnorm
+
+          prefact_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
+     &               apprime(iap) - xkkern
+          amp_split_wgtdegrem_xi(iamp) = amp_split_wgtdegrem_xi(iamp)+
+     &     oo2pi*dble(amp_split_cnt(iamp,1,iord))*prefact_xi*xnorm
+          amp_split_wgtdegrem_lxi(iamp) = amp_split_collrem_lxi(iamp)
+          amp_split_wgtdegrem_muF(iamp) = amp_split_wgtdegrem_muF(iamp)-
+     &     oo2pi*dble(amp_split_cnt(iamp,1,iord))*ap(iap)*xnorm
         enddo
 
-        if(doreweight)then
-          wgtdegrem_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
-     #               apprime(iap) - xkkern 
-          wgtdegrem_xi=oo2pi * dble(wgt1(1)) * wgtdegrem_xi * xnorm
-          wgtdegrem_lxi=collrem_lxi
-          wgtdegrem_muF= - oo2pi * dble(wgt1(1)) * ap(iap) * xnorm
-        endif
       enddo
       calculatedborn=.false.
 
