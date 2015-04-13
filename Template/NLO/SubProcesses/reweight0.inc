@@ -90,6 +90,10 @@ c Power of alpha_s in the Born (only used if jwgtinfo.eq.4)
       double precision wgtbpower
       common/cwgtbpower/wgtbpower
 
+c Power of a given contribution in the amp_split array
+      integer QCD_power
+      common/cQCDpower/QCD_power
+
 c This variable is only used in reweight_xsec.f and only if jwgtinfo.ne.4
 c If jwgtinfo.eq.4 the value in the common block is used
       double precision rwgtbpower

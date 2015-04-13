@@ -93,6 +93,9 @@ c to the list of weights using the add_wgt subroutine
       include 'reweight0.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      integer iamp
       double precision wgt_c
       double precision wgt1
       double precision p_born(0:3,nexternal-1)
@@ -108,8 +111,13 @@ c to the list of weights using the add_wgt subroutine
       if (f_b.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
       call sborn(p_born,wgt_c)
-      wgt1=wgt_c*f_b/g**(nint(2*wgtbpower))
-      call add_wgt(2,wgt1,0d0,0d0)
+      do iamp=1, amp_split_size
+        if (amp_split(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        wgt1=amp_split(iamp)*f_b/g**(qcd_power)
+        call add_wgt(2,wgt1,0d0,0d0)
+      enddo
       call cpu_time(tAfter)
       tBorn=tBorn+(tAfter-tBefore)
       return
@@ -171,6 +179,9 @@ c its value to the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'reweight0.inc'
       include 'timing_variables.inc'
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      integer iamp
       double precision x,dot,f_damp,ffact,s_ev,fks_Sij,p(0:3,nexternal)
      $     ,wgt1,fx_ev
       external dot,f_damp,fks_Sij
@@ -191,8 +202,13 @@ c its value to the list of weights using the add_wgt subroutine
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
-      wgt1=fx_ev*s_ev*f_r/g**(nint(2*wgtbpower+2))
-      call add_wgt(1,wgt1,0d0,0d0)
+      do iamp=1, amp_split_size
+        if (amp_split(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
+        call add_wgt(1,wgt1,0d0,0d0)
+      enddo
       call cpu_time(tAfter)
       tReal=tReal+(tAfter-tBefore)
       return
@@ -875,9 +891,9 @@ c        an analysis routine (i.e. same momenta and PDG codes)
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
+      qcdpower(icontr)=QCD_power
       if(type.eq.1) then
 c real emission
-         QCDpower(icontr)=nint(2*wgtbpower+2)
          do i=1,nexternal
             do j=0,3
                momenta(j,i,icontr)=p_ev(j,i)
@@ -886,11 +902,6 @@ c real emission
          enddo
       elseif(type.ge.2 .and. type.le.6) then
 c Born, counter term, or soft-virtual
-         if (type.eq.2) then
-            QCDpower(icontr)=nint(2*wgtbpower)
-         else
-            QCDpower(icontr)=nint(2*wgtbpower+2)
-         endif
          do i=1,nexternal
             do j=0,3
                if (p1_cnt(0,1,0).gt.0d0) then
