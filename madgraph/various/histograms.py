@@ -1871,13 +1871,17 @@ if __name__ == "__main__":
            '--show_full'     to show the complete output of what was read.
            '--show_short'    to show a summary of what was read.
            '--simple_ratios' to turn off correlations and error propagation in the ratio.
-           '--sum'           To sum all diagrams together
-           '--average'       To average all diagrams together
+           '--sum'           To sum all identical histograms together
+           '--average'       To average all identical histograms together
            '--rebin=<n>'     Rebin the plots by merging n-consecutive bins together.  
            '--assign_types=<type1>,<type2>,...' to assign a type to all histograms of the first, second, etc... files loaded.
+           '--multiply=<fact1>,<fact2>,...' to multiply all histograms of the first, second, etc... files by the fact1, fact2, etc...
            '--no_suffix'     Do no add any suffix (like '#1, #2, etc..) to the histograms types.
     """
-    
+
+    possible_options=['--help', '--gnuplot', '--HwU', '--types','--n_ratios','--no_scale','--no_pdf','--no_stat',\
+                      '--no_open','--show_full','--show_short','--simple_ratios','--sum','--average','--rebin',  \
+                      '--assign_types','--multiply','--no_suffix', '--out']
     n_ratios   = -1
     uncertainties = ['scale','pdf','statistical']
     auto_open = True
@@ -1889,6 +1893,11 @@ if __name__ == "__main__":
     if '--help' in sys.argv or len(sys.argv)==1:
         log('\n\n%s'%main_doc)
         sys.exit(0)
+
+    for arg in sys.argv[1:]:
+        if arg.startswith('--'):
+            if arg.split('=')[0] not in possible_options:
+                log('WARNING: option "%s" not valid. It will be ignored' % arg)
 
     arg_string=' '.join(sys.argv)
 
@@ -1933,22 +1942,25 @@ if __name__ == "__main__":
         uncertainties.remove('statistical')        
 
     n_files    = len([_ for _ in sys.argv[1:] if not _.startswith('--')])
-    histo_norm = 1.0
+    histo_norm = [1.0]*n_files
+
+    for arg in sys.argv[1:]:
+        if arg.startswith('--multiply='):
+            histo_norm = [(float(fact) if fact!='' else 1.0) for fact in \
+                                                arg[11:].split(',')]
+
     if '--average' in sys.argv:
-        histo_norm = 1.0/float(n_files)
+        histo_norm = [hist/float(n_files) for hist in histo_norm]
         
     log("=======")
     histo_list = HwUList([])
     for i, arg in enumerate(sys.argv[1:]):
-        n_files += 1
         if arg.startswith('--'):
             break
         log("Loading histograms from '%s'."%arg)
         if OutName=="":
             OutName = os.path.basename(arg).split('.')[0]+'_output'
         new_histo_list = HwUList(arg, accepted_types_order=accepted_types)
-        if n_files==1:
-            continue
         for histo in new_histo_list:
             if no_suffix:
                 continue
@@ -1973,7 +1985,7 @@ if __name__ == "__main__":
 
         if i==0 or all(_ not in ['--sum','--average'] for _ in sys.argv):
             for j,hist in enumerate(new_histo_list):
-                new_histo_list[j]=hist*histo_norm
+                new_histo_list[j]=hist*histo_norm[i]
             histo_list.extend(new_histo_list)
             continue
         
@@ -1982,7 +1994,7 @@ if __name__ == "__main__":
                  # First make sure the plots have the same weight labels and such
                  hist.test_plot_compability(histo_list[j])
                  # Now let the histogram module do the magic and add them.
-                 histo_list[j] += hist*histo_norm
+                 histo_list[j] += hist*histo_norm[i]
         
     log("A total of %i histograms were found."%len(histo_list))
     log("=======")
