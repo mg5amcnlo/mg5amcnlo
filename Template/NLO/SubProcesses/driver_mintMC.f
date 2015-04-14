@@ -724,7 +724,7 @@ c These should be ignored (but kept for 'historical reasons')
         nbody=.false.
       endif
       abrv=abrvinput(1:4)
-      if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
+      if(nbody.and.abrv.ne.'born'.and.abrv.ne.'virt'
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
         stop

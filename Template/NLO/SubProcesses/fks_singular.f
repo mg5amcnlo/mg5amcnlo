@@ -132,6 +132,15 @@ c value to the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'run.inc'
       include 'timing_variables.inc'
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      integer iamp
+      double precision amp_split_wgtnstmp(amp_split_size),
+     $                 amp_split_wgtwnstmpmuf(amp_split_size),
+     $                 amp_split_wgtwnstmpmur(amp_split_size)
+      common /to_amp_split_bsv/amp_split_wgtnstmp,
+     $                         amp_split_wgtwnstmpmuf,
+     $                         amp_split_wgtwnstmpmur
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2,g22
       parameter (pi=3.1415926535897932385d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -152,20 +161,28 @@ c value to the list of weights using the add_wgt subroutine
       if (f_nb.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
-      g2=g**(nint(2*wgtbpower))
-      g22=g**(nint(2*wgtbpower+2))
-      wgt1=wgtnstmp*f_nb/g22
       if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0) then
-         wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
+        write(*,*) 'FIX FXFX-MERGING in FKS_EW'
+        stop
+        wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
       endif
-      wgt2=wgtwnstmpmur*f_nb/g22
-      wgt3=wgtwnstmpmuf*f_nb/g22
-      call add_wgt(3,wgt1,wgt2,wgt3)
+      do iamp=1, amp_split_size
+        if (amp_split_wgtnstmp(iamp).eq.0d0.and.
+     $      amp_split_wgtwnstmpmur(iamp).eq.0d0.and.
+     $      amp_split_wgtwnstmpmuf(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        g22=g**(QCD_power)
+        wgt1=amp_split_wgtnstmp(iamp)*f_nb/g22
+        wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb/g22
+        wgt3=amp_split_wgtwnstmpmuf(iamp)*f_nb/g22
+        call add_wgt(3,wgt1,wgt2,wgt3)
+      enddo
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
-      virt_wgt_mint=virt_wgt*f_nb/g22
-      born_wgt_mint=born_wgt*f_b/g2
+      virt_wgt_mint=virt_wgt*f_nb
+      born_wgt_mint=born_wgt*f_b
       call cpu_time(tAfter)
       tIS=tIS+(tAfter-tBefore)
       return
@@ -305,7 +322,9 @@ c to the list of weights using the add_wgt subroutine
      $     ,deg_lxi_c)
       call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c)
       do iamp=1, amp_split_size
-        if (amp_split(iamp).eq.0d0) cycle
+        if (amp_split(iamp).eq.0d0.and.
+     $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
+     $      amp_split_wgtdegrem_lxi(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
         g22=g**(QCD_power)
@@ -371,7 +390,9 @@ c value to the list of weights using the add_wgt subroutine
       call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
       call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
       do iamp=1, amp_split_size
-        if (amp_split(iamp).eq.0d0) cycle
+        if (amp_split(iamp).eq.0d0.and.
+     $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
+     $      amp_split_wgtdegrem_lxi(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
         g22=g**(QCD_power)
@@ -1008,9 +1029,9 @@ c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
-            virt_wgt_mint=virt_wgt_mint*xlum*g_strong(i)**QCDpower(i)
+            virt_wgt_mint=virt_wgt_mint*xlum
      &           *rwgt_muR_dep_fac(sqrt(scales2(2,i)))
-            born_wgt_mint=born_wgt_mint*xlum*g_strong(i)**QCDpower(i)
+            born_wgt_mint=born_wgt_mint*xlum
      &           /(8d0*Pi**2)*rwgt_muR_dep_fac(sqrt(mu2_r))
          endif
       enddo
@@ -5232,8 +5253,11 @@ c For the MINT folding
       COMMON/c_nFKSprocess/nFKSprocess
       data nFKSprocess_col / 0 /
       data nFKSprocess_chg / 0 /
+      double precision bsv_wgt_mufoqes, bsv_wgt_mufomur
+      double precision contr_mufoqes, contr_mufomur
 C to keep track of the various split orders
       integer iamp
+      integer orders(nsplitorders)
       double precision amp_split_bsv(amp_split_size)
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
@@ -5241,6 +5265,15 @@ C to keep track of the various split orders
       save amp_split_virt_save
       double precision amp_split_virt(amp_split_size)
       common /to_amp_split_virt/amp_split_virt
+      double precision amp_split_wgtnstmp(amp_split_size),
+     $                 amp_split_wgtwnstmpmuf(amp_split_size),
+     $                 amp_split_wgtwnstmpmur(amp_split_size)
+      common /to_amp_split_bsv/amp_split_wgtnstmp,
+     $                         amp_split_wgtwnstmpmuf,
+     $                         amp_split_wgtwnstmpmur
+      double precision coupl_wgtwnstmpmuf
+
+      double precision amp_tot
 
       include "pmass.inc"
       
@@ -5285,17 +5318,11 @@ C links
         amp_split_virt(iamp)=0d0
       enddo
 
-      if (.not.(need_color_links_used.or.need_charge_links_used
-     #    .or.abrv.eq.'grid')) then
+      if (.not.(need_color_links_used.or.need_charge_links_used)) then
 C just return 0
          bsv_wgt=0d0
          virt_wgt=0d0
          born_wgt=0d0
-         if(doreweight)then
-           wgtnstmp=0d0
-           wgtwnstmpmuf=0d0
-           wgtwnstmpmur=0d0
-         endif
          goto 999
       endif
 
@@ -5318,9 +5345,8 @@ c Born contribution:
         amp_split_bsv(iamp)=amp_split_bsv(iamp)+amp_split(iamp)
       enddo
 
-      if (abrv.eq.'born' .or. abrv.eq.'grid') goto 549
-      if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
-     #       abrv.eq.'viLC') goto 547
+      if (abrv.eq.'born') goto 549
+      if (abrv.eq.'virt') goto 547
 
 c Q contribution eq 5.5 and 5.6 of FKS
 C loop over QCD/QED (iord=1,2 respectively)
@@ -5366,38 +5392,7 @@ C                 set charge factors
 
                if (i.gt.nincoming) then 
 C Q terms for final state partons
-                if(abrv.eq.'novA')then
-c 2+3+4
-                  Q = Q
-     &             -2*dlog(shat/QES2)*dlog(xicut_used)*c_used
-     &             -( dlog(deltaO/2d0)*( gamma_used-
-     &                     2d0*c_used*dlog(2d0*Ej/xicut_used/sqrtshat) )
-     &               +2*dlog(xicut_used)**2*c_used )
-     &             +gammap_used
-     &             +2d0*c_used*dlog(2d0*Ej/sqrtshat)**2
-     &             -2d0*gamma_used*dlog(2d0*Ej/sqrtshat)
-                elseif(abrv.eq.'novB')then
-c 2+3+4_mu
-                  Q = Q
-     &             -2*dlog(shat/QES2)*dlog(xicut_used)*c_used
-     &             -( dlog(deltaO/2d0)*( gamma_used-
-     &                     2d0*c_used*dlog(2d0*Ej/xicut_used/sqrtshat) )
-     &               +2*dlog(xicut_used)**2*c_used )
-                elseif(abrv.eq.'viSA')then
-c 1                
-                  Q = Q
-     &              -dlog(shat/QES2)*( gamma_used-
-     &                      2d0*c_used*dlog(2d0*Ej/sqrtshat) )
-                elseif(abrv.eq.'viSB')then
-c 1+4_L
-                  Q = Q
-     &              -dlog(shat/QES2)*( gamma_used-
-     &                      2d0*c_used*dlog(2d0*Ej/sqrtshat) )
-     &             +gammap_used
-     &             +2d0*c_used*dlog(2d0*Ej/sqrtshat)**2
-     &             -2d0*gamma_used*dlog(2d0*Ej/sqrtshat)
-                elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #                abrv.ne.'viLC')then
+                if(abrv.ne.'virt')then
 c 1+2+3+4
                   Q = Q+gammap_used
      &              -dlog(shat*deltaO/2d0/QES2)*( gamma_used-
@@ -5413,16 +5408,7 @@ c 1+2+3+4
 
                else
 C Q terms for initial state partons
-                if(abrv.eq.'novA'.or.abrv.eq.'novB')then
-c 2+3+4 or 2+3+4_mu
-                    Q=Q-2*dlog(shat/QES2)*dlog(xicut_used)*c_used
-     &              -dlog(q2fact(i)/shat)*(
-     &              gamma_used+2d0*c_used*dlog(xicut_used) )
-                elseif(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
-c 1 or 1+4_L
-                    Q=Q-dlog(shat/QES2)*gamma_used
-                elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #             abrv.ne.'viLC')then
+                if(abrv.ne.'virt')then
 c 1+2+3+4
                     Q=Q-dlog(q2fact(i)/QES2)*(
      &               gamma_used+2d0*c_used*dlog(xicut_used))
@@ -5451,12 +5437,10 @@ C end of the external particle loop
          endif
       enddo
 
-
 c     If doing MC over helicities, must sum over the two
 c     helicity contributions for the Q-terms of collinear limit.
  547  continue
-      if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
-     #    abrv.eq.'viLC') goto 548
+      if (abrv.eq.'virt') goto 548
 c
 c I(reg) terms, eq 5.5 of FKS
       nFKSprocess_save = nFKSprocess
@@ -5541,38 +5525,101 @@ c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
          virt_wgt=virt_wgt_save
 c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
       endif
-      if (abrv(1:4).ne.'virt')
+      if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1)
      &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*aso2pi
 
 c eq.(MadFKS.C.13)
-      if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
-          write(*,*) 'FIX visA, visB'
-          stop
-C        bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(shat/QES2)*
-C     #                       ao2pi*dble(wgt1(1))
-C      elseif(abrv.eq.'novA'.or.abrv.eq.'novB')then
-C        bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(q2fact(1)/shat)*
-C     #                       ao2pi*dble(wgt1(1))
-C      elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-C     #       abrv.ne.'viLC')then
-C         bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(q2fact(1)/QES2)*
-C     #                       ao2pi*dble(wgt1(1))
+      if(abrv.ne.'virt')then
+         ! this is to update the amp_split array
+         call sborn(p_born,wgt1)
+         bsv_wgt_mufoqes=0d0
+         do iamp=1,amp_split_size
+            if (dble(amp_split_cnt(iamp,1,qcd_pos)).eq.0d0) cycle
+            call amp_split_pos_to_orders(iamp, orders)
+            contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0+ren_group_coeff*wgtcpower) 
+     e        *log(q2fact(1)/QES2)*aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
+            amp_split_bsv(iamp) = amp_split_bsv(iamp)+contr_mufoqes
+            bsv_wgt_mufoqes=bsv_wgt_mufoqes+contr_mufoqes
+         enddo
+         bsv_wgt=bsv_wgt+bsv_wgt_mufoqes
       endif
-c eq.(MadFKS.C.14)
-CMZ         if(abrv(1:2).ne.'vi')then
-CMZ           bsv_wgt=bsv_wgt - 2*pi*(beta0*wgtbpower
-CMZ     #      +ren_group_coeff*wgtcpower)*log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
-CMZ         endif
 
+c  eq.(MadFKS.C.14)
+      if(abrv(1:2).ne.'vi')then
+CMZ        bsv_wgt=bsv_wgt - 2*pi*(beta0*wgtbpower
+CMZ     #      +ren_group_coeff*wgtcpower)*log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
+        bsv_wgt_mufomur=0d0
+        do iamp=1,amp_split_size
+          if (dble(amp_split_cnt(iamp,1,qcd_pos)).eq.0d0) cycle
+          call amp_split_pos_to_orders(iamp, orders)
+          contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0+ren_group_coeff*wgtcpower)
+     #      *log(q2fact(1)/scale**2)*aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
+          amp_split_bsv(iamp) = amp_split_bsv(iamp)+contr_mufomur
+          bsv_wgt_mufomur=bsv_wgt_mufomur+contr_mufomur
+       enddo
+       bsv_wgt=bsv_wgt+bsv_wgt_mufomur
+      endif
 
  549  continue
 
       wgtwnstmpmuf=0.d0
-CMZ         if(abrv.ne.'born' .and. abrv.ne.'grid')then
-CMZ            if(abrv(1:2).eq.'vi')then
-CMZ               wgtwnstmpmur=0.d0
-CMZ            else
-CMZ               do i=1,nincoming
+      wgtnstmp=0d0
+      wgtwnstmpmur=0.d0
+      do iamp = 1,amp_split_size
+        amp_split_wgtnstmp(iamp)=0d0
+        amp_split_wgtwnstmpmuf(iamp)=0d0
+        amp_split_wgtwnstmpmur(iamp)=0d0
+      enddo
+      if(abrv.ne.'born' .and. abrv.ne.'grid')then
+        call sborn(p_born,wgt1)
+        if(abrv(1:2).eq.'vi')then
+           wgtwnstmpmur=0.d0
+        else
+C loop over QCD/QED (iord=1,2 respectively)
+          do iord= 1,2
+C skip what we don't need
+            if (iord.eq.1) ipos_ord = qcd_pos
+            if (iord.eq.2) ipos_ord = qed_pos
+            if (.not.split_type_used(ipos_ord)) cycle
+            do i=1,nincoming
+              if (particle_type(i).eq.8) then
+                aj=0
+              elseif(abs(particle_type(i)).eq.3) then
+                aj=1
+              else
+                aj=-1
+              endif
+              if (ipos_ord.eq.qcd_pos) then
+C               set colour factors
+                if (aj.eq.-1) cycle
+                c_used = c(aj)
+                gamma_used = gamma(aj)
+                gammap_used = gammap(aj)
+              else if (ipos_ord.eq.qed_pos) then
+C               skip particles which are not photons or charged
+                if (particle_charge(i).eq.0d0.and.pdg_type(i).ne.22) cycle
+C               set charge factors
+                if (pdg_type(i).eq.22) then
+                  c_used = 0d0
+                  gamma_used = gamma_ph
+                  gammap_used = gammap_ph
+                else
+                  c_used = particle_charge(i)**2
+                  gamma_used = 3d0/2d0 * particle_charge(i)**2
+                  gammap_used = (13d0/2d0 - 2d0 * pi**2 / 3d0) * particle_charge(i)**2
+                endif
+              endif
+              do iamp=1,amp_split_size
+                if (dble(amp_split_cnt(iamp,1,ipos_ord)).eq.0d0) cycle
+                if (ipos_ord.eq.qcd_pos) then
+                  coupl_wgtwnstmpmuf=aso2pi
+                else if (ipos_ord.eq.qed_pos) then
+                  coupl_wgtwnstmpmuf=aeo2pi
+                endif
+                amp_split_wgtwnstmpmuf(iamp)=amp_split_wgtwnstmpmuf(iamp)-
+     #             (gamma_used+2d0*c_used*dlog(xicut_used))*
+     #             dble(amp_split_cnt(iamp,1,ipos_ord))*coupl_wgtwnstmpmuf
+              enddo
 CMZ                  if (particle_type(i).ne.1)then
 CMZ                     if (particle_type(i).eq.8) then
 CMZ                        aj=0
@@ -5582,20 +5629,36 @@ CMZ                     endif
 CMZ                     wgtwnstmpmuf=wgtwnstmpmuf-
 CMZ     #                   ( gamma(aj)+2d0*c(aj)*dlog(xicut_used) )
 CMZ                  endif
-CMZ               enddo
+              enddo !end loop i=1,nincoming
+            enddo !end loop iord=1,2
+            do iamp=1,amp_split_size
+              if (dble(amp_split_cnt(iamp,1,qcd_pos)).eq.0d0) cycle
+              if (wgtcpower.ne.0d0) then
+                write(*,*) 'FIX CPOWER'
+                stop
+              endif
+              call amp_split_pos_to_orders(iamp, orders)
+              amp_split_wgtwnstmpmur(iamp)=dble(amp_split_cnt(iamp,1,qcd_pos))*
+     #          2d0*pi*(beta0*dble(orders(qcd_pos)-2)/2d0+ 
+     #          ren_group_coeff*wgtcpower)*aso2pi
+            enddo
 CMZ               wgtwnstmpmuf=ao2pi*wgtwnstmpmuf*dble(wgt1(1))
-CMZ               wgtwnstmpmur=2*pi*(beta0*wgtbpower
-CMZ     #         +ren_group_coeff*wgtcpower)*ao2pi*dble(wgt1(1))
-CMZ            endif
+CCCMZ               wgtwnstmpmur=2*pi*(beta0*wgtbpower
+CCCMZ     #         +ren_group_coeff*wgtcpower)*ao2pi*dble(wgt1(1))
+        endif
 c bsv_wgt here always contains the Born; must subtract it, since 
 c we need the pure NLO terms only
-CMZ            wgtnstmp=bsv_wgt+virt_wgt-born_wgt-
-CMZ     #                wgtwnstmpmuf*log(q2fact(1)/QES2)-
-CMZ     #                wgtwnstmpmur*log(scale**2/QES2)
-CMZ         else
-CMZ            wgtnstmp=0d0
-CMZ            wgtwnstmpmur=0.d0
-CMZ         endif
+        do iamp=1,amp_split_size
+           amp_split_wgtnstmp(iamp)=amp_split_bsv(iamp)+
+     #                              amp_split_virt(iamp)-
+     #                              amp_split(iamp)-
+     #          log(q2fact(1)/QES2)*amp_split_wgtwnstmpmuf(iamp)-
+     #          log(scale**2/QES2)*amp_split_wgtwnstmpmur(iamp)
+        enddo
+CCMZ            wgtnstmp=bsv_wgt+virt_wgt-born_wgt-
+CCMZ     #                wgtwnstmpmuf*log(q2fact(1)/QES2)-
+CCMZ     #                wgtwnstmpmur*log(scale**2/QES2)
+      endif
 
       do iamp=1,amp_split_size
         amp_split(iamp)=amp_split_bsv(iamp)
@@ -5638,7 +5701,6 @@ c         print*,"LOOP2",(virtcor+born_wgt*4d0/3d0-double*pi**2/6d0)
 c         stop
  123     format(4(1x,d22.16))
       endif
-
 
  999  continue
       return
@@ -5859,30 +5921,7 @@ c$$$      return
         kikj=dot(p(0,n),p(0,m))
         rij=kikj/(2*Ei*Ej)
         if(abs(rij-1.d0).gt.1.d-6)then
-          if(abrv.eq.'novA')then
-c 2+3+4
-            tmp=2*dlog(shat/QES2)*dlog(xicut_used)+
-     #          2*dlog(xicut_used)**2+
-     #          2*dlog(xicut_used)*dlog(rij)-
-     #          ddilog(rij)+1d0/2d0*dlog(rij)**2-
-     #          dlog(1-rij)*dlog(rij)
-          elseif(abrv.eq.'novB')then
-c 2+3+4_mu
-            tmp=2*dlog(shat/QES2)*dlog(xicut_used)+
-     #          2*dlog(xicut_used)**2+
-     #          2*dlog(xicut_used)*dlog(rij)
-          elseif(abrv.eq.'viSA')then
-c 1                
-            tmp=1d0/2d0*dlog(shat/QES2)**2+
-     #          dlog(shat/QES2)*dlog(rij)
-          elseif(abrv.eq.'viSB')then
-c 1+4_L
-            tmp=1d0/2d0*dlog(shat/QES2)**2+
-     #          dlog(shat/QES2)*dlog(rij)-
-     #          ddilog(rij)+1d0/2d0*dlog(rij)**2-
-     #          dlog(1-rij)*dlog(rij)
-          elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #           abrv.ne.'viLC')then
+          if(abrv.ne.'virt')then
 c 1+2+3+4
             tmp=1d0/2d0*dlog(xicut_used**2*shat/QES2)**2+
      #          dlog(xicut_used**2*shat/QES2)*dlog(rij)-
@@ -5893,22 +5932,7 @@ c 1+2+3+4
              stop
           endif
         else
-          if(abrv.eq.'novA')then
-c 2+3+4
-            tmp=2*dlog(shat/QES2)*dlog(xicut_used)+
-     #          2*dlog(xicut_used)**2-pi2/6.d0
-          elseif(abrv.eq.'novB')then
-c 2+3+4_mu
-            tmp=2*dlog(shat/QES2)*dlog(xicut_used)+
-     #          2*dlog(xicut_used)**2
-          elseif(abrv.eq.'viSA')then
-c 1                
-            tmp=1d0/2d0*dlog(shat/QES2)**2
-          elseif(abrv.eq.'viSB')then
-c 1+4_L
-            tmp=1d0/2d0*dlog(shat/QES2)**2-pi2/6.d0
-          elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #           abrv.ne.'viLC')then
+          if(abrv.ne.'virt')then
 c 1+2+3+4
             tmp=1d0/2d0*dlog(xicut_used**2*shat/QES2)**2-pi2/6.d0
           else
@@ -5936,32 +5960,7 @@ c 1+2+3+4
         kikj=dot(p(0,n),p(0,m))
         rij=kikj/(2*Ei*Ej)
 
-        if(abrv.eq.'novA')then
-c 2+3+4
-          tmp=dlog(xicut_used)*dlog(shat/QES2)+
-     #        dlog(xicut_used)**2+
-     #        2*dlog(xicut_used)*dlog(kikj/(xmj*Ei))-
-     #        ddilog(1-(1+betaj)/(2*rij))+ddilog(1-2*rij/(1-betaj))+
-     #        1/2.d0*log(2*rij/(1-betaj))**2-pi2/12.d0-
-     #        1/4.d0*dlog((1+betaj)/(1-betaj))**2
-        elseif(abrv.eq.'novB')then
-c 2+3+4_mu
-          tmp=dlog(xicut_used)*dlog(shat/QES2)+
-     #        dlog(xicut_used)**2+
-     #        2*dlog(xicut_used)*dlog(kikj/(xmj*Ei))
-        elseif(abrv.eq.'viSA')then
-c 1                
-          tmp=1/4.d0*dlog(shat/QES2)**2+
-     #        dlog(shat/QES2)*dlog(kikj/(xmj*Ei))
-        elseif(abrv.eq.'viSB')then
-c 1+4_L
-          tmp=1/4.d0*dlog(shat/QES2)**2+
-     #        dlog(shat/QES2)*dlog(kikj/(xmj*Ei))-
-     #        ddilog(1-(1+betaj)/(2*rij))+ddilog(1-2*rij/(1-betaj))+
-     #        1/2.d0*log(2*rij/(1-betaj))**2-pi2/12.d0-
-     #        1/4.d0*dlog((1+betaj)/(1-betaj))**2
-        elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #         abrv.ne.'viLC')then
+        if(abrv.ne.'virt')then
 c 1+2+3+4
           tmp=dlog(xicut_used)*( dlog(xicut_used*shat/QES2)+
      #                           2*dlog(kikj/(xmj*Ei)) )-
@@ -5978,22 +5977,7 @@ c 1+2+3+4
         if(n.eq.m)then
           Ei=p(0,n)
           betai=sqrt(1-pmass(n)**2/Ei**2)
-          if(abrv.eq.'novA')then
-c 2+3+4
-            tmp=2*dlog(xicut_used)-
-     #          1/betai*dlog((1+betai)/(1-betai))
-          elseif(abrv.eq.'novB')then
-c 2+3+4_mu
-            tmp=2*dlog(xicut_used)
-          elseif(abrv.eq.'viSA')then
-c 1                
-            tmp=dlog(shat/QES2)
-          elseif(abrv.eq.'viSB')then
-c 1+4_L
-            tmp=dlog(shat/QES2)-
-     #          1/betai*dlog((1+betai)/(1-betai))
-          elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #           abrv.ne.'viLC')then
+          if(abrv.ne.'virt')then
 c 1+2+3+4
             tmp=dlog(xicut_used**2*shat/QES2)-
      #          1/betai*dlog((1+betai)/(1-betai))
@@ -6021,20 +6005,7 @@ c 1+2+3+4
           xi1a=kikj**2*(1+vij)/xmi2*( xj1a(arg1,arg2,tHVv,tHVvl)-
      #                                xj1a(arg3,arg4,tHVv,tHVvl) )
 
-          if(abrv.eq.'novA')then
-c 2+3+4
-            tmp=xi0*dlog(xicut_used)+1/2.d0*xi1a
-          elseif(abrv.eq.'novB')then
-c 2+3+4_mu
-            tmp=xi0*dlog(xicut_used)
-          elseif(abrv.eq.'viSA')then
-c 1                
-            tmp=1/2.d0*xi0*dlog(shat/QES2)
-          elseif(abrv.eq.'viSB')then
-c 1+4_L
-            tmp=1/2.d0*xi0*dlog(shat/QES2)+1/2.d0*xi1a
-          elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
-     #           abrv.ne.'viLC')then
+          if(abrv.ne.'virt')then
 c 1+2+3+4
             tmp=1/2.d0*xi0*dlog(xicut_used**2*shat/QES2)+1/2.d0*xi1a
           else

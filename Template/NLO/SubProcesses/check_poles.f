@@ -192,8 +192,13 @@ c initialization
             enddo
           enddo
           call sborn(p_born, born)
-          ! extra initialisation call
-          if (npointsChecked.eq.0)call BinothLHA(p_born, born, virt_wgt)
+          ! extra initialisation calls
+          if (npointsChecked.eq.0) then
+             write(*,*) 'INITIALIZATION POINT:'
+             call BinothLHA(p_born, born, virt_wgt)
+             write(*,*) 'RESULTS FROM INITIALIZATION POINTS WILL NOT'
+     1            //'BE USED FOR STATISTICS'
+          endif
           call BinothLHA(p_born, born, virt_wgt)
           write(*,*) 'MU_R    = ', ren_scale
           write(*,*) 'ALPHA_S = ', G**2/4d0/pi
@@ -219,7 +224,6 @@ C         Otherwise, perform the check
               else
                 write(*,*) 'FAILED', tolerance
                 nfail=nfail+1
-                stop
               endif
           endif
           write(*,*)

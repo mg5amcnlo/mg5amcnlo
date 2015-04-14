@@ -789,8 +789,6 @@ c
 
       abrvinput='     '
       write (*,*) "'all ', 'born', 'real', 'virt', 'novi' or 'grid'?"
-      write (*,*) "Enter 'born0' or 'virt0' to perform"
-      write (*,*) " a pure n-body integration (no S functions)"
       read(5,*) abrvinput
       if(abrvinput(5:5).eq.'0')then
         nbody=.true.
@@ -800,9 +798,7 @@ c
       abrv=abrvinput(1:4)
 c Options are way too many: make sure we understand all of them
       if ( abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
-     &     abrv.ne.'virt'.and.
-     &     abrv.ne.'viSC'.and.abrv.ne.'viLC'.and.abrv.ne.'novA'.and.
-     &     abrv.ne.'novB'.and.abrv.ne.'viSA'.and.abrv.ne.'viSB') then
+     &     abrv.ne.'virt') then
         write(*,*)'Error in input: abrv is:',abrv
         stop
       endif
