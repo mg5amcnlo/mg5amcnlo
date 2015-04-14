@@ -1857,8 +1857,8 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
 if __name__ == "__main__":
     main_doc = \
     """ For testing and standalone use. Usage:
-        python histograms.py <.HwU input_file_path_1> <.HwU input_file_path_2> ... --out=<output_file_path.format> <option>
-        Where <option> can be a list of the following: 
+        python histograms.py <.HwU input_file_path_1> <.HwU input_file_path_2> ... --out=<output_file_path.format> <options>
+        Where <options> can be a list of the following: 
            '--help'          See this message.
            '--gnuplot' or '' output the histograms read to gnuplot
            '--HwU'           to output the histograms read to the raw HwU source.
@@ -1872,7 +1872,7 @@ if __name__ == "__main__":
            '--show_short'    to show a summary of what was read.
            '--simple_ratios' to turn off correlations and error propagation in the ratio.
            '--sum'           To sum all identical histograms together
-           '--average'       To average all identical histograms together
+           '--average'       To average over all identical histograms
            '--rebin=<n>'     Rebin the plots by merging n-consecutive bins together.  
            '--assign_types=<type1>,<type2>,...' to assign a type to all histograms of the first, second, etc... files loaded.
            '--multiply=<fact1>,<fact2>,...' to multiply all histograms of the first, second, etc... files by the fact1, fact2, etc...
