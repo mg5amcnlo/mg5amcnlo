@@ -105,6 +105,8 @@ c others: same as 1 (for now)
 c APPLgrid switch
       integer iappl
       common /for_applgrid/ iappl
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
 c if ncalls0 is greater than 0, use the default running, i.e. do not
 c double the events after each iteration as well as use a fixed number
 c of intervals in the grids.
@@ -340,6 +342,7 @@ c Add the PS point to the result of this iteration
             vtot(i)=vtot(i)+f(i)
             etot(i)=etot(i)+f(i)**2
          enddo
+         if (f(1).ne.0d0) call HwU_add_points
       enddo
       do i=1,nintegrals
 c Number of phase-space points used
@@ -382,7 +385,8 @@ C If there was a large fluctation in this iteration, be careful with
 C including it in the accumalated results and plots.
       if (efrac(1).gt.0.3d0 .and. iappl.eq.0) then
 c Do not include the results in the plots
-         call accum(.false.)
+         if (fixed_order) call accum(.false.)
+         if (fixed_order) call HwU_accum_iter(.false.,ntotcalls(1))
       endif
       if (efrac(1).gt.0.3d0 .and. nit.gt.3 .and. iappl.eq.0) then
 c Do not include the results in the updating of the grids.
@@ -432,7 +436,7 @@ c Reset the MINT grids
                ymax_virt=xint_virt
             endif
             call reset_MC_grid  ! reset the grid for the integers
-            call initplot       ! Also reset all the plots
+            if (fixed_order) call initplot  ! Also reset all the plots
             do i=1,nintegrals
                ans(i)=0d0
                unc(i)=0d0
@@ -589,7 +593,8 @@ c Quit if the desired accuracy has been reached
             write (*,*) 'Found desired accuracy'
             nit=nitmax
 c Improve the stats in the plots
-            call accum(.true.)
+            if (fixed_order) call accum(.true.)
+            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
             goto 10
          elseif(unc_l3(1)/ans_l3(1)*max(1d0,chi2_l3(1)).lt.accuracy)
      $           then
@@ -602,7 +607,8 @@ c Improve the stats in the plots
                chi2(i)=chi2_l3(i)*dble(nit_included-1)
             enddo
 c Improve the stats in the plots
-            call accum(.true.)
+            if (fixed_order) call accum(.true.)
+            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
             goto 10
          endif
       endif
@@ -621,7 +627,8 @@ c Double the number of intervals in the grids if not yet reach the maximum
 c double the number of points for the next iteration
       if (double_events) ncalls0=ncalls0*2
 c Also improve stats in plots
-      call accum(.true.)
+      if (fixed_order) call accum(.true.)
+      if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
 c Do next iteration
       goto 10
       end

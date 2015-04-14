@@ -63,7 +63,7 @@ import math
 from madgraph import MG5DIR, MadGraph5Error
 import madgraph.various.misc as misc
 #import time
-import tests.unit_tests.various.test_aloha as test_aloha
+import tests.parallel_tests.test_aloha as test_aloha
 
 class MadSpinError(MadGraph5Error):
     pass
@@ -441,6 +441,7 @@ class dc_branch_from_me(dict):
             self['tree'][propa_id] = {'nbody': len(proc.get('legs'))-1,\
                                       'label':proc.get('legs')[0].get('id')}
             # loop over the child
+            child_propa_id = propa_id
             for c_nb,leg in enumerate(proc.get('legs')):
                 if c_nb == 0:
                     continue
@@ -449,12 +450,14 @@ class dc_branch_from_me(dict):
                 self["tree"][propa_id]["d%s" % c_nb]["label"] = c_pid
                 self["tree"][propa_id]["d%s" % c_nb]["labels"] = [c_pid]
                 if c_pid in to_decay:
-                    self["tree"][propa_id]["d%s" % c_nb]["index"] = propa_id-1
+                    child_propa_id -= 1
+                    self["tree"][propa_id]["d%s" % c_nb]["index"] = child_propa_id
                     self.nb_decays += 1
-                    add_decay(to_decay[c_pid].pop(), propa_id-1)
+                    child_propa_id = add_decay(to_decay[c_pid].pop(), child_propa_id)
                 else:
                     self.nexternal += 1
                     self["tree"][propa_id]["d%s" % c_nb]["index"] = self.nexternal
+            return child_propa_id
         
         # launch the recursive loop
         add_decay(process)
@@ -1063,9 +1066,11 @@ class AllMatrixElement(dict):
 
         s_and_t_channels = []
 
-        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
-                                             for config in configs])
-
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+          for config in configs if [d for d in config if d][0].\
+                                             get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
+    
         # Number of subprocesses
         #    nsubprocs = len(configs[0])
 
@@ -1075,7 +1080,7 @@ class AllMatrixElement(dict):
 
         for iconfig, helas_diags in enumerate(configs):
             if any([vert > minvert for vert in
-                            [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
+                    [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
                     # Only 3-vertices allowed in configs.inc
                     continue
             nconfigs += 1
@@ -1315,12 +1320,12 @@ class width_estimate(object):
 
         # Maybe the branching fractions are already given in the banner:
         self.extract_br_from_banner(self.banner)
-        to_decay = [p for p in to_decay if not p in self.br]
+        to_decay = list(to_decay)
         for part in to_decay[:]:
             if part in mgcmd._multiparticles:
                 to_decay += [self.pid2label[id] for id in mgcmd._multiparticles[part]]
                 to_decay.remove(part)
-        to_decay = list(set(to_decay))
+        to_decay = list(set([p for p in to_decay if not p in self.br]))
         
         if to_decay:
             logger.info('We need to recalculate the branching fractions for %s' % ','.join(to_decay))
@@ -2855,6 +2860,7 @@ class decay_all_events(object):
         #to remove potential pointless decay in the diagram generation.
         resonances = decay_misc.get_all_resonances(self.banner, 
                          self.mgcmd, self.mscmd.list_branches.keys())
+
         logger.debug('List of resonances:%s' % resonances)
         path_me = os.path.realpath(self.path_me) 
         width = width_estimate(resonances, path_me, self.banner, self.model,
@@ -3526,7 +3532,8 @@ class decay_all_events(object):
                 else:
                     # now we need to write the decay products in the event
                     # follow the decay chain order, so that we can easily keep track of the mother index
-                        
+                       
+                    map_to_part_number={}
                     for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
                         index_res_for_mom=decay_struct[part]['mg_tree'][-res-1][0]
                         if (res==-1):
@@ -3548,8 +3555,8 @@ class decay_all_events(object):
                                 "mass":mass,"helicity":helicity}
                             decayed_event.event2mg[part_number]=part_number
 
-                        mothup1=part_number
-                        mothup2=part_number
+                            map_to_part_number[res]=part_number
+   
 #
 #             Extract color information so that we can write the color flow
 #
@@ -3654,7 +3661,10 @@ class decay_all_events(object):
                             decay_struct[part]["tree"][indexd1]["colup2"]=d1colup2
                             istup=2                    
                             mass=mom.m
-                        
+                            map_to_part_number[indexd1]=part_number 
+ 
+                        mothup1=map_to_part_number[res]
+                        mothup2=map_to_part_number[res]
                         decayed_event.particle[part_number]={"pid":pid,\
                                 "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
                                 "colup1":d1colup1,"colup2":d1colup2,"momentum":mom,\
@@ -3685,10 +3695,10 @@ class decay_all_events(object):
                             decay_struct[part]["tree"][indexd2]["colup1"]=d2colup1
                             decay_struct[part]["tree"][indexd2]["colup2"]=d2colup2
                             mass=mom.m
+                            map_to_part_number[indexd2]=part_number
 
-
-                        mothup1=part_number-2
-                        mothup2=part_number-2
+                        mothup1=map_to_part_number[res]
+                        mothup2=map_to_part_number[res]
                         decayed_event.particle[part_number]={"pid":pid,"istup":istup,\
                            "mothup1":mothup1,"mothup2":mothup2,"colup1":d2colup1,\
                            "colup2":d2colup2,\
@@ -3776,8 +3786,7 @@ class decay_all_events(object):
                 assert production['total_br'] - min(total_br) < 1e-4
         
         self.branching_ratio = max(total_br) * eff
-        
-        
+
         #self.banner['madspin'] += ms_banner
         # Update cross-section in the banner
         if 'mggenerationinfo' in self.banner:
@@ -3785,9 +3794,15 @@ class decay_all_events(object):
             for i,line in enumerate(mg_info):
                 if 'Events' in line:
                     if eff == 1:
+                        self.err_branching_ratio = 0
                         continue
-                    nb_event =  int(int(mg_info[i].split()[-1]) * eff) 
+                    initial_event = int(mg_info[i].split()[-1])
+                    nb_event =  int(initial_event * eff) 
                     mg_info[i] = '#  Number of Events        :       %i' % nb_event
+                    if eff >0.5:
+                        self.err_branching_ratio = max(total_br) * math.sqrt(initial_event - eff * initial_event)/initial_event
+                    else:
+                        self.err_branching_ratio = max(total_br) * math.sqrt(eff * initial_event)/initial_event
                     continue
                 if ':' not in line:
                     continue
@@ -3801,6 +3816,9 @@ class decay_all_events(object):
                 else:
                     mg_info[i] = '%s : %s' % (info, value * self.branching_ratio)
                 self.banner['mggenerationinfo'] = '\n'.join(mg_info)
+                
+            
+        
         if 'init' in self.banner:
             new_init =''
             for line in self.banner['init'].split('\n'):

@@ -3,6 +3,11 @@
 event_file=$1
 save_wgts=$2
 
+# For support of LHAPATH in cluster mode                                                                                                                                                                    
+if [ $CLUSTER_LHAPATH ]; then
+  export LHAPATH=$CLUSTER_LHAPATH;
+fi
+
 if [[ -e ./reweight_xsec_events ]]
 then
     (echo $event_file; echo $save_wgts) | ./reweight_xsec_events > reweight_xsec_events.output

@@ -9,8 +9,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*(*) weights_info(*)
       integer i,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
-      character*5 cc(2)
-      data cc/'     ','Born '/
+      character*6 cc(2)
+      data cc/'|T@NLO','|T@LO '/
       call open_root_file()
       nwgt_analysis=nwgt
       do i=1,2

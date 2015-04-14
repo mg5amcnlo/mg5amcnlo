@@ -83,12 +83,18 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         if not identical_particle_factor:
             identical_particle_factor = process.identical_particle_factor()
         if process.get('perturbation_couplings') and \
-                process.get('NLO_mode') not in ['virt', 'loop']:
+                process.get('NLO_mode') not in ['virt', 'loop','noborn']:
             sorted_tags = sorted([IdentifyMETagFKS(d, model, ninitial) for d in \
                                       amplitude.get('diagrams')])
+        elif process.get('NLO_mode')=='noborn':
+            # For loop-induced processes, make sure to create the Tag based on
+            # the contracted diagram
+            sorted_tags = sorted([cls(d.get_contracted_loop_diagram(model,
+             amplitude.get('structure_repository')), model, ninitial) for d in \
+                                                     amplitude.get('diagrams')])
         else:
             sorted_tags = sorted([cls(d, model, ninitial) for d in \
-                                      amplitude.get('diagrams')])
+                                                     amplitude.get('diagrams')])
 
         # Do not use this for loop diagrams as for now the HelasMultiProcess
         # always contain only exactly one loop amplitude.
@@ -177,12 +183,15 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         if vertex.get('id') in [0,-1]:
             return ((vertex.get('id'),),)
 
-        inter = model.get_interaction(vertex.get('id'))
-        coup_keys = sorted(inter.get('couplings').keys())
-        ret_list = tuple([(key, inter.get('couplings')[key]) for key in \
+        if vertex.get('id') == -2:
+            ret_list = vertex.get('loop_tag')
+        else:
+            inter = model.get_interaction(vertex.get('id'))
+            coup_keys = sorted(inter.get('couplings').keys())
+            ret_list = tuple([(key, inter.get('couplings')[key]) for key in \
                           coup_keys] + \
                          [str(c) for c in inter.get('color')] + \
-                         inter.get('lorentz'))
+                         inter.get('lorentz')+sorted(inter.get('orders')))
                    
         if last_vertex:
             return ((ret_list,),)
@@ -260,6 +269,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
        IdentifySGConfigTag in diagram_symmetry.py (apart from leg number)
        to make sure symmetry works!"""
 
+
     def get_s_and_t_channels(self, ninitial, model, new_pdg, max_final_leg = 2):
         """Get s and t channels from the tag, as two lists of vertices
         ordered from the outermost s-channel and in/down towards the highest
@@ -278,14 +288,14 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             # Identify the chain closest to final_leg
             right_num = -1
             for num, link in enumerate(self.tag.links):
-                if len(link.vertex_id) == 2 and \
-                        link.vertex_id[-1][-1] == final_leg:
+                if len(link.vertex_id) == 3 and \
+                        link.vertex_id[1][-1] == final_leg:
                     right_num = num
             if right_num == -1:
                 # We need to look for leg number 1 instead
                 for num, link in enumerate(self.tag.links):
-                    if len(link.vertex_id) == 2 and \
-                       link.vertex_id[-1][-1] == 1:
+                    if len(link.vertex_id) == 3 and \
+                       link.vertex_id[1][-1] == 1:
                         right_num = num
             if right_num == -1:
                 # This should never happen
@@ -297,12 +307,14 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             # Create a new link corresponding to moving one step
             new_links = list(self.tag.links[:right_num]) + \
                                            list(self.tag.links[right_num + 1:])
+ 
             new_link = diagram_generation.DiagramTagChainLink(\
                                            new_links,
                                            self.flip_vertex(\
                                              self.tag.vertex_id,
                                              right_link.vertex_id,
                                              new_links))
+
             # Create a new final vertex in the direction of the right_link
             other_links = list(right_link.links) + [new_link]
             other_link = diagram_generation.DiagramTagChainLink(\
@@ -311,6 +323,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                                                  right_link.vertex_id,
                                                  self.tag.vertex_id,
                                                  other_links))
+
             self.tag = other_link
             done = [l for l in self.tag.links if \
                     l.end_link and l.links[0][1][0] == final_leg]
@@ -410,10 +423,6 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
 
         return schannels, tchannels
 
-
-
-
-
     @staticmethod
     def link_from_leg(leg, model):
         """Returns the end link for a leg needed to identify configs: 
@@ -435,37 +444,51 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the info needed to identify configs:
-        interaction color, mass, width. Also provide propagator PDG code."""
-
-        inter = model.get_interaction(vertex.get('id'))
+        interaction color, mass, width. Also provide propagator PDG code.
+        The third element of the tuple vertex_id serves to store potential
+        necessary information regarding the shrunk loop."""
+                
+        if isinstance(vertex,base_objects.ContractedVertex):
+            inter = None
+            # I don't add here the 'loop_tag' because it is heavy and in principle
+            # not necessary. It can however be added in the future if proven
+            # necessary.
+            loop_info = {'PDGs':vertex.get('PDGs'),
+                         'loop_orders':vertex.get('loop_orders')}
+        else:
+            # Not that it is going to be used here, but it might be eventually
+            inter = model.get_interaction(vertex.get('id'))
+            loop_info = {}
 
         if last_vertex:
             return ((0,),
                     (vertex.get('id'),
-                     min([l.get('number') for l in vertex.get('legs')])))
+                     min([l.get('number') for l in vertex.get('legs')])),
+                     loop_info)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             return ((part.get('color'),
                      part.get('mass'), part.get('width')),
                     (vertex.get('id'), 
                      vertex.get('legs')[-1].get('onshell'),
-                     vertex.get('legs')[-1].get('number')))
+                     vertex.get('legs')[-1].get('number')),
+                     loop_info)
 
     @staticmethod
     def flip_vertex(new_vertex, old_vertex, links):
         """Move the wavefunction part of propagator id appropriately"""
 
         # Find leg numbers for new vertex
-        min_number = min([l.vertex_id[-1][-1] for l in links if not l.end_link]\
+        min_number = min([l.vertex_id[1][-1] for l in links if not l.end_link]\
                          + [l.links[0][1][0] for l in links if l.end_link])
 
         if len(new_vertex[0]) == 1 and len(old_vertex[0]) > 1:
             # We go from a last link to next-to-last link 
             return (old_vertex[0], 
-                    (new_vertex[1][0], old_vertex[1][1], min_number))
+                    (new_vertex[1][0], old_vertex[1][1], min_number), new_vertex[2])
         elif len(new_vertex[0]) > 1 and len(old_vertex[0]) == 1:
             # We go from next-to-last link to last link - remove propagator info
-            return (old_vertex[0], (new_vertex[1][0], min_number))
+            return (old_vertex[0], (new_vertex[1][0], min_number), new_vertex[2])
 
         # We should not get here
         raise diagram_generation.DiagramTag.DiagramTagError, \
@@ -485,11 +508,22 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         # This shouldn't happen
         assert False
 
-    @staticmethod
-    def vertex_from_link(legs, vertex_id, model):
+    @classmethod
+    def vertex_from_link(cls, legs, vertex_id, model):
         """Return a vertex given a leg list and a vertex id"""
-        vertex = base_objects.Vertex({'legs': legs,
-                                      'id': vertex_id[1][0]})
+        
+        vert_ID = cls.id_from_vertex_id(vertex_id)
+        if vert_ID != -2:
+            vertex = base_objects.Vertex({'legs': legs,
+                                        'id': vert_ID})
+        else:
+            vertex = base_objects.ContractedVertex({'legs': legs,'id': -2})
+            for key, value in enumerate(cls.loop_info_from_vertex_id(vertex_id)):
+                # For now all the info put in the vertex_id is also an attribute
+                # of the ContractedVertex instance, i.e. 'PDGs' and 'loop_tag'
+                if key in vertex:
+                    vertex.set(key,value) 
+
         if len(vertex_id[1]) == 3:
             vertex.get('legs')[-1].set('onshell', vertex_id[1][1])
         return vertex
@@ -498,7 +532,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
     def id_from_vertex_id(vertex_id):
         """Return the numerical vertex id from a link.vertex_id"""
 
-        return vertex_id[-1][0]
+        return vertex_id[1][0]
 
 
 #===============================================================================
@@ -1442,7 +1476,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return return_dict
 
     def get_helas_call_dict(self, index=1, OptimizedOutput=False,
-                                                               specifyHel=True):
+                                            specifyHel=True,**opt):
         """ return a dictionary to be used for formatting
         HELAS call. The argument index sets the flipping while optimized output
         changes the wavefunction specification in the arguments."""
@@ -1524,6 +1558,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['CM'] = '%s' % self.get('mass') 
             else: 
                 output['CM'] ='CMASS_%s' % self.get('mass')
+        output.update(opt)
         return output
     
     def get_spin_state_number(self, flip=False):
@@ -1998,15 +2033,21 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return tuple(sorted(indices))
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram"""
 
         if not self.get('mothers'):
             return []
 
-        vertex_leg_numbers = [len(self.get('mothers')) + 1]
+        vertex_leg_numbers = [len(self.get('mothers')) + 1] if \
+            (self.get('interaction_id') not in veto_inter_id) or\
+            (self.get('interaction_id')==-2 and len(self.get('mothers'))+1 > 
+                                                             max_n_loop) else []
         for mother in self.get('mothers'):
-            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
+                                                 veto_inter_id = veto_inter_id))
 
         return vertex_leg_numbers
 
@@ -2898,8 +2939,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
         max_final_leg = 2
         if reverse_t_ch:
             max_final_leg = 1
-        tag = CanonicalConfigTag(self.get_base_diagram(wf_dict), model)
-        diagram = tag.diagram_from_tag(model)
+        # Note that here we do not specify a FDStructure repository, so that
+        # each loop diagram will recreate them. This is ok at this point because
+        # we do not need to have a canonical ID for the FD structures.
+        tag = CanonicalConfigTag(self.get_base_diagram(wf_dict).
+                                      get_contracted_loop_diagram(model), model)
+
         return tag.get_s_and_t_channels(ninitial, model, new_pdg, max_final_leg)
 
 
@@ -2952,16 +2997,26 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 
         return tuple(sorted(indices))
 
-    def get_vertex_leg_numbers(self):
-        """Get a list of the number of legs in vertices in this diagram"""
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
+        """Get a list of the number of legs in vertices in this diagram,
+        This function is only used for establishing the multi-channeling, so that
+        we exclude from it all the fake vertices and the vertices resulting from
+        shrunk loops (id=-2)"""
 
-        vertex_leg_numbers = [len(self.get('mothers'))]
+        vertex_leg_numbers = [len(self.get('mothers'))] if \
+                             (self['interaction_id'] not in veto_inter_id) or \
+          (self['interaction_id']==-2 and len(self.get('mothers'))>max_n_loop) \
+                                                                         else []
         for mother in self.get('mothers'):
-            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
+                                                 veto_inter_id = veto_inter_id))
 
         return vertex_leg_numbers
 
-    def get_helas_call_dict(self,index=1,OptimizedOutput=False,specifyHel=True):
+    def get_helas_call_dict(self,index=1,OptimizedOutput=False,
+                                 specifyHel=True,**opt):
         """ return a dictionary to be used for formatting
         HELAS call."""
         
@@ -2988,6 +3043,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         output['out'] = self.get('number') - flip
         output['propa'] = ''
+        output.update(opt)
         return output
 
 
@@ -3115,10 +3171,13 @@ class HelasDiagram(base_objects.PhysicsObject):
 
         return coupling_orders
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram"""
 
-        return self.get('amplitudes')[0].get_vertex_leg_numbers()
+        return self.get('amplitudes')[0].get_vertex_leg_numbers(
+                             veto_inter_id=veto_inter_id, max_n_loop=max_n_loop)
 
     def get_regular_amplitudes(self):
         """ For regular HelasDiagrams, it is simply all amplitudes.
@@ -3292,6 +3351,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         (without optimization then). This is called from the initialization
         and pulled out here in order to have the correct treatment in daughter
         classes."""
+        logger.debug('Computing the color basis')
         self.get('color_basis').build(self.get('base_amplitude'))
         self.set('color_matrix',
           color_amp.ColorMatrix(self.get('color_basis')))
@@ -4513,7 +4573,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                             get_helicity_states())\
                         for wf in self.get_external_wavefunctions() ], 1)
 
-    def get_helicity_matrix(self):
+    def get_helicity_matrix(self, allow_reverse=True):
         """Gives the helicity matrix for external wavefunctions"""
 
         if not self.get('processes'):
@@ -4523,7 +4583,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         model = process.get('model')
 
         return apply(itertools.product, [ model.get('particle_dict')[\
-                                  wf.get('pdg_code')].get_helicity_states()\
+                                  wf.get('pdg_code')].get_helicity_states(allow_reverse)\
                                   for wf in self.get_external_wavefunctions()])
 
     def get_hel_avg_factor(self):
@@ -5290,29 +5350,33 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         return ['matrix_elements']
 
     def __init__(self, argument=None, combine_matrix_elements=True,
-                 matrix_element_opts={}):
+                 matrix_element_opts={}, compute_loop_nc = False):
         """Allow initialization with AmplitudeList. Matrix_element_opts are 
         potential options to be passed to the constructor of the 
         HelasMatrixElements created. By default it is none, but when called from
         LoopHelasProcess, this options will contain 'optimized_output'."""
 
+
         if isinstance(argument, diagram_generation.AmplitudeList):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements', self.generate_matrix_elements(argument,
                             combine_matrix_elements = combine_matrix_elements,
-                            matrix_element_opts=matrix_element_opts))
+                            matrix_element_opts=matrix_element_opts,
+                            compute_loop_nc = compute_loop_nc))
         elif isinstance(argument, diagram_generation.MultiProcess):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements',
                      self.generate_matrix_elements(argument.get('amplitudes'),
                              combine_matrix_elements = combine_matrix_elements,
-                             matrix_element_opts = matrix_element_opts))
+                             matrix_element_opts = matrix_element_opts,
+                             compute_loop_nc = compute_loop_nc))
         elif isinstance(argument, diagram_generation.Amplitude):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements', self.generate_matrix_elements(\
                              diagram_generation.AmplitudeList([argument]),
                              combine_matrix_elements = combine_matrix_elements,
-                             matrix_element_opts = matrix_element_opts))
+                             matrix_element_opts = matrix_element_opts,
+                             compute_loop_nc = compute_loop_nc))
         elif argument:
             # call the mother routine
             super(HelasMultiProcess, self).__init__(argument)
@@ -5351,9 +5415,14 @@ class HelasMultiProcess(base_objects.PhysicsObject):
     #===========================================================================
 
     @classmethod
-    def process_color(cls,matrix_element, color_information):
+    def process_color(cls,matrix_element, color_information, compute_loop_nc=None):
         """ Process the color information for a given matrix
-        element made of a tree diagram """
+        element made of a tree diagram. compute_loop_nc is dummy here for the
+        tree-level Nc and present for structural reasons only."""
+        
+        if compute_loop_nc:
+            raise MadGraph5Error, "The tree-level function 'process_color' "+\
+             " of class HelasMultiProcess cannot be called with a value for compute_loop_nc"
         
         # Define the objects stored in the contained color_information
         for key in color_information:
@@ -5407,16 +5476,19 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
     @classmethod
     def generate_matrix_elements(cls, amplitudes, gen_color = True,
-                                decay_ids = [], combine_matrix_elements = True,
-                                matrix_element_opts = {}):
+        decay_ids = [], combine_matrix_elements = True, 
+        compute_loop_nc = False, matrix_element_opts = {}):
         """Generate the HelasMatrixElements for the amplitudes,
         identifying processes with identical matrix elements, as
         defined by HelasMatrixElement.__eq__. Returns a
         HelasMatrixElementList and an amplitude map (used by the
         SubprocessGroup functionality). decay_ids is a list of decayed
         particle ids, since those should not be combined even if
-        matrix element is identical. matrix_element_opts are potential
-        additional options to be passed to the HelasMatrixElements constructed."""
+        matrix element is identical. 
+        The compute_loop_nc sets wheter independent tracking of Nc power coming
+        from the color loop trace is necessary or not (it is time consuming).
+        Matrix_element_opts are potential additional options to be passed to 
+        the HelasMatrixElements constructed."""
 
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "%s is not valid AmplitudeList" % type(amplitudes)
@@ -5564,7 +5636,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 # The treatment of color is quite different for loop amplitudes
                 # than for regular tree ones. So the function below is overloaded
                 # in LoopHelasProcess
-                cls.process_color(matrix_element,color_information)                    
+                cls.process_color(matrix_element,color_information,\
+                                                compute_loop_nc=compute_loop_nc)                    
 
         if not matrix_elements:
             raise InvalidCmd, \

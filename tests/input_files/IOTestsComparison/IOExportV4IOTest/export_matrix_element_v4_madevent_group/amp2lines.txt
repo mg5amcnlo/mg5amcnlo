@@ -1,0 +1,6 @@
+AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))
+AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))
+AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))
+AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))
+AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))
+AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))

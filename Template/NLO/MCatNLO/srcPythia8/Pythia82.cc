@@ -42,7 +42,6 @@ int main() {
   CombineMatchingInput* combined = NULL;
   UserHooks* matching            = NULL;
 
-  pythia.init();
   string filename = pythia.word("Beams:LHEF");
 
   MyReader read(filename);
@@ -83,14 +82,18 @@ int main() {
     }
   }
 
+  pythia.init();
+
   HepMC::IO_BaseClass *_hepevtio;
   HepMC::Pythia8ToHepMC ToHepMC;
   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
   double nSelected;
+  int nTry;
   double norm;
 
   // Cross section
   double sigmaTotal  = 0.;
+  int iLHEFread=0;
 
   for (int iEvent = 0; ; ++iEvent) {
     if (!pythia.next()) {
@@ -131,8 +134,13 @@ int main() {
     //event weight
     cevwgt.EVWGT=hepmcevt->weights()[0];
 
-    //call the FORTRAN analysis for this event
-    read.lhef_read_wgts_(cwgt_ww);
+    //call the FORTRAN analysis for this event. First, make sure to
+    //re-synchronize the reading of the weights with the reading of
+    //the event. (They get desynchronised if an event was rejected).
+    nTry=pythia.info.nTried();
+    for (; iLHEFread<nTry ; ++iLHEFread) {
+      read.lhef_read_wgts_(cwgt_ww);
+    }
     pyanal_(cwgtinfo_nn,cwgt_ww);
 
     if (iEvent % nstep == 0 && iEvent >= 100){

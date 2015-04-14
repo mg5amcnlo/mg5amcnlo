@@ -832,8 +832,8 @@ from object_library import all_propagators, Propagator
         
         # Adding automatically identification for anti-particle if needed
         # + define identify_pid which keep tracks of the pdg_code identified
+        identify_pid = {}
         if identify_particles:
-            identify_pid = {}
             for new, old in identify_particles.items():
                 new_part = next((p for p in model.all_particles if p.name==new), None)
                 old_part = next((p for p in self.particles if p.name==old), None)

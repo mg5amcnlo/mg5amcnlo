@@ -23,12 +23,23 @@ import collections
 class FileWriter(file):
     """Generic Writer class. All writers should inherit from this class."""
 
+    supported_preprocessor_commands = ['if']
+    preprocessor_command_re=re.compile(
+                          "\s*(?P<command>%s)\s*\(\s*(?P<body>.*)\s*\)\s*{\s*"\
+                                   %('|'.join(supported_preprocessor_commands)))
+    preprocessor_endif_re=re.compile(\
+    "\s*}\s*(?P<endif>else)?\s*(\((?P<body>.*)\))?\s*(?P<new_block>{)?\s*")
+    
     class FileWriterError(IOError):
         """Exception raised if an error occurs in the definition
         or the execution of a Writer."""
 
         pass
 
+    class FilePreProcessingError(IOError):
+        """Exception raised if an error occurs in the handling of the
+        preprocessor tags '##' in the template file."""
+        pass
 
     def __init__(self, name, opt = 'w'):
         """Initialize file to write to"""
@@ -69,9 +80,11 @@ class FileWriter(file):
 
         pass
 
-    def writelines(self, lines):
+    def writelines(self, lines, context={}):
         """Extends the regular file.writeline() function to write out
-        nicely formatted code"""
+        nicely formatted code. When defining a context, then the lines
+        will be preprocessed to apply possible conditional statements on the
+        content of the template depending on the contextual variables specified."""
 
         splitlines = []
         if isinstance(lines, list):
@@ -84,10 +97,68 @@ class FileWriter(file):
         else:
             raise self.FileWriterError("%s not string" % repr(lines))
 
+        if len(context)>0:
+            splitlines = self.preprocess_template(splitlines,context=context)
+
         for line in splitlines:
             res_lines = self.write_line(line)
             for line_to_write in res_lines:
                 self.write(line_to_write)
+                
+    def preprocess_template(self, input_lines, context={}):
+        """ This class takes care of applying the pre-processing statements
+        starting with ## in the template .inc files, using the contextual
+        variables specified in the dictionary 'context' given in input with
+        the variable names given as keys and their respective value as values."""
+        
+        template_lines = []
+        if isinstance(input_lines, list):
+            for line in input_lines:
+                if not isinstance(line, str):
+                    raise self.FileWriterError("%s not string" % repr(input_lines))
+                template_lines.extend(line.split('\n'))
+        elif isinstance(input_lines, str):
+            template_lines.extend(input_lines.split('\n'))
+        else:
+            raise self.FileWriterError("%s not string" % repr(input_lines))
+        
+        # Setup the contextual environment
+        for contextual_variable, value in context.items():
+            exec('%s=%s'%(str(contextual_variable),repr(value)))
+        
+        res = []
+        # The variable below tracks the conditional statements structure
+        if_stack = []
+        for i, line in enumerate(template_lines):
+            if not line.startswith('##'):
+                if all(if_stack):
+                    res.append(line)
+                continue
+            preproc_command = self.preprocessor_command_re.match(line[2:])
+            # Treat the follow up of an if statement
+            if preproc_command is None:
+                preproc_endif = self.preprocessor_endif_re.match(line[2:])
+                if len(if_stack)==0 or preproc_endif is None:
+                    raise self.FilePreProcessingError, 'Incorrect '+\
+                             'preprocessing command %s at line %d.'%(line,i)
+                if preproc_endif.group('new_block') is None:
+                    if_stack.pop()
+                elif preproc_endif.group('endif')=='else':
+                    if_stack[-1]=(not if_stack[-1])
+            # Treat an if statement
+            elif preproc_command.group('command')=='if':
+                try:
+                    if_stack.append(eval(preproc_command.group('body'))==True)
+                except Exception, e:
+                    raise self.FilePreProcessingError, 'Could not evaluate'+\
+                      "python expression '%s' given the context %s provided."%\
+                            (preproc_command.group('body'),str(context))+\
+                                           "\nLine %d of file %s."%(i,self.name)
+        
+        if len(if_stack)>0:
+            raise self.FilePreProcessingError, 'Some conditional statements are'+\
+                                                     ' not properly terminated.'
+        return res
 
 #===============================================================================
 # FortranWriter
@@ -103,6 +174,7 @@ class FortranWriter(FileWriter):
 
     # Parameters defining the output of the Fortran writer
     keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
+                     '^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
                      '^do(?!\s+\d+)\s+': ('^enddo\s*$', 2),
                      '^subroutine': ('^end\s*$', 0),
                      'function': ('^end\s*$', 0)}
@@ -284,7 +356,7 @@ class FortranWriter(FileWriter):
                     splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
            i = i + 1
         return len(splitline)-1
-        
+
 #===============================================================================
 # CPPWriter
 #===============================================================================

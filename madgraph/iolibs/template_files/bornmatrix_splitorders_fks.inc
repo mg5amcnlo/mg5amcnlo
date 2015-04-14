@@ -182,7 +182,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER IHEL,IDEN,i,j,jj,glu_ij
-      REAL*8 borns(2,NSQAMPSO)
+      REAL*8 borns(2,0:NSQAMPSO)
       COMPLEX*16 BORNTILDE
       INTEGER NTRY(%(nconfs)d)
       DATA NTRY /%(nconfs)d*0/
@@ -218,7 +218,7 @@ C ----------
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
       if (NTRY(nFKSprocess).lt.2) then
          skip(nFKSprocess)=1			 
-         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.1)
+         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.-NHEL(GLU_IJ ,1))
             skip(nFKSprocess)=skip(nFKSprocess)+1
          enddo
          skip(nFKSprocess)=skip(nFKSprocess)-1
@@ -257,7 +257,7 @@ C ----------
       ENDDO
       hel_fac=1d0
       DO IHEL=1,NCOMB
-        if (nhel(glu_ij,ihel).le.0) then
+        if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             
             CALL BORN(P1,NHEL(1,IHEL),IHEL,T,borns)
@@ -265,10 +265,10 @@ C ----------
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
             ENDDO
-            if ( borns(1,1).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess) ) then
+            if ( borns(1,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess) ) then
               GOODHEL(IHEL,nFKSprocess)=.TRUE.
             endif
-            if ( borns(2,1).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) ) then
+            if ( borns(2,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) ) then
               GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess)=.TRUE.
             endif
 	  ENDIF
@@ -313,7 +313,7 @@ C
 C  
 C ARGUMENTS 
 C  
-      REAL*8 P(0:3,NEXTERNAL-1),borns(2,NSQAMPSO)
+      REAL*8 P(0:3,NEXTERNAL-1),borns(2,0:NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1), HELL
       COMPLEX*16 ANS(2,NSQAMPSO)
 C  
@@ -339,6 +339,7 @@ C
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
+      integer step_hel
 
 C
 C FUNCTION
@@ -360,16 +361,23 @@ C ----------
         borns(1,I)=0d0
         borns(2,I)=0d0
       ENDDO
+      borns(1,0)=0d0
+      borns(2,0)=0d0
       back_hel = nhel(glu_ij)
-      do ihel=-1,1,2
-        if (ihel.eq.-1.or.nhel(glu_ij).ne.0) then
+      if (back_hel.ne.0) then
+        step_hel=-2*back_hel
+      else
+        step_hel=1
+      endif
+      DO IHEL=back_hel,-back_hel,step_hel
+         IF (IHEL.EQ.back_hel.OR.NHEL(GLU_IJ).NE.0) THEN
         if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         if (.not. calculatedBorn) then
 %(helas_calls)s
         do i=1,ngraphs
-          if(ihel.eq.-1)then
+          if(ihel.eq.back_hel)then
             saveamp(i,hell)=amp(i)
-          elseif(ihel.eq.1)then
+          elseif(ihel.eq.-back_hel)then
             saveamp(i,hell+skip(nFKSprocess))=amp(i)
           else
             write(*,*) "ERROR #1 in born.f"
@@ -378,9 +386,9 @@ C ----------
         enddo
         elseif (calculatedBorn) then
         do i=1,ngraphs
-          if(ihel.eq.-1)then
+          if(ihel.eq.back_hel)then
             amp(i)=saveamp(i,hell)
-          elseif(ihel.eq.1)then
+          elseif(ihel.eq.-back_hel)then
             amp(i)=saveamp(i,hell+skip(nFKSprocess))
           else
             write(*,*) "ERROR #1 in born.f"
@@ -396,7 +404,7 @@ C ----------
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              BORNS(2-(1-ihel)/2,SQSOINDEXB(M,N))=BORNS(2-(1-ihel)/2,SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)   
+              BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))=BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)   
           ENDDO
         ENDDO
         ENDDO
@@ -406,12 +414,14 @@ C ----------
         do J = 1,NAMPSO
         Do I = 1, NCOLOR
           Jamp2(i,J)=Jamp2(i,J)+Jamp(i,J)*dconjg(Jamp(i,J))
-          Jamph(2-(1-ihel)/2,i,J)=Jamp(i,J)
+          Jamph(2-(1+back_hel*ihel)/2,i,J)=Jamp(i,J)
         Enddo
         ENDDO
       endif
       Enddo
       do i = 1, nsqampso
+      borns(1,0)=borns(1,0)+borns(1,i)
+      borns(2,0)=borns(2,0)+borns(2,i)
       ans(1,i) = borns(1,i) + borns(2,i) 
       enddo
       DO M = 1, NAMPSO

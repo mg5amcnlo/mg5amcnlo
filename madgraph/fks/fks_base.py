@@ -31,6 +31,8 @@ from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.fks_base')
 
 
+class NoBornException(Exception): pass
+
 #===============================================================================
 # FKS Process
 #===============================================================================
@@ -129,12 +131,11 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             del options['OLP']
 
         try:
-            # Now generate the borns 
-            super(FKSMultiProcess, self).__init__(*arguments)
-
-        except InvalidCmd as error:
+            # Now generating the borns for the first time.
+            super(FKSMultiProcess, self).__init__(*arguments,**options)
+        except diagram_generation.NoDiagramException as error:
             # If no born, then this process most likely does not have any.
-            raise InvalidCmd, "Born diagrams could not be generated for the "+\
+            raise NoBornException, "Born diagrams could not be generated for the "+\
                self['process_definitions'][0].nice_string().replace('Process',\
                'process')+". Notice that aMC@NLO does not handle loop-induced"+\
                " processes yet, but you can still use MadLoop if you want to "+\
@@ -200,7 +201,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             if self['process_definitions'][0].get('NLO_mode') == 'all':
                 self.generate_virtuals()
             
-            elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
+            elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real','LOonly']:
                 raise fks_common.FKSProcessError(\
                    "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
                    self['process_definitions'][0].get('NLO_mode'))
@@ -213,7 +214,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             n_diag_virt = sum([len(amp.get('loop_diagrams')) 
                      for amp in self.get_virt_amplitudes()])
 
-            if n_diag_virt == 0 and n_diag_real ==0:
+            if n_diag_virt == 0 and n_diag_real ==0 and \
+                    not self['process_definitions'][0].get('NLO_mode') == 'LOonly':
                 raise fks_common.FKSProcessError(
                         'This process does not have any correction up to NLO in %s'\
                         %','.join(perturbation))
@@ -520,7 +522,12 @@ class FKSProcess(object):
             self.nincoming = len([l for l in self.born_amp['process']['legs'] \
                                   if not l['state']])
                 
-            self.find_reals()
+            self.ndirs = 0
+            # generate reals, when the mode is not LOonly
+            # when is LOonly it is supposed to be a 'fake' NLO process
+            # e.g. to be used in merged sampels at high multiplicities
+            if self.born_amp['process']['NLO_mode'] != 'LOonly':
+                self.find_reals()
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):

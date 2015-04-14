@@ -18,6 +18,9 @@ COLORS = {
     'WHITE'    : WHITE,
 }
 
+for i in range(0,11):
+    COLORS['Level %i'%i] = COLORS['DEBUG']
+
 RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
 BOLD_SEQ  = "\033[1m"
@@ -30,7 +33,10 @@ class ColorFormatter(logging.Formatter):
 
     def format(self, record):
         levelname = record.levelname
-        color_choice = COLORS[levelname]
+        try:
+            color_choice = COLORS[levelname]
+        except KeyError:
+            color_choice = COLORS['INFO']
         new_args=[]
         # A not-so-nice but working way of passing arguments to this formatter
         # from MadGraph.

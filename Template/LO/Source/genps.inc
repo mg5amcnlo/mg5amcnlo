@@ -32,4 +32,9 @@ c*************************************************************************
       REAL*8 LIMHEL
       PARAMETER(LIMHEL=1e-6)
       INTEGER MAXTRIES
-      PARAMETER(MAXTRIES=100)
+      PARAMETER(MAXTRIES=10)
+C     To pass the helicity configuration chosen by the DiscreteSampler to 
+C     matrix<i>.f
+      double precision hel_jacobian
+	  INTEGER HEL_PICKED
+	  COMMON/HEL_PICKED/HEL_PICKED,hel_jacobian

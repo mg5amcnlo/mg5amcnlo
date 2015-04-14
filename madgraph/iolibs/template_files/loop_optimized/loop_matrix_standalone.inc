@@ -13,6 +13,39 @@ C
 %(process_lines)s
 C  
       IMPLICIT NONE
+C
+C USER CUSTOMIZABLE OPTIONS
+C 
+## if(ComputeColorFlows) {
+C The variables below are just used in the context of a JAMP consistency check turned off by default.
+      %(real_dp_format)s JAMP_DOUBLECHECK_THRES
+      PARAMETER (JAMP_DOUBLECHECK_THRES=1.0d-9)
+      LOGICAL DIRECT_ME_COMPUTATION, ME_COMPUTATION_FROM_JAMP
+C     Modify the logicals below to chose how the ME must be computed
+C        DIRECT_ME_COMPUTATION    = Each loop amplitude is squared individually against all amplitudes with its own color factor.
+C        ME_COMPUTATION_FROM_JAMP = Amplitudes are first projected onto color flows (many less of them) which are then squared to form the ME.
+C     When setting both computation method to .TRUE., their systematic comparisons will be printed out.
+## if(LoopInduced) {
+      DATA DIRECT_ME_COMPUTATION/.FALSE./
+c     When using this MadLoop output for integration with MadEvent, ME_COMPUTATION_FROM_JAMP *must* be set to .True. because it is necessary to compute the AMP2 setting up the multichanneling. 
+      DATA ME_COMPUTATION_FROM_JAMP/.TRUE./
+## } else {
+      DATA DIRECT_ME_COMPUTATION/.TRUE./
+      DATA ME_COMPUTATION_FROM_JAMP/.FALSE./
+## }
+## }
+C     This parameter is designed for the check timing command of MG5. It skips the loop reduction.
+      LOGICAL SKIPLOOPEVAL
+      PARAMETER (SKIPLOOPEVAL=.FALSE.)
+C     For timing checks. Stops the code after having only initialized its arrays from the external data files 
+	  LOGICAL BOOTANDSTOP
+      PARAMETER (BOOTANDSTOP=.FALSE.)
+## if(TIRCaching) {
+      INTEGER TIR_CACHE_SIZE
+C To change memory foot-print of MadLoop, you can change this parameter to be 0,1 or 2 *and recompile*.
+C Notice that this will impact MadLoop speed performances in the context of stability checks.
+      include 'tir_cache_size.inc'
+## }
 C  
 C CONSTANTS
 C
@@ -27,11 +60,16 @@ C
       PARAMETER ( ColorDenomFName='ColorDenomFactors.dat')
       PARAMETER ( Proc_Prefix='%(proc_prefix)s')
 
-	  %(nbornamps_decl)s
+## if (not LoopInduced) {
+	  INTEGER NBORNAMPS
+      PARAMETER (NBORNAMPS=%(nbornamps)d)
+## }
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
       PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d)
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NCOLORROWS
-	  PARAMETER (NCOLORROWS=%(nloopamps)d)
+	  PARAMETER (NCOLORROWS=NLOOPAMPS)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
@@ -65,14 +103,10 @@ C     At present, there are only CutTools,PJFry++,IREGI,Golem95
 C     Only CutTools provides QP
       INTEGER QP_NLOOPLIB
       PARAMETER (QP_NLOOPLIB=1)
-C     This parameter is designed for the check timing command of MG5
-      LOGICAL SKIPLOOPEVAL
-      PARAMETER (SKIPLOOPEVAL=.FALSE.)
-	  LOGICAL BOOTANDSTOP
-      PARAMETER (BOOTANDSTOP=.FALSE.)
 	  INTEGER MAXSTABILITYLENGTH
 	  DATA MAXSTABILITYLENGTH/20/
 	  common/%(proc_prefix)sstability_tests/maxstabilitylength
+
 C  
 C ARGUMENTS 
 C  
@@ -93,7 +127,7 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H,DUMMY,I_QP_LIB
+      INTEGER I,J,K,H,HEL_MULT,I_QP_LIB,DUMMY
 
       CHARACTER*512 ParamFN,HelConfigFN,LoopFilterFN,ColorNumFN,ColorDenomFN,HelFilterFN
 	  CHARACTER*512 TMP
@@ -120,9 +154,17 @@ C IF UNSTABLE IT GOES TO THE SAME PATTERN BUT STAB_INDEX IS THEN I+20.
       LOGICAL EVAL_DONE(MAXSTABILITYLENGTH)
 	  LOGICAL DOING_QP_EVALS
       INTEGER STAB_INDEX,BASIC_CT_MODE
-	  INTEGER N_DP_EVAL, N_QP_EVAL
-	  DATA N_DP_EVAL/1/
-	  DATA N_QP_EVAL/1/
+
+## if(LoopInduced){	  
+C This is used for loop-induced where the reference scale for comparisons is inferred from the first 30 points at most
+      INTEGER MAXNREF_EVALS
+      PARAMETER (MAXNREF_EVALS=30)
+      %(real_dp_format)s REF_EVALS(MAXNREF_EVALS)
+      DATA REF_EVALS/MAXNREF_EVALS*ZERO/
+      INTEGER NPSPOINTS
+      DATA NPSPOINTS/0/      
+## }
+
 	  %(real_dp_format)s ACC(0:NSQUAREDSO)
 	  %(real_dp_format)s DP_RES(3,0:NSQUAREDSO,MAXSTABILITYLENGTH)
 C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
@@ -134,8 +176,16 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  %(real_dp_format)s HELSAVED(3,NCOMB)
 	  INTEGER ITEMP
 	  LOGICAL LTEMP
-	  %(real_dp_format)s BORNBUFF(0:NSQSO_BORN)
-	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO),TEMP2
+	  %(real_dp_format)s BORNBUFF(0:NSQSO_BORN),TMPR
+	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO)
+## if(not AmplitudeReduction){
+	  %(real_dp_format)s TEMP2
+## }else{
+	  %(real_dp_format)s TEMP2(3)
+## }
+## if(ComputeColorFlows) {
+	  %(real_dp_format)s BUFFRES(0:3,0:NSQUAREDSO)
+## }
 	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
@@ -143,6 +193,10 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  DATA FOUNDLOOPFILTER/.TRUE./
       LOGICAL LOOPFILTERBUFF(NSQUAREDSO,NLOOPGROUPS)
 	  DATA ((LOOPFILTERBUFF(J,I),J=1,NSQUAREDSO),I=1,NLOOPGROUPS)/NSQSOXNLG*.FALSE./
+
+      LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
+      DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
+      COMMON/%(proc_prefix)sRUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
 
 	  INTEGER IDEN
       %(den_factor_line)s
@@ -161,12 +215,16 @@ C     Below are variables to bypass the checkphase and insure stability check to
 C
 C FUNCTIONS
 C
+	  INTEGER %(proc_prefix)sTIRCACHE_INDEX
       INTEGER %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP
 	  INTEGER %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP
 	  INTEGER %(proc_prefix)sML5SQSOINDEX
       INTEGER %(proc_prefix)sISSAME
       LOGICAL %(proc_prefix)sISZERO
       INTEGER SET_RET_CODE_U
+## if(LoopInduced){
+	  %(real_dp_format)s Median
+## }
 C  
 C GLOBAL VARIABLES
 C  
@@ -174,9 +232,19 @@ C
 	  include 'mp_coupl.inc'
 	  include 'MadLoopParams.inc'
 
+## if(ComputeColorFlows) {
+      %(real_dp_format)s RES_FROM_JAMP(0:3,0:NSQUAREDSO)
+	  common/%(proc_prefix)sDOUBLECHECK_JAMP/RES_FROM_JAMP,DIRECT_ME_COMPUTATION,ME_COMPUTATION_FROM_JAMP
+## }
+
       LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
 	  DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
       COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
+
+	  INTEGER N_DP_EVAL, N_QP_EVAL
+	  DATA N_DP_EVAL/1/
+	  DATA N_QP_EVAL/1/
+	  COMMON/%(proc_prefix)sN_EVALS/N_DP_EVAL,N_QP_EVAL
 
 	  LOGICAL CHECKPHASE
 	  DATA CHECKPHASE/.TRUE./
@@ -192,13 +260,13 @@ C
 	  DATA MP_DONE/.FALSE./
 	  common/%(proc_prefix)sMP_DONE/MP_DONE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE AVAILABLE OR NOT
-          LOGICAL LOOPLIBS_AVAILABLE(4)
-	  %(data_looplibs_av)s
+      LOGICAL LOOPLIBS_AVAILABLE(4)
+      DATA LOOPLIBS_AVAILABLE/%(data_looplibs_av)s/
 	  common/%(proc_prefix)sLOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS AVAILABLE OR NOT IN THE LOOPLIBS
 C     PJFry++ and Golem95 do not support direction test
-          LOGICAL LOOPLIBS_DIRECTEST(4)
-	  DATA LOOPLIBS_DIRECTEST /.TRUE.,.FALSE.,.TRUE.,.FALSE./
+      LOGICAL LOOPLIBS_DIRECTEST(4)
+	  DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE./
 
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHERE ELSE
@@ -232,7 +300,7 @@ C     Typically, the hel_offset is 10000
 	  INTEGER USERHEL
 	  DATA USERHEL/-1/
 	  common/%(proc_prefix)sUSERCHOICE/USERHEL
-
+	  
 C     This integer can be accessed by an external user to set its target squared split order.
 C     If set to a value different than -1, the code will try to avoid computing anything which
 C     does not contribute to contributions of squared split orders SQSO_TARGET and below.
@@ -252,19 +320,27 @@ C     loop split orders contributions have been reached already and the rest can
 	  DATA FILTER_SO/.FALSE./
 	  common/%(proc_prefix)sSO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
+C     Allows to forbid the zero helicity double check, no matter the value in MadLoopParams.dat
+C     This can be accessed with the SET_FORBID_HEL_DOUBLECHECK subroutine of MadLoopCommons.dat
+      LOGICAL FORBID_HEL_DOUBLECHECK
+	  COMMON/FORBID_HEL_DOUBLECHECK/FORBID_HEL_DOUBLECHECK
+
 	  integer I_SO
 	  DATA I_SO/1/
 	  common/%(proc_prefix)sI_SO/I_SO
 	  integer I_LIB
 	  DATA I_LIB/1/
 	  common/%(proc_prefix)sI_LIB/I_LIB
-C TILL NOW, ONLY CUTTOOLS PROVIDE QP
+C UTIL NOW, ONLY CUTTOOLS PROVIDE QP
        	  LOGICAL QP_TOOLS_AVAILABLE
        	  DATA QP_TOOLS_AVAILABLE/.FALSE./
        	  INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
        	  common/%(proc_prefix)sLOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
 
-	  %(dp_born_amps_decl)s	  
+## if(not LoopInduced) {
+	  %(complex_dp_format)s AMP(NBORNAMPS)
+	  common/%(proc_prefix)sAMPS/AMP
+## }
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/W  
 
@@ -275,16 +351,36 @@ C TILL NOW, ONLY CUTTOOLS PROVIDE QP
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/WL,PL
 
+## if(not AmplitudeReduction){
 	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## } else {
+	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
 	  common/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
+## if(AmplitudeReduction) {
+C This flag is used to prevent the re-computation of the OpenLoop coefficients when changing the CTMode for the stability test.
+	  LOGICAL SKIP_LOOPNUM_COEFS_CONSTRUCTION
+	  DATA SKIP_LOOPNUM_COEFS_CONSTRUCTION/.FALSE./
+	  COMMON/%(proc_prefix)sSKIP_COEFS/SKIP_LOOPNUM_COEFS_CONSTRUCTION
+## }
+
+## if(TIRCaching){
+	  LOGICAL TIR_DONE(NLOOPGROUPS)
+	  COMMON/%(proc_prefix)sTIRCACHING/TIR_DONE
+## }
+
+## if(not AmplitudeReduction){
       %(complex_dp_format)s AMPL(3,NCTAMPS)
+## } else {
+      %(complex_dp_format)s AMPL(3,NLOOPAMPS)
+## }
 	  common/%(proc_prefix)sAMPL/AMPL
 
       %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
 	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
 	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
-
+	  
 	  INTEGER CF_D(NCOLORROWS,%(color_matrix_size)s)
 	  INTEGER CF_N(NCOLORROWS,%(color_matrix_size)s)
 	  common/%(proc_prefix)sCF/CF_D,CF_N
@@ -321,16 +417,40 @@ C BEGIN CODE
 C ----------
 
 IF(ML_INIT) THEN
+  ML_INIT = .FALSE.
   CALL PRINT_MADLOOP_BANNER()
   TMP = 'auto'
   CALL setMadLoopPath(TMP)
   CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
   CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
-  ML_INIT = .FALSE.
+  IF (FORBID_HEL_DOUBLECHECK) THEN
+    DoubleCheckHelicityFilter = .False. 
+  ENDIF 
+## if(LoopInduced){
+  IF(.NOT.LoopInitStartOver) THEN
+    WRITE(*,*) 'INFO: For loop-induced processes it is preferable to always set the parameter LoopInitStartOver to True, so it is hard-set here to True.'
+    LoopInitStartOver=.TRUE.
+  ENDIF
+  IF(.NOT.HelInitStartOver) THEN
+    WRITE(*,*) "INFO: For loop-induced processes it is preferable to always set the parameter HelInitStartOver to True, so it is hard-set here to True.'
+    HelInitStartOver=.TRUE.
+  ENDIF
+  IF (CheckCycle.LT.5) THEN
+    WRITE(*,*) "INFO: Due to the dynamic setting of the reference scale for contributions comparisons, it is preferable to set the parameter CheckCycle to a value larger than 4, so it is hard-set here to 5.'
+    CheckCycle=5
+  ENDIF
+## }
+
+C Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
+  if(.NOT.AUTOMATIC_TIR_CACHE_CLEARING) THEN
+    IF(NROTATIONS_DP.NE.0.or.NROTATIONS_QP.NE.0) THEN
+      WRITE(*,*) 'INFO: AUTOMATIC_TIR_CACHE_CLEARING is disabled, so MadLoop automatically resets NROTATIONS_DP and NROTATIONS_QP to 0.'
+      NROTATIONS_QP=0
+      NROTATIONS_DP=0
+    ENDIF
+  ENDIF
 ENDIF
 
-IF(NTRY.EQ.0) THEN
-C  CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
   QP_TOOLS_AVAILABLE=.FALSE.
   INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
 C SKIP THE ONES THAT NOT AVAILABLE
@@ -366,35 +486,6 @@ C Setup the file paths
   CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
 
   CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)  
-
-  HELDOUBLECHECKED=.NOT.DoubleCheckHelicityFilter
-OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
-  DO J=1,NLOOPGROUPS
-    READ(1,*,END=101) (GOODAMP(I,J),I=1,NSQUAREDSO)
-  ENDDO
-  GOTO 101
-100  CONTINUE
-  FOUNDLOOPFILTER=.FALSE.
-  DO J=1,NLOOPGROUPS
-    DO I=1,NSQUAREDSO
-	  GOODAMP(I,J)=(.NOT.USELOOPFILTER)
-	ENDDO
-  ENDDO
-101  CONTINUE
-CLOSE(1)
-
-OPEN(1, FILE=HelFilterFN, err=102, status='OLD',           action='READ')
-  DO I=1,NCOMB
-    READ(1,*,END=103) GOODHEL(I)
-  ENDDO
-  GOTO 103
-102  CONTINUE
-  FOUNDHELFILTER=.FALSE.
-  DO J=1,NCOMB
-	GOODHEL(J)=1
-  ENDDO
-103  CONTINUE
-CLOSE(1)
 
 OPEN(1, FILE=ColorNumFN, err=104, status='OLD',           action='READ')
   DO I=1,NCOLORROWS
@@ -444,11 +535,99 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
     WRITE(*,*) 'Stopped by user request.'
     stop
   ENDIF
+
+IF(NTRY.EQ.0) THEN
+  HELDOUBLECHECKED=(.NOT.DoubleCheckHelicityFilter).OR.(HelicityFilterLevel.eq.0)
+OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
+  DO J=1,NLOOPGROUPS
+    READ(1,*,END=101) (GOODAMP(I,J),I=1,NSQUAREDSO)
+  ENDDO
+  GOTO 101
+100  CONTINUE
+  FOUNDLOOPFILTER=.FALSE.
+  DO J=1,NLOOPGROUPS
+    DO I=1,NSQUAREDSO
+	  GOODAMP(I,J)=(.NOT.USELOOPFILTER)
+	ENDDO
+  ENDDO
+101  CONTINUE
+CLOSE(1)
+
+IF (HelicityFilterLevel.eq.0) then
+  FOUNDHELFILTER=.TRUE.
+  DO J=1,NCOMB
+	GOODHEL(J)=1
+  ENDDO
+  GOTO 122
+ENDIF
+OPEN(1, FILE=HelFilterFN, err=102, status='OLD',           action='READ')
+  DO I=1,NCOMB
+    READ(1,*,END=103) GOODHEL(I)
+  ENDDO
+  GOTO 103
+102  CONTINUE
+  FOUNDHELFILTER=.FALSE.
+  DO J=1,NCOMB
+	GOODHEL(J)=1
+  ENDDO
+103  CONTINUE
+CLOSE(1)
+IF (HelicityFilterLevel.eq.1) then
+C We must make sure to remove the matching-helicity optimisation, as requested by the user.
+  DO J=1,NCOMB
+    IF ((GOODHEL(J).GT.1).OR.(GOODHEL(J).LT.-HELOFFSET)) THEN
+	  GOODHEL(J)=1
+	ENDIF
+  ENDDO
+ENDIF
+122  CONTINUE
 ENDIF
 
-%(compute_born)s
+## if(LoopInduced){
+C The born is of course 0 for loop-induced processes.
+DO I=0,NSQUAREDSO
+  ANS(0,I)=0.0d0
+ENDDO
+## }else{
+C First compute the borns, it will store them in ANS(0,I)
+C It is left untouched for the rest of MadLoop evaluation.
+C Notice that the squared split order index I does NOT
+C correspond to the same ordering of J for the loop ME 
+C results stored in ANS(K,J), with K in [1-3].The ordering 
+C of each can be obtained with ML5SOINDEX_FOR_SQUARED_ORDERS 
+C and SQSOINDEX_FROM_ORDERS for the loop ME and born ME 
+C respectively. For this to work, we assume that there is 
+C always more squared split orders in the loop ME than in the
+C born ME, which is practically always true. In any case, only
+C the split_order summed value I=0 is used in ML5 code.
+DO I=0,NSQSO_BORN
+  BORNBUFF(I)=0.0d0
+ENDDO
+CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,BORNBUFF(0))
+DO I=0,NSQSO_BORN
+  ANS(0,I)=BORNBUFF(I)
+ENDDO
+## }
 
-%(set_reference)s
+## if(LoopInduced){
+C For loop-induced, the reference for comparison is set later from the total contribution of the previous PS point considered.
+C But you can edit here the value to be used for the first PS points.    
+IF (NPSPOINTS.EQ.0) THEN
+  REF=1.0D-50
+ELSE
+  IF(NPSPOINTS.GE.MAXNREF_EVALS) THEN
+    REF=Median(REF_EVALS,MAXNREF_EVALS)
+  ELSE
+    REF=Median(REF_EVALS,NPSPOINTS)
+  ENDIF
+ENDIF
+## }else{
+C We set here the reference to the born summed over all split orders
+REF=0.0d0
+DO I=1,NSQSO_BORN
+REF=REF+ANS(0,I)
+ENDDO
+## }
 
 MP_DONE=.FALSE.
 MP_DONE_ONCE=.FALSE.
@@ -460,7 +639,13 @@ DO I=2,MAXSTABILITYLENGTH
   EVAL_DONE(I)=.FALSE.
 ENDDO
 
+## if(LoopInduced) {
+C For loop-induced processes, we should make sure not to use the first points
+C to set the filters because it doesn't have a reasonable REF scale yet.
+IF(.NOT.BYPASS_CHECK.AND.NPSPOINTS.GE.1) THEN
+## } else {
 IF(.NOT.BYPASS_CHECK) THEN
+## }
   NTRY=NTRY+1
 ENDIF
 
@@ -483,8 +668,7 @@ ENDIF
 CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
 IF (WriteOutFilters) THEN
-IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
-
+IF ((HelicityFilterLevel.ne.0).AND.(.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
 OPEN(1, FILE=HelFilterFN, err=110, status='NEW',action='WRITE')
   DO I=1,NCOMB
     WRITE(1,*) GOODHEL(I)  
@@ -550,6 +734,12 @@ DO I=1,NEXTERNAL
   ENDDO
 ENDDO
 
+## if(TIRCaching){
+IF (AUTOMATIC_TIR_CACHE_CLEARING) THEN
+  CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+ENDIF
+## }
+
 IF (ImprovePSPoint.ge.0) THEN
 C Make the input PS more precise (exact onshell and energy-momentum conservation)
   CALL %(proc_prefix)sIMPROVE_PS_POINT_PRECISION(PS)
@@ -565,14 +755,79 @@ DO K=1, 3
   DO I=0,NSQUAREDSO
     BUFFR(K,I)=0.0d0
   ENDDO
+## if(not AmplitudeReduction){
   DO I=1,NCTAMPS
+## }else{
+  DO I=1,NLOOPAMPS
+## }
     AMPL(K,I)=(0.0d0,0.0d0)
   ENDDO
 ENDDO
-C     USE THE FIRST LOOP REDUCTION LIBRARY AND THE FIRST QP LOOP REDUCTION LIBRARY
+
+C Start by using the first available loop reduction library and qp library.
 I_LIB=1
 I_QP_LIB=1
+
+goto 208
+C MadLoop jumps to this label during stability checks when it recomputes a rotated PS point
 200 CONTINUE
+C For the computation of a rotated version of this PS point we must reset the TIR cache since this changes the definition of the loop denominators.
+CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+208 CONTINUE
+## if(AmplitudeReduction) {
+SKIP_LOOPNUM_COEFS_CONSTRUCTION=.FALSE.
+GOTO 308
+C MadLoop jumps to this label during stability checks when it recomputes the same PS point with a different CTMode
+300 CONTINUE
+C Of course the trick of reusing coefficients when reducing at the amplitude level only works when computing one helicity at a time
+if (USERHEL.ne.-1) THEN
+  SKIP_LOOPNUM_COEFS_CONSTRUCTION = .TRUE.
+ENDIF
+308 CONTINUE
+## if(ComputeColorFlows) {
+C We don't want to re-initialized the following quantities when checking the helicity filter. (which jumps to label 205 to probe each helicity).
+C We however want to re-initialize them for each new computation part of the stability check (which jumps to label 200)
+C This code is therefore placed before 205 and after 200.
+CALL %(proc_prefix)sREINITIALIZE_CUMULATIVE_ARRAYS()
+IF (ME_COMPUTATION_FROM_JAMP) THEN
+C If both ME computational methods have been used, then the ME computation from color flows was stored in RES_FROM_JAMP and we must reset it here.
+  DO I=0,NSQUAREDSO
+    DO K=0,3
+      RES_FROM_JAMP(K,I)=0.0d0
+    ENDDO
+  ENDDO
+ENDIF
+IF ((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP) THEN
+C When computing the ME with color flows, the Born ME will be computed as well, so we reset here the result obtained from the smatrix call above.
+DO I=0,NSQUAREDSO
+  ANS(0,I)=0.0d0
+ENDDO
+ENDIF
+## }
+
+## if(iregi_available) {
+C     Free cache when using IREGI
+      IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3) THEN
+        CALL IREGI_FREE_PS()
+      ENDIF
+## }
+
+## if(TIRCaching){
+C Even if the user did ask to turn off the automatic TIR cache clearing, we must do it now if the CTModeIndex rolls over the size of the TIR cache employed.
+C Notice that we must do that only when processing a new CT mode as part of the stability test and not when computing a new helicity as part of the filtering process.
+C This we check that we are not in the initialization phase.
+C If we are not in CTModeRun=-1, then we never need to clear the cache since the TIR will always be used for a unique computation (not stab test).
+C Also, it is clear that if we are running OPP when reaching this line, then we shouldn't clear the TIR cache as it might still be useful later.
+C Finally, notice that the conditional statement below should never be true except you have TIR library supporting quadruple precision or when TIR_CACHE_SIZE<2.
+IF((.NOT.CHECKPHASE.AND.(HELDOUBLECHECKED)).and.CTMODERUN.eq.-1.and.MLReductionLib(I_LIB).ne.1..AND.(%(proc_prefix)sTIRCACHE_INDEX(CTMODE).eq.(TIR_CACHE_SIZE+1))) THEN
+  CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+ENDIF
+## }
+
+## }
+
+C MadLoop jumps to this label during initialization when it goes to the computation of the next helicity.
+205 CONTINUE
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
   CALL %(proc_prefix)sSET_MP_PS(P_USER)
@@ -584,6 +839,7 @@ LSCALE=DSQRT(ABS((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1
 CTCALL_REQ_SO_DONE=.FALSE.
 FILTER_SO = (.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.(SQSO_TARGET.ne.-1)
 
+## if(not AmplitudeReduction){
 DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
     DO K=1,NSQUAREDSO
@@ -591,11 +847,12 @@ DO I=1,NLOOPGROUPS
 	ENDDO
   ENDDO
 ENDDO
+## }
 
 DO I=1,NLOOPGROUPS
   DO J=1,3
     DO K=1,NSQUAREDSO  
-      LOOPRES(J,K,I)=0.0d0
+      LOOPRES(J,K,I)=(0.0d0,0.0d0)
 	ENDDO
   ENDDO
 ENDDO
@@ -608,6 +865,7 @@ ENDDO
 
 C Check if we directly go to multiple precision
 IF (CTMODE.GE.4) THEN
+## if(not AmplitudeReduction){
   IF (.NOT.MP_DONE) THEN
     CALL %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
 C   It should be safe to directly set MP_DONE to true already here. But maybe I overlooked something.
@@ -617,6 +875,22 @@ C Even if MP_DONE is .TRUE. we should anyway skip the
 C double precision evaluation as it as already been
 c computed in quadruple precision.
   goto 300
+## }else{
+  CALL %(proc_prefix)sMP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
+## if(ComputeColorFlows) {
+    IF ((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP) THEN
+C   If the ME's are computed from the color flows only, we must update the NLO part of ANS from BUFFR_BIS and the Born part of ANS using RES_FROM_JAMP(0,*)
+      DO I=0,NSQUAREDSO
+        ANS(0,I)=RES_FROM_JAMP(0,I)
+        DO K=1,3
+          ANS(K,I)=BUFFR_BIS(K,I)
+        ENDDO
+      ENDDO
+    ENDIF
+## }
+C We must skip the double precision computation of both loop amplitudes and CT amplitudes because they will all be computed in MP_COMPUTE_LOOP_COEFS.
+  goto 301
+## }
 ENDIF
 
 DO H=1,NCOMB
@@ -624,10 +898,37 @@ DO H=1,NCOMB
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
-
+  
   UVCT_REQ_SO_DONE=.FALSE.
   CT_REQ_SO_DONE=.FALSE.
   LOOP_REQ_SO_DONE=.FALSE.
+ 
+  IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
+    HEL_MULT=GOODHEL(H)
+  ELSE
+    HEL_MULT=1
+  ENDIF
+ 
+## if(AmplitudeReduction){
+  CTCALL_REQ_SO_DONE=.FALSE.
+  
+C The coefficient were already computed previously with another CTMode, so we can skip them
+  IF (SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
+    GOTO 4000
+  ENDIF
+  
+  DO I=1,NLOOPGROUPS
+    DO J=0,LOOPMAXCOEFS-1
+      LOOPCOEFS(J,I)=(0.0d0,0.0d0)
+    ENDDO
+  ENDDO
+  
+  DO K=1,3
+    DO I=1,NLOOPAMPS
+      AMPL(K,I)=(0.0d0,0.0d0)
+    ENDDO
+  ENDDO
+## }
 
 C Helas calls for the born amplitudes and counterterms associated to given loops
   %(born_ct_helas_calls)s
@@ -644,48 +945,204 @@ c FeynRules, there are none of these type of counterterms.
 3000 CONTINUE
   UVCT_REQ_SO_DONE=.TRUE.
 
-  IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
-    DUMMY=GOODHEL(H)
-  ELSE
-    DUMMY=1
-  ENDIF
-  DO I=1,%(nctamps_or_nloopamps)s
-    DO J=1,%(nbornamps_or_nloopamps)s
+## if(not AmplitudeReduction) {
+  DO I=1,NCTAMPS
+    DO J=1,NBORNAMPS
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
-	  %(squaring)s
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
+	  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+        DO K=1,3
+          TEMP2 = 2.0d0*HEL_MULT*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))
+          ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
+          ANS(K,0)=ANS(K,0)+TEMP2
+        ENDDO
+      ENDIF
     ENDDO
   ENDDO
+## }
   
   %(coef_construction)s
 4000 CONTINUE
   LOOP_REQ_SO_DONE=.TRUE.
 
+## if(AmplitudeReduction) {
+  IF(SKIPLOOPEVAL) THEN
+    GOTO 5000
+  ENDIF
+  DO I=1,NSQUAREDSO
+    DO J=1,NLOOPGROUPS
+      S(I,J)=.TRUE.
+    ENDDO
+  ENDDO
+C We need the dummy argument I_SO for the squared order index to conform to the structure that the call to the LOOP* subroutine takes for processes with Born diagrams.
+  I_SO=1
+%(loop_CT_calls)s
+5000 CONTINUE
+  CTCALL_REQ_SO_DONE=.TRUE.
+
+## if(ComputeColorFlows) {
+  IF (DIRECT_ME_COMPUTATION) THEN
+## }
+  DO I=1,NLOOPAMPS
+## if(not LoopInduced) {
+    DO J=1,NBORNAMPS
+## } else {
+    DO J=1,NLOOPAMPS
+## }
+	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
+      IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
+## if(not LoopInduced) {
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
+      DO K=1,3
+        TEMP2(K) = 2.0d0*HEL_MULT*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))
+      ENDDO
+## } else {
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
+      TEMP2(1) = HEL_MULT*DBLE(CFTOT*(AMPL(1,I)*DCONJG(AMPL(1,J))))
+C Computing the quantities below is not strictly necessary since the result should be finite
+C It is however a good cross-check.
+      TEMP2(2) = HEL_MULT*DBLE(CFTOT*(AMPL(2,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(2,J))))
+      TEMP2(3) = HEL_MULT*DBLE(CFTOT*(AMPL(3,I)*DCONJG(AMPL(1,J)) + AMPL(1,I)*DCONJG(AMPL(3,J))+AMPL(2,I)*DCONJG(AMPL(2,J))))
+## }
+C To mimick the structure of the squared amplitude reduction, we add here the squared counterterm contribution directly to the result ANS() and put the loop contributions in the LOOPRES array which will be added to ANS later
+      IF (I.LE.NCTAMPS) THEN
+        IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+          DO K=1,3
+            ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2(K)
+            ANS(K,0)=ANS(K,0)+TEMP2(K)
+          ENDDO
+        ENDIF
+      ELSE
+        DO K=1,3
+          LOOPRES(K,ITEMP,I-NCTAMPS)=LOOPRES(K,ITEMP,I-NCTAMPS)+TEMP2(K)
+C During the evaluation of the AMPL, we had stored the stability in S(1,*) so we now copy over this flag to the relevant contributing Squared orders.
+          S(ITEMP,I-NCTAMPS)=S(1,I-NCTAMPS)
+        ENDDO
+      ENDIF
+    ENDDO
+  ENDDO
+## }
+## if(ComputeColorFlows) {
+ENDIF
+## }
+
+## if(ComputeColorFlows){
+C We should compute the color flow either if it contributes to the final result (i.e. not used just for the filtering), or if the computation is only done from the color flows
+IF (((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP).OR.(H.EQ.USERHEL.OR.USERHEL.EQ.-1)) THEN
+C The cumulative quantities must only be computed if that helicity contributes according to user request (second argument of the subroutine below).
+  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)
+  IF(ME_COMPUTATION_FROM_JAMP) THEN
+    CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(BUFFRES,HEL_MULT)
+    IF(((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP)) THEN
+C     If the computation from the color flow is the only form of computation, we directly update the answer.
+      DO K=0,3
+        DO I=0,NSQUAREDSO
+          ANS(K,I)=ANS(K,I)+BUFFRES(K,I)
+        ENDDO
+      ENDDO
+C   When setting up the loop filter, it is important to set the quantitied LOOPRES.
+C   Notice that you may have a more powerful filter with the direct computation mode because it can filter vanishing loop contributions for a particular squared split order only
+C   The quantity LOOPRES defined below is not physical, but it's ok since it is only intended for the loop filtering.
+     IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
+        DO J=1,NLOOPGROUPS
+          DO I=1,NSQUAREDSO
+            DO K=1,3
+              LOOPRES(K,I,J)=LOOPRES(K,I,J)+AMPL(K,NCTAMPS+J)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDIF
+C   The if statement below is not strictly necessary but makes it clear when it is executed.
+    ELSEIF(H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
+C     If both computational method is used, then we must just update RES_FROM_JAMP
+      DO K=0,3
+        DO I=0,NSQUAREDSO
+          RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)+BUFFRES(K,I)
+        ENDDO
+      ENDDO
+    ENDIF
+	IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
+	  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+	ENDIF
+  ENDIF
+ENDIF
+## }
+
   ENDIF
 ENDDO
 
+## if(not AmplitudeReduction){
 %(coef_merging)s
+## }
 
+## if (ComputeColorFlows) {
+IF(DIRECT_ME_COMPUTATION) THEN
+C Lines below are not necessary when computing the ME from color flows
+## }
 DO I=0,NSQUAREDSO
   DO J=1,3
     BUFFR_BIS(J,I)=ANS(J,I)
   ENDDO
 ENDDO
+## if (ComputeColorFlows) {
+ENDIF
+## }
 
+
+## if(not AmplitudeReduction){
+C MadLoop jumps to this label during stability checks when it recomputes the same PS point with a different CTMode
 300 CONTINUE
-C     Free cache when using IREGI
-%(iregi_free_ps)s
 
+## if(iregi_available) {
+C     Free cache when using IREGI
+      IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3) THEN
+        CALL IREGI_FREE_PS()
+      ENDIF
+## }
+
+## if(TIRCaching){
+C Even if the user did ask to turn off the automatic TIR cache clearing, we must do it now if the CTModeIndex rolls over the size of the TIR cache employed.
+C Notice that we must do that only when processing a new CT mode as part of the stability test and not when computing a new helicity as part of the filtering process.
+C This we check that we are not in the initialization phase.
+C If we are not in CTModeRun=-1, then we never need to clear the cache since the TIR will always be used for a unique computation (not stab test).
+C Also, it is clear that if we are running OPP when reaching this line, then we shouldn't clear the TIR cache as it might still be useful later.
+C Finally, notice that the conditional statement below should never be true except you have TIR library supporting quadruple precision or when TIR_CACHE_SIZE<2.
+IF((.NOT.CHECKPHASE.AND.(HELDOUBLECHECKED)).AND.CTMODERUN.eq.-1.and.MLReductionLib(I_LIB).ne.1.AND.(%(proc_prefix)sTIRCACHE_INDEX(CTMODE).eq.(TIR_CACHE_SIZE+1))) THEN
+  CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+ENDIF
+## }
+
+## }else{
+C MadLoop jumps to this label just after having called the subroutine %(proc_prefix)sMP_COMPUTE_LOOP_COEFS to compute OpenLoop coefficients in quadruple precision (and not double precision as done above)
+301 CONTINUE
+## }
+
+## if (ComputeColorFlows) {
+IF(DIRECT_ME_COMPUTATION) THEN
+C Lines below are not necessary when computing the ME from color flows
+## }
 DO I=0,NSQUAREDSO
   DO J=1,3
     ANS(J,I)=BUFFR_BIS(J,I)
   ENDDO
 ENDDO
+## if (ComputeColorFlows) {
+ENDIF
+## }
+
+## if (ComputeColorFlows) {
+IF ((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP) THEN
+C We can skip the update of ANS if it was computed from color flows
+  GOTO 1226
+ENDIF
+## }
 
 IF(SKIPLOOPEVAL) THEN
   GOTO 1226
 ENDIF
 
+## if(not AmplitudeReduction){
 DO I_SO=1,NSQUAREDSO
   DO J=1,NLOOPGROUPS
     S(I_SO,J)=.TRUE.
@@ -697,8 +1154,23 @@ DO I_SO=1,NSQUAREDSO
   CTCALL_REQ_SO_DONE=.TRUE.
 5001 CONTINUE
 ENDDO
+## }
 
-%(actualize_ans)s
+DO I=1,NLOOPGROUPS
+  LTEMP=.TRUE.
+  DO K=1,NSQUAREDSO
+    IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.K) THEN
+      IF (.NOT.S(K,I)) LTEMP=.FALSE.
+      DO J=1,3
+        ANS(J,K)=ANS(J,K)+LOOPRES(J,K,I)
+        ANS(J,0)=ANS(J,0)+LOOPRES(J,K,I)
+      ENDDO
+    ENDIF
+  ENDDO
+  IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.LTEMP)) THEN
+    WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'           
+  ENDIF
+ENDDO
 
 1226 CONTINUE
 
@@ -712,19 +1184,27 @@ C   TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING CHECK PHASE
 	ENDDO
   ENDIF
 C SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING THE HELICITY FILTER SETUP
-  HELSAVED(1,HELPICKED)=ANS(1,0)
-  HELSAVED(2,HELPICKED)=ANS(2,0)
-  HELSAVED(3,HELPICKED)=ANS(3,0)
+  DO I=1,NSQUAREDSO
+    IF (CHOSEN_SO_CONFIGS(I)) THEN
+      HELSAVED(1,HELPICKED)=HELSAVED(1,HELPICKED)+ANS(1,I)
+      HELSAVED(2,HELPICKED)=HELSAVED(2,HELPICKED)+ANS(2,I)
+      HELSAVED(3,HELPICKED)=HELSAVED(3,HELPICKED)+ANS(3,I)
+	ENDIF
+  ENDDO
 
-  IF (CHECKPHASE) THEN
+## if(LoopInduced){
+C We make sure not to perform any check when NTRY is 0 because this means that
+C the REF scale has not been set to the result of the evaluation for the first PS point.
+## }
+  IF (CHECKPHASE.AND.NTRY.NE.0) THEN
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
 	  HEL_INCONSISTENT=.FALSE.
-      IF(%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+      IF(%(proc_prefix)sIsZero(DABS(HELSAVED(1,HELPICKED))+DABS(HELSAVED(2,HELPICKED))+DABS(HELSAVED(3,HELPICKED)),REF/DBLE(NCOMB),-1,-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
-		  WRITE(*,*) '##W02A WARNING Inconsistent helicity ',HELPICKED
+		  WRITE(*,*) '##W02A WARNING Inconsistent zero helicity ',HELPICKED
 		  IF(HELINITSTARTOVER) THEN
 	        WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
 	        NTRY=0
@@ -732,20 +1212,20 @@ C   SET THE HELICITY FILTER
 		    HEL_INCONSISTENT=.TRUE.
 		  ENDIF
 		ENDIF
-      ELSE
+      ELSEIF(HelicityFilterLevel.gt.1) THEN
 	    DO H=1,HELPICKED-1
 		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C           Be looser for helicity check, bring a factor 100
-		    DUMMY=%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,H),REF,.FALSE.)
+		    DUMMY=%(proc_prefix)sISSAME(HELSAVED(1,HELPICKED),HELSAVED(1,H),REF,.FALSE.)
 		    IF(DUMMY.NE.0) THEN
-		      IF(NTRY.EQ.1) THEN
+              IF(NTRY.EQ.1) THEN
 C               Set the matching helicity to be contributing once more
 		        GOODHEL(H)=GOODHEL(H)+DUMMY
 C               Use an offset to clearly show it is linked to an other one and to avoid overlap
 			    GOODHEL(HELPICKED)=-H-HELOFFSET
 C             Make sure we have paired this hel config to the same one last PS point
 			  ELSEIF(GOODHEL(HELPICKED).NE.(-H-HELOFFSET)) THEN
-			    WRITE(*,*) '##W02B WARNING Inconsistent helicity ',HELPICKED
+			    WRITE(*,*) '##W02B WARNING Inconsistent matching helicity ',HELPICKED
 		        IF(HELINITSTARTOVER) THEN
 	              WRITE(*,*) '##I01 INFO Initialization starting over because of inconsistency in the helicity filter setup.'
 	              NTRY=0
@@ -756,7 +1236,7 @@ C             Make sure we have paired this hel config to the same one last PS p
 			ENDIF
 		  ENDIF
 		ENDDO
-	  ENDIF
+      ENDIF
 	  IF(HEL_INCONSISTENT) THEN
 C This helicity has unstable filter so we will always compute it by itself.
 C We therefore also need to remove it from the multiplicative factor of the corresponding helicity.
@@ -789,7 +1269,7 @@ C   SET THE LOOP FILTER
   	  DO I=1,NLOOPGROUPS
 	    DO J=1,NSQUAREDSO
           IF(.NOT.%(proc_prefix)sIsZero(ABS(LOOPRES(1,J,I))+ABS(LOOPRES(2,J,I))+ABS(LOOPRES(3,J,I)),(REF*1.0d-4),I,J)) THEN
-            IF(NTRY.EQ.1) THEN
+              IF(NTRY.EQ.1) THEN
 	          GOODAMP(J,I)=.TRUE.
 		      LOOPFILTERBUFF(J,I)=.TRUE.
 	        ELSEIF(.NOT.LOOPFILTERBUFF(J,I)) THEN
@@ -808,7 +1288,7 @@ C   SET THE LOOP FILTER
   ELSEIF (.NOT.HELDOUBLECHECKED.AND.NTRY.NE.0)THEN
 C   DOUBLE CHECK THE HELICITY FILTER
     IF (GOODHEL(HELPICKED).EQ.-HELOFFSET) THEN
-	  IF (.NOT.%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+	  IF (.NOT.%(proc_prefix)sIsZero(DABS(HELSAVED(1,HELPICKED))+DABS(HELSAVED(2,HELPICKED))+DABS(HELSAVED(2,HELPICKED)),REF/DBLE(NCOMB),-1,-1)) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected what are the zero helicity configurations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -819,7 +1299,7 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	  ENDIF
 	ENDIF
 	IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-	  IF(%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
+	  IF(%(proc_prefix)sISSAME(HELSAVED(1,HELPICKED),HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -840,7 +1320,7 @@ C GOTO NEXT HELICITY OR FINISH
   IF(HELPICKED.NE.NCOMB) THEN
     HELPICKED=HELPICKED+1
 	MP_DONE=.FALSE.
-    goto 200
+    goto 205
   ELSE
 C   Useful printout
 c    do I=1,NCOMB
@@ -854,6 +1334,22 @@ c    ENDDO
         ANS(K,I)=BUFFR(K,I)
       ENDDO
 	ENDDO
+## if(LoopInduced){
+C Update of REF_EVALS (only for loop-induced processes).
+    REF_EVALS(MOD(NPSPOINTS,MAXNREF_EVALS)+1) = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
+C We add one here to the number of PS points used for building the reference scale for comparisons.
+C It might be that when asking for specific helicities, the user started with a vanishing helicity
+C not filtered yet. In this case, the new ref would remain zero. So we want to check for this
+C and wait for a point for which the evaluation won't be zero.
+    IF(NPSPOINTS.GE.MAXNREF_EVALS) THEN
+      TMPR=MEDIAN(REF_EVALS,MAXNREF_EVALS)
+    ELSE
+      TMPR=MEDIAN(REF_EVALS,NPSPOINTS+1)
+    ENDIF
+    IF (TMPR.NE.0.0d0) THEN
+      NPSPOINTS = NPSPOINTS+1
+    ENDIF
+## }
 	IF(NTRY.EQ.0) THEN
 	  NATTEMPTS=NATTEMPTS+1
 	  IF(NATTEMPTS.EQ.MAXATTEMPTS) THEN
@@ -862,10 +1358,28 @@ c    ENDDO
 	  ENDIF
 	ENDIF
   ENDIF
-
+## if(LoopInduced){
+ELSE
+C When not in checking mode, update the ref for the first MAXNREF_EVALS points (Not really important since the ref. scale shouldn't be used anymore at this stage).
+C Is is possible to simply remove the if statement below to have a running reference scale which always depends on the MAXNREF_EVALS *last* evaluations. 
+    if (NPSPOINTS.LE.MAXNREF_EVALS) THEN
+      REF_EVALS(MOD(NPSPOINTS,MAXNREF_EVALS)+1) = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
+      NPSPOINTS = NPSPOINTS+1
+    ENDIF
+## }
 ENDIF
 
+## if (ComputeColorFlows) {
+C When computing the ME from the color flows, we also compute the born ME from them, so we must apply the normalization factors to the born ME as well.
+IF(((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP)) THEN
+  ITEMP=0
+ELSE
+  ITEMP=1
+ENDIF
+DO K=ITEMP,3
+## } else {
 DO K=1,3
+## }
   DO I=0,NSQUAREDSO
     ANS(K,I)=ANS(K,I)/DBLE(IDEN)
     IF (USERHEL.NE.-1) THEN
@@ -873,6 +1387,50 @@ DO K=1,3
     ENDIF
   ENDDO
 ENDDO
+
+## if (ComputeColorFlows) {
+IF (DIRECT_ME_COMPUTATION.AND.ME_COMPUTATION_FROM_JAMP) THEN
+  WRITE(*,*) ' ================================= '
+  WRITE(*,*) ' === JAMP double-checking test === '
+  WRITE(*,*) ' ================================= '
+  CALL %(proc_prefix)sWRITE_MOM(P)
+  DO J=1,NSQUAREDSO+1
+C We should finish by the summed orders
+    I = MOD(J,NSQUAREDSO+1)
+    IF (I.EQ.0) THEN
+      WRITE(*,*) ' > Checking the sum of all chosen squared split orders'    
+    ELSE
+      WRITE(*,*) ' > Checking squared split order #',I
+    ENDIF
+## if (LoopInduced) {
+    DO K=1,1
+## } else {
+    DO K=0,3
+## }
+      RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)/DBLE(IDEN)
+      IF (USERHEL.NE.-1) THEN
+        RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)*HELAVGFACTOR
+      ENDIF
+      IF (K.eq.0) WRITE(*,*) ' || Born :' 
+      IF (K.eq.1) WRITE(*,*) ' || Finite part :' 
+      IF (K.eq.2) WRITE(*,*) ' || Single pole residue :' 
+      IF (K.eq.3) WRITE(*,*) ' || Double pole residue :' 
+      WRITE(*,*) ' --> Direct result        =',ANS(K,I)
+      WRITE(*,*) ' --> Computed from JAMPS  =',RES_FROM_JAMP(K,I)
+      IF((RES_FROM_JAMP(K,I)+ANS(K,I)).EQ.0.0d0) THEN
+        TMPR = ABS(RES_FROM_JAMP(K,I)-ANS(K,I))      
+      ELSE
+        TMPR = ABS((ANS(K,I)-RES_FROM_JAMP(K,I))/((ANS(K,I)+RES_FROM_JAMP(K,I))/2.0d0))
+      ENDIF
+      WRITE(*,*) ' --> Relative diff.       =',TMPR
+      IF(TMPR.GT.JAMP_DOUBLECHECK_THRES) THEN
+         STOP 'Consistency cross-check of JAMPS failed.'
+      ENDIF
+    ENDDO
+  ENDDO
+  WRITE(*,*) ' ================================= '
+ENDIF
+## }
 
 IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
   STAB_INDEX=STAB_INDEX+1  
@@ -902,25 +1460,25 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
   IF(.NOT.EVAL_DONE(2)) THEN
 	EVAL_DONE(2)=.TRUE.
 	IF(LOOPLIBS_DIRECTEST(MLReductionLib(I_LIB)))THEN 
-	CTMODE=BASIC_CT_MODE+1
-	goto 300
-	ELSE
-C   NO DIRECTION TEST LIBRARIES: e.g. PJFry++ and Golem95
-	STAB_INDEX=STAB_INDEX+1
-	IF(DOING_QP_EVALS)THEN
-	DO I=0,NSQUAREDSO
-	DO K=1,3
-	  QP_RES(K,I,STAB_INDEX)=ANS(K,I)
-	ENDDO
-	ENDDO
-	ELSE
-	DO I=0,NSQUAREDSO
-       	DO K=1,3
-          DP_RES(K,I,STAB_INDEX)=ANS(K,I)
-       	ENDDO
-       	ENDDO
-	ENDIF
-	ENDIF
+	  CTMODE=BASIC_CT_MODE+1
+	  goto 300
+    ELSE
+C     If some TIR library would not support the loop direction test (they all do for now), then we would just copy the answer from mode 1 and carry on.
+	  STAB_INDEX=STAB_INDEX+1
+	  IF(DOING_QP_EVALS)THEN
+	    DO I=0,NSQUAREDSO
+	      DO K=1,3
+	        QP_RES(K,I,STAB_INDEX)=ANS(K,I)
+	      ENDDO
+	    ENDDO
+	  ELSE
+	    DO I=0,NSQUAREDSO
+       	  DO K=1,3
+            DP_RES(K,I,STAB_INDEX)=ANS(K,I)
+       	  ENDDO
+        ENDDO
+	  ENDIF
+    ENDIF
   ENDIF
 
   CTMODE=BASIC_CT_MODE
@@ -1227,8 +1785,8 @@ C If the helicity can be constructed progressively while allowing inconsistency,
 		    IF(.NOT.%(proc_prefix)sIsZero(ABS(resB(J))+ABS(resA(J)),ref,-1,-1)) THEN
 		      GOTO 1231
 			ENDIF
-C         Be loser for helicity comparison, so bring a factor 100
-		  ELSEIF(.NOT.%(proc_prefix)sIsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref*100.0d0,-1,-1)) THEN
+C         Be looser for helicity comparison, so bring a factor 100
+		  ELSEIF(.NOT.%(proc_prefix)sIsZero(ABS((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I))),1.0d0,-1,-1)) THEN
 		    GOTO 1231		    
 		  ENDIF
 		ENDDO
@@ -1415,6 +1973,7 @@ C
       INTEGER I,J
 	  INTEGER SQPLITORDERS(NSQSO,NSO)
 	  %(SquaredSO)s
+	  COMMON/%(proc_prefix)sML5SQPLITORDERS/SQPLITORDERS
 C
 C BEGIN CODE
 C
@@ -1537,7 +2096,6 @@ c order canonical ordering.
 C
 C CONSTANTS
 C      
-
       INTEGER    NSO, NSQUAREDSO, NAMPSO
 	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
 C
@@ -1550,6 +2108,7 @@ C
       INTEGER I, SQORDERS(NSO)
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
 	  %(ampsplitorders)s
+	  COMMON/%(proc_prefix)sML5AMPSPLITORDERS/AMPSPLITORDERS
 C
 C FUNCTION
 C
@@ -1562,6 +2121,117 @@ C
 	  ENDDO
 	  %(proc_prefix)sML5SQSOINDEX=%(proc_prefix)sML5SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
 	  END
+
+C This is the inverse subroutine of ML5SOINDEX_FOR_SQUARED_ORDERS. Not directly useful, but provided nonetheless.
+      SUBROUTINE %(proc_prefix)sML5GET_SQUARED_ORDERS_FOR_SOINDEX(SOINDEX,ORDERS)
+C
+C This functions returns the orders identified by the squared split order index in argument. Order values correspond to following list of couplings (and in this order):
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NSQSO
+	  PARAMETER (NSO=%(nSO)d, NSQSO=%(nSquaredSO)d)
+C
+C ARGUMENTS
+C
+      INTEGER SOINDEX, ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I
+	  INTEGER SQPLITORDERS(NSQSO,NSO)
+	  COMMON/%(proc_prefix)sML5SQPLITORDERS/SQPLITORDERS	  
+C
+C BEGIN CODE
+C
+      IF (SOINDEX.gt.0.and.SOINDEX.le.NSQSO) THEN
+        DO I=1,NSO
+          ORDERS(I) =  SQPLITORDERS(SOINDEX,I)
+        ENDDO
+        RETURN
+      ENDIF
+
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sML5GET_SQUARED_ORDERS_FOR_SOINDEX'
+	  WRITE(*,*) 'Could not find squared orders index ',SOINDEX
+	  STOP
+
+      END SUBROUTINE
+
+C This is the inverse subroutine of getting amplitude SO orders. Not directly useful, but provided nonetheless.
+      SUBROUTINE %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(SOINDEX,ORDERS)
+C
+C This functions returns the orders identified by the split order index in argument. Order values correspond to following list of couplings (and in this order):
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NAMPSO
+	  PARAMETER (NSO=%(nSO)d, NAMPSO=%(nAmpSO)d)
+C
+C ARGUMENTS
+C
+      INTEGER SOINDEX, ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I
+      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
+	  COMMON/%(proc_prefix)sML5AMPSPLITORDERS/AMPSPLITORDERS
+C
+C BEGIN CODE
+C
+      IF (SOINDEX.gt.0.and.SOINDEX.le.NAMPSO) THEN
+        DO I=1,NSO
+          ORDERS(I) =  AMPSPLITORDERS(SOINDEX,I)
+        ENDDO
+        RETURN
+      ENDIF
+
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX'
+	  WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
+	  STOP
+
+      END SUBROUTINE
+
+
+C This function is not directly useful, but included for completeness
+      INTEGER FUNCTION %(proc_prefix)sML5SOINDEX_FOR_AMPORDERS(ORDERS)
+C
+C This functions returns the integer index identifying the amplitude split orders passed in argument which correspond to the values of the following list of couplings (and in this order):
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NAMPSO
+	  PARAMETER (NSO=%(nSO)d, NAMPSO=%(nAmpSO)d)
+C
+C ARGUMENTS
+C
+      INTEGER ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I,J
+      INTEGER AMPSPLITORDERS(NAMPSO,NSO)
+	  COMMON/%(proc_prefix)sML5AMPSPLITORDERS/AMPSPLITORDERS
+C
+C BEGIN CODE
+C
+      DO I=1,NAMPSO
+	    DO J=1,NSO
+		  IF (ORDERS(J).NE.AMPSPLITORDERS(I,J)) GOTO 1009
+		ENDDO
+		%(proc_prefix)sML5SOINDEX_FOR_AMPORDERS = I
+		RETURN
+1009    CONTINUE
+	  ENDDO
+
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sML5SOINDEX_FOR_AMPORDERS'
+	  WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
+	  STOP
+
+      END
 
 C --=========================================--
 C   Definition of additional access routines
@@ -1580,8 +2250,42 @@ C
 
 	  ALWAYS_TEST_STABILITY = ONOFF
 
-	  END
+	  END SUBROUTINE
 
+	  SUBROUTINE %(proc_prefix)sSET_AUTOMATIC_TIR_CACHE_CLEARING(ONOFF)
+C
+C This function can be called by the MadLoop user so as to manually chose when
+C to reset the TIR cache.
+C
+	  	IMPLICIT NONE
+
+	    include 'MadLoopParams.inc'
+
+		LOGICAL ONOFF
+
+      	LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
+      	DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
+      	COMMON/%(proc_prefix)sRUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
+      	
+	    INTEGER N_DP_EVAL, N_QP_EVAL
+	    COMMON/%(proc_prefix)sN_EVALS/N_DP_EVAL,N_QP_EVAL
+
+## if(not TIRCaching){
+       WRITE(*,*) 'Warning: No TIR caching implemented. Call to SET_AUTOMATIC_TIR_CACHE_CLEARING did nothing.'
+## } else {
+
+		AUTOMATIC_TIR_CACHE_CLEARING = ONOFF
+		
+		IF (NRotations_DP.ne.0.or.NRotations_QP.ne.0) THEN
+		  WRITE(*,*) 'Warning: One cannot remove the TIR cache automatic clearing while at the same time keeping Lorentz rotations for stability tests.'
+		  WRITE(*,*) 'MadLoop will therefore automatically set NRotations_DP and NRotations_QP to 0.'
+		  NRotations_DP = 0
+		  NRotations_QP = 0
+  		  CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
+		ENDIF
+## }
+	  END SUBROUTINE
+	  
 	  SUBROUTINE %(proc_prefix)sSET_COUPLINGORDERS_TARGET(SOTARGET)
 	  IMPLICIT NONE
 C
@@ -1788,3 +2492,13 @@ C Reset it to default value not to affect next runs
 	  RET_CODE=100*H+10*T+U
 
 	  END
+	  
+C The subroutine below perform clean-up duties for MadLoop like de-allocating
+c arrays
+	  SUBROUTINE %(proc_prefix)sEXIT_MADLOOP()
+## if(ComputeColorFlows) {
+	    CALL %(proc_prefix)sDEALLOCATE_COLOR_FLOWS()
+## }
+        CONTINUE
+	  END
+

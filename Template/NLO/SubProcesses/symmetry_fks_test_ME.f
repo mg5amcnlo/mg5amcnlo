@@ -11,6 +11,7 @@ c
       include 'nexternal.inc'
       include '../../Source/run_config.inc'
       include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
       
       double precision ZERO,one
       parameter       (ZERO = 0d0)
@@ -143,6 +144,13 @@ c      integer icomp
 c-----
 c  Begin Code
 c-----
+      if (fks_configs.eq.1) then
+         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
+            write (*,*) 'Process generated with [LOonly=QCD]. '/
+     $           /'No tests to do.'
+            return
+         endif
+      endif
 
       write(*,*)'Enter xi_i, y_ij to be used in coll/soft tests'
       write(*,*)' Enter -2 to generate them randomly'

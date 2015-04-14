@@ -40,6 +40,7 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.various.q_polynomial as q_polynomial
+import madgraph.various.banner as banner_mod
 
 import aloha.create_aloha as create_aloha
 
@@ -71,6 +72,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         mgme_dir = self.mgme_dir
         dir_path = self.dir_path
         clean =self.opt['clean']
+        
         
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(dir_path):
@@ -128,7 +130,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                                         link_tir_libs,tir_libs)
         
         # Duplicate run_card and FO_analyse_card
-        for card in ['run_card', 'FO_analyse_card', 'shower_card']:
+        for card in ['FO_analyse_card', 'shower_card']:
             try:
                 shutil.copy(pjoin(self.dir_path, 'Cards',
                                          card + '.dat'),
@@ -153,6 +155,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+        if os.path.exists(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat')):          
+                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.dir_path, 
+                                                  'Cards', 'MadLoopParams.dat'))
+                # write the output file
+                self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
+                                                           "MadLoopParams.dat"))
                                        
         # We need minimal editing of MadLoopCommons.f
         MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
@@ -184,6 +192,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Copy the different python files in the Template
         self.copy_python_files()
 
+        # We need to create the correct open_data for the pdf
+        self.write_pdf_opendata()
+        
     # I put it here not in optimized one, because I want to use the same makefile_loop.inc
     # Also, we overload this function (i.e. it is already defined in 
     # LoopProcessExporterFortranSA) because the path of the template makefile
@@ -227,38 +238,32 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def copy_python_files(self):
         """copy python files required for the Template"""
 
-        cp(_file_path+'/interface/amcatnlo_run_interface.py',
-                            self.dir_path+'/bin/internal/amcatnlo_run_interface.py')
-        cp(_file_path+'/interface/extended_cmd.py',
-                                  self.dir_path+'/bin/internal/extended_cmd.py')
-        cp(_file_path+'/interface/common_run_interface.py',
-                            self.dir_path+'/bin/internal/common_run_interface.py')
-        cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
-        cp(_file_path+'/various/shower_card.py', self.dir_path+'/bin/internal/shower_card.py')        
-        cp(_file_path+'/various/FO_analyse_card.py', self.dir_path+'/bin/internal/FO_analyse_card.py')        
-        cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
-        cp(_file_path+'/iolibs/save_load_object.py', 
-                              self.dir_path+'/bin/internal/save_load_object.py') 
-        cp(_file_path+'/iolibs/file_writers.py', 
-                              self.dir_path+'/bin/internal/file_writers.py')
-        cp(_file_path+'../models/check_param_card.py', 
-                              self.dir_path+'/bin/internal/check_param_card.py')
-        cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
-        cp(_file_path+'/various/gen_crossxhtml.py', 
-                                self.dir_path+'/bin/internal/gen_crossxhtml.py')                
-        cp(_file_path+'/various/banner.py', 
-                                   self.dir_path+'/bin/internal/banner.py')
-        cp(_file_path+'/various/cluster.py', 
-                                       self.dir_path+'/bin/internal/cluster.py') 
-        cp(_file_path+'/various/sum_html.py', 
-                                       self.dir_path+'/bin/internal/sum_html.py') 
-        cp(_file_path+'/various/lhe_parser.py', 
-                                       self.dir_path+'/bin/internal/lhe_parser.py') 
+        files_to_copy = [ \
+          pjoin('interface','amcatnlo_run_interface.py'),
+          pjoin('interface','extended_cmd.py'),
+          pjoin('interface','common_run_interface.py'),
+          pjoin('interface','coloring_logging.py'),
+          pjoin('various','misc.py'),
+          pjoin('various','shower_card.py'),
+          pjoin('various','FO_analyse_card.py'),
+          pjoin('various','histograms.py'),      
+          pjoin('various','banner.py'),          
+          pjoin('various','cluster.py'),          
+          pjoin('various','lhe_parser.py'),
+          pjoin('madevent','sum_html.py'),
+          pjoin('madevent','gen_crossxhtml.py'),          
+          pjoin('iolibs','files.py'),
+          pjoin('iolibs','save_load_object.py'),
+          pjoin('iolibs','file_writers.py'),
+          pjoin('..','models','check_param_card.py'),
+          pjoin('__init__.py')
+        ]
         cp(_file_path+'/interface/.mg5_logging.conf', 
-                                 self.dir_path+'/bin/internal/me5_logging.conf') 
-        cp(_file_path+'/interface/coloring_logging.py', 
-                                 self.dir_path+'/bin/internal/coloring_logging.py') 
-
+                                 self.dir_path+'/bin/internal/me5_logging.conf')
+        
+        for cp_file in files_to_copy:
+            cp(pjoin(_file_path,cp_file),
+                pjoin(self.dir_path,'bin','internal',os.path.basename(cp_file)))
 
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
@@ -292,7 +297,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """Write the maxparticles.inc file for MadEvent"""
 
         maxparticles = max([me.get_nexternal_ninitial()[0] \
-                              for me in matrix_elements])
+                              for me in matrix_elements['matrix_elements']])
 
         lines = "integer max_particles, max_branch\n"
         lines += "parameter (max_particles=%d) \n" % maxparticles
@@ -310,7 +315,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def write_maxconfigs_file(self, writer, matrix_elements):
         """Write the maxconfigs.inc file for MadEvent"""
 
-        maxconfigs = max([me.get_num_configs() for me in matrix_elements])
+        try:
+            maxconfigs = max([me.get_num_configs() \
+                            for me in matrix_elements['real_matrix_elements']])
+        except ValueError:
+            maxconfigs = max([me.born_me.get_num_configs() \
+                            for me in matrix_elements['matrix_elements']])
 
         lines = "integer lmaxconfigs\n"
         lines += "parameter (lmaxconfigs=%d)" % maxconfigs
@@ -381,7 +391,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ff.write(text)
         ff.close()
 
-    def get_ME_identifier(self, matrix_element):
+    def get_ME_identifier(self, matrix_element, *args, **opts):
         """ A function returning a string uniquely identifying the matrix 
         element given in argument so that it can be used as a prefix to all
         MadLoop5 subroutines and common blocks related to it. This allows
@@ -429,9 +439,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         #first make and cd the direcrory corresponding to the born process:
         borndir = "P%s" % \
         (matrix_element.born_me.get('processes')[0].shell_string())
-        if not matrix_element.real_processes:
-            logger.warning('Skipping %s, it has no corrections' % borndir)
-            return 0
         os.mkdir(borndir)
         os.chdir(borndir)
         logger.info('Writing files in %s (%d / %d)' % (borndir, me_number + 1, me_ntot))
@@ -496,6 +503,13 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         nfksconfs,maxproc,maxflow,nexternal=\
                 self.write_leshouche_info_file(filename,matrix_element)
 
+        # if no corrections are generated ([LOonly] mode), get 
+        # these variables from the born
+        if nfksconfs == maxproc == maxflow == 0:
+            nfksconfs = 1
+            (dummylines, maxproc, maxflow) = self.get_leshouche_lines(
+                    matrix_element.born_me, 1)
+
         filename = 'leshouche_decl.inc'
         self.write_leshouche_info_declarations(
                               writers.FortranWriter(filename), 
@@ -535,8 +549,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                matrix_element)
 
         filename = 'nexternal.inc'
-        (nexternal, ninitial) = \
-                matrix_element.real_processes[0].get_nexternal_ninitial()
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
 
@@ -545,8 +558,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                     matrix_element)
     
         filename = 'pmass.inc'
-        self.write_pmass_file(writers.FortranWriter(filename),
+        try:
+            self.write_pmass_file(writers.FortranWriter(filename),
                              matrix_element.real_processes[0].matrix_element)
+        except IndexError:
+            self.write_pmass_file(writers.FortranWriter(filename),
+                             matrix_element.born_me)
 
         #draw the diagrams
         self.draw_feynman_diagrams(matrix_element)
@@ -586,6 +603,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_powers.inc',
                      'fks_singular.f',
                      'chooser_functions.f',
+                     'veto_xsec.f',
+                     'veto_xsec.inc',
                      'c_weight.inc',
                      'genps.inc',
                      'genps_fks.f',
@@ -593,6 +612,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'madfks_mcatnlo.inc',
                      'open_output_files.f',
                      'open_output_files_dummy.f',
+                     'HwU_dummy.f',
                      'madfks_plot.f',
                      'analysis_dummy.f',
                      'mint-integrator2.f',
@@ -613,6 +633,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'reweight_xsec_events_pdf_dummy.f',
                      'iproc_map.f',
                      'run.inc',
+                     'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
                      'symmetry_fks_test_MC.f',
@@ -671,6 +692,24 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         return calls
 
+    #===========================================================================
+    #  create the run_card 
+    #===========================================================================
+    def create_run_card(self, matrix_elements, history):
+        """ """
+ 
+        run_card = banner_mod.RunCardNLO()
+        
+        processes = [me.get('processes') 
+                                 for me in matrix_elements['matrix_elements']]
+        
+        run_card.create_default_for_process(self.proc_characteristic, 
+                                            history,
+                                            processes)
+        
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+
 
     def finalize_fks_directory(self, matrix_elements, history, makejpg = False,
             online = False, 
@@ -679,6 +718,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """Finalize FKS directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
+        self.proc_characteristic['grouped_matrix'] = False
+        
+        self.create_run_card(matrix_elements, history)
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
 #            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
@@ -694,12 +736,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 #        # Write maxconfigs.inc based on max of ME's/subprocess groups
         filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
         self.write_maxconfigs_file(writers.FortranWriter(filename),
-                                   matrix_elements['real_matrix_elements'])
+                                   matrix_elements)
         
 #        # Write maxparticles.inc based on max of ME's/subprocess groups
         filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
         self.write_maxparticles_file(writers.FortranWriter(filename),
-                                     matrix_elements['real_matrix_elements'])
+                                     matrix_elements)
 
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
@@ -845,7 +887,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         lines = []
         lines2 = []
         max_links = 0
-        born_me = matrix_element.born_matrix_element
+        born_me = matrix_element.born_me
         for iFKS, conf in enumerate(matrix_element.get_fks_info_list()):
             iFKS = iFKS+1
             links = conf['fks_info']['rb_links']
@@ -1077,7 +1119,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         lines.append("# P -> POW_D") 
         lines2 = []
         nconfs = len(matrix_element.get_fks_info_list())
-        (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         max_iconfig=0
         max_leg_number=0
@@ -1154,7 +1196,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             for iconf, configs in enumerate(s_and_t_channels):
                 for vertex in configs[0] + configs[1][:-1]:
                     leg = vertex.get('legs')[-1]
-                    if leg.get('id') == 21 and 21 not in particle_dict:
+                    if leg.get('id') not in particle_dict:
                         # Fake propagator used in multiparticle vertices
                         pow_part = 0
                     else:
@@ -1197,7 +1239,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         lines.append("# M -> MOTHUP_D")
         lines.append("# C -> ICOLUP_D")
         nfksconfs = len(matrix_element.get_fks_info_list())
-        (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         maxproc = 0
         maxflow = 0
@@ -1219,8 +1261,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         and among the different parton luminosities and 
         among the various helper functions for the split-orders"""
 
-        maxsqso = max(sqsolist)
-
         # the real me wrapper
         text = \
             """subroutine smatrix_real(p, wgt)
@@ -1230,100 +1270,58 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             double precision wgt
             integer nfksprocess
             common/c_nfksprocess/nfksprocess
-            real*4 tbefore, tAfter
-            real*4 tTot, tOLP, tFastJet, tPDF
-            common/timings/tTot, tOLP, tFastJet, tPDF
-            call cpu_time(tbefore)
             """ 
         # the pdf wrapper
         text1 = \
             """\n\ndouble precision function dlum()
             implicit none
+            include 'timing_variables.inc'
             integer nfksprocess
             common/c_nfksprocess/nfksprocess
+            call cpu_time(tbefore)
             """
-        # the wrapper to the function which returns the number of squared 
-        # split orders
-        text2 = \
-            """\n\n integer function get_nsqso_real()
-            implicit none
-            integer nfksprocess
-            common/c_nfksprocess/nfksprocess
-            """
-        # the wrapper to the function which returns the power of a given coupling 
-        #appearing at a given index in the ans array
-        function_list = set(['getordpowfromindex%(n_me)d' % info \
-                for info in matrix_element.get_fks_info_list()])
-        text3 = \
-            """\n\n integer function getordpowfromindex_real(iorder, index)
-            implicit none
-            integer iorder, index
-            integer nfksprocess
-            common/c_nfksprocess/nfksprocess
-            integer %s
-            """ % ', '.join(function_list)
-        # the wrapper to the function which returns the index in the res array
-        # of the contribution of given orders
-        function_list = set(['sqsoindex_from_orders%(n_me)d' % info \
-                for info in matrix_element.get_fks_info_list()])
-        text4 = \
-            """\n\n integer function sqsoindex_from_orders_real(orders)
-            implicit none
-            integer orders(%d)
-            integer nfksprocess
-            common/c_nfksprocess/nfksprocess
-            integer %s
-            """ % (maxsqso, ', '.join(function_list))
 
-        for n, info in enumerate(matrix_element.get_fks_info_list()):
+        if matrix_element.real_processes:
+            for n, info in enumerate(matrix_element.get_fks_info_list()):
+                text += \
+                    """if (nfksprocess.eq.%(n)d) then
+                    call smatrix%(n_me)d(p, wgt)
+                    else""" % {'n': n + 1, 'n_me' : info['n_me']}
+                text1 += \
+                    """if (nfksprocess.eq.%(n)d) then
+                    call dlum_%(n_me)d(dlum)
+                    else""" % {'n': n + 1, 'n_me' : info['n_me']}
+
             text += \
-                """if (nfksprocess.eq.%(n)d) then
-                call smatrix%(n_me)d(p, wgt)
-                else""" % {'n': n + 1, 'n_me' : info['n_me']}
+                """
+                write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
+                stop\n endif
+                return \n end
+                """
             text1 += \
-                """if (nfksprocess.eq.%(n)d) then
-                call dlum_%(n_me)d(dlum)
-                else""" % {'n': n + 1, 'n_me' : info['n_me']}
-            text2 += \
-                """if (nfksprocess.eq.%(n)d) then
-                call get_nsqso_real%(n_me)d(get_nsqso_real)
-                else""" % {'n': n + 1, 'n_me' : info['n_me']}
-            text3 += \
-                """if (nfksprocess.eq.%(n)d) then
-                 getordpowfromindex_real = getordpowfromindex%(n_me)d(iorder, index)
-                else""" % {'n': n + 1, 'n_me' : info['n_me']}
-            text4 += \
-                """if (nfksprocess.eq.%(n)d) then
-                 sqsoindex_from_orders_real = sqsoindex_from_orders%(n_me)d(orders)
-                else""" % {'n': n + 1, 'n_me' : info['n_me']}
-        text += \
-            """
-            write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
-            stop\n endif\n call cpu_time(tAfter) \n tPDF = tPDF + (tAfter-tBefore)
-            return \n end
-            """
-        text1 += \
-            """
-            write(*,*) 'ERROR: invalid n in dlum :', nfksprocess\n stop\n endif
-            return \nend
-            """
-        text2 += \
-            """
-            write(*,*) 'ERROR: invalid n in get_nsqso_real :', nfksprocess\n stop\n endif
-            return \nend
-            """
-        text3 += \
-            """
-            write(*,*) 'ERROR: invalid n in getordpowfromindex_real :', nfksprocess\n stop\n endif
-            return \nend
-            """
-        text4 += \
-            """
-            write(*,*) 'ERROR: invalid n in sqsoindex_from_orders_real :', nfksprocess\n stop\n endif
-            return \nend
-            """
+                """
+                write(*,*) 'ERROR: invalid n in dlum :', nfksprocess\n stop\n endif
+                call cpu_time(tAfter) \n tPDF = tPDF + (tAfter-tBefore)
+                return \nend
+                """
+        else:
+            text += \
+                """
+                wgt=0d0
+                return
+                end
+                """
+            text1 += \
+                """
+                call dlum_0(dlum)
+                call cpu_time(tAfter)
+                tPDF = tPDF + (tAfter-tBefore)
+                return
+                end
+                """
+
         # Write the file
-        writer.writelines(text + text1 + text2 + text3 + text4)
+        writer.writelines(text + text1)
         return 0
 
 
@@ -1563,12 +1561,20 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
 
     def write_pdf_calls(self, matrix_element, fortran_model):
-        """writes the parton_lum_i.f files which contain the real matrix elements""" 
-        for n, fksreal in enumerate(matrix_element.real_processes):
-            filename = 'parton_lum_%d.f' % (n + 1)
-            self.write_pdf_file(writers.FortranWriter(filename),
-                                            fksreal.matrix_element, n + 1, 
-                                            fortran_model)
+        """writes the parton_lum_i.f files which contain the real matrix elements.
+        If no real emission existst, write the one for the born""" 
+
+        if matrix_element.real_processes:
+            for n, fksreal in enumerate(matrix_element.real_processes):
+                filename = 'parton_lum_%d.f' % (n + 1)
+                self.write_pdf_file(writers.FortranWriter(filename),
+                                                fksreal.matrix_element, n + 1, 
+                                                fortran_model)
+        else:
+                filename = 'parton_lum_0.f'
+                self.write_pdf_file(writers.FortranWriter(filename),
+                                                matrix_element.born_me, 0, 
+                                                fortran_model)
 
 
     def generate_born_fks_files(self, matrix_element, fortran_model, me_number, path):
@@ -1626,6 +1632,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             self.write_split_me_fks(writers.FortranWriter(filename),
                                     born_me, fortran_model, 'born', '',
                                     start_dict = born_dict)
+
+        filename = 'born_maxamps.inc'
+        maxamps = len(matrix_element.get('diagrams'))
+        maxflows = ncolor_born
+        self.write_maxamps_file(writers.FortranWriter(filename),
+                           maxamps,
+                           maxflows,
+                           max([len(matrix_element.get('processes')) for me in \
+                                matrix_element.born_me]),1)
+
 
         # the second call is for the born_hel file. use the same writer
         # function
@@ -1829,7 +1845,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         # The born matrix element, if needed
         filename = 'born_matrix.f'
         calls = self.write_bornmatrix(
@@ -1839,7 +1855,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
+                             nexternal, ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -1873,7 +1889,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # We should move to MadLoop5_resources directory from the SubProcesses
 
-        ln(pjoin('../../..','Cards','MadLoopParams.dat'),
+        ln(pjoin(os.path.pardir,os.path.pardir,'MadLoopParams.dat'),
                                               pjoin('..','MadLoop5_resources'))
 
         for file in linkfiles:
@@ -1939,7 +1955,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             QCD=orders['QCD']
         else:
             QED, QCD = self.get_qed_qcd_orders_from_weighted(\
-                    fksborns[0].born_matrix_element.get_nexternal_ninitial()[0],
+                    fksborns[0].get_nexternal_ninitial()[0]-1, # -1 is because the function returns nexternal of the real emission
                     orders['WEIGHTED'])
 
         replace_dict = {}
@@ -1978,10 +1994,113 @@ Parameters              %(params)s\n\
         return
 
 
+    #===============================================================================
+    # write_born_fks
+    #===============================================================================
+    # test written
+    def write_born_fks(self, writer, fksborn, fortran_model):
+        """Export a matrix element to a born.f file in MadFKS format"""
+
+        matrix_element = fksborn.born_me
+        
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+    
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+    
+        replace_dict = {}
+    
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+    
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        replace_dict['process_lines'] = process_lines
+        
+    
+        # Extract ncomb
+        ncomb = matrix_element.get_helicity_combinations()
+        replace_dict['ncomb'] = ncomb
+    
+        # Extract helicity lines
+        helicity_lines = self.get_helicity_lines(matrix_element)
+        replace_dict['helicity_lines'] = helicity_lines
+    
+        # Extract IC line
+        ic_line = self.get_ic_line(matrix_element)
+        replace_dict['ic_line'] = ic_line
+    
+        # Extract overall denominator
+        # Averaging initial state color, spin, and identical FS particles
+        #den_factor_line = get_den_factor_line(matrix_element)
+    
+        # Extract ngraphs
+        ngraphs = matrix_element.get_number_of_amplitudes()
+        replace_dict['ngraphs'] = ngraphs
+    
+        # Extract nwavefuncs
+        nwavefuncs = matrix_element.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
+    
+        # Extract ncolor
+        ncolor = max(1, len(matrix_element.get('color_basis')))
+        replace_dict['ncolor'] = ncolor
+    
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines(matrix_element)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+    
+        # Extract helas calls
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls)
+    
+        # Extract amp2 lines
+        amp2_lines = self.get_amp2_lines(matrix_element)
+        replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+    
+        # Extract JAMP lines
+        jamp_lines = self.get_JAMP_lines(matrix_element)
+        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
+
+        # Extract glu_ij_lines
+        ij_lines = self.get_ij_lines(fksborn)
+        replace_dict['ij_lines'] = '\n'.join(ij_lines)
+
+        # Extract den_factor_lines
+        den_factor_lines = self.get_den_factor_lines(fksborn)
+        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+    
+        # Extract the number of FKS process
+        replace_dict['nconfs'] = max(len(fksborn.get_fks_info_list()),1)
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/born_fks.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+        logger.warning('This function should not be called')
+    
+        return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
+
+
     def write_born_hel(self, writer, fksborn, fortran_model):
         """Export a matrix element to a born_hel.f file in MadFKS format"""
 
-        matrix_element = fksborn.born_matrix_element
+        matrix_element = fksborn.born_me
         
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -2257,9 +2376,10 @@ Parameters              %(params)s\n\
     #===============================================================================
     def write_nfksconfigs_file(self, writer, fksborn, fortran_model):
         """Writes the content of nFKSconfigs.inc, which just gives the
-        total FKS dirs as a parameter"""
+        total FKS dirs as a parameter.
+        nFKSconfigs is always >=1 (use a fake configuration for LOonly)"""
         replace_dict = {}
-        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
+        replace_dict['nconfs'] = max(len(fksborn.get_fks_info_list()), 1)
         content = \
 """      INTEGER FKS_CONFIGS
       PARAMETER (FKS_CONFIGS=%(nconfs)d)
@@ -2274,72 +2394,113 @@ Parameters              %(params)s\n\
     #===============================================================================
     def write_fks_info_file(self, writer, fksborn, fortran_model): #test_written
         """Writes the content of fks_info.inc, which lists the informations on the 
-        possible splittings of the born ME"""
+        possible splittings of the born ME.
+        nconfs is always >=1 (use a fake configuration for LOonly).
+        The fake configuration use an 'antigluon' (id -21, color=8) as i_fks and 
+        the last colored particle as j_fks."""
 
         replace_dict = {}
         fks_info_list = fksborn.get_fks_info_list()
         split_orders = fksborn.born_me['processes'][0]['split_orders']
-        replace_dict['nconfs'] = len(fks_info_list)
-        replace_dict['fks_i_values'] = ', '.join(['%d' % info['fks_info']['i'] \
-                                                 for info in fks_info_list]) 
-        replace_dict['fks_j_values'] = ', '.join(['%d' % info['fks_info']['j'] \
-                                                 for info in fks_info_list]) 
-        replace_dict['extra_cnt_values'] = ', '.join(['%d' % (info['fks_info']['extra_cnt_index'] + 1) \
-                                                 for info in fks_info_list]) 
+        replace_dict['nconfs'] = max(len(fks_info_list), 1)
         replace_dict['nsplitorders'] = len(split_orders)
         replace_dict['splitorders_name'] = ', '.join(split_orders)
 
         bool_dict = {True: '.true.', False: '.false.'}
 
-        # extra array to be filled, with the type of the splitting of the born and of the extra cnt
-        isplitorder_born = []
-        isplitorder_cnt = []
-        for info in fks_info_list:
-            # fill 0 if no extra_cnt is needed
-            if info['fks_info']['extra_cnt_index'] == -1:
-                isplitorder_born.append(0)
-                isplitorder_cnt.append(0)
-            else:
-                # the 0th component of split_type correspond to the born, the 1st
-                # to the extra_cnt
-                isplitorder_born.append(split_orders.index(
-                                        info['fks_info']['splitting_type'][0]) + 1)
-                isplitorder_cnt.append(split_orders.index(
-                                       info['fks_info']['splitting_type'][1]) + 1)
+        # this is for processes with 'real' or 'all' as NLO mode 
+        if len(fks_info_list) > 0:
+            replace_dict['fks_i_values'] = ', '.join(['%d' % info['fks_info']['i'] \
+                                                 for info in fks_info_list]) 
+            replace_dict['fks_j_values'] = ', '.join(['%d' % info['fks_info']['j'] \
+                                                 for info in fks_info_list]) 
+            replace_dict['extra_cnt_values'] = ', '.join(['%d' % (info['fks_info']['extra_cnt_index'] + 1) \
+                                                 for info in fks_info_list]) 
+            # extra array to be filled, with the type of the splitting of the born and of the extra cnt
+            isplitorder_born = []
+            isplitorder_cnt = []
+            for info in fks_info_list:
+                # fill 0 if no extra_cnt is needed
+                if info['fks_info']['extra_cnt_index'] == -1:
+                    isplitorder_born.append(0)
+                    isplitorder_cnt.append(0)
+                else:
+                    # the 0th component of split_type correspond to the born, the 1st
+                    # to the extra_cnt
+                    isplitorder_born.append(split_orders.index(
+                                            info['fks_info']['splitting_type'][0]) + 1)
+                    isplitorder_cnt.append(split_orders.index(
+                                           info['fks_info']['splitting_type'][1]) + 1)
 
-        replace_dict['isplitorder_born_values'] = \
-                        ', '.join(['%d' % n for n in isplitorder_born])
-        replace_dict['isplitorder_cnt_values'] = \
-                        ', '.join(['%d' % n for n in isplitorder_cnt])
+            replace_dict['isplitorder_born_values'] = \
+                            ', '.join(['%d' % n for n in isplitorder_born])
+            replace_dict['isplitorder_cnt_values'] = \
+                            ', '.join(['%d' % n for n in isplitorder_cnt])
 
-        col_lines = []
-        pdg_lines = []
-        charge_lines = []
-        fks_j_from_i_lines = []
-        split_type_lines = []
-        replace_dict['need_color_links'] = ', '.join(\
-                [bool_dict[info['fks_info']['need_color_links']] for \
-                info in fks_info_list ])
-        replace_dict['need_charge_links'] = ', '.join(\
-                [bool_dict[info['fks_info']['need_charge_links']] for \
-                info in fks_info_list ])
-        for i, info in enumerate(fks_info_list):
-            col_lines.append( \
-                'DATA (PARTICLE_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
-                % (i + 1, ', '.join('%d' % col for col in fksborn.real_processes[info['n_me']-1].colors) ))
-            pdg_lines.append( \
-                'DATA (PDG_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
-                % (i + 1, ', '.join('%d' % pdg for pdg in info['pdgs'])))
-            charge_lines.append(\
-                'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
-                % (i + 1, ', '.join('%19.15fd0' % charg\
-                                    for charg in fksborn.real_processes[info['n_me']-1].charges) ))
-            fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
-                                                                   i + 1))
-            split_type_lines.append( \
-                'DATA (SPLIT_TYPE_D (%d, IPOS), IPOS=1, %d) / %s /' %
-                  (i + 1, len(split_orders), 
-                   ', '.join([bool_dict[ordd in info['fks_info']['splitting_type']] for ordd in split_orders])))
+            replace_dict['need_color_links'] = ', '.join(\
+                    [bool_dict[info['fks_info']['need_color_links']] for \
+                    info in fks_info_list ])
+            replace_dict['need_charge_links'] = ', '.join(\
+                    [bool_dict[info['fks_info']['need_charge_links']] for \
+                    info in fks_info_list ])
+
+            col_lines = []
+            pdg_lines = []
+            charge_lines = []
+            fks_j_from_i_lines = []
+            split_type_lines = []
+            for i, info in enumerate(fks_info_list):
+                col_lines.append( \
+                    'DATA (PARTICLE_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                    % (i + 1, ', '.join('%d' % col for col in fksborn.real_processes[info['n_me']-1].colors) ))
+                pdg_lines.append( \
+                    'DATA (PDG_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                    % (i + 1, ', '.join('%d' % pdg for pdg in info['pdgs'])))
+                charge_lines.append(\
+                    'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
+                    % (i + 1, ', '.join('%19.15fd0' % charg\
+                                        for charg in fksborn.real_processes[info['n_me']-1].charges) ))
+                fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
+                                                i + 1))
+                split_type_lines.append( \
+                    'DATA (SPLIT_TYPE_D (%d, IPOS), IPOS=1, %d) / %s /' %
+                      (i + 1, len(split_orders), 
+                       ', '.join([bool_dict[ordd in info['fks_info']['splitting_type']] for ordd in split_orders])))
+        else:
+        # this is for 'LOonly', generate a fake FKS configuration with
+        # - i_fks = nexternal, pdg type = -21 and color =8
+        # - j_fks = the last colored particle
+            bornproc = fksborn.born_me.get('processes')[0]
+            pdgs = [l.get('id') for l in bornproc.get('legs')] + [-21]
+            colors = [l.get('color') for l in bornproc.get('legs')] + [8]
+            charges = [0.] * len(colors) 
+
+            fks_i = len(colors)
+            for cpos, col in enumerate(colors[:-1]):
+                if col != 1:
+                    fks_j = cpos+1
+
+            replace_dict['fks_i_values'] = str(fks_i)
+            replace_dict['fks_j_values'] = str(fks_j)
+            replace_dict['extra_cnt_values'] = '0'
+            replace_dict['isplitorder_born_values'] = '0'
+            replace_dict['isplitorder_cnt_values'] = '0'
+            replace_dict['need_color_links'] = '.false.'
+            replace_dict['need_charge_links'] = '.false.'
+
+            col_lines = ['DATA (PARTICLE_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                            % ', '.join([str(col) for col in colors])]
+            pdg_lines = ['DATA (PDG_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                            % ', '.join([str(pdg) for pdg in pdgs])]
+            charge_lines = ['DATA (PARTICLE_CHARGE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                            % ', '.join('%19.15fd0' % charg for charg in charges)]
+            fks_j_from_i_lines = ['DATA (FKS_J_FROM_I_D(1, %d, JPOS), JPOS = 0, 1)  / 1, %d /' \
+                            % (fks_i, fks_j)]
+            split_type_lines = [ \
+                    'DATA (SPLIT_TYPE_D (%d, IPOS), IPOS=1, %d) / %s /' %
+                      (1, len(split_orders), 
+                       ', '.join([bool_dict[False]] * len(split_orders)))]
+            
 
         replace_dict['col_lines'] = '\n'.join(col_lines)
         replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
@@ -2435,19 +2596,14 @@ Parameters              %(params)s\n\
         (nexternal, ninitial) = me.get_nexternal_ninitial()
     
         lines = []
-        lines.append('integer idup(%d,maxprocb_used)' % nexternal)
-        lines.append('integer mothup(%d,%d,maxprocb_used)' % (2, nexternal))
-        lines.append('integer icolup(%d,%d,maxflowb_used)' % (2, nexternal))
-        lines.append('integer ilh')
-        lines.append('')
 
         for iproc, proc in enumerate(me.get('processes')):
             legs = proc.get_legs_with_decays()
-            lines.append("DATA (IDUP(ilh,%d),ilh=1,%d)/%s/" % \
+            lines.append("DATA (IDUP(i,%d),i=1,%d)/%s/" % \
                          (iproc + 1, nexternal,
                           ",".join([str(l.get('id')) for l in legs])))
             for i in [1, 2]:
-                lines.append("DATA (MOTHUP(%d,ilh,%3r),ilh=1,%2r)/%s/" % \
+                lines.append("DATA (MOTHUP(%d,i,%3r),i=1,%2r)/%s/" % \
                          (i, iproc + 1, nexternal,
                           ",".join([ "%3r" % 0 ] * ninitial + \
                                    [ "%3r" % i ] * (nexternal - ninitial))))
@@ -2458,7 +2614,7 @@ Parameters              %(params)s\n\
                 # If no color basis, just output trivial color flow
                 if not me.get('color_basis'):
                     for i in [1, 2]:
-                        lines.append("DATA (ICOLUP(%d,ilh,  1),ilh=1,%2r)/%s/" % \
+                        lines.append("DATA (ICOLUP(%d,i,  1),i=1,%2r)/%s/" % \
                                  (i, nexternal,
                                   ",".join([ "%3r" % 0 ] * nexternal)))
                     color_flow_list = []
@@ -2476,21 +2632,15 @@ Parameters              %(params)s\n\
                     # And output them properly
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
                         for i in [0, 1]:
-                            lines.append("DATA (ICOLUP(%d,ilh,%3r),ilh=1,%2r)/%s/" % \
+                            lines.append("DATA (ICOLUP(%d,i,%3r),i=1,%2r)/%s/" % \
                                  (i + 1, cf_i + 1, nexternal,
                                   ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
                                             for l in legs])))
 
-        nflows = len(color_flow_list)
-
-        nproc = len(me.get('processes'))
-        firstlines = ['integer maxprocb_used, maxflowb_used',
-                      'parameter (maxprocb_used = %d)' % len(me.get('processes')),
-                      'parameter (maxflowb_used = %d)' % nflows]
         # Write the file
-        writer.writelines(firstlines + lines)
+        writer.writelines(lines)
     
-        return nflows
+        return len(color_flow_list)
 
 
     #===============================================================================
@@ -2781,13 +2931,20 @@ Parameters              %(params)s\n\
     
         lines = []
         info_list = fks_born.get_fks_info_list()
-        lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
-        lines.append('DATA IDEN_VALUES /' + \
-                     ', '.join(['%d' % ( 
-                     born_me.get_denominator_factor() / \
-                     born_me['identical_particle_factor'] * \
-                     fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
-                     for info in info_list]) + '/')
+        if info_list:
+            # if the reals have been generated, fill with the corresponding average factor
+            lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
+            lines.append('DATA IDEN_VALUES /' + \
+                         ', '.join(['%d' % ( 
+                         fks_born.born_me.get_denominator_factor() / \
+                         fks_born.born_me['identical_particle_factor'] * \
+                         fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
+                         for info in info_list]) + '/')
+        else:
+            # otherwise use the born
+            lines.append('INTEGER IDEN_VALUES(1)')
+            lines.append('DATA IDEN_VALUES / %d /' \
+                    % fks_born.born_me.get_denominator_factor())
 
         return lines
 
@@ -2800,9 +2957,15 @@ Parameters              %(params)s\n\
         that splits"""
         info_list = fks_born.get_fks_info_list()
         lines = []
-        lines.append('INTEGER IJ_VALUES(%d)' % len(info_list))
-        lines.append('DATA IJ_VALUES /' + \
-                     ', '.join(['%d' % info['fks_info']['ij'] for info in info_list]) + '/')
+        if info_list:
+            # if the reals have been generated, fill with the corresponding value of ij
+            lines.append('INTEGER IJ_VALUES(%d)' % len(info_list))
+            lines.append('DATA IJ_VALUES /' + \
+                         ', '.join(['%d' % info['fks_info']['ij'] for info in info_list]) + '/')
+        else:
+            #otherwise just put the first leg
+            lines.append('INTEGER IJ_VALUES(1)')
+            lines.append('DATA IJ_VALUES / 1 /')
 
         return lines
 
@@ -3016,7 +3179,10 @@ Parameters              %(params)s\n\
         """Write the get_color.f file for MadEvent, which returns color
         for all particles used in the matrix element."""
 
-        matrix_elements=matrix_element.real_processes[0].matrix_element
+        try:
+            matrix_elements=matrix_element.real_processes[0].matrix_element
+        except IndexError:
+            matrix_elements=[matrix_element.born_me]
 
         if isinstance(matrix_elements, helas_objects.HelasMatrixElement):
             matrix_elements = [matrix_elements]
@@ -3025,16 +3191,27 @@ Parameters              %(params)s\n\
 
         # We need the both particle and antiparticle wf_ids, since the identity
         # depends on the direction of the wf.
+        # loop on the real emissions
         wf_ids = set(sum([sum([sum([sum([[wf.get_pdg_code(),wf.get_anti_pdg_code()] \
                               for wf in d.get('wavefunctions')],[]) \
                               for d in me.get('diagrams')],[]) \
                               for me in [real_proc.matrix_element]],[])\
                               for real_proc in matrix_element.real_processes],[]))
+        # and also on the born
+        wf_ids = wf_ids.union(set(sum([sum([[wf.get_pdg_code(),wf.get_anti_pdg_code()] \
+                              for wf in d.get('wavefunctions')],[]) \
+                              for d in matrix_element.born_me.get('diagrams')],[])))
+
+        # loop on the real emissions
         leg_ids = set(sum([sum([sum([[l.get('id') for l in \
                                 p.get_legs_with_decays()] for p in \
                                 me.get('processes')], []) for me in \
                                 [real_proc.matrix_element]], []) for real_proc in \
                                 matrix_element.real_processes],[]))
+        # and also on the born
+        leg_ids = leg_ids.union(set(sum([[l.get('id') for l in \
+                                p.get_legs_with_decays()] for p in \
+                                matrix_element.born_me.get('processes')], [])))
         particle_ids = sorted(list(wf_ids.union(leg_ids)))
 
         lines = """function get_color(ipdg)
@@ -3069,6 +3246,56 @@ c           This is dummy particle used in multiparticle vertices
         # Write the file
         writer.writelines(lines)
 
+        return True
+
+    #===============================================================================
+    # write_props_file
+    #===============================================================================
+    #test_written
+    def write_props_file(self, writer, matrix_element, fortran_model, s_and_t_channels):
+        """Write the props.inc file for MadEvent. Needs input from
+        write_configs_file. With respect to the parent routine, it has some 
+        more specific formats that allow the props.inc file to be read by the 
+        link program"""
+    
+        lines = []
+    
+        particle_dict = matrix_element.get('processes')[0].get('model').\
+                        get('particle_dict')
+    
+        for iconf, configs in enumerate(s_and_t_channels):
+            for vertex in configs[0] + configs[1][:-1]:
+                leg = vertex.get('legs')[-1]
+                if leg.get('id') not in particle_dict:
+                    # Fake propagator used in multiparticle vertices
+                    mass = 'zero'
+                    width = 'zero'
+                    pow_part = 0
+                else:
+                    particle = particle_dict[leg.get('id')]
+                    # Get mass
+                    if particle.get('mass').lower() == 'zero':
+                        mass = particle.get('mass')
+                    else:
+                        mass = "abs(%s)" % particle.get('mass')
+                    # Get width
+                    if particle.get('width').lower() == 'zero':
+                        width = particle.get('width')
+                    else:
+                        width = "abs(%s)" % particle.get('width')
+    
+                    pow_part = 1 + int(particle.is_boson())
+    
+                lines.append("pmass(%3d,%4d)  = %s" % \
+                             (leg.get('number'), iconf + 1, mass))
+                lines.append("pwidth(%3d,%4d) = %s" % \
+                             (leg.get('number'), iconf + 1, width))
+                lines.append("pow(%3d,%4d) = %d" % \
+                             (leg.get('number'), iconf + 1, pow_part))
+    
+        # Write the file
+        writer.writelines(lines)
+    
         return True
 
 
@@ -3221,6 +3448,12 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+        if os.path.exists(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat')):          
+                self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.dir_path, 
+                                                  'Cards', 'MadLoopParams.dat'))
+                # write the output file
+                self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
+                                                           "MadLoopParams.dat"))
 
         # We need minimal editing of MadLoopCommons.f
         MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
@@ -3245,6 +3478,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                             writers.FortranWriter('cts_mpc.h'),)
 
         self.copy_python_files()
+
+
+        # We need to create the correct open_data for the pdf
+        self.write_pdf_opendata()
+
 
         # Return to original PWD
         os.chdir(cwd)
@@ -3284,7 +3522,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         
         # The born matrix element, if needed
         filename = 'born_matrix.f'
@@ -3295,7 +3533,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
+                             nexternal, ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -3340,7 +3578,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         os.system("ln -s ../../makefile_loop makefile")
         
 # We should move to MadLoop5_resources directory from the SubProcesses
-        ln(pjoin('../../..','Cards','MadLoopParams.dat'),
+        ln(pjoin(os.path.pardir,os.path.pardir,'MadLoopParams.dat'),
                                               pjoin('..','MadLoop5_resources'))        
 
         linkfiles = ['mpmodule.mod']

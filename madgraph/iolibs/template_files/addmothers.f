@@ -898,7 +898,7 @@ c         write(*,*) i, icol(1,i), icol(2,i),(jpart(j,i) , j=1,3)
 c      enddo
       do i=-nexternal+3,-1
          if (jpart(2,i).eq.0.or.jpart(3,i).eq.0) goto 20 ! not define mother -> continue
-         if (jpart(1,i).eq.1000.or.icol(2,i).eq.1000) goto 20 ! special color value -> continue
+         if (icol(1,i).eq.1000.or.icol(2,i).eq.1000) goto 20 ! special color value -> continue
          do k = 1,2
             found=.false.
             do j=1,nexternal

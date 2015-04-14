@@ -35,7 +35,7 @@ fi
 if [ "$SHOWER" == "HERWIG6" ] || [ "$SHOWER" == "PYTHIA6Q" ] || [ "$SHOWER" == "PYTHIA6PT" ] || [ "$SHOWER" == "HERWIGPP" ] ; then
     ./MCATNLO_$SHOWER\_EXE < MCATNLO_$SHOWER\_input > mcatnlo_run.log 2>&1
 
-elif [ $SHOWER == "PYTHIA8" ] ; then
+elif [ "$SHOWER" == "PYTHIA8" ] ; then
     if [ -f config.sh ] ; then source config.sh ; fi
     ./Pythia8.exe Pythia8.cmd > mcatnlo_run.log 2>&1
 fi
@@ -60,16 +60,16 @@ if [ "$OUTPUT" == "HEP" ] ; then
         gzip $NAME.hepmc
     fi
 
-elif [ "$OUTPUT" == "TOP" ] ; then
+elif [ "$OUTPUT" == "TOP" ] || [ "$OUTPUT" == "HWU" ]; then
     #top output 
     # this is for the final filename
     if [[ "$NFILE" != "" ]]; then
-        NAME="../topfile_$NFILE"
+        NAME="../histfile_$NFILE"
     else
-        NAME="topfile"
+        NAME="histfile"
     fi
     # just tar all the topfiles which are found
-    tar -cf $NAME.tar *.top *.TOP > tarlog.txt 2>&1
+    tar -cf $NAME.tar *.top *.TOP *.HwU *.hwu *.HWU > tarlog.txt 2>&1
 fi
 
 if [[ "$NFILE" != "" ]]; then

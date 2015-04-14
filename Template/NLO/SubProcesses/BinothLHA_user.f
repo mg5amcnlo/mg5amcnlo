@@ -29,9 +29,9 @@ c
       save conversion
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
      &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
+      integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
+     &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       logical firsttime,firsttime_conversion
       data firsttime,firsttime_conversion /.true.,.true./
       integer           isum_hel
@@ -39,13 +39,6 @@ c
       common/to_matrix/isum_hel, multi_channel
       double precision qes2
       common /coupl_es/ qes2
-      integer nvtozero
-      logical doVirtTest 
-      common/cvirt2test/nvtozero,doVirtTest
-      integer ivirtpoints,ivirtpointsExcept
-      double precision  virtmax,virtmin,virtsum
-      common/cvirt3test/virtmax,virtmin,virtsum,ivirtpoints,
-     &     ivirtpointsExcept
       logical fksprefact
       parameter (fksprefact=.true.)
       double precision tolerance, madfks_single, madfks_double
@@ -127,11 +120,6 @@ c              endif
 c          endif
 c      endif
 c======================================================================
-      if(doVirtTest.and.born_wgt.ne.0d0)then
-         virtmax=max(virtmax,virt_wgt/born_wgt/ao2pi)
-         virtmin=min(virtmin,virt_wgt/born_wgt/ao2pi)
-         virtsum=virtsum+virt_wgt/born_wgt/ao2pi
-      endif
       return
       end
 

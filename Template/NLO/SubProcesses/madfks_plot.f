@@ -2,6 +2,7 @@ c Wrapper routines for the fixed order analyses
       subroutine initplot
       implicit none
       include 'run.inc'
+      include "nexternal.inc"
       include 'reweight0.inc'
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
@@ -15,31 +16,54 @@ c Wrapper routines for the fixed order analyses
       include "appl_common.inc"
 
       nwgt=1
-      weights_info(nwgt)="central value  "
+      weights_info(nwgt)="  central value"
       if (do_rwgt_scale) then
          nwgt=nwgt+9
          if (numscales.ne.3) then
             write (*,*) 'ERROR #1 in initplot:',numscales
             stop 1
          endif
-         write (weights_info(nwgt-8),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",1.0,"muF=",1d0
-         write (weights_info(nwgt-7),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",1.0,"muF=",rw_Fscale_up
-         write (weights_info(nwgt-6),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",1.0,"muF=",rw_Fscale_down
-         write (weights_info(nwgt-5),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_up,"muF=",1d0
-         write (weights_info(nwgt-4),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_up,"muF=",rw_Fscale_up
-         write (weights_info(nwgt-3),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_up,"muF=",rw_Fscale_down
-         write (weights_info(nwgt-2),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_down,"muF=",1d0
-         write (weights_info(nwgt-1),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_down,"muF=",rw_Fscale_up
-         write (weights_info(nwgt  ),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_down,"muF=",rw_Fscale_down
+         if (ickkw.ne.-1) then
+c Renormalisation and factorisation scale uncertainties
+            write (weights_info(nwgt-8),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",1.0,"muF=",1d0
+            write (weights_info(nwgt-7),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",1.0,"muF=",rw_Fscale_up
+            write (weights_info(nwgt-6),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",1.0,"muF=",rw_Fscale_down
+            write (weights_info(nwgt-5),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_up,"muF=",1d0
+            write (weights_info(nwgt-4),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_up,"muF=",rw_Fscale_up
+            write (weights_info(nwgt-3),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_up,"muF=",rw_Fscale_down
+            write (weights_info(nwgt-2),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_down,"muF=",1d0
+            write (weights_info(nwgt-1),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_down,"muF=",rw_Fscale_up
+            write (weights_info(nwgt  ),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_down,"muF=",rw_Fscale_down
+         else
+c Soft and Hard scale variations for NLO+NNLO jet veto
+            write (weights_info(nwgt-8),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",1.0,"muH=",1.0
+            write (weights_info(nwgt-7),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",1.0,"muH=",2.0
+            write (weights_info(nwgt-6),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",1.0,"muH=",0.5
+            write (weights_info(nwgt-5),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",2.0,"muH=",1.0
+            write (weights_info(nwgt-4),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",2.0,"muH=",2.0
+            write (weights_info(nwgt-3),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",2.0,"muH=",0.5
+            write (weights_info(nwgt-2),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",0.5,"muH=",1.0
+            write (weights_info(nwgt-1),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",0.5,"muH=",2.0
+            write (weights_info(nwgt  ),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",0.5,"muH=",0.5
+         endif
       endif
       if (do_rwgt_pdf) then
          npdfs=pdf_set_max-pdf_set_min+1
@@ -81,6 +105,7 @@ c To keep track of the accumulated results:
 
       subroutine topout
       implicit none
+      include "nexternal.inc"
       include 'reweight0.inc'
       include 'reweightNLO.inc'
       integer ii,jj,n

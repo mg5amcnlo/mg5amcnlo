@@ -79,9 +79,9 @@ $(BINDIR)combine_events: $(COMBINE)
 	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 	mv combine_events $(BINDIR)
 
-CutTools: $(LIBDIR)libcts.a
+libcuttools: $(LIBDIR)libcts.a
 
-IREGI: $(LIBDIR)libiregi.a
+libiregi: $(LIBDIR)libiregi.a
 
 $(LIBDIR)libcts.a: $(CUTTOOLSDIR)
 	cd $(CUTTOOLSDIR); make
@@ -112,6 +112,10 @@ cleanIR:
 cleanStdHEP:
 	cd $(STDHEPDIR); make clean; cd ..
 
+libmodel: $(LIBDIR)libmodel.a
+
+libdhelas: $(LIBDIR)libdhelas.a
+
 clean:
 	rm -f *.o
 	rm -f param_card.inc run_card.inc
@@ -120,5 +124,6 @@ clean:
 	cd PDF; make clean; cd ..
 	cd DHELAS; make clean; cd ..
 	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
+	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi
 	if [ -d $(STDHEPDIR) ]; then cd $(STDHEPDIR); make clean; cd ..; fi
 	rm -f $(BINDIR)/combine_events $(BINDIR)/gen_ximprove

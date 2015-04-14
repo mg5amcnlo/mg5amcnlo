@@ -1627,6 +1627,7 @@ class ProcessTest(unittest.TestCase):
             self.assertEqual(a,b)
         self.assertEqual(goal, str(self.myprocess))
 
+
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
@@ -1936,6 +1937,32 @@ class ProcessDefinitionTest(unittest.TestCase):
         self.assertRaises(base_objects.ProcessDefinition.PhysicsObjectError,
                           self.my_process_definition.set,
                           'wrongparam', 0)
+
+    def test_get_process_with_legs(self):
+        """test the get_process_with_legs_function.
+        In particular, check that also the born_orders are passed"""
+
+        mydict = {'id':3,
+                      'number':5,
+                      'state':True,
+                      'from_group':False,
+                      'onshell':None,                       
+                      'loop_line':False}
+
+        myleg = base_objects.Leg(mydict)
+
+        mylist = [copy.copy(myleg) for dummy in range(1, 4) ]
+        myleglist = base_objects.LegList(mylist)
+        my_new_process_definition = copy.copy(self.my_process_definition)
+        my_new_process_definition['born_orders'] = {'QCD':99, 'QED':99}
+        testproc = my_new_process_definition.get_process_with_legs(myleglist)
+
+        for (k, v) in testproc.items():
+            if k not in self.my_process_definition.keys(): continue
+            if k != 'legs':
+                self.assertEqual(my_new_process_definition[k], testproc[k])
+            else:
+                self.assertEqual(myleglist, testproc[k])
 
     def test_values_for_prop(self):
         """Test filters for process properties"""

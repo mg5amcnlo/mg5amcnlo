@@ -35,6 +35,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.various.misc as misc
 import aloha
 
 # Special logger for the Cmd Interface
@@ -88,9 +89,7 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_output(self,args)
         
-        if args and args[0] in ['standalone']:
-            self._export_format = args.pop(0)
-        else:
+        if self._export_format not in ["standalone", "matchbox"]: 
             self._export_format = 'standalone'
 
     def check_launch(self, args, options):
@@ -222,7 +221,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             proc.get_ninitial():
             raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
             
-        if proc.get_ninitial()==1:
+        if proc.get_ninitial()==1 and tool=='aMC@NLO':
             raise self.InvalidCmd("At this stage %s cannot handle decay process."%tool+\
                                   "\nIt is however a straight-forward extension which "+\
                                   "will come out with the next release.")                           
@@ -273,13 +272,19 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
-    def validate_model(self, loop_type='virtual',coupling_type='QCD', stop=True):
+    def validate_model(self, loop_type='virtual',coupling_type=['QCD'], stop=True):
         """ Upgrade the model sm to loop_sm if needed """
+
+        # Allow to call this function with a string instead of a list of 
+        # perturbation orders.
+        if isinstance(coupling_type,str):
+            coupling_type = [coupling_type,]
 
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
-              (coupling_type not in self._curr_model['perturbation_couplings']):
-            if loop_type.startswith('real'):
+           any((coupl not in self._curr_model['perturbation_couplings']) \
+           for coupl in coupling_type):
+            if loop_type.startswith('real') or loop_type == 'LOonly':
                 if loop_type == 'real':
                     logger.info(\
                       "Beware that real corrections are generated from a tree-level model.")
@@ -291,26 +296,26 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             else:
                 logger.info(\
                   "The current model %s does not allow to generate"%self._curr_model.get('name')+
-                  " loop corrections of type %s."%coupling_type)
+                  " loop corrections of type %s."%str(coupling_type))
                 model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
                 if model_name.split('-')[0]=='loop_sm':
 		           model_name = model_name[5:]
                 if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
-                    if not self.options['gauge']=='Feynman' and coupling_type == 'QED':
+                    if not self.options['gauge']=='Feynman' and 'QED' in coupling_type:
                         logger.info('Switch to Feynman gauge because '+\
                           'model loop_qcd_qed_sm is restricted only to Feynman gauge.')
                         self._curr_model = None
                         mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-                    if coupling_type == 'QCD':
+                    if coupling_type == ['QCD',]:
                         add_on = ''
-                    elif coupling_type == 'QED':
+                    elif coupling_type in [['QED'],['QCD','QED']]:
                         add_on = 'qcd_qed_'
                     else:
 			            raise MadGraph5Error(
-                          "The pertubation coupling cannot be '%s'"%coupling_type+\
-                                                        " in SM loop processes")
+                          "The pertubation coupling cannot be '%s'"\
+                                    %str(coupling_type)+" in SM loop processes")
 
                     logger.info("MG5_aMC now loads 'loop_%s%s'."%(add_on,model_name))
 
@@ -414,8 +419,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         aloha_original_quad_mode = aloha.mp_precision
         aloha.mp_precision = True
 
-        if self._export_format not in ['standalone']:
-            raise self.InvalidCmd('ML5 only support standalone as export format.')
+        if self._export_format not in ['standalone', 'matchbox']:
+            raise self.InvalidCmd('ML5 only support standalone/matchbox as export format.')
 
         if not os.path.isdir(self._export_dir) and \
            self._export_format in ['matrix']:
@@ -435,18 +440,17 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                     shutil.rmtree(self._export_dir)
                 except OSError:
                     raise self.InvalidCmd('Could not remove directory %s.'\
-                                                         %str(self._export_dir))     
+                                                         %str(self._export_dir))
 
-        if not self._curr_amps[0].get('process').get('has_born') and \
-                                          self.options['loop_optimized_output']:
-            logger.warning('The loop optimized output is not available for '+\
-                     'loop-induced processes. Now setting this option to False.')
-            self.do_set('loop_optimized_output False')
+        if self._export_format == 'standalone':
+            output_type = 'madloop'
+        elif self._export_format == 'matchbox':
+            output_type = 'madloop_matchbox'
 
         self._curr_exporter = export_v4.ExportV4Factory(self, \
-                                                 noclean, output_type='madloop')
+                                                 noclean, output_type=output_type)
 
-        if self._export_format in ['standalone']:
+        if self._export_format in ['standalone', 'matchbox']:
             self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
 
         # Reset _done_export, since we have new directory
@@ -504,7 +508,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone']:
+        if self._export_format in ['standalone','matchbox']:
             path = pjoin(path, 'SubProcesses')
             
         cpu_time1 = time.time()
@@ -514,8 +518,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                         self._curr_matrix_elements.get_matrix_elements()
 
         # Fortran MadGraph5_aMC@NLO Standalone
-        if self._export_format == 'standalone':
-            for me in matrix_elements:
+        if self._export_format in ['standalone', 'matchbox']:
+            for me in matrix_elements:            
                 calls = calls + \
                         self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
@@ -575,18 +579,26 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         """Copy necessary sources and output the ps representation of 
         the diagrams, if needed"""
 
-        if self._export_format in ['standalone']:
+        if self._export_format in ['standalone','matchbox']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
+            # For a unique output of multiple type of exporter model information
+            # are save in memory
+            if hasattr(self, 'previous_lorentz'):
+                wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
+                wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                del self.previous_lorentz
+                del self.previous_couplings
+            
             self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)
 
-        if self._export_format in ['standalone']:
+        if self._export_format in ['standalone', 'matchbox']:
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
                                            self.history,
@@ -594,7 +606,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                                            online,
                                            self.options['fortran_compiler'])
 
-        if self._export_format in ['standalone']:
+        if self._export_format in ['standalone','matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
     def do_launch(self, line, *args,**opt):

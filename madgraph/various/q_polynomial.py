@@ -120,6 +120,7 @@ class PolynomialRoutines(object):
     
     def __init__(self, max_rank, coef_format='complex*16', sub_prefix='' 
                                                                 ,line_split=30):
+
         self.coef_format=coef_format
         self.sub_prefix=sub_prefix
         if coef_format=='complex*16':

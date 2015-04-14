@@ -985,8 +985,8 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},23,11,4,18),  # 37->23,12->11 remove external bubble and some triangle
-                       ({},['QCD'],{},15,5,2,10)]
+                       ({},['QCD','QED'],{},19,10,4,18), 
+                       ({},['QCD'],{},11,4,2,10)]
         
                 
         for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVmassGoal,nUVCTGoal) in ordersChoices:
@@ -1527,7 +1527,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         vx12_tag=base_objects.Vertex({'legs':base_objects.LegList([l24, l18, l12]), 'id': 1})
         closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l12, lfinal]), 'id': -1})
         goal_vertices=base_objects.VertexList([vx18_tag,vx12_tag,closing_vx])
-        myBubbleDiag.tag(myStructRep,8,9,self.myproc)
+        myBubbleDiag.tag(myStructRep,self.myproc['model'],8,9)
         self.assertEqual(myBubbleDiag.get('canonical_tag'), goal_tag)
         self.assertEqual(myBubbleDiag.get('vertices'), goal_vertices)
 
@@ -1575,7 +1575,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         myStruct=loop_base_objects.FDStructure()
         
         goal_tag=[[1, [0], 3], [1, [1], 3], [1, [2], 3], [1, [3], 3], [1, [4], 3]]
-        myPentaDiag1.tag(myStructRep,7,8,self.myproc)
+        myPentaDiag1.tag(myStructRep, self.myproc['model'], 7, 8)
         self.assertEqual(myPentaDiag1.get('canonical_tag'), goal_tag)
 
         vx17_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l7, l17]), 'id': 3})
@@ -1629,8 +1629,8 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[({},['QCD'],{},8),\
-                       ({},['QED'],{},224),\
-                       ({},['QCD','QED'],{},232)]
+                       ({},['QED'],{},198),\
+                       ({},['QCD','QED'],{},206)]
         for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
                                            'model':self.myloopmodel,
@@ -1677,9 +1677,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},697,171,260),
-                       ({},['QCD'],{},164,71,188),
-                       ({},['QED'],{},533,100,72)]
+                       ({},['QCD','QED'],{},625,171,260),
+                       ({},['QCD'],{},140,71,188),
+                       ({},['QED'],{},485,100,72)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -1733,9 +1733,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},1075,256,154),
+                       ({},['QCD','QED'],{},941,256,154),
                        ({},['QCD'],{},20,16,40),
-                       ({},['QED'],{},1055,240,114)]
+                       ({},['QED'],{},921,240,114)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -1789,9 +1789,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},425,136,108),
-                       ({},['QCD'],{},46,18,52),
-                       ({},['QED'],{},379,118,56)]
+                       ({},['QCD','QED'],{},363,136,108),
+                       ({},['QCD'],{},28,18,52),
+                       ({},['QED'],{},335,118,56)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -1845,9 +1845,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},1348,413,535),
-                       ({},['QCD'],{},556,234,431),
-                       ({},['QED'],{},792,179,104)]
+                       ({},['QCD','QED'],{},978,413,535),
+                       ({},['QCD'],{},384,234,431),
+                       ({},['QED'],{},594,179,104)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -1899,9 +1899,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},442,77,50),
+                       ({},['QCD','QED'],{},409,77,50),
                        ({},['QCD'],{},7,6,18),
-                       ({},['QED'],{},435,71,32)]
+                       ({},['QED'],{},402,71,32)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -1953,7 +1953,7 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QED'],{},611,63,34)]
+                       ({},['QED'],{},553,63,34)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -2005,9 +2005,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},101,53,16),
+                       ({},['QCD','QED'],{},79,53,16),
                        ({},['QCD'],{},2,2,0),
-                       ({},['QED'],{},99,51,16)]
+                       ({},['QED'],{},77,51,16)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -2059,9 +2059,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD'],{},23,6,14),
+                       ({},['QCD'],{},11,6,14),
                        ({},['QED'],{},27,12,12),
-                       ({},['QCD','QED'],{},50,18,26)]
+                       ({},['QCD','QED'],{},38,18,26)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -2113,7 +2113,7 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QED'],{},603,20,20)]
+                       ({},['QED'],{},582,20,20)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -2167,7 +2167,7 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QED'],{},8075,210,210)]
+                       ({},['QED'],{},7841,210,210)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -2221,7 +2221,7 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD'],{},2075,735,575)]
+                       ({},['QCD'],{},1139,735,575)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:

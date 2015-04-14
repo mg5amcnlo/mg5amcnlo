@@ -1,21 +1,21 @@
 #######################################################################
 #                             
-# This file contains the settings for analyses to be linked to aMC@NLO
-# fixed order runs. Analyse files are meant to be put (or linked)
-# inside <PROCDIR>/FixedOrderAnalysis/ (<PROCDIR> is the name of the
-# exported process directory). See the
-# <PROCDIR>/FixedOrderAnalysis/analysis_template.f file for details on
-# how to write your own analysis.
+# This file contains the settings for analyses to be linked to fixed
+# order runs. Analysis files are meant to be put (or linked) inside
+# <PROCDIR>/FixedOrderAnalysis/ (<PROCDIR> is the name of the exported
+# process directory). See the
+# <PROCDIR>/FixedOrderAnalysis/analysis_*_template.f file for details
+# on how to write your own analysis.
 #                                                                               
 #######################################################################
 #
-# Analysis format. Can either be 'topdrawer', 'root', or 'none'.
-# Topdrawer is human-readable text format, which allows for easy
-# conversion to other formats. When choosing topdrawer, the
-# histogramming package 'dbook.f' is included in the code, while when
-# choosing root the 'rbook_fe8.f' and 'rbook_be8.cc' are included. If
-# 'none' is chosen, all the other entries below have to be set empty.
-FO_ANALYSIS_FORMAT = topdrawer
+# Analysis format. Can either be 'topdrawer', 'root', 'HwU' or 'none'.
+# When choosing HwU, it comes with a GnuPlot wrapper. When choosing
+# topdrawer, the histogramming package 'dbook.f' is included in the
+# code, while when choosing root the 'rbook_fe8.f' and 'rbook_be8.cc'
+# are included. If 'none' is chosen, all the other entries below have
+# to be set empty.
+FO_ANALYSIS_FORMAT = HwU
 #
 # Needed extra-libraries (FastJet is already linked):
 FO_EXTRALIBS = 
@@ -31,12 +31,13 @@ FO_INCLUDEPATHS =
 # User's analysis (to be put in the <PROCDIR>/FixedOrderAnalysis/
 # directory). Please use .o as extension and white spaces to separate
 # files.
-FO_ANALYSE = analysis_td_template.o
+FO_ANALYSE = analysis_HwU_template.o
 #
 #
 ## When linking with root, the following settings are a working
-## example on lxplus (CERN). When using this, comment out the lines
-## above and replace <PATH_TO_ROOT> with the physical path to root,
+## example on lxplus (CERN) as of July 2014. When using this, comment
+## out the lines above and replace <PATH_TO_ROOT> with the physical
+## path to root,
 ## e.g. /afs/cern.ch/sw/lcg/app/releases/ROOT/5.34.11/x86_64-slc6-gcc46-dbg/root/
 #FO_ANALYSIS_FORMAT = root
 #FO_EXTRALIBS = Core Cint Hist Matrix MathCore RIO dl Thread

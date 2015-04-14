@@ -3,11 +3,12 @@
       include "genps.inc"
       include 'nexternal.inc'
       include "born_nhel.inc"
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
 c Nexternal is the number of legs (initial and final) al NLO, while max_bcol
 c is the number of color flows at Born level
       integer i,j,k,l,k0,mothercol(2),i1(2)
-      integer maxflow
-      parameter (maxflow=999)
       include 'born_leshouche.inc'
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow

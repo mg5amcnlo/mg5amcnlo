@@ -94,8 +94,13 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
+## if(not AmplitudeReduction) {
       INTEGER ID,SQSOINDEX,R
-      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+	  common/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+## }else{
+      INTEGER ID,R
+	  common/%(proc_prefix)sLOOP/ID,R
+## }
 
       LOGICAL CTINIT, TIRINIT, GOLEMINIT
       COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT,GOLEMINIT
@@ -107,7 +112,11 @@ C
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
 
+## if(not AmplitudeReduction){	  
       %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## }else{
+      %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
       COMMON/%(proc_prefix)sLCOEFS/LOOPCOEFS
 C ----------
 C BEGIN CODE
@@ -188,43 +197,43 @@ C     Fill in the golem coefficents and compute the loop
         PASS_COEF_CHECK=.TRUE.
 	SELECT CASE(RANK)
 	CASE(0)
-	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_0(LOOPCOEFS(0,SQSOINDEX,ID),COEFFS0)
+	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_0(LOOPCOEFS(0%(loop_induced_sqsoindex)s,ID),COEFFS0)
 	    IF(GOLEM_RUN_MODE.EQ.3)THEN
 		COEFFS0_REC = %(proc_prefix)sGOLEM_LOOPNUM(NULL_VEC,0.0_ki)
 		PASS_COEF_CHECK=%(proc_prefix)sCOMPARE_COEFS_0(COEFFS0,COEFFS0_REC)
 	    ENDIF
 	CASE(1)
-	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_1(LOOPCOEFS(0,SQSOINDEX,ID),COEFFS1)
+	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_1(LOOPCOEFS(0%(loop_induced_sqsoindex)s,ID),COEFFS1)
 	    IF(GOLEM_RUN_MODE.EQ.3)THEN
 		CALL RECONSTRUCT1(%(proc_prefix)sGOLEM_LOOPNUM,COEFFS1_REC)
 		PASS_COEF_CHECK=%(proc_prefix)sCOMPARE_COEFS_1(COEFFS1,COEFFS1_REC)
 	    ENDIF
 	CASE(2)
-	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_2(LOOPCOEFS(0,SQSOINDEX,ID),COEFFS2)
+	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_2(LOOPCOEFS(0%(loop_induced_sqsoindex)s,ID),COEFFS2)
 	    IF(GOLEM_RUN_MODE.EQ.3)THEN
 	        CALL RECONSTRUCT2(%(proc_prefix)sGOLEM_LOOPNUM,COEFFS2_REC)
 		PASS_COEF_CHECK=%(proc_prefix)sCOMPARE_COEFS_2(COEFFS2,COEFFS2_REC)
 	    ENDIF
 	CASE(3)
-	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_3(LOOPCOEFS(0,SQSOINDEX,ID),COEFFS3)
+	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_3(LOOPCOEFS(0%(loop_induced_sqsoindex)s,ID),COEFFS3)
 	    IF(GOLEM_RUN_MODE.EQ.3)THEN
 		CALL RECONSTRUCT3(%(proc_prefix)sGOLEM_LOOPNUM,COEFFS3_REC)
 		PASS_COEF_CHECK=%(proc_prefix)sCOMPARE_COEFS_3(COEFFS3,COEFFS3_REC)
 	    ENDIF
 	CASE(4)
-	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_4(LOOPCOEFS(0,SQSOINDEX,ID),COEFFS4)
+	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_4(LOOPCOEFS(0%(loop_induced_sqsoindex)s,ID),COEFFS4)
 	    IF(GOLEM_RUN_MODE.EQ.3)THEN
 		CALL RECONSTRUCT4(%(proc_prefix)sGOLEM_LOOPNUM,COEFFS4_REC)
 		PASS_COEF_CHECK=%(proc_prefix)sCOMPARE_COEFS_4(COEFFS4,COEFFS4_REC)
 	    ENDIF
 	CASE(5)
-	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_5(LOOPCOEFS(0,SQSOINDEX,ID),COEFFS5)
+	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_5(LOOPCOEFS(0%(loop_induced_sqsoindex)s,ID),COEFFS5)
 	    IF(GOLEM_RUN_MODE.EQ.3)THEN
 		CALL RECONSTRUCT5(%(proc_prefix)sGOLEM_LOOPNUM,COEFFS5_REC)
 		PASS_COEF_CHECK=%(proc_prefix)sCOMPARE_COEFS_5(COEFFS5,COEFFS5_REC)
 	    ENDIF
 	CASE(6)
-	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_6(LOOPCOEFS(0,SQSOINDEX,ID),COEFFS6)
+	    CALL %(proc_prefix)sFILL_GOLEM_COEFFS_6(LOOPCOEFS(0%(loop_induced_sqsoindex)s,ID),COEFFS6)
 	    IF(GOLEM_RUN_MODE.EQ.3)THEN
 		CALL RECONSTRUCT6(%(proc_prefix)sGOLEM_LOOPNUM,COEFFS6_REC)
 		PASS_COEF_CHECK=%(proc_prefix)sCOMPARE_COEFS_6(COEFFS6,COEFFS6_REC)
@@ -370,8 +379,16 @@ C     Fill in the golem coefficents and compute the loop
 	   STOP
 	 END SELECT
       ENDIF
-      
-	  %(finalize_GOLEM)s
+
+## if(AmplitudeReduction) {
+        RES(1)=NORMALIZATION*(RES_GOLEM%%c+2.0*LOG(MU_R)*RES_GOLEM%%b+2.0*LOG(MU_R)**2*RES_GOLEM%%a)
+        RES(2)=NORMALIZATION*(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)
+        RES(3)=NORMALIZATION*(RES_GOLEM%%a)
+## } else {
+        RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%c+2.0*LOG(MU_R)*RES_GOLEM%%b+2.0*LOG(MU_R)**2*RES_GOLEM%%a)
+        RES(2)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)
+        RES(3)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%a)
+## }
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
 
 C     Finally free golem memory and cache
