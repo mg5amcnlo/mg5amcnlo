@@ -23,6 +23,11 @@ C
       LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
       data keep_order / NSQAMPSO * .TRUE. /
       data firsttime / .TRUE. /
+      INCLUDE 'born_nhel.inc'
+      DOUBLE PRECISION WGT_HEL(NSQAMPSO, MAX_BHEL)
+      COMMON/C_BORN_HEL_SPLIT/WGT_HEL
+      DOUBLE PRECISION WGT_HEL_SUMMED(MAX_BHEL)
+      COMMON/C_BORN_HEL/WGT_HEL_SUMMED
 C
 C     FUNCTIONS
 C
@@ -48,9 +53,17 @@ endif
 C look for orders which match the born order constraint 
 	  CALL SBORN_HEL_SPLITORDERS(P,ANS)
 ans_summed = 0d0
-do i = 1, nsqampso
- if (keep_order(i)) ANS_SUMMED = ANS_SUMMED + ANS(I)
-enddo
+  DO J = 1, MAX_BHEL
+    WGT_HEL_SUMMED(J) = 0d0
+  ENDDO
+  DO I = 1, NSQAMPSO
+    IF (KEEP_ORDER(I)) THEN
+        ANS_SUMMED = ANS_SUMMED + ANS(I)
+        DO J = 1, MAX_BHEL
+            WGT_HEL_SUMMED(J) = WGT_HEL_SUMMED(J) + WGT_HEL(I,J)
+        ENDDO
+    ENDIF
+  ENDDO
 
 return
 END
@@ -102,7 +115,7 @@ C
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       double precision wgt_hel(NSQAMPSO, max_bhel)
-      common/c_born_hel/wgt_hel
+      COMMON/C_BORN_HEL_SPLIT/WGT_HEL
 C ----------
 C BEGIN CODE
 C ----------
