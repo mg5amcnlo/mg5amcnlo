@@ -5116,13 +5116,18 @@ c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
       virt_wgt=0d0
 
+      call sborn(p_born, wgt1)
       ! use the amp_split_cnt as the born to approximate the virtual
       ! check which one of the two (QCD, QED) is !=0
-      if (dble(amp_split_cnt(iamp,1,qcd_pos)).ne.0d0) then
-        amp_split_born_for_virt(iamp)=dble(amp_split_cnt(iamp,1,qcd_pos))
-      else if (dble(amp_split_cnt(iamp,1,qed_pos)).ne.0d0) then
-        amp_split_born_for_virt(iamp)=dble(amp_split_cnt(iamp,1,qed_pos))
-      endif
+      do iamp=1, amp_split_size
+        amp_split_born_for_virt(iamp)=0d0
+        if (dble(amp_split_cnt(iamp,1,qcd_pos)).ne.0d0) then
+          amp_split_born_for_virt(iamp)=dble(amp_split_cnt(iamp,1,qcd_pos))
+        else if (dble(amp_split_cnt(iamp,1,qed_pos)).ne.0d0) then
+          amp_split_born_for_virt(iamp)=dble(amp_split_cnt(iamp,1,qed_pos))
+        endif
+      enddo
+      
       if (fold.eq.0) then
          if ((ran2().le.virtual_fraction .and.
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
@@ -5140,7 +5145,7 @@ c convert to Binoth Les Houches Accord standards
               do iamp=1,amp_split_size
                 if (amp_split_virt(iamp).eq.0d0) cycle
                 amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $            average_virtual*dble(amp_split_born_for_virt(iamp))
+     $            average_virtual*amp_split_born_for_virt(iamp)
               enddo
             endif
             if (abrv.ne.'virt') then
