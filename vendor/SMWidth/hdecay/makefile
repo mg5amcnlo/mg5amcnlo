@@ -18,6 +18,8 @@ FC=gfortran
 
 #FFLAGS= -pc 64 -g77libs
 
+FFLAGS = -finit-local-zero
+
 #FC=gfortran
 
 .f.o:
