@@ -5278,9 +5278,8 @@ C               set charge factors
 c bsv_wgt here always contains the Born; must subtract it, since 
 c we need the pure NLO terms only
         do iamp=1,amp_split_size
-           amp_split_wgtnstmp(iamp)=amp_split_bsv(iamp)+
-     #                              amp_split_virt(iamp)-
-     #                              amp_split(iamp)-
+           amp_split_wgtnstmp(iamp)=amp_split_bsv(iamp)-
+     #                              amp_split_born(iamp)-
      #          log(q2fact(1)/QES2)*amp_split_wgtwnstmpmuf(iamp)-
      #          log(scale**2/QES2)*amp_split_wgtwnstmpmur(iamp)
         enddo
