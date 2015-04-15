@@ -81,6 +81,8 @@ c statistics for MadLoop
       include 'orders.inc'
       integer amp_orders(nsplitorders)
       integer split_amp_orders(nsplitorders), iamp
+      double precision amp_split_finite_ML(amp_split_size)
+      common /to_amp_split_finite/amp_split_finite_ML
       double precision amp_split_poles_ML(amp_split_size,2),
      $ amp_split_poles_FKS(amp_split_size,2)
       common /to_amp_split_poles_FKS/amp_split_poles_FKS
@@ -103,6 +105,7 @@ c Ellis-Sexton scale)
 C     reset the amp_split array
       do i = 1, amp_split_size
         amp_split(i) = 0d0
+        amp_split_finite_ML(i) = 0d0
         amp_split_poles_ML(i,1) = 0d0
         amp_split_poles_ML(i,2) = 0d0
       enddo
@@ -154,15 +157,15 @@ C        look for orders which match the nlo order constraint
              virt_wgt= virt_wgt + virt_wgts(1,i) / symfactvirt
              single  = single + virt_wgts(2,i) / symfactvirt
              double  = double + virt_wgts(3,i) / symfactvirt
-           endif
 C         keep track of the separate pieces correspoinding to
 C          different coupling combinations
-           do j = 1, nsplitorders
-            amp_orders(j) = getordpowfromindex_ML5(j, i)
-           enddo
-           amp_split(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
-           amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
-           amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i) / symfactvirt
+             do j = 1, nsplitorders
+              amp_orders(j) = getordpowfromindex_ML5(j, i)
+             enddo
+             amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
+             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
+             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i) / symfactvirt
+           endif
         enddo
       else
          tolerance=PrecisionVirtualAtRunTime
@@ -182,7 +185,7 @@ C          different coupling combinations
                 do j = 1, nsplitorders
                  amp_orders(j) = getordpowfromindex_ML5(j, i) / symfactvirt
                 enddo
-                amp_split(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
+                amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
                 amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
                 amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i) / symfactvirt
               endif
@@ -267,19 +270,23 @@ c MadLoop initialization PS points.
           if (iamp.ne.0.and.amp_split_poles_FKS(iamp,1).eq.0d0.and.
      $     amp_split_poles_FKS(iamp,1).eq.0d0) cycle
           if (iamp.eq.0) then
-            write(*,*) ''
-            write(*,*) 'Sum of all split-orders'
+            if (firsttime) then
+              write(*,*) ''
+              write(*,*) 'Sum of all split-orders'
+            endif
           else
-            write(*,*) ''
-            write(*,*) 'Splitorders', iamp
-             call amp_split_pos_to_orders(iamp,split_amp_orders)
-             do i = 1, nsplitorders
-               write(*,*) '      ',ordernames(i), ':', split_amp_orders(i)
-             enddo
-             single=amp_split_poles_ML(iamp,1)
-             double=amp_split_poles_ML(iamp,2)
-             madfks_single=amp_split_poles_FKS(iamp,1)
-             madfks_double=amp_split_poles_FKS(iamp,2)
+            if (firsttime) then
+              write(*,*) ''
+              write(*,*) 'Splitorders', iamp
+              call amp_split_pos_to_orders(iamp,split_amp_orders)
+              do i = 1, nsplitorders
+                write(*,*) '      ',ordernames(i), ':', split_amp_orders(i)
+              enddo
+            endif
+            single=amp_split_poles_ML(iamp,1)
+            double=amp_split_poles_ML(iamp,2)
+            madfks_single=amp_split_poles_FKS(iamp,1)
+            madfks_double=amp_split_poles_FKS(iamp,2)
           endif
           avgPoleRes(1)=(single+madfks_single)/2.0d0
           avgPoleRes(2)=(double+madfks_double)/2.0d0

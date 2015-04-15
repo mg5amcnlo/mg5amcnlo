@@ -48,6 +48,8 @@ c
       data nbad / 0 /
       include 'orders.inc'
       integer iamp
+      double precision amp_split_finite(amp_split_size)
+      common /to_amp_split_finite/amp_split_finite
 
       if (isum_hel.ne.0) then
          write (*,*) 'Can only do explicit helicity sum'//
@@ -59,6 +61,7 @@ C the OLP should be able to store the different amplitudes
 C corresponding to different coupling combinations
       do iamp=1,amp_split_size
         amp_split(iamp)=0d0
+        amp_split_finite(iamp)=0d0
       enddo
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)

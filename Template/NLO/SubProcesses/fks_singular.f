@@ -135,6 +135,8 @@ c value to the list of weights using the add_wgt subroutine
       include 'orders.inc'
       integer orders(nsplitorders)
       integer iamp
+      double precision amp_split_virt(amp_split_size)
+      common /to_amp_split_virt/amp_split_virt
       double precision amp_split_wgtnstmp(amp_split_size),
      $                 amp_split_wgtwnstmpmuf(amp_split_size),
      $                 amp_split_wgtwnstmpmur(amp_split_size)
@@ -197,7 +199,14 @@ c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
       virt_wgt_mint=virt_wgt*f_nb
       born_wgt_mint=born_wgt*f_b
-      call add_wgt(14,virt_wgt_mint,0d0,0d0)
+      do iamp=1, amp_split_size
+        if (amp_split_virt(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        g22=g**(QCD_power)
+        wgt1=amp_split_virt(iamp)*f_nb/g22
+        call add_wgt(14,wgt1,0d0,0d0)
+      enddo
       call cpu_time(tAfter)
       tIS=tIS+(tAfter-tBefore)
       return
@@ -3680,7 +3689,6 @@ C Reset the amp_split array
      &           n.ne.i_fks.and.m.ne.i_fks) then
 C wgt includes the gs/w^2 
                call sborn_sf(p_born,m,n,wgt)
-               write(*,*) 'MN', m, n, wgt
                if (wgt.ne.0d0) then
                   call eikonal_reduced(pp,m,n,i_fks,j_fks,
      #                                 xi_i_fks,y_ij_fks,eik)
@@ -4857,9 +4865,13 @@ c For the MINT folding
 C to keep track of the various split orders
       integer iamp
       integer orders(nsplitorders)
+      double precision amp_split_born(amp_split_size)
+      double precision amp_split_born_for_virt(amp_split_size)
       double precision amp_split_bsv(amp_split_size)
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
+      double precision amp_split_finite_ML(amp_split_size)
+      common /to_amp_split_finite/amp_split_finite_ML
       double precision amp_split_virt_save(amp_split_size)
       save amp_split_virt_save
       double precision amp_split_virt(amp_split_size)
@@ -4941,6 +4953,7 @@ c Born contribution:
       born_wgt=wgt1
       virt_wgt=0d0
       do iamp=1,amp_split_size
+        amp_split_born(iamp)=amp_split(iamp)
         amp_split_bsv(iamp)=amp_split_bsv(iamp)+amp_split(iamp)
       enddo
 
@@ -5102,31 +5115,59 @@ C set back the fks i/j info as prior to enter this function
 c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
       virt_wgt=0d0
+
+      ! use the amp_split_cnt as the born to approximate the virtual
+      ! check which one of the two (QCD, QED) is !=0
+      if (dble(amp_split_cnt(iamp,1,qcd_pos)).ne.0d0) then
+        amp_split_born_for_virt(iamp)=dble(amp_split_cnt(iamp,1,qcd_pos))
+      else if (dble(amp_split_cnt(iamp,1,qed_pos)).ne.0d0) then
+        amp_split_born_for_virt(iamp)=dble(amp_split_cnt(iamp,1,qed_pos))
+      endif
       if (fold.eq.0) then
          if ((ran2().le.virtual_fraction .and.
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
-               call cpu_time(tBefore)
-               Call BinothLHA(p_born,born_wgt,virt_wgt)
-c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
-               call cpu_time(tAfter)
-               do iamp=1,amp_split_size
-                 amp_split_virt(iamp)=amp_split(iamp)
-               enddo
-               tOLP=tOLP+(tAfter-tBefore)
-               virtual_over_born=virt_wgt/(born_wgt*aso2pi)
-               if (ickkw.ne.-1)
-     &              virt_wgt=virt_wgt-average_virtual*born_wgt*aso2pi
-               if (abrv.ne.'virt') then
-                  virt_wgt=virt_wgt/virtual_fraction
-               endif
-               virt_wgt_save=virt_wgt
+            call cpu_time(tBefore)
+            Call BinothLHA(p_born,born_wgt,virt_wgt)
+            call cpu_time(tAfter)
+            do iamp=1,amp_split_size
+              amp_split_virt(iamp)=amp_split_finite_ML(iamp)
+            enddo
+
+            tOLP=tOLP+(tAfter-tBefore)
+            virtual_over_born=virt_wgt/born_wgt
+            if (ickkw.ne.-1) then
+              virt_wgt=virt_wgt-average_virtual*born_wgt
+              do iamp=1,amp_split_size
+                if (amp_split_virt(iamp).eq.0d0) cycle
+                amp_split_virt(iamp)=amp_split_virt(iamp)-
+     $            average_virtual*dble(amp_split_born_for_virt(iamp))
+              enddo
+            endif
+            if (abrv.ne.'virt') then
+              virt_wgt=virt_wgt/virtual_fraction
+                do iamp=1,amp_split_size
+                  amp_split_virt(iamp)=amp_split_virt(iamp)/virtual_fraction
+                enddo
+            endif
+            virt_wgt_save=virt_wgt
+              do iamp=1,amp_split_size
+                amp_split_virt_save(iamp)=amp_split_virt(iamp)
+            enddo
          endif
       elseif(fold.eq.1) then
          virt_wgt=virt_wgt_save
-c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
+         do iamp=1,amp_split_size
+            amp_split_virt(iamp)=amp_split_virt_save(iamp)
+         enddo
       endif
-      if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1)
-     &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*aso2pi
+      if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1) then
+         bsv_wgt=bsv_wgt+average_virtual*born_wgt
+         do iamp=1, amp_split_size
+            if (amp_split_virt(iamp).eq.0d0) cycle
+            amp_split_bsv(iamp)=amp_split_bsv(iamp)+
+     $        average_virtual*amp_split_born_for_virt(iamp)
+         enddo
+      endif
 
 c eq.(MadFKS.C.13)
       if(abrv.ne.'virt')then
@@ -5220,15 +5261,6 @@ C               set charge factors
      #             (gamma_used+2d0*c_used*dlog(xicut_used))*
      #             dble(amp_split_cnt(iamp,1,ipos_ord))*coupl_wgtwnstmpmuf
               enddo
-CMZ                  if (particle_type(i).ne.1)then
-CMZ                     if (particle_type(i).eq.8) then
-CMZ                        aj=0
-CMZ                     elseif(abs(particle_type(i)).eq.3) then
-CMZ                        aj=1
-CMZ                     endif
-CMZ                     wgtwnstmpmuf=wgtwnstmpmuf-
-CMZ     #                   ( gamma(aj)+2d0*c(aj)*dlog(xicut_used) )
-CMZ                  endif
               enddo !end loop i=1,nincoming
             enddo !end loop iord=1,2
             do iamp=1,amp_split_size
@@ -5242,9 +5274,6 @@ CMZ                  endif
      #          2d0*pi*(beta0*dble(orders(qcd_pos)-2)/2d0+ 
      #          ren_group_coeff*wgtcpower)*aso2pi
             enddo
-CMZ               wgtwnstmpmuf=ao2pi*wgtwnstmpmuf*dble(wgt1(1))
-CCCMZ               wgtwnstmpmur=2*pi*(beta0*wgtbpower
-CCCMZ     #         +ren_group_coeff*wgtcpower)*ao2pi*dble(wgt1(1))
         endif
 c bsv_wgt here always contains the Born; must subtract it, since 
 c we need the pure NLO terms only
@@ -5255,9 +5284,6 @@ c we need the pure NLO terms only
      #          log(q2fact(1)/QES2)*amp_split_wgtwnstmpmuf(iamp)-
      #          log(scale**2/QES2)*amp_split_wgtwnstmpmur(iamp)
         enddo
-CCMZ            wgtnstmp=bsv_wgt+virt_wgt-born_wgt-
-CCMZ     #                wgtwnstmpmuf*log(q2fact(1)/QES2)-
-CCMZ     #                wgtwnstmpmur*log(scale**2/QES2)
       endif
 
       do iamp=1,amp_split_size
