@@ -1024,6 +1024,7 @@ class CondorCluster(Cluster):
         cmd = "condor_rm %s" % ' '.join(self.submitted_ids)
         
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
         
 class PBSCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -1167,6 +1168,7 @@ class PBSCluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 
 class SGECluster(Cluster):
@@ -1317,6 +1319,7 @@ class SGECluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 
 class LSFCluster(Cluster):
@@ -1446,6 +1449,7 @@ class LSFCluster(Cluster):
             return
         cmd = "bkill %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 class GECluster(Cluster):
     """Class for dealing with cluster submission on a GE cluster"""
@@ -1570,6 +1574,7 @@ class GECluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 def asyncrone_launch(exe, cwd=None, stdout=None, argument = [], **opt):
     """start a computation and not wait for it to finish.
@@ -1700,6 +1705,7 @@ class SLURMCluster(Cluster):
             return
         cmd = "scancel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 class HTCaaSCluster(Cluster):
     """Class for dealing with cluster submission on a HTCaaS cluster using GPFS """
@@ -1880,6 +1886,7 @@ class HTCaaSCluster(Cluster):
         for i in range(len(self.submitted_ids)):
          cmd = "htcaas-job-cancel -m %s" % ' '.join(self.submitted_ids[i])
          status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
  
 class HTCaaS2Cluster(Cluster):
@@ -2276,6 +2283,7 @@ class HTCaaS2Cluster(Cluster):
         for i in range(len(self.submitted_ids)):
          cmd = "htcaas-job-cancel -m %s" % ' '.join(self.submitted_ids[i])        
          status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
