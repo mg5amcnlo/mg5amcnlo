@@ -6593,12 +6593,10 @@ This implies that with decay chains:
         if 'ident_card.dat' in os.listdir(carddir):
             identpath=pjoin(carddir,'ident_card.dat')
         #run the code
-        misc.sprint('./smwidth',opts['path'],identpath,arg2)
         output,error = misc.Popen(['./smwidth',opts['path'],identpath,arg2],
                                   stdout=subprocess.PIPE,
                                   stdin=subprocess.PIPE,
                                   cwd=pjoin(model_path, 'SMWidth')).communicate()
-        misc.sprint(output,error)
         pattern = re.compile(r'''  decay\s+(\+?\-?\d+)\s+(\+?\-?\d+\.\d+E\+?\-?\d+)''',re.I)
         width_list = pattern.findall(output)
         width_dict = {}
