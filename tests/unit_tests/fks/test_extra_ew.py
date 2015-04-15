@@ -22,6 +22,7 @@ import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.amcatnlo_interface as amcatnlocmd
 import os
 import madgraph.fks.fks_helas_objects as fks_helas
+import copy
 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -239,9 +240,9 @@ class TestAMCatNLOEW(unittest.TestCase):
         newinterface = mgcmd.MasterCmd()
         newinterface2 = mgcmd.MasterCmd()
         # generate the processes
-        self.interface.do_generate('u u~ > t t~ [real=QCD QED]')
-        newinterface.do_generate('c c~ > t t~ [real=QCD QED]')
-        newinterface2.do_generate('d d~ > t t~ [real=QCD QED]')
+        self.interface.do_generate('u u~ > t t~ QED=0 QCD=2 [real=QCD QED]')
+        newinterface.do_generate('c c~ > t t~ QED=0 QCD=2 [real=QCD QED]')
+        newinterface2.do_generate('d d~ > t t~ QED=0 QCD=2 [real=QCD QED]')
 
         fksproc1 = self.interface._fks_multi_proc
         fksproc2 = newinterface._fks_multi_proc
@@ -266,6 +267,48 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.assertEqual(len(fksme1.born_me['processes']), 2)
         for real in fksme1.real_processes:
             self.assertEqual(len(real.matrix_element['processes']), 2)
+
+
+    def test_combine_equal_processes_qcd_qed_virt(self):
+        """check that two processes with the same matrix-elements are equal
+        and check that the add_process function works as expected. 
+        This test also cehck that equality works for virtuals.
+        In particular b-initiate processes have same trees but different loops (w/top)"""
+        # generate the processes
+
+        self.interface.do_import('model loop_qcd_qed_sm-no_widths')
+
+        self.interface.do_generate('u u~ > g g QED=0 QCD=2 [QCD QED]')
+        fksproc1 = copy.copy(self.interface._fks_multi_proc)
+
+        self.interface.do_generate('c c~ > g g QED=0 QCD=2 [QCD QED]')
+        fksproc2 = copy.copy(self.interface._fks_multi_proc)
+
+        self.interface.do_generate('d d~ > g g QED=0 QCD=2 [QCD QED]')
+        fksproc3 = copy.copy(self.interface._fks_multi_proc)
+
+        self.interface.do_generate('b b~ > g g QED=0 QCD=2 [QCD QED]')
+        fksproc4 = copy.copy(self.interface._fks_multi_proc)
+
+        # this is to avoid effects on other tests
+        self.interface.do_import('model sm')
+
+        fksme1 = fks_helas.FKSHelasMultiProcess(fksproc1)['matrix_elements'][0]
+        fksme2 = fks_helas.FKSHelasMultiProcess(fksproc2)['matrix_elements'][0]
+        fksme3 = fks_helas.FKSHelasMultiProcess(fksproc3)['matrix_elements'][0]
+        fksme4 = fks_helas.FKSHelasMultiProcess(fksproc4)['matrix_elements'][0]
+
+        # check that the u and d initiated are not equal
+        self.assertNotEqual(fksme2,fksme3)
+
+        # check that the b-initiated is different from all other processes
+        self.assertNotEqual(fksme1,fksme4)
+        self.assertNotEqual(fksme2,fksme4)
+        self.assertNotEqual(fksme3,fksme4)
+        
+        # check that the u and c initiated are equal
+        self.assertEqual(fksme1, fksme2)
+
 
 
     def test_combine_equal_processes_qcd(self):

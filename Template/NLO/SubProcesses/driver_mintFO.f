@@ -251,6 +251,13 @@ c
 c
 c Setup for parton-level NLO reweighting
          if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
+C check for zero cross-section
+C if restoring grids corresponding to sigma=0, just terminate the run
+         if (imode.ne.0.and.ans(1).eq.0d0.and.unc(1).eq.0d0) then
+            call close_run_zero_res(ncall, itmax, ndim, nintervals,
+     &                              nintervals_virt)
+            stop
+         endif
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2)
          call topout

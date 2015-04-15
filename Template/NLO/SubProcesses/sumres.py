@@ -53,7 +53,11 @@ for line in range(0,len(lines),2):
         dirs.remove(os.path.join(proc['folder'], proc['channel']))
         proc['resultABS'] = float(list[4])
         proc['errorABS'] = float(list[6])
-        proc['err_percABS'] = proc['errorABS']/proc['resultABS']*100.
+        try: 
+            proc['err_percABS'] = proc['errorABS']/proc['resultABS']*100.
+        except ZeroDivisionError:
+            proc['err_percABS'] = 0. 
+
         processes.append(proc)
         totABS+= proc['resultABS']
         errABS+= math.pow(proc['errorABS'],2)
@@ -61,7 +65,11 @@ for line in range(0,len(lines),2):
         if list:
             proc['result'] = float(list[3])
             proc['error'] = float(list[5])
-            proc['err_perc'] = proc['error']/proc['result']*100.
+            try:
+                proc['err_perc'] = proc['error']/proc['result']*100.
+            except ZeroDivisionError:
+                proc['err_perc'] = 0.
+
             tot+= proc['result']
             err+= math.pow(proc['error'],2)
 if dirs:

@@ -353,10 +353,14 @@ c Special for the computation of the 'computed virtual'
       enddo
       if (ntotcalls(1).gt.max_points .and. non_zero_point(1).lt.25 .and.
      &     double_events) then
+C zero cross-section: warn the user in the log, but print everything
+C and save files/grids as any other run
          write (*,*) 'ERROR: INTEGRAL APPEARS TO BE ZERO.'
          write (*,*) 'TRIED',ntotcalls(1),'PS POINTS AND ONLY '
      &        ,non_zero_point(1),' GAVE A NON-ZERO INTEGRAND.'
-         stop 1
+         call close_run_zero_res(ncalls0, nitmax, ndim, nintervals,
+     &    nintervals_virt)
+         stop 
       endif
 c Goto beginning of loop over PS points until enough points have found
 c that pass cuts.
@@ -1244,3 +1248,38 @@ c reset the acc values
       return
       end
 
+
+      subroutine close_run_zero_res(ncalls, nitmax, ndim, nintervals,
+     &    nintervals_virt)
+      implicit none
+      integer ncalls, nitmax, ndim, nintervals, nintervals_virt
+      integer j, i
+
+      write(*,*) 'Final result [ABS]:  0.000E000   +/-  0.000E000'
+      write(*,*) 'Final result:  0.000E000   +/-  0.000E000'
+      open(unit=58,file='res_0',status='unknown')
+      write(58,*) 'Final result [ABS]:  0.000E000   +/-  0.000E000'
+      write(58,*) 'Final result:  0.000E000   +/-  0.000E000'
+      close(58)
+ 
+      open(unit=58,file='results.dat',status='unknown')
+      write(58,*) 0d0,0d0,0d0,0,0,0,0,0d0,0d0,0d0
+      close(58)
+      call topout()
+c to save grids:
+      open (unit=12, file='mint_grids',status='unknown')
+      do j=0,nintervals
+        write (12,*) (0d0,i=1,ndim) ! xgrid(j,i)
+      enddo
+      do j=1,nintervals_virt
+         write (12,*) (0d0,i=1,ndim) !ave_virt(j,i)
+      enddo
+      write (12,*) 0d0,0d0,ncalls,nitmax
+      write (12,*) 0d0,0d0 !virtual_fraction, average_virtual
+      close (12)
+c write also a  dummy grid .MC_integer file
+      open (unit=12, file='grid.MC_integer',status='unknown')
+      write(12,*) '#DUMMYZEROXSEC'
+      close(12)
+      return
+      end
