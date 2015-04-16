@@ -1404,7 +1404,7 @@ c and not be part of the plots nor computation of the cross section.
             virt_wgt_mint=virt_wgt_mint*xlum
      &           *rwgt_muR_dep_fac(sqrt(scales2(2,i)))
             born_wgt_mint=born_wgt_mint*xlum
-     &           /(8d0*Pi**2)*rwgt_muR_dep_fac(sqrt(mu2_r))
+     &           *rwgt_muR_dep_fac(sqrt(mu2_r))
          endif
       enddo
       call cpu_time(tAfter)
@@ -5168,7 +5168,7 @@ c convert to Binoth Les Houches Accord standards
       if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1) then
          bsv_wgt=bsv_wgt+average_virtual*born_wgt
          do iamp=1, amp_split_size
-            if (amp_split_virt(iamp).eq.0d0) cycle
+            if (amp_split_born_for_virt(iamp).eq.0d0) cycle
             amp_split_bsv(iamp)=amp_split_bsv(iamp)+
      $        average_virtual*amp_split_born_for_virt(iamp)
          enddo
