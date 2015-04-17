@@ -17,7 +17,7 @@ C
 C
 C     LOCAL
 C
-      integer i,j,l,l1,l2,ndim
+      integer i,j,k,l,l1,l2,ndim
       integer npoints
       character*130 buf
 c
@@ -73,11 +73,11 @@ c For MINT:
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
-     $     ,ndimmax)
-      double precision ave_virt(nintervals_virt,ndimmax)
-     $     ,ave_virt_acc(nintervals_virt,ndimmax)
-     $     ,ave_born_acc(nintervals_virt ,ndimmax)
+      integer nvirt(nintervals_virt,ndimmax,0:n_ave_virt)
+     &     ,nvirt_acc(nintervals_virt,ndimmax,0:n_ave_virt)
+      double precision ave_virt(nintervals_virt,ndimmax,0:n_ave_virt)
+     $     ,ave_virt_acc(nintervals_virt,ndimmax,0:n_ave_virt)
+     $     ,ave_born_acc(nintervals_virt ,ndimmax,0:n_ave_virt)
       common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
      $     ,nvirt_acc
 
@@ -91,8 +91,11 @@ c statistics for MadLoop
 
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      double precision average_virtual,virtual_fraction
+      double precision average_virtual(0:n_ave_virt),virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
+      include 'orders.inc'
+      integer              n_ord_virt
+      common /c_n_ord_virt/n_ord_virt
 
 c timing statistics
       include "timing_variables.inc"
@@ -122,9 +125,11 @@ c
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
-      average_virtual=0d0
+      do i=0,n_ave_virt
+         average_virtual(i)=0d0
+      enddo
       virtual_fraction=max(virt_fraction,min_virt_fraction)
-      
+      n_ord_virt=amp_split_size
       
 c
 c     Read process number
@@ -218,7 +223,9 @@ c to restore grids:
                read (12,*) (xgrid(j,i),i=1,ndim)
             enddo
             do j=1,nintervals_virt
-               read (12,*) (ave_virt(j,i),i=1,ndim)
+               do k=0,n_ord_virt
+                  read (12,*) (ave_virt(j,i,k),i=1,ndim)
+               enddo
             enddo
             if (ncall.gt.0 .and. accuracy.ne.0d0) then
                read (12,*) ans(1),unc(1),ncall,itmax
@@ -237,7 +244,7 @@ c Update the number of PS points based on unc(1), ncall and accuracy
             else
                read (12,*) ans(1),unc(1),dummy,dummy
             endif
-            read (12,*) virtual_fraction,average_virtual
+            read (12,*) virtual_fraction,average_virtual(0)
             close (12)
             write (*,*) "Update iterations and points to",itmax,ncall
          endif
@@ -278,10 +285,12 @@ c to save grids:
             write (12,*) (xgrid(j,i),i=1,ndim)
          enddo
          do j=1,nintervals_virt
-            write (12,*) (ave_virt(j,i),i=1,ndim)
+            do k=0,n_ord_virt
+               write (12,*) (ave_virt(j,i,k),i=1,ndim)
+            enddo
          enddo
          write (12,*) ans(1),unc(1),ncall,itmax
-         write (12,*) virtual_fraction,average_virtual
+         write (12,*) virtual_fraction,average_virtual(0)
          close (12)
       else
          write (*,*) 'Unknown imode',imode
@@ -390,9 +399,10 @@ c timing statistics
       include 'c_weight.inc'
       include 'reweight.inc'
       include 'run.inc'
+      include 'orders.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
-      integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min
+      integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum
@@ -409,7 +419,8 @@ c timing statistics
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      double precision           virt_wgt_mint,born_wgt_mint
+      double precision           virt_wgt_mint(0:n_ave_virt),
+     &                           born_wgt_mint(0:n_ave_virt)
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common/c_vob/virtual_over_born
@@ -431,8 +442,10 @@ c timing statistics
       endif
       sigint=0d0
       icontr=0
-      virt_wgt_mint=0d0
-      born_wgt_mint=0d0
+      do iamp=0,amp_split_size
+         virt_wgt_mint(iamp)=0d0
+         born_wgt_mint(iamp)=0d0
+      enddo
       virtual_over_born=0d0
       if (ickkw.eq.-1) H1_factor_virt=0d0
       if (ickkw.eq.3) call set_FxFx_scale(0,p)

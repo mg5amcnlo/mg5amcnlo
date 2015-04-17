@@ -133,10 +133,12 @@ c value to the list of weights using the add_wgt subroutine
       include 'run.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'mint.inc'
       integer orders(nsplitorders)
       integer iamp
       double precision amp_split_virt(amp_split_size)
-      common /to_amp_split_virt/amp_split_virt
+     &     ,amp_split_born_for_virt(amp_split_size)
+      common /to_amp_split_virt/amp_split_virt,amp_split_born_for_virt
       double precision amp_split_wgtnstmp(amp_split_size),
      $                 amp_split_wgtwnstmpmuf(amp_split_size),
      $                 amp_split_wgtwnstmpmur(amp_split_size)
@@ -148,7 +150,8 @@ c value to the list of weights using the add_wgt subroutine
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision           virt_wgt_mint,born_wgt_mint
+      double precision           virt_wgt_mint(0:n_ave_virt),
+     &                           born_wgt_mint(0:n_ave_virt)
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
@@ -197,14 +200,15 @@ c value to the list of weights using the add_wgt subroutine
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
-      virt_wgt_mint=virt_wgt*f_nb
-      born_wgt_mint=born_wgt*f_b
+      virt_wgt_mint(0)=virt_wgt*f_nb
+      born_wgt_mint(0)=born_wgt*f_b
       do iamp=1, amp_split_size
         if (amp_split_virt(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
-        g22=g**(QCD_power)
-        wgt1=amp_split_virt(iamp)*f_nb/g22
+        virt_wgt_mint(iamp)=amp_split_virt(iamp)*f_nb
+        born_wgt_mint(iamp)=amp_split_born_for_virt(iamp)*f_nb
+        wgt1=virt_wgt_mint(iamp)/g**(QCD_power)
         call add_wgt(14,wgt1,0d0,0d0)
       enddo
       call cpu_time(tAfter)
@@ -1356,7 +1360,12 @@ c or to fill histograms.
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'genps.inc'
-      integer i,j,k
+      include 'orders.inc'
+      include 'mint.inc'
+      include 'reweight0.inc'
+      integer orders(nsplitorders)
+      integer i,j,k,iamp
+      logical virt_found
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
      $     ,wgt_wo_pdf
       external rwgt_muR_dep_fac
@@ -1364,13 +1373,15 @@ c or to fill histograms.
       external dlum
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      double precision           virt_wgt_mint,born_wgt_mint
+      double precision           virt_wgt_mint(0:n_ave_virt),
+     &                           born_wgt_mint(0:n_ave_virt)
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
       call cpu_time(tBefore)
       if (icontr.eq.0) return
+      virt_found=.false.
       do i=1,icontr
          nFKSprocess=nFKS(i)
          xbk(1) = bjx(1,i)
@@ -1397,14 +1408,23 @@ c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          do j=1,iproc
             parton_iproc(j,i)=parton_iproc(j,i) * wgt_wo_pdf
          enddo
-         if (itype(i).eq.14) then
+         if (itype(i).eq.14 .and. .not.virt_found) then
+            virt_found=.true.
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
-            virt_wgt_mint=virt_wgt_mint*xlum
-     &           *rwgt_muR_dep_fac(sqrt(scales2(2,i)))
-            born_wgt_mint=born_wgt_mint*xlum
+            virt_wgt_mint(0)=virt_wgt_mint(0)*xlum
      &           *rwgt_muR_dep_fac(sqrt(mu2_r))
+            born_wgt_mint(0)=born_wgt_mint(0)*xlum
+     &           *rwgt_muR_dep_fac(sqrt(mu2_r))
+            do iamp=1,amp_split_size
+               call amp_split_pos_to_orders(iamp, orders)
+               QCD_power=orders(qcd_pos)
+               virt_wgt_mint(iamp)=virt_wgt_mint(iamp)*xlum
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r))
+               born_wgt_mint(iamp)=born_wgt_mint(iamp)*xlum
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r))
+            enddo
          endif
       enddo
       call cpu_time(tAfter)
@@ -1477,8 +1497,6 @@ c wgts() array to include the weights.
       external dlum,alphas
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      double precision           virt_wgt_mint,born_wgt_mint
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c currently we have 'iwgt' weights in the wgts() array.
@@ -1924,9 +1942,11 @@ c Fills the function that is returned to the MINT integrator
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'mint.inc'
-      integer i
+      include 'orders.inc'
+      integer i,iamp,ithree,isix
       double precision f(nintegrals),sigint
-      double precision           virt_wgt_mint,born_wgt_mint
+      double precision           virt_wgt_mint(0:n_ave_virt),
+     &                           born_wgt_mint(0:n_ave_virt)
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
@@ -1936,10 +1956,19 @@ c Fills the function that is returned to the MINT integrator
       enddo
       f(1)=abs(sigint)
       f(2)=sigint
-      f(3)=virt_wgt_mint
       f(4)=virtual_over_born
-      f(5)=abs(virt_wgt_mint)
-      f(6)=born_wgt_mint
+      f(5)=abs(virt_wgt_mint(0))
+      do iamp=0,amp_split_size
+         if (iamp.eq.0) then
+            ithree=3
+            isix=6
+         else
+            ithree=2*iamp+5
+            isix=2*iamp+6
+         endif
+         f(ithree)=virt_wgt_mint(iamp)
+         f(isix)=born_wgt_mint(iamp)
+      enddo
       return
       end
       
@@ -2025,8 +2054,6 @@ c various FKS configurations can be summed together.
       logical               only_virt
       integer         imode
       common /c_imode/imode,only_virt
-      double precision           virt_wgt_mint,born_wgt_mint
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c Find the contribution to sum all the S-event ones. This should be one
@@ -2178,7 +2205,8 @@ c on the imode we should or should not include the virtual corrections.
       integer i,j,ict
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
      $     ,n1body_wgt,tmp_wgt
-      double precision           virt_wgt_mint,born_wgt_mint
+      double precision           virt_wgt_mint(0:n_ave_virt),
+     &                           born_wgt_mint(0:n_ave_virt)
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
@@ -2210,11 +2238,11 @@ c check the consistency of the results
                stop 1
             endif
          else
-            sigint1=sigint1+virt_wgt_mint
+            sigint1=sigint1+virt_wgt_mint(0)
             if (abs((sigint-sigint1)/(sigint+sigint1)).gt.1d-3) then
                write (*,*) 'ERROR: inconsistent integrals #1',sigint
      $              ,sigint1,abs((sigint-sigint1)/(sigint+sigint1))
-     $              ,virt_wgt_mint
+     $              ,virt_wgt_mint(0)
                stop 1
             endif
          endif
@@ -2232,10 +2260,10 @@ c n1body_wgt is used for the importance sampling over FKS directories
       endif
       f(1)=sigint_ABS
       f(2)=sigint
-      f(3)=virt_wgt_mint
+      f(3)=virt_wgt_mint(0)
       f(4)=virtual_over_born
-      f(5)=abs(virt_wgt_mint)
-      f(6)=born_wgt_mint
+      f(5)=abs(virt_wgt_mint(0))
+      f(6)=born_wgt_mint(0)
       return
       end
 
@@ -4764,6 +4792,7 @@ c      include "fks.inc"
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
+      include 'mint.inc'
       double precision p(0:3,nexternal),bsv_wgt,born_wgt
       double precision pp(0:3,nexternal)
       
@@ -4822,7 +4851,7 @@ c For tests of virtuals
       integer iminmax
       common/cExceptPSpoint/iminmax,ExceptPSpoint
 
-      double precision average_virtual,virtual_fraction
+      double precision average_virtual(0:n_ave_virt),virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
       double precision virtual_over_born
       common/c_vob/virtual_over_born
@@ -4866,7 +4895,6 @@ C to keep track of the various split orders
       integer iamp
       integer orders(nsplitorders)
       double precision amp_split_born(amp_split_size)
-      double precision amp_split_born_for_virt(amp_split_size)
       double precision amp_split_bsv(amp_split_size)
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
@@ -4875,7 +4903,8 @@ C to keep track of the various split orders
       double precision amp_split_virt_save(amp_split_size)
       save amp_split_virt_save
       double precision amp_split_virt(amp_split_size)
-      common /to_amp_split_virt/amp_split_virt
+     &     ,amp_split_born_for_virt(amp_split_size)
+      common /to_amp_split_virt/amp_split_virt,amp_split_born_for_virt
       double precision amp_split_wgtnstmp(amp_split_size),
      $                 amp_split_wgtwnstmpmuf(amp_split_size),
      $                 amp_split_wgtwnstmpmur(amp_split_size)
@@ -5119,8 +5148,14 @@ c convert to Binoth Les Houches Accord standards
       call sborn(p_born, wgt1)
       ! use the amp_split_cnt as the born to approximate the virtual
       ! check which one of the two (QCD, QED) is !=0
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+c     THIS IS DANGEROUS: if these are not always the same for all
+c     events, the whole virt_trics doesn't work and gives wrong results!
+c     CHECK THIS.
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       do iamp=1, amp_split_size
-        amp_split_born_for_virt(iamp)=0d0
+         amp_split_virt(iamp)=0d0
+         amp_split_born_for_virt(iamp)=0d0
         if (dble(amp_split_cnt(iamp,1,qcd_pos)).ne.0d0) then
           amp_split_born_for_virt(iamp)=dble(amp_split_cnt(iamp,1,qcd_pos))
         else if (dble(amp_split_cnt(iamp,1,qed_pos)).ne.0d0) then
@@ -5135,24 +5170,25 @@ c convert to Binoth Les Houches Accord standards
             Call BinothLHA(p_born,born_wgt,virt_wgt)
             call cpu_time(tAfter)
             do iamp=1,amp_split_size
-              amp_split_virt(iamp)=amp_split_finite_ML(iamp)
+               amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
 
             tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
-              virt_wgt=virt_wgt-average_virtual*born_wgt
+              virt_wgt=virt_wgt-average_virtual(0)*born_wgt
               do iamp=1,amp_split_size
                 if (amp_split_virt(iamp).eq.0d0) cycle
                 amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $            average_virtual*amp_split_born_for_virt(iamp)
+     $            average_virtual(iamp)*amp_split_born_for_virt(iamp)
               enddo
             endif
             if (abrv.ne.'virt') then
-              virt_wgt=virt_wgt/virtual_fraction
-                do iamp=1,amp_split_size
-                  amp_split_virt(iamp)=amp_split_virt(iamp)/virtual_fraction
-                enddo
+               virt_wgt=virt_wgt/virtual_fraction
+               do iamp=1,amp_split_size
+                  amp_split_virt(iamp)=amp_split_virt(iamp)
+     &                 /virtual_fraction
+               enddo
             endif
             virt_wgt_save=virt_wgt
               do iamp=1,amp_split_size
@@ -5166,11 +5202,11 @@ c convert to Binoth Les Houches Accord standards
          enddo
       endif
       if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1) then
-         bsv_wgt=bsv_wgt+average_virtual*born_wgt
+         bsv_wgt=bsv_wgt+average_virtual(0)*born_wgt
          do iamp=1, amp_split_size
             if (amp_split_born_for_virt(iamp).eq.0d0) cycle
             amp_split_bsv(iamp)=amp_split_bsv(iamp)+
-     $        average_virtual*amp_split_born_for_virt(iamp)
+     $        average_virtual(iamp)*amp_split_born_for_virt(iamp)
          enddo
       endif
 
