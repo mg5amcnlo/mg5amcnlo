@@ -554,8 +554,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                              nexternal, ninitial)
 
         filename = 'orders.inc'
-        self.write_orders_file(writers.FortranWriter(filename),
-                                    matrix_element)
+        amp_split_orders = self.write_orders_file(
+                            writers.FortranWriter(filename),
+                            matrix_element)
+
+        filename = 'amp_split_orders.inc'
+        self.write_amp_split_orders_file(
+                            writers.FortranWriter(filename),
+                            amp_split_orders)
     
         filename = 'pmass.inc'
         try:
@@ -917,6 +923,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         writer.writelines(lines2)
 
 
+    def write_amp_split_orders_file(self, writer, amp_split_orders):
+        """ write the include file with the information of the coupling power for the 
+        differen entries in the amp_split array"""
+        text = "integer iaso, amp_split_orders(%d, nsplitorders)\n" % len(amp_split_orders)
+
+        for i, amp_orders in enumerate(amp_split_orders):
+            text+= "data (amp_split_orders(%d, iaso), iaso=1,nsplitorders) / %s /\n" % \
+                (i + 1, ', '.join(['%d' % o for o in amp_orders]))
+
+        writer.writelines(text)
+
 
     def write_orders_file(self, writer, matrix_element):
         """writes the include file with the informations about coupling orders.
@@ -991,10 +1008,26 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         if 'QED' in split_orders:
             qed_pos = split_orders.index('QED') + 1
 
-        # the size of the array that keeps track
-        amp_split_size = 1
-        for o in split_orders:
-            amp_split_size = amp_split_size * (nlo_orders[o]+1)
+        # determine the size of the array that keeps track
+        # of the different split orders, and the position 
+        # of the different split order combinations in this array
+        # to be written in orders_to_amp_split_pos.inc and
+        #                  amp_split_pos_to_orders.inc
+                          
+        # the number of squared orders of the born ME
+        amp_split_orders = []
+        squared_orders, amp_orders = matrix_element.born_me.get_split_orders_mapping()
+        amp_split_size_born =  len(squared_orders)
+        amp_split_orders += squared_orders
+        
+        #then check the real emissions
+        for realme in matrix_element.real_processes:
+            squared_orders, amp_orders = realme.matrix_element.get_split_orders_mapping()
+            for order in squared_orders:
+                if not order in amp_split_orders:
+                    amp_split_orders.append(order)
+
+        amp_split_size=len(amp_split_orders)
 
         text = 'C The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
@@ -1011,13 +1044,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         text += 'parameter (qcd_pos = %d)\n' % qcd_pos
         text += 'parameter (qed_pos = %d)\n' % qed_pos
         text += 'C this is to keep track of the various coupling combinations entering each ME\n'
-        text += 'integer amp_split_size\n'
-        text += 'parameter (amp_split_size = %d) ! prod_i (nlo_orders(i)+1)\n' % amp_split_size
+        text += 'integer amp_split_size, amp_split_size_born\n'
+        text += 'parameter (amp_split_size = %d)\n' % amp_split_size
+        text += 'parameter (amp_split_size_born = %d) ! the first entries in amp_split are for the born\n' % amp_split_size_born
         text += 'double precision amp_split(amp_split_size)\n'
         text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
         text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
 
         writer.writelines(text)
+
+        return amp_split_orders
 
 
     #===============================================================================

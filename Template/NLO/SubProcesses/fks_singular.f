@@ -4,8 +4,8 @@ C given the squared orders ord, return the corresponding position into the amp_s
       implicit none
       include 'orders.inc'
       integer ord(nsplitorders)
-      integer i
-      integer so_prod
+      integer i,j
+      include 'amp_split_orders.inc'
 
 C sanity check
       do i = 1, nsplitorders
@@ -17,15 +17,20 @@ C sanity check
         endif
       enddo
 
-C split_amp is a one-dimensional array, corresponding to the 
-C  one-dimensional version of the 'cube' of size 
-C  nlo_orders(1) x ... nlo_orders(nsplitorders)
-      orders_to_amp_split_pos = 1
-      so_prod = 1
-      do i = 1, nsplitorders
-        if (i.gt.1) so_prod = so_prod * (nlo_orders(i - 1) + 1)
-        orders_to_amp_split_pos = orders_to_amp_split_pos + ord(i) * so_prod
+      do i=1, amp_split_size
+        do j=1, nsplitorders
+          if (amp_split_orders(i,j).ne.ord(j)) goto 999 
+        enddo
+        orders_to_amp_split_pos = i
+        return
+ 999    continue   
       enddo
+
+      WRITE(*,*) 'ERROR:: Stopping function orders_to_amp_split_pos'
+      WRITE(*,*) 'Could not find orders ',(ord(i),i=1
+     $ ,nsplitorders)
+      stop
+
       return
       end
 
@@ -38,7 +43,7 @@ C it is the inverse of orders_to_amp_split_pos
       include 'orders.inc'
       integer pos, orders(nsplitorders)
       integer i
-      integer remainder, prod
+      include 'amp_split_orders.inc'
 
 C sanity check
       if (pos.gt.amp_split_size.or.pos.lt.0) then
@@ -47,13 +52,8 @@ C sanity check
         stop 1
       endif
 
-      prod = amp_split_size
-      remainder = pos
-      do i = nsplitorders, 1, -1
-        prod = prod / (nlo_orders(i) + 1)
-        orders(i) = (remainder - 1) / prod 
-        remainder = mod(remainder, prod) 
-        if (remainder.eq.0) remainder = prod
+      do i = 1, nsplitorders
+        orders(i) = amp_split_orders(pos,i)
       enddo
       return
       end
@@ -5228,8 +5228,6 @@ c eq.(MadFKS.C.13)
 
 c  eq.(MadFKS.C.14)
       if(abrv(1:2).ne.'vi')then
-CMZ        bsv_wgt=bsv_wgt - 2*pi*(beta0*wgtbpower
-CMZ     #      +ren_group_coeff*wgtcpower)*log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
         bsv_wgt_mufomur=0d0
         do iamp=1,amp_split_size
           if (dble(amp_split_cnt(iamp,1,qcd_pos)).eq.0d0) cycle
