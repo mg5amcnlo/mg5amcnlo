@@ -1820,6 +1820,7 @@ class RunCardNLO(RunCard):
         self.add_param('maxjetflavor', 4)
         self.add_param('iappl', 0)   
     
+        self.add_param('lhe_version', 3, hidden=True, include=False)
     
     def check_validity(self):
         """check the validity of the various input"""

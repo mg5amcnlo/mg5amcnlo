@@ -1535,8 +1535,8 @@ c     factor in front of matrix element
          enddo
          if (asref.gt.0d0.and.n_qcd.le.nexternal)then
             s_rwfact=s_rwfact*asref**n_qcd
-         else
-            s_rwfact=0d0
+c         else
+c            s_rwfact=0d0
          endif
       endif
 
