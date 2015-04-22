@@ -1664,6 +1664,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ij_lines = self.get_ij_lines(matrix_element)
         born_dict['ij_lines'] = '\n'.join(ij_lines)
 
+        #this is to skip computing amp_split_cnt if the process has no corrections
+        if not matrix_element.real_processes:
+            born_dict['skip_amp_cnt'] = 'goto 999 ! LOonly, no need to compute amp_split_cnt'
+        else:
+            born_dict['skip_amp_cnt'] = ''
+
         calls_born, ncolor_born, norders, nsqorders = \
             self.write_split_me_fks(writers.FortranWriter(filename),
                                     born_me, fortran_model, 'born', '',
@@ -2509,11 +2515,16 @@ Parameters              %(params)s\n\
             bornproc = fksborn.born_me.get('processes')[0]
             pdgs = [l.get('id') for l in bornproc.get('legs')] + [-21]
             colors = [l.get('color') for l in bornproc.get('legs')] + [8]
-            charges = [0.] * len(colors) 
+            charges = [l.get('charge') for l in bornproc.get('legs')] + [0.]
 
             fks_i = len(colors)
+            # fist look for a colored legs
             for cpos, col in enumerate(colors[:-1]):
                 if col != 1:
+                    fks_j = cpos+1
+            # if no colored leg exist, look for a charged leg
+            for cpos, chg in enumerate(charges[:-1]):
+                if chg != 0.:
                     fks_j = cpos+1
 
             replace_dict['fks_i_values'] = str(fks_i)
@@ -2521,8 +2532,9 @@ Parameters              %(params)s\n\
             replace_dict['extra_cnt_values'] = '0'
             replace_dict['isplitorder_born_values'] = '0'
             replace_dict['isplitorder_cnt_values'] = '0'
-            replace_dict['need_color_links'] = '.false.'
-            replace_dict['need_charge_links'] = '.false.'
+            # set both color/charge links to true
+            replace_dict['need_color_links'] = '.true.'
+            replace_dict['need_charge_links'] = '.true.'
 
             col_lines = ['DATA (PARTICLE_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
                             % ', '.join([str(col) for col in colors])]
@@ -3038,7 +3050,7 @@ Parameters              %(params)s\n\
                 pdf_codes[key] = val.replace('~','x').replace('+','p').replace('-','m')
 
             # Set conversion from PDG code to number used in PDF calls
-            pdgtopdf = {21: 0, 22: 7}
+            pdgtopdf = {21: 0, 22: 7, -11: -8, 11: 8, -13: -9, 13: 9, -15: -10, 15: 10}
             # Fill in missing entries of pdgtopdf
             for pdg in sum(initial_states,[]):
                 if not pdg in pdgtopdf and not pdg in pdgtopdf.values():
@@ -3081,7 +3093,7 @@ Parameters              %(params)s\n\
                 for initial_state in init_states:
                     if initial_state in pdf_codes.keys():
                         if subproc_group:
-                            if abs(pdgtopdf[initial_state]) <= 7:  
+                            if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
                                     ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
@@ -3095,7 +3107,7 @@ Parameters              %(params)s\n\
                                      "%s%d=0d0\n") % \
                                          (pdf_codes[initial_state],i + 1)                                
                         else:
-                            if abs(pdgtopdf[initial_state]) <= 7:  
+                            if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
                                     ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \

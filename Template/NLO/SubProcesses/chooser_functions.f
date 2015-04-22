@@ -134,7 +134,7 @@ c
          pdg_type(i)=pdg_type_D(nFKSprocess,i)
          ! is_aorg is true if the particle can induce soft singularities
          ! currencly it is based on the pdg id (photon or gluon)
-         is_aorg(i) = pdg_type(i).eq.21.or.pdg_type(i).eq.22
+         is_aorg(i) = abs(pdg_type(i)).eq.21.or.pdg_type(i).eq.22
          ! is_charged is true if the particle has any color or electric
          ! charge
          is_charged(i) = particle_type(i).ne.1.or.

@@ -6219,7 +6219,7 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
      &                 particle_type(j_fks),pdg_type(i_fks),pdg_type(j_fks)
                   stop
                endif
-            elseif(i_fks_pdg.ne.21.and.i_fks_pdg.ne.22) then ! if not already above, it MUST be a gluon or photon
+            elseif(abs(i_fks_pdg).ne.21.and.i_fks_pdg.ne.22) then ! if not already above, it MUST be a gluon or photon
                write (*,*) 'ERROR, i_fks is not a g/gamma and falls not'//
      $              ' in other categories',i_fks,j_fks,i_fks_pdg
      $              ,j_fks_pdg

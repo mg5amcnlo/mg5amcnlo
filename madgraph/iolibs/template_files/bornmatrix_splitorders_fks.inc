@@ -118,6 +118,7 @@ enddo
 C this is to avoid fake non-zero contributions 
 if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 
+%(skip_amp_cnt)s
 C quantities for the counterterms
 do j = 1, nsplitorders
  ans_cnt(1,j) = (0d0, 0d0)
@@ -143,7 +144,8 @@ C this is to avoid fake non-zero contributions
  if (abs(ans_cnt(2,j)).lt.max_val*tiny) ans_cnt(2,j)=(0d0,0d0)
 enddo
 
-return
+
+ 999   return
 END
 
 
