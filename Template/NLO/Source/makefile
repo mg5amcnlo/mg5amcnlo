@@ -79,9 +79,9 @@ $(BINDIR)combine_events: $(COMBINE)
 	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 	mv combine_events $(BINDIR)
 
-CutTools: $(LIBDIR)libcts.a
+libcuttools: $(LIBDIR)libcts.a
 
-IREGI: $(LIBDIR)libiregi.a
+libiregi: $(LIBDIR)libiregi.a
 
 $(LIBDIR)libcts.a: $(CUTTOOLSDIR)
 	cd $(CUTTOOLSDIR); make
@@ -111,6 +111,10 @@ cleanIR:
 
 cleanStdHEP:
 	cd $(STDHEPDIR); make clean; cd ..
+
+libmodel: $(LIBDIR)libmodel.a
+
+libdhelas: $(LIBDIR)libdhelas.a
 
 clean:
 	rm -f *.o

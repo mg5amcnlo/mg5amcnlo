@@ -9,6 +9,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+# 
 reset
 
 set lmargin 10
@@ -107,8 +108,8 @@ plot \
 unset label
 unset format
 set yrange [-4.6811e-01:5.7853e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
@@ -125,8 +126,8 @@ plot \
 unset label
 unset format
 set yrange [7.4371e-02:1.1353e-01]
-set origin 0.0000e+00, 3.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 2.0000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -183,8 +184,8 @@ plot \
 unset label
 unset format
 set yrange [-2.0081e-01:2.1998e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -245,8 +246,8 @@ plot \
 unset label
 unset format
 set yrange [-3.2802e-01:2.9991e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
@@ -263,8 +264,8 @@ plot \
 unset label
 unset format
 set yrange [-8.3479e-01:9.2115e-01]
-set origin 0.0000e+00, 3.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 2.0000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -321,8 +322,8 @@ plot \
 unset label
 unset format
 set yrange [-4.4782e-01:3.3281e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -383,8 +384,8 @@ plot \
 unset label
 unset format
 set yrange [-3.3957e-01:3.0377e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
@@ -401,8 +402,8 @@ plot \
 unset label
 unset format
 set yrange [-3.2102e-01:1.7413e+00]
-set origin 0.0000e+00, 3.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 2.0000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -459,8 +460,8 @@ plot \
 unset label
 unset format
 set yrange [-5.8784e-01:4.1534e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -521,8 +522,8 @@ plot \
 unset label
 unset format
 set yrange [-4.1641e-01:3.7151e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
@@ -539,8 +540,8 @@ plot \
 unset label
 unset format
 set yrange [3.8636e-01:1.1202e+00]
-set origin 0.0000e+00, 3.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 2.0000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -597,8 +598,8 @@ plot \
 unset label
 unset format
 set yrange [-2.7513e-01:2.9749e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -659,8 +660,8 @@ plot \
 unset label
 unset format
 set yrange [-1.6603e-01:1.3890e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
@@ -677,8 +678,8 @@ plot \
 unset label
 unset format
 set yrange [5.6282e-01:8.6343e-01]
-set origin 0.0000e+00, 3.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 2.0000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -735,8 +736,8 @@ plot \
 unset label
 unset format
 set yrange [-1.9712e-01:2.3171e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -797,8 +798,8 @@ plot \
 unset label
 unset format
 set yrange [-4.2181e-01:3.3480e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
@@ -815,8 +816,8 @@ plot \
 unset label
 unset format
 set yrange [-3.4140e-01:2.8528e+00]
-set origin 0.0000e+00, 3.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 2.0000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -873,8 +874,8 @@ plot \
 unset label
 unset format
 set yrange [-4.1428e-01:4.2102e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -935,8 +936,8 @@ plot \
 unset label
 unset format
 set yrange [-3.6492e-01:3.8950e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
@@ -953,8 +954,8 @@ plot \
 unset label
 unset format
 set yrange [9.2557e-01:1.7009e+00]
-set origin 0.0000e+00, 3.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 2.0000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -1011,8 +1012,8 @@ plot \
 unset label
 unset format
 set yrange [-3.1760e-01:2.5399e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -1073,8 +1074,8 @@ plot \
 unset label
 unset format
 set yrange [-9.5760e-01:9.4743e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
@@ -1091,8 +1092,8 @@ plot \
 unset label
 unset format
 set yrange [3.8790e-01:1.3698e+00]
-set origin 0.0000e+00, 3.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 2.0000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
@@ -1149,8 +1150,8 @@ plot \
 unset label
 unset format
 set yrange [-2.6403e-01:3.2176e-01]
-set origin 0.0000e+00, 4.0000e-01
-set size 1.0000e+00, 1.0000e-01
+set origin 0.0000e+00, 3.5000e-01
+set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x

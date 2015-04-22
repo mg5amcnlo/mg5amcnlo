@@ -94,10 +94,14 @@
 # cluster_queue = madgraph
 # cluster_size = 150 
 
-#! Path to a node directory to avoid direct writting on the central disk
-#!  Note that condor cluster avoid direct writting by default (therefore this
-#!  options didn't modify condor cluster)
+#! Path to a node directory to avoid direct writing on the central disk
+#!  Note that condor clusters avoid direct writing by default (therefore this
+#!  options does not affect condor clusters)
 # cluster_temp_path = None
+
+#! path to a node directory where local file can be found (typically pdf)
+#! to avoid to send them to the node (if cluster_temp_path is on True or condor)
+# cluster_local_path = /cvmfs/cp3.uclouvain.be/madgraph/
 
 #! Cluster waiting time for status update 
 #!  First number is when the number of waiting job is higher than the number 

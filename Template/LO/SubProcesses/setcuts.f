@@ -456,7 +456,7 @@ c
       inclHtmin=ihtmin
       inclHtmax=ihtmax
 
-      jetor = cutuse.eq.0d0
+      jetor = cutuse.eq.0
 
 c
 c   EXTRA LEPTON CUTS

@@ -985,8 +985,8 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},23,11,4,18),  # 37->23,12->11 remove external bubble and some triangle
-                       ({},['QCD'],{},15,5,2,10)]
+                       ({},['QCD','QED'],{},19,10,4,18), 
+                       ({},['QCD'],{},11,4,2,10)]
         
                 
         for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVmassGoal,nUVCTGoal) in ordersChoices:
@@ -1629,8 +1629,8 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[({},['QCD'],{},8),\
-                       ({},['QED'],{},204),\
-                       ({},['QCD','QED'],{},212)]
+                       ({},['QED'],{},198),\
+                       ({},['QCD','QED'],{},206)]
         for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
                                            'model':self.myloopmodel,
@@ -1677,9 +1677,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},637,171,260),
+                       ({},['QCD','QED'],{},625,171,260),
                        ({},['QCD'],{},140,71,188),
-                       ({},['QED'],{},497,100,72)]
+                       ({},['QED'],{},485,100,72)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -1733,9 +1733,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},947,256,154),
+                       ({},['QCD','QED'],{},941,256,154),
                        ({},['QCD'],{},20,16,40),
-                       ({},['QED'],{},927,240,114)]
+                       ({},['QED'],{},921,240,114)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -1789,8 +1789,8 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},369,136,108),
-                       ({},['QCD'],{},34,18,52),
+                       ({},['QCD','QED'],{},363,136,108),
+                       ({},['QCD'],{},28,18,52),
                        ({},['QED'],{},335,118,56)]
         
                 
@@ -1845,9 +1845,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},1032,413,535),
+                       ({},['QCD','QED'],{},978,413,535),
                        ({},['QCD'],{},384,234,431),
-                       ({},['QED'],{},648,179,104)]
+                       ({},['QED'],{},594,179,104)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -1953,7 +1953,7 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QED'],{},559,63,34)]
+                       ({},['QED'],{},553,63,34)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:
@@ -2059,9 +2059,9 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD'],{},17,6,14),
+                       ({},['QCD'],{},11,6,14),
                        ({},['QED'],{},27,12,12),
-                       ({},['QCD','QED'],{},44,18,26)]
+                       ({},['QCD','QED'],{},38,18,26)]
         
                 
         for (bornOrders,pert,sqOrders,nLoopGoal,nR2Goal,nUVGoal) in ordersChoices:

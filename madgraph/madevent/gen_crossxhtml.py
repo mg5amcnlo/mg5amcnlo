@@ -164,7 +164,8 @@ class AllResults(dict):
             if recreateold:
                 for run in runs:
                     self.readd_old_run(run)
-                self.current = self[run]
+                if self.order:
+                    self.current = self[self.order[-1]]
             else:
                 logger.warning("Previous runs exists but they will not be present in the html output.")
     
@@ -345,7 +346,8 @@ class AllResults(dict):
     def add_detail(self, name, value, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia',
-                        'nb_event_pythia','error_pythia', 'run_mode']
+                        'nb_event_pythia','error_pythia', 'run_mode',
+                        'run_statistics']
 
         if not run and not self.current:
             return
@@ -361,10 +363,26 @@ class AllResults(dict):
             run[name] = int(value)
         elif name == 'nb_event_pythia':
             run[name] = int(value)
-        elif name == 'run_mode':
+        elif name in ['run_mode','run_statistics']:
             run[name] = value
         else:    
             run[name] = float(value)    
+    
+    def get_detail(self, name, run=None, tag=None):
+        """ add information to current run (cross/error/event)"""
+        assert name in ['cross', 'error', 'nb_event', 'cross_pythia',
+                        'nb_event_pythia','error_pythia', 'run_mode',
+                        'run_statistics']
+
+        if not run and not self.current:
+            return None
+
+        if not run:
+            run = self.current
+        else:
+            run = self[run].return_tag(tag)
+            
+        return run[name]
     
     def output(self):
         """ write the output file """
@@ -495,6 +513,7 @@ class RunResults(list):
         
         self.info = {'run_name': run_name,'me_dir':path}
         self.tags = [run_card['run_tag']]
+        
         # Set the collider information
         data = process.split('>',1)[0].split()
         if len(data) == 2:
@@ -737,6 +756,9 @@ class OneTagResults(dict):
         # data 
         self.status = ''
 
+        # Dictionary with (Pdir,G) as keys and sum_html.RunStatistics instances
+        # as values
+        self['run_statistics'] = {}
     
     
     def update_status(self, level='all', nolevel=[]):
@@ -785,13 +807,14 @@ class OneTagResults(dict):
                                     exists(pjoin(path, "%s_parton_syscalc.log" %self['tag'])):
                 self.parton.append('syst')
 
-            if glob.glob(pjoin(path,"*.top")):
-                if self['run_mode'] in ['LO', 'NLO']:
-                    self.parton.append('top')
+            for kind in ['top','HwU','pdf','ps']:
+                if glob.glob(pjoin(path,"*.%s" % kind)):
+                    if self['run_mode'] in ['LO', 'NLO']:
+                        self.parton.append('%s' % kind)
 
         if level in ['shower','all'] and 'shower' not in nolevel \
           and self['run_mode'] != 'madevent':
-            # this is for hep/top files from amcatnlo
+            # this is for hep/top/HwU files from amcatnlo
             if glob.glob(pjoin(path,"*.hep")) + \
                glob.glob(pjoin(path,"*.hep.gz")):
                 self.shower.append('hep')
@@ -804,12 +827,12 @@ class OneTagResults(dict):
                glob.glob(pjoin(path,"*.hepmc.gz")):
                 self.shower.append('hepmc')
 
-            if glob.glob(pjoin(path,"*.top")):
-                if self['run_mode'] in ['LO', 'NLO']:
-                    self.parton.append('top')
-                else:
-                    self.shower.append('top')
-
+            for kind in ['top','HwU','pdf','ps']:
+                if glob.glob(pjoin(path,'*.' + kind)):
+                    if self['run_mode'] in ['LO', 'NLO']:
+                        self.parton.append('%s' % kind)
+                    else:
+                        self.shower.append('%s' % kind)
 
                 
         if level in ['pythia', 'all']:
@@ -911,20 +934,31 @@ class OneTagResults(dict):
                 elif exists(pjoin(self.me_dir, 'Events', self['run_name'], 'events.lhe')) or\
                   exists(pjoin(self.me_dir, 'Events', self['run_name'], 'events.lhe.gz')):
                     link = './Events/%(run_name)s/events.lhe'
-                level = 'parton'
-                name = 'LHE'
-                out += self.special_link(link, level, name) 
+                else:
+                    link = None
+                if link:
+                    level = 'parton'
+                    name = 'LHE'
+                    out += self.special_link(link, level, name) 
             if 'root' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/unweighted_events.root">rootfile</a>'
             if 'plot' in self.parton:
                 out += ' <a href="./HTML/%(run_name)s/plots_parton.html">plots</a>'
             if 'param_card' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/param_card.dat">param_card</a>'
-            if 'top' in self.parton:
+            for kind in ['top', 'pdf', 'ps']:
+                if kind in self.parton:
+            # fixed order plots
+                    for f in \
+                        glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)):
+                        out += " <a href=\"%s\">%s</a> " % (f, '%s' % kind.upper())
+            if 'HwU' in self.parton:
             # fixed order plots
                 for f in \
-                  glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.top')):
-                    out += " <a href=\"%s\">%s</a> " % (f, 'TOP')
+                  glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.HwU')):
+                    out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
+                    out += " <a href=\"%s\">%s</a> " % \
+                                           (f.replace('.HwU','.gnuplot'), 'GnuPlot')
             #if 'rwt' in self.parton:
             #    out += ' <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematic variation</a>'
 
@@ -991,12 +1025,17 @@ class OneTagResults(dict):
 
         if level == 'shower':
         # this is to add the link to the results after shower for amcatnlo
-            for kind in ['hep', 'hepmc', 'top']:
+            for kind in ['hep', 'hepmc', 'top', 'HwU', 'pdf', 'ps']:
                 if kind in self.shower:
                     for f in \
                       glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)) + \
                       glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind + '.gz')):
-                        out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
+                        if kind == 'HwU':
+                            out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
+                            out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.gnuplot'), 'GnuPlot')
+                        else:
+                            out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
+
             if 'plot' in self.shower:
                 out += """ <a href="./HTML/%(run_name)s/plots_shower_%(tag)s.html">plots</a>"""
             

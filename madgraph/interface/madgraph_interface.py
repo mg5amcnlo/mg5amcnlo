@@ -2442,7 +2442,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme',
                     'gauge',
                     'EWscheme']
-    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn']
+    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=']
     _OLP_supported = ['MadLoop', 'GoSam']
@@ -2478,6 +2478,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
+                       'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/',
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
@@ -2554,7 +2555,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
         self._comparisons = None
-        self._nlo_modes_for_completion = ['all','virt','real']
+        self._nlo_modes_for_completion = ['all','virt','real','LOonly']
 
         # Load the configuration file,i.e.mg5_configuration.txt
         self.set_configuration()
@@ -3772,7 +3773,7 @@ This implies that with decay chains:
             # then empty the perturbation_couplings_list at this stage.
             if LoopOption=='tree':
                 perturbation_couplings_list = []
-            if perturbation_couplings_list and LoopOption!='real':
+            if perturbation_couplings_list and LoopOption not in ['real', 'LOonly']:
                 if not isinstance(self._curr_model,loop_base_objects.LoopModel):
                     raise self.InvalidCmd(\
                       "The current model does not allow for loop computations.")
@@ -3782,7 +3783,6 @@ This implies that with decay chains:
                             raise self.InvalidCmd(\
                                 "Perturbation order %s is not among" % pert_order + \
                                 " the perturbation orders allowed for by the loop model.")
-
             if not self.options['loop_optimized_output'] and \
                          LoopOption not in ['tree','real'] and split_orders!=[]:
                 logger.info('The default output mode (loop_optimized_output'+\
@@ -3825,8 +3825,7 @@ This implies that with decay chains:
                   "At most one negative squared order constraint can be specified.")
             
             sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
-            
-            
+                        
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
@@ -4710,21 +4709,24 @@ This implies that with decay chains:
 
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
-                target = 'http://theory.fnal.gov/people/parke/TD/td_mac_intel.tar.gz'
+                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td_mac_intel.tar.gz'
                 misc.call(['curl', target, '-otd.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
                 misc.call(['tar', '-xzpvf', 'td.tgz'],
                                                   cwd=pjoin(MG5DIR,'td'))
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
             else:
-                logger.info('Downloading TD for Linux 32 bit')
-                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
-                misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
-                os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
+                    logger.info('Downloading TD for Linux 64 bit')
+                    target = 'http://madgraph.phys.ucl.ac.be/Downloads/td64/td'
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer.
                 In 99% of the case, this is perfectly fine. If you do not have plot, please follow 
                 instruction in https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/TopDrawer .''')
+                else:                    
+                    logger.info('Downloading TD for Linux 32 bit')
+                    target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
+                misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
+                os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 self.options['td_path'] = pjoin(MG5DIR,'td')
 
             if not misc.which('gs'):
@@ -5222,7 +5224,6 @@ This implies that with decay chains:
                         self.history.append('set %s %s' % (key, self.options[key]))
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
-
         return self.options
 
     def check_for_export_dir(self, filepath):
@@ -5753,6 +5754,9 @@ This implies that with decay chains:
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
                          'cluster_retry_wait', 'cluster_size']:
                 self.options[args[0]] = int(args[1])
+
+        elif args[0] in ['cluster_local_path']:
+            self.options[args[0]] = args[1].strip()
 
         elif args[0] == 'cluster_status_update':
             if '(' in args[1]:

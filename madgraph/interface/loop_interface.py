@@ -221,7 +221,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             proc.get_ninitial():
             raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
             
-        if proc.get_ninitial()==1:
+        if proc.get_ninitial()==1 and tool=='aMC@NLO':
             raise self.InvalidCmd("At this stage %s cannot handle decay process."%tool+\
                                   "\nIt is however a straight-forward extension which "+\
                                   "will come out with the next release.")                           
@@ -284,7 +284,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
            self._curr_model['perturbation_couplings']==[] or \
            any((coupl not in self._curr_model['perturbation_couplings']) \
            for coupl in coupling_type):
-            if loop_type.startswith('real'):
+            if loop_type.startswith('real') or loop_type == 'LOonly':
                 if loop_type == 'real':
                     logger.info(\
                       "Beware that real corrections are generated from a tree-level model.")

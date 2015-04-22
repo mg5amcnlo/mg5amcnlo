@@ -63,6 +63,8 @@ import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 
+from madgraph.interface.madevent_interface import MadLoopInitializer
+
 from madgraph import MG5DIR, InvalidCmd, MadGraph5Error
 
 from madgraph.iolibs.files import cp
@@ -82,100 +84,6 @@ def clean_added_globals(to_clean):
     for value in list(to_clean):
         del globals()[value]
         to_clean.remove(value)
-
-#===============================================================================
-# Helper class for timing and RAM flashing of subprocesses.
-#===============================================================================
-class ProcessTimer:
-  def __init__(self,*args,**opts):
-    self.cmd_args = args
-    self.cmd_opts = opts
-    self.execution_state = False
-
-  def execute(self):
-    self.max_vms_memory = 0
-    self.max_rss_memory = 0
-
-    self.t1 = None
-    self.t0 = time.time()
-    self.p = subprocess.Popen(*self.cmd_args,**self.cmd_opts)
-    self.execution_state = True
-
-  def poll(self):
-    if not self.check_execution_state():
-      return False
-
-    self.t1 = time.time()
-    flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
-                                              shell=True,stdout=subprocess.PIPE)
-    stdout_list = flash.communicate()[0].split('\n')
-    rss_memory = int(stdout_list[1])
-    # for now we ignore vms
-    vms_memory = 0
-
-    # This is the neat version using psutil
-#    try:
-#      pp = psutil.Process(self.p.pid)
-#
-#      # obtain a list of the subprocess and all its descendants
-#      descendants = list(pp.get_children(recursive=True))
-#      descendants = descendants + [pp]
-#
-#      rss_memory = 0
-#      vms_memory = 0
-#
-#      # calculate and sum up the memory of the subprocess and all its descendants 
-#      for descendant in descendants:
-#        try:
-#          mem_info = descendant.get_memory_info()
-#
-#          rss_memory += mem_info[0]
-#          vms_memory += mem_info[1]
-#        except psutil.error.NoSuchProcess:
-#          # sometimes a subprocess descendant will have terminated between the time
-#          # we obtain a list of descendants, and the time we actually poll this
-#          # descendant's memory usage.
-#          pass
-#
-#    except psutil.error.NoSuchProcess:
-#      return self.check_execution_state()
-
-    self.max_vms_memory = max(self.max_vms_memory,vms_memory)
-    self.max_rss_memory = max(self.max_rss_memory,rss_memory)
-
-    return self.check_execution_state()
-
-  def is_running(self):
-    # Version with psutil
-#    return psutil.pid_exists(self.p.pid) and self.p.poll() == None
-    return self.p.poll() == None
-
-  def check_execution_state(self):
-    if not self.execution_state:
-      return False
-    if self.is_running():
-      return True
-    self.executation_state = False
-    self.t1 = time.time()
-    return False
-
-  def close(self,kill=False):
-
-    if self.p.poll() == None:
-        if kill:
-            self.p.kill()
-        else:
-            self.p.terminate()
-
-    # Again a neater handling with psutil
-#    try:
-#      pp = psutil.Process(self.p.pid)
-#      if kill:
-#        pp.kill()
-#      else:
-#        pp.terminate()
-#    except psutil.error.NoSuchProcess:
-#      pass
 
 #===============================================================================
 # Fake interface to be instancied when using process_checks from tests instead.
@@ -655,7 +563,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
             FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
 
-        self.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                                                       split_orders=split_orders)
 
         self.fix_MadLoopParamCard(pjoin(export_dir,'Cards'),
@@ -718,11 +626,21 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         for key, value in MLOptions.items():
             if key == "MLReductionLib":
+                if isinstance(value, int):
+                    ml_reds = str(value)
                 if isinstance(value,list):
                     if len(value)==0:
                         ml_reds = '1'
                     else:
-                        ml_reds="|".join([str(vl) for vl in value]) 
+                        ml_reds="|".join([str(vl) for vl in value])
+                elif isinstance(value, str):
+                    ml_reds = value
+                elif isinstance(value, int):
+                    ml_reds = str(value)
+                else:
+                    raise MadGraph5Error, 'The argument %s '%str(value)+\
+                      ' in fix_MadLoopParamCard must be a string, integer'+\
+                      ' or a list.'
                 MLCard.set("MLReductionLib",ml_reds)      
             elif key == 'ImprovePS':
                 MLCard.set('ImprovePSPoint',2 if value else -1)
@@ -740,59 +658,6 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         MLCard.set('UseLoopFilter',loop_filter)
         MLCard.set('DoubleCheckHelicityFilter',DoubleCheckHelicityFilter)
         MLCard.write(pjoin(dir_name,os.pardir,'SubProcesses','MadLoopParams.dat'))
-
-    @classmethod
-    def fix_PSPoint_in_check(cls, dir_path, read_ps = True, npoints = 1,
-                             hel_config = -1, mu_r=0.0, split_orders=-1):
-        """Set check_sa.f to be reading PS.input assuming a working dir dir_name.
-        if hel_config is different than -1 then check_sa.f is configured so to
-        evaluate only the specified helicity.
-        If mu_r > 0.0, then the renormalization constant value will be hardcoded
-        directly in check_sa.f, if is is 0 it will be set to Sqrt(s) and if it
-        is < 0.0 the value in the param_card.dat is used.
-        If the split_orders target (i.e. the target squared coupling orders for 
-        the computation) is != -1, it will be changed in check_sa.f via the
-        subroutine CALL SET_COUPLINGORDERS_TARGET(split_orders)."""
-
-        file_path = dir_path
-        if not os.path.isfile(dir_path) or \
-                                   not os.path.basename(dir_path)=='check_sa.f':
-            file_path = pjoin(dir_path,'check_sa.f')
-            if not os.path.isfile(file_path):
-                directories = [d for d in glob.glob(pjoin(dir_path,'P*_*')) \
-                         if (re.search(r'.*P\d+_\w*$', d) and os.path.isdir(d))]
-                if len(directories)>0:
-                     file_path = pjoin(directories[0],'check_sa.f')
-        if not os.path.isfile(file_path):
-            raise MadGraph5Error('Could not find the location of check_sa.f'+\
-                                  ' from the specified path %s.'%str(file_path))    
-
-        file = open(file_path, 'r')
-        check_sa = file.read()
-        file.close()
-        
-        file = open(file_path, 'w')
-        check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
-                                                      else '.FALSE.'), check_sa)
-        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = %d"%npoints, check_sa)
-        if hel_config != -1:
-            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
-                      "SLOOPMATRIXHEL_THRES(P,%d,MATELEM,"%hel_config, check_sa)
-        else:
-            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
-                                        "SLOOPMATRIX_THRES(P,MATELEM,",check_sa)
-        if mu_r > 0.0:
-            check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
-                                        (("%.17e"%mu_r).replace('e','d')),check_sa)
-        elif mu_r < 0.0:
-            check_sa = re.sub(r"MU_R=SQRTS","",check_sa)
-        
-        if split_orders > 0:
-            check_sa = re.sub(r"SET_COUPLINGORDERS_TARGET\(-?\d+\)",
-                     "SET_COUPLINGORDERS_TARGET(%d)"%split_orders,check_sa) 
-        
-        file.write(check_sa)
-        file.close()
 
     def get_me_value(self, proc, proc_id, working_dir, PSpoint=[], \
                                                   PS_name = None, verbose=True):
@@ -1006,62 +871,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
     def __init__(self, *args, **kwargs):
         """ Same as the mother for now """
         LoopMatrixElementEvaluator.__init__(self,*args, **kwargs)
-
-    @classmethod
-    def make_and_run(cls, dir_name,checkRam=False):
-        """ Compile the check program in the directory dir_name.
-        Return the compilation and running time. """
-
-        # Make sure to recreate the executable and modified source
-        # (The time stamps are sometimes not actualized if it is too fast)
-        if os.path.isfile(pjoin(dir_name,'check')):
-            os.remove(pjoin(dir_name,'check'))
-            os.remove(pjoin(dir_name,'check_sa.o'))
-            os.remove(pjoin(dir_name,'loop_matrix.o'))            
-        # Now run make
-        devnull = open(os.devnull, 'w')
-        start=time.time()
-        retcode = subprocess.call(['make','check'],
-                                   cwd=dir_name, stdout=devnull, stderr=devnull)
-        compilation_time = time.time()-start
-        if retcode != 0:
-            logging.info("Error while executing make in %s" % dir_name)
-            return None, None, None
-
-        if not checkRam:
-            start=time.time()
-            retcode = subprocess.call('./check',
-                                   cwd=dir_name, stdout=devnull, stderr=devnull)
-
-            run_time = time.time()-start
-            ram_usage = None
-        else:
-            ptimer = ProcessTimer(['./check'], cwd=dir_name, shell=False, \
-                                 stdout=devnull, stderr=devnull, close_fds=True)
-            try:
-                ptimer.execute()
-                #poll as often as possible; otherwise the subprocess might 
-                # "sneak" in some extra memory usage while you aren't looking
-                # Accuracy of .2 seconds is enough for the timing.
-                while ptimer.poll():
-                    time.sleep(.2)
-            finally:
-                #make sure that we don't leave the process dangling.
-                ptimer.close()
-            # Notice that ptimer.max_vms_memory is also available if needed.
-            ram_usage = ptimer.max_rss_memory
-            # Unfortunately the running time is less precise than with the
-            # above version
-            run_time = (ptimer.t1 - ptimer.t0)
-            retcode = ptimer.p.returncode
-
-        devnull.close()
-
-        if retcode != 0:
-            logging.warning("Error while executing ./check in %s" % dir_name)
-            return None, None, None
-
-        return compilation_time, run_time, ram_usage
     
     @classmethod
     def get_MadLoop_Params(cls,MLCardPath):
@@ -1082,128 +891,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         MLcard = bannermod.MadLoopParam(MLCardPath)
         for key,value in params.items():
             MLcard.set(key, value, ifnotdefault=False)
-        MLcard.write(MLCardPath, commentdefault=True) 
-
-    @classmethod    
-    def run_initialization(cls, run_dir=None, SubProc_dir=None, infos=None,\
-                            req_files = ['HelFilter.dat','LoopFilter.dat'],
-                            attempts = [3,15]):
-        """ Run the initialization of the process in 'run_dir' with success 
-        characterized by the creation of the files req_files in this directory.
-        The directory containing the driving source code 'check_sa.f'.
-        The list attempt gives the successive number of PS points the 
-        initialization should be tried with before calling it failed.
-        Returns the number of PS points which were necessary for the init.
-        Notice at least run_dir or SubProc_dir must be provided.
-        A negative attempt number given in input means that quadprec will be
-        forced for initialisation."""
-        
-        # If the user does not want detailed info, then set the dictionary
-        # to a dummy one.
-        if infos is None:
-            infos={}
-        
-        if SubProc_dir is None and run_dir is None:
-            raise MadGraph5Error, 'At least one of [SubProc_dir,run_dir] must'+\
-                                           ' be provided in run_initialization.'
-        
-        # If the user does not specify where is check_sa.f, then it is assumed
-        # to be one levels above run_dir
-        if SubProc_dir is None:
-            SubProc_dir = os.path.abspath(pjoin(run_dir,os.pardir))
-            
-        if run_dir is None:
-            directories =[ dir for dir in glob.glob(pjoin(SubProc_dir,\
-                                             'P[0-9]*')) if os.path.isdir(dir) ]
-            if directories:
-                run_dir = directories[0]
-            else:
-                raise MadGraph5Error, 'Could not find a valid running directory'+\
-                                                      ' in %s.'%str(SubProc_dir)
-
-        # Use the presence of the file born_matrix.f to decide if it is a 
-        # loop-induced process or not. It's not crucial, but just that because
-        # of the dynamic adjustment of the ref scale used for deciding what are
-        # the zero contributions, more points are neeeded for loop-induced.
-        if not os.path.isfile(pjoin(run_dir,'born_matrix.f')):
-            if len(attempts)>=1 and attempts[0]<8:
-                attempts[0]=8
-            if len(attempts)>=2 and attempts[1]<25:
-                attempts[1]=25
-
-        to_attempt = copy.copy(attempts)
-        to_attempt.reverse()
-        my_req_files = copy.copy(req_files)
-        
-        # Make sure that LoopFilter really is needed.
-        MLCardPath = pjoin(SubProc_dir,os.pardir,'Cards','MadLoopParams.dat')
-        if not os.path.isfile(MLCardPath):
-            raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
-                                                                     %MLCardPath
-        if not cls.get_MadLoop_Params(MLCardPath)['UseLoopFilter']:
-            try:
-                my_req_files.pop(my_req_files.index('LoopFilter.dat'))
-            except ValueError:
-                pass
-        
-        def need_init():
-            """ True if init not done yet."""
-            proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
-            proc_prefix = proc_prefix_file.read()
-            proc_prefix_file.close()
-            return any([not os.path.exists(pjoin(run_dir,'MadLoop5_resources',
-                            proc_prefix+fname)) for fname in my_req_files]) or \
-                         not os.path.isfile(pjoin(run_dir,'check')) or \
-                         not os.access(pjoin(run_dir,'check'), os.X_OK)
-        
-        # Check if this is a process without born by checking the presence of the
-        # file born_matrix.f
-        is_loop_induced = os.path.exists(pjoin(run_dir,'born_matrix.f'))
-        
-        # For loop induced processes, always attempt quadruple precision if
-        # double precision attempts fail and the user didn't specify himself
-        # quadruple precision initializations attempts
-        if not any(attempt<0 for attempt in to_attempt):
-            to_attempt = [-attempt for attempt in to_attempt] + to_attempt
-        use_quad_prec = 1
-        curr_attempt = 1
-        while to_attempt!=[] and need_init():
-            curr_attempt = to_attempt.pop()
-            # if the attempt is a negative number it means we must force 
-            # quadruple precision at initialization time
-            MLCard = bannermod.MadLoopParam(pjoin(SubProc_dir,'MadLoopParams.dat'))    
-            if curr_attempt < 0:
-                use_quad_prec = -1
-                # In quadruple precision we can lower the ZeroThres threshold
-                MLCard.set('CTModeInit',4)
-                MLCard.set('ZeroThres',1e-11)
-            else:
-                # Restore the default double precision intialization params
-                MLCard.set('CTModeInit',1)
-                MLCard.set('ZeroThres',1e-9)
-            # Plus one because the filter are written on the next PS point after
-            curr_attempt = abs(curr_attempt+1)
-            MLCard.set('MaxAttempts',curr_attempt) 
-            MLCard.write(pjoin(SubProc_dir,'MadLoopParams.dat'))
-
-            # initialization is performed.
-            cls.fix_PSPoint_in_check(run_dir, read_ps = False, 
-                                                         npoints = curr_attempt)
-            compile_time, run_time, ram_usage = cls.make_and_run(run_dir)
-            if compile_time==None:
-                logging.error("Failed at running the process in %s."%run_dir)
-                attempts = None
-                return None
-            # Only set process_compilation time for the first compilation.
-            if 'Process_compilation' not in infos.keys() or \
-                                             infos['Process_compilation']==None:
-                infos['Process_compilation'] = compile_time
-            infos['Initialization'] = run_time
-        
-        if need_init():
-            return None
-        else:
-            return use_quad_prec*(curr_attempt-1)
+        MLcard.write(MLCardPath, commentdefault=True)
 
     def skip_loop_evaluation_setup(self, dir_name, skip=True):
         """ Edit loop_matrix.f in order to skip the loop evaluation phase.
@@ -1306,7 +994,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 
         # First Initialize filters (in later versions where this will be done
         # at generation time, it can be skipped)
-        self.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                                                    read_ps = False, npoints = 4)
         self.fix_MadLoopParamCard(pjoin(export_dir,'Cards'),
                             mp = False, loop_filter = True,MLOptions=MLOptions)
@@ -1326,7 +1014,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         except OSError:
             pass
         
-        nPS_necessary = self.run_initialization(dir_name,
+        nPS_necessary = MadLoopInitializer.run_initialization(dir_name,
                                 pjoin(export_dir,'SubProcesses'),infos,\
                                 req_files = ['HelFilter.dat','LoopFilter.dat'],
                                 attempts = attempts)
@@ -1391,14 +1079,14 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         else:
             # We cannot estimate from the initialization, so we run just a 3
             # PS point run to evaluate it.
-            self.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+            MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                                   read_ps = False, npoints = 3, hel_config = -1, 
                                                       split_orders=split_orders)
-            compile_time, run_time, ram_usage = self.make_and_run(dir_name)
+            compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
             time_per_ps_estimate = run_time/3.0
         
         self.boot_time_setup(dir_name,bootandstop=True)
-        compile_time, run_time, ram_usage = self.make_and_run(dir_name)
+        compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
         res_timings['Booting_time'] = run_time
         self.boot_time_setup(dir_name,bootandstop=False)
 
@@ -1430,18 +1118,18 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
         
-        self.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                           read_ps = False, npoints = target_pspoints_number*2, \
                        hel_config = contributing_hel, split_orders=split_orders)
-        compile_time, run_time, ram_usage = self.make_and_run(dir_name)
+        compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
         if compile_time == None: return None
         res_timings['run_polarized_total']=\
                (run_time-res_timings['Booting_time'])/(target_pspoints_number*2)
 
-        self.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
              read_ps = False, npoints = target_pspoints_number, hel_config = -1,
                                                       split_orders=split_orders)
-        compile_time, run_time, ram_usage = self.make_and_run(dir_name, 
+        compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name, 
                                                                   checkRam=True)
         if compile_time == None: return None
         res_timings['run_unpolarized_total']=\
@@ -1457,18 +1145,18 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # So we modify loop_matrix.f in order to skip the loop evaluation phase.
         self.skip_loop_evaluation_setup(dir_name,skip=True)
 
-        self.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
              read_ps = False, npoints = target_pspoints_number, hel_config = -1,
                                                       split_orders=split_orders)
-        compile_time, run_time, ram_usage = self.make_and_run(dir_name)
+        compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
         if compile_time == None: return None
         res_timings['run_unpolarized_coefs']=\
                    (run_time-res_timings['Booting_time'])/target_pspoints_number
         
-        self.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                           read_ps = False, npoints = target_pspoints_number*2, \
                        hel_config = contributing_hel, split_orders=split_orders)
-        compile_time, run_time, ram_usage = self.make_and_run(dir_name)
+        compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
         if compile_time == None: return None
         res_timings['run_polarized_coefs']=\
                (run_time-res_timings['Booting_time'])/(target_pspoints_number*2)    
@@ -1737,7 +1425,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                             pbar.Bar(),' ', pbar.ETA(), ' ']
                 progress_bar = pbar.ProgressBar(widgets=widgets, maxval=nPoints, 
                                                               fd=sys.stdout)
-            self.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+            MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
             read_ps = True, npoints = 1, hel_config = -1, split_orders=split_orders)
             # Recompile (Notice that the recompilation is only necessary once) for
             # the change above to take effect.

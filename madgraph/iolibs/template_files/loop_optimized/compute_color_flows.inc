@@ -6,9 +6,6 @@ C Set of subroutines to project the Feynman diagrama amplitudes AMPL onto the co
       INTEGER HEL_MULT
         CALL %(proc_prefix)sREINITIALIZE_JAMPS()
         CALL %(proc_prefix)sDO_COMPUTE_COLOR_FLOWS(.FALSE.)
-        IF(DO_CUMULATIVE) THEN
-          CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
-        ENDIF
       END SUBROUTINE
 
       SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
@@ -41,6 +38,10 @@ C
 ## }
 	  %(complex_dp_format)s IMAG1
       PARAMETER (IMAG1=(0.0d0,1.0d0))
+## if(LoopInduced and MadEventOutput){
+	  INTEGER NCONFIGS
+	  PARAMETER (NCONFIGS=%(nmultichannels)i)
+## }
 
 ## if (not LoopInduced) {
 	  INTEGER NBORNAMPS
@@ -75,6 +76,12 @@ C Storing concatenated filenames
 	  INTEGER I, J, K, SOINDEX, ARRAY_SIZE
 	  %(complex_dp_format)s PROJ_COEF
 
+## if(LoopInduced and MadEventOutput){
+      integer config_index
+      integer CONFIG_MAP(NLOOPAMPS)
+	  %(config_map_definition)s
+## }
+
 C  
 C FUNCTIONS
 C
@@ -94,6 +101,11 @@ C
 	  common/%(proc_prefix)sAMPL/AMPL
 	  %(complex_dp_format)s JAMPL(3,NLOOPFLOWS,NLOOPAMPSO)
 	  common/%(proc_prefix)sJAMPL/JAMPL
+## if(LoopInduced and MadEventOutput){
+	  %(complex_dp_format)s JAMPL_FOR_AMP2(3,NLOOPFLOWS,NLOOPAMPSO,NCONFIGS)
+	  common/%(proc_prefix)sJAMPL_FOR_AMP2/JAMPL_FOR_AMP2
+## }
+
 ## if(not LoopInduced){
       %(complex_dp_format)s JAMPB(NBORNFLOWS,NBORNAMPSO)
 	  common/%(proc_prefix)sJAMPB/JAMPB
@@ -203,6 +215,12 @@ DO I=1,NLOOPFLOWS
     IF(LoopColorProjector(I)%%Denom(J).LT.0) PROJ_COEF=PROJ_COEF*IMAG1
     DO K=1,3
       JAMPL(K,I,SOINDEX) = JAMPL(K,I,SOINDEX) + PROJ_COEF*AMPL(K,LoopColorProjector(I)%%AmpID(J))
+## if(LoopInduced and MadEventOutput){
+      config_index = CONFIG_MAP(LoopColorProjector(I)%%AmpID(J)) 
+	  IF (config_index.ne.0) THEN
+	    JAMPL_FOR_AMP2(K,I,SOINDEX,config_index) = JAMPL_FOR_AMP2(K,I,SOINDEX,config_index) + PROJ_COEF*AMPL(K,LoopColorProjector(I)%%AmpID(J))
+	  ENDIF
+## }
     ENDDO
   ENDDO
 ENDDO
@@ -413,7 +431,11 @@ C
       INTEGER    NSQUAREDSO, NLOOPAMPSO, NSO
 	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d, NLOOPAMPSO=%(nAmpSO)d, NSO=%(nSO)d)
 	  INTEGER NLOOPFLOWS
-	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)	  
+	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)
+## if(LoopInduced and MadEventOutput){
+      INTEGER NCONFIGS
+      PARAMETER (NCONFIGS=%(nmultichannels)i)
+## }
 ## if(not LoopInduced){
 	  INTEGER NBORNFLOWS
 	  PARAMETER (NBORNFLOWS=%(nBornFlows)d)
@@ -434,9 +456,15 @@ C
 ## if(LoopInduced) {
 	  INTEGER LOWERBOUND
 ## }
+## if(LoopInduced and MadEventOutput){
+      integer config_i, config_j
+## }
 	  INTEGER ORDERS_A(NSO), ORDERS_B(NSO)
 	  %(complex_dp_format)s COLOR_COEF
 	  %(real_dp_format)s TEMP(3)
+## if(LoopInduced and MadEventOutput){
+	  %(real_dp_format)s TEMP_AMP2(3,NCONFIGS)
+## }
 C  
 C FUNCTIONS
 C
@@ -458,6 +486,15 @@ C
       %(complex_dp_format)s JAMPB(NBORNFLOWS,NBORNAMPSO)
 	  common/%(proc_prefix)sJAMPB/JAMPB
 ## }
+## if(LoopInduced and MadEventOutput){
+      %(real_dp_format)s AMP2_ALL(3,NCONFIGS,0:NSQUAREDSO)	  
+      common/%(proc_prefix)sAMP2_ALL/AMP2_ALL
+	  %(complex_dp_format)s JAMPL_FOR_AMP2(3,NLOOPFLOWS,NLOOPAMPSO,NCONFIGS)
+	  common/%(proc_prefix)sJAMPL_FOR_AMP2/JAMPL_FOR_AMP2
+## }
+
+	  LOGICAL UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+	  common/%(proc_prefix)sSO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
 C Now a more advanced data structure for storing the projection coefficient
 C This is of course not F77 standard but widely supported by now.
@@ -482,6 +519,10 @@ C This is of course not F77 standard but widely supported by now.
 C ----------
 C BEGIN CODE
 C ----------
+## if(LoopInduced and MadEventOutput){
+C Always reinitialize AMP2_ALL because it is not a cumulative quantity
+CALL %(proc_prefix)sREINITIALIZE_AMP2_ALL()
+## }
 
 C Initialization
 if(.NOT.CMInitialized) then
@@ -517,7 +558,7 @@ C Now figure out to which SQSOINDEX these orders together correspond to *in the 
         ENDIF
         TEMP(1) = DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*JAMPB(I,M)*DCONJG(JAMPB(J,N)))
         RES(0,SQSOINDEX) = RES(0,SQSOINDEX) + TEMP(1)
-        IF(SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
+        IF((.not.FILTER_SO).or.SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
           RES(0,0) = RES(0,0) + TEMP(1)
         ENDIF
       ENDDO
@@ -564,16 +605,43 @@ C Computing the quantities below is not strictly necessary since the result shou
 C It is however a good cross-check.
         TEMP(2) = DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL(2,I,M)*DCONJG(JAMPL(1,J,N)) + JAMPL(1,I,M)*DCONJG(JAMPL(2,J,N))))
         TEMP(3) = DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL(3,I,M)*DCONJG(JAMPL(1,J,N)) + JAMPL(1,I,M)*DCONJG(JAMPL(3,J,N))+JAMPL(2,I,M)*DCONJG(JAMPL(2,J,N))))
+## if(MadEventOutput) {
+		DO config_i=1,nconfigs
+		  DO K=1,3
+		    TEMP_AMP2(K,config_i) = 0.0d0
+	      ENDDO
+C For the multi-channeling, to choose to square against only among a given configuration, use the do loop below
+		  DO config_j=config_i,config_i
+c For the multi-channeling, to choose to square against all other configuration, use the do loop below
+c          DO config_j=1,nconfigs
+		    TEMP_AMP2(1,config_i) = TEMP_AMP2(1,config_i) + DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL_FOR_AMP2(1,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(1,J,N,config_j))))
+        	TEMP_AMP2(2,config_i) = TEMP_AMP2(2,config_i) + DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL_FOR_AMP2(2,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(1,J,N,config_j)) + JAMPL_FOR_AMP2(1,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(2,J,N,config_j))))
+        	TEMP_AMP2(3,config_i) = TEMP_AMP2(3,config_i) + DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*(JAMPL_FOR_AMP2(3,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(1,J,N,config_j)) + JAMPL_FOR_AMP2(1,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(3,J,N,config_j))+JAMPL_FOR_AMP2(2,I,M,config_i)*DCONJG(JAMPL_FOR_AMP2(2,J,N,config_j))))
+
+		  ENDDO
+		ENDDO
+## }
 ## }
         DO K=1,3
 ## if(not LoopInduced){      
           TEMP(K) = 2.0d0*HEL_MULT*DBLE(COLOR_COEF*JAMPL(K,I,M)*DCONJG(JAMPB(J,N)))
 ## }
           RES(K,SQSOINDEX) = RES(K,SQSOINDEX) + TEMP(K)
+## if(LoopInduced and MadEventOutput){
+		  DO config_i=1,nconfigs
+            AMP2_ALL(K,config_i,SQSOINDEX) = AMP2_ALL(K,config_i,SQSOINDEX) + TEMP_AMP2(K,config_i)
+		  ENDDO
+## }
         ENDDO
-        IF(SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
+        IF((.NOT.FILTER_SO).OR.SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
           DO K=1,3
             RES(K,0) = RES(K,0) + TEMP(K)
+## if(LoopInduced and MadEventOutput){
+C           Notice here that the squared order constraints will apply to the determination of the AMP2 for multichanneling. Place it outside the corresponding statement if this is not desirable.
+            do config_i=1,nconfigs
+	          AMP2_ALL(K,config_i,0) = AMP2_ALL(K,config_i,0) + TEMP_AMP2(K,config_i)
+	        enddo
+## }
           ENDDO
         ENDIF
       ENDDO
@@ -592,10 +660,16 @@ C
       PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NLOOPDIAGRAMS
       PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
+	  INTEGER    NCONFIGS
+	  PARAMETER (NCONFIGS=%(nmultichannels)i)
+      INTEGER    NSQUAREDSO, NLOOPAMPSO, NSO
+	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d, NLOOPAMPSO=%(nAmpSO)d, NSO=%(nSO)d)
 C  
 C LOCAL VARIABLES 
 C
-	  INTEGER I, SOINDEX
+	  INTEGER I,J, SOINDEX
+      integer config_index_map(NCONFIGS)
+	  %(config_index_map_definition)s
 C
 C ARGUMENTS
 C 
@@ -603,21 +677,35 @@ C
 C
 C GLOBAL VARIABLES
 C
-      %(complex_dp_format)s AMPL(3,NLOOPAMPS)
-	  common/%(proc_prefix)sAMPL/AMPL
       %(real_dp_format)s AMP2(NLOOPDIAGRAMS)
 	  common/%(proc_prefix)sAMP2/AMP2
-
+      %(real_dp_format)s  AMP2_ALL(3,NCONFIGS,0:NSQUAREDSO)	  
+	  common/%(proc_prefix)sAMP2_ALL/AMP2_ALL
+      LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
+      COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
 C ----------
 C BEGIN CODE
 C ----------
-	  
-	  %(loop_amp2)s
+
+      do i=1,nconfigs
+C The configurations are not necessarily consecutive when grouping subprocesses. So, here, we simply skip those which have no diagrams for this process.
+	    if (config_index_map(i).eq.0) then
+		  cycle
+		endif
+	    DO J=1,NSQUAREDSO
+C For the multi-channeling, it is in general better to ignore the squared order constraints (which, if they are any, would restrict the AMP2 quantities to be coming from the interference terms only).  
+         IF (.TRUE.) THEN
+C Chosing the if statement below instead would as a result to apply the squared order constraints to the AMP2 quantities given to MadEvent for the multichanneling.
+c  		  IF (CHOSEN_SO_CONFIGS(I)) THEN
+	        AMP2(config_index_map(i))=AMP2(config_index_map(i))+DABS(AMP2_ALL(1,i,J))
+ 		  ENDIF
+		ENDDO
+	  enddo
 
       END SUBROUTINE
 ## }
 
-C This subroutine resets to 0 the common arrays JAMPL, JAMPB
+C This subroutine resets to 0 the common arrays JAMPL, JAMPB and possibly JAMPL_FOR_AMP2 if used
 SUBROUTINE %(proc_prefix)sREINITIALIZE_JAMPS()
 implicit none
 C  
@@ -630,7 +718,11 @@ C
       INTEGER    NLOOPAMPSO
 	  PARAMETER (NLOOPAMPSO=%(nAmpSO)d)
 	  INTEGER NLOOPFLOWS
-	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)	  
+	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)
+## if(LoopInduced and MadEventOutput){
+      INTEGER NCONFIGS
+      PARAMETER (NCONFIGS=%(nmultichannels)i)
+## }
 ## if(not LoopInduced){
 	  INTEGER NBORNFLOWS
 	  PARAMETER (NBORNFLOWS=%(nBornFlows)d)
@@ -641,7 +733,7 @@ C     We use the same list of amplitude split order for Born and Loop, so that N
 C
 C LOCAL VARIABLES
 C
-      INTEGER I,J,K
+      INTEGER I,J,K,L
 C
 C GLOBAL VARIABLES
 C
@@ -650,6 +742,10 @@ C
 ## if(not LoopInduced){
       %(complex_dp_format)s JAMPB(NBORNFLOWS,NBORNAMPSO)
 	  common/%(proc_prefix)sJAMPB/JAMPB
+## }
+## if(LoopInduced and MadEventOutput){
+	  %(complex_dp_format)s JAMPL_FOR_AMP2(3,NLOOPFLOWS,NLOOPAMPSO,NCONFIGS)
+	  common/%(proc_prefix)sJAMPL_FOR_AMP2/JAMPL_FOR_AMP2
 ## }
 
 C ----------
@@ -663,6 +759,17 @@ DO I=1,NLOOPAMPSO
     ENDDO
   ENDDO
 ENDDO
+## if(LoopInduced and MadEventOutput){
+DO L=1,NCONFIGS
+  DO I=1,NLOOPAMPSO
+    DO J=1,NLOOPFLOWS
+      DO K=1,3
+        JAMPL_FOR_AMP2(K,J,I,L)=CMPLXZERO
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
+## }
 ## if(not LoopInduced){
 DO I=1,NBORNAMPSO
   DO J=1,NBORNFLOWS
@@ -672,6 +779,43 @@ ENDDO
 ## }
 
 END SUBROUTINE
+
+## if(LoopInduced and MadEventOutput){
+C This subroutine resets to 0 the common arrays AMP2_ALL
+SUBROUTINE %(proc_prefix)sREINITIALIZE_AMP2_ALL()
+implicit none
+C  
+C CONSTANTS 
+C 
+      INTEGER    NSQUAREDSO, NLOOPAMPSO, NSO
+	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d, NLOOPAMPSO=%(nAmpSO)d, NSO=%(nSO)d)
+	  %(real_dp_format)s ZERO
+      PARAMETER (ZERO=0.0d0)
+      INTEGER NCONFIGS
+      PARAMETER (NCONFIGS=%(nmultichannels)i)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I,K,L
+C
+C GLOBAL VARIABLES
+C
+      %(real_dp_format)s AMP2_ALL(3,NCONFIGS,0:NSQUAREDSO)
+	  common/%(proc_prefix)sAMP2_ALL/AMP2_ALL
+C ----------
+C BEGIN CODE
+C ----------
+
+DO I=1,NCONFIGS
+  DO K=1,3
+    DO L=0,NSQUAREDSO
+      AMP2_ALL(K,I,L)=ZERO
+	ENDDO
+  ENDDO
+ENDDO
+
+END SUBROUTINE
+## }
 
 C This subroutine resets all cumulative (for each helicity) arrays in common block and deriving from the color flow computation.
 C This subroutine is called by loop_matrix.f at appropriate time when these arrays must be reset.
@@ -689,6 +833,10 @@ C
       PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
 	  INTEGER NLOOPFLOWS
 	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)
+## if(LoopInduced and MadEventOutput){
+      INTEGER NCONFIGS
+      PARAMETER (NCONFIGS=%(nmultichannels)i)
+## }
 C
 C LOCAL VARIABLES
 C

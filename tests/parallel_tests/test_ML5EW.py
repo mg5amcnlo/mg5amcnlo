@@ -16,6 +16,8 @@ from madgraph import MadGraph5Error
 from madgraph.iolibs.files import cp
 #import madgraph.iolibs.save_load_object as save_load_object
 import loop_me_comparator
+import madgraph.various.banner as banner_mod
+import madgraph.various.misc as misc
 import me_comparator
 from test_ML5 import procToFolderName
 # The processes below are treated all together because they are relatively quick
@@ -163,23 +165,18 @@ def compare_processes(testInstance, my_proc_list = [], model = 'loop_qcd_qed_sm-
         stored_runner = me_comparator.PickleRunner.find_comparisons(
                           os.path.join(_pickle_path,pickle_file))[0]
         energy = stored_runner.energy
-
-    file = open(os.path.join(_mg5_path,'Template','loop_material','StandAlone',
-                             'Cards','MadLoopParams.dat'), 'r')
     
     # Check if the process has squared order constraints
     has_sqso = any('^2' in key for proc in my_proc_list for key in \
                                                              proc[3].keys())
 
-    MLParams = file.read()
-    MLred = re.search(r'#MLReductionLib\n',MLParams)
-    MLredstr=MLParams[MLred.end():MLred.end()+1]
-    if loop_induced and MLredstr!="1":return            
+    MLCard = banner_mod.MadLoopParam(os.path.join(_mg5_path,'Template','loop_material',
+                                                 'StandAlone','Cards','MadLoopParams.dat'))
+    MLredstr=MLCard['MLReductionLib'][0:1]
+ 
     # Create a MERunner object for MadLoop 5 optimized
-    # Open Loops is not avaiable for loop induced processes
-    if not loop_induced:
-        ML5_opt = loop_me_comparator.LoopMG5Runner()
-        ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename,\
+    ML5_opt = loop_me_comparator.LoopMG5Runner()
+    ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename,\
                       mu_r=mu_r)
 
     if MLredstr=="1" and not has_sqso:

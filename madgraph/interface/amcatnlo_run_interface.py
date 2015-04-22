@@ -111,6 +111,9 @@ def compile_dir(*arguments):
         #compile everything
         # compile and run tests
         for test in tests:
+            # skip check_poles for LOonly dirs
+            if test == 'check_poles' and os.path.exists(pjoin(this_dir, 'parton_lum_0.f')):
+                continue
             misc.compile([test], cwd = this_dir, job_specs = False)
             input = pjoin(me_dir, '%s_input.txt' % test)
             #this can be improved/better written to handle the output
@@ -1458,6 +1461,15 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                 pjoin(self.me_dir, 'Events', self.run_name))
                 files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.gnuplot'),
                                 pjoin(self.me_dir, 'Events', self.run_name))
+                try:
+                    misc.call(['gnuplot','MADatNLO.gnuplot'],\
+                              stdout=os.open(os.devnull, os.O_RDWR),\
+                              stderr=os.open(os.devnull, os.O_RDWR),\
+                              cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                except Exception:
+                    pass
+
+
                 logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             elif self.analyse_card['fo_analysis_format'].lower() == 'root':
@@ -1715,6 +1727,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         content = ''
 
+        outfile = open(log_file, 'w')
+
         content += '<HTML><BODY>\n<font face="courier" size=2>'
         for log in log_files:
             channel_dict[os.path.dirname(log)] = [istep]
@@ -1732,9 +1746,11 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             #the PRE tag prints everything verbatim
             content += '<PRE>\n' + open(log).read() + '\n</PRE>'
             content +='<br>\n'
+            outfile.write(content)
+            content=''
 
-        content += '</font>\n</BODY></HTML>\n'
-        open(log_file, 'w').write(content)
+        outfile.write('</font>\n</BODY></HTML>\n')
+        outfile.close()
 
 
     def read_results(self, output, mode):
@@ -2559,7 +2575,10 @@ Integrated cross-section
             out_id = 'HEP'
         else:
             # one or more .top file(s) as output
-            out_id = 'TOP'
+            if "HwU" in self.shower_card['analyse']:
+                out_id = 'HWU'
+            else:
+                out_id = 'TOP'
 
         # write the executable
         open(pjoin(rundir, 'shower.sh'), 'w').write(\
@@ -2631,10 +2650,14 @@ Integrated cross-section
                     logger.info("Fail to make the plot. Continue...")
                     pass
 
-        elif out_id == 'TOP':
-            #copy the topdrawer file(s) back in events
+        elif out_id == 'TOP' or out_id == 'HWU':
+            #copy the topdrawer or HwU file(s) back in events
+            if out_id=='TOP':
+                ext='top'
+            elif out_id=='HWU':
+                ext='HwU'
             topfiles = []
-            top_tars = [tarfile.TarFile(f) for f in glob.glob(pjoin(rundir, 'topfile*.tar'))]
+            top_tars = [tarfile.TarFile(f) for f in glob.glob(pjoin(rundir, 'histfile*.tar'))]
             for top_tar in top_tars:
                 topfiles.extend(top_tar.getnames())
 
@@ -2648,25 +2671,43 @@ Integrated cross-section
             filename = 'plot_%s_%d_' % (shower, 1)
             count = 1
             while os.path.exists(pjoin(self.me_dir, 'Events', 
-                      self.run_name, '%s0.top' % filename)) or \
+                      self.run_name, '%s0.%s' % (filename,ext))) or \
                   os.path.exists(pjoin(self.me_dir, 'Events', 
-                      self.run_name, '%s0__1.top' % filename)):
+                      self.run_name, '%s0__1.%s' % (filename,ext))):
                 count += 1
                 filename = 'plot_%s_%d_' % (shower, count)
 
+            if out_id=='TOP':
+                hist_format='TopDrawer format'
+            elif out_id=='HWU':
+                hist_format='HwU and GnuPlot formats'
+
             if not topfiles:
                 # if no topfiles are found just warn the user
-                waarning = 'No .top file has been generated. For the results of your ' +\
+                warning = 'No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir
-
             elif self.shower_card['nsplit_jobs'] == 1:
                 # only one job for the shower
                 top_tars[0].extractall(path = rundir) 
                 plotfiles = [] 
                 for i, file in enumerate(topfiles):
-                    plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
-                              '%s%d.top' % (filename, i))
-                    files.mv(pjoin(rundir, file), plotfile) 
+                    if out_id=='TOP':
+                        plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
+                                         '%s%d.top' % (filename, i))
+                        files.mv(pjoin(rundir, file), plotfile) 
+                    elif out_id=='HWU':
+                        histogram_list=histograms.HwUList(pjoin(rundir,file))
+                        histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,
+                                                    '%s%d'% (filename,i)),format = 'gnuplot')
+                        try:
+                            misc.call(['gnuplot','%s%d.gnuplot' % (filename,i)],\
+                                      stdout=os.open(os.devnull, os.O_RDWR),\
+                                      stderr=os.open(os.devnull, os.O_RDWR),\
+                                      cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                        except Exception:
+                            pass
+                        plotfile=pjoin(self.me_dir,'Events',self.run_name,
+                                                    '%s%d.HwU'% (filename,i))
                     plotfiles.append(plotfile)
 
                 ffiles = 'files'
@@ -2676,9 +2717,9 @@ Integrated cross-section
                     have = 'has'
 
                 message = ('The %s %s %s been generated, with histograms in the' + \
-                        ' TopDrawer format, obtained by showering the parton-level' + \
+                        ' %s, obtained by showering the parton-level' + \
                         ' file %s.gz with %s.') % (ffiles, ', '.join(plotfiles), have, \
-                        evt_file, shower)
+                        hist_format, evt_file, shower)
             else:
                 # many jobs for the shower have been run
                 topfiles_set = set(topfiles)
@@ -2687,7 +2728,7 @@ Integrated cross-section
                     top_tar.extractall(path = rundir) 
                     for i, file in enumerate(topfiles_set):
                         plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
-                                  '%s%d__%d.top' % (filename, i, j + 1))
+                                             '%s%d__%d.%s' % (filename, i, j + 1,ext))
                         files.mv(pjoin(rundir, file), plotfile) 
                         plotfiles.append(plotfile)
 
@@ -2700,23 +2741,44 @@ Integrated cross-section
                     elif self.banner.get('run_card', 'event_norm').lower() == 'average':
                         norm = 1./float(self.shower_card['nsplit_jobs'])
 
-                    plotfiles = []
+                    plotfiles2 = []
                     for i, file in enumerate(topfiles_set):
-                        filelist = ['%s%d__%d.top' % (filename, i, j + 1) \
+                        filelist = ['%s%d__%d.%s' % (filename, i, j + 1,ext) \
                                     for j in range(self.shower_card['nsplit_jobs'])]
-                        infile="%d\n%s\n%s\n" % \
+                        if out_id=='TOP':
+                            infile="%d\n%s\n%s\n" % \
                                 (self.shower_card['nsplit_jobs'],
                                  '\n'.join(filelist),
                                  '\n'.join([str(norm)] * self.shower_card['nsplit_jobs']))
+                            p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'sum_plots')],
+                                           stdin=subprocess.PIPE,
+                                           stdout=os.open(os.devnull, os.O_RDWR), 
+                                           cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                            p.communicate(input = infile)
+                            files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
+                                     pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
+                        elif out_id=='HWU':
+                            histogram_list=histograms.HwUList(plotfiles[0])
+                            for ii, histo in enumerate(histogram_list):
+                                histogram_list[ii] = histo*norm
+                            for histo_path in plotfiles[1:]:
+                                for ii, histo in enumerate(histograms.HwUList(histo_path)):
+                                    # First make sure the plots have the same weight labels and such
+                                    histo.test_plot_compability(histogram_list[ii])
+                                    # Now let the histogram module do the magic and add them.
+                                    histogram_list[ii] += histo*norm
+                            # And now output the finalized list
+                            histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,'%s%d'% (filename, i)),
+                                                  format = 'gnuplot')
+                            try:
+                                misc.call(['gnuplot','%s%d.gnuplot' % (filename, i)],\
+                                          stdout=os.open(os.devnull, os.O_RDWR),\
+                                          stderr=os.open(os.devnull, os.O_RDWR),\
+                                          cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                            except Exception:
+                                pass
 
-                        p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'sum_plots')],
-                                        stdin=subprocess.PIPE,
-                                        stdout=os.open(os.devnull, os.O_RDWR), 
-                                        cwd=pjoin(self.me_dir, 'Events', self.run_name))
-                        p.communicate(input = infile)
-                        files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
-                                 pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
-                        plotfiles.append(pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
+                        plotfiles2.append(pjoin(self.me_dir, 'Events', self.run_name, '%s%d.%s' % (filename, i,ext)))
                         tar = tarfile.open(
                                 pjoin(self.me_dir, 'Events', self.run_name, '%s%d.tar.gz' % (filename, i)), 'w:gz')
                         for f in filelist:
@@ -2727,25 +2789,25 @@ Integrated cross-section
 
                     ffiles = 'files'
                     have = 'have'
-                    if len(plotfiles) == 1:
+                    if len(plotfiles2) == 1:
                         ffiles = 'file'
                         have = 'has'
 
                     message = ('The %s %s %s been generated, with histograms in the' + \
-                            ' TopDrawer format, obtained by showering the parton-level' + \
+                            ' %s, obtained by showering the parton-level' + \
                             ' file %s.gz with %s.\n' + \
                             'The files from the different shower ' + \
                             'jobs (before combining them) can be found inside %s.') % \
-                            (ffiles, ', '.join(plotfiles), have, \
+                            (ffiles, ', '.join(plotfiles2), have, hist_format,\
                              evt_file, shower, 
-                             ', '.join([f.replace('top', 'tar.gz') for f in plotfiles]))
+                             ', '.join([f.replace('%s' % ext, 'tar.gz') for f in plotfiles2]))
 
                 else:
                     message = ('The following files have been generated:\n  %s\n' + \
                             'They contain histograms in the' + \
-                            ' TopDrawer format, obtained by showering the parton-level' + \
+                            ' %s, obtained by showering the parton-level' + \
                             ' file %s.gz with %s.') % ('\n  '.join(plotfiles), \
-                            evt_file, shower)
+                            hist_format, evt_file, shower)
                 
         # Now arxiv the shower card used if RunMaterial is present
         run_dir_path = pjoin(rundir, self.run_name)
@@ -3403,11 +3465,11 @@ Integrated cross-section
                     output_files.append(fname + '.hepmc.gz')
                 else:
                     output_files.append(fname + '.hep.gz')
-            elif args[1] == 'TOP':
+            elif args[1] == 'TOP' or args[1] == 'HWU':
                 if len(args) == 3:
-                    fname = 'topfile'
+                    fname = 'histfile'
                 else:
-                    fname = 'topfile_%s' % args[3]
+                    fname = 'histfile_%s' % args[3]
                 output_files.append(fname + '.tar')
             else:
                 raise aMCatNLOError, 'Not a valid output argument for shower job :  %d' % args[1]
@@ -3869,10 +3931,11 @@ Integrated cross-section
 
 
     def check_tests(self, test, dir):
-        """just call the correct parser for the test log"""
+        """just call the correct parser for the test log.
+        Skip check_poles for LOonly folders"""
         if test in ['test_ME', 'test_MC']:
             return self.parse_test_mx_log(pjoin(dir, '%s.log' % test)) 
-        elif test == 'check_poles':
+        elif test == 'check_poles' and not os.path.exists(pjoin(dir,'parton_lum_0.f')):
             return self.parse_check_poles_log(pjoin(dir, '%s.log' % test)) 
 
 
@@ -4197,9 +4260,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)
     #                    raise aMCatNLOError(error)
-            elif int(self.run_card['ickkw']) == -1 and mode in ['aMC@NLO', 'noshower', 'LO', 'noshowerLO']:
+            elif int(self.run_card['ickkw']) == -1 and mode in ['aMC@NLO', 'noshower']:
                     # NNLL+NLO jet-veto only possible for LO event generation or fNLO runs.
-                raise self.InvalidCmd("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO.""")
+                raise self.InvalidCmd("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO or LO.""")
         if 'aMC@' in mode or mode == 'onlyshower':
             self.shower_card = self.banner.charge_card('shower_card')
             

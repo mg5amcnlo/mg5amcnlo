@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# For support of LHAPATH in cluster mode
+if [ $CLUSTER_LHAPATH ]; then 
+  export LHAPATH=$CLUSTER_LHAPATH;
+fi
+
 if [[ -e MadLoop5_resources.tar.gz && ! -e MadLoop5_resources ]]; then
 tar -xzf MadLoop5_resources.tar.gz;
 fi
@@ -43,7 +48,7 @@ for i in $@ ; do
 
      for((try=1;try<=10;try+=1)); 
      do
-     ../madevent >> $k <input_app.txt;
+     ../madevent 2>&1 >> $k <input_app.txt | tee -a $k;
      if [ -s $k ]
      then
          break;
@@ -55,5 +60,19 @@ for i in $@ ; do
 #     rm -f ftn26
      echo "" >> $k; echo "ls status:" >> $k; ls >> $k;
      cp $k log.txt;
+# Perform some cleaning to keep less file on disk/transfer less file.
+     if [[ $subdir -ne 1 &&  -s results.dat && $MG5DEBUG -ne true ]]; then
+	 rm -f ftn25 &> /dev/null
+         rm -f ftn26 &> /dev/null
+	 rm -f log.txt &> /dev/null
+         rm -f *.log &> /dev/null
+	 rm -f moffset.dat &> /dev/null
+     fi
      cd ../;
+ 
 done;
+
+# Cleaning 
+
+
+

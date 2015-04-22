@@ -323,15 +323,19 @@ class SubProcessGroup(base_objects.PhysicsObject):
             
             # Check the minimal number of legs we need to include in order
             # to make sure we'll have some valid configurations
-            max_legs = min([max([len(v.get('legs')) for v in \
-                             d.get('vertices') if not v.get('id') in [0, -1]]) \
-                                                             for d in diagrams])
+            vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+                                  diagrams if diag.get_vertex_leg_numbers()!=[]]
+            minvert = min(vert_list) if vert_list!=[] else 0
+            
             diagram_maps[ime] = []
             
             for diagram in diagrams:
-                # Only use diagrams with all vertices == min_legs
-                if any([len(v.get('legs')) > max_legs for v in \
-                        diagram.get('vertices') if not v.get('id') in [0, -1]]):
+                # Only use diagrams with all vertices == min_legs, but do not
+                # consider artificial vertices, such as those coming from a
+                # contracted loop for example, which should be considered as new
+                # topologies (the contracted vertex has id == -2.)
+                if diagram.get_vertex_leg_numbers()!=[] and \
+                                max(diagram.get_vertex_leg_numbers()) > minvert:
                     diagram_maps[ime].append(0)
                     continue
                 # Create the equivalent diagram, in the format

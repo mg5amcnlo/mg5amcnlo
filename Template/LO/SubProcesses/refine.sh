@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# For support of LHAPATH in cluster mode
+if [ $CLUSTER_LHAPATH ]; then
+  export LHAPATH=$CLUSTER_LHAPATH;
+fi
+
 if [[ -e MadLoop5_resources.tar.gz && ! -e MadLoop5_resources ]]; then
 tar -xzf MadLoop5_resources.tar.gz
 fi
@@ -45,7 +50,7 @@ j=%(directory)s
      # filesystem problem (executable not found)
      for((try=1;try<=16;try+=1)); 
      do
-         ../madevent >> $k <input_sg.txt
+         ../madevent 2>&1 >> $k <input_sg.txt | tee -a $k;
          if [ -s $k ]
          then
              break

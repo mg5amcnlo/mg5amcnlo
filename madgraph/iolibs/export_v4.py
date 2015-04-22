@@ -180,7 +180,7 @@ class ProcessExporterFortran(object):
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # Duplicate run_card and plot_card
-            for card in ['run_card', 'plot_card']:
+            for card in ['plot_card']:
                 try:
                     shutil.copy(pjoin(self.dir_path, 'Cards',
                                              card + '.dat'),
@@ -228,6 +228,11 @@ class ProcessExporterFortran(object):
                  pjoin(self.dir_path, 'Source'))
         files.cp(pjoin(MG5DIR,'vendor', 'DiscreteSampler', 'StringCast.f'), 
                  pjoin(self.dir_path, 'Source'))
+        
+        # We need to create the correct open_data for the pdf
+        self.write_pdf_opendata()
+        
+        
         
             
     #===========================================================================
@@ -296,6 +301,67 @@ class ProcessExporterFortran(object):
         """Function to write a matrix.f file, for inheritance.
         """
         pass
+
+    #===========================================================================
+    # write_pdf_opendata
+    #===========================================================================
+    def write_pdf_opendata(self):
+        """ modify the pdf opendata file, to allow direct access to cluster node
+        repository if configure"""
+        
+        if not self.opt["cluster_local_path"]:
+            changer = {"pdf_systemwide": ""}
+        else: 
+            to_add = """
+            tempname='%(path)s'//Tablefile
+            open(IU,file=tempname,status='old',ERR=1)
+            return
+ 1          tempname='%(path)s/Pdfdata/'//Tablefile
+            open(IU,file=tempname,status='old',ERR=2)
+            return
+ 2          tempname='%(path)s/lhapdf'//Tablefile
+            open(IU,file=tempname,status='old',ERR=3)
+            return            
+ 3          tempname='%(path)s/../lhapdf/pdfsets/'//Tablefile
+            open(IU,file=tempname,status='old',ERR=4)
+            return              
+ 4          tempname='%(path)s/../lhapdf/pdfsets/6.1/'//Tablefile
+            open(IU,file=tempname,status='old',ERR=5)
+            return  
+            """ % {"path" : self.opt["cluster_local_path"]}
+            
+            changer = {"pdf_systemwide": to_add}
+
+        ff = open(pjoin(self.dir_path, "Source", "PDF", "opendata.f"),"w")
+        template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_opendata.f"),"r").read()
+        ff.write(template % changer)
+        
+        # Do the same for lhapdf set
+        if not self.opt["cluster_local_path"]:
+            changer = {"cluster_specific_path": ""}
+        else:
+            to_add="""
+         LHAPath='%(path)s/PDFsets'
+         Inquire(File=LHAPath, exist=exists)
+         if(exists)return        
+         LHAPath='%(path)s/../lhapdf/pdfsets/6.1/'
+         Inquire(File=LHAPath, exist=exists)
+         if(exists)return
+         LHAPath='%(path)s/../lhapdf/pdfsets/'
+         Inquire(File=LHAPath, exist=exists)
+         if(exists)return  
+         LHAPath='./PDFsets'            
+         """ % {"path" : self.opt["cluster_local_path"]}
+            changer = {"cluster_specific_path": to_add}
+
+        ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
+        template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_lhapdf.f"),"r").read()
+        ff.write(template % changer)
+        
+        
+        return
+
+
 
     #===========================================================================
     # write_maxparticles_file
@@ -929,8 +995,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
         # Get minimum legs in a vertex
-        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
-                       matrix_element.get('diagrams')])
+        vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+       matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
 
         ret_lines = []
         if config_map:
@@ -971,7 +1038,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
                 # Ignore any diagrams with 4-particle vertices.
-                if max(diag.get_vertex_leg_numbers()) > minvert:
+                if diag.get_vertex_leg_numbers()!=[] and max(diag.get_vertex_leg_numbers()) > minvert:
                     continue
                 # Now write out the expression for AMP2, meaning the sum of
                 # squared amplitudes belonging to the same diagram
@@ -1386,8 +1453,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         s_and_t_channels = []
 
-        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
-                       for config in configs])
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+            for config in configs if [d for d in config if d][0].\
+                                             get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
 
         # Number of subprocesses
         nsubprocs = len(configs[0])
@@ -1397,9 +1466,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         new_pdg = model.get_first_non_pdg()
 
         for iconfig, helas_diags in enumerate(configs):
-            if any([vert > minvert for vert in
-                    [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
-                # Only 3-vertices allowed in configs.inc
+            if any(vert > minvert for vert in [d for d in helas_diags if d]\
+              [0].get_vertex_leg_numbers()) :
+                # Only 3-vertices allowed in configs.inc except for vertices
+                # which originate from a shrunk loop.
                 continue
             nconfigs += 1
 
@@ -2326,6 +2396,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
         cp(_file_path+'/various/banner.py', 
                                    self.dir_path+'/bin/internal/banner.py')
+        cp(_file_path+'/various/shower_card.py', 
+                                   self.dir_path+'/bin/internal/shower_card.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
         
@@ -2337,7 +2409,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
     #===========================================================================
-    # Make the Helas and Model directories for Standalone directory
+    # Change the version of cuts.f to the one compatible with MW
     #===========================================================================    
     def get_mw_cuts_version(self, outpath=None):
         """create the appropriate cuts.f
@@ -2465,7 +2537,6 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'),
                        template=pjoin(MG5DIR, 'Template', 'MadWeight', 'Cards', 'run_card.dat'),
                        python_template=True)
-
 
     #===========================================================================
     # export model files
@@ -2853,9 +2924,11 @@ c     channel position
 
         s_and_t_channels = []
 
-        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
-                       for config in configs])
-
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+                       for config in configs if [d for d in config if d][0].\
+                                                  get_vertex_leg_numbers()!=[]]
+        
+        minvert = min(vert_list) if vert_list!=[] else 0
         # Number of subprocesses
         nsubprocs = len(configs[0])
 
@@ -3918,8 +3991,10 @@ c           This is dummy particle used in multiparticle vertices
 
         nqcd_list = []
 
-        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
-                       for config in configs])
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+                       for config in configs if [d for d in config if d][0].\
+                                                  get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
 
         # Number of subprocesses
         nsubprocs = len(configs[0])
@@ -5905,6 +5980,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
 
     group_subprocesses = cmd.options['group_subprocesses']
 
+    opt = cmd.options
+
     # First treat the MadLoop5 standalone case       
     MadLoop_SA_options = {'clean': not noclean, 
       'complex_mass':cmd.options['complex_mass_scheme'],
@@ -5944,7 +6021,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
     elif output_type=='amcatnlo':
         import madgraph.iolibs.export_fks as export_fks
         ExporterClass=None
-        amcatnlo_options = MadLoop_SA_options
+        amcatnlo_options = dict(opt)
+        amcatnlo_options.update(MadLoop_SA_options)
         amcatnlo_options['mp'] = len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0
         if not cmd.options['loop_optimized_output']:
             logger.info("Writing out the aMC@NLO code")
@@ -5968,19 +6046,21 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
 
         assert group_subprocesses in [True, False]
         
-        opt = {'clean': not noclean,
+        opt = dict(opt)
+        opt.update({'clean': not noclean,
                'complex_mass': cmd.options['complex_mass_scheme'],
                'export_format':cmd._export_format,
                'mp': False,  
                'sa_symmetry':False, 
-               'model': cmd._curr_model.get('name') }
+               'model': cmd._curr_model.get('name') })
 
         format = cmd._export_format #shortcut
 
         if format in ['standalone_msP', 'standalone_msF', 'standalone_rw']:
             opt['sa_symmetry'] = True        
     
-        loop_induced_opt = MadLoop_SA_options
+        loop_induced_opt = dict(opt)
+        loop_induced_opt.update(MadLoop_SA_options)
         loop_induced_opt['export_format'] = 'madloop_optimized'
         loop_induced_opt['SubProc_prefix'] = 'PV'
         # For loop_induced output with MadEvent, we must have access to the 

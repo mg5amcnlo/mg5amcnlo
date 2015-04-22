@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# For support of LHAPATH in cluster mode
+if [ $CLUSTER_LHAPATH ]; then
+  export LHAPATH=$CLUSTER_LHAPATH;
+fi
 if [[ -e MadLoop5_resources.tar.gz && ! -e MadLoop5_resources ]]; then
 tar -xzf MadLoop5_resources.tar.gz
 fi
@@ -46,7 +50,7 @@ echo   $offset > moffset.dat;
 # filesystem problem (executable not found)
 for((try=1;try<=16;try+=1)); 
 do
-    ../madevent >> $k <input_app.txt;
+    ../madevent 2>&1 >> $k <input_app.txt | tee -a $k;
     if [ -s $k ]
     then
         break
@@ -55,5 +59,14 @@ do
     fi
 done
 echo "" >> $k; echo "ls status:" >> $k; ls >> $k
+# Perform some cleaning to keep less file on disk/transfer less file.
+subdir=${grid_directory##*_}
+if [[ $subdir -ne 1 &&  -s results.dat && $MG5DEBUG != true ]]; then
+	 rm -f ftn25 &> /dev/null
+         rm -f ftn26 &> /dev/null
+	 rm -f log.txt &> /dev/null
+         rm -f *.log &> /dev/null
+	 rm -f moffset.dat &> /dev/null
+	 rm -f fail.log &> /dev/null
+fi
 cd ../
-

@@ -79,6 +79,7 @@ c
       integer th_nunwgt
       double precision th_maxwgt
       common/theoretical_unwgt_max/th_maxwgt, th_nunwgt
+
 c
 c     External
 c
@@ -221,6 +222,8 @@ c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
          write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
+c     Write out MadLoop statistics, if any
+      call output_run_statistics(66)
       flush(66)
       close(66, status='KEEP')
       else
@@ -228,6 +231,8 @@ c      do i=1,cur_it-1
          write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,kevent,nw,
      &     1,0,0.,0.,0.,0.,0.,0
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
+c        Write out MadLoop statistics, if any
+         call output_run_statistics(66)
          flush(66)
          close(66, status='KEEP')
 
@@ -385,6 +390,8 @@ c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
          write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
+c     Write out MadLoop statistics, if any
+      call output_run_statistics(66)      
       flush(66)
       close(66, status='KEEP')
       else
@@ -392,12 +399,79 @@ c      do i=1,cur_it-1
          write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,kevent,nw,
      &     1,0,0.,0.,0.,0.,0.,0
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
+c        Write out MadLoop statistics, if any
+         call output_run_statistics(66)
          flush(66)
          close(66, status='KEEP')
 
       endif      
 
       end
+
+      subroutine output_run_statistics(outUnit)
+c***********************************************************************
+c     Writes out the madloop runtime statistics to the unit in argument
+c***********************************************************************
+      use StringCast
+      implicit none
+c
+c     Arguments
+c
+      integer outUnit
+C
+C     Local
+C
+      double precision t_after
+c
+c     Global
+c
+      INTEGER U_RETURN_CODES(0:9)
+      INTEGER T_RETURN_CODES(0:9)
+      INTEGER H_RETURN_CODES(0:9)
+      DOUBLE PRECISION AVG_TIMING
+      DOUBLE PRECISION MAX_PREC, MIN_PREC
+      INTEGER N_EVALS
+      DATA U_RETURN_CODES/10*0/
+      DATA T_RETURN_CODES/10*0/
+      DATA H_RETURN_CODES/10*0/
+      DATA MAX_PREC /-1.0d0/
+      DATA MIN_PREC /1.0d99/
+      DATA AVG_TIMING/0.0d0/
+      DATA N_EVALS/0/
+      COMMON/MADLOOPSTATS/AVG_TIMING,MAX_PREC,MIN_PREC,N_EVALS,
+     &       U_RETURN_CODES,T_RETURN_CODES,H_RETURN_CODES
+
+      DOUBLE PRECISION CUMULATED_TIMING
+      DATA CUMULATED_TIMING/0.0d0/
+      COMMON/GENERAL_STATS/CUMULATED_TIMING
+
+c-----
+c  Begin Code
+c-----
+      call cpu_time(t_after)
+      CUMULATED_TIMING = t_after - CUMULATED_TIMING
+
+      if (N_EVALS.eq.0) then
+        return
+      endif
+      
+      write(outUnit,*) '<run_statistics> '
+      write(outUnit,33) '<u_return_code>',U_RETURN_CODES,'</u_return_code>'
+      write(outUnit,33) '<t_return_code>',T_RETURN_CODES,'</t_return_code>'
+      write(outUnit,33) '<h_return_code>',H_RETURN_CODES,'</h_return_code>'
+      write(outUnit,*) '<average_time>'//trim(toStr_real(AVG_TIMING))
+     & //'</average_time>'
+      write(outUnit,*) '<cumulated_time>'//trim(toStr_real(CUMULATED_TIMING))
+     & //'</cumulated_time>'
+      write(outUnit,*) '<max_prec>'//trim(toStr_real(MAX_PREC))//'</max_prec>'
+      write(outUnit,*) '<min_prec>'//trim(toStr_real(MIN_PREC))//'</min_prec>'
+      write(outUnit,*) '<n_evals>'//trim(toStr_int(N_EVALS))//'</n_evals>'   
+      write(outUnit,*) '</run_statistics>'
+      
+33    FORMAT( a15,i12,',',i12',',i12',',i12',',i12',
+     &        ',i12',',i12',',i12',',i12',',i12,a16)
+
+      end subroutine
 
       subroutine sample_writehtm()
 c***********************************************************************
@@ -537,6 +611,10 @@ c
       logical               zooming
       common /to_zoomchoice/zooming
 
+      logical read_grid_file
+      data read_grid_file/.False./
+      common/read_grid_file/read_grid_file
+
       data use_cut/2/            !Grid: 0=fixed , 1=standard, 2=non-zero
       data ituple/1/             !1=htuple, 2=sobel 
       data Minvar(1,1)/-1/       !No special variable mapping
@@ -641,6 +719,7 @@ c
       read(25,*) twgt, force_max_wgt
       call read_discrete_grids(25)
       write(*,*) 'Grid read from file'
+      read_grid_file=.true.
       flat_grid=.false.
       close(25)
 c
@@ -683,6 +762,7 @@ c
 c     Unable to read grid, using uniform grid and equal points in
 c     each configuration
 c
+      read_grid_file=.false.
       write(*,*) 'Using Uniform Grid!', maxinvar
       force_max_wgt = -1d0
       do j = 1, maxinvar
@@ -2166,6 +2246,8 @@ c 23   close(22)
       write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,0,0,
      &     0,1,0.,0.,0.,0.,0.,0
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
+c     Write out MadLoop statistics, if any
+      call output_run_statistics(66)
       flush(66)
       close(66, status='KEEP')
 

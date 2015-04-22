@@ -140,20 +140,23 @@ c If no pdf, read the param_card and use the value from there and
 c order of alfas running = 2
 
       if(lpp(1).ne.0.or.lpp(2).ne.0) then
-          write(*,*) 'A PDF is used, so alpha_s(MZ) is going to be modified'
+         write(*,*) 'A PDF is used, so alpha_s(MZ)'/
+     &        /' is going to be modified'
           call setpara('param_card.dat')
           asmz=G**2/(16d0*atan(1d0))
           write(*,*) 'Old value of alpha_s from param_card: ',asmz
           call pdfwrap
           write(*,*) 'New value of alpha_s from PDF ',pdlabel,':',asmz
       else
-          call setpara('param_card.dat',.true.)
+          call setpara('param_card.dat')
           asmz=G**2/(16d0*atan(1d0))
           nloop=2
           pdlabel='none'
-          write(*,*) 'No PDF is used, alpha_s(MZ) from param_card is used'
+          write(*,*)
+     &         'No PDF is used, alpha_s(MZ) from param_card is used'
           write(*,*) 'Value of alpha_s from param_card: ',asmz
-          write(*,*) 'The default order of alpha_s running is fixed to ',nloop
+          write(*,*) 'The default order of alpha_s running is fixed to '
+     &         ,nloop
       endif
 c !!! end of modification !!!
 

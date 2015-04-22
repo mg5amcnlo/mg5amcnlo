@@ -116,9 +116,14 @@ class Banner(dict):
     def read_banner(self, input_path):
         """read a banner"""
 
-        if isinstance(input_path, str) and input_path.find('\n') ==-1:
-            input_path = open(input_path)
-
+        if isinstance(input_path, str):
+            if input_path.find('\n') ==-1:
+                input_path = open(input_path)
+            else:
+                def split_iter(string):
+                    return (x.groups(0)[0] for x in re.finditer(r"([^\n]*\n)", string, re.DOTALL))
+                input_path = split_iter(input_path)
+                
         text = ''
         store = False
         for line in input_path:
@@ -154,6 +159,22 @@ class Banner(dict):
             raise Exception, "Not Supported version"
         self.lhe_version = version
     
+    def get_cross(self):
+        """return the cross-section of the file"""
+
+        if "init" not in self:
+            misc.sprint(self.keys())
+            raise Exception
+        
+        text = self["init"].split('\n')
+        cross = 0
+        for line in text:
+            s = line.split()
+            if len(s)==4:
+                cross += float(s[0])
+        return cross
+        
+
     
     def modify_init_cross(self, cross):
         """modify the init information with the associate cross-section"""
@@ -182,7 +203,28 @@ class Banner(dict):
             new_data.append(line)
         self['init'] = '\n'.join(new_data)
     
-    
+    def scale_init_cross(self, ratio):
+        """modify the init information with the associate scale"""
+
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        new_data = []
+        new_data.append(all_lines[0])
+        for i in range(1, len(all_lines)):
+            line = all_lines[i]
+            split = line.split()
+            if len(split) == 4:
+                xsec, xerr, xmax, pid = split 
+            else:
+                new_data += all_lines[i:]
+                break
+            pid = int(pid)
+            
+            line = "   %+13.7e %+13.7e %+13.7e %i" % \
+                (ratio*float(xsec), ratio* float(xerr), ratio*float(xmax), pid)
+            new_data.append(line)
+        self['init'] = '\n'.join(new_data)
     
     def load_basic(self, medir):
         """ Load the proc_card /param_card and run_card """
@@ -408,10 +450,10 @@ class Banner(dict):
     def get_detail(self, tag, *arg, **opt):
         """return a specific """
                 
-        if tag == 'param_card':
+        if tag in ['param_card', 'param']:
             tag = 'slha'
             attr_tag = 'param_card'
-        elif tag == 'run_card':
+        elif tag in ['run_card', 'run']:
             tag = 'mgruncard' 
             attr_tag = 'run_card'
         elif tag == 'proc_card':
@@ -428,11 +470,11 @@ class Banner(dict):
         elif tag == 'shower_card':
             tag = 'mgshowercard'
             attr_tag = 'shower_card'
-        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'shower_card'], 'not recognized'
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'shower_card'], '%s not recognized' % tag
         
         if not hasattr(self, attr_tag):
             self.charge_card(attr_tag) 
-        
+
         card = getattr(self, attr_tag)
         if len(arg) == 1:
             if tag == 'mg5proccard':
@@ -505,13 +547,18 @@ class Banner(dict):
         
     
     @misc.multiple_try()
-    def add_to_file(self, path, seed=None):
+    def add_to_file(self, path, seed=None, out=None):
         """Add the banner to a file and change the associate seed in the banner"""
 
         if seed is not None:
             self.set("run_card", "iseed", seed)
-            
-        ff = self.write("%s.tmp" % path, close_tag=False,
+        
+        if not out:
+            path_out = "%s.tmp" % path
+        else:
+            path_out = out
+        
+        ff = self.write(path_out, close_tag=False,
                         exclude=['MGGenerationInfo', '/header', 'init'])
         ff.write("## END BANNER##\n")
         if self.lhe_version >= 3:
@@ -523,7 +570,10 @@ class Banner(dict):
             [ff.write(line) for line in open(path)]
         ff.write("</LesHouchesEvents>\n")
         ff.close()
-        files.mv("%s.tmp" % path, path)
+        if out:
+            os.remove(path)
+        else:
+            files.mv(path_out, path)
 
 
         
@@ -1187,8 +1237,6 @@ class RunCard(ConfigFile):
                         text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
                     if nline[1].strip().lower() in to_write:
                         to_write.remove(nline[1].strip().lower())
-                    else:
-                        misc.sprint(to_write, nline[1].strip().lower())
                 else:
                     logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
                     text += line 
@@ -1359,8 +1407,8 @@ class RunCardLO(RunCard):
         self.add_param("lpp2", 1, fortran_name="lpp(2)")
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
-        self.add_param("polbeam1", 0, fortran_name="pb1")
-        self.add_param("polbeam2", 0, fortran_name="pb2")
+        self.add_param("polbeam1", 0.0, fortran_name="pb1")
+        self.add_param("polbeam2", 0.0, fortran_name="pb2")
         self.add_param("pdlabel", "nn23lo1")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
@@ -1368,6 +1416,8 @@ class RunCardLO(RunCard):
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
+        self.add_param("dynamical_scale_choice", -1)
+        
         #matching
         self.add_param("scalefact", 1.0)
         self.add_param("ickkw", 0)
@@ -1450,7 +1500,7 @@ class RunCardLO(RunCard):
         self.add_param("mmnlmax", -1.0, cut=True)
         #minimum/max pt for sum of leptons
         self.add_param("ptllmin", 0.0, cut=True)
-        self.add_param("ptllmax", -1, cut=True)
+        self.add_param("ptllmax", -1.0, cut=True)
         self.add_param("xptj", 0.0, cut=True)
         self.add_param("xptb", 0.0, cut=True)
         self.add_param("xpta", 0.0, cut=True) 
@@ -1512,7 +1562,6 @@ class RunCardLO(RunCard):
         self.add_param('d', 1.0, hidden=True)
         self.add_param('gseed', 0, hidden=True, include=False)
         self.add_param('issgridfile', '', hidden=True)
-        self.add_param('hightestmult', 0, hidden=True, fortran_name="nhmult")
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False)
         self.add_param('survey_splitting', -1, hidden=True, include=False)
@@ -1733,6 +1782,7 @@ class RunCardNLO(RunCard):
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', 91.118)
         self.add_param('muf2_ref_fixed', 91.118)
+        self.add_param("dynamical_scale_choice", -1)
         self.add_param('fixed_qes_scale', False)
         self.add_param('qes_ref_fixed', 91.118)
         self.add_param('mur_over_ref', 1.0)
@@ -1770,6 +1820,7 @@ class RunCardNLO(RunCard):
         self.add_param('maxjetflavor', 4)
         self.add_param('iappl', 0)   
     
+        self.add_param('lhe_version', 3, hidden=True, include=False)
     
     def check_validity(self):
         """check the validity of the various input"""
@@ -1780,9 +1831,16 @@ class RunCardNLO(RunCard):
             scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
             for scale in scales:
                 if self[scale]:
-                    logger.info('''For consistency in the FxFx merging, \'%s\' has been set to false'''
+                    logger.warning('''For consistency in the FxFx merging, \'%s\' has been set to false'''
                                 % scale,'$MG:color:BLACK')
                     self[scale]= False
+            #and left to default dynamical scale
+            if self["dynamical_scale_choice"] != -1:
+                self["dynamical_scale_choice"] = -1
+                logger.warning('''For consistency in the FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
+                                ,'$MG:color:BLACK')
+                
+                
             # 2. Use kT algorithm for jets with pseudo-code size R=1.0
             jetparams=['jetradius','jetalgo']
             for jetparam in jetparams:
@@ -1790,6 +1848,12 @@ class RunCardNLO(RunCard):
                     logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
                                 % jetparam ,'$MG:color:BLACK')
                     self[jetparam] = 1.0
+        elif self['ickkw'] == -1 and self["dynamical_scale_choice"] != -1:
+                self["dynamical_scale_choice"] = -1
+                self["dynamical_scale_choice"] = -1
+                logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
+                                ,'$MG:color:BLACK')            
+            
                                 
         # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
         if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':
@@ -1803,6 +1867,9 @@ class RunCardNLO(RunCard):
         if self['pdlabel'] not in possible_set:
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
     
+        # check that we use lhapdf if reweighting is ON
+        if self['reweight_pdf'] and self['pdlabel'] != "lhapdf":
+            raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

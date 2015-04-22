@@ -173,7 +173,10 @@ class TestCmdShell1(unittest.TestCase):
                     'hwpp_path': './herwigPP',
                     'thepeg_path': './thepeg',
                     'amcfast': 'amcfast-config',
-                    'applgrid': 'applgrid-config'
+                    'applgrid': 'applgrid-config',
+                    'cluster_size': 100,
+                    'loop_color_flows': False,
+                    'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/'
                     }
 
         self.assertEqual(config, expected)

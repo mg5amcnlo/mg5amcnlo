@@ -821,6 +821,11 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Set format of the masses
         dict['mass_dp_format'] = dict['complex_dp_format']
         dict['mass_mp_format'] = dict['complex_mp_format']
+        # Fill in default values for the placeholders for the madevent 
+        # loop-induced output
+        dict['nmultichannels'] = 0
+        dict['config_map_definition'] = ''
+        dict['config_index_map_definition'] = ''        
         # Color matrix size
         # For loop induced processes it is NLOOPAMPSxNLOOPAMPS and otherwise
         # it is NLOOPAMPSxNBORNAMPS
@@ -2159,13 +2164,15 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # The following variables only have to be defined for the LoopInduced
         # output for madevent.
         if self.get_context(matrix_element)['MadEventOutput']:
-            nmultichannels, loop_amp2 = self.get_amp2_lines(\
-                                                      matrix_element,config_map)
-            replace_dict['loop_amp2'] = '\n'.join(loop_amp2)
-            replace_dict['nmultichannels'] = nmultichannels
+            self.get_amp2_lines(matrix_element, replace_dict, config_map)
         else:
-            replace_dict['loop_amp2'] = ''
+            replace_dict['config_map_definition'] = ''
+            replace_dict['config_index_map_definition'] = ''            
             replace_dict['nmultichannels'] = 0
+            
+        # The nmultichannels entry will be used in the matrix<i> wrappers as 
+        # well, so we add it to the general_replace_dict too.
+        self.general_replace_dict['nmultichannels'] = replace_dict['nmultichannels']
 
         file = open(os.path.join(self.template_dir,\
                                  'compute_color_flows.inc')).read()%replace_dict
@@ -2591,17 +2598,14 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         """
         
         self.proc_characteristic['loop_induced'] = True
-        super(LoopInducedExporterME, self).finalize_v4_directory(matrix_elements,
-                            history=history, makejpg=makejpg, online=online, 
-                            compiler=compiler)
-
-
-        if self.proc_characteristic['nexternal'] > 3:
-            misc.sprint("Use more splitting for gen_ximprove")
-            files.cp(pjoin(self.mgme_dir,'madgraph/iolibs/template_files/loop/gen_ximprove_loop_induced.f'),
-                     pjoin(self.dir_path, 'Source/gen_ximprove.f'))
-        else:
-            misc.sprint('Use standard splitting')
+        
+        # This can be uncommented if one desires to have the MadLoop
+        # initialization performed at the end of the output phase.
+        # Alternatively, one can simply execute the command 'initMadLoop' in
+        # the madevent interactive interface after the output.
+        # from madgraph.interface.madevent_interface import MadLoopInitializer
+        # MadLoopInitializer.init_MadLoop(self.dir_path,
+        #                   subproc_prefix=self.SubProc_prefix, MG_options=None)
 
     def write_tir_cache_size_include(self, writer):
         """Write the file 'tir_cache_size.inc' which sets the size of the TIR
@@ -2673,12 +2677,11 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
                  """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
                  COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
             # Set set_amp2_line
-            replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(SUBDIAG(%s))/XTOT" % \
-                                            proc_id
+            replace_dict['configID_in_matrix'] = "SUBDIAG(%s)"%proc_id
         else:
             # Standard running
             # Set set_amp2_line
-            replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT"
+            replace_dict['configID_in_matrix'] = "MAPCONFIG(ICONFIG)"
         
         # If group_numer
         replace_dict['ml_prefix'] = \
@@ -2746,11 +2749,15 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         """
         # Call specifically what finalize_v4_directory must be used, so that the
         # MRO doesn't interfere.
-        
+
         self.proc_characteristic['loop_induced'] = True
         
         export_v4.ProcessExporterFortranMEGroup.finalize_v4_directory(
                                                               self,*args,**opts)
+        
+        # And the finilize_v4 from LoopInducedExporterME which essentially takes
+        # care of MadLoop virtuals initialization
+        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
         
     def generate_subprocess_directory_v4(self, subproc_group,
                                                     fortran_model,group_number):
@@ -2773,61 +2780,95 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         
         return calls
     
-    def get_amp2_lines(self, matrix_element, config_map):
-        """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
+    def get_amp2_lines(self, matrix_element, replace_dict, config_map):
+        """Return the various replacement dictionary inputs necessary for the 
+        multichanneling amp2 definition for the loop-induced MadEvent output.
+        """
 
         if not config_map:
             raise MadGraph5Error, 'A multi-channeling configuration map is '+\
               ' necessary for the MadEvent Loop-induced output with grouping.'
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
-        # Get minimum legs in a vertex
-        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
-                       matrix_element.get('diagrams')])
 
         ret_lines = []
         # In this case, we need to sum up all amplitudes that have
         # identical topologies, as given by the config_map (which
         # gives the topology/config for each of the diagrams
         diagrams = matrix_element.get('diagrams')
+                
+        # Note that we need to use AMP2 number corresponding to the first 
+        # diagram number used for that AMP2.
+        # The dictionary below maps the config ID to this corresponding first 
+        # diagram number
+        config_index_map = {}
+        # For each diagram number, the dictionary below gives the config_id it
+        # belongs to or 0 if it doesn't belong to any.
+        loop_amp_ID_to_config = {}
+        
         # Combine the diagrams with identical topologies
         config_to_diag_dict = {}
         for idiag, diag in enumerate(matrix_element.get('diagrams')):
-            if config_map[idiag] == 0:
-                continue
             try:
                 config_to_diag_dict[config_map[idiag]].append(idiag)
             except KeyError:
                 config_to_diag_dict[config_map[idiag]] = [idiag]
-        # Write out the AMP2s summing squares of amplitudes belonging
-        # to eiher the same diagram or different diagrams with
-        # identical propagator properties.  Note that we need to use
-        # AMP2 number corresponding to the first diagram number used
-        # for that AMP2.
+
         for config in sorted(config_to_diag_dict.keys()):
-            line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
-                   {"num": (config_to_diag_dict[config][0] + 1)}
+            config_index_map[config] = (config_to_diag_dict[config][0] + 1)
                    
             # First add the UV and R2 counterterm amplitudes of each selected
             # diagram for the multichannel config
-            CT_amp_list = [("AMPL(1,%(num)d)" % {"num": a.get('number')}) for a in \
+            CT_amp_numbers = [a.get('number') for a in \
                                     sum([diagrams[idiag].get_ct_amplitudes() for \
                                      idiag in config_to_diag_dict[config]], [])]
+            
+            for CT_amp_number in CT_amp_numbers:
+                loop_amp_ID_to_config[CT_amp_number] = config 
 
             # Now add here the loop amplitudes.
-            Loop_amp_list = [("AMPL(1,%(num)d)" % 
-              {"num": a.get('amplitudes')[0].get('number')}) 
+            loop_amp_numbers = [a.get('amplitudes')[0].get('number')
                        for a in sum([diagrams[idiag].get_loop_amplitudes() for \
                                      idiag in config_to_diag_dict[config]], [])]
             
-            amps = '+'.join(CT_amp_list+Loop_amp_list)
+            for loop_amp_number in loop_amp_numbers:
+                loop_amp_ID_to_config[loop_amp_number] = config
+                
+        # Notice that the config_id's are not necessarily sequential here, so
+        # the size of the config_index_map array has to be the maximum over all
+        # config_ids.
+        # config_index_map should never be empty unless there was no diagram,
+        # so the expression below is ok.
+        n_configs = max(config_index_map.keys())
+        replace_dict['nmultichannels'] = n_configs
+        # We must fill the empty entries of the map with the dummy amplitude 
+        # number 0.
+        conf_list = [(config_index_map[i] if i in config_index_map else 0) \
+                                                  for i in range(1,n_configs+1)]
+        
+        # Now write the amp2 related inputs in the replacement dictionary
+        res_list = []
+        chunk_size = 6
+        for k in xrange(0, len(conf_list), chunk_size):
+            res_list.append("DATA (config_index_map(i),i=%6r,%6r) /%s/" % \
+                (k + 1, min(k + chunk_size, len(conf_list)),
+                    ','.join(["%6r" % i for i in conf_list[k:k + chunk_size]])))
 
-            # Not using \sum |M|^2 anymore since this creates troubles
-            # when ckm is not diagonal due to the JIM mechanism.
-            line += "HEL_MULT*DBLE((%s)*dconjg(%s))" % (amps, amps)
-            ret_lines.append(line)
+        replace_dict['config_index_map_definition'] = '\n'.join(res_list)
 
-        return len(config_to_diag_dict), ret_lines
+        res_list = []
+        n_loop_amps = max(loop_amp_ID_to_config.keys())
+        amp_list = [loop_amp_ID_to_config[i] for i in \
+                                   sorted(loop_amp_ID_to_config.keys()) if i!=0]
+        chunk_size = 6
+        for k in xrange(0, len(amp_list), chunk_size):
+            res_list.append("DATA (CONFIG_MAP(i),i=%6r,%6r) /%s/" % \
+                (k + 1, min(k + chunk_size, len(amp_list)),
+                    ','.join(["%6r" % i for i in amp_list[k:k + chunk_size]])))
+
+        replace_dict['config_map_definition'] = '\n'.join(res_list)
+
+        return
     
 #===============================================================================
 # LoopInducedExporterMENoGroup
@@ -2874,6 +2915,10 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         export_v4.ProcessExporterFortranME.finalize_v4_directory(
                                                               self,*args,**opts)
 
+        # And the finilize_v4 from LoopInducedExporterME which essentially takes
+        # care of MadLoop virtuals initialization
+        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
+
     def generate_subprocess_directory_v4(self, matrix_element, fortran_model, me_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
@@ -2889,7 +2934,7 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
                                  self, matrix_element, fortran_model, me_number)
         return calls
 
-    def get_amp2_lines(self, matrix_element, config_map):
+    def get_amp2_lines(self, matrix_element, replace_dict, config_map):
         """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
         if config_map:
@@ -2898,34 +2943,68 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
         # Get minimum legs in a vertex
-        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
-                                                matrix_element.get('diagrams')])
+        vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+        matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
 
-        ret_lines = []
+        # Note that we need to use AMP2 number corresponding to the first 
+        # diagram number used for that AMP2.
+        # The dictionary below maps the config ID to this corresponding first 
+        # diagram number
+        config_index_map = {}
+        # For each diagram number, the dictionary below gives the config_id it
+        # belongs to or 0 if it doesn't belong to any.
+        loop_amp_ID_to_config = {}
 
+        n_configs = 0
         for idiag, diag in enumerate(matrix_element.get('diagrams')):
             # Ignore any diagrams with 4-particle vertices.
-            if max(diag.get_vertex_leg_numbers()) > minvert:
-                continue
+            use_for_multichanneling = True
+            if diag.get_vertex_leg_numbers()!=[] and max(diag.get_vertex_leg_numbers()) > minvert:
+                use_for_multichanneling = False
+                curr_config = 0
+            else:
+                n_configs += 1
+                curr_config = n_configs
 
-            # Now write out the expression for AMP2, meaning the sum of
-            # squared amplitudes belonging to the same diagram
-            
-            line = "AMP2(%(num)d)=AMP2(%(num)d)+" % {"num": (idiag + 1)}
+            if not use_for_multichanneling:
+                if 0 not in config_index_map: 
+                    config_index_map[0] = idiag + 1
+            else:
+                config_index_map[curr_config] = idiag + 1
                    
-            CT_amps = ["AMPL(1,%(num)d)" % \
-                     {"num": a.get('number')} for a in diag.get_ct_amplitudes()]
+            CT_amps = [ a.get('number') for a in diag.get_ct_amplitudes()]
+            for CT_amp in CT_amps:
+                loop_amp_ID_to_config[CT_amp] = curr_config
                             
-            Loop_amps = ["AMPL(1,%(num)d)" % 
-                    {"num": a.get('amplitudes')[0].get('number')}
+            Loop_amps = [a.get('amplitudes')[0].get('number')
                                             for a in diag.get_loop_amplitudes()]
-            
-            amps = "+".join(CT_amps + Loop_amps)
-            # Not using \sum |M|^2 anymore since this creates troubles
-            # when ckm is not diagonal due to the GIM mechanism.
-            line += "HEL_MULT*DBLE((%s)*dconjg(%s))" % (amps, amps)
-            ret_lines.append(line)
+            for Loop_amp in Loop_amps:
+                loop_amp_ID_to_config[Loop_amp] = curr_config
+ 
+        # Now write the amp2 related inputs in the replacement dictionary
+        n_configs = len([k for k in config_index_map.keys() if k!=0])
+        replace_dict['nmultichannels'] = n_configs
+        
+        res_list = []
+        conf_list = [config_index_map[i] for i in sorted(config_index_map.keys())
+                                                                        if i!=0]
+        chunk_size = 6
+        for k in xrange(0, len(conf_list), chunk_size):
+            res_list.append("DATA (config_index_map(i),i=%6r,%6r) /%s/" % \
+                (k + 1, min(k + chunk_size, len(conf_list)),
+                    ','.join(["%6r" % i for i in conf_list[k:k + chunk_size]])))
 
-        return len(matrix_element.get('diagrams')), ret_lines
+        replace_dict['config_index_map_definition'] = '\n'.join(res_list)
 
+        res_list = []
+        n_loop_amps = max(loop_amp_ID_to_config.keys())
+        amp_list = [loop_amp_ID_to_config[i] for i in \
+                                   sorted(loop_amp_ID_to_config.keys()) if i!=0]
+        chunk_size = 6
+        for k in xrange(0, len(amp_list), chunk_size):
+            res_list.append("DATA (CONFIG_MAP(i),i=%6r,%6r) /%s/" % \
+                (k + 1, min(k + chunk_size, len(amp_list)),
+                    ','.join(["%6r" % i for i in amp_list[k:k + chunk_size]])))
 
+        replace_dict['config_map_definition'] = '\n'.join(res_list)
