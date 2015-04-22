@@ -114,11 +114,27 @@ class HelpToCmd(object):
         logger.info("   -f options: answer all question by default.")
 
     def help_compute_widths(self):
-        logger.info("syntax: compute_widths Particle [Particles] [--precision=] [--path=Param_card] [--output=PATH]")
+        logger.info("syntax: compute_widths Particle [Particles] [OPTIONS]")
         logger.info("-- Compute the widths for the particles specified.")
         logger.info("   By default, this takes the current param_card and overwrites it.") 
         logger.info("   Precision allows to define when to include three/four/... body decays (LO).")
-        logger.info("   If this number is an integer then all N-body decay will be included.")      
+        logger.info("   If this number is an integer then all N-body decay will be included.")
+        logger.info("  Various options:\n")
+        logger.info("  --body_decay=X: Parameter to control the precision of the computation")
+        logger.info("        if X is an integer, we compute all channels up to X-body decay.")
+        logger.info("        if X <1, then we stop when the estimated error is lower than X.")
+        logger.info("        if X >1 BUT not an integer, then we X = N + M, with M <1 and N an integer")
+        logger.info("              We then either stop at the N-body decay or when the estimated error is lower than M.")
+        logger.info("        default: 4.0025")
+        logger.info("  --min_br=X: All channel which are estimated below this value will not be integrated numerically.")
+        logger.info("        default: precision (decimal part of the body_decay options) divided by four")
+        logger.info("  --precision_channel=X: requested numerical precision for each channel")
+        logger.info("        default: 0.01")
+        logger.info("  --path=X: path for param_card")
+        logger.info("        default: take value from the model")
+        logger.info("  --output=X: path where to write the resulting card. ")
+        logger.info("        default: overwrite input file. If no input file, write it in the model directory")
+        logger.info("  --nlo: Compute NLO width [if the model support it]")      
 
 
     def help_pythia(self):
@@ -256,12 +272,15 @@ class CheckValidForCmd(object):
                     raise self.InvalidCmd , '%s is not a valid param_card.' % arg
                 output['path'] = arg
             elif arg.startswith('--'):
-                name, value = arg.split('=',1)
-                try:
-                    value = float(value)
-                except Exception:
-                    raise self.InvalidCmd, '--%s requires integer or a float' % name
-                output[name[2:]] = float(value)                
+                if "=" in arg:
+                    name, value = arg.split('=',1)
+                    try:
+                        value = float(value)
+                    except Exception:
+                        raise self.InvalidCmd, '--%s requires integer or a float' % name
+                    output[name[2:]] = float(value)
+                elif arg == "--nlo":
+                    output["nlo"] = True
             elif arg in particles_name:
                 # should be a particles
                 output['particles'].add(particles_name[arg])
@@ -1107,10 +1126,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
+
+
         args = self.split_arg(line)
         opts = self.check_compute_widths(args)
-        
-        
+
         from madgraph.interface.master_interface import MasterCmd
         cmd = MasterCmd()
         self.define_child_cmd_interface(cmd, interface=False)
@@ -1125,7 +1145,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        
         cmd.exec_cmd(line, model=opts['model'])
         self.child = None
         del cmd
@@ -1517,13 +1536,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""
         
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        pdg = pattern.findall(text)
-        if pdg:
+        pdg_info = pattern.findall(text)
+        if pdg_info:
             if run:
                 logger.info('Computing the width set on auto in the param_card.dat')
-                self.do_compute_widths('%s %s' % (' '.join(pdg), path))
+                has_nlo = any(nlo.lower()=="@nlo" for _,nlo in pdg_info)
+                pdg = [pdg for pdg,nlo in pdg_info]
+                if not has_nlo:
+                    self.do_compute_widths('%s %s' % (' '.join(pdg), path))
+                else:
+                    self.do_compute_widths('%s %s --nlo' % (' '.join(pdg), path))
             else:
                 logger.info('''Some width are on Auto in the card. 
     Those will be computed as soon as you have finish the edition of the cards.
@@ -1936,7 +1960,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             completion = {}            
             completion['options'] = self.list_completion(text, 
-                            ['--path=', '--output=', '--min_br=0.\$'
+                            ['--path=', '--output=', '--min_br=0.\$', '--nlo',
                              '--precision_channel=0.\$', '--body_decay='])            
         
         return self.deal_multiple_categories(completion)
@@ -2471,8 +2495,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             opts = ['default']
             if 'decay' in args:
                 opts.append('Auto')
-            if args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
+                opts.append('Auto@NLO')
+            elif args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
                 opts.append('Auto')
+                opts.append('Auto@NLO')
             possibilities['Special Value'] = self.list_completion(text, opts)
 
         if 'block' in allowed.keys():
@@ -2502,6 +2528,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         opts = ['default']
                         if allowed['block'][0] == 'decay':
                             opts.append('Auto')
+                            opts.append('Auto@NLO')
                         possibilities['Special value'] = self.list_completion(text, opts)
                 possibilities['Param Card id' ] = self.list_completion(text, ids)
 
@@ -2736,7 +2763,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     text += "You need to match this expression for external program (such pythia)."
                     logger.warning(text)
 
-                if args[-1].lower() in ['default', 'auto']:
+                if args[-1].lower() in ['default', 'auto', 'auto@nlo']:
                     self.setP(args[start], key, args[-1])
                 else:
                     try:
@@ -2899,7 +2926,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     def setR(self, name, value):
         logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
-        self.run_card.set(name,value, user=True)
+        self.run_card.set(name, value, user=True)
 
     def setML(self, name, value, default=False):
         
@@ -2919,8 +2946,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
                 value = default[block].param_dict[lhaid].value
 
-            elif value == 'auto':
-                value = 'Auto'
+            elif value in ['auto', 'auto@nlo']:
+                if 'nlo' in value:
+                    value = 'Auto@NLO'
+                else:
+                    value = 'Auto'
                 if block != 'decay':
                     logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
                     return
@@ -2998,12 +3028,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
         path = pjoin(self.me_dir,'Cards','param_card.dat')
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        pdg = pattern.findall(text)
+        pdg_info = pattern.findall(text)
+        has_nlo = any("@nlo"==nlo.lower() for _, nlo in pdg_info)
+        pdg = [p for p,_ in pdg_info]
+        
+        
         line = '%s %s' % (line, ' '.join(pdg))
         if not '--path' in line:
             line += ' --path=%s' % path
+        if has_nlo:
+            line += ' --nlo'
+
         try:
             return self.mother_interface.do_compute_widths(line)
         except InvalidCmd, error:

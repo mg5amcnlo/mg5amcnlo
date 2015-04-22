@@ -21,6 +21,7 @@ import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.madevent_interface as mecmd
 import madgraph.interface.common_run_interface as runcmd
 import madgraph.iolibs.files as files
+import madgraph.various.misc as misc
 import os
 import readline
 
@@ -289,6 +290,7 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default' in first_level)
         self.assertTrue('Auto' in first_level)
+        self.assertTrue('Auto@NLO' in first_level)
         self.assertTrue('iregimode' not in first_level)
         
         first_level = self.get_completion('set param_card width 6')
@@ -309,6 +311,7 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default' in first_level)
         self.assertTrue('Auto' in first_level)
+        self.assertTrue('Auto@NLO' in first_level)
         self.assertTrue('iregimode' not in first_level)       
         
         # Run_card completion -------------------------------------------------
@@ -328,6 +331,7 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('as' not in first_level)
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default'  in first_level)
+        self.assertTrue('Auto@NLO' not in first_level)
         self.assertTrue('iregimode' not in first_level) 
           
         first_level = self.get_completion('set run_card htjmax')
@@ -396,8 +400,11 @@ class TestEditCardCmd(unittest.TestCase):
         self.cmd.do_set('wt default')        
         self.assertEqual(param['decay'].get((6,)).value, wt)
         self.cmd.do_set('param_card width 6 Auto')        
-        self.assertEqual(param['decay'].get((6,)).value, 'Auto')                
-        
+        self.assertEqual(param['decay'].get((6,)).value, 'Auto') 
+        self.cmd.do_set('param_card width 6 Auto@NLO')        
+        self.assertEqual(param['decay'].get((6,)).value, 'Auto@NLO')          
+        self.cmd.do_set('param_card width 6 auto@nLo')        
+        self.assertEqual(param['decay'].get((6,)).value, 'Auto@NLO')  
         
     def test_modif_run_card(self):
         """ """
