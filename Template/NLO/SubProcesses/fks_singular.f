@@ -3343,6 +3343,9 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
             enddo
         endif
       enddo
+      do i = 1, amp_split_size
+        amp_split(i) = amp_split_local(i)
+      enddo
       return
       end
 
