@@ -122,11 +122,11 @@ then
   ISLHA5=0
   ISLHA6=0
   LHAVERSION=`$LHAPDFPATH/bin/lhapdf-config --version`
-  if [ ${LHAVERSION:0:1} == "5" ]
+  if [ "${LHAVERSION:0:1}" == "5" ]
   then
       LHAINDEX=$LHAPDFPATH/share/lhapdf/PDFsets.index
       ISLHA5=1
-  elif [ ${LHAVERSION:0:1} == "6" ]
+  elif [ "${LHAVERSION:0:1}" == "6" ]
   then
       LHAINDEX=$LHAPDFPATH/share/LHAPDF/pdfsets.index
       ISLHA6=1
