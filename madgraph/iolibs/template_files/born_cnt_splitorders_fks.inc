@@ -73,8 +73,8 @@ CALL SBORN_CNT%(proc_prefix)s_SPLITORDERS(P,ANS)
 C reset the amp_split array
 do i = 1, amp_split_size
   do j = 1, nsplitorders
-    amp_split_cnt(i,1,j) = 0d0
-    amp_split_cnt(i,2,j) = 0d0
+    amp_split_cnt(i,1,j) = dcmplx(0d0,0d0)
+    amp_split_cnt(i,2,j) = dcmplx(0d0,0d0)
   enddo
 enddo
 

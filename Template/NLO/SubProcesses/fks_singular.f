@@ -3192,6 +3192,8 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
 
       include 'orders.inc'
       double precision amp_split_local(amp_split_size)
+      double complex amp_split_cnt_local(amp_split_size,2,nsplitorders)
+      integer iamp
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
@@ -3269,10 +3271,17 @@ C check if any extra_cnt is needed
            wgt1(1) = ans_cnt(1,iord)
            wgt1(2) = ans_cnt(2,iord)
         endif
+        do iamp=1,amp_split_size
+          amp_split_cnt_local(iamp,1,iord)=amp_split_cnt(iamp,1,iord)
+          amp_split_cnt_local(iamp,2,iord)=amp_split_cnt(iamp,2,iord)
+        enddo
         if (abs(m_type).eq.3.or.ch_m.ne.0d0) then
            Q(1)=0d0
            Q(2)=0d0
-           wgt1(2)=0d0
+           wgt1(2)=dcmplx(0d0,0d0)
+           do iamp=1,amp_split_size
+             amp_split_cnt_local(iamp,2,iord)=dcmplx(0d0,0d0)
+           enddo
         else
 c Insert <ij>/[ij] which is not included by sborn()
            if (1d0-y_ij_fks.lt.vtiny)then
@@ -3313,29 +3322,26 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
            wgt1(2) = -(cphi_mother+ximag*sphi_mother)**2 *
      #             wgt1(2) * dconjg(azifact)
            do i = 1, amp_split_size
-              amp_split_cnt(i,2,iord) = -(cphi_mother+ximag*sphi_mother)**2 * 
-     #               amp_split_cnt(i,2,iord) * dconjg(azifact)
+              amp_split_cnt_local(i,2,iord) = -(cphi_mother+ximag*sphi_mother)**2 * 
+     #               amp_split_cnt_local(i,2,iord) * dconjg(azifact)
            enddo
         endif
         if (iord.eq.qcd_pos) then
             wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
             do i = 1, amp_split_size
               amp_split_local(i) = amp_split_local(i) + 
-     #          dble(amp_split_cnt(i,1,iord)*AP(1)+
-     #               amp_split_cnt(i,2,iord)*Q(1))
+     #          dble(amp_split_cnt_local(i,1,iord)*AP(1)+
+     #               amp_split_cnt_local(i,2,iord)*Q(1))
             enddo
         endif
         if (iord.eq.qed_pos) then
             wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
             do i = 1, amp_split_size
               amp_split_local(i) = amp_split_local(i) + 
-     #          dble(amp_split_cnt(i,1,iord)*AP(2)+
-     #               amp_split_cnt(i,2,iord)*Q(2))
+     #          dble(amp_split_cnt_local(i,1,iord)*AP(2)+
+     #               amp_split_cnt_local(i,2,iord)*Q(2))
             enddo
         endif
-      enddo
-      do i = 1, amp_split_size
-        amp_split(i) = amp_split_local(i)
       enddo
       return
       end
