@@ -15,3 +15,6 @@ $(LIBDIR)$(LIBRARY): $(SOURCES)
 	ar cru $(LIBRARY) $^
 	ranlib $(LIBRARY)
 	mv $(LIBRARY) $(LIBDIR)
+
+clean:
+	$(RM) *.o $(LIBDIR)$(LIBRARY)
