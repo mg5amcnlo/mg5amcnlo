@@ -2879,7 +2879,7 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       include "pmass.inc"
 
       if (softtest.or.colltest) then
-         tiny=1d-8
+         tiny=1d-10
       else
          tiny=1d-6
       endif
