@@ -104,7 +104,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: END of USER CODE                                      cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       endif
-
+      rscale = scalefact*rscale
       return
       end
 

@@ -2052,7 +2052,7 @@ c
 
                xxmean = tmean/tsigma
                if (cur_it.ne.2)then
-                  xchi2 = (chi2/xxmean/xxmean-tsigma)/dble(cur_it-2)               
+                  xchi2 = dabs(chi2/xxmean/xxmean-tsigma)/dble(cur_it-2)               
                else
                   xchi2 = 0d0
                endif
@@ -2171,7 +2171,7 @@ c 129              close(22)
                endif
                tmean = tmean / tsigma
                trmean = trmean / tsigma
-               chi2 = (chi2 / tmean / tmean - tsigma) / dble(itm - 1)
+               chi2 = dabs(chi2 / tmean / tmean - tsigma) / dble(itm - 1)
                tsigma = tmean / sqrt(tsigma)
                write(*, 80) real(tmean), real(tsigma), real(trmean), real(chi2)
  80            format(/1X,79(1H-)/1X,23HAccumulated results:   ,
