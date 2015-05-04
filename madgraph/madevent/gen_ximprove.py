@@ -948,7 +948,7 @@ class gen_ximprove_v4(gen_ximprove):
                 nb_split = 1
             if nb_split > self.max_splitting:
                 nb_split = self.max_splitting
-            nb_split=min(1, nb_split)
+            nb_split=max(1, nb_split)
 
             
             #2. estimate how many points we need in each iteration

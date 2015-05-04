@@ -49,6 +49,8 @@ sys.path.append(os.path.join(root_path, os.path.pardir, 'Template', 'bin', 'inte
 import check_param_card 
 
 pjoin = os.path.join
+logger = logging.getLogger("madgraph.model")
+
 
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
@@ -222,10 +224,10 @@ def import_full_model(model_path, decay=False, prefix=''):
     model = ufo2mg5_converter.load_model()
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-    
+
     # Load the Parameter/Coupling in a convenient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main(\
-             additional_couplings = ufo2mg5_converter.wavefunction_CT_couplings)
+             additional_couplings =(ufo2mg5_converter.wavefunction_CT_couplings if ufo2mg5_converter.perturbation_couplings else []))
     
     model.set('parameters', parameters)
     model.set('couplings', couplings)
@@ -287,7 +289,7 @@ class UFOMG5Converter(object):
             for order in model.all_orders:
                 if(order.perturbative_expansion>0):
                     self.perturbation_couplings[order.name]=order.perturbative_expansion
-        except AttributeError:
+        except AttributeError,error:
             pass
 
         if self.perturbation_couplings!={}:
@@ -992,7 +994,7 @@ class OrganizeModelExpression:
         """Launch the actual computation and return the associate 
         params/couplings. Possibly consider additional_couplings in addition
         to those defined in the UFO model attribute all_couplings """
-        
+
         self.analyze_parameters()
         self.analyze_couplings(additional_couplings = additional_couplings)
         return self.params, self.couplings
@@ -1071,9 +1073,9 @@ class OrganizeModelExpression:
                         newCoupling.value=newCoupling.pole(poleOrder)
                         couplings_list.append(newCoupling)     
         else:
-            couplings_list = self.model.all_couplings + additional_couplings                        
-                                        
-        
+            couplings_list = self.model.all_couplings + additional_couplings       
+            couplings_list = [c for c in couplings_list if not isinstance(c.value, dict)] 
+                             
         for coupling in couplings_list:
             # shorten expression, find dependencies, create short object
             expr = self.shorten_expr(coupling.value)
@@ -1116,10 +1118,14 @@ class OrganizeModelExpression:
     def shorten_expr(self, expr):
         """ apply the rules of contraction and fullfill
         self.params with dependent part"""
-        expr = self.complex_number.sub(self.shorten_complex, expr)
-        expr = self.expo_expr.sub(self.shorten_expo, expr)
-        expr = self.cmath_expr.sub(self.shorten_cmath, expr)
-        expr = self.conj_expr.sub(self.shorten_conjugate, expr)
+        try:
+            expr = self.complex_number.sub(self.shorten_complex, expr)
+            expr = self.expo_expr.sub(self.shorten_expo, expr)
+            expr = self.cmath_expr.sub(self.shorten_cmath, expr)
+            expr = self.conj_expr.sub(self.shorten_conjugate, expr)
+        except Exception:
+            logger.critical("fail to handle expression: %s, type()=%s", expr,type(expr))
+            raise
         return expr
     
 
