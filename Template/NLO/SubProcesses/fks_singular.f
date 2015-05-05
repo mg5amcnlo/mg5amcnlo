@@ -1424,6 +1424,7 @@ c and not be part of the plots nor computation of the cross section.
       parameter (conv=389379660d0) ! conversion to picobarns
       include 'leshouche_decl.inc'
       common/c_leshouche_idup_d/ idup_d
+      include 'orders.inc'
 c save also the separate contributions to the PDFs and the corresponding
 c PDG codes
       niproc(ict)=iproc
@@ -1436,14 +1437,40 @@ c PDG codes
             elseif(k.eq.fks_j_d(iFKS)) then
                if ( abs(idup_d(iFKS,fks_i_d(iFKS),j)) .eq.
      &              abs(idup_d(iFKS,fks_j_d(iFKS),j)) ) then
-                 parton_pdg_uborn(k,j,ict)=21
-               elseif (abs(idup_d(iFKS,fks_i_d(iFKS),j)).eq.21) then
+                 ! check if any extra cnt is needed
+                 if (extra_cnt_d(iFKS).eq.0d0) then
+                   ! if not, assign photon/gluon depending on split_type
+                   if (split_type_d(iFKS,qcd_pos)) then
+                     parton_pdg_uborn(k,j,ict)=21
+                   else if (split_type_d(iFKS,qed_pos)) then
+                     parton_pdg_uborn(k,j,ict)=22
+                   else
+                     write (*,*) 'set_pdg_codes ',
+     &                'ERROR#1 in PDG assigment for underlying Born'
+                     stop 1
+                   endif
+                 else
+                   ! if there are extra cnt's, assign the pdg of the
+                   ! mother in the born (according to isplitorder_born_d)
+                   if (isplitorder_born_d(iFKS).eq.qcd_pos) then
+                     parton_pdg_uborn(k,j,ict)=21
+                   else if (isplitorder_born_d(iFKS).eq.qcd_pos) then
+                     parton_pdg_uborn(k,j,ict)=22
+                   else
+                     write (*,*) 'set_pdg_codes ',
+     &                'ERROR#2 in PDG assigment for underlying Born'
+                     stop 1
+                   endif
+                 endif
+               elseif (abs(idup_d(iFKS,fks_i_d(iFKS),j)).eq.21.or.
+     &                     idup_d(iFKS,fks_i_d(iFKS),j).eq.22) then
                  parton_pdg_uborn(k,j,ict)=idup_d(iFKS,fks_j_d(iFKS),j)
-               elseif (idup_d(iFKS,fks_j_d(iFKS),j).eq.21) then
+               elseif (idup_d(iFKS,fks_j_d(iFKS),j).eq.21.or.
+     &                 idup_d(iFKS,fks_j_d(iFKS),j).eq.22) then
                  parton_pdg_uborn(k,j,ict)=-idup_d(iFKS,fks_i_d(iFKS),j)
                else
-                 write (*,*)
-     &                'ERROR in PDG assigment for underlying Born'
+                 write (*,*) 'set_pdg_codes ',
+     &                'ERROR#3 in PDG assigment for underlying Born'
                  stop 1
                endif
             elseif(k.lt.fks_i_d(iFKS)) then
@@ -1777,6 +1804,7 @@ c mother and the extra (n+1) parton is given the PDG code of the gluon.
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      $     icolup(2,nexternal,maxflow)
       common /c_leshouche_inc/idup,mothup,icolup
+      include 'orders.inc'
       do k=1,nexternal
          pdg(k,ict)=idup(k,1)
       enddo
@@ -1786,23 +1814,54 @@ c mother and the extra (n+1) parton is given the PDG code of the gluon.
          elseif(k.eq.fks_j_d(iFKS)) then
             if ( abs(pdg(fks_i_d(iFKS),ict)) .eq.
      &           abs(pdg(fks_j_d(iFKS),ict)) ) then
-c gluon splitting:  g -> XX
-               pdg_uborn(k,ict)=21
-            elseif (abs(pdg(fks_i_d(iFKS),ict)).eq.21) then
+c gluon splitting:  g/a -> XX
+               !!!pdg_uborn(k,ict)=21
+               ! check if any extra cnt is needed
+               if (extra_cnt_d(iFKS).eq.0d0) then
+                  ! if not, assign photon/gluon depending on split_type
+                  if (split_type_d(iFKS,qcd_pos)) then
+                    pdg_uborn(k,ict)=21
+                  else if (split_type_d(iFKS,qed_pos)) then
+                    pdg_uborn(k,ict)=22
+                  else
+                    write (*,*) 'set_pdg ',
+     &                'ERROR#1 in PDG assigment for underlying Born'
+                    stop 1
+                  endif
+               else
+                  ! if there are extra cnt's, assign the pdg of the
+                  ! mother in the born (according to isplitorder_born_d)
+                  if (isplitorder_born_d(iFKS).eq.qcd_pos) then
+                    pdg_uborn(k,ict)=21
+                  else if (isplitorder_born_d(iFKS).eq.qcd_pos) then
+                    pdg_uborn(k,ict)=22
+                  else
+                    write (*,*) 'set_pdg ',
+     &                'ERROR#2 in PDG assigment for underlying Born'
+                    stop 1
+                  endif
+               endif
+            elseif (abs(pdg(fks_i_d(iFKS),ict)).eq.21.or.
+                    abs(pdg(fks_i_d(iFKS),ict)).eq.22) then
 c final state gluon radiation:  X -> Xg
                pdg_uborn(k,ict)=pdg(fks_j_d(iFKS),ict)
-            elseif (pdg(fks_j_d(iFKS),ict).eq.21) then
+            elseif (pdg(fks_j_d(iFKS),ict).eq.21.or.
+                    pdg(fks_j_d(iFKS),ict).eq.22) then
 c initial state gluon splitting (gluon is j_fks):  g -> XX
                pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
             else
                write (*,*)
-     &              'ERROR in PDG assigment for underlying Born'
+     &          'set_pdg ERROR#3 in PDG assigment for underlying Born'
                stop 1
             endif
          elseif(k.lt.fks_i_d(iFKS)) then
             pdg_uborn(k,ict)=pdg(k,ict)
          elseif(k.eq.nexternal) then
-            pdg_uborn(k,ict)=21  ! give the extra particle a gluon PDG code
+            if (split_type_d(iFKS,qcd_pos)) then
+              pdg_uborn(k,ict)=21  ! give the extra particle a gluon PDG code
+            elseif (split_type_d(iFKS,qed_pos)) then
+              pdg_uborn(k,ict)=22  ! give the extra particle a photon PDG code
+            endif
          elseif(k.ge.fks_i_d(iFKS)) then
             pdg_uborn(k,ict)=pdg(k+1,ict)
          endif
