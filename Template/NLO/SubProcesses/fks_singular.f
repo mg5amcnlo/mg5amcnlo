@@ -7,16 +7,6 @@ C given the squared orders ord, return the corresponding position into the amp_s
       integer i,j
       include 'amp_split_orders.inc'
 
-C sanity check
-      do i = 1, nsplitorders
-        if (ord(i).gt.nlo_orders(i).or.ord(i).lt.0) then
-          write(*,*) 'ERROR in orders_to_amp_split_pos'
-          write(*,*) 'Invalid orders', ord, i
-          write(*,*) 'NLO orders', nlo_orders
-          stop 1
-        endif
-      enddo
-
       do i=1, amp_split_size
         do j=1, nsplitorders
           if (amp_split_orders(i,j).ne.ord(j)) goto 999 
