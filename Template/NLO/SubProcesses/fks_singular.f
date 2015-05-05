@@ -1842,11 +1842,11 @@ c gluon splitting:  g/a -> XX
                   endif
                endif
             elseif (abs(pdg(fks_i_d(iFKS),ict)).eq.21.or.
-                    abs(pdg(fks_i_d(iFKS),ict)).eq.22) then
+     &              abs(pdg(fks_i_d(iFKS),ict)).eq.22) then
 c final state gluon radiation:  X -> Xg
                pdg_uborn(k,ict)=pdg(fks_j_d(iFKS),ict)
             elseif (pdg(fks_j_d(iFKS),ict).eq.21.or.
-                    pdg(fks_j_d(iFKS),ict).eq.22) then
+     &              pdg(fks_j_d(iFKS),ict).eq.22) then
 c initial state gluon splitting (gluon is j_fks):  g -> XX
                pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
             else
