@@ -2423,13 +2423,17 @@ class Diagram(PhysicsObject):
 
     def get_vertex_leg_numbers(self, 
                         veto_inter_id=Vertex.ID_to_veto_for_multichanneling,
-                        max_n_loop=Vertex.max_n_loop_for_multichanneling):
+                        max_n_loop=0):
         """Return a list of the number of legs in the vertices for
         this diagram. 
         This function is only used for establishing the multi-channeling, so that
         we exclude from it all the fake vertices and the vertices resulting from
         shrunk loops (id=-2)"""
 
+
+        if max_n_loop == 0:
+            max_n_loop = Vertex.max_n_loop_for_multichanneling
+           
         res = [len(v.get('legs')) for v in self.get('vertices') if (v.get('id') \
                                   not in veto_inter_id) or (v.get('id')==-2 and 
                                                  len(v.get('legs'))>max_n_loop)]

@@ -52,6 +52,7 @@ import models.import_ufo as import_ufo
 #from madgraph.interface.madgraph_interface import MadGraphCmd
 import madgraph.interface.master_interface as Cmd
 import madgraph.interface.madevent_interface as me_interface
+import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.files as files
 import madgraph.fks.fks_common as fks_common
 import aloha
@@ -1930,8 +1931,8 @@ class decay_all_events(object):
     
         # Remove old stuff from previous runs
         # so that the current run is not confused
-        # Don't have to do that for gridpack 
-        if not options["ms_dir"]:
+        # Don't have to do that for gridpack / or if asked.
+        if not (options["ms_dir"] or options["use_old_dir"]):
             if os.path.isdir(pjoin(self.path_me,"production_me")):
                 shutil.rmtree(pjoin(self.path_me,"production_me"))
             if os.path.isdir(pjoin(self.path_me,"full_me")):
@@ -2006,8 +2007,21 @@ class decay_all_events(object):
 
  
         # generate BR and all the square matrix element based on the banner.
-        self.generate_all_matrix_element()
-
+        pickle_info = pjoin(self.path_me,"production_me", "all_ME.pkl")
+        if not options["use_old_dir"] or not os.path.exists(pickle_info):
+            self.generate_all_matrix_element()
+            save_load_object.save_to_file(pickle_info,
+                                          (self.all_ME,self.all_decay,self.width_estimator))
+        else:
+            try:
+                self.all_ME, self.all_decay,self.width_estimator = save_load_object.load_from_file(pjoin(self.path_me,"production_me", "all_ME.pkl"))
+            except Exception,error:
+                logger.debug(str(error))
+                self.generate_all_matrix_element()
+                save_load_object.save_to_file(pickle_info,
+                                          (self.all_ME,self.all_decay,self.width_estimator))                
+        misc.sprint(os.path.exists(pickle_info),options["use_old_dir"])
+        
         if not self.options["onlyhelicity"]:
             resonances = self.width_estimator.resonances
             logger.debug('List of resonances: %s' % resonances)
@@ -2894,8 +2908,9 @@ class decay_all_events(object):
         # COMPILATION OF LIBRARY
         misc.compile( cwd=pjoin(path_me, mode,"Source","DHELAS"), mode='fortran')
         file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
-        shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" )) 
-        misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
+        shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" ))
+        if not self.options["use_old_dir"]: 
+            misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
         misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')     
 
         file=pjoin(path_me, 'param_card.dat')
@@ -2962,7 +2977,8 @@ class decay_all_events(object):
                 shutil.copyfile(pjoin(path_me, mode,'Source','MODEL','input.inc'),
                                 pjoin(new_path,'input.inc'))
                 if not os.path.exists(pjoin(new_path,os.path.pardir, 'parameters.inc')):
-                    misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
+                    if not self.options["use_old_dir"]:
+                        misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
                     misc.compile(arg=['init'],cwd=new_path,mode='fortran')
                     misc.call('./init', cwd=new_path)
                     shutil.copyfile(pjoin(new_path,'parameters.inc'), 
