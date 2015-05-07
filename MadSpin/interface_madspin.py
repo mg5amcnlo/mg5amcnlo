@@ -650,6 +650,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 run_card["nevents"] = int(1.2*nb_event)
                 run_card["iseed"] = self.seed
                 run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                param_card = self.banner['slha']
+                open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
                 self.seed += 1
                 me5_cmd.exec_cmd("generate_events run_01 -f")
                 me5_cmd.exec_cmd("exit")     
