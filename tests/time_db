@@ -27,7 +27,6 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.DiagramGenerationTest testMethod=test_coupling_orders_uux_ddxng>]> 0.389806032181
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_helas_objects.testFKSHelasObjects testMethod=test_fks_helas_multi_process_ppwj>]> 9.92277693748
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_drawing_eps.TestDrawingS_EPS testMethod=test_schedular>]> 0.184823036194
-<__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_common.TestFKSDiagramTag testMethod=test_diagram_tag_gg_ggg>]> 0.128249883652
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_fks_EW.IOExportFKSEWTest testMethod=test_write_coloramps_file_EW>]> 0.00352311134338
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestAddVariable testMethod=testmultaddadd>]> 0.0001380443573
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_base_objects.InteractionTest testMethod=test_generating_dict_to_1>]> 0.00120282173157
@@ -40,10 +39,7 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_base_objects.ParticleTest testMethod=test_representation>]> 0.000179052352905
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_color_algebra.ColorStringTest testMethod=test_simplify>]> 0.000159025192261
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_cpp.IOExportPythia8Test testMethod=test_write_process_cc_file>]> 0.0698401927948
-<<<<<<< TREE
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5EW.ML5EWTest testMethod=test_long_sm_vs_stored_HCR_gg_hh_QCD>]> 0.00105404853821
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_diagram_generation.LoopDiagramGenerationTest testMethod=test_diagram_generation_gg_ng>]> 1.61963582039
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_with_old_mg5_version.OLDMG5Comparator testMethod=test_short_sm>]> 6.53617286682
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_helas_call_writers.UFOHELASCallWriterTest testMethod=test_UFO_Python_helas_call_writer>]> 0.0118069648743
@@ -88,15 +84,12 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_AbstractModel testMethod=test_generate_ab_amplitudes>]> 0.394317865372
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_drawing.TestVertexPoint testMethod=test_def_level>]> 8.58306884766e-05
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_rambo.test_wavefunctions testMethod=test_V>]> 0.000189065933228
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.DiagramGenerationTest testMethod=test_combine_legs_uux_ddx>]> 0.002357006073
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5EW.ML5EWTest testMethod=test_long_sm_vs_stored_HCR_dxd_wpwm_QED>]> 0.00110411643982
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_helas_objects.HelasMatrixElementTest testMethod=test_setget_matrix_element_exceptions>]> 0.00100207328796
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5MSSMQCD.ML5MSSMQCDTest testMethod=test_long_mssm_vs_stored_HCR_uux_t1t1xg_QCD>]> 167.044816017
+<__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_drawing.TestFeynmanLine testMethod=test_domain_intersection>]> 0.000416040420532
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd.TestCmdShell2 testMethod=test_madevent_triplet_diquarks>]> 8.50123596191
-<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestAddVariable testMethod=testsumaddadd>]> 0.000109910964966
+<__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd.TestCmdShell2 testMethod=test_output_standalone_directory>]> 8.03073692322
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_helas_objects.HelasMatrixElementTest testMethod=test_get_conjugate_index>]> 0.00273394584656
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_color_algebra.ColorObjectTest testMethod=test_Tr_simplify>]> 0.000442028045654
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.DecayChainAmplitudeTest testMethod=test_representation>]> 0.000744104385376
@@ -120,6 +113,7 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.ExportV4IOTest testMethod=test_different_order_process_symmetry>]> 0.0982210636139
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_cpp.IOExportMatchBox testMethod=test_fail_on_process_cc_file_uu_six>]> 0.0245349407196
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_base_objects.ProcessTest testMethod=test_setget_process_correct>]> 0.000624895095825
+<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestAddVariable testMethod=testsumaddadd>]> 0.000109910964966
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_base.TestFKSProcess testMethod=test_find_fks_j_from_i>]> 0.0350108146667
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_cpp.IOExportPythia8Test testMethod=testIO_write_dec_multiprocess_files>]> 0.408844947815
 <__main__.TestSuiteModified tests=[<tests.unit_tests.madweight.test_export_v4.TestMadWeight testMethod=test_ungrouping_lepton>]> 0.0430071353912
@@ -129,7 +123,6 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_color_amp.ColorAmpTest testMethod=test_color_flow_string>]> 0.00816702842712
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=test_part_spin32propagator>]> 0.0205278396606
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_madweight.TestMadWeight testMethod=test_mw_wproduction>]> 11.4712297916
-<__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_diagram_generation.LoopEWDiagramGenerationTest testMethod=test_diagram_generation_uux_ga_EW>]> 15.2475500107
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayModel testMethod=test_find_full_sm_decay_groups>]> 5.82679080963
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_fks_EW.IOExportFKSEWTest testMethod=test_write_decayBW_file_EW>]> 0.00243401527405
 <__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_drawing.TestLoopDrawer testMethod=test_NLO_draw_uux_uuxddx>]> 0.00144910812378
@@ -151,7 +144,7 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5EW.ML5EWTest testMethod=test_long_sm_vs_stored_HCR_uux_zz_QED>]> 0.00137400627136
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestAddVariable testMethod=test_short_factorization2>]> 0.000210046768188
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_drawing_eps.TestDrawingOption testMethod=test_option_6g>]> 0.0658371448517
-<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayParticleList testMethod=test_convert>]> 0.000968933105469
+<__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.DiagramGenerationTest testMethod=test_combine_legs_uux_ddx>]> 0.002357006073
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_IOTest_examples.IOTestExampleWithSetUp testMethod=testIO_IOTestWrappedWithSetUP>]> 0.00829696655273
 <__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_exporters.IOExportMadLoopUnitTest testMethod=test_IOTests>]> 12.0391700268
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_helas_objects.TestIdentifyMETagFKS testMethod=test_identify_me_tag_qq_qg>]> 0.0854730606079
@@ -250,10 +243,7 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=test_power>]> 0.00031304359436
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestMultVariable testMethod=testsummultadd>]> 0.000144004821777
 <__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_drawing.TestLoopDrawer testMethod=test_NLO_draw_all_reconstructed_gg_gg>]> 0.0375239849091
-<<<<<<< TREE
-=======
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.MECmdShell testMethod=test_generate_events_lo_hw6_stdhep>]> 95.5102880001
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_drawing.TestLoopDrawer testMethod=test_NLO_draw_uux_guux>]> 0.0011990070343
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestAlohaWriter testMethod=test_short_pythonwriter_spin3half>]> 0.137291908264
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.test_aloha_creation testMethod=test_aloha_multiple_lorentz_and_symmetry>]> 0.0302782058716
@@ -374,6 +364,7 @@
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.TestMECmdShell testMethod=test_generate_events_name>]> 44.6062128544
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd.TestCmdShell2 testMethod=test_ufo_standard_sm>]> 0.142593860626
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayParticle testMethod=test_getsetvertexlist_correct>]> 0.112138986588
+<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayParticleList testMethod=test_convert>]> 0.000968933105469
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_Channel testMethod=test_findchannels>]> 8.38987207413
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.TestMECmdShell testMethod=test_check_singletop_fastjet>]> 140.989368916
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_drawing.TestFeynmanLine testMethod=test_domain_intersection_failure>]> 0.000155925750732
@@ -397,11 +388,7 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5EW.ML5EWTest testMethod=test_long_sm_vs_stored_HCR_hh_hh_QED>]> 0.00143194198608
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.test_aloha_creation testMethod=test_short_aloha_ZPZZ>]> 0.0636489391327
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_color_algebra.ColorFactorTest testMethod=test_gluons>]> 0.00796890258789
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayAmplitude testMethod=test_decaytable_string>]> 0.357012033463
-=======
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.MECmdShell testMethod=test_check_ppzjj>]> 100.601984024
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_import_ufo.TestRestrictModel testMethod=test_merge_identical_parameters>]> 0.0875990390778
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_gauge.GaugeComparatorLoop testMethod=test_gauge_loop_p1>]> 427.859879017
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_helas_objects.testFKSHelasObjects testMethod=test_fks_helas_multi_process_pptt>]> 4.34664011002
@@ -479,7 +466,6 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_Channel testMethod=test_get_initialfinal>]> 0.125761032104
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_base.TestFKSProcess testMethod=test_generate_reals_no_combine>]> 0.184464216232
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_with_old_mg5_version.OLDMG5Comparator testMethod=test_short_cross_sm2>]> 23.508852005
-<__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_color_algebra.ColorObjectTest testMethod=test_delta6_simplify>]> 8.51154327393e-05
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_helas_objects.HelasAmplitudeTest testMethod=test_sign_flips_to_order>]> 8.08238983154e-05
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestAlohaWriter testMethod=test_Fortranwriter_spin3half>]> 0.154531002045
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_madweight.TestMadWeight testMethod=test_short_mw_wa_refine>]> 11.0905270576
@@ -494,10 +480,7 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestMultVariable testMethod=testsummultmul>]> 0.000133991241455
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_AbstractModel testMethod=test_get_particles_type>]> 0.128159046173
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_shower_card.TestShowerCard testMethod=test_shower_card_py8_analyse>]> 0.000602960586548
-<<<<<<< TREE
-=======
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.ExportV4IOTest testMethod=test_coeff_string>]> 0.028568983078
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_import_ufo.TestRestrictModel testMethod=test_merge_iden_couplings>]> 0.0879130363464
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayParticle testMethod=test_values_for_prop>]> 0.110687971115
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_helas_objects.HelasMatrixElementTest testMethod=test_get_base_amplitude>]> 0.140361070633
@@ -512,7 +495,7 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.FullHelasOutputTest testMethod=test_generate_helas_diagrams_uu_susug>]> 0.0533299446106
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayParticle testMethod=test_reset_decaywidth>]> 0.13299202919
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestAlohaWriter testMethod=test_python_routine_are_exec>]> 0.00516891479492
-<__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_drawing.TestFeynmanLine testMethod=test_domain_intersection>]> 0.000416040420532
+<__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_common.TestFKSDiagramTag testMethod=test_diagram_tag_gg_ggg>]> 0.128249883652
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.test_aloha_creation testMethod=test_aloha_expr_FFFF3>]> 0.325031042099
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayParticle testMethod=test_get_max_level>]> 0.132587909698
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_drawing.TestVertexPoint testMethod=test_isexternal>]> 0.000101089477539
@@ -542,10 +525,7 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5.ML5Test testMethod=test_long_sm_vs_stored_ML5_udx_htbx>]> 12.6998720169
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_common.TestLinkRBConfHEFT testMethod=test_link_gghgg_gghg>]> 0.115737915039
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.FullHelasOutputTest testMethod=test_generate_helas_diagrams_WWWW>]> 0.0192968845367
-<<<<<<< TREE
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestAlohaWriter testMethod=test_short_change_number_format_cpp>]> 0.000536918640137
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=test_mass_overmass>]> 0.00163412094116
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=test_equality>]> 0.000424861907959
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=test_spin2propagator4>]> 0.025171995163
@@ -572,13 +552,9 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_drawing.TestLoopDrawer testMethod=test_NLO_draw_gg_ggg>]> 0.137652873993
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestAddVariable testMethod=test_short_factorization4>]> 0.000862836837769
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.DiagramGenerationTest testMethod=test_expand_list>]> 0.00167798995972
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayModel testMethod=test_setget>]> 2.0447640419
-=======
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.MECmdShell testMethod=test_calculate_xsect_script>]> 54.8990449905
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_histograms.TestHistograms testMethod=test_histograms_operations>]> 0.181525945663
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.testLorentzObject testMethod=test_short_spin2propagator2>]> 0.131481170654
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_with_old_mg5_version.OLDMG5Comparator testMethod=test_short_cross_sqso1>]> 0.000553131103516
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestLorentzObjectRepresentation testMethod=testtensorialproductspin>]> 0.070338010788
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.MECmdShell testMethod=test_generate_events_shower_scripts>]> 107.744693995
@@ -591,7 +567,6 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_with_old_mg5_version.OLDMG5Comparator testMethod=test_mg5_sm_22>]> 360.097683191
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_import_ufo.TestImportUFONoSideEffect testMethod=test_ImportUFONoSideEffectLO>]> 0.0163459777832
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayModel testMethod=test_running_couplings>]> 7.48882603645
-<__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_madevent.TestMECmdShell testMethod=test_width_nlocomputation>]> 102.852046967
 <__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_diagram_generation.LoopEWDiagramGenerationTest testMethod=test_diagram_generation_epem_ttxa_EW>]> 46.6009709835
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_base_objects.ProcessTest testMethod=test_setget_process_exceptions>]> 0.000452041625977
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_cpp.ExportUFOModelPythia8Test testMethod=test_write_pythia8_parameter_files>]> 0.082643032074
@@ -634,7 +609,6 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_helas_call_writers.UFOHELASCALLWriterComplexMass testMethod=test_UFO_Python_helas_call_writer>]> 0.197067022324
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5EW.ML5EWTest testMethod=test_long_sm_vs_stored_ML5EW_gg_ttxh_QCD>]> 0.000695943832397
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_shower_card.TestShowerCard testMethod=test_shower_card_hwpp_analyse>]> 0.000179052352905
-<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_write_param.TestParamWrittingWithRestrict testMethod=test_define_not_dep_param>]> 0.0751221179962
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_base.TestFKSProcess testMethod=test_FKSProcess_gggg>]> 0.369121789932
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestSomeObjectProperty testMethod=test_complex_equality>]> 0.453453063965
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestLorentzObjectRepresentation testMethod=testEinsteinsum>]> 0.00298190116882
@@ -647,11 +621,7 @@
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.MECmdShell testMethod=test_generate_events_lo_hw6_set>]> 102.896171808
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.FullHelasOutputTest testMethod=test_helas_diagrams_gg_gogo_go_tt1x_t_wpb>]> 0.0463981628418
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayParticle testMethod=test_find_vertexlist>]> 0.113565921783
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_madweight.TestMadWeight testMethod=test_mw_wjjproduction>]> 14.5608379841
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5EW.ML5EWTest testMethod=test_long_sm_vs_stored_HCR_uux_ga_QCD_QED>]> 0.00132417678833
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd.TestCmdShell2 testMethod=test_save_load>]> 1.68547606468
 <__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_diagram_generation.LoopDiagramFDStructTest testMethod=test_gg_5gglgl_bubble_tag>]> 0.00427198410034
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.FullHelasOutputTest testMethod=test_generate_helas_diagrams_ea_ae>]> 0.0131080150604
@@ -673,11 +643,8 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5EW.ML5EWTest testMethod=test_long_sm_vs_stored_HCR_uux_za_QED>]> 0.0014591217041
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_file_writers.FilePreprocessingTest testMethod=test_single_if_statement>]> 0.000323057174683
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_output_files.IOExportMadLoopAcceptanceTest testMethod=test_IOTests>]> 22.2488629818
-<<<<<<< TREE
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestAddVariable testMethod=test_short_replace>]> 0.000373125076294
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.IOExportV4IOTest testMethod=testIO_export_matrix_element_v4_madevent_group>]> 0.124577045441
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5.ML5Test testMethod=test_long_sm_vs_stored_ML5_uux_wpwmbbx>]> 61.837485075
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_python.IOExportPythonTest testMethod=test_export_matrix_element_python_madevent_group>]> 0.0395710468292
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.AlohaFortranWriterTest testMethod=test_header>]> 0.0467920303345
@@ -696,12 +663,8 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_ufo_parsers.UFOParserTest testMethod=test_parse_fortran_fct>]> 0.220015048981
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestLorentzObjectRepresentation testMethod=test_split>]> 0.00737619400024
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_fks_EW.IOExportFKSEWTest testMethod=test_write_pdf_file_EW>]> 5.29289245605e-05
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_check_param_card.TestParamCardRule testMethod=test_write>]> 7.00950622559e-05
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.test_aloha_creation testMethod=test_short_aloha_expr_FFFF3>]> 0.317361831665
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.MultiProcessTest testMethod=test_setget_process_exceptions>]> 0.000932931900024
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayModel testMethod=test_find_mssm_decay_groups_modified_mssm_general>]> 8.70347595215
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_drawing.TestVertexPoint testMethod=test_def_position>]> 0.000124931335449
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_banner.TestConfigFileCase testMethod=test_sum_object>]> 0.000125885009766
@@ -774,12 +737,8 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestAlohaWriter testMethod=test_short_fortranwriter_C>]> 0.0298249721527
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayParticle testMethod=test_getsetvertexlist_exceptions>]> 0.110853910446
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.FullHelasOutputTest testMethod=test_generate_helas_diagrams_uux_gepem_no_optimization>]> 0.0196721553802
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_with_old_mg5_version.OLDMG5Comparator testMethod=test_short_heft>]> 10.1859381199
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.test_aloha_creation testMethod=test_short_aloha_expr_VVS1>]> 0.0284140110016
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_diquark_models.TestColorSextetModel testMethod=test_uu_to_six_g>]> 0.172813892365
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_cpp.IOExportPythia8Test testMethod=test_write_cpp_go_process_cc_file>]> 0.0690608024597
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.TestMECmdShell testMethod=test_split_evt_gen_zeroev>]> 67.6156620979
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=testTraceofObject>]> 0.000325918197632
@@ -810,11 +769,8 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_diagram_symmetry.TestDiagramSymmetry testMethod=test_find_symmetry_qq_qqg_with_subprocess_group>]> 0.406945943832
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayModel testMethod=test_find_mssm_decay_groups_modified_mssm>]> 7.05039405823
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_helas_objects.HelasMultiProcessTest testMethod=test_helas_multiprocess_pp_nj>]> 0.281494140625
-<<<<<<< TREE
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestAlohaWriter testMethod=test_short_python_routine_are_exec>]> 0.00470900535583
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_helas_call_writers.UFOHELASCallWriterTest testMethod=test_UFO_fortran_helas_call_writer>]> 0.0117249488831
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd.TestCmdShell2 testMethod=test_import_banner_command>]> 1.45100903511
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.FullHelasOutputTest testMethod=test_duplicate_lorentz_structures>]> 0.0115809440613
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestLorentzObjectRepresentation testMethod=test_sum_with4ind>]> 0.0239880084991
@@ -839,11 +795,7 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.loop.test_loop_diagram_generation.LoopEWDiagramGenerationTest testMethod=test_diagram_generation_gg_ttxh_EW>]> 60.816671133
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5MSSMQCD.ML5MSSMQCDTest testMethod=test_long_mssm_vs_stored_HCR_gg_gogo_QCD>]> 150.644671917
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_fks_EW.IOExportFKSEWTest testMethod=test_write_born_nhel_file_EW>]> 0.125450849533
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.interface.test_edit_card.TestEditCardCmd testMethod=test_modif_shower_card>]> 0.0418620109558
-=======
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.MECmdShell testMethod=test_calculate_xsect_nlo>]> 55.6570930481
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.DecayChainAmplitudeTest testMethod=test_unused_decays_in_decay_chain_pp_jj>]> 0.199378967285
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.FullHelasOutputTest testMethod=test_generate_helas_diagrams_uu_susu>]> 0.0135440826416
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_misc.IOMiscTest testMethod=test_parse_info_str_correct>]> 0.000116109848022
@@ -884,12 +836,8 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_drawing.TestFeynmanLine testMethod=test_def_begin_end_point>]> 9.89437103271e-05
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_base_objects.VertexTest testMethod=test_setget_vertex_exceptions>]> 0.000106811523438
 <__main__.TestSuiteModified tests=[<tests.unit_tests.interface.test_cmd.TestMadSpinFCT_in_interface testMethod=test_get_final_part>]> 0.12849187851
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_helas_call_writers.UFOHELASCallWriterTest testMethod=test_UFO_fortran_helas_call_writer>]> 0.0117249488831
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.test_aloha_creation testMethod=test_short_aloha_FFV_MG4>]> 0.111173868179
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5.ML5Test testMethod=test_long_sm_vs_stored_ML4_ddx_wpwmg>]> 26.4144010544
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_gauge.GaugeComparator testMethod=test_cross_gauge_p2>]> 26775.4375861
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_base.TestFKSProcess testMethod=test_FKSMultiProcess_no_isr>]> 0.035425901413
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5EW.ML5EWTest testMethod=test_long_sm_vs_stored_HCR_uux_uux_QCD_QED>]> 0.00138115882874
@@ -900,7 +848,7 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_common.TestLinkRBConfSM testMethod=test_link_butdg_butd>]> 0.0965809822083
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_madweight.TestMadWeight testMethod=test_short_mw_tt_full_lept>]> 29.0376198292
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_IdentifyHelasTag testMethod=test_helas_comparison>]> 0.225214958191
-<__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.DiagramGenerationTest testMethod=test_decay_process_generation>]> 0.0119822025299
+<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_write_param.TestParamWrittingWithRestrict testMethod=test_define_not_dep_param>]> 0.0751221179962
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_usermod.Test_ADDON_UFO testMethod=test_interaction>]> 0.000797033309937
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestAlohaWriter testMethod=test_short_aloha_get_name>]> 0.0285120010376
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_fks.IOExportFKSTest testMethod=test_write_b_sf_fks>]> 2.02799201012
@@ -926,19 +874,11 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.test_aloha_creation testMethod=test_short_aloha_get_rank>]> 0.103627204895
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_base_objects.ProcessTest testMethod=test_nice_string>]> 0.000377178192139
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.TestMECmdShell testMethod=test_check_generate_eventsnlo_py6pt_fsr>]> 16.2141349316
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.MultiProcessTest testMethod=test_setget_process_exceptions>]> 0.000932931900024
-=======
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_check_param_card.TestParamCardRule testMethod=test_write>]> 7.00950622559e-05
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_helas_objects.HelasAmplitudeTest testMethod=test_setget_amplitude_exceptions>]> 0.000211000442505
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestAlohaWriter testMethod=test_aloha_MP_mode>]> 0.0349721908569
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestMultVariable testMethod=testmultmultint>]> 0.000134944915771
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.testLorentzObject testMethod=test_short_spin32propagator>]> 0.208134174347
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_color_algebra.ColorObjectTest testMethod=test_delta6_simplify>]> 8.51154327393e-05
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_fks_EW.IOExportFKSEWTest testMethod=test_write_configs_file_born_EW>]> 5.07831573486e-05
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_AbstractModel testMethod=test_add_ab_particle>]> 0.127122163773
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_base_objects.MultiLegTest testMethod=test_setget_multi_leg_correct>]> 6.60419464111e-05
@@ -954,7 +894,7 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5EW.ML5EWTest testMethod=test_long_sm_vs_stored_HCR_uux_aa_QED>]> 0.00227403640747
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_madevent.TestMEfromfile testMethod=test_add_time_of_flight>]> 19.5163040161
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_fks_EW.IOExportFKSEWTest testMethod=test_write_nfksconfigs_file_EW>]> 0.0351588726044
-<__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_with_old_mg5_version.OLDMG5Comparator testMethod=test_short_sqso>]> 4.5599489212
+<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayModel testMethod=test_setget>]> 2.0447640419
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_group_subprocs.SubProcessGroupTest testMethod=test_special_group_decay_chain>]> 0.162132024765
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd.TestCmdShell2 testMethod=test_invalid_operations_for_output>]> 0.0474369525909
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=test_spin2propagator2>]> 0.152077913284
@@ -1000,10 +940,7 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_process_checks.TestLorentzInvariance testMethod=test_boost_momenta>]> 5.30410599709
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.DiagramGenerationTest testMethod=test_diagram_generation_gluons>]> 0.0548150539398
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd.TestCmdShell2 testMethod=test_complex_mass_SA>]> 1.51796483994
-<<<<<<< TREE
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_aloha.TestLorentzObjectRepresentation testMethod=test_short_sumofLorentzObj>]> 0.00596499443054
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_fks_EW.IOExportFKSEWTest testMethod=test_write_born_fks_EW>]> 4.79221343994e-05
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestVariable testMethod=testsumvaradd>]> 7.20024108887e-05
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=test_spin32propagator>]> 0.232930898666
@@ -1037,12 +974,8 @@
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_with_old_mg5_version.OLDMG5Comparator testMethod=test_short_heft>]> 10.1859381199
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_4fermion_models.TestSchannelModels testMethod=test_find_symmetry_uu_tt>]> 0.129317045212
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_drawing.TestVertexPoint testMethod=test_add_line>]> 0.000107049942017
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_drawing.TestFeynmanDiagram testMethod=test_creation_from_cmd>]> 0.0318400859833
-=======
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.MECmdShell testMethod=test_calculate_xsect_lo>]> 53.5439140797
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_amcatnlo.TestMECmdShell testMethod=test_split_evt_gen>]> 6.80820512772
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_decay.Test_DecayModel testMethod=test_find_mssm_decay_groups_general>]> 7.73995018005
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_color_algebra.ColorObjectTest testMethod=test_Tr_pair_simplify>]> 0.000292062759399
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_fks.IOExportFKSTest testMethod=test_write_configs_file_born>]> 0.00420498847961
@@ -1090,11 +1023,7 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_diagram_generation.MultiProcessTest testMethod=test_heft_multiparticle_pp_hnj>]> 0.326533079147
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_common.TestFKSCommon testMethod=test_legs_to_color_link_string>]> 0.00512909889221
 <__main__.TestSuiteModified tests=[<tests.unit_tests.fks.test_fks_common.TestFKSCommon testMethod=test_sort_fksleglist>]> 0.00221490859985
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_rambo.test_wavefunctions testMethod=test_I>]> 0.000235080718994
-=======
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.compare_with_old_mg5_version.OLDMG5Comparator testMethod=test_short_sqso>]> 4.5599489212
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestAddVariable testMethod=testsumaddvar>]> 0.000104904174805
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_base_objects.LegTest testMethod=test_representation>]> 7.29560852051e-05
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.testLorentzObject testMethod=test_spin2propagator5>]> 0.182165145874
@@ -1113,19 +1042,12 @@
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_check_param_card.TestParamCard testMethod=test_mod_param>]> 0.000418901443481
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.FullHelasOutputTest testMethod=test_generate_helas_diagrams_enu_enu>]> 0.008131980896
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd_madevent.TestMECmdShell testMethod=test_width_computation>]> 13.0126650333
-<<<<<<< TREE
-=======
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_banner.TESTMadLoopParam testMethod=test_initMadLoopParam>]> 0.00100302696228
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.unit_tests.various.test_aloha.TestSomeObjectProperty testMethod=test_other>]> 4.31537628174e-05
 <__main__.TestSuiteModified tests=[<tests.unit_tests.interface.test_edit_card.TestEditCardCmd testMethod=test_modif_run_card>]> 0.0163931846619
 <__main__.TestSuiteModified tests=[<tests.unit_tests.interface.test_madevent.TestMadEventCmd testMethod=test_card_type_recognition>]> 0.0509171485901
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.FullHelasOutputTest testMethod=test_vector_clash_majorana_process>]> 0.012188911438
-<<<<<<< TREE
-<__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_cmd.TestCmdShell2 testMethod=test_output_standalone_directory>]> 8.03073692322
-=======
 <__main__.TestSuiteModified tests=[<tests.unit_tests.iolibs.test_export_v4.IOExportV4Test testMethod=test_export_matrix_element_v4_madevent_nogroup>]> 0.109572172165
->>>>>>> MERGE-SOURCE
 <__main__.TestSuiteModified tests=[<tests.parallel_tests.test_ML5.ML5Test testMethod=test_long_sm_vs_stored_ML4_dxd_zzg>]> 32.0563452244
 <__main__.TestSuiteModified tests=[<tests.unit_tests.core.test_base_objects.MultiLegTest testMethod=test_representation>]> 5.91278076172e-05
 <__main__.TestSuiteModified tests=[<tests.acceptance_tests.test_output_files.IOExportMadLoopAcceptanceTest testMethod=testIO_ProcOutputIOTests>]> 28.318707943
