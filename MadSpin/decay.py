@@ -52,6 +52,7 @@ import models.import_ufo as import_ufo
 #from madgraph.interface.madgraph_interface import MadGraphCmd
 import madgraph.interface.master_interface as Cmd
 import madgraph.interface.madevent_interface as me_interface
+import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.files as files
 import madgraph.fks.fks_common as fks_common
 import aloha
@@ -1001,12 +1002,14 @@ class AllMatrixElement(dict):
                'base_order':[l.get('id') for l in me.get_legs_with_decays()] ,
                'decay_struct':self.get_full_process_structure(proc_list),
                'decay_tag': tuple(decay_tags)}
+
         # adding it to the current object
         self[tag]['decays'].append(out)
         self[tag]['total_br'] += out['br']
         # update the particle decaying in the process
         decaying = [m.get('legs')[0].get('id') for m in me.get('decay_chains')]
-        self[tag]['decaying'].update(decaying)
+        decaying.sort()
+        self[tag]['decaying'] = tuple(decaying)
                 
         # sanity check
         assert self[tag]['total_br'] <= 1.01, self[tag]['total_br']
@@ -1203,7 +1206,7 @@ class AllMatrixElement(dict):
                 if decaying != decaying_base:
                     skip.append(proc)
                     continue
-                topo['decaying'] = set()
+                topo['decaying'] = ()
                 tags.append(proc.get_initial_final_ids())
                 topo['tag2order'][tags[-1]] = (initial , final)
             
@@ -1228,9 +1231,8 @@ class AllMatrixElement(dict):
         topo = dict(topo) #change the main pointer
         topo['decays'] = []   # unlink information which need to be different.
         topo['total_br'] = 0  #
-        topo['decaying'] = set() # 
         topo['tag2order'] = {}
-        topo['decaying'] = set()
+        topo['decaying'] = ()
         for key in topo.keys():
             if isinstance(key, int):
                 topo[key] = copy.copy(topo[key])
@@ -1930,8 +1932,8 @@ class decay_all_events(object):
     
         # Remove old stuff from previous runs
         # so that the current run is not confused
-        # Don't have to do that for gridpack 
-        if not options["ms_dir"]:
+        # Don't have to do that for gridpack / or if asked.
+        if not (options["ms_dir"] or options["use_old_dir"]):
             if os.path.isdir(pjoin(self.path_me,"production_me")):
                 shutil.rmtree(pjoin(self.path_me,"production_me"))
             if os.path.isdir(pjoin(self.path_me,"full_me")):
@@ -2006,8 +2008,20 @@ class decay_all_events(object):
 
  
         # generate BR and all the square matrix element based on the banner.
-        self.generate_all_matrix_element()
-
+        pickle_info = pjoin(self.path_me,"production_me", "all_ME.pkl")
+        if not options["use_old_dir"] or not os.path.exists(pickle_info):
+            self.generate_all_matrix_element()
+            save_load_object.save_to_file(pickle_info,
+                                          (self.all_ME,self.all_decay,self.width_estimator))
+        else:
+            try:
+                self.all_ME, self.all_decay,self.width_estimator = save_load_object.load_from_file(pjoin(self.path_me,"production_me", "all_ME.pkl"))
+            except Exception,error:
+                logger.debug(str(error))
+                self.generate_all_matrix_element()
+                save_load_object.save_to_file(pickle_info,
+                                          (self.all_ME,self.all_decay,self.width_estimator))                
+        
         if not self.options["onlyhelicity"]:
             resonances = self.width_estimator.resonances
             logger.debug('List of resonances: %s' % resonances)
@@ -2447,7 +2461,7 @@ class decay_all_events(object):
         
         relation = {} # {tag: {(tag2, ratio)}}
         # Loop over the class and create the relation information about the 1     
-        for ((nbody, pid, finals),decays) in nbody_to_decay.items():  
+        for ((nbody, pid, finals),decays) in nbody_to_decay.items():
             if len(decays) == 1:
                 continue  
             mom_init = momentum(self.pid2mass(pid), 0, 0, 0)
@@ -2492,7 +2506,7 @@ class decay_all_events(object):
                             valid[(i, j)] = 0
                             valid[(j, i)] = 0
                 
-            if __debug__:    
+            if __debug__: 
                 for i in range(len(decays)):
                     comment= "| "
                     for j in range(len(decays)):
@@ -2514,7 +2528,7 @@ class decay_all_events(object):
         # fullfill the object with the already identify to one decay.
         #and add those who doesn't have any relations.
         for decay in self.all_decay.values():
-            tags = [m.shell_string()[2:] for m in decay['processes']]
+            tags = [m.shell_string(pdg_order=True)[2:] for m in decay['processes']]
             init_tag = tags[0]
             if init_tag not in relation:
                 out = (init_tag, 1)
@@ -2523,7 +2537,6 @@ class decay_all_events(object):
             for tag in tags[1:]:
                 relation[tag] = out
 
-        
         decay_mapping = self.get_process_identical_ratio(relation)
         
         logger.info('Done in %ss' % (time.time()-start))
@@ -2538,9 +2551,11 @@ class decay_all_events(object):
         decay_mapping = {} # final output: {first_process: [(equiv_proc, ratio), ...]
         tag2real = {}    # basic tag [the one related via relation] -> first process
         # basic tag ratio doesn't have any identical factor (this simplify calculation)
+        nb=0
         for prod in self.all_ME.values():
             for decay in prod['decays']:
                 tag = decay['decay_tag']
+                nb+=1
                 # build the basic tag (all equiv process are related to this tag)
                 basic_tag = []
                 ratio = 1
@@ -2567,6 +2582,7 @@ class decay_all_events(object):
                     real_tag, ratio2 = tag2real[basic_tag]
                     if real_tag != tag:
                         decay_mapping[real_tag].add((tag, ratio/ratio2))
+
 
         return decay_mapping
     
@@ -2894,8 +2910,9 @@ class decay_all_events(object):
         # COMPILATION OF LIBRARY
         misc.compile( cwd=pjoin(path_me, mode,"Source","DHELAS"), mode='fortran')
         file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
-        shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" )) 
-        misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
+        shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" ))
+        if not self.options["use_old_dir"]: 
+            misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
         misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')     
 
         file=pjoin(path_me, 'param_card.dat')
@@ -2962,7 +2979,8 @@ class decay_all_events(object):
                 shutil.copyfile(pjoin(path_me, mode,'Source','MODEL','input.inc'),
                                 pjoin(new_path,'input.inc'))
                 if not os.path.exists(pjoin(new_path,os.path.pardir, 'parameters.inc')):
-                    misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
+                    if not self.options["use_old_dir"]:
+                        misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
                     misc.compile(arg=['init'],cwd=new_path,mode='fortran')
                     misc.call('./init', cwd=new_path)
                     shutil.copyfile(pjoin(new_path,'parameters.inc'), 
@@ -3037,7 +3055,7 @@ class decay_all_events(object):
         # check all set of decay that need to be done:
         decay_set = set()
         for production in self.all_ME.values():
-            decay_set.add(frozenset(production['decaying']))
+            decay_set.add(production['decaying'])
 
         numberev = self.options['Nevents_for_max_weigth'] # number of events
         numberps = self.options['max_weight_ps_point'] # number of phase pace points per event
@@ -3059,7 +3077,6 @@ class decay_all_events(object):
         ev = -1
         nb_decay = dict( (key,0) for key in decay_set)
         probe_weight = dict( (key,[]) for key in decay_set)
-        
         while ev+1 < len(decay_set) * numberev: 
             production_tag, event_map = self.load_event()
 
@@ -3069,7 +3086,7 @@ class decay_all_events(object):
                 break
             
             #check if this event is usefull or not
-            decaying = frozenset(self.all_ME[production_tag]['decaying'])
+            decaying = self.all_ME[production_tag]['decaying']
             if nb_decay[decaying] >=  numberev:
                 continue 
             ev += 1
@@ -3077,7 +3094,7 @@ class decay_all_events(object):
 
 #            mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
 
-    
+   
             logger.debug('Event %s/%s: ' % (ev+1, len(decay_set)*numberev))
             if (len(decay_set)*numberev -(ev+2)) >0:
                 self.mscmd.update_status((len(decay_set)*numberev -(ev+2),1,ev+1, 
@@ -3091,8 +3108,6 @@ class decay_all_events(object):
 
             atleastonedecay=False
             for decay in self.all_ME[production_tag]['decays']:
-                #print decay
-                #print decay['decay_struct'] 
                 tag = decay['decay_tag']
                 if decay_mapping and not tag in decay_mapping:
                     continue
@@ -3181,16 +3196,15 @@ class decay_all_events(object):
                     else:  
                         logger.debug('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
- 
-        # sanity check that all decay have a max_weight
-        if __debug__:
+
+        if __debug__: 
+        # check that all decay have a max_weight and fix it if not the case.
             for prod in self.all_ME.values():
                 for dec in prod['decays']:
-                    if dec['decay_tag']:                        
+                    if dec['decay_tag']:                                                
                         assert 'max_weight' in dec and dec['max_weight'] ,\
                                   'fail for %s (%s)' % (str(dec['decay_tag']), \
                                                   os.path.basename(prod['path']))
-            
         self.evtfile.seek(0)
         return
 

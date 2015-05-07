@@ -2370,11 +2370,11 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             return True
     
         def RaiseError():
-            raise self.PhysicsObjectError, \
+            raise self.PhysicsObjectListError, \
       "This wavefunction list does not have a consistent wavefunction ordering."+\
-      "\n  Wf numbers: %s"%str([wf['number'] for wf in diag_wavefunctions])+\
+      "\n  Wf numbers: %s"%str([wf['number'] for wf in diag_wfs])+\
       "\n  Wf mothers: %s"%str([[mother['number'] for mother in wf['mothers']] \
-                                                  for wf in diag_wavefunctions])
+                                                  for wf in diag_wfs])
     
         # We want to work on a local copy of the wavefunction list attribute
         diag_wfs = copy.copy(self)

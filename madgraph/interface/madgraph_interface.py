@@ -1260,12 +1260,14 @@ This will take effect only in a NEW terminal
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')
 
-        if args[0] in ['timeout']:
+        if args[0] in ['timeout', 'max_npoint_for_channel']:
             if not args[1].isdigit():
-                raise self.InvalidCmd('timeout values should be a integer')
+                raise self.InvalidCmd('%s values should be a integer' % args[0])
 
         if args[0] in ['loop_optimized_output', 'loop_color_flows']:
-            if args[1] not in ['True', 'False']:
+            try:
+                args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
+            except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
 
         if args[0] in ['gauge']:
@@ -2441,7 +2443,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge',
-                    'EWscheme']
+                    'EWscheme',
+                    'max_npoint_for_channel']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=']
@@ -2492,7 +2495,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'gauge':'unitary',
                           'stdout_level':None,
                           'loop_optimized_output':True,
-                          'loop_color_flows':False
+                          'loop_color_flows':False,
+                          'max_npoint_for_channel': 0 # 0 means automaticly adapted
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -5680,7 +5684,7 @@ This implies that with decay chains:
             if log:
                     logger.info('set loop optimized output to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self.options[args[0]] = eval(args[1])
+            self.options[args[0]] = args[1]
             if not self.options['loop_optimized_output'] and \
                                                self.options['loop_color_flows']:
                 logger.warning("Turning off option 'loop_color_flows'"+\
@@ -5690,7 +5694,7 @@ This implies that with decay chains:
             if log:
                     logger.info('set loop color flows to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self.options[args[0]] = eval(args[1])
+            self.options[args[0]] = args[1]
             if self.options['loop_color_flows'] and \
                                       not self.options['loop_optimized_output']:
                 logger.warning("Turning on option 'loop_optimized'"+\
@@ -5752,7 +5756,7 @@ This implies that with decay chains:
                         ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
-                         'cluster_retry_wait', 'cluster_size']:
+                         'cluster_retry_wait', 'cluster_size', 'max_npoint_for_channel']:
                 self.options[args[0]] = int(args[1])
 
         elif args[0] in ['cluster_local_path']:
@@ -5936,6 +5940,33 @@ This implies that with decay chains:
 
         # Reset _done_export, since we have new directory
         self._done_export = False
+
+        if self._export_format == "madevent":
+            # for MadEvent with MadLoop decide if we keep the box as channel of 
+            #integration or not. Forbid them for matching and for h+j
+            if self.options['max_npoint_for_channel']:
+                base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
+            else:
+                #if default forbid 4 point channel for matching.
+                min_particle = 999
+                max_particle = 0
+                for amp in self._curr_amps:
+                    from madgraph.loop.loop_diagram_generation import LoopAmplitude
+                    if not isinstance(amp, LoopAmplitude):
+                        break
+                    nb = len(amp["process"].get_final_ids())
+                    min_particle = min(min_particle, nb)
+                    max_particle = max(max_particle, nb)
+                if min_particle != max_particle:
+                    base_objects.Vertex.max_n_loop_for_multichanneling = 3
+                else:
+                    #check if H+jet since in that case the box slow down the code
+                    last_proc = amp["process"].get_final_ids()
+                    not_hj = [i for i in last_proc if i not in range(-5,6)+[21,25]]
+                    if not not_hj and 25 in last_proc:
+                        base_objects.Vertex.max_n_loop_for_multichanneling = 3
+                    else:
+                        base_objects.Vertex.max_n_loop_for_multichanneling = 4                
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, args)
