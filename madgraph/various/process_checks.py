@@ -659,7 +659,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         MLCard.set('DoubleCheckHelicityFilter',DoubleCheckHelicityFilter)
         MLCard.write(pjoin(dir_name,os.pardir,'SubProcesses','MadLoopParams.dat'))
 
-    def get_me_value(self, proc, proc_id, working_dir, PSpoint=[], \
+    @classmethod
+    def get_me_value(cls, proc, proc_id, working_dir, PSpoint=[], \
                                                   PS_name = None, verbose=True):
         """Compile and run ./check, then parse the output and return the result
         for process with id = proc_id and PSpoint if specified.
@@ -717,7 +718,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             output.read()
             output.close()
             if os.path.exists(pjoin(dir_name,'result.dat')):
-                return self.parse_check_output(file(pjoin(dir_name,\
+                return cls.parse_check_output(file(pjoin(dir_name,\
                                                   'result.dat')),format='tuple')  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\

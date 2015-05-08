@@ -57,6 +57,9 @@ libdhelas: $(LIBDIR)libdhelas.$(libext)
 
 libmodel: $(LIBDIR)libmodel.$(libext)
 
+treatCardsLoopNoInit:
+	echo "Card treatment not necessary in MadLoop standalone mode."
+
 # Binaries
 
 $(BINDIR)sum_html: sum_html.o 
