@@ -3243,7 +3243,16 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         # Initialize matrix element evaluation
         # For the unitary gauge, open loops should not be used
         loop_optimized_bu = cmd.options['loop_optimized_output']
-        cmd.options['loop_optimized_output'] = False
+        if processes_unit.get('squared_orders'):
+            if processes_unit.get('perturbation_couplings') in [[],['QCD']]:
+                cmd.options['loop_optimized_output'] = True
+            else:
+                raise InvalidCmd("The gauge test cannot be performed for "+
+                  " a process with more than QCD corrections and which"+
+                  " specifies squared order constraints.")
+        else:
+            cmd.options['loop_optimized_output'] = False
+            
         aloha.unitary_gauge = True
         if processes_unit.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,

@@ -3789,7 +3789,7 @@ This implies that with decay chains:
                                 " the perturbation orders allowed for by the loop model.")
             if not self.options['loop_optimized_output'] and \
                          LoopOption not in ['tree','real'] and split_orders!=[]:
-                logger.info('The default output mode (loop_optimized_output'+\
+                logger.warning('The default output mode (loop_optimized_output'+\
                   ' = False) does not support evaluations for given powers of'+\
                   ' coupling orders. MadLoop output will therefore not be'+\
                   ' able to provide such quantities.')
