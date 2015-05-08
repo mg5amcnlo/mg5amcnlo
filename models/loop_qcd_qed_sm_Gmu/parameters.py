@@ -70,7 +70,7 @@ Gf = Parameter(name = 'Gf',
                value = 0.0000116637,
                texname = 'G_f',
                lhablock = 'SMINPUTS',
-               lhacode = [ 1 ])
+               lhacode = [ 2 ])
 
 MW = Parameter(name = 'MW',
                nature = 'external',
@@ -86,7 +86,7 @@ aS = Parameter(name = 'aS',
                value = 0.1184,
                texname = '\\alpha _s',
                lhablock = 'SMINPUTS',
-               lhacode = [ 2 ])
+               lhacode = [ 3 ])
 
 lamWS = Parameter(name = 'lamWS',
                   nature = 'external',
