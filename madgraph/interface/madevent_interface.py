@@ -3099,6 +3099,8 @@ Beware that this can be dangerous for local multicore runs.""")
         """Advanced commands: Create gridpack from present run"""
 
         self.update_status('Creating gridpack', level='parton')
+        # compile gen_ximprove
+        misc.compile(['../bin/internal/gen_ximprove'], cwd=pjoin(self.me_dir, "Source"))
         args = self.split_arg(line)
         self.check_combine_events(args)
         if not self.run_tag: self.run_tag = 'tag_1'
