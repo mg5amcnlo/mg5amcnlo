@@ -586,6 +586,7 @@ c
       integer ires,icol(2,-nexternal+2:2*nexternal-3)
       integer is_colors(2,nincoming)
       integer i,j,i3,i3bar,max3,max3bar,min3,min3bar,maxcol,mincol
+      integer count
 
 c     Successively eliminate color indices in pairs until only the wanted
 c     indices remain
@@ -692,7 +693,7 @@ c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
      $        mo_color.eq.8.and.i3.eq.2.and.i3bar.eq.2) then
 c     Replace the maximum index with the minimum one everywhere
 c     (we don't know if we should replace i3 with i3bar or vice versa)
-
+c     Actually we know if one of the index is repeated (we do not want to replace that one)
          maxcol=max(max3,max3bar)
          if(maxcol.eq.max3) then
             mincol=min3bar
@@ -752,6 +753,26 @@ c            print *,'Replaced ',maxcol,' by ',mincol
             enddo
          else
 c        standard case
+c     First check that mincol is not a going trough index. If it is it 
+C     should not be assign to one of the temporary index
+            count=0
+            do i=1,nexternal
+               do j=1,2
+                  if (icol(j,i).eq.mincol) count = count +1
+               enddo
+            enddo
+
+            if(count.eq.2)then
+c     we do not want to use that index pass to the other one
+               if (mincol.eq.min3)then
+                  mincol = min3bar
+                  maxcol = max3
+               else
+                  mincol = min3
+                  maxcol = max3bar
+               endif
+            endif
+
 c     Fix the color for ires (remember 3<->3bar for t-channels)
             icol(1,ires)=0
             icol(2,ires)=0
@@ -913,20 +934,20 @@ c              g (504,505)
 c
 c    need to correct to 
 c    -------------------------  (0,503)
-c    (504,0)   g
+c    (0,505)   g
 c              g
-c              g (504,503)
+c              g (503,505)
          if (i3.eq.2) then
-            icol(2,ires) = max(icolmp(2,1), icolmp(2,2))
-            icol(1,ires) = 0
-            maxcol = icolmp(1,2)
-            mincol = icolmp(1,1)
-c           replace maxcol by mincol
-         elseif (i3bar.eq.2) then
             icol(1,ires) = max(icolmp(1,1), icolmp(1,2))
             icol(2,ires) = 0
-            maxcol = icolmp(2,1)
-            mincol = icolmp(2,2)
+            maxcol = max(icolmp(2,1), icolmp(2,2))
+            mincol = min(icolmp(1,1), icolmp(1,2))
+c           replace maxcol by mincol
+         elseif (i3bar.eq.2) then
+            icol(1,ires) = 0
+            icol(2,ires) = max(icolmp(2,1), icolmp(2,2))
+            maxcol = max(icolmp(1,1), icolmp(1,2))
+            mincol = min(icolmp(2,1), icolmp(2,2))
          endif
 c         write(*,*) "replace ", maxcol,"by",mincol
             do i=ires+1,nexternal
