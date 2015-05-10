@@ -289,8 +289,8 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_decay(self, decaybranch):
         """add a process in the list of decayed particles"""
         
-        if self.model and not self.model['case_sensitive']:
-            decaybranch = decaybranch.lower()
+        #if self.model and not self.model['case_sensitive']:
+        #    decaybranch = decaybranch.lower()
 
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
         if not self.list_branches.has_key(init_part):
