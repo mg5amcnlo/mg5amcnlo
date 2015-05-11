@@ -320,7 +320,18 @@ class gensym(object):
         #               - more than 5 -> prepare info for refine
         need_submit = False
         if step < self.min_iterations and cross != 0:
-            need_submit = True
+            if step == 1:
+                need_submit = True
+            else:
+                across = self.abscross[(Pdir,G)]/(self.sigma[(Pdir,G)]+1e-99)
+                tot_across = self.get_current_axsec()
+                if across / tot_across < 1e-6:
+                    need_submit = False
+                elif error <  self.cmd.opts['accuracy'] / 100:
+                    need_submit = False
+                else:
+                    need_submit = True
+                    
         elif step >= self.cmd.opts['iterations']:
             need_submit = False
         elif self.cmd.opts['accuracy'] < 0:
@@ -1223,7 +1234,9 @@ class gen_ximprove_share(gen_ximprove, gensym):
 
     nb_ps_by_job = 2000 
     mode = "refine"
-    gen_events_security = 1.1
+    gen_events_security = 1.15
+    # Note the real security is lower since we stop the jobs if they are at 96%
+    # of this target.
 
     def __init__(self, *args, **opts):
         
@@ -1366,7 +1379,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
 
         # misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
         # check what to do
-        if nunwgt > needed_event+1:
+        if nunwgt >= int(0.96*needed_event)+1: # 0.96*1.15=1.10 =real security
             # We did it.
             logger.info("found enough event for %s/G%s" % (os.path.basename(Pdir), G))
             self.write_results(grid_calculator, cross, error, Pdir, G, step, efficiency)
