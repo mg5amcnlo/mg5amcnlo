@@ -1277,7 +1277,9 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 if nb_split > self.max_splitting:
                     nb_split = self.max_splitting
                     nevents = self.max_event_in_iter * self.max_splitting          
-            
+                else:
+                    nevents = self.max_event_in_iter * nb_split
+
             if nevents > self.max_splitting*self.max_event_in_iter:
                 logger.warning("Channel %s has a very low efficiency of unweighting. Might not be possible to reach target" % C.name)
                 nevents = self.max_event_in_iter * self.max_splitting 
