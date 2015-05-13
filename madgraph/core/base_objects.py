@@ -2106,7 +2106,7 @@ class Vertex(PhysicsObject):
     # Notice that, in the grouped subprocess case mode, if -2 is not added to 
     # the list ID_to_veto_for_multichanneling then all loop are considered by 
     # default and the constraint below is not applied.
-    max_n_loop_for_multichanneling = 3
+    max_n_loop_for_multichanneling = 4
     
     def default_setup(self):
         """Default values for all properties"""

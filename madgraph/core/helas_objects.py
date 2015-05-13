@@ -2035,11 +2035,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def get_vertex_leg_numbers(self, 
               veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
-              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
+              max_n_loop=0):
         """Get a list of the number of legs in vertices in this diagram"""
 
         if not self.get('mothers'):
             return []
+
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
 
         vertex_leg_numbers = [len(self.get('mothers')) + 1] if \
             (self.get('interaction_id') not in veto_inter_id) or\
@@ -2999,11 +3002,14 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
     def get_vertex_leg_numbers(self, 
               veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
-              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
+              max_n_loop=0):
         """Get a list of the number of legs in vertices in this diagram,
         This function is only used for establishing the multi-channeling, so that
         we exclude from it all the fake vertices and the vertices resulting from
         shrunk loops (id=-2)"""
+
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
 
         vertex_leg_numbers = [len(self.get('mothers'))] if \
                              (self['interaction_id'] not in veto_inter_id) or \
@@ -3173,8 +3179,11 @@ class HelasDiagram(base_objects.PhysicsObject):
 
     def get_vertex_leg_numbers(self, 
               veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
-              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
+              max_n_loop=0):
         """Get a list of the number of legs in vertices in this diagram"""
+
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
 
         return self.get('amplitudes')[0].get_vertex_leg_numbers(
                              veto_inter_id=veto_inter_id, max_n_loop=max_n_loop)

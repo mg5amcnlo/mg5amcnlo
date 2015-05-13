@@ -5975,7 +5975,11 @@ This implies that with decay chains:
                     if not not_hj and 25 in last_proc:
                         base_objects.Vertex.max_n_loop_for_multichanneling = 3
                     else:
-                        base_objects.Vertex.max_n_loop_for_multichanneling = 4                
+                        base_objects.Vertex.max_n_loop_for_multichanneling = 4
+
+                    # Ignore boxes for decay processes
+                    if len(amp["process"].get_initial_ids())==1:
+                        base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, args)
