@@ -2103,10 +2103,10 @@ class Vertex(PhysicsObject):
     # because the phase-space generation is not suited to map contact interactions
     # This parameter controls up to how many legs should loop-induced diagrams
     # be considered for multichanneling.
-    # Notice that if -2 is not added to the list ID_to_veto_for_multichanneling 
-    # then all loop are considered by default and the constraint below is not
-    # applied.
-    max_n_loop_for_multichanneling = 4
+    # Notice that, in the grouped subprocess case mode, if -2 is not added to 
+    # the list ID_to_veto_for_multichanneling then all loop are considered by 
+    # default and the constraint below is not applied.
+    max_n_loop_for_multichanneling = 3
     
     def default_setup(self):
         """Default values for all properties"""
@@ -2433,11 +2433,11 @@ class Diagram(PhysicsObject):
 
         if max_n_loop == 0:
             max_n_loop = Vertex.max_n_loop_for_multichanneling
-           
+        
         res = [len(v.get('legs')) for v in self.get('vertices') if (v.get('id') \
                                   not in veto_inter_id) or (v.get('id')==-2 and 
                                                  len(v.get('legs'))>max_n_loop)]
-    
+        misc.sprint(res)
         return res
     
     def get_num_configs(self, model, ninitial):

@@ -391,10 +391,12 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
               max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
         """Get a list of the number of legs in vertices in this diagram"""
 
+        # There is no need to check for self.get('interaction_id')==-2 when
+        # applying the max_n_loop check because we already know that this
+        # vertex is a loop one since it is a LoopHelasAmplitude
         vertex_leg_numbers = [len(self.get('mothers'))] if \
                          (self.get('interaction_id') not in veto_inter_id) or \
-          (self.get('interaction_id')==-2 and len(self.get('mothers'))>max_n_loop) \
-                                                                         else []
+                                     len(self.get('mothers'))>max_n_loop else []
         for mother in self.get('mothers'):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
                             veto_inter_id=veto_inter_id, max_n_loop=max_n_loop))
