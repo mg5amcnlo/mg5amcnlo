@@ -144,13 +144,7 @@ def find_symmetry(matrix_element):
             # Only 3-vertices allowed in configs.inc
             continue
         
-        # We do not use the original DiagramTag class, which uses the vertex ID
-        # and the loop-content information (for loop-induced) as an identifier
-        # but instead its daughter-class IdentifySGConfigTag, already used
-        # for the non-grouped-process case and which only uses information
-        # relevant for comparing diagram symmetries.
-#        tag = diagram_generation.DiagramTag(base_diagram)
-        tag = IdentifySGConfigTag(base_diagram, base_model)
+        tag = diagram_generation.DiagramTag(base_diagram)
         try:
             ind = diagram_tags.index(tag)
         except ValueError:
