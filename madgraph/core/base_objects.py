@@ -2437,7 +2437,7 @@ class Diagram(PhysicsObject):
         res = [len(v.get('legs')) for v in self.get('vertices') if (v.get('id') \
                                   not in veto_inter_id) or (v.get('id')==-2 and 
                                                  len(v.get('legs'))>max_n_loop)]
-        misc.sprint(res)
+
         return res
     
     def get_num_configs(self, model, ninitial):
