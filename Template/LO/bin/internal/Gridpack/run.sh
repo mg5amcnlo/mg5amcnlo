@@ -108,6 +108,12 @@ fi
 if [[ -e ./madevent/bin/internal/addmasses.py ]]; then
   mv ./events.lhe ./events.lhe.0
   python ./madevent/bin/internal/addmasses.py ./events.lhe.0 ./events.lhe
+  if [[ $? -eq 0 ]]; then
+     echo "Mass added"
+     rm -rf ./events.lhe.0 &> /dev/null
+  else
+     mv ./events.lhe.0 ./events.lhe
+  fi
 fi  
 
 gzip -f events.lhe

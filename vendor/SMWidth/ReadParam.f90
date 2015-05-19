@@ -100,10 +100,10 @@ CONTAINS
     IF(Decay_scheme.EQ.1)THEN
        WRITE(iunit,*)"sminputs 1 aEWM1"
     ELSE
-       WRITE(iunit,*)"sminputs 1 Gf"
+       WRITE(iunit,*)"sminputs 2 Gf"
     ENDIF
     WRITE(iunit,*)" "
-    WRITE(iunit,*)"sminputs 2 aS"
+    WRITE(iunit,*)"sminputs 3 aS"
     WRITE(iunit,*)" "
     WRITE(iunit,*)"mass 6 "//TRIM(prefix)//"MT"
     WRITE(iunit,*)" "

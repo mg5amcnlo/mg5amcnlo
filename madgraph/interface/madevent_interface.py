@@ -2575,7 +2575,7 @@ Beware that this can be dangerous for local multicore runs.""")
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
                                           "MadLoopParams.dat"))
             
-        if self.proc_characteristics['loop_induced']:
+        if self.proc_characteristics['loop_induced'] and mode in ['loop', 'all']:
             # Now Update MadLoop filters if necessary (if modifications were made to
             # the model parameters).
             if need_MadLoopFilterUpdate:
@@ -3099,6 +3099,8 @@ Beware that this can be dangerous for local multicore runs.""")
         """Advanced commands: Create gridpack from present run"""
 
         self.update_status('Creating gridpack', level='parton')
+        # compile gen_ximprove
+        misc.compile(['../bin/internal/gen_ximprove'], cwd=pjoin(self.me_dir, "Source"))
         args = self.split_arg(line)
         self.check_combine_events(args)
         if not self.run_tag: self.run_tag = 'tag_1'
@@ -4971,7 +4973,7 @@ class MadLoopInitializer(object):
 
         # Setup parallelization
         if MG_options:
-            mcore = cluster.MultiCore(MG_options)
+            mcore = cluster.MultiCore(**MG_options)
         else:
             mcore = cluster.MultiCore(nb_core=1)
         def run_initialization_wrapper(run_dir, infos, attempts):
