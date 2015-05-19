@@ -5707,7 +5707,7 @@ class UFO_model_to_mg4(object):
              if(dble(arg).lt.0.0d0.and.dimag(arg).lt.0.0d0)then
                 reglogp=log(arg) + 2.0d0*3.1415926535897932d0*(0.0d0,1.0d0)
              else
-`               reglogp=log(arg)
+                reglogp=log(arg)
              endif
           endif
           end
