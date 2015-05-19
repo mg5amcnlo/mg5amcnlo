@@ -424,8 +424,8 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conjg(CMPLX(' + p[2] + ',KIND=16))'
         elif p[1] == 'reglog': p[0] = 'mp_reglog(CMPLX(' + p[2] +',KIND=16))'
-        elif p[1] == 'reglogp': p[0] = 'mp_reglogp(CMPLX(' + p[2] + 'KIND=16))'
-        elif p[1] == 'reglogm': p[0] = 'mp_reglogm(CMPLX(' + p[2] + 'KIND=16))'
+        elif p[1] == 'reglogp': p[0] = 'mp_reglogp(CMPLX(' + p[2] + ',KIND=16))'
+        elif p[1] == 'reglogm': p[0] = 'mp_reglogm(CMPLX(' + p[2] + ',KIND=16))'
 
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''
