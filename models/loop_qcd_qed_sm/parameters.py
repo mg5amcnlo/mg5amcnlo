@@ -94,7 +94,7 @@ aS = Parameter(name = 'aS',
                value = 0.1184,
                texname = '\\alpha _s',
                lhablock = 'SMINPUTS',
-               lhacode = [ 2 ])
+               lhacode = [ 3 ])
 
 lamWS = Parameter(name = 'lamWS',
                   nature = 'external',

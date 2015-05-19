@@ -1,13 +1,13 @@
-ifeq ($(wildcard ../../Source/make_opts),)
-    ifeq ($(wildcard ../Source/make_opts),)
+
+ifeq ($(wildcard ../Source/make_opts),)
+    ifeq ($(wildcard ../../Source/make_opts),)
        ROOT = ../../..
     else
-       ROOT = ..
+       ROOT = ../..
     endif
 else
-    ROOT = ../..
+    ROOT = ..
 endif
-
 
 include $(ROOT)/Source/make_opts
 include $(ROOT)/SubProcesses/MadLoop_makefile_definitions

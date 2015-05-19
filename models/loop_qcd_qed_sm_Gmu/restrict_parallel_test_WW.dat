@@ -13,8 +13,8 @@ Block LOOP
 ## INFORMATION FOR SMINPUTS
 ###################################
 Block SMINPUTS 
-    1 1.16637000e-05 # Gf  
-    2 1.09557800063972e-01 # aS, it is dangerous to set it as 1 
+    2 1.16637000e-05 # Gf  
+    3 1.09557800063972e-01 # aS, it is dangerous to set it as 1 
 
 ###################################
 ## INFORMATION FOR MASS

@@ -289,8 +289,8 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_decay(self, decaybranch):
         """add a process in the list of decayed particles"""
         
-        if self.model and not self.model['case_sensitive']:
-            decaybranch = decaybranch.lower()
+        #if self.model and not self.model['case_sensitive']:
+        #    decaybranch = decaybranch.lower()
 
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
         if not self.list_branches.has_key(init_part):
@@ -591,7 +591,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         generate_all.ending_run()
         self.branching_ratio = generate_all.branching_ratio
-        self.err_branching_ratio = generate_all.err_branching_ratio 
+        try:
+            self.err_branching_ratio = generate_all.err_branching_ratio
+        except Exception:
+            # might not be define in some gridpack mode
+            self.err_branching_ratio = 0 
         evt_path = self.events_file.name
         try:
             self.events_file.close()
