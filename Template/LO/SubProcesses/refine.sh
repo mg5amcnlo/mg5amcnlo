@@ -51,6 +51,7 @@ j=%(directory)s
      for((try=1;try<=16;try+=1)); 
      do
          ../madevent 2>&1 >> $k <input_sg.txt | tee -a $k;
+     status_code=${PIPESTATUS[0]};
          if [ -s $k ]
          then
              break
@@ -60,7 +61,11 @@ j=%(directory)s
      done
      echo "" >> $k; echo "ls status:" >> $k; ls >> $k
      cat $k >> log.txt
-     
+     if [[ $status_code -ne 0 ]]; then 
+	 rm results.dat
+	 echo "ERROR DETECTED"
+	 echo "end-code not correct $status_code" > results.dat
+     fi     
      if [[ -e ftn26 ]]; then
          cp ftn26 ftn25
      fi
