@@ -121,7 +121,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 raise InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
                             % ', '.join(myprocdef['perturbation_couplings']))
             elif myprocdef.get_ninitial()==1:
-                raise InvalidCmd("At this stage aMC@NLO cannot handle decay process.\n"+\ "
+                raise InvalidCmd("At this stage aMC@NLO cannot handle decay process.\n"+\
                  "   Only Leading Order (loop-induced and tree level) decay are supported.") 
             
         #check process definition(s):

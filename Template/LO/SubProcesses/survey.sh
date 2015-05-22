@@ -69,6 +69,7 @@ for i in $@ ; do
          rm -f *.log &> /dev/null
 	 rm -f moffset.dat &> /dev/null
      fi
+     echo $status_code
      if [[ $status_code -ne 0 ]]; then 
 	 rm results.dat
 	 echo "ERROR DETECTED"
