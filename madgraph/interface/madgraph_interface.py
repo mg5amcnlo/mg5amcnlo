@@ -6412,7 +6412,7 @@ This implies that with decay chains:
             logger.warning(warning_text)
             
         if not model:
-            modelname = self._curr_model['name']
+            modelname = self._curr_model.get('modelpath')
             with misc.MuteLogger(['madgraph'], ['INFO']):
                 model = import_ufo.import_model(modelname, decay=True)
         else:
