@@ -741,8 +741,8 @@ class Event(list):
         # Weight information
         self.tag = ''
         self.comment = ''
-        self.reweight_data ={}
-        
+        self.reweight_data = {}
+        self.matched_scale_data = None
         if text:
             self.parse(text)
 
@@ -788,7 +788,7 @@ class Event(list):
         """Parse the re-weight information in order to return a dictionary
            {key: value}. If no group is define group should be '' """
         if self.reweight_data:
-            return
+            return self.reweight_data
         self.reweight_data = {}
         self.reweight_order = []
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
@@ -803,6 +803,39 @@ class Event(list):
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]
         return self.reweight_data
+    
+    def parse_matching_scale(self):
+        """Parse the line containing the starting scale for the shower"""
+        
+        if self.matched_scale_data is not None:
+            return self.matched_scale_data
+            
+        self.matched_scale_data = []
+        
+
+        pattern  = re.compile("<scales\s|</scales>")
+        data = re.split(pattern,self.tag)
+        if len(data) == 1:
+            return
+        else:
+            tmp = {}
+            start,content, end = data
+            self.tag = "%s%s" % (start, end)
+            pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
+            for id,value in pattern.findall(content):
+                tmp[int(id)] = float(value)
+                
+            for i in range(1, len(tmp)+1):
+                self.matched_scale_data.append(tmp[i])
+                
+        return self.matched_scale_data
+            
+            
+        misc.sprint(content)
+            
+        # content should be 
+        #<scales pt_clust_1="13000.00000" pt_clust_2="48.99743"></scales>
+        
 
 
     def add_decay_to_particle(self, position, decay_event):
@@ -823,7 +856,9 @@ class Event(list):
             "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
         
         self.nexternal += decay_event.nexternal -1
-        
+        old_scales = list(self.parse_matching_scale())
+        if old_scales:
+            self.matched_scale_data.pop(position-2)
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
         for particle in decay_event[1:]:
@@ -831,6 +866,8 @@ class Event(list):
             new_particle = Particle(particle, self)
             new_particle.event_id = len(self)
             self.append(new_particle)
+            if old_scales:
+                self.matched_scale_data.append(old_scales[position-2])
             # compute and assign the new four_momenta
             new_momentum = this_4mom.boost(FourMomentum(new_particle))
             new_particle.set_momentum(new_momentum)
@@ -846,8 +883,7 @@ class Event(list):
                 elif tag == "mother2" and isinstance(particle.mother1, Particle):
                     new_particle.mother2 = this_particle
                 else:
-                    misc.sprint("Need to understan why", particle)
-            
+                    raise Exception, "Something weird happens. Please report it for investigation"
         # Need to correct the color information of the particle
         # first find the first available color index
         max_color=501
@@ -874,6 +910,8 @@ class Event(list):
                 else:
                     particle.color2 = color_mapping[particle.color2]                
 
+
+
     def remove_decay(self, pdg_code=0, event_id=None):
         
         to_remove = []
@@ -889,7 +927,7 @@ class Event(list):
         # copy first line information + ...
         for tag in ['nexternal', 'ievent', 'wgt', 'aqcd', 'scale', 'aqed','tag','comment']:
             setattr(new_event, tag, getattr(self, tag))
-            
+        
         for particle in self:
             if isinstance(particle.mother1, Particle) and particle.mother1 in to_remove:
                 to_remove.append(particle)
@@ -910,7 +948,6 @@ class Event(list):
             particle.event_id = pos
             if particle in to_remove:
                 particle.status = 1
-                new_event.nexternal += 1
         return new_event
 
     def get_decay(self, pdg_code=0, event_id=None):
@@ -938,6 +975,7 @@ class Event(list):
         new_decay_part.status =  -1
         old2new[new_decay_part.event_id] = len(old2new) 
         new_event.append(new_decay_part)
+        
         
         # add the other particle   
         for particle in self:
@@ -1191,9 +1229,17 @@ class Event(list):
                         for i in self.reweight_order)
         else:
             reweight_str = '' 
+            
+        tag_str = self.tag
+        if self.matched_scale_data:
+            tag_str = "<scales %s></scales>%s" % (
+                                    ' '.join(['pt_clust_%i=\"%s\"' % (i,v)
+                                   for i,v in enumerate(self.matched_scale_data)]),
+                                                  self.tag)
+            
         out = out % {'scale': scale_str, 
                       'particles': '\n'.join([str(p) for p in self]),
-                      'tag': self.tag,
+                      'tag': tag_str,
                       'comments': self.comment,
                       'reweight': reweight_str}
         return re.sub('[\n]+', '\n', out)

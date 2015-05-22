@@ -886,6 +886,7 @@ class AllMatrixElement(dict):
         self.decay_ids = set([abs(id) for id in decay_ids])
         self.has_particles_ambiguity = False
         self.model = model
+
         
     def add(self, topologies, keys):
         """Adding one element to the list of production_topo"""
@@ -1921,7 +1922,7 @@ class decay_all_events(object):
         self.evtfile = inputfile
         self.curr_event = Event(self.evtfile, banner) 
         self.inverted_decay_mapping={}
-               
+        self.width_estimator = None
         self.curr_dir = os.getcwd()
         # dictionary to fortan evaluator
         self.calculator = {}
@@ -3775,6 +3776,7 @@ class decay_all_events(object):
                               'decay_struct':None, 'decay_tag': None}
                 production['decays'].append(fake_decay)
                 production['total_br'] = max_br
+
 
 
 

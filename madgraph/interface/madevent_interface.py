@@ -3151,7 +3151,7 @@ Beware that this can be dangerous for local multicore runs.""")
             self.options['automatic_html_opening'] = False
 
         # Update the banner with the pythia card
-        if not self.banner:
+        if not self.banner or len(self.banner) <=1:
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
                      
    
