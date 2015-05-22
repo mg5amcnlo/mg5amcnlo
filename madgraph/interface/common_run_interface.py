@@ -1320,7 +1320,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         def check_cluster(path):
             if not self.options["cluster_local_path"] or \
-                        os.path.exists(self.options["cluster_local_path"]) or\    
+                        os.path.exists(self.options["cluster_local_path"]) or\
                         self.options['run_mode'] !=1:
                 return path
             main = self.options["cluster_local_path"]

@@ -25,7 +25,7 @@ import madgraph.fks.fks_common as fks_common
 import copy
 import logging
 import array
-
+import madgraph.various.misc as misc
 from madgraph import InvalidCmd
 
 logger = logging.getLogger('madgraph.fks_base')
@@ -101,6 +101,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             self['OLP']=options['OLP']
             del options['OLP']
 
+
         try:
             # Now generating the borns for the first time.
             super(FKSMultiProcess, self).__init__(*arguments,**options)
@@ -111,7 +112,18 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                'process')+". Notice that aMC@NLO does not handle loop-induced"+\
                " processes yet, but you can still use MadLoop if you want to "+\
                "only generate them."+\
-               " For this, use the 'virt=' mode, without multiparticle labels." 
+               " For this, use the 'virt=' mode, without multiparticle labels."
+        
+        #check limitation of FKS
+        if arguments:
+            myprocdef = arguments[0]
+            if myprocdef['perturbation_couplings']!=['QCD']:
+                raise InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
+                            % ', '.join(myprocdef['perturbation_couplings']))
+            elif myprocdef.get_ninitial()==1:
+                raise InvalidCmd("At this stage aMC@NLO cannot handle decay process.\n"+\ "
+                 "   Only Leading Order (loop-induced and tree level) decay are supported.") 
+            
         #check process definition(s):
         # a process such as g g > g g will lead to real emissions 
         #   (e.g: u g > u g g ) which will miss some corresponding born,

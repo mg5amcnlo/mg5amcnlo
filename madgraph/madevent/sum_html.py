@@ -273,6 +273,8 @@ class OneResult(object):
         i=0
         found_xsec_line = False
         for line in finput:
+            print line
+            
             # Exit as soon as we hit the xml part. Not elegant, but the part
             # below should eventually be xml anyway.
             if '<' in line:
