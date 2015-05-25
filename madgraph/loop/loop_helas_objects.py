@@ -1515,7 +1515,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     loop_amp.set('orders',loop_amp.get_orders())
                     helas_diagram.get('amplitudes').append(loop_amp)
                     # here we check the two L-cut loop helas wavefunctions are                                                                                                                           
-                    # in consistent flow                    
+                    # in consistent flow                     
                     check_lcut_fermion_flow_consistency(\
                         loop_amp_wfs[0],loop_amp_wfs[1])
                 return wfNumber, amplitudeNumber
