@@ -217,7 +217,9 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':2, 'QED':0},
+                        'orders': {'QCD':4, 'QED':0},
+                        'born_orders': {'QCD':2, 'QED':0},
+                        'squared_orders': {'QCD':6, 'QED':0},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -225,7 +227,9 @@ class TestFKSProcess(unittest.TestCase):
             [my_process_definition])
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':2, 'QED':0},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':2, 'QED':0},
+                        'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -305,6 +309,9 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
+                        'orders': {'QCD':4, 'QED':0},
+                        'born_orders': {'QCD':2, 'QED':0},
+                        'squared_orders': {'QCD':6, 'QED':0},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -314,6 +321,9 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist_qed[1].set('state', False)
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist_qed,
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':2, 'QED':0},
+                        'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -356,11 +366,17 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist_qed[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
+                        'orders': {'QCD':4, 'QED':0},
+                        'born_orders': {'QCD':2, 'QED':0},
+                        'squared_orders': {'QCD':6, 'QED':0},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist_qed,
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':2, 'QED':0},
+                        'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -398,6 +414,9 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
+                        'orders': {'QCD':4, 'QED':0},
+                        'born_orders': {'QCD':2, 'QED':0},
+                        'squared_orders': {'QCD':6, 'QED':0},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -405,6 +424,9 @@ class TestFKSProcess(unittest.TestCase):
             [my_process_definition])
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':2, 'QED':0},
+                        'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})

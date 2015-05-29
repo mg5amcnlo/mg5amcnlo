@@ -1656,7 +1656,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = 'born.f'
 
         born_dict = {}
-        born_dict['nconfs'] = len(matrix_element.get_fks_info_list())
+        born_dict['nconfs'] = max(len(matrix_element.get_fks_info_list()),1)
 
         den_factor_lines = self.get_den_factor_lines(matrix_element)
         born_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
