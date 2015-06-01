@@ -77,6 +77,7 @@
  %(mur_ref_fixed)s   = muR_ref_fixed    ! fixed ren reference scale 
  %(muf1_ref_fixed)s   = muF1_ref_fixed   ! fixed fact reference scale for pdf1
  %(muf2_ref_fixed)s   = muF2_ref_fixed   ! fixed fact reference scale for pdf2
+ %(dynamical_scale_choice)s = dynamical_scale_choice ! Select one of the preselect dynamical choice
 #***********************************************************************
 # Renormalization and factorization scales (advanced and NLO options)  *
 #***********************************************************************
@@ -100,11 +101,16 @@
  %(pdf_set_min)s   = PDF_set_min      ! First of the error PDF sets 
  %(pdf_set_max)s   = PDF_set_max      ! Last of the error PDF sets
 #***********************************************************************
-# Merging - WARNING! Applies merging only at the hard-event level.     *
-# After showering an MLM-type merging should be applied as well.       *
-# See http://amcatnlo.cern.ch/FxFx_merging.htm for more details.       *
+# ickkw parameter:                                                     *
+#   0: No merging                                                      *
+#   3: FxFx Merging - WARNING! Applies merging only at the hard-event  *
+#      level. After showering an MLM-type merging should be applied as *
+#      well. See http://amcatnlo.cern.ch/FxFx_merging.htm for details. *
+#   4: UNLOPS merging (with pythia8 only). No interface from within    *
+#      MG5_aMC available, but available in Pythia8.                    *
+#  -1: NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph].    *
 #***********************************************************************
- %(ickkw)s        = ickkw            ! 0 no merging, 3 FxFx merging, 4 UNLOPS
+ %(ickkw)s        = ickkw
 #***********************************************************************
 #
 #***********************************************************************

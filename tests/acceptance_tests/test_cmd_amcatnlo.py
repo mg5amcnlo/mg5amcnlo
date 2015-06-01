@@ -28,7 +28,7 @@ from cStringIO import StringIO
 logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
-from tests.unit_tests.various.test_aloha import set_global
+from tests.parallel_tests.test_aloha import set_global
 import tests.IOTests as IOTests
 
 import madgraph.interface.master_interface as MGCmd
@@ -36,6 +36,7 @@ import madgraph.interface.amcatnlo_run_interface as NLOCmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
+import madgraph.various.banner as banner
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -52,17 +53,26 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
+    debugging = False
     
     def setUp(self):
         
-        self.tmpdir = tempfile.mkdtemp(prefix='amc')
-        #if os.path.exists(self.tmpdir):
-        #    shutil.rmtree(self.tmpdir)
-        #os.mkdir(self.tmpdir)
+        if not self.debugging:
+            self.tmpdir = tempfile.mkdtemp(prefix='amc')
+            #if os.path.exists(self.tmpdir):
+            #    shutil.rmtree(self.tmpdir)
+            #os.mkdir(self.tmpdir)
+            self.path = pjoin(self.tmpdir,'MGProcess')
+        else:
+            if os.path.exists(pjoin(MG5DIR, 'TEST_AMC')):
+                shutil.rmtree(pjoin(MG5DIR, 'TEST_AMC'))
+            os.mkdir(pjoin(MG5DIR, 'TEST_AMC'))
+            self.tmpdir = pjoin(MG5DIR, 'TEST_AMC')
+            
         self.path = pjoin(self.tmpdir,'MGProcess')
-
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        if not self.debugging:
+            shutil.rmtree(self.tmpdir)
     
     
     def generate(self, process, model, multiparticles=[]):
@@ -192,18 +202,23 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertEqual(cmd, os.getcwd())
 
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue('    1   = lpp' in card)
-        self.assertTrue('6500   = ebeam' in card)
-        self.assertTrue('nn23nlo   = pdlabel' in card)
-        card = card.replace('    1   = lpp', '    0   = lpp')
-        card = card.replace('6500   = ebeam', ' 500   = ebeam')
-        card = card.replace('nn23nlo   = pdlabel', '\'lhapdf\' = pdlabel')
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        # this check that the value of lpp/beam are change automatically
+        self.assertTrue('0   = lpp1' in card)
+        self.assertTrue('500   = ebeam' in card)
+        # pass to the object
+        card = banner.RunCardNLO(card)
+        card['pdlabel'] = "lhapdf"
+        self.assertEqual(card['lpp1'], 0)
+        self.assertEqual(card['lpp2'], 0)
+        self.assertEqual(card['ebeam1'], 500)
+        self.assertEqual(card['ebeam2'], 500)
+        card.write('%s/Cards/run_card.dat' % self.path)
+        
 
         self.do('calculate_xsect -f LO')
         self.do('quit')
 
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
@@ -224,6 +239,58 @@ class MECmdShell(IOTests.IOTestManager):
 
         self.assertEqual(res_dict['xseca'], res_dict['xsect'])
         self.assertTrue(math.fabs(res_dict['xseca']-3.811e-1) < 0.01)
+
+
+    def test_raise_invalid_path_hwpp(self):
+        """test that an exception is raised when trying to shower with hwpp without
+        having set the corresponding pahts"""
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD] '], 'sm')
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertTrue( 'HERWIG6   = parton_shower' in card)
+        card = card.replace('HERWIG6   = parton_shower', 'HERWIGPP   = parton_shower')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.do('generate_events -pf')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+        #no shower the file
+        self.assertRaises(NLOCmd.aMCatNLOError, self.do, 'shower run_01 -f')
+
+
+    def test_raise_invalid_path_py8(self):
+        """test that an exception is raised when trying to shower with py8 without
+        having set the corresponding pahts"""
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD] '], 'sm')
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertTrue( 'HERWIG6   = parton_shower' in card)
+        card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.do('generate_events -pf')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+        #no shower the file
+        self.assertRaises(NLOCmd.aMCatNLOError, self.do, 'shower run_01 -f')
+
+
 
 
     def test_split_evt_gen(self):
@@ -252,9 +319,9 @@ class MECmdShell(IOTests.IOTestManager):
         cmd = os.getcwd()
         self.generate(['p p > e+ e- [real=QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( ' -1 = nevt_job' in card)
+        self.assertTrue( '-1 = nevt_job' in card)
         self.assertTrue( '10000 = nevents' in card)
-        self.assertTrue( ' -1 = req_acc' in card)
+        self.assertTrue( '-1.0 = req_acc' in card)
         card = card.replace(' -1 = nevt_job', '1 = nevt_job')
         card = card.replace('10000 = nevents', '6 = nevents')
         card = card.replace(' -1 = req_acc', '0.1 = req_acc')
@@ -385,7 +452,7 @@ class MECmdShell(IOTests.IOTestManager):
 
         self.do('launch NLO -f')
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
@@ -402,7 +469,7 @@ class MECmdShell(IOTests.IOTestManager):
                 stdout = open(os.devnull, 'w'))
 
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
@@ -709,7 +776,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('calculate_xsect NLO -f')        
         
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
@@ -725,7 +792,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('calculate_xsect LO -f')        
         
         # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
@@ -738,12 +805,12 @@ class MECmdShell(IOTests.IOTestManager):
         
         cwd = os.getcwd()
         try:
-            shutil.rmtree('%s/' % self.path)
+            os.remove('%s/test.log' % self.tmpdir)
         except Exception, error:
             pass
         import subprocess
         
-        stdout = open('/tmp/test.log','w')
+        stdout = open('%s/test.log' % self.tmpdir,'w')
         if logging.getLogger('madgraph').level <= 20:
             stderr=None
         else:
@@ -754,10 +821,10 @@ class MECmdShell(IOTests.IOTestManager):
             
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_amcatnlo')],
-                         cwd=pjoin(MG5DIR),
+                         cwd=self.tmpdir,
                         stdout=stdout,stderr=stderr)
         stdout.close()
-        text = open('/tmp/test.log','r').read()
+        text = open('%s/test.log' % self.tmpdir,'r').read()
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
@@ -775,7 +842,32 @@ class MECmdShell(IOTests.IOTestManager):
 
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])
-        
+
+
+    def test_jet_veto_xsec(self):
+        """tests the jet-veto cross section at NNLL+NLO"""
+        self.generate_production()
+        cmd = """generate_events NLO
+                 set ickkw -1
+                 set ptj 10
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        self.assertFalse(self.cmd_line.options['automatic_html_opening'])
+        self.cmd_line.import_command_file('/tmp/mg5_cmd')
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        text=open('%s/Events/run_01/summary.txt' % self.path,'r').read()
+        data=text.split('\n')
+        for i,line in enumerate(data):
+            if 'Process' in line:
+                break
+        #      Run at p-p collider (6500 + 6500 GeV)
+        self.assertTrue('Run at p-p collider (6500 + 6500 GeV)' in data[i+1])
+        cross_section = data[i+2]
+        cross_section = float(cross_section.split(':')[1].split('+-')[0])
+        try:
+            self.assertAlmostEqual(6011.0, cross_section,delta=50)
+        except TypeError:
+            self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 
     def load_result(self, run_name):
         

@@ -28,7 +28,7 @@ C
 C the include file with the values of the parameters and masses      
       INCLUDE "coupl.inc"
 C particle masses
-      REAL*8 PMASS(NEXTERNAL)      
+      REAL*8 PMASS(NEXTERNAL)
 C integer    n_max_cg
       INCLUDE "ngraphs.inc"
 	  include "nsqso_born.inc"

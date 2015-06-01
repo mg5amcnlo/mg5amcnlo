@@ -7,6 +7,11 @@ if [[ ! -e $1 && -e ../$1 ]] ; then
 fi
 }
 
+#Force LHAPATH to be set correctly on cluster
+if [ $CLUSTER_LHAPATH ]; then
+   export LHAPATH=$CLUSTER_LHAPATH;
+fi
+
 tarCounter=0
 while [[ (-f MadLoop5_resources.tar.gz) && (! -f MadLoop5_resources/HelConfigs.dat) && ($tarCounter < 10) ]]; do
     if [[ $tarCounter > 0 ]]; then

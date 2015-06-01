@@ -4,7 +4,10 @@ import random
 import re
 import math
 import time
+import os
+import shutil
 
+pjoin = os.path.join
 
 if '__main__' == __name__:
     import sys
@@ -49,7 +52,7 @@ class Particle(object):
         self.event_id = len(event) #not yet in the event
         # LHE information
         self.pid = 0
-        self.status = 0
+        self.status = 0 # -1:initial. 1:final. 2: propagator
         self.mother1 = None
         self.mother2 = None
         self.color1 = 0
@@ -61,10 +64,16 @@ class Particle(object):
         self.mass = 0
         self.vtim = 0
         self.helicity = 9
+        self.rwgt = 0
         self.comment = ''
 
         if line:
             self.parse(line)
+          
+    @property
+    def pdg(self):
+        "convenient alias"
+        return self.pid
             
     def parse(self, line):
         """parse the line"""
@@ -75,24 +84,12 @@ class Particle(object):
         for key, value in obj.groupdict().items():
             if key not in  ['comment','pid']:
                 setattr(self, key, float(value))
-            elif key in ['pid']:
+            elif key in ['pid', 'mother1', 'mother2']:
                 setattr(self, key, int(value))
             else:
                 self.comment = value
-        # assign the mother:
-        if self.mother1:
-            try:
-                self.mother1 = self.event[int(self.mother1) -1]
-            except KeyError:
-                raise Exception, 'Wrong Events format: a daughter appears before it\'s mother'
-        if self.mother2:
-            try:
-                self.mother2 = self.event[int(self.mother2) -1]
-            except KeyError:
-                raise Exception, 'Wrong Events format: a daughter appears before it\'s mother'
-    
-    
-    
+        # Note that mother1/mother2 will be modified by the Event parse function to replace the
+        # integer by a pointer to the actual particle object.
     
     def __str__(self):
         """string representing the particles"""
@@ -152,7 +149,7 @@ class EventFile(object):
 
     def __new__(self, path, mode='r', *args, **opt):
 
-        if path.endswith(".gz"):
+        if  path.endswith(".gz"):
             return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
         else:
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
@@ -181,10 +178,40 @@ class EventFile(object):
     def get_banner(self):
         """return a banner object"""
         import madgraph.various.banner as banner
+        if isinstance(self.banner, banner.Banner):
+            return self.banner
+        
         output = banner.Banner()
-        output.read_banner(self.banner.split('\n'))
+        output.read_banner(self.banner)
         return output
+
+    @property
+    def cross(self):
+        """return the cross-section of the file #from the banner"""
+        try:
+            return self._cross
+        except Exception:
+            pass
+
+        onebanner = self.get_banner()
+        self._cross = onebanner.get_cross()
+        return self._cross
     
+    def __len__(self):
+        if self.closed:
+            return 0
+        if hasattr(self,"len"):
+            return self.len
+
+        init_pos = self.tell()
+        self.seek(0)
+        nb_event=0
+        for _ in self:
+            nb_event +=1
+        self.len = nb_event
+        self.seek(init_pos)
+        return self.len
+        
     
     def next(self):
         """get next event"""
@@ -200,27 +227,16 @@ class EventFile(object):
                 text += line
         return Event(text)
     
-    def unweight(self, outputpath, wgt, max_wgt=0, trunc_error=0, event_target=0, 
-                 log_level=logging.DEBUG):
-        """unweight the current file according to wgt information wgt.
-        which can either be a fct of the event or a tag in the rwgt list.
-        max_wgt allow to do partial unweighting. 
-        trunc_error allow for dynamical partial unweighting
-        event_target reweight for that many event with maximal trunc_error.
-        (stop to write event when target is reached)
-        """
-        
-        if isinstance(wgt, str):
-            unwgt_name =wgt 
-            def get_wgt(event):
-                event.parse_reweight()
-                return event.reweight_data[unwgt_name]
-        else:
-            unwgt_name = wgt.func_name
-            get_wgt = wgt
-                    
+    def initialize_unweighting(self, get_wgt, trunc_error):
+        """ scan once the file to return 
+            - the list of the hightest weight (of size trunc_error*NB_EVENT
+            - the cross-section by type of process
+            - the total number of events in the file
+            """
+            
         # We need to loop over the event file to get some information about the 
         # new cross-section/ wgt of event.
+        self.seek(0)
         all_wgt = []
         cross = collections.defaultdict(int)
         nb_event = 0
@@ -228,34 +244,70 @@ class EventFile(object):
             nb_event +=1
             wgt = get_wgt(event)
             cross['all'] += wgt
+            cross['abs'] += abs(wgt)
             cross[event.ievent] += wgt
             all_wgt.append(abs(wgt))
             # avoid all_wgt to be too large
-            if nb_event % 5000 == 0:
+            if nb_event % 20000 == 0:
                 all_wgt.sort()
                 # drop the lowest weight
-                nb_keep = max(1, int(nb_event*trunc_error))
+                nb_keep = max(20, int(nb_event*trunc_error*15))
                 all_wgt = all_wgt[-nb_keep:]
         
         #final selection of the interesting weight to keep
         all_wgt.sort()
         # drop the lowest weight
-        nb_keep = max(1, int(nb_event*trunc_error))
-        all_wgt = all_wgt[-nb_keep:]        
+        nb_keep = max(20, int(nb_event*trunc_error*10))
+        all_wgt = all_wgt[-nb_keep:] 
+        self.seek(0)
+        return all_wgt, cross, nb_event
+            
+    
+    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, event_target=0, 
+                 log_level=logging.INFO):
+        """unweight the current file according to wgt information wgt.
+        which can either be a fct of the event or a tag in the rwgt list.
+        max_wgt allow to do partial unweighting. 
+        trunc_error allow for dynamical partial unweighting
+        event_target reweight for that many event with maximal trunc_error.
+        (stop to write event when target is reached)
+        """
+        if not get_wgt:
+            def weight(event):
+                return event.wgt
+            get_wgt  = weight
+        elif isinstance(get_wgt, str):
+            unwgt_name =get_wgt 
+            def get_wgt(event):
+                event.parse_reweight()
+                return event.reweight_data[unwgt_name]
+        else:
+            unwgt_name = get_wgt.func_name
+
         
+        # check which weight to write
+        if hasattr(self, "written_weight"):
+            written_weight = lambda x: math.copysign(self.written_weight,float(x))
+        else: 
+            written_weight = lambda x: x
+            
+        all_wgt, cross, nb_event = self.initialize_unweighting(get_wgt, trunc_error)
+
+        # function that need to be define on the flight
         def max_wgt_for_trunc(trunc):
             """find the weight with the maximal truncation."""
             
             xsum = 0
-            i=1
-            while (xsum - all_wgt[-i] * (i-1) <= cross['all'] * trunc):
+            i=1 
+            while (xsum - all_wgt[-i] * (i-1) <= cross['abs'] * trunc):
                 max_wgt = all_wgt[-i]
                 xsum += all_wgt[-i]
                 i +=1
                 if i == len(all_wgt):
                     break
-            print i, all_wgt[-i], xsum - all_wgt[-i] * (i-1), cross['all'] * trunc
+
             return max_wgt
+        # end of the function
                 
         # choose the max_weight
         if not max_wgt:
@@ -266,47 +318,63 @@ class EventFile(object):
 
         # need to modify the banner so load it to an object
         if self.banner:
-            banner = self.get_banner()
-            # 1. modify the cross-section
-            banner.modify_init_cross(cross)
-            strategy = banner.get_lha_strategy()
-            # 2. modify the lha strategy
-            if strategy >0:  
-                banner.set_lha_strategy(4)
+            try:
+                import madgraph
+            except:
+                import internal.banner as banner_module
             else:
-                banner.set_lha_strategy(-4)
-            # 3. add information about change in weight
-            banner["unweight"] = "unweighted by %s" % unwgt_name
+                import madgraph.various.banner as banner_module
+            if not isinstance(self.banner, banner_module.Banner):
+                banner = self.get_banner()
+                # 1. modify the cross-section
+                banner.modify_init_cross(cross)
+                strategy = banner.get_lha_strategy()
+                # 2. modify the lha strategy
+                if strategy >0:  
+                    banner.set_lha_strategy(4)
+                else:
+                    banner.set_lha_strategy(-4)
+                # 3. add information about change in weight
+                banner["unweight"] = "unweighted by %s" % unwgt_name
+            else:
+                banner = self.banner
+
         
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
+        nb_keep = 0
         for i in range(nb_try):
             self.seek(0)
-            outfile = EventFile(outputpath, "w")
-            # need to write banner information
-            # need to see what to do with rwgt information!
-            if self.banner:
-                banner.write(outfile)
-                        
             if event_target:
                 if i==0:
-                    max_wgt = max_wgt_for_trunc(trunc_error*i/nb_try)
+                    max_wgt = max_wgt_for_trunc(0)
                 else:
                     #guess the correct max_wgt based on last iteration
                     efficiency = nb_keep/nb_event
                     needed_efficiency = event_target/nb_event
                     last_max_wgt = max_wgt
                     needed_max_wgt = last_max_wgt * efficiency / needed_efficiency
+                    
                     min_max_wgt = max_wgt_for_trunc(trunc_error)
                     max_wgt = max(min_max_wgt, needed_max_wgt)
+                    max_wgt = min(max_wgt, all_wgt[-1])
                     if max_wgt == last_max_wgt:
-                        logger.warning("fail to reach target")
-                        break
-                    
-                logger.log(log_level, "Max_wgt use is %s", max_wgt)
-            
+                        if nb_keep <= event_target:
+                            logger.log(log_level+10,"fail to reach target %s", event_target)
+                            break   
+                        else:
+                            break
+            #create output file (here since we are sure that we have to rewrite it)
+            if outputpath:
+                outfile = EventFile(outputpath, "w")
+            # need to write banner information
+            # need to see what to do with rwgt information!
+            if self.banner and outputpath:
+                banner.write(outfile, close_tag=False)
+
             # scan the file
             nb_keep = 0
+            trunc_cross = 0
             for event in self:
                 r = random.random()
                 wgt = get_wgt(event)
@@ -314,31 +382,104 @@ class EventFile(object):
                     continue
                 elif wgt > 0:
                     nb_keep += 1
-                    event.wgt = max(event.wgt, max_wgt)
-                    outfile.write(str(event))
+                    event.wgt = written_weight(max(wgt, max_wgt))
+                    
+                    if abs(wgt) > max_wgt:
+                        trunc_cross += abs(wgt) - max_wgt 
+                    if event_target ==0 or nb_keep <= event_target:
+                        if outputpath:                         
+                            outfile.write(str(event))
+
                 elif wgt < 0:
                     nb_keep += 1
-                    event.wgt = -1 * max(event.wgt, max_wgt)
-                    outfile.write(event)
+                    event.wgt = -1 * max(abs(wgt), max_wgt)
+                    if abs(wgt) > max_wgt:
+                        trunc_cross += abs(wgt) - max_wgt
+                    if event_target ==0 or nb_keep <= event_target: 
+                        outfile.write(str(event))
             
-            if nb_keep >= event_target:
+            if event_target and nb_keep > event_target:
                 if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
                     outfile.close()
-                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
+#                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
+                    continue
+                elif not outputpath:
+                    #no outputpath define -> wants only the nb of unweighted events
                     continue
                 else:
                     outfile.write("</LesHouchesEvents>\n")
                     outfile.close()
-                    logger.log(log_level, "write %i event in %s (efficiency %s %%)" % 
-                           (nb_keep, outputpath, nb_keep/nb_event/100))
                 break
-            else:
+            elif event_target == 0:
+                if outputpath:
+                    outfile.write("</LesHouchesEvents>\n")
+                    outfile.close()
+                break                    
+            elif outputpath:
                 outfile.close()
-                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
+#                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
+            
         else:
             # pass here if event_target > 0 and all the attempt fail.
-            logger.warning("fail to reach target event")
+            logger.log(log_level+10,"fail to reach target event %s (iteration=%s)", event_target,i)
         
+#        logger.log(log_level, "Final maximum weight used for final "+\
+#                    "unweighting is %s yielding %s events." % (max_wgt,nb_keep))
+            
+        if event_target:
+            nb_events_unweighted = nb_keep
+            nb_keep = min( event_target, nb_keep)
+        else:
+            nb_events_unweighted = nb_keep
+
+        logger.log(log_level, "write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
+          nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
+     
+        #correct the weight in the file if not the correct number of event
+        if nb_keep != event_target and hasattr(self, "written_weight"):
+            written_weight = lambda x: math.copysign(self.written_weight*event_target/nb_keep, float(x))
+            startfile = EventFile(outputpath)
+            tmpname = pjoin(os.path.dirname(outputpath), "wgtcorrected_"+ os.path.basename(outputpath))
+            outfile = EventFile(tmpname, "w")
+            outfile.write(startfile.banner)
+            for event in startfile:
+                event.wgt = written_weight(event.wgt)
+                outfile.write(str(event))
+            outfile.write("</LesHouchesEvents>\n")
+            startfile.close()
+            outfile.close()
+            shutil.move(tmpname, outputpath)
+            
+     
+     
+        return nb_keep
+    
+    def apply_fct_on_event(self, *fcts, **opts):
+        """ apply one or more fct on all event. """
+        
+        opt= {"print_step": 2000}
+        opt.update(opts)
+        
+        nb_fct = len(fcts)
+        out = []
+        for i in range(nb_fct):
+            out.append([])
+        self.seek(0)
+        nb_event = 0
+        for event in self:
+            nb_event += 1
+            if opt["print_step"] and nb_event % opt["print_step"] == 0:
+                if hasattr(self,"len"):
+                    logger.info("currently at %s/%s event" % (nb_event, self.len))
+                else:
+                    logger.info("currently at %s event" % nb_event)
+            for i in range(nb_fct):
+                out[i].append(fcts[i](event))
+        if nb_fct == 1:
+            return out[0]
+        else:
+            return out
+
     
 class EventFileGzip(EventFile, gzip.GzipFile):
     """A way to read/write a gzipped lhef event"""
@@ -346,10 +487,244 @@ class EventFileGzip(EventFile, gzip.GzipFile):
 class EventFileNoGzip(EventFile, file):
     """A way to read a standard event file"""
     
+class MultiEventFile(EventFile):
+    """a class to read simultaneously multiple file and read them in mixing them.
+       Unweighting can be done at the same time. 
+       The number of events in each file need to be provide in advance 
+       (if not provide the file is first read to find that number"""
+    
+    def __new__(cls, start_list=[]):
+        return object.__new__(MultiEventFile)
+    
+    def __init__(self, start_list=[]):
+        """if trunc_error is define here then this allow
+        to only read all the files twice and not three times."""
+        self.files = []
+        self.banner = ''
+        self.initial_nb_events = []
+        self.total_event_in_files = 0
+        self.curr_nb_events = []
+        self.allcross = []
+        self.error = []
+        self.across = []
+        self.scales = []
+        if start_list:
+            for p in start_list:
+                self.add(p)
+        self.configure = False
+        
+    def add(self, path, cross, error, across):
+        """ add a file to the pool, across allow to reweight the sum of weight 
+        in the file to the given cross-section 
+        """
+        
+        if across == 0:
+            # No event linked to this channel -> so no need to include it
+            return 
+        
+        obj = EventFile(path)
+        if len(self.files) == 0 and not self.banner:
+            self.banner = obj.banner
+        self.curr_nb_events.append(0)
+        self.initial_nb_events.append(0)
+        self.allcross.append(cross)
+        self.across.append(across)
+        self.error.append(error)
+        self.scales.append(1)
+        self.files.append(obj)
+        self.configure = False
+        
+    def __iter__(self):
+        return self
+    
+    def next(self):
+
+        if not self.configure:
+            self.configure()
+
+        remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
+        if remaining_event == 0:
+            raise StopIteration
+        # determine which file need to be read
+        nb_event = random.randint(1, remaining_event)
+        sum_nb=0
+        for i, obj in enumerate(self.files):
+            sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
+            if nb_event <= sum_nb:
+                self.curr_nb_events[i] += 1
+                event = obj.next()
+                event.sample_scale = self.scales[i] # for file reweighting
+                return event
+        else:
+            raise Exception
+    
+
+    def define_init_banner(self, wgt):
+        """define the part of the init_banner"""
+        
+        if not self.banner:
+            return
+        
+        # compute the cross-section of each splitted channel
+        grouped_cross = {}
+        grouped_error = {}
+        for i,ff in enumerate(self.files):
+            filename = ff.name
+            Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')][-1]
+            group = Pdir.split("_")[0][1:]
+            if group in grouped_cross:
+                grouped_cross[group] += self.allcross[i]
+                grouped_error[group] += self.error[i]**2 
+            else:
+                grouped_cross[group] = self.allcross[i]
+                grouped_error[group] = self.error[i]**2                
+                
+        nb_group = len(grouped_cross)
+        
+        # compute the information for the first line 
+        try:
+            run_card = self.banner.run_card
+        except:
+            run_card = self.banner.charge_card("run_card")
+        
+        init_information = run_card.get_banner_init_information()
+        init_information["nprup"] = nb_group
+        
+        if run_card["lhe_version"] < 3:
+            init_information["generator_info"] = ""
+        else:
+            init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='2.2.1'>please cite 1405.0301 </generator>\n"
+        
+        # cross_information:
+        cross_info = "%(cross)e %(error)e %(wgt)e %(id)i"
+        init_information["cross_info"] = []
+        for id in grouped_cross:
+            conv = {"id": int(id), "cross": grouped_cross[id], "error": math.sqrt(grouped_error[id]),
+                    "wgt": wgt}
+            init_information["cross_info"].append( cross_info % conv)
+        init_information["cross_info"] = '\n'.join(init_information["cross_info"])
+            
+        
+        
+        template_init =\
+        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i -3 %(nprup)i
+%(cross_info)s
+%(generator_info)s
+"""
+        
+        self.banner["init"] = template_init % init_information
+        
+            
+    
+    def initialize_unweighting(self, getwgt, trunc_error):
+        """ scan once the file to return 
+            - the list of the hightest weight (of size trunc_error*NB_EVENT
+            - the cross-section by type of process
+            - the total number of events in the files
+            In top of that it initialise the information for the next routine
+            to determine how to choose which file to read 
+            """
+        self.seek(0)
+        all_wgt = []
+        total_event = 0
+        sum_cross = collections.defaultdict(int)
+        for i,f in enumerate(self.files):
+            nb_event = 0 
+            # We need to loop over the event file to get some information about the 
+            # new cross-section/ wgt of event.
+            cross = collections.defaultdict(int)
+            new_wgt =[] 
+            for event in f:
+                nb_event += 1
+                total_event += 1
+                event.sample_scale = 1
+                wgt = getwgt(event)
+                cross['all'] += wgt
+                cross['abs'] += abs(wgt)
+                cross[event.ievent] += wgt
+                new_wgt.append(abs(wgt))
+                # avoid all_wgt to be too large
+                if nb_event % 20000 == 0:
+                    new_wgt.sort()
+                    # drop the lowest weight
+                    nb_keep = max(20, int(nb_event*trunc_error*15))
+                    new_wgt = new_wgt[-nb_keep:]
+            if nb_event == 0:
+                raise Exception
+            # store the information
+            self.initial_nb_events[i] = nb_event
+            self.scales[i] = self.across[i]/cross['abs'] if self.across[i] else 1
+            #misc.sprint("sum of wgt in event %s is %s. Should be %s => scale %s (nb_event: %s)"
+            #            % (i, cross['all'], self.allcross[i], self.scales[i], nb_event))
+            for key in cross:
+                sum_cross[key] += cross[key]* self.scales[i]
+            all_wgt +=[self.scales[i] * w for w in new_wgt]
+            all_wgt.sort()
+            nb_keep = max(20, int(total_event*trunc_error*10))
+            all_wgt = all_wgt[-nb_keep:] 
+            
+        self.total_event_in_files = total_event
+        #final selection of the interesting weight to keep
+        all_wgt.sort()
+        # drop the lowest weight
+        nb_keep = max(20, int(total_event*trunc_error*10))
+        all_wgt = all_wgt[-nb_keep:]  
+        self.seek(0)
+        self.configure = True
+        return all_wgt, sum_cross, total_event
+    
+    def configure(self):
+        
+        self.configure = True
+        for i,f in enumerate(self.files):
+            self.initial_nb_events = len(f)
+    
+    
+    def __len__(self):
+        
+        return len(self.files)
+    
+    def seek(self, pos):
+        """ """
+        
+        if pos !=0:
+            raise Exception
+        for i in range(len(self)):
+            self.curr_nb_events[i] = 0         
+        for f in self.files:
+            f.seek(pos)
+            
+    def unweight(self, outputpath, get_wgt, **opts):
+        """unweight the current file according to wgt information wgt.
+        which can either be a fct of the event or a tag in the rwgt list.
+        max_wgt allow to do partial unweighting. 
+        trunc_error allow for dynamical partial unweighting
+        event_target reweight for that many event with maximal trunc_error.
+        (stop to write event when target is reached)
+        """
+        
+        if isinstance(get_wgt, str):
+            unwgt_name =get_wgt 
+            def get_wgt_multi(event):
+                event.parse_reweight()
+                return event.reweight_data[unwgt_name] * event.sample_scale
+        else:
+            unwgt_name = get_wgt.func_name
+            get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
+        #define the weighting such that we have built-in the scaling
+        
+        if opts['event_target']:
+            new_wgt = sum(self.across)/opts['event_target']
+            self.define_init_banner(new_wgt)
+            self.written_weight = new_wgt
+          
+        return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
            
 class Event(list):
     """Class storing a single event information (list of particles + global information)"""
+
+    warning_order = True # raise a warning if the order of the particle are not in accordance of child/mother
 
     def __init__(self, text=None):
         """The initialization of an empty Event (or one associate to a text file)"""
@@ -366,14 +741,14 @@ class Event(list):
         # Weight information
         self.tag = ''
         self.comment = ''
-        self.reweight_data ={}
-        
+        self.reweight_data = {}
+        self.matched_scale_data = None
         if text:
             self.parse(text)
+
             
     def parse(self, text):
         """Take the input file and create the structured information"""
-        
         text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
         for line in text.split('\n'):
@@ -395,27 +770,72 @@ class Event(list):
                 self.append(Particle(line, event=self))
             else:
                 self.tag += '%s\n' % line
-                
+
+        # assign the mother:
+        for i,particle in enumerate(self):
+            if self.warning_order:
+                if i < particle.mother1 or i < particle.mother2:
+                    logger.warning("Order of particle in the event did not agree with parent/child order. This might be problematic for some code.")
+                    Event.warning_order = False
+                                   
+            if particle.mother1:
+                particle.mother1 = self[int(particle.mother1) -1]
+            if particle.mother2:
+                particle.mother2 = self[int(particle.mother2) -1]
+
+   
     def parse_reweight(self):
         """Parse the re-weight information in order to return a dictionary
            {key: value}. If no group is define group should be '' """
-        
         if self.reweight_data:
-            return
-        
+            return self.reweight_data
         self.reweight_data = {}
         self.reweight_order = []
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
         if start != -1 != stop :
-            pattern = re.compile(r'''<\s*wgt id=\'(?P<id>[^\']+)\'\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
+            pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
             data = pattern.findall(self.tag)
             try:
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
                                            if not self.reweight_order.append(pid)])
-                      # the if is to create the order file on the flight
+                                      # the if is to create the order file on the flight
             except ValueError, error:
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]
+        return self.reweight_data
+    
+    def parse_matching_scale(self):
+        """Parse the line containing the starting scale for the shower"""
+        
+        if self.matched_scale_data is not None:
+            return self.matched_scale_data
+            
+        self.matched_scale_data = []
+        
+
+        pattern  = re.compile("<scales\s|</scales>")
+        data = re.split(pattern,self.tag)
+        if len(data) == 1:
+            return
+        else:
+            tmp = {}
+            start,content, end = data
+            self.tag = "%s%s" % (start, end)
+            pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
+            for id,value in pattern.findall(content):
+                tmp[int(id)] = float(value)
+                
+            for i in range(1, len(tmp)+1):
+                self.matched_scale_data.append(tmp[i])
+                
+        return self.matched_scale_data
+            
+            
+        misc.sprint(content)
+            
+        # content should be 
+        #<scales pt_clust_1="13000.00000" pt_clust_2="48.99743"></scales>
+        
 
 
     def add_decay_to_particle(self, position, decay_event):
@@ -436,7 +856,9 @@ class Event(list):
             "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
         
         self.nexternal += decay_event.nexternal -1
-        
+        old_scales = list(self.parse_matching_scale())
+        if old_scales:
+            self.matched_scale_data.pop(position-2)
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
         for particle in decay_event[1:]:
@@ -444,6 +866,8 @@ class Event(list):
             new_particle = Particle(particle, self)
             new_particle.event_id = len(self)
             self.append(new_particle)
+            if old_scales:
+                self.matched_scale_data.append(old_scales[position-2])
             # compute and assign the new four_momenta
             new_momentum = this_4mom.boost(FourMomentum(new_particle))
             new_particle.set_momentum(new_momentum)
@@ -459,8 +883,7 @@ class Event(list):
                 elif tag == "mother2" and isinstance(particle.mother1, Particle):
                     new_particle.mother2 = this_particle
                 else:
-                    print particle
-            
+                    raise Exception, "Something weird happens. Please report it for investigation"
         # Need to correct the color information of the particle
         # first find the first available color index
         max_color=501
@@ -487,6 +910,8 @@ class Event(list):
                 else:
                     particle.color2 = color_mapping[particle.color2]                
 
+
+
     def remove_decay(self, pdg_code=0, event_id=None):
         
         to_remove = []
@@ -502,7 +927,7 @@ class Event(list):
         # copy first line information + ...
         for tag in ['nexternal', 'ievent', 'wgt', 'aqcd', 'scale', 'aqed','tag','comment']:
             setattr(new_event, tag, getattr(self, tag))
-            
+        
         for particle in self:
             if isinstance(particle.mother1, Particle) and particle.mother1 in to_remove:
                 to_remove.append(particle)
@@ -523,7 +948,6 @@ class Event(list):
             particle.event_id = pos
             if particle in to_remove:
                 particle.status = 1
-                new_event.nexternal += 1
         return new_event
 
     def get_decay(self, pdg_code=0, event_id=None):
@@ -551,6 +975,7 @@ class Event(list):
         new_decay_part.status =  -1
         old2new[new_decay_part.event_id] = len(old2new) 
         new_event.append(new_decay_part)
+        
         
         # add the other particle   
         for particle in self:
@@ -798,15 +1223,23 @@ class Event(list):
             if set(self.reweight_data.keys()) != set(self.reweight_order):
                 self.reweight_order += [k for k in self.reweight_data.keys() \
                                                 if k not in self.reweight_order]
-                
+
             reweight_str = '<rwgt>\n%s\n</rwgt>' % '\n'.join(
                         '<wgt id=\'%s\'> %+13.7e </wgt>' % (i, float(self.reweight_data[i]))
                         for i in self.reweight_order)
         else:
             reweight_str = '' 
+            
+        tag_str = self.tag
+        if self.matched_scale_data:
+            tag_str = "<scales %s></scales>%s" % (
+                                    ' '.join(['pt_clust_%i=\"%s\"' % (i,v)
+                                   for i,v in enumerate(self.matched_scale_data)]),
+                                                  self.tag)
+            
         out = out % {'scale': scale_str, 
                       'particles': '\n'.join([str(p) for p in self]),
-                      'tag': self.tag,
+                      'tag': tag_str,
                       'comments': self.comment,
                       'reweight': reweight_str}
         return re.sub('[\n]+', '\n', out)
@@ -880,25 +1313,29 @@ class FourMomentum(object):
         self.px = px
         self.py = py
         self.pz =pz
-        
+
     @property
     def mass(self):
         """return the mass"""    
         return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
 
+    def mass_sqr(self):
+        """return the mass square"""    
+        return self.E**2 - self.px**2 - self.py**2 - self.pz**2
+
     @property
     def pt(self):
         return math.sqrt(max(0, self.pt2()))
     
-
-    def mass_sqr(self):
-        """return the mass square"""    
-        return self.E**2 - self.px**2 - self.py**2 - self.pz**2
+    @property
+    def pseudorapidity(self):
+        norm = math.sqrt(self.px**2 + self.py**2+self.pz**2)
+        return  0.5* math.log((norm - self.pz) / (norm + self.pz))
     
     def pt2(self):
         """ return the pt square """
         
-        return  self.px**2 + self.py**2 + self.pz**2
+        return  self.px**2 + self.py**2
     
     def __add__(self, obj):
         
@@ -931,10 +1368,10 @@ class FourMomentum(object):
         function copied from HELAS routine."""
 
         
-        pt = self.pt2()
+        pt = self.px**2 + self.py**2 + self.pz**2
         if pt:
             s3product = self.px * mom.px + self.py * mom.py + self.pz * mom.pz
-            mass = self.mass()
+            mass = self.mass
             lf = (mom.E + (self.E - mass) * s3product / pt ) / mass
             return FourMomentum(E=(self.E*mom.E+s3product)/mass,
                            px=mom.px + self.px * lf,
@@ -948,7 +1385,7 @@ if '__main__' == __name__:
     
     # Example 1: adding some missing information to the event (here distance travelled)
     if False: 
-        lhe = EventFile('unweighted_events.lhe')
+        lhe = EventFile('unweighted_events.lhe.gz')
         output = open('output_events.lhe', 'w')
         #write the banner to the output file
         output.write(lhe.banner)
@@ -963,59 +1400,11 @@ if '__main__' == __name__:
             output.write(str(event))
         output.write('</LesHouchesEvent>\n')
     
-    # Example 2: Adding the decay of one particle (Bridge Method).
-    if True:
-        orig_lhe = EventFile('../../production.lhe')
-        decay_lhe = EventFile('../../t_decay.lhe')
-        output = open('../../production_t_decay.lhe', 'w')
-        output.write(orig_lhe.banner) #need to be modified by hand!
-        pid_to_decay  = 6 #which particle to decay
-        bypassed_decay = {} # not yet use decay due to wrong helicity
-        
-        counter = 0
-        start = time.time()
-        for event in orig_lhe:
-            if counter % 1000 == 1:
-                print "decaying event number %s [%s s]" % (counter, time.time()-start)
-            counter +=1
-            for particle in event:
-                if particle.pid == pid_to_decay:
-                    #ok we have to decay this particle!
-                    helicity = particle.helicity
-                    # use the already parsed_event if any
-                    done = False
-                    if helicity in bypassed_decay and bypassed_decay[helicity]:
-                        # use one of the already parsed (but not used) decay event
-                        for decay in bypassed_decay[helicity]:
-                            if decay[0].helicity == helicity:
-                                particle.add_decay(decay)
-                                bypassed_decay[helicity].remove(decay)
-                                done = True
-                                break
-                    # read the decay event up to find one valid decay
-                    while not done:
-                        try:
-                            decay = decay_lhe.next()
-                        except StopIteration:
-                            raise Exception, "not enoug event in the decay file"
-                        
-                        if helicity == decay[0].helicity or helicity==9:
-                            particle.add_decay(decay)
-                            done=True
-                        elif decay[0].helicity in bypassed_decay:
-                            if len(bypassed_decay[decay[0].helicity]) < 100:
-                                bypassed_decay[decay[0].helicity].append(decay)
-                            #limit to 100 to avoid huge increase of memory if only 
-                            #one helicity is present in the production sample.
-                        else:
-                            bypassed_decay[decay[0].helicity] = [decay]
 
-            output.write(str(event))
-        output.write('</LesHouchesEvent>\n')
         
     # Example 3: Plotting some variable
-    if False:
-        lhe = EventFile('unweighted_events.lhe')
+    if True:
+        lhe = EventFile('unweighted_events.lhe.gz')
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
         nbins = 100
@@ -1023,19 +1412,20 @@ if '__main__' == __name__:
         nb_pass = 0
         data = []
         for event in lhe:
-            if nb_pass > 10000:
-                break
-            E=0
+            etaabs = 0 
+            etafinal = 0
             for particle in event:
-                if particle.status<0:
-                    E+=particle.E
+                if particle.status==1:
+                    p = FourMomentum(particle)
+                    eta = p.pseudorapidity
+                    if abs(eta) > etaabs:
+                        etafinal = eta
+                        etaabs = abs(eta)
+            if etaabs < 4:
+                data.append(etafinal)
+                nb_pass +=1     
 
-            event.parse_reweight()
-
-            if 2 < event.reweight_data["mg_reweight_1"]/event.wgt:            
-                data.append(event.reweight_data["mg_reweight_1"]/event.wgt)
-                nb_pass +=1
-            
+                        
         print nb_pass
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
         gs1.update(wspace=0, hspace=0) # set the spacing between axes. 
@@ -1047,6 +1437,9 @@ if '__main__' == __name__:
         ax_c.yaxis.set_label_coords(1.01, 0.25)
         ax_c.set_yticks(ax.get_yticks())
         ax_c.set_yticklabels([])
+        ax.set_xlim([-4,4])
+        print "bin value:", n
+        print "start/end point of bins", bins
         plt.axis('on')
         plt.xlabel('weight ratio')
         plt.show()

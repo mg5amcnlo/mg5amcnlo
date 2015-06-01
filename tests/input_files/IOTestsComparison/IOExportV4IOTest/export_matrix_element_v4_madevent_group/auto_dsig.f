@@ -12,7 +12,9 @@ C     Input:
 C     pp    4 momentum of external particles
 C     wgt   weight from Monte Carlo
 C     imode 0 run, 1 init, 2 reweight, 
-C     3 finalize, 4 only PDFs
+C     3 finalize, 4 only PDFs,
+C     5 squared amplitude only (never
+C     generate events)
 C     Output:
 C     Amplitude squared and summed
 C     ****************************************************
@@ -95,8 +97,8 @@ C       Set up process information from file symfact
  20     WRITE(*,*)'Error opening symfact.dat. No symmetry factor used.'
         RETURN
       ENDIF
-C     Only run if IMODE is 0
-      IF(IMODE.NE.0.AND.IMODE.NE.4) RETURN
+C     Continue only if IMODE is 0, 4 or 5
+      IF(IMODE.NE.0.AND.IMODE.NE.4.AND.IMODE.NE.5) RETURN
 
 
       IF (ABS(LPP(IB(1))).GE.1) THEN
@@ -117,6 +119,14 @@ C     Only run if IMODE is 0
         RETURN
       ENDIF
       CALL SMATRIX1(PP,DSIGUU)
+      IF (IMODE.EQ.5) THEN
+        IF (DSIGUU.LT.1D199) THEN
+          DSIG1 = DSIGUU*CONV
+        ELSE
+          DSIG1 = 0.0D0
+        ENDIF
+        RETURN
+      ENDIF
 C     Select a flavor combination (need to do here for right sign)
       CALL RANMAR(R)
       IPSEL=0
@@ -133,10 +143,15 @@ C       Set sign of dsig based on sign of PDF and matrix element
         DSIGUU=0D0
         DSIG1=0D0
       ENDIF
+C     Generate events only if IMODE is 0.
       IF(IMODE.EQ.0.AND.DABS(DSIG1).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
         CALL UNWGT(PP,DSIG1*WGT,1)
       ENDIF
 
       END
+C     
+C     Functionality to handling grid
+C     
+
 

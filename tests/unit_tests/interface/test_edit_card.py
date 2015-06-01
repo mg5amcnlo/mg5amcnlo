@@ -21,6 +21,7 @@ import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.madevent_interface as mecmd
 import madgraph.interface.common_run_interface as runcmd
 import madgraph.iolibs.files as files
+import madgraph.various.misc as misc
 import os
 import readline
 
@@ -65,12 +66,15 @@ class TestEditCardCmd(unittest.TestCase):
         card = 'MadWeight_card'
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
+        card = 'shower_card'
+        files.cp(pjoin(template_path, 'NLO/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
+        files.cp(pjoin(template_path, 'NLO/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
         
         #MadLoop Card
         files.cp(pjoin(template_path, 'loop_material/StandAlone/Cards/MadLoopParams.dat'), '/tmp/edit_card/Cards')
         
         fakemother = FakeInterface('/tmp/edit_card/')
-        self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat'],
+        self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat', 'shower_card.dat'],
                                         mode='auto', mother_interface=fakemother)
 
     def get_completion(self, text):
@@ -286,6 +290,7 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default' in first_level)
         self.assertTrue('Auto' in first_level)
+        self.assertTrue('Auto@NLO' in first_level)
         self.assertTrue('iregimode' not in first_level)
         
         first_level = self.get_completion('set param_card width 6')
@@ -306,6 +311,7 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default' in first_level)
         self.assertTrue('Auto' in first_level)
+        self.assertTrue('Auto@NLO' in first_level)
         self.assertTrue('iregimode' not in first_level)       
         
         # Run_card completion -------------------------------------------------
@@ -325,6 +331,7 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertTrue('as' not in first_level)
         self.assertTrue('mw_parameter'  not in first_level)        
         self.assertTrue('default'  in first_level)
+        self.assertTrue('Auto@NLO' not in first_level)
         self.assertTrue('iregimode' not in first_level) 
           
         first_level = self.get_completion('set run_card htjmax')
@@ -393,8 +400,11 @@ class TestEditCardCmd(unittest.TestCase):
         self.cmd.do_set('wt default')        
         self.assertEqual(param['decay'].get((6,)).value, wt)
         self.cmd.do_set('param_card width 6 Auto')        
-        self.assertEqual(param['decay'].get((6,)).value, 'Auto')                
-        
+        self.assertEqual(param['decay'].get((6,)).value, 'Auto') 
+        self.cmd.do_set('param_card width 6 Auto@NLO')        
+        self.assertEqual(param['decay'].get((6,)).value, 'Auto@NLO')          
+        self.cmd.do_set('param_card width 6 auto@nLo')        
+        self.assertEqual(param['decay'].get((6,)).value, 'Auto@NLO')  
         
     def test_modif_run_card(self):
         """ """
@@ -456,10 +466,29 @@ class TestEditCardCmd(unittest.TestCase):
         
         # check that we can add block
         self.cmd.do_set('MadWeight_card mw_select E True')
-        self.assertEqual(mw['mw_select']['e'], 'true')
+        self.assertEqual(mw['mw_select']['e'].lower(), 'true')
         # check that we can add more than one value + add item
         self.cmd.do_set('mw_select F 1 2 3')
         self.assertEqual(mw['mw_select']['f'], ['1', '2','3'])
 
         
+    def test_modif_shower_card(self):
+        """ """
+        
+        shower = self.cmd.shower_card
+        nevents = shower['nevents']
+        self.cmd.do_set('shower_card nevents 199')
+        self.assertEqual(shower['nevents'], 199)
+        self.cmd.do_set('shower_card nevents default')        
+        self.assertEqual(shower['nevents'], -1)
+        self.cmd.do_set('mup_stable true')
+        self.assertEqual(shower['mup_stable'], True)
+        self.cmd.do_set('mup_stable F')
+        self.assertEqual(shower['mup_stable'], False)
+        self.cmd.do_set('mup_stable .true.')
+        self.assertEqual(shower['mup_stable'], True)
+        self.cmd.do_set('analyse a.o b.o c.o d.o')
+        self.assertEqual(shower['analyse'], 'a.o b.o c.o d.o')
+        self.cmd.do_set('shower_card analyse a.o b.o c.o f.o')
+        self.assertEqual(shower['analyse'], 'a.o b.o c.o f.o')
         

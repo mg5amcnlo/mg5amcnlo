@@ -161,7 +161,8 @@ class Block(list):
         """ """
         if len(self) != len(other):
             return False
-        return not any(abs(param.value-other.param_dict[key].value)> prec
+        
+        return not any(abs(param.value-other.param_dict[key].value)> prec * abs(param.value)
                         for key, param in self.param_dict.items())
         
     def __ne__(self, other, prec=1e-4):
@@ -268,9 +269,14 @@ class ParamCard(dict):
     def __init__(self, input_path=None):
         self.order = []
         
-        self.input_path = input_path
-        if input_path:
-            self.read(input_path)
+        if isinstance(input_path, ParamCard):
+            self.order = list(input_path.order)
+            self.update(input_path)
+            self.input_path = input_path.input_path 
+        else:
+            self.input_path = input_path
+            if input_path:
+                self.read(input_path)
         
     def read(self, input_path):
         """ read a card and full this object with the content of the card """
@@ -1025,15 +1031,17 @@ def convert_to_slha1(path, outputpath=None ):
         
 
 def convert_to_mg5card(path, outputpath=None, writting=True):
-    """ """
+    """
+    """
                                                       
     if not outputpath:
         outputpath = path
     card = ParamCard(path)
     if 'usqmix' in card:
         #already mg5(slha2) format
-        card.write(outputpath)
-        return
+        if outputpath != path and writting:
+            card.write(outputpath)
+        return card
 
         
     # SMINPUTS

@@ -90,12 +90,14 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
             fortran_model = self.fortran_models['fortran_model']
         
         needed = False
+
         if not isinstance(exporters,list):
             if self.need(testFolder,testName):
-                needed = True
+                needed = True    
         elif any(self.need('%s_%s'%(testFolder,exporter) ,testName) for \
                                                          exporter in exporters):
             needed = True
+            
         if not needed:
             return
         
@@ -118,7 +120,6 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
         else:
             test_list = [('%s_%s'%(testFolder,exp),exp) for exp in exporters] 
 
-        
         for (folderName, exporter) in test_list:
             if self.need(folderName,testName):
                 self.addIOTest(folderName,testName, IOTests.IOTest(\
@@ -294,8 +295,6 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
             # information in the Helas loop diagrams.
             matrix_element.compute_all_analytic_information(
                                       self.exporter.get_aloha_model(self.model))
-            # and TIR specific entries
-            self.exporter.set_TIR_replace_dict_entries()
             
             # Finally the entries specific to the optimized output
             self.exporter.set_optimized_output_specific_replace_dict_entries(\

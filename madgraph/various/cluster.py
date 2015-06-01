@@ -18,6 +18,7 @@ import time
 import re
 import glob
 import inspect
+import sys
 
 logger = logging.getLogger('madgraph.cluster') 
 
@@ -73,6 +74,14 @@ def store_input(arg=''):
         return deco_f_store
     return deco_store
 
+def need_transfer(options):
+    """ This function checks whether compression of input files are necessary
+    given the running options given. """
+    
+    if options['run_mode'] != 1 and options['cluster_temp_path'] is None:
+        return False
+    else:
+        return True
 
 class Cluster(object):
     """Basic Class for all cluster type submission"""
@@ -155,13 +164,18 @@ class Cluster(object):
         echo '%(arguments)s' > arguments
         chmod +x ./%(script)s
         %(program)s ./%(script)s %(arguments)s
+        exit=$?
         output_files=( %(output_files)s )
         for i in ${output_files[@]}
         do
             cp -r $MYTMP/$i $MYPWD
         done
-        rm -rf $MYTMP
+#        if [ "$exit" -eq "0" ] 
+#        then
+            rm -rf $MYTMP
+#        fi
         """
+        
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
                 'cwd': cwd, 'job_id': self.job_id,
                 'input_files': ' '.join(input_files + [prog]),
@@ -488,7 +502,6 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
         logger.warning("""This cluster didn't support job removal, 
     the jobs are still running on the cluster.""")
 
-
 class Packet(object):
     """ an object for handling packet of job, it is designed to be thread safe
     """
@@ -517,8 +530,7 @@ class MultiCore(Cluster):
     """class for dealing with the submission in multiple node"""
 
     job_id = "$"
-    wait_time = 300
-    
+
     def __init__(self, *args, **opt):
         """Init the cluster """
         
@@ -549,29 +561,26 @@ class MultiCore(Cluster):
         self.fail_msg = None
 
         # starting the worker node
-        for i in range(self.nb_core):
-            self.start_demon(i)
+        for _ in range(self.nb_core):
+            self.start_demon()
 
         
-    def start_demon(self,i):
+    def start_demon(self):
         import threading
-        t = threading.Thread(target=self.worker, args=(i,))
+        t = threading.Thread(target=self.worker)
         t.daemon = True
         t.start()
         self.demons.append(t)
 
 
-    def worker(self, thread_id):
+    def worker(self):
         import Queue
         import thread
-        import threading
-        thread_space = threading.local()
         while not self.stoprequest.isSet():
             try:
                 args = self.queue.get()
                 tag, exe, arg, opt = args
-                if 1:
-                #try:
+                try:
                     # check for executable case
                     if isinstance(exe,str):
                         if os.path.exists(exe) and not exe.startswith('/'):
@@ -597,21 +606,19 @@ class MultiCore(Cluster):
                         self.pids.put(pid)
                         # the function should return 0 if everything is fine
                         # the error message otherwise
-                        local_opt = dict(opt)
-                        local_opt['thread_id'] = thread_id 
-                        local_opt['thread_space'] = thread_space
-                        thread_space.thread_id = thread_id
-                        returncode = exe(*arg, **local_opt)
+                        returncode = exe(*arg, **opt)
                         if returncode != 0:
-                            logger.warning("fct %s does not return 0", exe)
+                            logger.warning("fct %s does not return 0. Starts to stop the code in a clean way.", exe)
                             self.stoprequest.set()
-                            self.remove("fct %s does not return 0" % exe)
-#                 except Exception,error:
-#                     logger.warning(str(error))
-#                     self.stoprequest.set()
-#                     self.remove(error)
-#                     if __debug__:
-#                         raise
+                            self.remove("fct %s does not return 0:\n %s" % (exe, returncode))
+                except Exception,error:
+                    self.fail_msg = sys.exc_info()
+                    logger.warning(str(error))
+                    self.stoprequest.set()
+                    self.remove(error)
+                    
+                    if __debug__:
+                        raise self.fail_msg[0], self.fail_msg[1],self.fail_msg[2]
 
                 self.queue.task_done()
                 self.done.put(tag)
@@ -622,9 +629,8 @@ class MultiCore(Cluster):
                 except thread.error:
                     continue
             except Queue.Empty:
-                self.demons[thread_id].local = thread_space
                 continue
-         
+            
             
             
     
@@ -662,7 +668,7 @@ class MultiCore(Cluster):
         
         # ensure the worker to stop
         self.stoprequest.set()
-        if error:
+        if error and not self.fail_msg:
             self.fail_msg = error
             
         # cleaning the queue done_pid_queue and move them to done_pid        
@@ -686,95 +692,110 @@ class MultiCore(Cluster):
     def wait(self, me_dir, update_status, update_first=None):
         """Waiting that all the jobs are done. This function also control that
         the submission by packet are handle correctly (i.e. submit the function)"""
+
         import Queue
         import threading
 
-        last_status = (0, 0, 0)
-        sleep_time = 1
-        use_lock = True
-        first = True
-        while True:
-            force_one_more_loop = False # some security
-                        
-            # Loop over the job tagged as done to check if some packet of jobs
-            # are finished in case, put the associate function in the queue
-            while self.done.qsize():
-                try:
-                    tag = self.done.get(True, 1)
-                except Queue.Empty:
-                    pass
-                else:
-                    if self.id_to_packet and tuple(tag) in self.id_to_packet:
-                        packet = self.id_to_packet[tuple(tag)]
-                        remaining = packet.remove_one()
-                        if remaining == 0:
-                            # fully ensure that the packet is finished (thread safe)
-                            packet.queue.join()
-                            self.submit(packet.fct, packet.args)
-                            force_one_more_loop = True
-                    self.nb_done += 1
-                    self.done.task_done()
-
-            # Get from the various queue the Idle/Done/Running information 
-            # Those variable should be thread safe but approximate.
-            Idle = self.queue.qsize()
-            Done = self.nb_done + self.done.qsize()
-            Running = max(0, self.submitted.qsize() - Idle - Done) 
-                       
-            if Idle + Running <= 0 and not force_one_more_loop:
-                update_status(Idle, Running, Done)
-                # Going the quit since everything is done
-                # Fully Ensure that everything is indeed done.
-                self.queue.join()
-                break
-            
-            if (Idle, Running, Done) != last_status:
-                if first and update_first:
-                    update_first(Idle, Running, Done)
-                    first = False
-                else:
+        try: # to catch KeyBoardInterupt to see which kind of error to display 
+            last_status = (0, 0, 0)
+            sleep_time = 1
+            use_lock = True
+            first = True
+            while True:
+                force_one_more_loop = False # some security
+                            
+                # Loop over the job tagged as done to check if some packet of jobs
+                # are finished in case, put the associate function in the queue
+                while self.done.qsize():
+                    try:
+                        tag = self.done.get(True, 1)
+                    except Queue.Empty:
+                        pass
+                    else:
+                        if self.id_to_packet and tuple(tag) in self.id_to_packet:
+                            packet = self.id_to_packet[tuple(tag)]
+                            remaining = packet.remove_one()
+                            if remaining == 0:
+                                # fully ensure that the packet is finished (thread safe)
+                                packet.queue.join()
+                                self.submit(packet.fct, packet.args)
+                                force_one_more_loop = True
+                        self.nb_done += 1
+                        self.done.task_done()
+    
+                # Get from the various queue the Idle/Done/Running information 
+                # Those variable should be thread safe but approximate.
+                Idle = self.queue.qsize()
+                Done = self.nb_done + self.done.qsize()
+                Running = max(0, self.submitted.qsize() - Idle - Done) 
+                           
+                if Idle + Running <= 0 and not force_one_more_loop:
                     update_status(Idle, Running, Done)
-                last_status = (Idle, Running, Done)
-            
-            # cleaning the queue done_pid_queue and move them to done_pid
-            while not self.done_pid_queue.empty():
-                pid = self.done_pid_queue.get()
-                self.done_pid.append(pid)
-                self.done_pid_queue.task_done()
-                     
+                    # Going the quit since everything is done
+                    # Fully Ensure that everything is indeed done.
+                    self.queue.join()
+                    break
                 
-            # Define how to wait for the next iteration
-            if use_lock:
-                # simply wait that a worker release the lock
-                use_lock = self.lock.wait(self.wait_time)
+                if (Idle, Running, Done) != last_status:
+                    if first and update_first:
+                        update_first(Idle, Running, Done)
+                        first = False
+                    else:
+                        update_status(Idle, Running, Done)
+                    last_status = (Idle, Running, Done)
+                
+                # cleaning the queue done_pid_queue and move them to done_pid
+                while not self.done_pid_queue.empty():
+                    pid = self.done_pid_queue.get()
+                    self.done_pid.append(pid)
+                    self.done_pid_queue.task_done()
+                         
+                    
+                # Define how to wait for the next iteration
+                if use_lock:
+                    # simply wait that a worker release the lock
+                    use_lock = self.lock.wait(300)
+                    self.lock.clear()
+                    if not use_lock and Idle > 0:
+                        use_lock = True
+                else:
+                    # to be sure that we will never fully lock at the end pass to 
+                    # a simple time.sleep()
+                    time.sleep(sleep_time)
+                    sleep_time = min(sleep_time + 2, 180)
+            if update_first:
+                update_first(Idle, Running, Done)
+            
+            if self.stoprequest.isSet():
+                if isinstance(self.fail_msg, Exception):
+                    raise self.fail_msg
+                elif isinstance(self.fail_msg, str):
+                    raise Exception, self.fail_msg
+                else:
+                    raise self.fail_msg[0], self.fail_msg[1], self.fail_msg[2]
+            # reset variable for next submission
+            try:
                 self.lock.clear()
-                if not use_lock and Idle > 0:
-                    use_lock = True
-            else:
-                # to be sure that we will never fully lock at the end pass to 
-                # a simple time.sleep()
-                time.sleep(sleep_time)
-                sleep_time = min(sleep_time + 2, 180)
-        if update_first:
-            update_first(Idle, Running, Done)
-        
-        if self.stoprequest.isSet():
+            except Exception:
+                pass
+            self.done = Queue.Queue()
+            self.done_pid = []
+            self.done_pid_queue = Queue.Queue()
+            self.nb_done = 0
+            self.submitted = Queue.Queue()
+            self.pids = Queue.Queue()
+            self.stoprequest.clear()
+
+        except KeyboardInterrupt:
+            # if one of the node fails -> return that error
             if isinstance(self.fail_msg, Exception):
                 raise self.fail_msg
-            else:
+            elif isinstance(self.fail_msg, str):
                 raise Exception, self.fail_msg
-        # reset variable for next submission
-        try:
-            self.lock.clear()
-        except Exception:
-            pass
-        self.done = Queue.Queue()
-        self.done_pid = []
-        self.done_pid_queue = Queue.Queue()
-        self.nb_done = 0
-        self.submitted = Queue.Queue()
-        self.pids = Queue.Queue()
-        self.stoprequest.clear()
+            elif self.fail_msg:
+                raise self.fail_msg[0], self.fail_msg[1], self.fail_msg[2]
+            # else return orignal error
+            raise 
 
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -828,9 +849,11 @@ class CondorCluster(Cluster):
                 'stderr': stderr,'log': log,'argument': argument,
                 'requirement': requirement}
 
-        open('submit_condor','w').write(text % dico)
-        a = misc.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
-        output = a.stdout.read()
+        #open('submit_condor','w').write(text % dico)
+        a = misc.Popen(['condor_submit'], stdout=subprocess.PIPE,
+                       stdin=subprocess.PIPE)
+        output, _ = a.communicate(text % dico)
+        #output = a.stdout.read()
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
@@ -913,9 +936,11 @@ class CondorCluster(Cluster):
                 'requirement': requirement, 'input_files':input_files, 
                 'output_files':output_files}
 
-        open('submit_condor','w').write(text % dico)
-        a = subprocess.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
-        output = a.stdout.read()
+        #open('submit_condor','w').write(text % dico)
+        a = subprocess.Popen(['condor_submit'], stdout=subprocess.PIPE,
+                             stdin=subprocess.PIPE)
+        output, _ = a.communicate(text % dico)
+        #output = a.stdout.read()
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
@@ -999,6 +1024,7 @@ class CondorCluster(Cluster):
         cmd = "condor_rm %s" % ' '.join(self.submitted_ids)
         
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
         
 class PBSCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -1142,6 +1168,7 @@ class PBSCluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 
 class SGECluster(Cluster):
@@ -1292,6 +1319,7 @@ class SGECluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 
 class LSFCluster(Cluster):
@@ -1421,6 +1449,7 @@ class LSFCluster(Cluster):
             return
         cmd = "bkill %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 class GECluster(Cluster):
     """Class for dealing with cluster submission on a GE cluster"""
@@ -1545,6 +1574,7 @@ class GECluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 def asyncrone_launch(exe, cwd=None, stdout=None, argument = [], **opt):
     """start a computation and not wait for it to finish.
@@ -1675,6 +1705,7 @@ class SLURMCluster(Cluster):
             return
         cmd = "scancel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 class HTCaaSCluster(Cluster):
     """Class for dealing with cluster submission on a HTCaaS cluster using GPFS """
@@ -1855,6 +1886,7 @@ class HTCaaSCluster(Cluster):
         for i in range(len(self.submitted_ids)):
          cmd = "htcaas-job-cancel -m %s" % ' '.join(self.submitted_ids[i])
          status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
  
 class HTCaaS2Cluster(Cluster):
@@ -2251,6 +2283,7 @@ class HTCaaS2Cluster(Cluster):
         for i in range(len(self.submitted_ids)):
          cmd = "htcaas-job-cancel -m %s" % ' '.join(self.submitted_ids[i])        
          status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 

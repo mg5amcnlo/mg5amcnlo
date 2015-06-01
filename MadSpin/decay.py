@@ -52,6 +52,7 @@ import models.import_ufo as import_ufo
 #from madgraph.interface.madgraph_interface import MadGraphCmd
 import madgraph.interface.master_interface as Cmd
 import madgraph.interface.madevent_interface as me_interface
+import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.files as files
 import madgraph.fks.fks_common as fks_common
 import aloha
@@ -63,7 +64,7 @@ import math
 from madgraph import MG5DIR, MadGraph5Error
 import madgraph.various.misc as misc
 #import time
-import tests.unit_tests.various.test_aloha as test_aloha
+import tests.parallel_tests.test_aloha as test_aloha
 
 class MadSpinError(MadGraph5Error):
     pass
@@ -441,6 +442,7 @@ class dc_branch_from_me(dict):
             self['tree'][propa_id] = {'nbody': len(proc.get('legs'))-1,\
                                       'label':proc.get('legs')[0].get('id')}
             # loop over the child
+            child_propa_id = propa_id
             for c_nb,leg in enumerate(proc.get('legs')):
                 if c_nb == 0:
                     continue
@@ -449,12 +451,14 @@ class dc_branch_from_me(dict):
                 self["tree"][propa_id]["d%s" % c_nb]["label"] = c_pid
                 self["tree"][propa_id]["d%s" % c_nb]["labels"] = [c_pid]
                 if c_pid in to_decay:
-                    self["tree"][propa_id]["d%s" % c_nb]["index"] = propa_id-1
+                    child_propa_id -= 1
+                    self["tree"][propa_id]["d%s" % c_nb]["index"] = child_propa_id
                     self.nb_decays += 1
-                    add_decay(to_decay[c_pid].pop(), propa_id-1)
+                    child_propa_id = add_decay(to_decay[c_pid].pop(), child_propa_id)
                 else:
                     self.nexternal += 1
                     self["tree"][propa_id]["d%s" % c_nb]["index"] = self.nexternal
+            return child_propa_id
         
         # launch the recursive loop
         add_decay(process)
@@ -882,6 +886,7 @@ class AllMatrixElement(dict):
         self.decay_ids = set([abs(id) for id in decay_ids])
         self.has_particles_ambiguity = False
         self.model = model
+
         
     def add(self, topologies, keys):
         """Adding one element to the list of production_topo"""
@@ -998,12 +1003,14 @@ class AllMatrixElement(dict):
                'base_order':[l.get('id') for l in me.get_legs_with_decays()] ,
                'decay_struct':self.get_full_process_structure(proc_list),
                'decay_tag': tuple(decay_tags)}
+
         # adding it to the current object
         self[tag]['decays'].append(out)
         self[tag]['total_br'] += out['br']
         # update the particle decaying in the process
         decaying = [m.get('legs')[0].get('id') for m in me.get('decay_chains')]
-        self[tag]['decaying'].update(decaying)
+        decaying.sort()
+        self[tag]['decaying'] = tuple(decaying)
                 
         # sanity check
         assert self[tag]['total_br'] <= 1.01, self[tag]['total_br']
@@ -1063,9 +1070,11 @@ class AllMatrixElement(dict):
 
         s_and_t_channels = []
 
-        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
-                                             for config in configs])
-
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+          for config in configs if [d for d in config if d][0].\
+                                             get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
+    
         # Number of subprocesses
         #    nsubprocs = len(configs[0])
 
@@ -1075,7 +1084,7 @@ class AllMatrixElement(dict):
 
         for iconfig, helas_diags in enumerate(configs):
             if any([vert > minvert for vert in
-                            [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
+                    [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
                     # Only 3-vertices allowed in configs.inc
                     continue
             nconfigs += 1
@@ -1198,7 +1207,7 @@ class AllMatrixElement(dict):
                 if decaying != decaying_base:
                     skip.append(proc)
                     continue
-                topo['decaying'] = set()
+                topo['decaying'] = ()
                 tags.append(proc.get_initial_final_ids())
                 topo['tag2order'][tags[-1]] = (initial , final)
             
@@ -1223,9 +1232,8 @@ class AllMatrixElement(dict):
         topo = dict(topo) #change the main pointer
         topo['decays'] = []   # unlink information which need to be different.
         topo['total_br'] = 0  #
-        topo['decaying'] = set() # 
         topo['tag2order'] = {}
-        topo['decaying'] = set()
+        topo['decaying'] = ()
         for key in topo.keys():
             if isinstance(key, int):
                 topo[key] = copy.copy(topo[key])
@@ -1315,12 +1323,12 @@ class width_estimate(object):
 
         # Maybe the branching fractions are already given in the banner:
         self.extract_br_from_banner(self.banner)
-        to_decay = [p for p in to_decay if not p in self.br]
+        to_decay = list(to_decay)
         for part in to_decay[:]:
             if part in mgcmd._multiparticles:
                 to_decay += [self.pid2label[id] for id in mgcmd._multiparticles[part]]
                 to_decay.remove(part)
-        to_decay = list(set(to_decay))
+        to_decay = list(set([p for p in to_decay if not p in self.br]))
         
         if to_decay:
             logger.info('We need to recalculate the branching fractions for %s' % ','.join(to_decay))
@@ -1914,7 +1922,7 @@ class decay_all_events(object):
         self.evtfile = inputfile
         self.curr_event = Event(self.evtfile, banner) 
         self.inverted_decay_mapping={}
-               
+        self.width_estimator = None
         self.curr_dir = os.getcwd()
         # dictionary to fortan evaluator
         self.calculator = {}
@@ -1925,8 +1933,8 @@ class decay_all_events(object):
     
         # Remove old stuff from previous runs
         # so that the current run is not confused
-        # Don't have to do that for gridpack 
-        if not options["ms_dir"]:
+        # Don't have to do that for gridpack / or if asked.
+        if not (options["ms_dir"] or options["use_old_dir"]):
             if os.path.isdir(pjoin(self.path_me,"production_me")):
                 shutil.rmtree(pjoin(self.path_me,"production_me"))
             if os.path.isdir(pjoin(self.path_me,"full_me")):
@@ -2001,11 +2009,24 @@ class decay_all_events(object):
 
  
         # generate BR and all the square matrix element based on the banner.
-        self.generate_all_matrix_element()
-
-        resonances = self.width_estimator.resonances
-        logger.debug('List of resonances: %s' % resonances)
-        self.extract_resonances_mass_width(resonances) 
+        pickle_info = pjoin(self.path_me,"production_me", "all_ME.pkl")
+        if not options["use_old_dir"] or not os.path.exists(pickle_info):
+            self.generate_all_matrix_element()
+            save_load_object.save_to_file(pickle_info,
+                                          (self.all_ME,self.all_decay,self.width_estimator))
+        else:
+            try:
+                self.all_ME, self.all_decay,self.width_estimator = save_load_object.load_from_file(pjoin(self.path_me,"production_me", "all_ME.pkl"))
+            except Exception,error:
+                logger.debug(str(error))
+                self.generate_all_matrix_element()
+                save_load_object.save_to_file(pickle_info,
+                                          (self.all_ME,self.all_decay,self.width_estimator))                
+        
+        if not self.options["onlyhelicity"]:
+            resonances = self.width_estimator.resonances
+            logger.debug('List of resonances: %s' % resonances)
+            self.extract_resonances_mass_width(resonances) 
 
         self.compile()
         
@@ -2056,6 +2077,8 @@ class decay_all_events(object):
             for key in self.all_ME:
                 for mode in self.all_ME['decays']:
                     mode['max_weight'] = max_weight_arg
+        elif self.options["onlyhelicity"]:
+            logger.info("not needed in helicity mode")
         else:
             #self.get_max_weight_from_1toN()
             self.get_max_weight_from_event(decay_mapping)  
@@ -2093,7 +2116,8 @@ class decay_all_events(object):
         if not self.options['ms_dir']:
             shutil.rmtree(pjoin(self.path_me,'production_me'))
             shutil.rmtree(pjoin(self.path_me,'full_me'))
-            shutil.rmtree(pjoin(self.path_me,'decay_me'))
+            if not self.options["onlyhelicity"]:
+                shutil.rmtree(pjoin(self.path_me,'decay_me'))
         # set the environment variable GFORTRAN_UNBUFFERED_ALL 
         # to its original value
         #os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
@@ -2137,7 +2161,7 @@ class decay_all_events(object):
         self.write_banner_information()
         
         
-        event_nb = 0
+        event_nb, fail_nb = 0, 0
         nb_skip = 0 
         trial_nb_all_events=0
         starttime = time.time()
@@ -2146,34 +2170,23 @@ class decay_all_events(object):
             production_tag, event_map = self.load_event()
             if production_tag == 0 == event_map: #end of file
                 break
- 
-            numdecays=0
-            for decay in self.all_ME[production_tag]['decays']:
-              if decay['decay_tag']:
-                  numdecays = numdecays + 1
 
-            if not numdecays:
-                #no decays for this production mode, run in passthrough mode, only adding the helicities to the events
-                nb_mc_masses=0
-                p, p_str=self.curr_event.give_momenta(event_map)
-                stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0)
-                stdin_text+=p_str
-                # here I also need to specify the Monte Carlo Masses
-                stdin_text+=" %s \n" % nb_mc_masses
-                
-                mepath = self.all_ME[production_tag]['path']
-                mepath = mepath.replace('production_me','full_me');
-                                
-                trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = self.loadfortran( 'unweighting', mepath, stdin_text)
-                                
-                self.reset_helicityonly_in_prod_event(event_map, helicities)
-                event_nb+=1
-                decayed_event = self.curr_event
-                self.outputfile.write(decayed_event.string_event())
-                #print "number of trials: "+str(trial_nb)
+            if  event_nb and \
+                (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
+                running_time = misc.format_timer(time.time()-starttime)
+                logger.info('Event nb %s %s' % (event_nb, running_time))
+                self.mscmd.update_status(('$events',1,event_nb, 'decaying events'), 
+                                         force=False, print_log=False)
+            if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
+
+
+            if self.options["onlyhelicity"]:
+                trial_nb, fail = self.adding_only_helicity(event_map, production_tag)
                 trial_nb_all_events+=trial_nb
+                fail_nb += fail
+                event_nb += 1
                 continue
-            
+
             # Here we need to select a decay configuration on a random basis:
             decay = self.all_ME.get_random_decay(production_tag)
             if not decay['decay_tag']:
@@ -2191,12 +2204,6 @@ class decay_all_events(object):
                     
                 event_nb+=1
                 report[decay['decay_tag']] += 1 
-                if (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
-                    running_time = misc.format_timer(time.time()-starttime)
-                    logger.info('Event nb %s %s' % (event_nb, running_time))
-                    self.mscmd.update_status(('$events',1,event_nb, 'decaying events'), 
-                                             force=False, print_log=False)
-                if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
             indices_for_mc_masses, values_for_mc_masses=self.get_montecarlo_masses_from_event(decay['decay_struct'], event_map, decay['prod2full'])
             nb_mc_masses=len(indices_for_mc_masses)
@@ -2211,7 +2218,12 @@ class decay_all_events(object):
                 stdin_text+='%s  \n' % str(values_for_mc_masses).strip('[]').replace(',', ' ')
             
 #            here apply the reweighting procedure in fortran
-            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
+            output = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
+            if not output:
+                fail_nb +=1
+                continue
+            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = output 
+            
             # next: need to fill all intermediate momenta
             if nb_mc_masses>0 and use_mc_masses==0:nb_fail_mc_mass+=1
             
@@ -2312,8 +2324,42 @@ class decay_all_events(object):
         logger.info('Number of events with weights larger than max_weight: %s' % report['over_weight'])
         logger.info('Number of subprocesses '+str(len(self.calculator)))
         logger.info('Number of failures when restoring the Monte Carlo masses: %s ' % nb_fail_mc_mass)
+        if fail_nb:
+            logger.info('Number of failures in reshuffling (event skipped): %s ' % fail_nb)
         
         return  event_nb/(event_nb+nb_skip)       
+
+
+    def adding_only_helicity(self, event_map, production_tag):
+        """no decays for this production mode, run in passthrough mode,
+           only adding the helicities to the events """
+
+        #no decays for this production mode, run in passthrough mode, only adding the helicities to the events
+        nb_mc_masses=0
+        p, p_str=self.curr_event.give_momenta(event_map)
+        stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0)
+        stdin_text+=p_str
+        # here I also need to specify the Monte Carlo Masses
+        stdin_text+=" %s \n" % nb_mc_masses
+        
+        mepath = self.all_ME[production_tag]['path']
+        decay = self.all_ME[production_tag]['decays'][0]
+        decay_me=self.all_ME.get_decay_from_tag(production_tag, decay['decay_tag'])
+        mepath = decay_me['path']
+                        
+        output = self.loadfortran( 'unweighting', mepath, stdin_text)
+        if not output:
+            # Event fail
+            return 0, 1
+        trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = output                
+        self.reset_helicityonly_in_prod_event(event_map, helicities)
+
+        decayed_event = self.curr_event
+        self.outputfile.write(decayed_event.string_event())
+        #print "number of trials: "+str(trial_nb)
+        
+        return trial_nb, 0
+
 
     def get_int_mom_in_decay(self,decay_struct,ext_mom):
         """  fill  """
@@ -2416,7 +2462,7 @@ class decay_all_events(object):
         
         relation = {} # {tag: {(tag2, ratio)}}
         # Loop over the class and create the relation information about the 1     
-        for ((nbody, pid, finals),decays) in nbody_to_decay.items():  
+        for ((nbody, pid, finals),decays) in nbody_to_decay.items():
             if len(decays) == 1:
                 continue  
             mom_init = momentum(self.pid2mass(pid), 0, 0, 0)
@@ -2461,7 +2507,7 @@ class decay_all_events(object):
                             valid[(i, j)] = 0
                             valid[(j, i)] = 0
                 
-            if __debug__:    
+            if __debug__: 
                 for i in range(len(decays)):
                     comment= "| "
                     for j in range(len(decays)):
@@ -2483,7 +2529,7 @@ class decay_all_events(object):
         # fullfill the object with the already identify to one decay.
         #and add those who doesn't have any relations.
         for decay in self.all_decay.values():
-            tags = [m.shell_string()[2:] for m in decay['processes']]
+            tags = [m.shell_string(pdg_order=True)[2:] for m in decay['processes']]
             init_tag = tags[0]
             if init_tag not in relation:
                 out = (init_tag, 1)
@@ -2492,7 +2538,6 @@ class decay_all_events(object):
             for tag in tags[1:]:
                 relation[tag] = out
 
-        
         decay_mapping = self.get_process_identical_ratio(relation)
         
         logger.info('Done in %ss' % (time.time()-start))
@@ -2507,9 +2552,11 @@ class decay_all_events(object):
         decay_mapping = {} # final output: {first_process: [(equiv_proc, ratio), ...]
         tag2real = {}    # basic tag [the one related via relation] -> first process
         # basic tag ratio doesn't have any identical factor (this simplify calculation)
+        nb=0
         for prod in self.all_ME.values():
             for decay in prod['decays']:
                 tag = decay['decay_tag']
+                nb+=1
                 # build the basic tag (all equiv process are related to this tag)
                 basic_tag = []
                 ratio = 1
@@ -2536,6 +2583,7 @@ class decay_all_events(object):
                     real_tag, ratio2 = tag2real[basic_tag]
                     if real_tag != tag:
                         decay_mapping[real_tag].add((tag, ratio/ratio2))
+
 
         return decay_mapping
     
@@ -2569,7 +2617,8 @@ class decay_all_events(object):
         path_me = self.path_me        
         
         # 1. compute the partial width------------------------------------------
-        self.get_branching_ratio()
+        if not self.options["onlyhelicity"]:
+            self.get_branching_ratio()
         
         # 2. compute the production matrix element -----------------------------
         processes = [line[9:].strip() for line in self.banner.proc_card
@@ -2592,11 +2641,22 @@ class decay_all_events(object):
         start = time.time()
         commandline=''
         for proc in processes:
+            # deal with @ syntax need to move it after the decay specification
+            if '@' in proc:
+                proc, proc_nb = proc.split('@')
+                try:
+                    proc_nb = int(proc_nb)
+                except ValueError:
+                    raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
+                proc_nb = '@ %i' % proc_nb 
+            else:
+                proc_nb = ''
+            
             if '[' not in proc:
                 commandline+="add process %s  --no_warning=duplicate;" % proc
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s  --no_warning=duplicate;" % (process)
+                commandline+="add process %s %s --no_warning=duplicate;" % (process, proc_nb)
                 if not order:
                     continue
                 elif not order.startswith('virt='):
@@ -2620,14 +2680,14 @@ class decay_all_events(object):
                     result = re.split('([/$@]|\w+=\w+)', process, 1)                    
                     if len(result) ==3:
                         process, split, rest = result
-                        commandline+="add process %s pert_%s %s%s  --no_warning=duplicate;" % (process, order ,split, rest)
+                        commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order ,split, rest, proc_nb)
                     else:
-                        commandline +='add process %s pert_%s --no_warning=duplicate;' % (process,order)                                       
+                        commandline +='add process %s pert_%s  %s --no_warning=duplicate;' % (process,order, proc_nb)                                       
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
         commandline = 'output standalone_msP %s %s' % \
-            (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))
+        (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))        
         mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))
 
@@ -2651,90 +2711,97 @@ class decay_all_events(object):
         for key in self.list_branches.keys():
             if key not in final_states and key not in self.mgcmd._multiparticles:
                 if (len(self.list_branches)>1):
-                  del self.list_branches[key]
-                else:
-                  logger.info('keeping dummy decay for passthrough mode')
+                    del self.list_branches[key]
+                elif not self.options["onlyhelicity"]:
+                    raise Exception, " No decay define for process."
+                    logger.info('keeping dummy decay for passthrough mode')
 
         # 4. compute the full matrix element -----------------------------------
-        logger.info('generating the full square matrix element (with decay)')
-        start = time.time()
-        to_decay = self.mscmd.list_branches.keys()
-        decay_text = []
-        for decays in self.mscmd.list_branches.values():
-            for decay in  decays:
-                if '=' not in decay:
-                    decay += ' QCD=99'
-                if ',' in decay:
-                    decay_text.append('(%s)' % decay)
-                else:
-                    decay_text.append(decay)
-        decay_text = ', '.join(decay_text)
-        commandline = ''
-        
-        
-        for proc in processes:
-            # deal with @ syntax need to move it after the decay specification
-            if '@' in proc:
-                proc, proc_nb = proc.split('@')
-                try:
-                    proc_nb = int(proc_nb)
-                except ValueError:
-                    raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
-                proc_nb = '@ %i' % proc_nb 
-            else:
-                proc_nb = '' 
-            
-            if '[' not in proc:
-                nb_comma = proc.count(',')
-                if nb_comma == 0:
-                    commandline+="add process %s, %s %s  --no_warning=duplicate;" % (proc, decay_text, proc_nb)
-                elif nb_comma == 1:
-                    before, after = proc.split(',')
-                    commandline+="add process %s, %s, (%s, %s) %s  --no_warning=duplicate;" % (before, decay_text, after, decay_text, proc_nb)
-                else:
-                    raise Exception, 'too much decay at MG level. this can not be done for the moment)'
-            else:
-                process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s, %s %s  --no_warning=duplicate;" % (process, decay_text, proc_nb)
-                if not order:
-                    continue
-                elif not order.startswith('virt='):
-                    if '=' in order:
-                        order = order.split('=',1)[1]
-                    # define the list of particles that are needed for the radiateion
-                    pert = fks_common.find_pert_particles_interactions(
-                         mgcmd._curr_model,pert_order = order)['soft_particles']
-                    commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
-                    
-                    # check if we have to increase by one the born order
-                    if '%s=' % order in process:
-                        result=re.split(' ',process)
-                        process=''
-                        for r in result:
-                            if '%s=' % order in r:
-                                ior=re.split('=',r)
-                                r='QCD=%i' % (int(ior[1])+1)
-                            process=process+r+' '
-                    #handle special tag $ | / @
-                    result = re.split('([/$@]|\w+=\w+)', process, 1)                    
-                    if len(result) ==3:
-                        process, split, rest = result
-                        commandline+="add process %s pert_%s %s%s , %s %s --no_warning=duplicate;" % \
-                              (process, order, split, rest, decay_text, proc_nb)
+        if not self.options["onlyhelicity"]:
+            logger.info('generating the full square matrix element (with decay)')
+            start = time.time()
+            to_decay = self.mscmd.list_branches.keys()
+            decay_text = []
+            for decays in self.mscmd.list_branches.values():
+                for decay in  decays:
+                    if '=' not in decay:
+                        decay += ' QCD=99'
+                    if ',' in decay:
+                        decay_text.append('(%s)' % decay)
                     else:
-                        commandline +='add process %s pert_%s, %s %s  --no_warning=duplicate;' % \
-                                           (process, order, decay_text, proc_nb)
-                    
+                        decay_text.append(decay)
+            decay_text = ', '.join(decay_text)
+            commandline = ''
+            
+            
+            for proc in processes:
+                # deal with @ syntax need to move it after the decay specification
+                if '@' in proc:
+                    proc, proc_nb = proc.split('@')
+                    try:
+                        proc_nb = int(proc_nb)
+                    except ValueError:
+                        raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
+                    proc_nb = '@ %i' % proc_nb 
+                else:
+                    proc_nb = '' 
+                
+                if '[' not in proc:
+                    nb_comma = proc.count(',')
+                    if nb_comma == 0:
+                        commandline+="add process %s, %s %s  --no_warning=duplicate;" % (proc, decay_text, proc_nb)
+                    elif nb_comma == 1:
+                        before, after = proc.split(',')
+                        commandline+="add process %s, %s, (%s, %s) %s  --no_warning=duplicate;" % (before, decay_text, after, decay_text, proc_nb)
+                    else:
+                        raise Exception, 'too much decay at MG level. this can not be done for the moment)'
+                else:
+                    process, order, final = re.split('\[\s*(.*)\s*\]', proc)
+                    commandline+="add process %s, %s %s  --no_warning=duplicate;" % (process, decay_text, proc_nb)
+                    if not order:
+                        continue
+                    elif not order.startswith('virt='):
+                        if '=' in order:
+                            order = order.split('=',1)[1]
+                        # define the list of particles that are needed for the radiateion
+                        pert = fks_common.find_pert_particles_interactions(
+                             mgcmd._curr_model,pert_order = order)['soft_particles']
+                        commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
                         
-        commandline = commandline.replace('add process', 'generate',1)
-        logger.info(commandline)
-        mgcmd.exec_cmd(commandline, precmd=True)
-        # remove decay with 0 branching ratio.
-        mgcmd.remove_pointless_decay(self.banner.param_card)
-        commandline = 'output standalone_msF %s %s' % (pjoin(path_me,'full_me'),
-                                                      ' '.join(self.list_branches.keys()))
-        mgcmd.exec_cmd(commandline, precmd=True)
-        logger.info('Done %.4g' % (time.time()-start))
+                        # check if we have to increase by one the born order
+                        if '%s=' % order in process:
+                            result=re.split(' ',process)
+                            process=''
+                            for r in result:
+                                if '%s=' % order in r:
+                                    ior=re.split('=',r)
+                                    r='QCD=%i' % (int(ior[1])+1)
+                                process=process+r+' '
+                        #handle special tag $ | / @
+                        result = re.split('([/$@]|\w+=\w+)', process, 1)                    
+                        if len(result) ==3:
+                            process, split, rest = result
+                            commandline+="add process %s pert_%s %s%s , %s %s --no_warning=duplicate;" % \
+                                  (process, order, split, rest, decay_text, proc_nb)
+                        else:
+                            commandline +='add process %s pert_%s, %s %s  --no_warning=duplicate;' % \
+                                               (process, order, decay_text, proc_nb)
+            commandline = commandline.replace('add process', 'generate',1)
+            logger.info(commandline)
+            mgcmd.exec_cmd(commandline, precmd=True)
+            # remove decay with 0 branching ratio.
+            mgcmd.remove_pointless_decay(self.banner.param_card)
+            commandline = 'output standalone_msF %s %s' % (pjoin(path_me,'full_me'),
+                                                          ' '.join(self.list_branches.keys()))
+            mgcmd.exec_cmd(commandline, precmd=True)
+            logger.info('Done %.4g' % (time.time()-start))
+        elif self.options["onlyhelicity"]:
+            logger.info("Helicity Matrix-Element")      
+            commandline = 'output standalone_msF %s %s' % \
+            (pjoin(path_me,'full_me'), ' '.join(self.list_branches.keys()))        
+            mgcmd.exec_cmd(commandline, precmd=True)        
+            logger.info('Done %.4g' % (time.time()-start))                    
+
 
 
         # 5. add the decay information to the all_topology object --------------                        
@@ -2761,6 +2828,9 @@ class decay_all_events(object):
                 # we need to write the file config_decays.inc
                 self.generate_configs_file(nfinal,dico,full_path)
                 
+
+        if self.options["onlyhelicity"]:
+            return
 
         # 6. generate decay only part ------------------------------------------
         logger.info('generate matrix element for decay only (1 - > N).')
@@ -2807,6 +2877,7 @@ class decay_all_events(object):
         #to remove potential pointless decay in the diagram generation.
         resonances = decay_misc.get_all_resonances(self.banner, 
                          self.mgcmd, self.mscmd.list_branches.keys())
+
         logger.debug('List of resonances:%s' % resonances)
         path_me = os.path.realpath(self.path_me) 
         width = width_estimate(resonances, path_me, self.banner, self.model,
@@ -2822,9 +2893,10 @@ class decay_all_events(object):
 
     def compile(self):
         logger.info('Compiling code')
-        self.compile_fortran(self.path_me, mode="production_me")
         self.compile_fortran(self.path_me, mode="full_me")
-        self.compile_fortran(self.path_me, mode="decay_me")
+        if not self.options["onlyhelicity"]:
+            self.compile_fortran(self.path_me, mode="production_me")
+            self.compile_fortran(self.path_me, mode="decay_me")
 
     def compile_fortran(self, path_me, mode='production_me'):
         """ Compile the fortran executables associated with the evalutation of the 
@@ -2839,8 +2911,9 @@ class decay_all_events(object):
         # COMPILATION OF LIBRARY
         misc.compile( cwd=pjoin(path_me, mode,"Source","DHELAS"), mode='fortran')
         file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'lha_read_ms.f')
-        shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" )) 
-        misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
+        shutil.copyfile(file_madspin, pjoin(path_me, mode,"Source","MODEL","lha_read.f" ))
+        if not self.options["use_old_dir"]: 
+            misc.compile(arg=['clean'], cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')
         misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')     
 
         file=pjoin(path_me, 'param_card.dat')
@@ -2907,7 +2980,8 @@ class decay_all_events(object):
                 shutil.copyfile(pjoin(path_me, mode,'Source','MODEL','input.inc'),
                                 pjoin(new_path,'input.inc'))
                 if not os.path.exists(pjoin(new_path,os.path.pardir, 'parameters.inc')):
-                    misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
+                    if not self.options["use_old_dir"]:
+                        misc.compile(arg=['clean'], cwd=new_path, mode='fortran')
                     misc.compile(arg=['init'],cwd=new_path,mode='fortran')
                     misc.call('./init', cwd=new_path)
                     shutil.copyfile(pjoin(new_path,'parameters.inc'), 
@@ -2982,7 +3056,7 @@ class decay_all_events(object):
         # check all set of decay that need to be done:
         decay_set = set()
         for production in self.all_ME.values():
-            decay_set.add(frozenset(production['decaying']))
+            decay_set.add(production['decaying'])
 
         numberev = self.options['Nevents_for_max_weigth'] # number of events
         numberps = self.options['max_weight_ps_point'] # number of phase pace points per event
@@ -3004,7 +3078,6 @@ class decay_all_events(object):
         ev = -1
         nb_decay = dict( (key,0) for key in decay_set)
         probe_weight = dict( (key,[]) for key in decay_set)
-        
         while ev+1 < len(decay_set) * numberev: 
             production_tag, event_map = self.load_event()
 
@@ -3014,7 +3087,7 @@ class decay_all_events(object):
                 break
             
             #check if this event is usefull or not
-            decaying = frozenset(self.all_ME[production_tag]['decaying'])
+            decaying = self.all_ME[production_tag]['decaying']
             if nb_decay[decaying] >=  numberev:
                 continue 
             ev += 1
@@ -3022,7 +3095,7 @@ class decay_all_events(object):
 
 #            mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
 
-    
+   
             logger.debug('Event %s/%s: ' % (ev+1, len(decay_set)*numberev))
             if (len(decay_set)*numberev -(ev+2)) >0:
                 self.mscmd.update_status((len(decay_set)*numberev -(ev+2),1,ev+1, 
@@ -3036,8 +3109,6 @@ class decay_all_events(object):
 
             atleastonedecay=False
             for decay in self.all_ME[production_tag]['decays']:
-                #print decay
-                #print decay['decay_struct'] 
                 tag = decay['decay_tag']
                 if decay_mapping and not tag in decay_mapping:
                     continue
@@ -3126,16 +3197,15 @@ class decay_all_events(object):
                     else:  
                         logger.debug('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
- 
-        # sanity check that all decay have a max_weight
-        if __debug__:
+
+        if __debug__: 
+        # check that all decay have a max_weight and fix it if not the case.
             for prod in self.all_ME.values():
                 for dec in prod['decays']:
-                    if dec['decay_tag']:                        
+                    if dec['decay_tag']:                                                
                         assert 'max_weight' in dec and dec['max_weight'] ,\
                                   'fail for %s (%s)' % (str(dec['decay_tag']), \
                                                   os.path.basename(prod['path']))
-            
         self.evtfile.seek(0)
         return
 
@@ -3212,25 +3282,38 @@ class decay_all_events(object):
             output = me_value
         elif mode == 'unweighting':
             firstline=external.stdout.readline().split()
-            nexternal=int(firstline[0])
-            trials= int(firstline[1])
-            BWvalue= float(firstline[2])
-            weight= float(firstline[3])
-            failed= float(firstline[4])
-            use_mc_masses=int(firstline[5])
+            try:
+                nexternal=int(firstline[0])
+                trials= int(firstline[1])
+                BWvalue= float(firstline[2])
+                weight= float(firstline[3])
+                failed= float(firstline[4])
+                use_mc_masses=int(firstline[5])
+            except ValueError:
+                logger.debug(firstline)
+                return
             momenta=[external.stdout.readline() for i in range(nexternal)]
             lastline=external.stdout.readline().split()
             helicities=[lastline[i] for i in range(len(lastline))]
             output = trials, BWvalue, weight, momenta, failed, use_mc_masses, helicities
 
-        if len(self.calculator) > 100:
-            logger.debug('more than 100 calculator. Perform cleaning')
+        if len(self.calculator) > self.options['max_running_process']:
+            logger.debug('more than %s calculators. Perform cleaning' % self.options['max_running_process'])
             nb_calls = self.calculator_nbcall.values()
             nb_calls.sort()
             cut = max([nb_calls[len(nb_calls)//2], 0.001 * nb_calls[-1]])
             for key, external in list(self.calculator.items()):
                 nb = self.calculator_nbcall[key]
                 if nb < cut:
+                    if key[0]=='full':
+                        path=key[1]
+                        end_signal="5 0 0 0 \n"  # before closing, write down the seed 
+                        external.stdin.write(end_signal)
+                        ranmar_state=external.stdout.readline()
+                        ranmar_file=pjoin(path,'ranmar_state.dat')
+                        ranmar=open(ranmar_file, 'w')
+                        ranmar.write(ranmar_state)
+                        ranmar.close()
                     external.stdin.close()
                     external.stdout.close()
                     external.terminate()
@@ -3243,6 +3326,9 @@ class decay_all_events(object):
     
     def calculate_matrix_element(self, mode, production, stdin_text):
         """routine to return the matrix element"""
+
+        if mode != "decay":
+            raise Exception, "This function is only secure in mode decay."
 
         tmpdir = ''
         if (mode, production) in self.calculator:
@@ -3461,7 +3547,8 @@ class decay_all_events(object):
                 else:
                     # now we need to write the decay products in the event
                     # follow the decay chain order, so that we can easily keep track of the mother index
-                        
+                       
+                    map_to_part_number={}
                     for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
                         index_res_for_mom=decay_struct[part]['mg_tree'][-res-1][0]
                         if (res==-1):
@@ -3483,8 +3570,8 @@ class decay_all_events(object):
                                 "mass":mass,"helicity":helicity}
                             decayed_event.event2mg[part_number]=part_number
 
-                        mothup1=part_number
-                        mothup2=part_number
+                            map_to_part_number[res]=part_number
+   
 #
 #             Extract color information so that we can write the color flow
 #
@@ -3589,7 +3676,10 @@ class decay_all_events(object):
                             decay_struct[part]["tree"][indexd1]["colup2"]=d1colup2
                             istup=2                    
                             mass=mom.m
-                        
+                            map_to_part_number[indexd1]=part_number 
+ 
+                        mothup1=map_to_part_number[res]
+                        mothup2=map_to_part_number[res]
                         decayed_event.particle[part_number]={"pid":pid,\
                                 "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
                                 "colup1":d1colup1,"colup2":d1colup2,"momentum":mom,\
@@ -3620,10 +3710,10 @@ class decay_all_events(object):
                             decay_struct[part]["tree"][indexd2]["colup1"]=d2colup1
                             decay_struct[part]["tree"][indexd2]["colup2"]=d2colup2
                             mass=mom.m
+                            map_to_part_number[indexd2]=part_number
 
-
-                        mothup1=part_number-2
-                        mothup2=part_number-2
+                        mothup1=map_to_part_number[res]
+                        mothup2=map_to_part_number[res]
                         decayed_event.particle[part_number]={"pid":pid,"istup":istup,\
                            "mothup1":mothup1,"mothup2":mothup2,"colup1":d2colup1,\
                            "colup2":d2colup2,\
@@ -3689,6 +3779,7 @@ class decay_all_events(object):
 
 
 
+
     def write_banner_information(self, eff=1):
         
         ms_banner = ""
@@ -3711,8 +3802,7 @@ class decay_all_events(object):
                 assert production['total_br'] - min(total_br) < 1e-4
         
         self.branching_ratio = max(total_br) * eff
-        
-        
+
         #self.banner['madspin'] += ms_banner
         # Update cross-section in the banner
         if 'mggenerationinfo' in self.banner:
@@ -3720,9 +3810,15 @@ class decay_all_events(object):
             for i,line in enumerate(mg_info):
                 if 'Events' in line:
                     if eff == 1:
+                        self.err_branching_ratio = 0
                         continue
-                    nb_event =  int(int(mg_info[i].split()[-1]) * eff) 
+                    initial_event = int(mg_info[i].split()[-1])
+                    nb_event =  int(initial_event * eff) 
                     mg_info[i] = '#  Number of Events        :       %i' % nb_event
+                    if eff >0.5:
+                        self.err_branching_ratio = max(total_br) * math.sqrt(initial_event - eff * initial_event)/initial_event
+                    else:
+                        self.err_branching_ratio = max(total_br) * math.sqrt(eff * initial_event)/initial_event
                     continue
                 if ':' not in line:
                     continue
@@ -3736,6 +3832,9 @@ class decay_all_events(object):
                 else:
                     mg_info[i] = '%s : %s' % (info, value * self.branching_ratio)
                 self.banner['mggenerationinfo'] = '\n'.join(mg_info)
+                
+            
+        
         if 'init' in self.banner:
             new_init =''
             for line in self.banner['init'].split('\n'):

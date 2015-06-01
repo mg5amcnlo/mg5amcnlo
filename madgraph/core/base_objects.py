@@ -24,7 +24,7 @@ import os
 import re
 import StringIO
 import madgraph.core.color_algebra as color
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
 
 
@@ -421,7 +421,7 @@ class Particle(PhysicsObject):
         else:
             return self['name']
 
-    def get_helicity_states(self):
+    def get_helicity_states(self, allow_reverse=True):
         """Return a list of the helicity states for the onshell particle"""
 
         spin = self.get('spin')
@@ -453,9 +453,10 @@ class Particle(PhysicsObject):
             raise self.PhysicsObjectError, \
               "No helicity state assignment for spin %d particles" % spin
                   
-        if not self.get('is_part'):
+        if allow_reverse and not self.get('is_part'):
             res.reverse()
-        
+
+
         return res
 
     def is_fermion(self):
@@ -1562,6 +1563,45 @@ class Model(PhysicsObject):
         
         return default
 
+    def change_electroweak_mode(self, mode):
+        """Change the electroweak mode. The only valid mode now is external.
+        Where in top of the default MW and sw2 are external parameters."""
+        
+        assert mode == "external"
+        
+        try:
+            W = self.get('particle_dict')[24]
+        except KeyError:
+            raise InvalidCmd('No W particle in the model impossible to change the EW scheme!')
+        
+        MW = self.get_parameter(W.get('mass'))
+        if not isinstance(MW, ParamCardVariable):
+            newMW = ParamCardVariable(MW.name, MW.value, 'MASS', [24])
+            if not newMW.value:
+                newMW.value = 80.385
+            #remove the old definition
+            self.get('parameters')[MW.depend].remove(MW)
+            # add the new one
+            self.add_param(newMW, ['external'])
+            
+        # Now check for sw2. if not define bypass this
+        try:
+            sw2 = self.get_parameter('sw2')
+        except KeyError:
+            try:
+                sw2 = self.get_parameter('mdl_sw2')
+            except KeyError:
+                sw2=None
+        
+        if sw2:
+            newsw2 = ParamCardVariable(sw2.name,sw2.value, 'SMINPUTS', [4])
+            if not newsw2.value:
+                newsw2.value = 0.222246485786
+            #remove the old definition
+            self.get('parameters')[sw2.depend].remove(sw2)
+            # add the new one
+            self.add_param(newsw2, ['external'])            
+
     def change_mass_to_complex_scheme(self):
         """modify the expression changing the mass to complex mass scheme"""
         
@@ -2048,6 +2088,26 @@ class Vertex(PhysicsObject):
     
     sorted_keys = ['id', 'legs']
     
+    # This sets what are the ID's of the vertices that must be ignored for the
+    # purpose of the multi-channeling. 0 and -1 are ID's of various technical
+    # vertices which have no relevance from the perspective of the diagram 
+    # topology, while -2 is the ID of a vertex that results from a shrunk loop
+    # (for loop-induced integration with MadEvent) and one may or may not want
+    # to consider these higher point loops for the purpose of the multi-channeling.
+    # So, adding -2 to the list below makes sur that all loops are considered
+    # for multichanneling.
+    ID_to_veto_for_multichanneling = [0,-1,-2]
+    
+    # For loop-induced integration, considering channels from up to box loops 
+    # typically leads to better efficiencies. Beyond that, it is detrimental 
+    # because the phase-space generation is not suited to map contact interactions
+    # This parameter controls up to how many legs should loop-induced diagrams
+    # be considered for multichanneling.
+    # Notice that, in the grouped subprocess case mode, if -2 is not added to 
+    # the list ID_to_veto_for_multichanneling then all loop are considered by 
+    # default and the constraint below is not applied.
+    max_n_loop_for_multichanneling = 4
+    
     def default_setup(self):
         """Default values for all properties"""
 
@@ -2361,12 +2421,25 @@ class Diagram(PhysicsObject):
         state_dict = {True:'T',False:'F'}
         return new_diag
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, 
+                        veto_inter_id=Vertex.ID_to_veto_for_multichanneling,
+                        max_n_loop=0):
         """Return a list of the number of legs in the vertices for
-        this diagram"""
+        this diagram. 
+        This function is only used for establishing the multi-channeling, so that
+        we exclude from it all the fake vertices and the vertices resulting from
+        shrunk loops (id=-2)"""
 
-        return [len(v.get('legs')) for v in self.get('vertices')]
 
+        if max_n_loop == 0:
+            max_n_loop = Vertex.max_n_loop_for_multichanneling
+        
+        res = [len(v.get('legs')) for v in self.get('vertices') if (v.get('id') \
+                                  not in veto_inter_id) or (v.get('id')==-2 and 
+                                                 len(v.get('legs'))>max_n_loop)]
+
+        return res
+    
     def get_num_configs(self, model, ninitial):
         """Return the maximum number of configs from this diagram,
         given by 2^(number of non-zero width s-channel propagators)"""

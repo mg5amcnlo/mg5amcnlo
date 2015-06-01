@@ -12,6 +12,7 @@ C     for the point in phase space P(0:3,NEXTERNAL)
 C     
 C     Process: u u~ > g g
 C     
+      USE DISCRETESAMPLER
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -33,14 +34,19 @@ C     ARGUMENTS
 C     
       REAL*8 P(0:3,NEXTERNAL),ANS
 C     
+C     global (due to reading writting)
+C     
+      LOGICAL GOODHEL(NCOMB)
+      INTEGER NTRY
+      COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
+C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+      INTEGER NHEL(NEXTERNAL,NCOMB)
       REAL*8 T,MATRIX
       REAL*8 R,SUMHEL,TS(NCOMB)
       INTEGER I,IDEN
       INTEGER IPROC,JC(NEXTERNAL),II
-      LOGICAL GOODHEL(NCOMB)
       REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
       INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
       REAL     XRAN1
@@ -62,26 +68,25 @@ C
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
-      DATA NTRY,IDUM /0,-1/
+      DATA IDUM /-1/
       DATA XTRY, XREJ, NGOOD /0,0,0/
       SAVE YFRAC, IGOOD, JHEL
-      DATA GOODHEL/THEL*.FALSE./
-      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
-      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1, 1/
-      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1,-1/
-      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1, 1/
-      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1,-1/
-      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1, 1/
-      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1,-1/
-      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1, 1/
-      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1,-1/
-      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1, 1/
-      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1,-1/
-      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1, 1/
-      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1,-1/
-      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
-      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
-      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
+      DATA (NHEL(I,   1),I=1,4) / 1,-1,-1,-1/
+      DATA (NHEL(I,   2),I=1,4) / 1,-1,-1, 1/
+      DATA (NHEL(I,   3),I=1,4) / 1,-1, 1,-1/
+      DATA (NHEL(I,   4),I=1,4) / 1,-1, 1, 1/
+      DATA (NHEL(I,   5),I=1,4) / 1, 1,-1,-1/
+      DATA (NHEL(I,   6),I=1,4) / 1, 1,-1, 1/
+      DATA (NHEL(I,   7),I=1,4) / 1, 1, 1,-1/
+      DATA (NHEL(I,   8),I=1,4) / 1, 1, 1, 1/
+      DATA (NHEL(I,   9),I=1,4) /-1,-1,-1,-1/
+      DATA (NHEL(I,  10),I=1,4) /-1,-1,-1, 1/
+      DATA (NHEL(I,  11),I=1,4) /-1,-1, 1,-1/
+      DATA (NHEL(I,  12),I=1,4) /-1,-1, 1, 1/
+      DATA (NHEL(I,  13),I=1,4) /-1, 1,-1,-1/
+      DATA (NHEL(I,  14),I=1,4) /-1, 1,-1, 1/
+      DATA (NHEL(I,  15),I=1,4) /-1, 1, 1,-1/
+      DATA (NHEL(I,  16),I=1,4) /-1, 1, 1, 1/
       DATA IDEN/72/
 C     ----------
 C     BEGIN CODE
@@ -105,9 +110,12 @@ C     ----------
       DO I=1,NCOMB
         TS(I)=0D0
       ENDDO
-      IF (ISUM_HEL .EQ. 0 .OR. NTRY .LE. MAXTRIES) THEN
+
+        !   If the helicity grid status is 0, this means that it is not yet initialized.
+      IF (ISUM_HEL.EQ.0.OR.(DS_GET_DIM_STATUS('Helicity').EQ.0)) THEN
         DO I=1,NCOMB
-          IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES) THEN
+          IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0)
+     $     ) THEN
             T=MATRIX(P ,NHEL(1,I),JC(1))
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0
@@ -117,53 +125,73 @@ C     ----------
                 T=T*(2D0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            ANS=ANS+T
+            IF (ISUM_HEL.NE.0) THEN
+              CALL DS_ADD_ENTRY('Helicity',I,T)
+            ENDIF
+            ANS=ANS+DABS(T)
             TS(I)=T
           ENDIF
         ENDDO
-        JHEL = 1
-        IF(NTRY.LE.MAXTRIES)THEN
-          DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
-              GOODHEL(I)=.TRUE.
-              NGOOD = NGOOD +1
-              IGOOD(NGOOD) = I
-              PRINT *,'Adding good helicity ',I,TS(I)/ANS
-            ENDIF
-          ENDDO
+        IF(NTRY.EQ.(MAXTRIES+1)) THEN
+          CALL RESET_CUMULATIVE_VARIABLE()  ! avoid biais of the initialization
         ENDIF
-        IF(NTRY.EQ.MAXTRIES)THEN
-          ISUM_HEL=MIN(ISUM_HEL,NGOOD)
+        IF (ISUM_HEL.NE.0) THEN
+            !         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
+          HEL_PICKED = -1
+            !         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
+          HEL_JACOBIAN   = 1.0D0
+          IF(DS_GET_DIM_STATUS('Helicity').EQ.1) THEN
+              !           If we finished the initialization we can update the grid so as to start sampling over it.
+              !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
+            CALL DS_UPDATE_GRID('Helicity')
+            CALL DS_SET_GRID_MODE('Helicity','init')
+          ENDIF
+        ELSE
+          JHEL = 1
+          IF(NTRY.LE.MAXTRIES)THEN
+            DO I=1,NCOMB
+              IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)
+     $         ) THEN
+                GOODHEL(I)=.TRUE.
+                NGOOD = NGOOD +1
+                IGOOD(NGOOD) = I
+                PRINT *,'Adding good helicity ',I,TS(I)/ANS
+              ENDIF
+            ENDDO
+          ENDIF
+          IF(NTRY.EQ.MAXTRIES)THEN
+            ISUM_HEL=MIN(ISUM_HEL,NGOOD)
+          ENDIF
         ENDIF
       ELSE  !RANDOM HELICITY
-        DO J=1,ISUM_HEL
-          JHEL=JHEL+1
-          IF (JHEL .GT. NGOOD) JHEL=1
-          HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
-          I = IGOOD(JHEL)
-          T=MATRIX(P ,NHEL(1,I),JC(1))
-          DO JJ=1,NINCOMING
-            IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
-     $       ) THEN
-              T=T*ABS(POL(JJ))
-            ELSE IF(POL(JJ).NE.1D0)THEN
-              T=T*(2D0-ABS(POL(JJ)))
-            ENDIF
-          ENDDO
-          ANS=ANS+T*HWGT
-          TS(I)=T*HWGT
+
+C       The helicity configuration was chosen already by genps and put
+C        in a common block defined in genps.inc.
+        I = HEL_PICKED
+
+        T=MATRIX(P ,NHEL(1,I),JC(1))
+        DO JJ=1,NINCOMING
+          IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
+     $     ) THEN
+            T=T*ABS(POL(JJ))
+          ELSE IF(POL(JJ).NE.1D0)THEN
+            T=T*(2D0-ABS(POL(JJ)))
+          ENDIF
         ENDDO
-        IF (ISUM_HEL .EQ. 1) THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-        ENDIF
+C       Always one helicity at a time
+        ANS = T
+C       Include the Jacobian from helicity sampling
+        ANS = ANS * HEL_JACOBIAN
+        WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
       ENDIF
-      IF (ISUM_HEL .NE. 1) THEN
+      IF (ISUM_HEL .NE. 1.OR.(HEL_PICKED.EQ.-1)) THEN
         R=XRAN1(IDUM)*ANS
         SUMHEL=0D0
         DO I=1,NCOMB
           SUMHEL=SUMHEL+TS(I)
           IF(R.LT.SUMHEL)THEN
             WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+            ANS=DSIGN(ANS,TS(I))
             GOTO 10
           ENDIF
         ENDDO
@@ -292,7 +320,7 @@ C     JAMPs contributing to orders ALL_ORDERS=1
         DO M = 1, NAMPSO
           DO N = 1, NAMPSO
             IF (CHOSEN_SO_CONFIGS(SQSOINDEX(M,N))) THEN
-              JAMP2(I)=JAMP2(I)+JAMP(I,M)*DCONJG(JAMP(I,N))
+              JAMP2(I)=JAMP2(I)+DABS(DBLE(JAMP(I,M)*DCONJG(JAMP(I,N))))
             ENDIF
           ENDDO
         ENDDO

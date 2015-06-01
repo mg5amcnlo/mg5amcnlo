@@ -1,7 +1,12 @@
 #!/bin/bash
 
-if [[ -e MadLoop5_resources.tar && ! -e MadLoop5_resources ]]; then
-tar -xf MadLoop5_resources.tar
+# For support of LHAPATH in cluster mode
+if [ $CLUSTER_LHAPATH ]; then
+  export LHAPATH=$CLUSTER_LHAPATH;
+fi
+
+if [[ -e MadLoop5_resources.tar.gz && ! -e MadLoop5_resources ]]; then
+tar -xzf MadLoop5_resources.tar.gz
 fi
 k=%(name)s_app.log
 script=%(script_name)s                         
@@ -45,7 +50,8 @@ j=%(directory)s
      # filesystem problem (executable not found)
      for((try=1;try<=16;try+=1)); 
      do
-         ../madevent >> $k <input_sg.txt
+         ../madevent 2>&1 >> $k <input_sg.txt | tee -a $k;
+     status_code=${PIPESTATUS[0]};
          if [ -s $k ]
          then
              break
@@ -55,7 +61,11 @@ j=%(directory)s
      done
      echo "" >> $k; echo "ls status:" >> $k; ls >> $k
      cat $k >> log.txt
-     
+     if [[ $status_code -ne 0 ]]; then 
+	 rm results.dat
+	 echo "ERROR DETECTED"
+	 echo "end-code not correct $status_code" > results.dat
+     fi     
      if [[ -e ftn26 ]]; then
          cp ftn26 ftn25
      fi

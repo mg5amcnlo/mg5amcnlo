@@ -30,6 +30,30 @@
 
       end
 
+      SUBROUTINE SET_FORBID_HEL_DOUBLECHECK(ONOFF)
+C
+C Give the possibility to overwrite the value of MadLoopParams.dat
+c for the helicity double checking.
+C Make sure to call this subroutine before the first time you 
+C call MadLoop.
+C
+      IMPLICIT NONE
+C
+C ARGUMENT
+C
+      LOGICAL ONOFF
+C
+C GLOBAL VARIABLES
+C
+      LOGICAL FORBID_HEL_DOUBLECHECK
+	  DATA FORBID_HEL_DOUBLECHECK/.False./
+	  COMMON/FORBID_HEL_DOUBLECHECK/FORBID_HEL_DOUBLECHECK
+C ----------
+C BEGIN CODE
+C ----------
+      FORBID_HEL_DOUBLECHECK = ONOFF
+      END
+
       subroutine setMadLoopPath(path)
 
       character(512) path
@@ -294,7 +318,7 @@ C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.7.OR.RANK.GE.7)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.8.OR.RANK.GE.8)LPASS=.FALSE.
       RETURN
       END
 

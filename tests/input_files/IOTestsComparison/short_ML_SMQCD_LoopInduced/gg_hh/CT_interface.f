@@ -6,7 +6,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and CutTools.
 C     
-C     Process: g g > h h QED=2 QCD=2 [ virt = QCD ]
+C     Process: g g > h h QED=2 QCD=2 [ sqrvirt = QCD ]
 C     
 C     
 C     CONSTANTS 

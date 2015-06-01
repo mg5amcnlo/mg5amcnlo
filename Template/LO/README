@@ -1,5 +1,6 @@
-MadGraph/MadEvent 5
-By Johan Alwall, Michel Herquet, Fabio Maltoni, Olivier Mattelaer and Tim Stelzer
+MadGraph5_aMC@NLO (MadEvent)
+arXiv:1405.0301
+
 
 http://madgraph.phys.ucl.ac.be/
 http://madgraph.hep.uiuc.edu/
@@ -17,6 +18,7 @@ C) how to launch sequential run (called multi-run)
 D) How to launch Pythia/PGS/Delphes
 E) How to prevent automatic opening of html pages
 F) How to link to lhapdf 
+G) How to run in gridpack mode
 
 A) To generate events:
 -------------------
@@ -143,3 +145,26 @@ and specify the path to the script lhpadfconfig.
  'lhapdf'    = pdlabel     ! PDF set
  10042       = lhaid       ! PDF number used ONLY for LHAPDF
 4) RUN as usual
+
+
+G) How to run in gridpack mode
+------------------------------
+
+The gridpackage is meant to be sent over to the cluster or grid
+nodes. It's completely frozen, meaning that you cannot change any
+parameters or run options, apart from the # of event and the rnd
+number.
+
+Using the option " .true.  = gridpack " in the run_card.dat will generate a gridpack.tar.gz.
+
+When you unpack it you get:
+run.sh
+madevent/
+The first is a script which accepts two numbers (the number of events
+and the rnd number).
+
+For more information on the options please refer to 
+https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/GridDevelopment
+
+to know the technical details please read:
+https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/IntroGrid

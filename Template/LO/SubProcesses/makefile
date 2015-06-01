@@ -54,10 +54,7 @@ $(LIBDIR)libpdf.$(libext):
 
 # Dependencies
 
-driver.f: genps.inc qmass.inc
-setcuts.f: qmass.inc
-qmass.inc: nexternal.inc
-	   touch qmass.inc
+driver.f: genps.inc
 symmetry.o: genps.inc nexternal.inc configs.inc run_config.inc
 genps.o: genps.inc nexternal.inc configs.inc
 cuts.o: genps.inc nexternal.inc pmass.inc

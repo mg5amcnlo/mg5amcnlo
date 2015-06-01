@@ -169,7 +169,11 @@ c  Begin Code
 c-----
 c     First open symfact file
       open (unit=27, file = 'symfact.dat', status='unknown')
-      nsym=int(dlog10(dble(mapconfig(0))))+3
+c
+c     VA 15/05/2015 It was +3, leading to symfact.dat lines like these
+c     112-100
+c     So I add here a safety margin 10.
+      nsym=int(dlog10(dble(mapconfig(0))))+13
 
       ic = 0      
 c     ncode is number of digits needed for the code
@@ -215,7 +219,7 @@ c                 Create format string based on number of digits
                   write(formstr,'(a,i1,a)') '(I',nconf,'$)'
                   write(*,formstr) mapconfig(i)
 c                 Write symmetry factors
-                  write(formstr2,'(a,i1,a)') '(2i',nsym,')'
+                  write(formstr2,'(a,i2,a)') '(2i',nsym,')'
                   write(27,formstr2) mapconfig(i),use_config(i)
                else
 c                 Create format string based on number of digits
@@ -231,10 +235,10 @@ c                 Create format string based on number of digits
 c                 Write symmetry factors
                   nconf=int(dlog10(dble(mapconfig(i))))+1
                   if(nconf+ncode+1.lt.10) then
-                     write(formstr2,'(a,i1,a,i1,a,i1,a)') '(F',nconf+ncode+1,
+                     write(formstr2,'(a,i1,a,i1,a,i2,a)') '(F',nconf+ncode+1,
      $                    '.',ncode,',i',nsym,')'
                   else
-                     write(formstr2,'(a,i2,a,i1,a,i1,a)') '(F',nconf+ncode+1,
+                     write(formstr2,'(a,i2,a,i1,a,i2,a)') '(F',nconf+ncode+1,
      $                    '.',ncode,',i',nsym,')'
                   endif
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
@@ -244,7 +248,7 @@ c                 Write symmetry factors
  100           call bw_increment_array(iarray,imax,ibase,done)
             enddo
          else
-            write(formstr2,'(a,i1,a)') '(2i',nsym,')'
+            write(formstr2,'(a,i2,a)') '(2i',nsym,')'
             write(27,formstr2) mapconfig(i),use_config(i)
          endif
       enddo
@@ -476,14 +480,12 @@ c
          xwidth(-i)=prwidth(-i,iconfig)
          if (xwidth(-i) .gt. 0d0) then
             nbw=nbw+1
-            if (iarray(nbw) .eq. 1) then
-               if(xmass(-i).gt.prmass(-i,iconfig)+5d0*xwidth(-i)) then
-                  failConfig=.true.
-                  return
-               else
-                  xmass(-i)=max(xmass(-i),prmass(-i,iconfig)-5d0*xwidth(-i))
-               endif
-            else if(forcebw(-i) .eq. 1) then
+            if(forcebw(-i) .eq. 1) then
+c               if (iarray(nbw) .ne. 1) then
+c                  write(*,*) "fail due to iarray", iarray(nbw)
+c                  failConfig=.true.
+c                  return
+c               endif
                if(xmass(-i).gt.prmass(-i,iconfig)+bwcutoff*xwidth(-i)) then
                   failConfig=.true.
                   return
@@ -491,6 +493,14 @@ c
                   xmass(-i)=max(xmass(-i),prmass(-i,iconfig)-
      $                 bwcutoff*xwidth(-i))
                endif
+            else if (iarray(nbw) .eq. 1) then
+               if(xmass(-i).gt.prmass(-i,iconfig)+5d0*xwidth(-i)) then
+                  failConfig=.true.
+                  return
+               else
+                  xmass(-i)=max(xmass(-i),prmass(-i,iconfig)-5d0*xwidth(-i))
+               endif
+
             endif
          endif
          mtot=mtot+xmass(-i)
@@ -548,10 +558,11 @@ c-----
       done = .not. found
       end
 
-      subroutine store_events()
+      subroutine store_events(grid)
 c**********************************************************************
 c     Dummy routine
 c**********************************************************************
+      integer grid
       end
 
       double precision function dsig(pp,wgt,imode)

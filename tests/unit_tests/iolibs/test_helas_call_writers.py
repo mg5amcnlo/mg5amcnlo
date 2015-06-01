@@ -32,7 +32,7 @@ import madgraph.various.misc as misc
 import tests.unit_tests as unittest
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
-import tests.unit_tests.various.test_aloha as test_aloha
+import tests.parallel_tests.test_aloha as test_aloha
 
 
 #===============================================================================

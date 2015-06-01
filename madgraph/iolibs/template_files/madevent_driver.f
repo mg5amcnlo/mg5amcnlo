@@ -9,6 +9,8 @@ C
       double precision zero
       parameter       (ZERO = 0d0)
       include 'genps.inc'
+      data HEL_PICKED/-1/
+      data hel_jacobian/1.0d0/
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       INTEGER    ITMAX, ITMIN, NCALL
@@ -23,6 +25,7 @@ C
       character*130 buf
       integer NextUnopen
       external NextUnopen
+      double precision t_before
 c
 c     Global
 c
@@ -34,6 +37,10 @@ c
       integer ngroup
       common/to_group/ngroup
       data ngroup/0/
+
+      DOUBLE PRECISION CUMULATED_TIMING
+      COMMON/GENERAL_STATS/CUMULATED_TIMING
+
 c
 c     PARAM_CARD
 c
@@ -66,7 +73,9 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 
 C-----
 C  BEGIN CODE
-C-----  
+C----- 
+      call cpu_time(t_before)
+      CUMULATED_TIMING = t_before
 c
 c     Read process number
 c
@@ -97,7 +106,6 @@ c     in first iteration for gridpacks
       call setrun                !Sets up run parameters
       call setpara(param_card_name %(secondparam)s)   !Sets up couplings and masses
       include 'pmass.inc'        !Sets up particle masses
-      include 'qmass.inc'        !Sets up particle masses inside onium state
       call setcuts               !Sets up cuts 
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
@@ -144,9 +152,9 @@ c
       write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
       call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
       write(*,*) "Completed mapping",nexternal
-      ndim = 3*(nexternal-2)-4
-      if (abs(lpp(1)) .ge. 1) ndim=ndim+1
-      if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+      ndim = 3*(nexternal-nincoming)-4
+      if (nincoming.gt.1.and.abs(lpp(1)) .ge. 1) ndim=ndim+1
+      if (nincoming.gt.1.and.abs(lpp(2)) .ge. 1) ndim=ndim+1
       ninvar = ndim
       do j=mincfig,maxcfig
          if (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then
@@ -158,13 +166,13 @@ c
       enddo
       write(*,*) "about to integrate ", ndim,ncall,itmax,itmin,ninvar,nconfigs
       call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
+
 c
 c     Now write out events to permanent file
 c
       if (twgt .gt. 0d0) maxwgt=maxwgt/twgt
       write(lun,'(a,f20.5)') 'Summary', maxwgt
       
-c      call store_events
 
 c      write(*,'(a34,20I7)'),'Color flows originally chosen:   ',
 c     &     (ncolflow(i),i=1,ncols)

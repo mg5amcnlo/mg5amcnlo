@@ -21,8 +21,6 @@ int main() {
   if (!matching) return 1;
   pythia.setUserHooksPtr(matching);
 
-  pythia.init();
-
   int nAbort=10;
   int nPrintLHA=1;
   int iAbort=0;
@@ -44,6 +42,8 @@ int main() {
       return 0;
     }
   }
+
+  pythia.init();
 
   HepMC::Pythia8ToHepMC ToHepMC;
   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
@@ -82,6 +82,7 @@ int main() {
     } else {
       normhepmc = double(iEventtot) / double(iEventshower);
     }
+    sigmaTotal += evtweight*normhepmc;
     hepmcevt->weights().push_back(evtweight*normhepmc);
     ToHepMC.fill_next_event( pythia, hepmcevt );
     // Add the weight of the current event to the cross section.

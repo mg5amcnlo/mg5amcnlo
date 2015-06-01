@@ -314,7 +314,38 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 discarded_configurations.append(diag_config)
         self[diags] = newdiagselection
 
+    def remove_Furry_loops(self, model, structs):
+        """ Remove the loops which are zero because of Furry theorem. So as to
+        limit any possible mistake in case of BSM model, I limit myself here to
+        removing SM-quark loops with external legs with an odd number of photons,
+        possibly including exactly two gluons."""
 
+        new_diag_selection = base_objects.DiagramList()
+        
+        n_discarded = 0
+        for diag in self['loop_diagrams']:
+            if diag.get('tag')==[]:
+                raise MadGraph5Error, "The loop diagrams should have been tagged"+\
+                  " before going through the Furry filter."
+            
+            loop_line_pdgs = diag.get_loop_lines_pdgs()
+            attached_pdgs   = diag.get_pdgs_attached_to_loop(structs)
+            if (attached_pdgs.count(22)%2==1) and \
+               (attached_pdgs.count(21) in [0,2]) and \
+               (all(pdg in [22,21] for pdg in attached_pdgs)) and \
+               (abs(loop_line_pdgs[0]) in list(range(1,7))) and \
+               (all(abs(pdg)==abs(loop_line_pdgs[0]) for pdg in loop_line_pdgs)):
+                n_discarded += 1
+            else:
+                new_diag_selection.append(diag)
+                
+        self['loop_diagrams'] = new_diag_selection
+        
+        if n_discarded > 0:
+            logger.debug(("MadLoop discarded %i diagram%s because they appeared"+\
+              " to be zero because of Furry theorem.")%(n_discarded,'' if \
+                                                       n_discarded<=1 else 's'))
+        
     def user_filter(self, model, structs):
         """ User-defined user-filter. By default it is not called, but the expert
         user can turn it on and code here is own filter. Some default examples
@@ -770,6 +801,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Set the necessary UV/R2 CounterTerms for each loop diagram generated
         self.set_LoopCT_vertices()
         
+        # Discard diagrams which are zero because of Furry theorem
+        self.remove_Furry_loops(model,self['structure_repository'])
+        
         # Apply here some user-defined filter.
         # For expert only, you can edit your own filter by modifying the
         # user_filter() function which by default does nothing but in which you
@@ -1007,8 +1041,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 (particle.is_perturbating(order, self['process']['model']) and \
                 particle.get_pdg_code() not in \
                                         self['process']['forbidden_particles'])]
-#            lcutPart = [lp for lp in lcutPart if abs(lp.get('pdg_code'))==1000021]
-#            print "lcutPart=",[part.get('name') for part in lcutPart]
+#            lcutPart = [lp for lp in lcutPart if abs(lp.get('pdg_code'))==6]
+#            misc.sprint("lcutPart=",[part.get('name') for part in lcutPart])
             for part in lcutPart:
                 if part.get_pdg_code() not in self.lcutpartemployed:
                     # First create the two L-cut particles to add to the process.
@@ -1059,7 +1093,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     # Accordingly update the totloopsuccessful tag
                     if loopsuccessful:
                         totloopsuccessful=True
-        
+
         # Reset the l-cut particle list
         self.lcutpartemployed=[]
 

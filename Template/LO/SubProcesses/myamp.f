@@ -259,9 +259,14 @@ c              write(*,*) 'cut_bw: ',i,gForceBW(i,iconfig),OnBW(i),cut_bw
             endif
 c
 c     Here we set onshell for phase space integration (JA 4/8/11)
-c
-            onshell = (abs(xmass - prmass(i,iconfig)) .lt.
+c     For decay-chain syntax use BWcutoff here too (22/12/14)
+            if (gForceBW(i, iconfig).eq.1) then
+               onshell = (abs(xmass - prmass(i,iconfig)) .lt.
+     $           bwcutoff*prwidth(i,iconfig))
+            else
+               onshell = (abs(xmass - prmass(i,iconfig)) .lt.
      $           5d0*prwidth(i,iconfig))
+            endif
 
             if (onshell .and. (lbw(nbw).eq. 2) .or.
      $          .not. onshell .and. (lbw(nbw).eq. 1)) then
@@ -297,6 +302,7 @@ c     Local
 c
       double precision  xm(-nexternal:nexternal)
       double precision  xe(-nexternal:nexternal)
+      double precision bwcut_for_PS(-nexternal:0)
       double precision tsgn, xo, a
       double precision x1,x2,xk(nexternal)
       double precision dr,mtot,etot,xqfact
@@ -440,25 +446,28 @@ c            write(*,*) prwidth(i,iconfig),prmass(i,iconfig)
             if (prwidth(i,iconfig) .gt. 0 ) then
                nbw=nbw+1
 c              JA 6/8/2011 Set xe(i) for resonances
-               if (lbw(nbw).eq.1) then
-                  xm(i) = max(xm(i), prmass(i,iconfig)-5d0*prwidth(i,iconfig))
-               else if (gforcebw(i,iconfig).eq.1) then
+               if (gforcebw(i,iconfig).eq.1) then
                   xm(i) = max(xm(i), prmass(i,iconfig)-bwcutoff*prwidth(i,iconfig))
+                  bwcut_for_PS(i) = bwcutoff
+               else if (lbw(nbw).eq.1) then
+                  xm(i) = max(xm(i), prmass(i,iconfig)-5d0*prwidth(i,iconfig))
+                  bwcut_for_PS(i) = 5d0
+               else
+                  bwcut_for_PS(i) = 5d0
                endif
             endif
             xe(i)=max(xe(i),xm(i))
 c     Check for impossible onshell configurations
 c     Either: required onshell and daughter masses too large
 c     Or: forced and daughter masses too large
-c     Or: required offshell and forced, with bwcutoff.le.5
+c     Or: required offshell and forced
             if(prwidth(i,iconfig) .gt. 0.and.
      $         (lbw(nbw).eq.1.and.
-     $          (prmass(i,iconfig)+5d0*prwidth(i,iconfig).lt.xm(i)
-     $           .or.prmass(i,iconfig)-5d0*prwidth(i,iconfig).gt.dsqrt(stot))
+     $          (prmass(i,iconfig)+bwcut_for_PS(i)*prwidth(i,iconfig).lt.xm(i)
+     $           .or.prmass(i,iconfig)-bwcut_for_PS(i)*prwidth(i,iconfig).gt.dsqrt(stot))
      $          .or.gforcebw(i,iconfig).eq.1.and.
      $              prmass(i,iconfig)+bwcutoff*prwidth(i,iconfig).lt.xm(i)
-     $          .or.lbw(nbw).eq.2.and.gforcebw(i,iconfig).eq.1 .and.
-     $              bwcutoff.le.5d0))
+     $          .or.lbw(nbw).eq.2.and.gforcebw(i,iconfig).eq.1))
      $        then
 c     Write results.dat and quit
                call write_null_results()
@@ -478,7 +487,7 @@ c----
                      spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/stot
                      swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/stot
                   endif
-               else if((prmass(i,iconfig)+5d0*prwidth(i,iconfig)).ge.xm(i)
+               else if((prmass(i,iconfig)+bwcut_for_PS(i)*prwidth(i,iconfig)).ge.xm(i)
      $                  .and. iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
 c              JA 02/13 Only allow BW if xm below M+5*Gamma
                   write(*,*) 'Setting BW',i,nbw,prmass(i,iconfig)
@@ -496,7 +505,7 @@ c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
 c     Set spmass for BWs
                if (swidth(-i) .ne. 0d0)
      $              spmass=spmass-xm(i) +
-     $              max(xm(i),prmass(i,iconfig)-5d0*prwidth(i,iconfig))
+     $              max(xm(i),prmass(i,iconfig)-bwcut_for_PS(i)*prwidth(i,iconfig))
             else                                  !1/x^pow
               a=prmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
@@ -642,7 +651,7 @@ c      if (xo .gt. 0) call setgrid(-i,xo,a,1)
 
       write(*,*),'Impossible BW configuration'
       open(unit=66,file='results.dat',status='unknown')
-      write(66,'(3e12.5,2i9,i5,i9,3e10.3)')0.,0.,0.,0,0,1,0,0.,0.,0.
+      write(66,'(3e12.5,2i9,i5,i9,4e10.3)')0.,0.,0.,0,0,1,0,0.,0.,0.,0.
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
       close(66)
       end

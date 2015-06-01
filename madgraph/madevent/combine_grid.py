@@ -2,15 +2,18 @@ from __future__ import division
 import collections
 import math
 import os
-
 try:
     import madgraph
 except ImportError:
     import internal.sum_html as sum_html
     import internal.misc as misc
+    import internal.files as files
 else:
     import madgraph.madevent.sum_html as sum_html
     import madgraph.various.misc as misc
+    import madgraph.iolibs.files as files
+
+pjoin = os.path.join
 
 class grid_information(object):
 
@@ -19,6 +22,7 @@ class grid_information(object):
 
     def __init__(self, mc_hel):
         # information that we need to get to create a new grid
+        self.oneFail = False # check if one splitted job fails to pass cuts
         self.mc_hel= mc_hel 
         self.grid_base = collections.defaultdict(int)
         self.original_grid = collections.defaultdict(int) 
@@ -35,6 +39,8 @@ class grid_information(object):
         self.max_wgt = 0
         self.nb_ps_point = 0
         self.target_evt = 0
+        self.nb_sample = 0
+        self.force_max_wgt = [] # list of weight for the secondary unweighting
         
         #
         self.results = sum_html.Combine_results('combined')
@@ -48,6 +54,7 @@ class grid_information(object):
 
     def add_one_grid_information(self, path):
 
+        self.nb_sample += 1 
         if isinstance(path, str):
             finput = open(path)
         elif isinstance(path, file):
@@ -61,9 +68,20 @@ class grid_information(object):
             try:
                 self.nonzero, self.ng, self.maxinvar = [int(i) for i in line.split()]
             except ValueError:
+                self.nb_ps_point += 500000
+                self.onefail = True
                 return
         else:
-            nonzero, ng, maxinvar = [self.convert_to_number(i) for i in line.split()]
+            info =  [self.convert_to_number(i) for i in line.split()]
+            if len(info) == 0: 
+                #file empty (should be due to no point pass cuts)
+                self.nb_ps_point += 500000
+                self.oneFail = True
+                return
+            elif len(info) !=3:
+                raise Exception, "wrong formatting of %s"% finput.name
+            
+            nonzero, ng, maxinvar = info
             self.nonzero+=nonzero
             assert ng == self.ng
             assert maxinvar == self.maxinvar
@@ -73,7 +91,7 @@ class grid_information(object):
         data = [self.convert_to_number(i) for i in line.split()]
         for j in range(self.maxinvar):
             for i in range(self.ng): 
-                self.grid_base[(i,j)] = data.pop(0)
+                self.grid_base[(i,j)] += data.pop(0)
 
         line = finput.readline()
         data = [self.convert_to_number(i) for i in line.split()]
@@ -85,7 +103,7 @@ class grid_information(object):
         data = [self.convert_to_number(i) for i in line.split()]
         for j in range(self.maxinvar):
             for i in range(self.ng): 
-                self.non_zero_grid[(i,j)] = int(data.pop(0))
+                self.non_zero_grid[(i,j)] += int(data.pop(0))
 
         #minimal value for each variable of integraion
         line = finput.readline()
@@ -111,6 +129,9 @@ class grid_information(object):
             assert self.target_evt == data[5], "%s != %s" % (self.target_evt, data[5])
         else: 
             self.target_evt += data[5]  
+        self.force_max_wgt.append(data[6])
+        
+        
             
         # discrete sampler/helicity information
         if not self.mc_hel:
@@ -135,11 +156,37 @@ class grid_information(object):
             raise Exception, "path should be a path or a file descriptor"
          
         
-        self.results.add_results(fname,finput)
+        return self.results.add_results(fname,finput)
+        
 
+    def write_grid_for_submission(self, Pdir, G, n_split, nb_events, mode='survey',
+                                                     conservative_factor = 1.0):
+        """ Generate the grid for the resubmission """
+
+        Gdirs = [] #build the the list of directory
+        for i in range(n_split):
+            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            Gdirs.append(path)
+                
+        # Create the new grid and put it in all directory  
+        if not os.path.exists(pjoin(Pdir,"G%s" % G)):
+            os.mkdir(pjoin(Pdir,"G%s" % G))
+        
+        self.write_associate_grid(pjoin(Pdir,"G%s" % G,'ftn25'), nb_events,
+                            conservative_factor=conservative_factor, mode=mode)
+
+        # In refine, the link is automatically created by the job
+        if mode=='survey':
+            for Gdir in Gdirs[:]:
+                files.ln(pjoin(Pdir,"G%s" % G, 'ftn25'),  Gdir)
     
-    def write_associate_grid(self, path):
+    def write_associate_grid(self, path, nb_event, 
+                                        conservative_factor=1.0, mode="survey"):
         """use the grid information to create the grid associate"""
+
+        if not self.nb_ps_point:
+            # PS return 0 so pointless to continue
+            return
 
         new_grid = self.get_new_grid()
         
@@ -148,6 +195,9 @@ class grid_information(object):
         for var in range(self.maxinvar):
             for i in range(self.ng):
                 data.append(new_grid[(i,var)])
+        
+#        misc.sprint("plotting grid")
+#        self.plot_grid(new_grid, 1)
         
         while len(data) >= 4:
             v1, v2, v3, v4 = data[:4]
@@ -159,20 +209,175 @@ class grid_information(object):
             fsock.write('%+.16f' % v)
         if  data:
             fsock.write('\n')
+
+        
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
-        fsock.write('%s\n' %(mean*self.target_evt/self.nb_ps_point**2))            
+                
+        #means that this the max number of iteration
+        # The division by max_iter is just to be more conservative
+        twgt = mean / 8.0 / nb_event
+        trunc_max = 0.10
+        force_max_wgt = self.get_max_wgt(trunc_max)
+
+        fsock.write('%s %s \n' %(twgt, force_max_wgt))
         
         if not self.mc_hel:
             fsock.write(self.helicity_line)
         
+        # At this stage we chose the small_contrib_threshold and damping power
+        # parameter of the discrete grids depending on the mode currently being
+        # run.
+        for  dimension in self.discrete_grid.values():
+            if mode=='survey':
+                # For the survey, we use the conservative 3% with the third root
+                dimension.small_contrib_threshold = 0.03
+                dimension.damping_power = 1.0/3.0
+            elif mode=='refine':
+                # For the refine, we use the more aggressive 0.3% with the square root
+                dimension.small_contrib_threshold = 0.003
+                dimension.damping_power = 0.5
+            else:
+                dimension.small_contrib_threshold = 0.0
+                dimension.damping_power = 0.5
+        
         self.discrete_grid.write(fsock)
-                    
+        
+        return twgt
+    
+    def get_max_wgt(self, trunc_max=0.01):
+        """Compute the force max weight for the secondary unweighting
+           This correspond to the weight which allow "trunc_max" (1%) of the event
+           to have a weight larger than one."""
+        
+        
+        th_maxwgt = [R.th_maxwgt for R in self.results]
+        th_nunwgt = [R.th_nunwgt for R in self.results]
+        nb_data = len(th_nunwgt)
+        total_sum = sum(th_maxwgt[i] * th_nunwgt[i] for i in xrange(nb_data))
+        info = sorted([ (th_maxwgt[i], th_nunwgt[i]) for i in xrange(nb_data) 
+                                                          if th_nunwgt[i] > 0],
+                      reverse=True)
+
+        if len(info) == 0:
+            maxwgt = max(th_maxwgt)
+            if maxwgt==0:
+                return -1
+            else:
+                return maxwgt
+            
+        xsum = 0
+        nb_event = 0
+        i = 0        
+        while (i != len(info) and xsum-info[i][0] * nb_event < trunc_max * total_sum):
+            xsum += info[i][0]*info[i][1]
+            nb_event += info[i][1]
+            i += 1
+        else:
+            # Naively we want to return info[i-1]
+            # We want to be smarter and find the value which has exactly
+            # a trunc_max error. 
+            # For this we solve the following equation
+            # xsum_old - X * nb_event_old = trunc_max *total_sum
+                        
+            wgt =  (xsum - trunc_max *total_sum )/ nb_event
+            
+            if __debug__:
+                if len(info) == i:
+                    assert 0 < wgt < info[i-1][0]
+                else:
+                    assert info[i][0] < wgt < info[i-1][0]        
+            
+            return wgt
+
+    def get_nunwgt(self, max_wgt=-1):
+        """return an estimate of the number of unweighted events for a given weight"""
+        
+        if max_wgt == -1:
+            max_wgt = self.get_max_wgt()
+        
+        #th_maxwgt = [R.th_maxwgt for R in self.results]
+        #th_nunwgt = [R.th_nunwgt for R in self.results]
+        
+        # 1. estimate based on the information in results.dat
+        #estimate1 = sum([max(R.nunwgt*R.maxwgt/max_wgt, R.nunwgt)  
+        #                                     for R in self.results if R.nunwgt])
+        
+        # 2. estimate based on the information of the theoretical information
+        #info = zip(self.th_maxwgt, self.th_nunwgt)
+        #estimate2 = sum(max(N, N*W/max_wgt, N) for N,W in info)
+        
+        # 3. 
+        total_nunwgt = 0
+        for i in range(len(self.results)):
+            #take the data
+            maxwgt1 = self.results[i].maxwgt
+            nunwgt1  = self.results[i].nunwgt
+            maxwgt2 = self.results[i].th_maxwgt
+            nunwgt2 = self.results[i].th_nunwgt
+            
+            if maxwgt1 > maxwgt2:
+                maxwgt1, maxwgt2 = maxwgt2, maxwgt1
+                nunwgt1, nunwgt2 = nunwgt2, nunwgt1
+            
+            assert nunwgt1 >= nunwgt2
+            
+            if max_wgt <= maxwgt1:
+                # we can not return more event than those written on he disk
+                total_nunwgt += self.results[i].nunwgt
+            elif max_wgt > maxwgt2:
+                total_nunwgt += nunwgt2 * maxwgt2 / max_wgt
+            else:
+                # solve the equation a+b/x=N with the two know point
+                
+                a = (nunwgt1 * maxwgt1 - nunwgt2 * maxwgt2) / (maxwgt1 -maxwgt2)
+                b = maxwgt1 * maxwgt2 / (maxwgt1 -maxwgt2) *(nunwgt2 -nunwgt1)
+                
+                to_add = a + b / max_wgt
+                            
+                assert round(nunwgt2) <= round(to_add) <= round(nunwgt1)
+                total_nunwgt += min(to_add, self.results[i].nunwgt)
+        return total_nunwgt
+        
+    def plot_grid(self, grid, var=0):
+        """make a plot of the grid."""
+            
+        try:
+            import matplotlib
+        except Exception:
+            return
+        else:
+            import matplotlib.pyplot as plt
+            import matplotlib.gridspec as gridspec
+        
+        gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
+        gs1.update(wspace=0, hspace=0) # set the spacing between axes.                                                                                                                                          
+        ax = plt.subplot(gs1[0])
+        data = []
+        for i in range(self.ng):
+            data.append(grid[(i,var)])
+        ftnvalues = [(i+1)/len(data)for i in range(len(data)) if i < len(data)]
+        
+        ax.plot(data, ftnvalues, label="ftn26")
+        ax.legend()
+        plt.title('grid')
+        ax.set_ylim([0,1])
+        plt.axis('on')
+        i=0
+        while os.path.exists("matplotlib%s.png" % i):
+            i+=1
+        plt.savefig("matplotlib%s.png" % i)
+        misc.sprint("file save in matplotlib%s.png" % i)
+        
     def get_cross_section(self):
         """return the cross-section error"""
 
-        if self.nb_ps_point == 0:
+        if self.nb_ps_point == 0 or self.nonzero == 0:
             return 0, 0, 0
-                
+        elif self.oneFail: #one of the split fail due to cut but not all of them
+            if self.nonzero < 10*len(self.results):
+                # no real success in any of the run. Declare failure.
+                return 0, 0 , 0 
+            
         mean = self.sum_wgt*self.target_evt/self.nb_ps_point
         rmean =  self.sum_abs_wgt*self.target_evt/self.nb_ps_point
         
@@ -201,8 +406,9 @@ class grid_information(object):
 
 
     def get_new_grid_for_var(self, var):
+        """return the combine grid for a given variable"""
         
-        #1. biais the grid to allow more points where the fct is zero.    
+        #1. biais the grid to allow more points where the fct is zero.   
         grid = collections.defaultdict(int)
         for i in range(self.ng):
             if self.non_zero_grid[(i, var)] != 0:
@@ -320,6 +526,8 @@ class DiscreteSampler(dict):
 #  Helicity
 #  10 # Attribute 'min_bin_probing_points' of the grid.
 #  1 # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
+#  0.01 # Attribute 'small_contrib_threshold' of the grid.
+#  0.5 # Attribute 'damping_power' of the grid.
 # # binID   n_entries weight   weight_sqr   abs_weight
 #    1   255   1.666491280568920E-002   4.274101502263763E-004   1.666491280568920E-002
 #    2   0   0.000000000000000E+000   0.000000000000000E+000   0.000000000000000E+000
@@ -364,6 +572,8 @@ class DiscreteSampler(dict):
 #  10 # Attribute 'min_bin_probing_points' of the grid.
 #  1 # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
 # # binID   n_entries weight   weight_sqr   abs_weight
+#  0.01 # Attribute 'small_contrib_threshold' of the grid.
+#  0.5 # Attribute 'damping_power' of the grid.
 #    1   512   7.658545534133427E-003   9.424671508005602E-005   7.658545534133427E-003
 #    4   478   8.108669631788431E-003   1.009367301168054E-004   8.108669631788431E-003
 #  </DiscreteSampler_grid>
@@ -398,8 +608,15 @@ class DiscreteSampler(dict):
         line = next_line(fsock)
         grid.grid_mode = int(line)
 
+        # line 5  small_contrib_threshold
+        line = next_line(fsock)
+        grid.small_contrib_threshold = float(line)
+        
+        # line 6  damping_power
+        line = next_line(fsock)
+        grid.damping_power = float(line)
 
-        # line 5 and following grid information
+        # line 7 and following grid information
         line = next_line(fsock)
         while 'discretesampler_grid' not in line.lower():
             grid.add_bin_entry(*line.split())
@@ -430,6 +647,13 @@ class DiscreteSamplerDimension(dict):
         self.min_bin_probing_points = 10
         self.grid_mode = 1 #1=='default',2=='initialization'
         self.grid_type = 1 # 1=='ref', 2=='run'
+        # The attribute below controls at which point we damp the probing
+        # of small contributions. It corresponds to the contribution relative
+        # to the averaged contribution of all bins. It must be >=0.0 and < 0.5
+        # typically
+        self.small_contrib_threshold = 0.0
+        # The power of the corresponding damping, typically 0.5
+        self.damping_power = 0.5
 
     def update(self, running_grid):
         """update the reference with the associate running grid """
@@ -505,6 +729,8 @@ class DiscreteSamplerDimension(dict):
   %(grid_type)s # grid_type. 1=='ref', 2=='run'
   %(min_bin_probing_points)s # Attribute 'min_bin_probing_points' of the grid.
   %(grid_mode)s # Attribute 'grid_mode' of the grid. 1=='default',2=='initialization'
+  %(small_contrib)s # Attribute 'small_contrib_threshold' of the grid.
+  %(damping_power)s # Attribute 'damping_power' of the grid.
 #  binID   n_entries weight   weight_sqr   abs_weight
 %(bins_informations)s
   </DiscreteSampler_grid>
@@ -525,7 +751,9 @@ class DiscreteSamplerDimension(dict):
                 'grid_mode': self.grid_mode,
                 'grid_type': self.grid_type,
                 'bins_informations' : '\n'.join('    %s %s' % (bin_id,str(bin_info)) \
-                                            for (bin_id, bin_info) in bins)
+                                            for (bin_id, bin_info) in bins),
+                'small_contrib': '%3.3f'%self.small_contrib_threshold,
+                'damping_power': '%3.3f'%self.damping_power                
                 }
         
         fsock.write(template % data)

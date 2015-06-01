@@ -404,7 +404,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             line = ' '.join(args[1:])
             
         proc_type=self.extract_process_type(line)
-        if proc_type[1] != 'real':
+        if proc_type[1] not in ['real', 'LOonly']:
             run_interface.check_compiler(self.options, block=False)
         self.validate_model(proc_type[1])
 
@@ -418,11 +418,18 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 raise MadGraph5Error("Decay processes cannot be perturbed")
         else:
             myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
+
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
-        if myprocdef['perturbation_couplings']!=['QCD']:
-                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
-                        % ', '.join(myprocdef['perturbation_couplings']))
+#        if myprocdef['perturbation_couplings']!=['QCD']:
+#            message = ""FKS for reals only available in QCD for now, you asked %s" \
+#                        % ', '.join(myprocdef['perturbation_couplings'])"
+#            logger.info("%s. Checking for loop induced")
+#            new_line = ln
+#                
+#                
+#                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
+#                        % ', '.join(myprocdef['perturbation_couplings']))
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,

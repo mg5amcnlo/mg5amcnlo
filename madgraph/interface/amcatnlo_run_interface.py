@@ -69,6 +69,7 @@ except ImportError:
     import internal.sum_html as sum_html
     import internal.shower_card as shower_card
     import internal.FO_analyse_card as analyse_card 
+    import internal.histograms as histograms
 else:
     # import from madgraph directory
     aMCatNLO = False
@@ -83,9 +84,8 @@ else:
     import madgraph.various.misc as misc
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
+    import madgraph.various.histograms as histograms
     from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
-    
-
 
 class aMCatNLOError(Exception):
     pass
@@ -111,6 +111,9 @@ def compile_dir(*arguments):
         #compile everything
         # compile and run tests
         for test in tests:
+            # skip check_poles for LOonly dirs
+            if test == 'check_poles' and os.path.exists(pjoin(this_dir, 'parton_lum_0.f')):
+                continue
             misc.compile([test], cwd = this_dir, job_specs = False)
             input = pjoin(me_dir, '%s_input.txt' % test)
             #this can be improved/better written to handle the output
@@ -146,6 +149,8 @@ def check_compiler(options, block=False):
         compiler = options['fortran_compiler']
     elif misc.which('gfortran'):
         compiler = 'gfortran'
+    else: 
+        compiler = ''
         
     if 'gfortran' not in compiler:
         if block:
@@ -1202,6 +1207,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if not mode in ['LO', 'NLO']:
             assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
+            self.exec_cmd('reweight -from_cards', postcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
         
@@ -1403,7 +1409,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], -1, npoints, niters) 
             # collect the results and logs
             self.collect_log_files(folder_names[mode], 0)
-            p = misc.Popen(['./combine_results_FO.sh', req_acc, '%s_G*' % mode_dict[mode]], \
+            p = misc.Popen(['./combine_results_FO.sh', str(req_acc), '%s_G*' % mode_dict[mode]], \
                                stdout=subprocess.PIPE, \
                                cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
@@ -1449,6 +1455,23 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),
                                 pjoin(self.me_dir, 'Events', self.run_name))
                 logger.info('The results of this run and the TopDrawer file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+            elif self.analyse_card['fo_analysis_format'].lower() == 'hwu':
+                self.combine_plots_HwU(folder_names[mode])
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.HwU'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.gnuplot'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                try:
+                    misc.call(['gnuplot','MADatNLO.gnuplot'],\
+                              stdout=os.open(os.devnull, os.O_RDWR),\
+                              stderr=os.open(os.devnull, os.O_RDWR),\
+                              cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                except Exception:
+                    pass
+
+
+                logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             elif self.analyse_card['fo_analysis_format'].lower() == 'root':
                 misc.call(['./combine_root.sh'] + folder_names[mode], \
@@ -1516,9 +1539,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     nevents_unweighted = []
 
                 split = i == 2 and \
-                        int(self.run_card['nevt_job']) > 0 and \
-                        any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
-                            for l in nevents_unweighted if l])
+                        int(self.run_card['nevt_job']) > 0 
 
                 if i == 2 or not options['only_generation']:
                     # if the number of events requested is zero,
@@ -1530,7 +1551,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     if split:
                         # split the event generation
                         misc.call([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
-                                   [self.run_card['nevt_job']],
+                                   [str(self.run_card['nevt_job'])],
                                    stdout = devnull,
                                    cwd = pjoin(self.me_dir, 'SubProcesses'))
                         assert os.path.exists(pjoin(self.me_dir, 'SubProcesses', 
@@ -1586,27 +1607,55 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         self.collect_log_files(folder_names[mode], 2)
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
+    def combine_plots_HwU(self,folder_names):
+        """Sums all the plots in the HwU format."""
+        
+        logger.debug('Combining HwU plots.')
+        
+        with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
+            all_histo_paths = dirf.readlines()
+        all_histo_paths = [pjoin(self.me_dir,'SubProcesses',
+                      path.rstrip(),"MADatNLO.HwU") for path in all_histo_paths]
+        
+        histogram_list = histograms.HwUList(all_histo_paths[0])
+
+        for histo_path in all_histo_paths[1:]:
+            for i, histo in enumerate(histograms.HwUList(histo_path)):
+                # First make sure the plots have the same weight labels and such
+                histo.test_plot_compability(histogram_list[i])
+                # Now let the histogram module do the magic and add them.
+                histogram_list[i] += histo
+        
+        # And now output the finalized list
+        histogram_list.output(pjoin(self.me_dir,'SubProcesses',"MADatNLO"),
+                                                             format = 'gnuplot')
 
     def applgrid_combine(self,cross,error):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
         logger.debug('Combining APPLgrids \n')
-        applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),'applgrid-combine')
+        applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),
+                                                            'applgrid-combine')
         with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
             all_jobs=dirf.readlines()
         ngrids=len(all_jobs)
-        nobs  =len([name for name in os.listdir(pjoin(self.me_dir,'SubProcesses',all_jobs[0].rstrip())) \
-                        if name.endswith("_out.root")])
+        nobs  =len([name for name in os.listdir(pjoin(self.me_dir,'SubProcesses',
+                          all_jobs[0].rstrip())) if name.endswith("_out.root")])
         for obs in range(0,nobs):
-            gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
+            gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+
+                                     str(obs)+"_out.root") for job in all_jobs]
             # combine APPLgrids from different channels for observable 'obs'
             if self.run_card["iappl"] == 1:
-                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,
+            "aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
             elif self.run_card["iappl"] == 2:
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
-                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
+                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",
+                        self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',
+                                  str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
                 for job in all_jobs:
-                    os.remove(pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+str(obs)+"_in.root"))
+                    os.remove(pjoin(self.me_dir,'SubProcesses',job.rstrip(),
+                                               "grid_obs_"+str(obs)+"_in.root"))
             else:
                 raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
             # after combining, delete the original grids
@@ -1616,77 +1665,93 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         
     def applgrid_distribute(self,options,mode,p_dirs):
         """Distributes the APPLgrids ready to be filled by a second run of the code"""
-        # if no appl_start_grid argument given, guess it from the time stamps of the starting grid files
+        # if no appl_start_grid argument given, guess it from the time stamps 
+        # of the starting grid files
         if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
-            gfiles=glob.glob(pjoin(self.me_dir, 'Events','*','aMCfast_obs_0_starting_grid.root'))
+            gfiles=glob.glob(pjoin(self.me_dir, 'Events','*',
+                                            'aMCfast_obs_0_starting_grid.root'))
             time_stamps={}
             for root_file in gfiles:
                 time_stamps[root_file]=os.path.getmtime(root_file)
             options['appl_start_grid']= \
-                max(time_stamps.iterkeys(), key=(lambda key: time_stamps[key])).split('/')[-2]
-            logger.info('No --appl_start_grid option given. Guessing that start grid from run "%s" should be used.' \
+                max(time_stamps.iterkeys(), key=(lambda key: 
+                                               time_stamps[key])).split('/')[-2]
+            logger.info('No --appl_start_grid option given. '+\
+                    'Guessing that start grid from run "%s" should be used.' \
                             % options['appl_start_grid'])
 
         if 'appl_start_grid' in options.keys() and options['appl_start_grid']:
             self.appl_start_grid = options['appl_start_grid']
             start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_start_grid)
             # check that this dir exists and at least one grid file is there
-            if not os.path.exists(pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root')):
+            if not os.path.exists(pjoin(start_grid_dir,
+                                           'aMCfast_obs_0_starting_grid.root')):
                 raise self.InvalidCmd('APPLgrid file not found: %s' % \
-                                  pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root'))
+                       pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root'))
             else:
-                all_grids=[pjoin(start_grid_dir,name) for name in os.listdir(start_grid_dir) \
-                               if name.endswith("_starting_grid.root")]
+                all_grids=[pjoin(start_grid_dir,name) for name in os.listdir( \
+                        start_grid_dir) if name.endswith("_starting_grid.root")]
                 nobs =len(all_grids)
                 gstring=" ".join(all_grids)
         if not hasattr(self, 'appl_start_grid') or not self.appl_start_grid:
-            raise self.InvalidCmd('No APPLgrid name currently defined. Please provide this information.')             
+            raise self.InvalidCmd('No APPLgrid name currently defined.'+
+                                             'Please provide this information.')             
         if mode == 'NLO':
             gdir='all_G'
         elif mode == 'LO':
             gdir='born_G'
         #copy the grid to all relevant directories
         for pdir in p_dirs:
-            g_dirs = [file for file in os.listdir(pjoin(self.me_dir,"SubProcesses",pdir)) \
-                      if file.startswith(gdir) and os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
+            g_dirs = [file for file in os.listdir(pjoin(self.me_dir,
+              "SubProcesses",pdir)) if file.startswith(gdir) and 
+                   os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
             for g_dir in g_dirs:
                 for grid in all_grids:
                     obs=grid.split('_')[-3]
-                    files.cp(grid,pjoin(self.me_dir,"SubProcesses",pdir,g_dir,'grid_obs_'+obs+'_in.root'))
+                    files.cp(grid,pjoin(self.me_dir,"SubProcesses",pdir,g_dir,
+                                                    'grid_obs_'+obs+'_in.root'))
 
 
     def collect_log_files(self, folders, istep):
-        """collect the log files and put them in a single, html-friendly file inside the run_...
-        directory"""
-        step_list = ['Grid setting', 'Cross-section computation', 'Event generation']
+        """collect the log files and put them in a single, html-friendly file
+        inside the run_... directory"""
+        step_list = ['Grid setting', 'Cross-section computation', 
+                                                             'Event generation']
         log_file = pjoin(self.me_dir, 'Events', self.run_name, 
                 'alllogs_%d.html' % istep)
         # this keeps track of which step has been computed for which channel
         channel_dict = {}
         log_files = []
         for folder in folders:
-            log_files += glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*', folder, 'log.txt'))
+            log_files += glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*', 
+                                                             folder, 'log.txt'))
 
         content = ''
+
+        outfile = open(log_file, 'w')
 
         content += '<HTML><BODY>\n<font face="courier" size=2>'
         for log in log_files:
             channel_dict[os.path.dirname(log)] = [istep]
             # put an anchor
-            content += '<a name=%s></a>\n' % (os.path.dirname(log).replace(pjoin(self.me_dir,'SubProcesses'),''))
+            content += '<a name=%s></a>\n' % (os.path.dirname(log).replace(
+                                          pjoin(self.me_dir,'SubProcesses'),''))
             # and put some nice header
             content += '<font color="red">\n'
             content += '<br>LOG file for integration channel %s, %s <br>' % \
-                    (os.path.dirname(log).replace(pjoin(self.me_dir,'SubProcesses'), ''), 
+                    (os.path.dirname(log).replace(pjoin(self.me_dir,
+                                                           'SubProcesses'), ''), 
                      step_list[istep])
             content += '</font>\n'
             #then just flush the content of the small log inside the big log
             #the PRE tag prints everything verbatim
             content += '<PRE>\n' + open(log).read() + '\n</PRE>'
             content +='<br>\n'
+            outfile.write(content)
+            content=''
 
-        content += '</font>\n</BODY></HTML>\n'
-        open(log_file, 'w').write(content)
+        outfile.write('</font>\n</BODY></HTML>\n')
+        outfile.close()
 
 
     def read_results(self, output, mode):
@@ -1802,7 +1867,7 @@ Integrated cross-section
                      '\n      Fraction of negative weights: %4.2f' + \
                      '\n      Total running time : %s') % \
                         (self.run_card['nevents'],
-                         self.run_card['parton_shower'],
+                         self.run_card['parton_shower'].upper(),
                          neg_frac, 
                          misc.format_timer(time.time()-self.start_time))
 
@@ -1818,9 +1883,14 @@ Integrated cross-section
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
                 if self.run_card['reweight_scale']:
-                    message = message + \
-                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
-                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
+                    if int(self.run_card['ickkw'])!=-1:
+                        message = message + \
+                            ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
+                            (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
+                    else:
+                        message = message + \
+                            ('\n      Soft and hard scale dependence (added in quadrature): +%0.1f%% -%0.1f%%') % \
+                            (scale_pdf_info['scale_upp_quad'], scale_pdf_info['scale_low_quad'])
                 if self.run_card['reweight_PDF']:
                     message = message + \
                         ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
@@ -2396,6 +2466,18 @@ Integrated cross-section
                     '\n'.join(fjwrapper_lines) + '\n')
 
         extrapaths = self.shower_card['extrapaths'].split()
+
+        # check that the path needed by HW++ and PY8 are set if one uses these shower
+        if shower in ['HERWIGPP', 'PYTHIA8']:
+            path_dict = {'HERWIGPP': ['hepmc_path',
+                                      'thepeg_path',
+                                      'hwpp_path'],
+                         'PYTHIA8': ['pythia8_path']}
+
+            if not all([self.options[ppath] for ppath in path_dict[shower]]):
+                raise aMCatNLOError('Some paths are missing in the configuration file.\n' + \
+                        ('Please make sure you have set these variables: %s' % ', '.join(path_dict[shower])))
+
         if shower == 'HERWIGPP':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
 
@@ -2412,6 +2494,11 @@ Integrated cross-section
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
         self.shower_card.write_card(shower, shower_card_path)
 
+        # overwrite if shower_card_set.dat exists in MCatNLO
+        if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'shower_card_set.dat')):
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'shower_card_set.dat'),
+                     pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat'))
+        
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
         self.update_status('Compiling MCatNLO for %s...' % shower, level='shower') 
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
@@ -2489,7 +2576,10 @@ Integrated cross-section
             out_id = 'HEP'
         else:
             # one or more .top file(s) as output
-            out_id = 'TOP'
+            if "HwU" in self.shower_card['analyse']:
+                out_id = 'HWU'
+            else:
+                out_id = 'TOP'
 
         # write the executable
         open(pjoin(rundir, 'shower.sh'), 'w').write(\
@@ -2561,10 +2651,14 @@ Integrated cross-section
                     logger.info("Fail to make the plot. Continue...")
                     pass
 
-        elif out_id == 'TOP':
-            #copy the topdrawer file(s) back in events
+        elif out_id == 'TOP' or out_id == 'HWU':
+            #copy the topdrawer or HwU file(s) back in events
+            if out_id=='TOP':
+                ext='top'
+            elif out_id=='HWU':
+                ext='HwU'
             topfiles = []
-            top_tars = [tarfile.TarFile(f) for f in glob.glob(pjoin(rundir, 'topfile*.tar'))]
+            top_tars = [tarfile.TarFile(f) for f in glob.glob(pjoin(rundir, 'histfile*.tar'))]
             for top_tar in top_tars:
                 topfiles.extend(top_tar.getnames())
 
@@ -2578,25 +2672,43 @@ Integrated cross-section
             filename = 'plot_%s_%d_' % (shower, 1)
             count = 1
             while os.path.exists(pjoin(self.me_dir, 'Events', 
-                      self.run_name, '%s0.top' % filename)) or \
+                      self.run_name, '%s0.%s' % (filename,ext))) or \
                   os.path.exists(pjoin(self.me_dir, 'Events', 
-                      self.run_name, '%s0__1.top' % filename)):
+                      self.run_name, '%s0__1.%s' % (filename,ext))):
                 count += 1
                 filename = 'plot_%s_%d_' % (shower, count)
 
+            if out_id=='TOP':
+                hist_format='TopDrawer format'
+            elif out_id=='HWU':
+                hist_format='HwU and GnuPlot formats'
+
             if not topfiles:
                 # if no topfiles are found just warn the user
-                waarning = 'No .top file has been generated. For the results of your ' +\
+                warning = 'No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir
-
             elif self.shower_card['nsplit_jobs'] == 1:
                 # only one job for the shower
                 top_tars[0].extractall(path = rundir) 
                 plotfiles = [] 
                 for i, file in enumerate(topfiles):
-                    plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
-                              '%s%d.top' % (filename, i))
-                    files.mv(pjoin(rundir, file), plotfile) 
+                    if out_id=='TOP':
+                        plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
+                                         '%s%d.top' % (filename, i))
+                        files.mv(pjoin(rundir, file), plotfile) 
+                    elif out_id=='HWU':
+                        histogram_list=histograms.HwUList(pjoin(rundir,file))
+                        histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,
+                                                    '%s%d'% (filename,i)),format = 'gnuplot')
+                        try:
+                            misc.call(['gnuplot','%s%d.gnuplot' % (filename,i)],\
+                                      stdout=os.open(os.devnull, os.O_RDWR),\
+                                      stderr=os.open(os.devnull, os.O_RDWR),\
+                                      cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                        except Exception:
+                            pass
+                        plotfile=pjoin(self.me_dir,'Events',self.run_name,
+                                                    '%s%d.HwU'% (filename,i))
                     plotfiles.append(plotfile)
 
                 ffiles = 'files'
@@ -2606,9 +2718,9 @@ Integrated cross-section
                     have = 'has'
 
                 message = ('The %s %s %s been generated, with histograms in the' + \
-                        ' TopDrawer format, obtained by showering the parton-level' + \
+                        ' %s, obtained by showering the parton-level' + \
                         ' file %s.gz with %s.') % (ffiles, ', '.join(plotfiles), have, \
-                        evt_file, shower)
+                        hist_format, evt_file, shower)
             else:
                 # many jobs for the shower have been run
                 topfiles_set = set(topfiles)
@@ -2617,7 +2729,7 @@ Integrated cross-section
                     top_tar.extractall(path = rundir) 
                     for i, file in enumerate(topfiles_set):
                         plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
-                                  '%s%d__%d.top' % (filename, i, j + 1))
+                                             '%s%d__%d.%s' % (filename, i, j + 1,ext))
                         files.mv(pjoin(rundir, file), plotfile) 
                         plotfiles.append(plotfile)
 
@@ -2630,23 +2742,44 @@ Integrated cross-section
                     elif self.banner.get('run_card', 'event_norm').lower() == 'average':
                         norm = 1./float(self.shower_card['nsplit_jobs'])
 
-                    plotfiles = []
+                    plotfiles2 = []
                     for i, file in enumerate(topfiles_set):
-                        filelist = ['%s%d__%d.top' % (filename, i, j + 1) \
+                        filelist = ['%s%d__%d.%s' % (filename, i, j + 1,ext) \
                                     for j in range(self.shower_card['nsplit_jobs'])]
-                        infile="%d\n%s\n%s\n" % \
+                        if out_id=='TOP':
+                            infile="%d\n%s\n%s\n" % \
                                 (self.shower_card['nsplit_jobs'],
                                  '\n'.join(filelist),
                                  '\n'.join([str(norm)] * self.shower_card['nsplit_jobs']))
+                            p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'sum_plots')],
+                                           stdin=subprocess.PIPE,
+                                           stdout=os.open(os.devnull, os.O_RDWR), 
+                                           cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                            p.communicate(input = infile)
+                            files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
+                                     pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
+                        elif out_id=='HWU':
+                            histogram_list=histograms.HwUList(plotfiles[0])
+                            for ii, histo in enumerate(histogram_list):
+                                histogram_list[ii] = histo*norm
+                            for histo_path in plotfiles[1:]:
+                                for ii, histo in enumerate(histograms.HwUList(histo_path)):
+                                    # First make sure the plots have the same weight labels and such
+                                    histo.test_plot_compability(histogram_list[ii])
+                                    # Now let the histogram module do the magic and add them.
+                                    histogram_list[ii] += histo*norm
+                            # And now output the finalized list
+                            histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,'%s%d'% (filename, i)),
+                                                  format = 'gnuplot')
+                            try:
+                                misc.call(['gnuplot','%s%d.gnuplot' % (filename, i)],\
+                                          stdout=os.open(os.devnull, os.O_RDWR),\
+                                          stderr=os.open(os.devnull, os.O_RDWR),\
+                                          cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                            except Exception:
+                                pass
 
-                        p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'sum_plots')],
-                                        stdin=subprocess.PIPE,
-                                        stdout=os.open(os.devnull, os.O_RDWR), 
-                                        cwd=pjoin(self.me_dir, 'Events', self.run_name))
-                        p.communicate(input = infile)
-                        files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
-                                 pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
-                        plotfiles.append(pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
+                        plotfiles2.append(pjoin(self.me_dir, 'Events', self.run_name, '%s%d.%s' % (filename, i,ext)))
                         tar = tarfile.open(
                                 pjoin(self.me_dir, 'Events', self.run_name, '%s%d.tar.gz' % (filename, i)), 'w:gz')
                         for f in filelist:
@@ -2657,25 +2790,25 @@ Integrated cross-section
 
                     ffiles = 'files'
                     have = 'have'
-                    if len(plotfiles) == 1:
+                    if len(plotfiles2) == 1:
                         ffiles = 'file'
                         have = 'has'
 
                     message = ('The %s %s %s been generated, with histograms in the' + \
-                            ' TopDrawer format, obtained by showering the parton-level' + \
+                            ' %s, obtained by showering the parton-level' + \
                             ' file %s.gz with %s.\n' + \
                             'The files from the different shower ' + \
                             'jobs (before combining them) can be found inside %s.') % \
-                            (ffiles, ', '.join(plotfiles), have, \
+                            (ffiles, ', '.join(plotfiles2), have, hist_format,\
                              evt_file, shower, 
-                             ', '.join([f.replace('top', 'tar.gz') for f in plotfiles]))
+                             ', '.join([f.replace('%s' % ext, 'tar.gz') for f in plotfiles2]))
 
                 else:
                     message = ('The following files have been generated:\n  %s\n' + \
                             'They contain histograms in the' + \
-                            ' TopDrawer format, obtained by showering the parton-level' + \
+                            ' %s, obtained by showering the parton-level' + \
                             ' file %s.gz with %s.') % ('\n  '.join(plotfiles), \
-                            evt_file, shower)
+                            hist_format, evt_file, shower)
                 
         # Now arxiv the shower card used if RunMaterial is present
         run_dir_path = pjoin(rundir, self.run_name)
@@ -3083,11 +3216,17 @@ Integrated cross-section
                 cntrl_val=scales[0]
 
         # get the scale uncertainty in percent
-        scale_upp=0.0
-        scale_low=0.0
         if numofscales>0:
-            scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
-            scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
+            if cntrl_val != 0.0:
+            # max and min of the full envelope
+                scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
+                scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
+            # ren and fac scale dependence added in quadrature
+                scale_pdf_info['scale_upp_quad'] = ((cntrl_val+math.sqrt(math.pow(max(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(max(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val-1)*100
+                scale_pdf_info['scale_low_quad'] = (1-(cntrl_val-math.sqrt(math.pow(min(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(min(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val)*100
+            else:
+                scale_pdf_info['scale_upp'] = 0.0
+                scale_pdf_info['scale_low'] = 0.0
 
         # get the pdf uncertainty in percent (according to the Hessian method)
         lhaid=int(self.run_card['lhaid'])
@@ -3099,15 +3238,23 @@ Integrated cross-section
                 for i in range(int(numofpdf/2)):
                     pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
                     pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
-                scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
-                scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+                if cntrl_val != 0.0:
+                    scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
+                    scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+                else:
+                    scale_pdf_info['pdf_upp'] = 0.0
+                    scale_pdf_info['pdf_low'] = 0.0
+
         else:
             # use Gaussian method (NNPDF)
             pdf_stdev=0.0
             for i in range(int(numofpdf-1)):
                 pdf_stdev = pdf_stdev + pow(pdfs[i+1] - cntrl_val,2)
             pdf_stdev = math.sqrt(pdf_stdev/int(numofpdf-2))
-            scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            if cntrl_val != 0.0:
+                scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            else:
+                scale_pdf_info['pdf_upp'] = 0.0
             scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
         return scale_pdf_info
 
@@ -3319,11 +3466,11 @@ Integrated cross-section
                     output_files.append(fname + '.hepmc.gz')
                 else:
                     output_files.append(fname + '.hep.gz')
-            elif args[1] == 'TOP':
+            elif args[1] == 'TOP' or args[1] == 'HWU':
                 if len(args) == 3:
-                    fname = 'topfile'
+                    fname = 'histfile'
                 else:
-                    fname = 'topfile_%s' % args[3]
+                    fname = 'histfile_%s' % args[3]
                 output_files.append(fname + '.tar')
             else:
                 raise aMCatNLOError, 'Not a valid output argument for shower job :  %d' % args[1]
@@ -3341,14 +3488,12 @@ Integrated cross-section
         keep_fourth_arg = False
         output_files = []
         required_output = []
-        input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
-                     pjoin(self.me_dir, 'SubProcesses', 'randinit'),
+        input_files = [pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
                      pjoin(cwd, 'initial_states_map.dat'),
                      pjoin(cwd, 'configs_and_props_info.dat'),
                      pjoin(cwd, 'leshouche_info.dat'),
-                     pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
         if os.path.exists(pjoin(cwd,'nevents.tar')):
@@ -3358,13 +3503,13 @@ Integrated cross-section
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
 
         # File for the loop (might not be present if MadLoop is not used)
-        if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
+        if os.path.exists(pjoin(cwd,'MadLoop5_resources')) and \
+                                            cluster.need_transfer(self.options):
             input_files.append(pjoin(cwd, 'MadLoop5_resources.tar.gz'))
-            if not os.path.exists(pjoin(cwd,'MadLoop5_resources.tar.gz')):
-                tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar.gz'),'w:gz',
-                                                                 dereference=True)
-                tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
-                tf.close()
+            tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar.gz'),'w:gz',
+                                                           dereference=True)
+            tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
+            tf.close()
 
         Ire = re.compile("for i in ([\d\s]*) ; do")
         try : 
@@ -3555,7 +3700,7 @@ Integrated cross-section
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
             # write an analyse_opts with a dummy analysis so that compilation goes through
-            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o\n')
+            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o\n')
 
         #directory where to compile exe
         p_dirs = [d for d in \
@@ -3575,12 +3720,12 @@ Integrated cross-section
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf' and \
                 (self.banner.get_detail('run_card', 'lpp1') != 0 or \
-                 self.banner.get_detail('run_card', 'lpp1') != 0):
+                 self.banner.get_detail('run_card', 'lpp2') != 0):
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
-            if self.run_card['reweight_PDF'].lower() == '.true.':
+            if self.run_card['reweight_PDF']:
                 lhaid_list.append(int(self.run_card['PDF_set_min']))
                 lhaid_list.append(int(self.run_card['PDF_set_max']))
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
@@ -3615,10 +3760,10 @@ Integrated cross-section
                     if code is 'amcfast' and output < '1.1.1':
                         raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
                                              +' You are using %s',output)
-                
+
             # set-up the Source/make_opts with the correct applgrid-config file
-            appllibs="  APPLLIBS=$(shell %s --ldcflags) $(shell %s --ldflags) \n" \
-                             % (self.options['applgrid'],self.options['amcfast'])
+            appllibs="  APPLLIBS=$(shell %s --ldflags) $(shell %s --ldcflags) \n" \
+                             % (self.options['amcfast'],self.options['applgrid'])
             text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
             text_out=[]
             for line in text:
@@ -3787,10 +3932,11 @@ Integrated cross-section
 
 
     def check_tests(self, test, dir):
-        """just call the correct parser for the test log"""
+        """just call the correct parser for the test log.
+        Skip check_poles for LOonly folders"""
         if test in ['test_ME', 'test_MC']:
             return self.parse_test_mx_log(pjoin(dir, '%s.log' % test)) 
-        elif test == 'check_poles':
+        elif test == 'check_poles' and not os.path.exists(pjoin(dir,'parton_lum_0.f')):
             return self.parse_check_poles_log(pjoin(dir, '%s.log' % test)) 
 
 
@@ -3891,7 +4037,7 @@ Integrated cross-section
         
         
         void = 'NOT INSTALLED'
-        switch_order = ['order', 'fixed_order', 'shower','madspin']
+        switch_order = ['order', 'fixed_order', 'shower','madspin', 'reweight']
         switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
                   'madspin': void}
         if not switch:
@@ -3903,16 +4049,19 @@ Integrated cross-section
         allowed_switch_value = {'order': ['LO', 'NLO'],
                                 'fixed_order': default_switch,
                                 'shower': default_switch,
-                                'madspin': default_switch}
+                                'madspin': default_switch,
+                                'reweight': default_switch}
         
         description = {'order':  'Perturbative order of the calculation:',
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
                        'shower': 'Shower the generated events:',
-                       'madspin': 'Decay particles with the MadSpin module:' }
+                       'madspin': 'Decay particles with the MadSpin module:',
+                       'reweight': 'Add weight to events based on coupling parameters'}
 
         force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
                        ('madspin', 'ON'): {'fixed_order':'OFF'},
-                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF'}
+                       ('reweight', 'ON'): {'fixed_order':'OFF'},
+                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'ON'}
                        }
         special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
 
@@ -3938,6 +4087,13 @@ Integrated cross-section
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
+
+        if not aMCatNLO or self.options['mg5_path']:
+            available_mode.append('5')
+            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                switch['reweight'] = 'ON'
+            else:
+                switch['reweight'] = 'OFF'
             
         answers = list(available_mode) + ['auto', 'done']
         alias = {}
@@ -3974,36 +4130,32 @@ Integrated cross-section
                 return 
             elif answer in special_values:
                 logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
+                assign_switch('reweight', 'OFF')
+                assign_switch('madspin', 'OFF')
                 if answer == 'LO':
                     switch['order'] = 'LO'
                     switch['fixed_order'] = 'ON'
                     assign_switch('shower', 'OFF')
-                    assign_switch('madspin', 'OFF')
                 elif answer == 'NLO':
                     switch['order'] = 'NLO'
                     switch['fixed_order'] = 'ON'
                     assign_switch('shower', 'OFF')
-                    assign_switch('madspin', 'OFF')
                 elif answer == 'aMC@NLO':
                     switch['order'] = 'NLO'
                     switch['fixed_order'] = 'OFF'
                     assign_switch('shower', 'ON')
-                    assign_switch('madspin', 'OFF')
                 elif answer == 'aMC@LO':
                     switch['order'] = 'LO'
                     switch['fixed_order'] = 'OFF'
                     assign_switch('shower', 'ON')
-                    assign_switch('madspin', 'OFF')
                 elif answer == 'noshower':
                     switch['order'] = 'NLO'
                     switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'OFF')
-                    assign_switch('madspin', 'OFF')                                                    
+                    assign_switch('shower', 'OFF')                                                  
                 elif answer == 'noshowerLO':
                     switch['order'] = 'LO'
                     switch['fixed_order'] = 'OFF'
                     assign_switch('shower', 'OFF')
-                    assign_switch('madspin', 'OFF')
                 if mode:
                     return
             return switch
@@ -4060,8 +4212,11 @@ Please, shower the Les Houches events before using them for physics analyses."""
             options['parton'] = True
             ignore = ['shower_card.dat', 'madspin_card.dat']
             cards.append('FO_analyse_card.dat')
-        elif switch['madspin'] == 'ON':
-            cards.append('madspin_card.dat')
+        else:
+            if switch['madspin'] == 'ON':
+                cards.append('madspin_card.dat')
+            if switch['reweight'] == 'ON':
+                cards.append('reweight_card.dat')
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
         if mode == 'onlyshower':
@@ -4098,16 +4253,14 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.run_name += '_LO' 
             self.set_run_name(self.run_name, self.run_tag, 'parton')
             if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
-                logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
-                raise self.InvalidCmd(error)
+                raise self.InvalidCmd("""FxFx merging (ickkw=3) not allowed at LO""")
             elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
                 logger.warning("""You are running with FxFx merging enabled.  To be able to merge
     samples of various multiplicities without double counting, you
     have to remove some events after showering 'by hand'.  Please
     read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
-                    logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
-                    raise self.InvalidCmd(error)
+                    raise self.InvalidCmd("""FxFx merging does not work with Q-squared ordered showers.""")
                 elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8':
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
@@ -4117,6 +4270,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)
     #                    raise aMCatNLOError(error)
+            elif int(self.run_card['ickkw']) == -1 and mode in ['aMC@NLO', 'noshower']:
+                    # NNLL+NLO jet-veto only possible for LO event generation or fNLO runs.
+                raise self.InvalidCmd("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO or LO.""")
         if 'aMC@' in mode or mode == 'onlyshower':
             self.shower_card = self.banner.charge_card('shower_card')
             

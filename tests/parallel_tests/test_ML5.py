@@ -11,7 +11,9 @@ import copy
 
 from madgraph import MG5DIR
 from madgraph import MadGraph5Error
+import madgraph.various.banner as banner_mod
 from madgraph.iolibs.files import cp
+import madgraph.various.misc as misc
 
 #Look for MG5/MG4 path
 _mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
@@ -182,12 +184,9 @@ class ML5Test(unittest.TestCase):
         ML5_opt = loop_me_comparator.LoopMG5Runner()
         ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename)
         
-        file = open(os.path.join(_mg5_path,'Template','loop_material','StandAlone',
-                                 'Cards','MadLoopParams.dat'), 'r')
-
-        MLParams = file.read()
-        MLred = re.search(r'#MLReductionLib\n',MLParams)
-        MLredstr=MLParams[MLred.end():MLred.end()+1]
+        MLCard = banner_mod.MadLoopParam(os.path.join(_mg5_path,'Template','loop_material',
+                                                 'StandAlone','Cards','MadLoopParams.dat'))
+        MLredstr=MLCard['MLReductionLib'][0:1]
 
         if MLredstr=="1":
             # Create a MERunner object for MadLoop 5 default
@@ -536,3 +535,4 @@ class ML5Test(unittest.TestCase):
                pickle_file = 'ml5_sm_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_old_ml5_sqso_%s'%proc,
                chosen_runner = 'ML5_opt',compare_with = ['ML5_opt'])
+

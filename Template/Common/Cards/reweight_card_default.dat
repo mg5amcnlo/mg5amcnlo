@@ -1,0 +1,40 @@
+#*************************************************************************
+#                       Reweight Module                                  *
+#*************************************************************************
+#
+# Reweighting by Leading order (Tree level / loop-induced)
+#   element
+# This is not (in general) NLO accurate
+#
+# Note: 
+#   1) the value of alphas will be used from the event
+#      so the value of the param_card is not taken into account.
+#   2) It is (in general) dangerous/wrong  to change a particle's mass.
+#
+# Possible options: 
+# You can enter one of the following line to customize the re-weighting 
+#        procedure
+#
+# change model NAME : use another model for the re-weighted matrix-element
+#        In that case you need to provide the path to a correct param_card
+# change process DEF [-add]: change the process by which you re-weighted. 
+#        All the initial/final state of the original process needs to be 
+#	 defined.
+# change helicity False: Make the reweighting by full matrix-element and 
+#        not by the one of the associate helicity
+#        
+# Example of (standard) code -computing two weights:
+#
+# launch                 ! tag to start one computation of weight
+#    set BLOCKNAME ID VALUE ! rule to modity the param_card
+#    set BLOCKNAME ID VALUE ! rule to modity the param_card
+# launch                 ! start to compute a second weight
+#    /home/Cards/param_card_2.dat ! you can also enter a path to a valid card
+#
+#*************************************************************************
+# ENTER YOUR COMMAND BELOW. 
+#*************************************************************************
+
+launch
+#  SPECIFY A PATH OR USE THE SET COMMAND like
+# set sminputs 1 130 # modify 1/alpha_EW

@@ -87,10 +87,17 @@ class MyTextTestRunner(unittest.TextTestRunner):
 
     def run(self, test):
         "Run the given test case or test suite."
+        keyboardstop=False
         MyTextTestRunner.stream = self.stream
         result = self._makeResult()
         startTime = time.time()
-        test(result)
+        try:
+            test(result)
+        except KeyboardInterrupt:
+            keyboardstop=True
+            pass
+        except:
+            raise
         stopTime = time.time()
         timeTaken = float(stopTime - startTime)
         result.printErrors()
@@ -115,7 +122,8 @@ class MyTextTestRunner(unittest.TextTestRunner):
         if self.bypassed:
             self.stream.writeln("Bypassed %s:" % len(self.bypassed))
             self.stream.writeln(" ".join(self.bypassed))
-        
+        if keyboardstop:
+            self.stream.writeln("Some of the tests Bypassed due to Ctrl-C")
         return result 
 
     def run_border(self, test):
@@ -355,8 +363,24 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         IOTestsFunctions.collect_function(IOTestsClass,prefix='testIO')
         for IOTestFunction in IOTestsFunctions:
             start = time.time()
+            # Add all the tests automatically (i.e. bypass filters) if the 
+            # specified test is the name of the IOtest. the [7:] is to
+            # skip the testIO prefix
+            name_filer_bu = None         
+            if IOTestFunction.split('.')[-1][7:] in \
+                                                 IOTestManager.testNames_filter:
+                name_filer_bu = IOTestManager.testNames_filter
+                IOTestManager.testNames_filter = ['ALL']
+                existing_tests = IOTestManager.all_tests.keys()
+                
             eval('IOTestsInstances[-1].'+IOTestFunction.split('.')[-1]+\
                                                              '(load_only=True)')
+            if name_filer_bu:
+                new_tests = [test[0] for test in IOTestManager.all_tests.keys() \
+                                                  if test not in existing_tests]
+                IOTestManager.testNames_filter = name_filer_bu + new_tests
+                name_filer_bu = None
+            
             setUp_time = time.time() - start
             if setUp_time > 0.5:                
                 print colored%(34,"Loading IOtest %s is slow (%s)"%
@@ -960,11 +984,11 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         
     if options.timed == "Auto":
         if options.path == 'tests/unit_tests':
-            options.timed = 2
+            options.timed = 1
         elif options.path == 'tests/parallel_tests':
             options.timed = 400
         elif options.path == 'tests/acceptance_tests':
-            options.timed = 30
+            options.timed = 10
         else:
             options.timed = 0 
 
@@ -1001,7 +1025,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         elif options.semiForce:
             force = 1
         else:
-            force = 0                        
+            force = 0 
+
         runIOTests(args,update=options.IOTests=='U',force=force,
                                                 synchronize=options.synchronize)
     

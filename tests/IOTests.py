@@ -460,7 +460,6 @@ class IOTestManager(unittest.TestCase):
             all modified file and if 1 you will monitor each modified file of
             a given name only once.
         """
-        
         # First make sure that the tarball need not be untarred
         # Extract the tarball for hardcoded in all cases to make sure the 
         # IOTestComparison folder is synchronized with it.
@@ -710,6 +709,9 @@ class IOTestManager(unittest.TestCase):
                     target = target.replace('MadGraph5_aMC@NLO v. %(version)s, %(date)s'\
                                                            %misc.get_pkg_info(),
                                           'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
+                    target = target.replace('v%(version)s (%(date)s)'\
+                                                           %misc.get_pkg_info(),
+                                                      'v%(version)s (%(date)s)')
                     file.close()
                     if os.path.isfile(comparison_path):
                         file = open(comparison_path,'r')

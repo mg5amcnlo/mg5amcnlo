@@ -1476,7 +1476,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return return_dict
 
     def get_helas_call_dict(self, index=1, OptimizedOutput=False,
-                                                               specifyHel=True):
+                                            specifyHel=True,**opt):
         """ return a dictionary to be used for formatting
         HELAS call. The argument index sets the flipping while optimized output
         changes the wavefunction specification in the arguments."""
@@ -1558,6 +1558,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['CM'] = '%s' % self.get('mass') 
             else: 
                 output['CM'] ='CMASS_%s' % self.get('mass')
+        output.update(opt)
         return output
     
     def get_spin_state_number(self, flip=False):
@@ -2032,15 +2033,24 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return tuple(sorted(indices))
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=0):
         """Get a list of the number of legs in vertices in this diagram"""
 
         if not self.get('mothers'):
             return []
 
-        vertex_leg_numbers = [len(self.get('mothers')) + 1]
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
+
+        vertex_leg_numbers = [len(self.get('mothers')) + 1] if \
+            (self.get('interaction_id') not in veto_inter_id) or\
+            (self.get('interaction_id')==-2 and len(self.get('mothers'))+1 > 
+                                                             max_n_loop) else []
         for mother in self.get('mothers'):
-            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
+                                                 veto_inter_id = veto_inter_id))
 
         return vertex_leg_numbers
 
@@ -2363,11 +2373,11 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             return True
     
         def RaiseError():
-            raise self.PhysicsObjectError, \
+            raise self.PhysicsObjectListError, \
       "This wavefunction list does not have a consistent wavefunction ordering."+\
-      "\n  Wf numbers: %s"%str([wf['number'] for wf in diag_wavefunctions])+\
+      "\n  Wf numbers: %s"%str([wf['number'] for wf in diag_wfs])+\
       "\n  Wf mothers: %s"%str([[mother['number'] for mother in wf['mothers']] \
-                                                  for wf in diag_wavefunctions])
+                                                  for wf in diag_wfs])
     
         # We want to work on a local copy of the wavefunction list attribute
         diag_wfs = copy.copy(self)
@@ -2990,16 +3000,29 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 
         return tuple(sorted(indices))
 
-    def get_vertex_leg_numbers(self):
-        """Get a list of the number of legs in vertices in this diagram"""
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=0):
+        """Get a list of the number of legs in vertices in this diagram,
+        This function is only used for establishing the multi-channeling, so that
+        we exclude from it all the fake vertices and the vertices resulting from
+        shrunk loops (id=-2)"""
 
-        vertex_leg_numbers = [len(self.get('mothers'))]
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
+
+        vertex_leg_numbers = [len(self.get('mothers'))] if \
+                             (self['interaction_id'] not in veto_inter_id) or \
+          (self['interaction_id']==-2 and len(self.get('mothers'))>max_n_loop) \
+                                                                         else []
         for mother in self.get('mothers'):
-            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
+            vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
+                                                 veto_inter_id = veto_inter_id))
 
         return vertex_leg_numbers
 
-    def get_helas_call_dict(self,index=1,OptimizedOutput=False,specifyHel=True):
+    def get_helas_call_dict(self,index=1,OptimizedOutput=False,
+                                 specifyHel=True,**opt):
         """ return a dictionary to be used for formatting
         HELAS call."""
         
@@ -3026,6 +3049,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         output['out'] = self.get('number') - flip
         output['propa'] = ''
+        output.update(opt)
         return output
 
 
@@ -3153,10 +3177,16 @@ class HelasDiagram(base_objects.PhysicsObject):
 
         return coupling_orders
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, 
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=0):
         """Get a list of the number of legs in vertices in this diagram"""
 
-        return self.get('amplitudes')[0].get_vertex_leg_numbers()
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
+
+        return self.get('amplitudes')[0].get_vertex_leg_numbers(
+                             veto_inter_id=veto_inter_id, max_n_loop=max_n_loop)
 
     def get_regular_amplitudes(self):
         """ For regular HelasDiagrams, it is simply all amplitudes.
@@ -4552,7 +4582,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                             get_helicity_states())\
                         for wf in self.get_external_wavefunctions() ], 1)
 
-    def get_helicity_matrix(self):
+    def get_helicity_matrix(self, allow_reverse=True):
         """Gives the helicity matrix for external wavefunctions"""
 
         if not self.get('processes'):
@@ -4562,7 +4592,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         model = process.get('model')
 
         return apply(itertools.product, [ model.get('particle_dict')[\
-                                  wf.get('pdg_code')].get_helicity_states()\
+                                  wf.get('pdg_code')].get_helicity_states(allow_reverse)\
                                   for wf in self.get_external_wavefunctions()])
 
     def get_hel_avg_factor(self):

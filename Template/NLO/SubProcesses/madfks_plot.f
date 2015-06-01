@@ -2,6 +2,7 @@ c Wrapper routines for the fixed order analyses
       subroutine initplot
       implicit none
       include 'run.inc'
+      include "nexternal.inc"
       include 'reweight0.inc'
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
@@ -15,31 +16,54 @@ c Wrapper routines for the fixed order analyses
       include "appl_common.inc"
 
       nwgt=1
-      weights_info(nwgt)="central value  "
+      weights_info(nwgt)="  central value"
       if (do_rwgt_scale) then
          nwgt=nwgt+9
          if (numscales.ne.3) then
             write (*,*) 'ERROR #1 in initplot:',numscales
             stop 1
          endif
-         write (weights_info(nwgt-8),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",1.0,"muF=",1d0
-         write (weights_info(nwgt-7),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",1.0,"muF=",rw_Fscale_up
-         write (weights_info(nwgt-6),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",1.0,"muF=",rw_Fscale_down
-         write (weights_info(nwgt-5),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_up,"muF=",1d0
-         write (weights_info(nwgt-4),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_up,"muF=",rw_Fscale_up
-         write (weights_info(nwgt-3),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_up,"muF=",rw_Fscale_down
-         write (weights_info(nwgt-2),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_down,"muF=",1d0
-         write (weights_info(nwgt-1),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_down,"muF=",rw_Fscale_up
-         write (weights_info(nwgt  ),'(a4,f3.1,x,a4,f3.1)')
-     &        "muR=",rw_Rscale_down,"muF=",rw_Fscale_down
+         if (ickkw.ne.-1) then
+c Renormalisation and factorisation scale uncertainties
+            write (weights_info(nwgt-8),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",1.0,"muF=",1d0
+            write (weights_info(nwgt-7),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",1.0,"muF=",rw_Fscale_up
+            write (weights_info(nwgt-6),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",1.0,"muF=",rw_Fscale_down
+            write (weights_info(nwgt-5),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_up,"muF=",1d0
+            write (weights_info(nwgt-4),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_up,"muF=",rw_Fscale_up
+            write (weights_info(nwgt-3),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_up,"muF=",rw_Fscale_down
+            write (weights_info(nwgt-2),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_down,"muF=",1d0
+            write (weights_info(nwgt-1),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_down,"muF=",rw_Fscale_up
+            write (weights_info(nwgt  ),'(a4,f3.1,x,a4,f3.1)')
+     &           "muR=",rw_Rscale_down,"muF=",rw_Fscale_down
+         else
+c Soft and Hard scale variations for NLO+NNLO jet veto
+            write (weights_info(nwgt-8),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",1.0,"muH=",1.0
+            write (weights_info(nwgt-7),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",1.0,"muH=",2.0
+            write (weights_info(nwgt-6),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",1.0,"muH=",0.5
+            write (weights_info(nwgt-5),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",2.0,"muH=",1.0
+            write (weights_info(nwgt-4),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",2.0,"muH=",2.0
+            write (weights_info(nwgt-3),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",2.0,"muH=",0.5
+            write (weights_info(nwgt-2),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",0.5,"muH=",1.0
+            write (weights_info(nwgt-1),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",0.5,"muH=",2.0
+            write (weights_info(nwgt  ),'(a4,f3.1,x,a4,f3.1)')
+     &           "muS=",0.5,"muH=",0.5
+         endif
       endif
       if (do_rwgt_pdf) then
          npdfs=pdf_set_max-pdf_set_min+1
@@ -81,6 +105,7 @@ c To keep track of the accumulated results:
 
       subroutine topout
       implicit none
+      include "nexternal.inc"
       include 'reweight0.inc'
       include 'reweightNLO.inc'
       integer ii,jj,n
@@ -131,7 +156,7 @@ c Write the accumulated results to a file
       end
 
 
-      subroutine outfun(pp,ybst_til_tolab,www,itype)
+      subroutine outfun(pp,ybst_til_tolab,www,iPDG,itype)
 C
 C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
 C
@@ -156,11 +181,11 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       include 'genps.inc'
       include 'reweight.inc'
       include 'reweightNLO.inc'
-      double precision pp(0:3,nexternal),ybst_til_tolab,www
+      double precision pp(0:3,nexternal),ybst_til_tolab
       integer itype
       double precision p(0:4,nexternal),pplab(0:3,nexternal),chybst
      $     ,shybst,chybstmo
-      integer i,j,ibody
+      integer i,j,ibody,i_wgt
       double precision xd(3)
       data (xd(i),i=1,3) /0d0,0d0,1d0/
       integer istatus(nexternal),iPDG(nexternal)
@@ -173,7 +198,7 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       common /c_leshouche_inc/idup,mothup,icolup
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision wgts(max_weight),wgtden,ratio
+      double precision www(max_weight),wgtden,ratio
       double precision xsecScale_acc(maxscales,maxscales)
      $     ,xsecPDFr_acc(0:maxPDFs)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
@@ -183,13 +208,10 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
 c Born, n-body or (n+1)-body contribution:
       if(itype.eq.11) then
          ibody=1 ! (n+1)-body
-         wgtden=wgtrefNLO11
       elseif(itype.eq.12)then
          ibody=2 ! n-body
-         wgtden=wgtrefNLO12
       elseif(itype.eq.20)then
          ibody=3 ! Born
-         wgtden=wgtrefNLO20
       else
          write(*,*)'Error in outfun: unknown itype',itype
          stop
@@ -199,8 +221,7 @@ c Boost the momenta to the lab frame:
       shybst=sinh(ybst_til_tolab)
       chybstmo=chybst-1.d0
       do i=3,nexternal
-        call boostwdir2(chybst,shybst,chybstmo,xd,
-     #                  pp(0,i),pplab(0,i))
+         call boostwdir2(chybst,shybst,chybstmo,xd,pp(0,i),pplab(0,i))
       enddo
 c Fill the arrays (momenta, status and PDG):
       do i=1,nexternal
@@ -213,57 +234,27 @@ c Fill the arrays (momenta, status and PDG):
             p(j,i)=pplab(j,i)
          enddo
          p(4,i)=pmass(i)
-         ipdg(i)=idup(i,1)
       enddo
-c The weights comming from reweighting:
-      nwgt=1
-      wgts(1)=www
-      if (wgtden.eq.0d0) then
-         if (www.eq.0d0) then
-            ratio=0d0
-         else
-            if (doreweight) then
-               write (*,*) 'ERROR in madfks_plot.f', wgtden,www
-            else
-               ratio=1d0
-            endif
-         endif
-      else
-c this ratio should essentially be the weight from vegas
-         ratio=www/wgtden
-      endif
-      if (do_rwgt_scale) then
-         do i=1,numscales
-            do j=1,numscales
-               nwgt=nwgt+1
-               wgts(nwgt)=wgtNLOxsecmu(ibody,i,j)*ratio
-            enddo
-         enddo
-      endif
-      if (do_rwgt_pdf) then
-         do i=1,numPDFs-1 ! exclude the central set, so 'numPDFs-1'
-            nwgt=nwgt+1
-            wgts(nwgt)=wgtNLOxsecPDF(ibody,i)*ratio
-         enddo
-      endif
       if(iappl.ne.0)then
          appl_itype     = ibody
-         appl_www_histo = wgts(1)
+         appl_www_histo = www(1)
       endif
-      call analysis_fill(p,istatus,ipdg,wgts,ibody)
+      call analysis_fill(p,istatus,ipdg,www,ibody)
 c Fill the accumulated results
+      i_wgt=1
       if (do_rwgt_scale) then
          do i=1,numscales
             do j=1,numscales
-               xsecScale_acc(i,j)=xsecScale_acc(i,j)+
-     &              wgtNLOxsecmu(ibody,i,j)*ratio
+               i_wgt=i_wgt+1
+               xsecScale_acc(i,j)=xsecScale_acc(i,j)+www(i_wgt)
             enddo
          enddo
       endif
       if (do_rwgt_pdf) then
-         xsecPDFr_acc(0)=xsecPDFr_acc(0)+www
+         xsecPDFr_acc(0)=xsecPDFr_acc(0)+www(1)
          do i=1,numPDFs-1
-            xsecPDFr_acc(i)=xsecPDFr_acc(i)+wgtNLOxsecPDF(ibody,i)*ratio
+            i_wgt=i_wgt+1
+            xsecPDFr_acc(i)=xsecPDFr_acc(i)+www(i_wgt)
          enddo
       endif
  999  return      

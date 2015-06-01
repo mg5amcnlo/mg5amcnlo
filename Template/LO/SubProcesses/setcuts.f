@@ -110,7 +110,6 @@ c
 c     setup masses for the final-state particles
 c
       include 'pmass.inc'
-      include 'qmass.inc'
 
 C-----
 C  BEGIN CODE
@@ -321,7 +320,7 @@ c        BJET
             endif
 c        PHOTON
             if(is_a_a(i))then
-                 etmin(i) = max(pta, ptgmin, eamax)
+                 etmin(i) = max(pta, ptgmin, ea)
                  SMIN = SMIN + etmin(i)
                  etmax(i)=ptamax
                  emin(i)=ea
@@ -457,7 +456,7 @@ c
       inclHtmin=ihtmin
       inclHtmax=ihtmax
 
-      jetor = cutuse.eq.0d0
+      jetor = cutuse.eq.0
 
 c
 c   EXTRA LEPTON CUTS
