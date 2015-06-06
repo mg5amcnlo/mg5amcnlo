@@ -48,7 +48,7 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       include 'q_es.inc'
-      integer nsqso      
+      integer nsqso,MLResArrayDim
       double precision pmass(nexternal), pmass_rambo(nexternal)
       integer nfail
       logical first_time
@@ -70,7 +70,8 @@ C-----
       force_polecheck = .true.
       if (first_time) then
           call get_nsqso_loop(nsqso)          
-          allocate(virt_wgts(0:3,0:nsqso))
+          call get_answer_dimension(MLResArrayDim)
+          allocate(virt_wgts(0:3,0:MLResArrayDim))
           allocate(accuracies(0:nsqso))
           allocate(keep_order(nsqso))
           first_time = .false.

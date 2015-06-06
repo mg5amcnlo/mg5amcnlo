@@ -116,7 +116,7 @@ c The helicity double check should have been performed during the
 c pole check, so we skip it here. It also makes sure that there is
 c no conflict on the write access to HelFilter.dat when running
 c locally in multicore without a cluster_tmp_path
-         call set_forbid_hel_doublecheck(.True.)
+         if (.not. force_polecheck) call set_forbid_hel_doublecheck(.True.)
          call get_nsqso_loop(nsqso)
          call get_answer_dimension(MLResArrayDim)
          allocate(accuracies(0:nsqso))
@@ -183,7 +183,7 @@ c once the initial pole check is performed.
 C         keep track of the separate pieces correspoinding to
 C          different coupling combinations
                 do j = 1, nsplitorders
-                 amp_orders(j) = getordpowfromindex_ML5(j, i) / symfactvirt
+                 amp_orders(j) = getordpowfromindex_ML5(j, i)
                 enddo
                 amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
                 amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
