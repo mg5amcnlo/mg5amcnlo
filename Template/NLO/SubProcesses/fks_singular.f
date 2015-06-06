@@ -3052,6 +3052,9 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
       logical reset_calculated_born
+
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
 C  
       do i = 1, amp_split_size
         amp_split_local(i) = 0d0
@@ -3185,8 +3188,9 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
             enddo
         endif
       enddo
+      wgt=wgt*iden_comp
       do i = 1, amp_split_size
-        amp_split(i) = amp_split_local(i)
+        amp_split(i) = amp_split_local(i)*iden_comp
       enddo
       return
       end
@@ -3251,6 +3255,9 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
       logical reset_calculated_born
+
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
 C  
       do i = 1, amp_split_size
         amp_split_local(i) = 0d0
@@ -3392,8 +3399,9 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
             enddo
         endif
       enddo
+      wgt=wgt*iden_comp
       do i = 1, amp_split_size
-        amp_split(i) = amp_split_local(i)
+        amp_split(i) = amp_split_local(i)*iden_comp
       enddo
       return
       end
@@ -3725,6 +3733,9 @@ c      include "fks.inc"
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
 
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
+
       include "pmass.inc"
 c
 c Call the Born to be sure that 'CalculatedBorn' is done correctly. This
@@ -3750,13 +3761,13 @@ C wgt includes the gs/w^2
                if (wgt.ne.0d0) then
                   call eikonal_reduced(pp,m,n,i_fks,j_fks,
      #                                 xi_i_fks,y_ij_fks,eik)
-                  softcontr=softcontr+wgt*eik
+                  softcontr=softcontr+wgt*eik*iden_comp
                   ! update the amp_split array
                   if (need_color_links) ipos_ord = qcd_pos
                   if (need_charge_links) ipos_ord = qed_pos
                   do k=1,amp_split_size
                     amp_split(k) = 
-     $                   amp_split(k) - 2d0 * eik * amp_split_soft(k)
+     $                   amp_split(k) - 2d0 * eik * amp_split_soft(k)*iden_comp
                   enddo
                endif
             endif
@@ -3915,6 +3926,9 @@ C keep track of each split orders
      $                         amp_split_wgtdegrem_muF
       double precision prefact_xi
 
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
+
       if(j_fks.gt.nincoming)then
 c Do not include this contribution for final-state branchings
          collrem_xi=0.d0
@@ -4007,7 +4021,7 @@ c one assumes MSbar
 c The partonic flux 1/(2*s) is inserted in genps. Thus, an extra 
 c factor z (implicit in the flux of the reduced Born in FKS) 
 c has to be inserted here
-        xnorm=1.d0/z
+        xnorm=1.d0/z *iden_comp
 
         collrem_xi=collrem_xi + oo2pi*dble(wgt1(1))*collrem_xi_tmp*
      &       xnorm
@@ -6088,9 +6102,13 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
 
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
+      
       include 'coupl.inc'
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'c_weight.inc'
       include 'fks_powers.inc'
       include 'nFKSconfigs.inc'
       integer fks_j_from_i(nexternal,0:nexternal)
@@ -6124,16 +6142,18 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       character*1 integrate
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      integer fac_i,fac_j,i_fks_pdg,j_fks_pdg
+      integer fac_i,fac_j,i_fks_pdg,j_fks_pdg,iden(nexternal)
 
       integer fac_i_FKS(fks_configs),fac_j_FKS(fks_configs)
-     $     ,i_type_FKS(fks_configs),j_type_FKS(fks_configs)
-     $     ,m_type_FKS(fks_configs),ngluons_FKS(fks_configs)
-     $     ,nphotons_FKS(fks_configs)
-      double precision
-     $ ch_i_FKS(fks_configs),ch_j_FKS(fks_configs),ch_m_FKS(fks_configs)
+     &     ,i_type_FKS(fks_configs),j_type_FKS(fks_configs)
+     &     ,m_type_FKS(fks_configs),ngluons_FKS(fks_configs)
+     &     ,nphotons_FKS(fks_configs),iden_real_FKS(fks_configs)
+     &     ,iden_born_FKS(fks_configs)
+      double precision ch_i_FKS(fks_configs),ch_j_FKS(fks_configs)
+     &     ,ch_m_FKS(fks_configs)
       save fac_i_FKS,fac_j_FKS,i_type_FKS,j_type_FKS,m_type_FKS
-     $     ,ngluons_FKS,ch_i_FKS,ch_j_FKS,ch_m_FKS,nphotons_FKS
+     &     ,ngluons_FKS,ch_i_FKS,ch_j_FKS,ch_m_FKS,nphotons_FKS
+     &     ,iden_real_FKS,iden_born_FKS
 
       character*13 filename
 
@@ -6307,6 +6327,38 @@ c Set color types of i_fks, j_fks and fks_mother.
          ch_i_FKS(nFKSprocess)=ch_i
          ch_j_FKS(nFKSprocess)=ch_j
          ch_m_FKS(nFKSprocess)=ch_m
+
+c Compute the identical particle symmetry factor that is in the
+c real-emission matrix elements.
+         iden_real_FKS(nFKSprocess)=1
+         do i=1,nexternal
+            iden(i)=1
+         enddo
+         do i=nincoming+2,nexternal
+            do j=nincoming+1,i-1
+               if (pdg_type(j).eq.pdg_type(i)) then
+                  iden(j)=iden(j)+1
+                  iden_real_FKS(nFKSprocess)=iden_real_FKS(nFKSprocess)*iden(j)
+                  exit
+               endif
+            enddo
+         enddo
+c Compute the identical particle symmetry factor that is in the
+c Born matrix elements.
+         iden_born_FKS(nFKSprocess)=1
+         call set_pdg(0,nFKSprocess)
+         do i=1,nexternal
+            iden(i)=1
+         enddo
+         do i=nincoming+2,nexternal-1
+            do j=nincoming+1,i-1
+               if (pdg_uborn(j,0).eq.pdg_uborn(i,0)) then
+                  iden(j)=iden(j)+1
+                  iden_born_FKS(nFKSprocess)=iden_born_FKS(nFKSprocess)*iden(j)
+                  exit
+               endif
+            enddo
+         enddo
       endif
 
       i_type=i_type_FKS(nFKSprocess)
@@ -6316,6 +6368,14 @@ c Set color types of i_fks, j_fks and fks_mother.
       ch_j=ch_j_FKS(nFKSprocess)
       ch_m=ch_m_FKS(nFKSprocess)
 
+c Compensating factor needed in the soft & collinear counterterms for
+c the fact that the identical particle symmetry factor in the Born
+c matrix elements is not the one that should be used for those terms
+c (should be the one in the real instead).
+      iden_comp=dble(iden_born_FKS(nFKSprocess))/dble(iden_real_FKS(nFKSprocess))
+
+      write (*,*) nFKSprocess,iden_comp,iden_born_FKS(nFKSprocess),iden_real_FKS(nFKSprocess)
+      
 c Set matrices used by MC counterterms
 c      call set_mc_matrices
 
@@ -6327,11 +6387,11 @@ c Setup the FKS symmetry factors.
       if (nbody.and.pdg_type(i_fks).eq.21) then
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
-         fkssymmetryfactorBorn=dble(ngluons)
+         fkssymmetryfactorBorn=1d0
       elseif (nbody.and.pdg_type(i_fks).eq.22) then
          fkssymmetryfactor=dble(nphotons)
          fkssymmetryfactorDeg=dble(nphotons)
-         fkssymmetryfactorBorn=dble(nphotons)
+         fkssymmetryfactorBorn=1d0
       elseif(pdg_type(i_fks).eq.-21) then
          fkssymmetryfactor=1d0
          fkssymmetryfactorDeg=1d0

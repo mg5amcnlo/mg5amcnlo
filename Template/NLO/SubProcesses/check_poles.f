@@ -121,7 +121,7 @@ c ie. which is a Born+g real-emission process
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setfksfactor(1)
-      symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
+      symfactvirt = 1d0
 
       nfail = 0
       npointsChecked = 0

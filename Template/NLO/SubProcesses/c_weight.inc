@@ -4,7 +4,7 @@
       parameter (max_contr=128,max_wgt=256,max_iproc=100)
       logical H_event(max_contr)
       integer nFKS(max_contr),itype(max_contr),QCDpower(max_contr)
-     $     ,pdg(nexternal,max_contr),pdg_uborn(nexternal,max_contr)
+     $     ,pdg(nexternal,0:max_contr),pdg_uborn(nexternal,0:max_contr)
      $     ,parton_pdg_uborn(nexternal,max_iproc,max_contr)
      $     ,parton_pdg(nexternal,max_iproc,max_contr),icontr,iwgt
      $     ,plot_id(max_contr),niproc(max_contr),parton_pdf(nexternal

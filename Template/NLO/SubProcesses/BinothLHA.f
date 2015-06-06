@@ -110,7 +110,9 @@ C     reset the amp_split array
         amp_split_poles_ML(i,2) = 0d0
       enddo
       prec_found = 1.0d0
-      symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
+c This is no longer needed, because now the Born has the correct symmetry factor:
+c      symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
+      symfactvirt = 1d0
       if (firsttime_run) then
 c The helicity double check should have been performed during the
 c pole check, so we skip it here. It also makes sure that there is

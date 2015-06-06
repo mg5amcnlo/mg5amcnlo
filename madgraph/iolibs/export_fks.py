@@ -2984,9 +2984,11 @@ Parameters              %(params)s\n\
             lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
             lines.append('DATA IDEN_VALUES /' + \
                          ', '.join(['%d' % ( 
-                         born_me.get_denominator_factor() / \
-                         born_me['identical_particle_factor'] * \
-                         fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
+#                         born_me.get_denominator_factor() / \
+#                         born_me['identical_particle_factor'] * \
+#                         fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
+#                         for info in info_list]) + '/')
+                         born_me.get_denominator_factor()) \
                          for info in info_list]) + '/')
         else:
             # otherwise use the born
