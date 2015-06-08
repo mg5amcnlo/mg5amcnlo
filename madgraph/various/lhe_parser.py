@@ -93,7 +93,7 @@ class Particle(object):
     
     def __str__(self):
         """string representing the particles"""
-        return " %8d %2d %4d %4d %4d %4d %+13.7e %+13.7e %+13.7e %14.8e %14.8e %10.4e %10.4e" \
+        return " %8d %2d %4d %4d %4d %4d %+14.8e %+14.8e %+14.8e %14.8e %14.8e %10.4e %10.4e" \
             % (self.pid, 
                self.status,
                self.mother1.event_id+1 if self.mother1 else 0,
@@ -150,7 +150,14 @@ class EventFile(object):
     def __new__(self, path, mode='r', *args, **opt):
 
         if  path.endswith(".gz"):
-            return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
+            try:
+                return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
+            except IOError, error:
+                raise
+            except Exception, error:
+                if mode == 'r':
+                    misc.gunzip(path)
+                return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
         else:
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
     
@@ -364,6 +371,7 @@ class EventFile(object):
                             break   
                         else:
                             break
+                        
             #create output file (here since we are sure that we have to rewrite it)
             if outputpath:
                 outfile = EventFile(outputpath, "w")
@@ -395,16 +403,16 @@ class EventFile(object):
                     event.wgt = -1 * max(abs(wgt), max_wgt)
                     if abs(wgt) > max_wgt:
                         trunc_cross += abs(wgt) - max_wgt
-                    if event_target ==0 or nb_keep <= event_target: 
+                    if outputpath and (event_target ==0 or nb_keep <= event_target):
                         outfile.write(str(event))
             
             if event_target and nb_keep > event_target:
-                if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
+                if not outputpath:
+                    #no outputpath define -> wants only the nb of unweighted events
+                    continue
+                elif event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
                     outfile.close()
 #                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
-                    continue
-                elif not outputpath:
-                    #no outputpath define -> wants only the nb of unweighted events
                     continue
                 else:
                     outfile.write("</LesHouchesEvents>\n")

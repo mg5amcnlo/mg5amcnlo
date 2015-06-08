@@ -354,6 +354,10 @@ class UFOMG5Converter(object):
             self.add_interaction(interaction_info, color_info)
 
         if self.perturbation_couplings:
+            try:
+                self.ufomodel.add_NLO()
+            except Exception, error:
+                pass 
             for interaction_info in self.ufomodel.all_CTvertices:
                 self.add_CTinteraction(interaction_info, color_info)
                     

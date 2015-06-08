@@ -425,6 +425,10 @@ class gensym(object):
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
+            os.remove(pjoin(path, 'results.dat'))
+            #os.remove(pjoin(path, 'grid_information'))
+            
+            
              
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory

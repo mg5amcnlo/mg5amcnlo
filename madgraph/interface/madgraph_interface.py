@@ -6520,7 +6520,10 @@ This implies that with decay chains:
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
                 self.exec_cmd('output %s -f' % decay_dir)
                 # Need to write the correct param_card in the correct place !!!
-                files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
+                if os.path.exists(opts['output']):
+                    files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
+                else:
+                    files.cp(opts['path'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
                     check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 # call a ME interface and define as it as child for correct error handling
