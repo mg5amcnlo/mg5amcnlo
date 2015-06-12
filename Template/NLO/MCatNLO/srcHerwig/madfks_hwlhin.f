@@ -24,6 +24,7 @@ C---Les Houches Event Common Block
       PARAMETER (IUNIT=61)
       CHARACTER*80 STRING
       CHARACTER*140 BUFF
+      character*20 cidwgt
       character*12 dummy12
       character*2 dummy2
       CHARACTER*9 CH1
@@ -35,9 +36,14 @@ c evwgt_lh is meant to be passed to stdhep
       COMMON/CEVWGT_LH/EVWGT_LH
       include 'reweight0.inc'
       integer iww,max_weight
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      integer maxRWGT
+      parameter (maxRWGT=100)
+      double precision wgtxsecRWGT(maxRWGT)
+      parameter (max_weight=maxscales*maxscales+maxpdfs+maxRWGT+1)
       double precision ww(max_weight)
       common/cww/ww
+      integer numRWGTS
+      common/cnrwgts/numRWGTS
 C
       IF (IERROR.NE.0) RETURN
 c
@@ -124,7 +130,8 @@ c Avoids rounding problems for zero-mass particles
         elseif(jwgtinfo.eq.9)then
           if (numscales.eq.0 .and. numPDFpairs.eq.0) then
              write (*,*) 'event file not correct format'
-             call HWWARN('UPEVNT',502)
+             write(*,*)'FATAL ERROR #3 IN UPEVNT'
+             stop
           endif
           read(iunit,'(a)')string
           wgtref=XWGTUP/MQQ
@@ -160,6 +167,11 @@ c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
              iww=iww+1
              ww(iww)=wgtxsecPDF(i)
           enddo
+          do i=1,numRWGTS
+             call read_rwgt_line_RWGT(iunit,cidwgt,wgtxsecRWGT(i))
+             iww=iww+1
+             ww(iww)=wgtxsecRWGT(i)
+          enddo
           if (numscales.eq.0) then
              wgtxsecmu(1,1)=wgtref
           endif
@@ -176,7 +188,8 @@ c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
         buff_tlh=' '
       endif
       if(INDEX(STRING,'</event>').eq.0)then
-        CALL HWWARN('UPEVNT',501)
+        write(*,*)'FATAL ERROR #2 IN UPEVNT'
+        stop
       endif
 c Modify what follows to set scale of H or S events in a different way
 c$$$      IF(ISORH_LHE.EQ.2)THEN
@@ -230,10 +243,13 @@ c Hard event file (to be entered in Herwig driver)
       character*15 weights_info(max_weight)
       common/cwgtsinfo/weights_info
       double precision xmuR,xmuF
-      integer iPDF,i
+      integer iPDF,i,numRWGTS
+      common/cnrwgts/numRWGTS
+      character*20 sRWGT
 C
       numscales=0
       numPDFpairs=0
+      numRWGTS=0
       nwgt=1
       weights_info(nwgt)="central value  "
       IF (IERROR.NE.0) RETURN
@@ -277,6 +293,20 @@ c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
             ENDDO
             nwgt=nwgt+numPDFpairs
             numPDFpairs=numPDFpairs/2
+         ELSEIF( INDEX(STRING,"<weightgroup type='mg_reweighting'").ne.0
+     $           .and.STRING(1:1).ne.'#') then
+            DO WHILE (.TRUE.)
+               READ(61,'(a)') STRING
+               if (INDEX(STRING,"<weight id").ne.0 .and.
+     $              STRING(1:1).ne.'#')then
+                  numRWGTS=numRWGTS+1
+                  read(string(index(string,"weight id")+11:index(string,"'>")-1),*)sRWGT
+                  write(weights_info(numscales**2+2*numPDFpairs+numRWGTS+1),113)sRWGT
+               endif
+               if (INDEX(STRING,"</weightgroup>").ne.0 .and.
+     $              STRING(1:1).ne.'#') exit
+            ENDDO
+            nwgt=nwgt+numRWGTS
          ELSEIF ( INDEX(STRING,'</header>').ne.0 .and.
      &        STRING(1:1).ne.'#' ) then
             EXIT
@@ -297,8 +327,10 @@ C--Read up to </init> in the event file
       enddo
  111  format(a4,f3.1,x,a4,f3.1)
  112  format(a4,i8,a3)
+ 113  format(a15)
       return
- 998  CALL HWWARN('UPINIT',500)
+ 998  write(*,*)'FATAL ERROR #2 IN UPINIT'
+      stop
  999  END
 
 
@@ -312,7 +344,10 @@ C----------------------------------------------------------------------
       DOUBLE PRECISION PP(5,*),P(5,20),P2(20),M2(20),SP(5),
      & TINY,FAC,ECM,DCM,EP,STEP,FRT,HWUSQR
       DATA TINY,NT/1D-9,20/
-      IF (NP.GT.20) CALL HWWARN('HWURSC',300+NP)
+      IF (NP.GT.20)THEN
+        write(*,*)'FATAL ERROR #1 IN HWURSC'
+        stop
+      ENDIF
 C--COMPUTE CM MOMENTUM
       CALL HWVZRO(4,SP)
       DO IP=1,NP
@@ -337,15 +372,21 @@ C--ITERATE RESCALING OF 3-MOMENTA
                DCM=DCM+P2(IP)/EP
             ENDIF
          ENDDO
-         IF (DCM.EQ.0D0) CALL HWWARN('HWURSC',390)
+         IF (DCM.EQ.0D0)THEN
+            write(*,*)'FATAL ERROR #2 IN HWURSC'
+            stop
+         ENDIF
          STEP=2D0*(ECM-SP(5))/DCM
          FAC=FAC-STEP
          IF (ABS(STEP).LT.TINY) GOTO 100
       ENDDO
 C--FAILED TO CONVERGE
-      CALL HWWARN('HWURSC',1)
+        write(*,*)'WARNING #1 IN HWURSC'
 C--CONVERGED: RESCALE 3-MOMENTA AND BOOST BACK 
- 100  IF (FAC.LT.0D0) CALL HWWARN('HWURSC',391)
+ 100  IF (FAC.LT.0D0)THEN
+         write(*,*)'FATAL ERROR #3 IN HWURSC'
+         stop
+      ENDIF
       FRT=SQRT(FAC)
       DO IP=1,NP
          CALL HWVSCA(3,FRT,P(1,IP),P(1,IP))
@@ -370,5 +411,28 @@ c independent (char(62)=">", char(61)="=", char(39)="'")
       id_start=index(buff,'id'//CHAR(61)//CHAR(39))+4
       read (buff(id_start:100),'(i4)') id
       read (buff(wgt_start:100),*) wgt
+      return
+      end
+
+
+      subroutine read_rwgt_line_RWGT(unit,cid,wgt)
+c read a line in the <rwgt> tag. The syntax should be
+c  <wgt id='1001'> 0.1234567e+01 </wgt>
+c The id should be exactly 4 digits long.
+      implicit none
+      integer unit,wgt_start,id_start,id_end
+      double precision wgt
+      character*100 buff
+      character*20 cid
+      read (unit,'(a)') buff
+c Use char() to make sure that the non-standard characters are compiler
+c independent (char(62)=">", char(61)="=", char(39)="'")
+      wgt_start=index(buff,CHAR(39)//CHAR(62))+2
+      id_start=index(buff,'id'//CHAR(61)//CHAR(39))+4
+      id_end=wgt_start-3
+
+      read (buff(id_start:id_end),*) cid
+      read (buff(wgt_start:100),*) wgt
+
       return
       end

@@ -60,6 +60,22 @@ class MyReader {
 	  ++cwgtinfo_nn;
 	}
       }
+
+      // Read the mg_reweighting block
+      if (hs.find("<weightgroup type='mg_reweighting'") != std::string::npos) {
+	while (true) {
+	  std::getline(hss,hs,'\n');
+	  if (hs.find("</weightgroup>") != std::string::npos) break;
+	  if (hs.find("<weight id") != std::string::npos) {
+	    std::string sRWGT = hs.substr(hs.find("weight id")+11,hs.length());
+	    sRWGT = sRWGT.substr(0,sRWGT.find("'>"));
+	    //store the reweight label
+	    sprintf(cwgtinfo_weights_info[cwgtinfo_nn], "%15s", sRWGT.c_str());
+	    ++cwgtinfo_nn;
+	  }
+	}
+      }
+
     }
   }
 
@@ -106,7 +122,8 @@ class MyReader {
 	  std::getline(ss,s,'\n');
 	  if (s.find("</rwgt>") != std::string::npos) break;
 	  if (s.find("id=") != std::string::npos) {
-	    std::string sww = s.substr(s.find("id=")+11,s.length());
+	    int ioffs=s.find("'>")+2;
+	    std::string sww = s.substr(ioffs,s.length());
 	    sww = sww.substr(0,sww.find("</w")-1);
 	    cwgt_ww[iww] = atof(sww.c_str());
 	    ++iww;
