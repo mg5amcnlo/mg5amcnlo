@@ -16,7 +16,7 @@ class MyReader {
   LHEF::Reader reader;
 
 
-  void lhef_read_wgtsinfo_(int &cwgtinfo_nn, char (cwgtinfo_weights_info[250][15])) {
+  void lhef_read_wgtsinfo_(int &cwgtinfo_nn, char (cwgtinfo_weights_info[350][15])) {
 
     // Read header of event file
     std::stringstream hss;
@@ -80,7 +80,7 @@ class MyReader {
   }
 
 
-  void lhef_read_wgts_(double (cwgt_ww[250])) {
+  void lhef_read_wgts_(double (cwgt_ww[350])) {
     
     // Read events
     if (reader.readEvent()) {
