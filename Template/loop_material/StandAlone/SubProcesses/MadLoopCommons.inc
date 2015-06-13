@@ -364,7 +364,7 @@ C     arrays since these are not the most optimized sorting algorithms.
       INTEGER FUNCTION  FindMinimum(x, mStart, mEnd)
       IMPLICIT  NONE
       INTEGER MAXNREF_EVALS
-      PARAMETER (MAXNREF_EVALS=30)
+      PARAMETER (MAXNREF_EVALS=100)
       INTEGER, DIMENSION(MAXNREF_EVALS), INTENT(IN) :: x
       INTEGER, INTENT(IN)							  :: mStart, mEnd
       INTEGER										  :: Minimum
@@ -406,7 +406,7 @@ C     arrays since these are not the most optimized sorting algorithms.
       SUBROUTINE  Sort(x, mSize)
       IMPLICIT  NONE
       INTEGER MAXNREF_EVALS
-      PARAMETER (MAXNREF_EVALS=30)
+      PARAMETER (MAXNREF_EVALS=100)
       REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(INOUT)  :: x
       INTEGER, INTENT(IN)							   :: mSize
       INTEGER										   :: i
@@ -428,7 +428,7 @@ C     arrays since these are not the most optimized sorting algorithms.
       REAL*8 FUNCTION  Median(X, N)
       IMPLICIT  NONE
       INTEGER MAXNREF_EVALS
-      PARAMETER (MAXNREF_EVALS=30)
+      PARAMETER (MAXNREF_EVALS=100)
       REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(IN)  :: X
       INTEGER, INTENT(IN)                			  :: N
       REAL*8, DIMENSION(MAXNREF_EVALS)              :: Temp

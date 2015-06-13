@@ -156,9 +156,10 @@ C IF UNSTABLE IT GOES TO THE SAME PATTERN BUT STAB_INDEX IS THEN I+20.
       INTEGER STAB_INDEX,BASIC_CT_MODE
 
 ## if(LoopInduced){	  
-C This is used for loop-induced where the reference scale for comparisons is inferred from the first 30 points at most
+C This is used for loop-induced where the reference scale for comparisons is inferred from the first 100 points at most (notice that the weight of a  given kinematic configuration can appear more than once because of the stability tests).
+C When changing this parameter, make sure to correspondingly update the parameter with the same name in MadLoopCommons.f.
       INTEGER MAXNREF_EVALS
-      PARAMETER (MAXNREF_EVALS=30)
+      PARAMETER (MAXNREF_EVALS=100)
       %(real_dp_format)s REF_EVALS(MAXNREF_EVALS)
       DATA REF_EVALS/MAXNREF_EVALS*ZERO/
       INTEGER NPSPOINTS
@@ -409,8 +410,15 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
 	  character(512) MLPath
       common/MLPATH/MLPath
 
+C     This variable controls the general initialization which is *common* between all MadLoop SubProcesses.
+C     For example setting the MadLoopPath or reading the ML runtime parameters.
 	  LOGICAL ML_INIT
 	  common/ML_INIT/ML_INIT
+
+C     This variable controls the *local* initialization of this particular SubProcess.
+C     For example, the reading of the filters must be done independently by each SubProcess.
+      LOGICAL LOCAL_ML_INIT
+	  data LOCAL_ML_INIT/.TRUE./
 
 C ----------
 C BEGIN CODE
@@ -449,7 +457,10 @@ C Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero if AUTOMATIC_TI
       NROTATIONS_DP=0
     ENDIF
   ENDIF
+ENDIF
 
+IF (LOCAL_ML_INIT) THEN
+  LOCAL_ML_INIT = .FALSE.
   QP_TOOLS_AVAILABLE=.FALSE.
   INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
 C SKIP THE ONES THAT NOT AVAILABLE
@@ -1339,19 +1350,15 @@ c    ENDDO
 	ENDDO
 ## if(LoopInduced){
 C Update of REF_EVALS (only for loop-induced processes).
-    REF_EVALS(MOD(NPSPOINTS,MAXNREF_EVALS)+1) = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
+    TMPR = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
 C We add one here to the number of PS points used for building the reference scale for comparisons.
 C It might be that when asking for specific helicities, the user started with a vanishing helicity
 C not filtered yet. In this case, the new ref would remain zero. So we want to check for this
-C and wait for a point for which the evaluation won't be zero.
-    IF(NPSPOINTS.GE.MAXNREF_EVALS) THEN
-      TMPR=MEDIAN(REF_EVALS,MAXNREF_EVALS)
-    ELSE
-      TMPR=MEDIAN(REF_EVALS,NPSPOINTS+1)
-    ENDIF
-    IF (TMPR.NE.0.0d0) THEN
+C and wait for a point for which the evaluation isn't be zero.
+    IF(TMPR.ne.0.0d0) THEN
+	  REF_EVALS(MOD(NPSPOINTS,MAXNREF_EVALS)+1) = TMPR
       NPSPOINTS = NPSPOINTS+1
-    ENDIF
+	ENDIF
 ## }
 	IF(NTRY.EQ.0) THEN
 	  NATTEMPTS=NATTEMPTS+1
@@ -1363,11 +1370,14 @@ C and wait for a point for which the evaluation won't be zero.
   ENDIF
 ## if(LoopInduced){
 ELSE
-C When not in checking mode, update the ref for the first MAXNREF_EVALS points (Not really important since the ref. scale shouldn't be used anymore at this stage).
+C When not in checking mode, update the ref for the first MAXNREF_EVALS points (The ref. scale could still be used after this stage if BYPASS_CHECK was set to true at some point using SLOOPMATRIX_THRES).
 C Is is possible to simply remove the if statement below to have a running reference scale which always depends on the MAXNREF_EVALS *last* evaluations. 
     if (NPSPOINTS.LE.MAXNREF_EVALS) THEN
-      REF_EVALS(MOD(NPSPOINTS,MAXNREF_EVALS)+1) = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
-      NPSPOINTS = NPSPOINTS+1
+	  TMPR = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
+	  IF (TMPR.ne.0.0d0) THEN
+        REF_EVALS(MOD(NPSPOINTS,MAXNREF_EVALS)+1) = TMPR
+        NPSPOINTS = NPSPOINTS+1
+      ENDIF
     ENDIF
 ## }
 ENDIF
