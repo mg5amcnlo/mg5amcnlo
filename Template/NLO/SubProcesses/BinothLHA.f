@@ -88,6 +88,8 @@ c statistics for MadLoop
       common /to_amp_split_poles_FKS/amp_split_poles_FKS
       logical force_polecheck, polecheck_passed
       common /to_polecheck/force_polecheck, polecheck_passed
+      integer ret_code_common
+      common /to_ret_code/ret_code_common
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -262,13 +264,14 @@ c Check poles for the first PS points when doing MC over helicities, and
 c for all phase-space points when not doing MC over helicities. Skip
 c MadLoop initialization PS points.
       cpol=.false.
+      ret_code_common=ret_code
       if ((firsttime .or. mc_hel.eq.0) .and. mod(ret_code,100)/10.ne.3
      $     .and. mod(ret_code,100)/10.ne.4) then 
          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
          ! loop over the full result and each of the amp_split
          ! contribution
          do iamp=0,amp_split_size
-          ! skip 0 contributions in the ap_split array
+          ! skip 0 contributions in the amp_split array
           if (iamp.ne.0.and.amp_split_poles_FKS(iamp,1).eq.0d0.and.
      $     amp_split_poles_FKS(iamp,1).eq.0d0) cycle
           if (iamp.eq.0) then

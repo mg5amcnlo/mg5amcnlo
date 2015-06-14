@@ -62,6 +62,8 @@ cc
       common /c_is_aorg/is_aorg
       logical force_polecheck, polecheck_passed
       common /to_polecheck/force_polecheck, polecheck_passed
+      integer ret_code_ml
+      common /to_ret_code/ret_code_ml
       include 'FKSParams.inc'
       
 C-----
@@ -193,14 +195,19 @@ c initialization
             enddo
           enddo
           call sborn(p_born, born)
-          ! extra initialisation calls
-          if (npointsChecked.eq.0) then
-             write(*,*) 'INITIALIZATION POINT:'
-             call BinothLHA(p_born, born, virt_wgt)
-             write(*,*) 'RESULTS FROM INITIALIZATION POINTS WILL NOT'
-     1            //'BE USED FOR STATISTICS'
-          endif
+          ! extra initialisation calls: skip the first point
+          ! as well as any other points which is used for initialization
+          ! (according to the return code)
           call BinothLHA(p_born, born, virt_wgt)
+          if (npointsChecked.eq.0) then
+            do while (mod(ret_code_ml,100)/10.eq.3.or.mod(ret_code_ml,100)/10.eq.4)
+              ! this is to skip initialisation points
+              write(*,*) 'INITIALIZATION POINT:'
+              call BinothLHA(p_born, born, virt_wgt)
+              write(*,*) 'RESULTS FROM INITIALIZATION POINTS WILL NOT '
+     1            //'BE USED FOR STATISTICS'
+            enddo
+          endif
           write(*,*) 'MU_R    = ', ren_scale
           write(*,*) 'ALPHA_S = ', G**2/4d0/pi
 
