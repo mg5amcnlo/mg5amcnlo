@@ -458,11 +458,14 @@ class UFOMG5Converter(object):
                     particle.set(key,abs(value))
                     if value<0:
                         particle.set('ghost',True)
-                elif key == 'propagator' and value:
-                    if aloha.unitary_gauge:
-                        particle.set(key, str(value[0]))
-                    else: 
-                        particle.set(key, str(value[1]))
+                elif key == 'propagator':
+                    if value:
+                        if aloha.unitary_gauge:
+                            particle.set(key, str(value[0]))
+                        else: 
+                            particle.set(key, str(value[1]))
+                    else:
+                        particle.set(key, '')
                 else:
                     particle.set(key, value)    
             elif key == 'loop_particles':
