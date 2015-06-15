@@ -1044,6 +1044,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         args = self.split_arg(line) 
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
+        misc.sprint(args[0])
         reweight_cmd = reweight_interface.ReweightInterface(args[0])
         reweight_cmd.mother = self
         self.update_status('Running Reweight', level='madspin')
@@ -1051,6 +1052,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
         reweight_cmd.me_dir = self.me_dir
+        misc.sprint(path)
         reweight_cmd.import_command_file(path)
         
         # re-define current run

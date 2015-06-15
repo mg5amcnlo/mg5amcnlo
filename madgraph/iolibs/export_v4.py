@@ -1836,6 +1836,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             history.write(output_file)
         
         ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+        open(pjoin(self.dir_path,'__init__.py'),'w')
+        open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
+
 
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
@@ -2119,7 +2122,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             matrix_template = 'matrix_standalone_msP_v4.inc'
         elif self.opt['export_format']=='standalone_msF':
             matrix_template = 'matrix_standalone_msF_v4.inc'
-	elif self.opt['export_format']=='matchbox':
+        elif self.opt['export_format']=='matchbox':
             replace_dict["proc_prefix"] = 'MG5_%i_' % matrix_element.get('processes')[0].get('id')
             replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
 

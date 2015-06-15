@@ -16,3 +16,8 @@ $(PROG_SPLITORDERS): $(PROCESS) $(CHECK_SA_SPLITORDERS) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(CHECK_SA_SPLITORDERS) $(LINKLIBS)
 
 driver.f: nexternal.inc pmass.inc ngraphs.inc coupl.inc
+
+# For python linking (require f2py part of numpy)
+matrix2py.so: matrix.f makefile $(LIBS)
+	touch __init__.py
+	f2py $(LINKLIBS) -c  matrix.f -m matrix2py

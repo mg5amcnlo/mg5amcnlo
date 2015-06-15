@@ -20,6 +20,7 @@ import math
 import os
 import re
 import shutil
+import sys
 import tempfile
 import time
 import subprocess
@@ -600,7 +601,16 @@ class ReweightInterface(extended_cmd.Cmd):
             print event.get_momenta_str(orig_order)
             print tuple(event.get_helicity(orig_order)), hel_dict[tuple(event.get_helicity(orig_order))]
         return w_new/w_orig*event.wgt
-        
+     
+    @staticmethod   
+    def invert_momenta(p):
+        """ fortran/C-python do not order table in the same order"""
+        new_p = []
+        for i in range(len(p[0])):  new_p.append([0]*len(p))
+        for i, onep in enumerate(p):
+            for j, x in enumerate(onep):
+                new_p[j][i] = x
+        return new_p
     
     def calculate_matrix_element(self, event, hypp_id, space):
         """routine to return the matrix element"""
@@ -614,144 +624,66 @@ class ReweightInterface(extended_cmd.Cmd):
 
         run_id = (tag, hypp_id)
 
+
+
         start = False
         if run_id in space.calculator:
             external = space.calculator[run_id]
-            space.calculator_nbcall[run_id] += 1
         elif (not self.second_model and not self.second_process) or hypp_id==0:
-            # create the executable for this param_card            
-            tmpdir = pjoin(self.me_dir,'rw_me', 'SubProcesses', Pdir)
-            time.sleep(0.1)
-            executable_prod="./check"
-            if not os.path.exists(pjoin(tmpdir, 'check')):
-                misc.compile( cwd=tmpdir)
-            try:
-                external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
-                                                      stderr=STDOUT, cwd=tmpdir)
-            except OSError:
-                time.sleep(0.1)
-                external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
-                                                      stderr=STDOUT, cwd=tmpdir)                
-            space.calculator[run_id] = external 
-            space.calculator_nbcall[run_id] = 1
-            time.sleep(0.2)
-            # set the param_card
-            #external.stdin.write('\x1a')
+            # create the executable for this param_card  
+            subdir = pjoin(self.me_dir,'rw_me ', 'SubProcesses')
+            if self.me_dir not in sys.path:
+                sys.path.insert(0,self.me_dir)
+            Pname = os.path.basename(Pdir)
+            if hypp_id == 0:         
+                misc.compile(['matrix2py.so'], cwd=Pdir)
+                mymod = __import__('rw_me.SubProcesses.%s.matrix2py' % Pname, globals(), locals(), [],-1)
+                S = mymod.SubProcesses
+                P = getattr(S, Pname)
+                mymod = P.matrix2py
+                with misc.chdir(Pdir):
+                    mymod.initialise('param_card_orig.dat')
             if hypp_id == 1:
-                out = misc.timeout(external.stdin.write, ('param_card.dat\n',), default=-1,timeout_duration=1)
-                #external.stdin.write('param_card.dat\n')
-            elif hypp_id == 0:
-                out = misc.timeout(external.stdin.write, ('param_card_orig.dat\n',), default=-1,timeout_duration=1)
-            if out == -1:
-                #fail resubmit
-                logger.warning("fail stdin, resubmit")
-                external.stdin.close()
-                external.stdout.close()
-                external.terminate()
-                del external
-                del space.calculator[run_id]
-                return self.calculate_matrix_element(event, hypp_id, space)
-                
+                if not os.path.exists(pjoin(Pdir, 'matrix3py.so')):
+                    open(pjoin(Pdir, 'matrix3py.so'),'w').write(open(pjoin(Pdir, 'matrix2py.so')
+                                        ).read().replace('matrix2py', 'matrix3py'))
+                mymod = __import__('rw_me.SubProcesses.%s.matrix3py' % Pname, globals(), locals(), [],-1)
+                S = mymod.SubProcesses
+                P = getattr(S, Pname)
+                mymod = P.matrix3py
+                with misc.chdir(Pdir):
+                    mymod.initialise('param_card.dat') 
+            space.calculator[run_id] = mymod.get_me
+            external = space.calculator[run_id]                      
         else:
-            # create the executable for this param_card            
-            tmpdir = pjoin(self.me_dir,'rw_me_second', 'SubProcesses', Pdir)
-            executable_prod="./check"
-            if not os.path.exists(pjoin(tmpdir, 'check')):
-                try:
-                    misc.compile( cwd=tmpdir)
-                except Exception:
-                    misc.compile(['check'], cwd=tmpdir)
-            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
-                                                      stderr=STDOUT, cwd=tmpdir)
-            space.calculator[run_id] = external 
-            space.calculator_nbcall[run_id] = 1       
-            # set the param_card
-            if hypp_id == 1:
-                external.stdin.write('param_card.dat\n')
-            elif hypp_id == 0:
-                external.stdin.write('param_card_orig.dat\n')
-            start = True                
+            subdir = pjoin(self.me_dir,'rw_me_second', 'SubProcesses')
+            if self.me_dir not in sys.path:
+                sys.path.append(self.me_dir)
+
+            assert hypp_id == 1
+            Pname = os.path.basename(Pdir)
+            misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
+            mymod = __import__("rw_me_second.SubProcesses.%s.matrix2py" % Pname)
+            S = mymod.SubProcesses
+            P = getattr(S, Pname)
+            mymod = P.matrix2py
+            misc.sprint("INIT SECOND")
+            with misc.chdir(Pdir):
+                mymod.initialise('param_card.dat')              
+            space.calculator[run_id] = mymod.get_me
+            external = space.calculator[run_id]                
         
-        #import the value of alphas
-        external.stdin.write('%g\n' % event.aqcd)
-        stdin_text = event.get_momenta_str(orig_order)
-        external.stdin.write(stdin_text)
+        
+        p = self.invert_momenta(event.get_momenta(orig_order))
         # add helicity information
         hel_order = event.get_helicity(orig_order)
         if self.helicity_reweighting and 9 not in hel_order:
-            external.stdin.write('%i\n' % hel_dict[tuple(hel_order)])
+            nhel = hel_dict[tuple(hel_order)]
         else:
-            external.stdin.write('%i\n' % 0)
-        me_value = external.stdout.readline()
-        if start:
-            while 1:
-                try: 
-                    me_value = float(me_value)
-                    break
-                except Exception:
-                    me_value = external.stdout.readline()             
-        else:
-            while 1:
-                me_value= me_value.strip()
-                try: 
-                    if 'nan' in me_value.lower():
-                        raise Exception
-                    if 'warning' in me_value.lower():
-                        logger.debug(me_value)
-                        me_value = external.stdout.readline()
-                        continue
-                    if me_value.strip().startswith(("#", "setting it to default value")):
-                        logger.debug(me_value)
-                        me_value = external.stdout.readline()
-                        continue
-                    if me_value.strip().lower().startswith('stop'):
-                        logger.warning("fail PS point! Retry")
-                        me_value = 0
-                        external.stdin.close()
-                        external.stdout.close()
-                        external.terminate()
-                        del space.calculator[run_id]
-                        del space.calculator_nbcall[run_id]
-                        return self.calculate_matrix_element(event, hypp_id, space)
-                    me_value = float(me_value)
-                    break
-                except Exception, error:
-                    print 'ZERO DETECTED for hypp', hypp_id
-                    print stdin_text
-                    print "RETURN VALUE IS", [me_value]
-                    print error
-                    #os.system('lsof -p %s' % external.pid)
-                    me_value = 0
-                    raise 
-        
-        if me_value == 0:
-            #print '%g' % event.aqcd
-            #print event.get_momenta_str(orig_order)
-            #print '%i' % hel_dict[tuple(event.get_helicity(orig_order))]
-            external.stdin.close()
-            external.stdout.close()
-            external.terminate()
-            del space.calculator[run_id]
-            del space.calculator_nbcall[run_id]
-            print "recalculate"
-            return self.calculate_matrix_element(event, hypp_id, space)            
-        
-        
-        if len(space.calculator) > 50:
-            logger.debug('more than 50 calculator. Perform cleaning')
-            nb_calls = space.calculator_nbcall.values()
-            nb_calls.sort()
-            cut = max([nb_calls[len(nb_calls)//2], 0.001 * nb_calls[-1]])
-            for key, external in list(space.calculator.items()):
-                nb = space.calculator_nbcall[key]
-                if nb < cut:
-                    external.stdin.close()
-                    external.stdout.close()
-                    external.terminate()
-                    del space.calculator[key]
-                    del space.calculator_nbcall[key]
-                else:
-                    space.calculator_nbcall[key] = self.calculator_nbcall[key] //10
+            nhel = 0
+            
+        nhel = event.get_helicity(orig_order)
+        me_value = external(p,event.aqcd, nhel)
         
         return me_value
     
@@ -761,11 +693,7 @@ class ReweightInterface(extended_cmd.Cmd):
         for (mode, production) in dict(self.calculator):
             
             if new_card_only and production == 0:
-                continue
-            external = self.calculator[(mode, production)]
-            external.stdin.close()
-            external.stdout.close()
-            external.terminate()            
+                continue            
             del self.calculator[(mode, production)]
     
     def do_quit(self, line):

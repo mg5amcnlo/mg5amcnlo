@@ -192,7 +192,7 @@ class FortranWriter(FileWriter):
     # Private variables
     __indent = 0
     __keyword_list = []
-    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$)))", re.IGNORECASE)
+    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py)", re.IGNORECASE)
 
     def write_line(self, line):
         """Write a fortran line, with correct indent and line splits"""
@@ -298,6 +298,10 @@ class FortranWriter(FileWriter):
         
         # write_comment_line must have a single line as argument
         assert(isinstance(line, str) and line.find('\n') == -1)
+
+        if line.startswith('F2PY'):
+            return ["C%s\n" % line.strip()]
+        
 
         res_lines = []
 
