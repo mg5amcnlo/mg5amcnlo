@@ -105,7 +105,11 @@ c     not equal to it so as to be sensitive to all logs in the check.
       write(*,*)' A negative number will mean use the default one: ',
      1 tolerance_default 
       read(*,*) tolerance
-      if (tolerance .le. zero) tolerance = tolerance_default
+      if (tolerance .le. zero) then
+          tolerance = tolerance_default
+      else
+          IRPoleCheckThreshold = tolerance
+      endif
 
       mu_r = ren_scale
       qes2 = ren_scale**2
