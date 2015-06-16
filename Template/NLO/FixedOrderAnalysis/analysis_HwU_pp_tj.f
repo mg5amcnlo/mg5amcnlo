@@ -71,7 +71,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       double precision wgts(*)
       integer ibody,mu,count_bj,count_j
       double precision wgt,var
-      integer i,j,kk,litop
+      integer i,j,kk,l,itop
       double precision www,pQCD(0:3,nexternal),palg,rfj,sycut,pjet(0:3
      $     ,nexternal),ptj1,yj1,etaj1,ptbj1,ybj1,etabj1,ptj2,yj2,etaj2
      $     ,ptbj2,ybj2,etabj2,p_top(0:3),pttop,ytop,etatop,psyst(0:3)

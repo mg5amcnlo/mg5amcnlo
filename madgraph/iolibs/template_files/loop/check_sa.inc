@@ -284,9 +284,9 @@ C
         write (*,*) "1eps   / (born*ao2pi) = ", MATELEM(2,0)/MATELEM(0,0)/AO2PI
         write (*,*) "2eps   / (born*ao2pi) = ", MATELEM(3,0)/MATELEM(0,0)/AO2PI
 	  ELSE
-        write (*,*) "finite / ao2pi      = ", MATELEM(1,0)/MATELEM(0,0)/AO2PI
-        write (*,*) "1eps   / ao2pi      = ", MATELEM(2,0)/MATELEM(0,0)/AO2PI
-        write (*,*) "2eps   / ao2pi      = ", MATELEM(3,0)/MATELEM(0,0)/AO2PI	    
+        write (*,*) "finite / ao2pi      = ", MATELEM(1,0)/AO2PI
+        write (*,*) "1eps   / ao2pi      = ", MATELEM(2,0)/AO2PI
+        write (*,*) "2eps   / ao2pi      = ", MATELEM(3,0)/AO2PI	    
 	  ENDIF
       write (*,*) "---------------------------------"
 

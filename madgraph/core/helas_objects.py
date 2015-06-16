@@ -1549,7 +1549,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         output['M'] = self.get('mass')
         output['W'] = self.get('width')
         output['propa'] = self.get('particle').get('propagator')
-        if output['propa'] != '':
+        if output['propa'] not in ['', None]:
             output['propa'] = 'P%s' % output['propa']
         # optimization
         if aloha.complex_mass: 
@@ -1756,8 +1756,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             else:
                 tags.append('L%d'%self.get_loop_index())
 
-        if self.get('particle').get('propagator') !='':
-                 tags.append('P%s' % str(self.get('particle').get('propagator')))
+        if self.get('particle').get('propagator') not in ['', None]:
+            tags.append('P%s' % str(self.get('particle').get('propagator')))
 
         return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 

@@ -742,8 +742,21 @@ def gunzip(path, keep=False, stdout=None):
         return 0
     
     if not stdout:
-        stdout = path[:-3]        
-    open(stdout,'w').write(ziplib.open(path, "r").read())
+        stdout = path[:-3]
+    try:
+        gfile = ziplib.open(path, "r")
+    except IOError:
+        raise
+    else:    
+        try:    
+            open(stdout,'w').write(gfile.read())
+        except IOError:
+            # this means that the file is actually not gzip
+            if stdout == path:
+                return
+            else:
+                files.cp(path, stdout)
+            
     if not keep:
         os.remove(path)
     return 0

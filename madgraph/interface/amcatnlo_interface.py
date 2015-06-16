@@ -421,9 +421,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
-        if myprocdef['perturbation_couplings']!=['QCD']:
-                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
-                        % ', '.join(myprocdef['perturbation_couplings']))
+#        if myprocdef['perturbation_couplings']!=['QCD']:
+#            message = ""FKS for reals only available in QCD for now, you asked %s" \
+#                        % ', '.join(myprocdef['perturbation_couplings'])"
+#            logger.info("%s. Checking for loop induced")
+#            new_line = ln
+#                
+#                
+#                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
+#                        % ', '.join(myprocdef['perturbation_couplings']))
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,

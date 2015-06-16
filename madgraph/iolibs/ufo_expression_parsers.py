@@ -305,7 +305,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
-        p[0] = '(' + p[3] + ',' + p[5] + ')'
+        p[0] = 'DCMPLX(' + p[3] + ',' + p[5] + ')'
 
     def p_expression_func(self, p):
         '''expression : CSC group
@@ -395,6 +395,10 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         "expression :   expression IF expression ELSE expression "
         p[0] = 'MP_CONDIF(CMPLX(%s,KIND=16).NE.(0.0e0_16,0.0e0_16),CMPLX(%s,KIND=16),CMPLX(%s,KIND=16))'\
                                                              %(p[3], p[1], p[5])
+
+    def p_expression_complex(self, p):
+        "expression : COMPLEX '(' expression ',' expression ')'"
+        p[0] = 'CMPLX(' + p[3] + ',' + p[5] + ',KIND=16)'
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
