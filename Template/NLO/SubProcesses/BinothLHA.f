@@ -416,7 +416,7 @@ c or more non-zero (independent) helicities
             if (nbad .lt. nbadmax) then
                nbad = nbad + 1
                write(*,*) " Trying another PS point"
-            else
+            elseif (.not.force_polecheck) then
                write(*,*) " TOO MANY FAILURES, QUITTING"
                stop
             endif
