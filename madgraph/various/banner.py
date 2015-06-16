@@ -589,21 +589,29 @@ def recover_banner(results_object, level, run=None, tag=None):
     """
     
     if not run:
-        try:    
-            tag = results_object.current['tag'] 
+        try: 
+            _run = results_object.current['run_name']   
+            _tag = results_object.current['tag'] 
         except Exception:
             return Banner()
+    else:
+        _run = run
     if not tag:
         try:    
-            tag = results_object[run].tags[-1] 
+            _tag = results_object[run].tags[-1] 
         except Exception,error:
-            return Banner()                                        
+            return Banner()      
+    else:
+        _tag = tag
+                                          
     path = results_object.path
     banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
     if not os.path.exists(banner_path):
-        # security if the banner was remove (or program canceled before created it)
-        return Banner()  
+         if level != "parton" and tag != _tag:
+            return recover_banner(results_object, level, _run, results_object[_run].tags[0])
+         # security if the banner was remove (or program canceled before created it)
+         return Banner()  
     banner = Banner(banner_path)
     
     
@@ -1401,6 +1409,7 @@ class RunCardLO(RunCard):
 
         self.add_param("run_tag", "tag_1", include=False)
         self.add_param("gridpack", False)
+        self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
         self.add_param("lpp1", 1, fortran_name="lpp(1)")
@@ -1566,6 +1575,7 @@ class RunCardLO(RunCard):
         self.add_param('job_strategy', 0, hidden=True, include=False)
         self.add_param('survey_splitting', -1, hidden=True, include=False)
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
+
  
 
         
@@ -1662,7 +1672,7 @@ class RunCardLO(RunCard):
                 for leg in proc[0]['legs']:
                     if not leg['state']:
                         beam_id.add(leg['id'])
-            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21]):
+            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
                 maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
                 self['asrwgtflavor'] = maxjetflavor
@@ -1900,7 +1910,7 @@ class RunCardNLO(RunCard):
             for leg in proc[0]['legs']:
                 if not leg['state']:
                     beam_id.add(leg['id'])
-        if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21]):
+        if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
             maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
             self['maxjetflavor'] = maxjetflavor
             pass

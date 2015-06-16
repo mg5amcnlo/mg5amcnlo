@@ -36,6 +36,7 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.various.misc as misc
+import madgraph.fks.fks_base as fks_base
 import aloha
 
 # Special logger for the Cmd Interface
@@ -221,10 +222,10 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             proc.get_ninitial():
             raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
             
-        if proc.get_ninitial()==1 and tool=='aMC@NLO':
-            raise self.InvalidCmd("At this stage %s cannot handle decay process."%tool+\
-                                  "\nIt is however a straight-forward extension which "+\
-                                  "will come out with the next release.")                           
+#        if proc.get_ninitial()==1 and tool=='aMC@NLO':            
+#            raise self.InvalidCmd("At this stage %s cannot handle decay process."%tool+\
+#                                  "\nIt is however a straight-forward extension which "+\
+#                                  "will come out with the next release.")                           
 
         if isinstance(proc, base_objects.ProcessDefinition) and mode.startswith('ML5'):
             if proc.has_multiparticle_label():

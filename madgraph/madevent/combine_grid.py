@@ -438,7 +438,7 @@ class grid_information(object):
         sum_var = sum([grid[(j,var)] for j in range(self.ng)])  
         for j in range(self.ng):
             if grid[(j,var)]:
-                x0 = 1e-14+grid[(j,var)]/sum_var
+                x0 = 1e-14+grid[(j,var)]/(sum_var+1e-99)
                 grid[(j,var)] = ((x0-1)/math.log(x0))**1.5
         
 

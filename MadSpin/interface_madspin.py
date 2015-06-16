@@ -429,6 +429,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise self.InvalidCmd("Nothing to decay ... Please specify some decay")
         if not self.events_file:
             raise self.InvalidCmd("No events files defined.")
+        
+        # Validity check. Need lhe version 3 if matching is on
+        if self.banner.get("run_card", "lhe_version") < 3 and \
+            self.banner.get("run_card", "ickkw") > 0:
+            raise Exception, "MadSpin requires LHEF version 3 when running with matching/merging"
 
     def help_launch(self):
         """help for the launch command"""
@@ -624,7 +629,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                cumul allow to merge all the definition in one run (add process)
                      to generate events according to cross-section
             """
-            
+                        
             part = self.model.get_particle(pdg)
             name = part.get_name()
             out = {}

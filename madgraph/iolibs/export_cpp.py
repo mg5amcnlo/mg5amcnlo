@@ -1534,8 +1534,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
         for ime, me in enumerate(self.matrix_elements):
 
-            res_lines.append("if(%s){" % \
-                                 "||".join(["&&".join(["id%d == %d" % \
+            res_lines.append("if((%s)){" % \
+                                 ")||(".join(["&&".join(["id%d == %d" % \
                                             (i+1, l.get('id')) for (i, l) in \
                                             enumerate(p.get_legs_with_decays())])\
                                            for p in me.get('processes')]))
@@ -1588,8 +1588,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         for ime, me in enumerate(self.matrix_elements):
             if not me.get('has_mirror_process'):
                 continue
-            res_lines.append("else if(%s){" % \
-                                 "||".join(["&&".join(["id%d == %d" % \
+            res_lines.append("else if((%s)){" % \
+                                 ")||(".join(["&&".join(["id%d == %d" % \
                                             (i+1, l.get('id')) for (i, l) in \
                                             enumerate(p.get_legs_with_decays())])\
                                            for p in me.get_mirror_processes()]))

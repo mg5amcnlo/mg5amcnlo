@@ -49,6 +49,7 @@ for i in $@ ; do
      for((try=1;try<=10;try+=1)); 
      do
      ../madevent 2>&1 >> $k <input_app.txt | tee -a $k;
+     status_code=${PIPESTATUS[0]};
      if [ -s $k ]
      then
          break;
@@ -68,7 +69,13 @@ for i in $@ ; do
          rm -f *.log &> /dev/null
 	 rm -f moffset.dat &> /dev/null
      fi
+     if [[ $status_code -ne 0 ]]; then 
+	 rm results.dat
+	 echo "ERROR DETECTED"
+	 echo "end code not correct $status_code" > results.dat
+     fi
      cd ../;
+
  
 done;
 
