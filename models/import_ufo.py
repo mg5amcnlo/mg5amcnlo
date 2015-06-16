@@ -1139,14 +1139,14 @@ class OrganizeModelExpression:
     def shorten_complex(self, matchobj):
         """add the short expression, and return the nice string associate"""
         
-        real = float(matchobj.group('real'))
-        imag = float(matchobj.group('imag'))
-        if real == 0 and imag ==1:
+        float_real = float(eval(matchobj.group('real')))
+        float_imag = float(eval(matchobj.group('imag')))
+        if float_real == 0 and float_imag ==1:
             new_param = base_objects.ModelVariable('complexi', 'complex(0,1)', 'complex')
             self.add_parameter(new_param)
             return 'complexi'
         else:
-            return 'complex(%s, %s)' % (real, imag)
+            return 'complex(%s, %s)' % (matchobj.group('real'), matchobj.group('imag'))
         
         
     def shorten_expo(self, matchobj):
