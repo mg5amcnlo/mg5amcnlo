@@ -71,6 +71,9 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
       elseif(dynamical_scale_choice.eq.4) then
 c         \sqrt(s), partonic energy
           rscale=dsqrt(max(0d0,2d0*dot(P(0,1),P(0,2))))
+      elseif(dynamical_scale_choice.eq.5) then
+c         \decaying particle mass, for decays
+          rscale=dsqrt(max(0d0,dot(P(0,1),P(0,1))))
       elseif(dynamical_scale_choice.eq.0) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: ENTER YOUR CODE HERE                                  cc
@@ -104,7 +107,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: END of USER CODE                                      cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       endif
-
+      rscale = scalefact*rscale
       return
       end
 

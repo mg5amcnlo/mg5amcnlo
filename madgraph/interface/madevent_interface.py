@@ -377,7 +377,7 @@ class HelpToCmd(object):
         logger.info("     --nPS=<int> : Specify how many phase-space points should be tried to set up the filters.",'$MG:color:BLUE')
         
     def help_add_time_of_flight(self):
-        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--treshold=]")
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--threshold=]")
         logger.info('-- Add in the lhe files the information')
         logger.info('   of how long it takes to a particle to decay.')
         logger.info('   threshold option allows to change the minimal value required to')
@@ -2016,7 +2016,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.create_plot('parton')            
             self.exec_cmd('store_events', postcmd=False)            
             self.exec_cmd('reweight -from_cards', postcmd=False)            
-            self.exec_cmd('decay_events -from_cards', postcmd=False)            
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
+            if self.run_card['time_of_flight']>=0:
+                self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed    
             self.store_result()
@@ -2575,7 +2577,7 @@ Beware that this can be dangerous for local multicore runs.""")
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
                                           "MadLoopParams.dat"))
             
-        if self.proc_characteristics['loop_induced']:
+        if self.proc_characteristics['loop_induced'] and mode in ['loop', 'all']:
             # Now Update MadLoop filters if necessary (if modifications were made to
             # the model parameters).
             if need_MadLoopFilterUpdate:
@@ -3099,6 +3101,8 @@ Beware that this can be dangerous for local multicore runs.""")
         """Advanced commands: Create gridpack from present run"""
 
         self.update_status('Creating gridpack', level='parton')
+        # compile gen_ximprove
+        misc.compile(['../bin/internal/gen_ximprove'], cwd=pjoin(self.me_dir, "Source"))
         args = self.split_arg(line)
         self.check_combine_events(args)
         if not self.run_tag: self.run_tag = 'tag_1'
@@ -3149,7 +3153,7 @@ Beware that this can be dangerous for local multicore runs.""")
             self.options['automatic_html_opening'] = False
 
         # Update the banner with the pythia card
-        if not self.banner:
+        if not self.banner or len(self.banner) <=1:
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
                      
    
@@ -4971,7 +4975,7 @@ class MadLoopInitializer(object):
 
         # Setup parallelization
         if MG_options:
-            mcore = cluster.MultiCore(MG_options)
+            mcore = cluster.MultiCore(**MG_options)
         else:
             mcore = cluster.MultiCore(nb_core=1)
         def run_initialization_wrapper(run_dir, infos, attempts):

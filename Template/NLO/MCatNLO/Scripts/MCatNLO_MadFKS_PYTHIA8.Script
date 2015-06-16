@@ -121,16 +121,17 @@ then
 # convert PDF number to name reading PDFsets.index
   ISLHA5=0
   ISLHA6=0
-  if [ -f $LHAPDFPATH/share/lhapdf/PDFsets.index ]
+  LHAVERSION=`$LHAPDFPATH/bin/lhapdf-config --version`
+  if [ "${LHAVERSION:0:1}" == "5" ]
   then
       LHAINDEX=$LHAPDFPATH/share/lhapdf/PDFsets.index
       ISLHA5=1
-  elif [ -f $LHAPDFPATH/share/LHAPDF/pdfsets.index ]
+  elif [ "${LHAVERSION:0:1}" == "6" ]
   then
       LHAINDEX=$LHAPDFPATH/share/LHAPDF/pdfsets.index
       ISLHA6=1
   else
-      echo 'PDF index not found!'
+      echo 'Unable to understand LHAPDF version!'
       exit 1
   fi
   while read pdfline

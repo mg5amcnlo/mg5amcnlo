@@ -208,7 +208,7 @@ C       Include the Jacobian from helicity sampling
 
         WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
       ENDIF
-      IF (ISUM_HEL .NE. 1.OR.(HEL_PICKED.EQ.-1)) THEN
+      IF (ANS.NE.0D0.AND.(ISUM_HEL .NE. 1.OR.HEL_PICKED.EQ.-1)) THEN
         CALL RANMAR(R)
         SUMHEL=0D0
         DO I=1,NCOMB

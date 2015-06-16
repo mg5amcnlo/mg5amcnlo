@@ -93,7 +93,7 @@ class Particle(object):
     
     def __str__(self):
         """string representing the particles"""
-        return " %8d %2d %4d %4d %4d %4d %+13.7e %+13.7e %+13.7e %14.8e %14.8e %10.4e %10.4e" \
+        return " %8d %2d %4d %4d %4d %4d %+13.10e %+13.10e %+13.10e %14.10e %14.10e %10.4e %10.4e" \
             % (self.pid, 
                self.status,
                self.mother1.event_id+1 if self.mother1 else 0,
@@ -150,7 +150,14 @@ class EventFile(object):
     def __new__(self, path, mode='r', *args, **opt):
 
         if  path.endswith(".gz"):
-            return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
+            try:
+                return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
+            except IOError, error:
+                raise
+            except Exception, error:
+                if mode == 'r':
+                    misc.gunzip(path)
+                return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
         else:
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
     
@@ -168,7 +175,7 @@ class EventFile(object):
                     self.seek(0)
                     self.banner = ''
                     break 
-                if "<event>" in line.lower():
+                if "<event" in line.lower():
                     self.seek(0)
                     self.banner = ''
                     break                     
@@ -364,6 +371,7 @@ class EventFile(object):
                             break   
                         else:
                             break
+                        
             #create output file (here since we are sure that we have to rewrite it)
             if outputpath:
                 outfile = EventFile(outputpath, "w")
@@ -395,16 +403,16 @@ class EventFile(object):
                     event.wgt = -1 * max(abs(wgt), max_wgt)
                     if abs(wgt) > max_wgt:
                         trunc_cross += abs(wgt) - max_wgt
-                    if event_target ==0 or nb_keep <= event_target: 
+                    if outputpath and (event_target ==0 or nb_keep <= event_target):
                         outfile.write(str(event))
             
             if event_target and nb_keep > event_target:
-                if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
+                if not outputpath:
+                    #no outputpath define -> wants only the nb of unweighted events
+                    continue
+                elif event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
                     outfile.close()
 #                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
-                    continue
-                elif not outputpath:
-                    #no outputpath define -> wants only the nb of unweighted events
                     continue
                 else:
                     outfile.write("</LesHouchesEvents>\n")
@@ -451,7 +459,7 @@ class EventFile(object):
             shutil.move(tmpname, outputpath)
             
      
-     
+        self.max_wgt = max_wgt
         return nb_keep
     
     def apply_fct_on_event(self, *fcts, **opts):
@@ -741,8 +749,8 @@ class Event(list):
         # Weight information
         self.tag = ''
         self.comment = ''
-        self.reweight_data ={}
-        
+        self.reweight_data = {}
+        self.matched_scale_data = None
         if text:
             self.parse(text)
 
@@ -758,6 +766,13 @@ class Event(list):
             if line.startswith('#'):
                 self.comment += '%s\n' % line
                 continue
+            if "<event" in line:
+                continue
+            
+            if 'first' == status:
+                if '<rwgt>' in line:
+                    status = 'tag'
+                    
             if 'first' == status:
                 self.assign_scale_line(line)
                 status = 'part' 
@@ -779,16 +794,24 @@ class Event(list):
                     Event.warning_order = False
                                    
             if particle.mother1:
-                particle.mother1 = self[int(particle.mother1) -1]
+                try:
+                    particle.mother1 = self[int(particle.mother1) -1]
+                except Exception:
+                    logger.warning("WRONG MOTHER INFO %s", self)
+                    particle.mother1 = 0
             if particle.mother2:
-                particle.mother2 = self[int(particle.mother2) -1]
+                try:
+                    particle.mother2 = self[int(particle.mother2) -1]
+                except Exception:
+                    logger.warning("WRONG MOTHER INFO %s", self)
+                    particle.mother2 = 0
 
    
     def parse_reweight(self):
         """Parse the re-weight information in order to return a dictionary
            {key: value}. If no group is define group should be '' """
         if self.reweight_data:
-            return
+            return self.reweight_data
         self.reweight_data = {}
         self.reweight_order = []
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
@@ -803,6 +826,35 @@ class Event(list):
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]
         return self.reweight_data
+    
+    def parse_matching_scale(self):
+        """Parse the line containing the starting scale for the shower"""
+        
+        if self.matched_scale_data is not None:
+            return self.matched_scale_data
+            
+        self.matched_scale_data = []
+        
+
+        pattern  = re.compile("<scales\s|</scales>")
+        data = re.split(pattern,self.tag)
+        if len(data) == 1:
+            return
+        else:
+            tmp = {}
+            start,content, end = data
+            self.tag = "%s%s" % (start, end)
+            pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
+            for id,value in pattern.findall(content):
+                tmp[int(id)] = float(value)
+                
+            for i in range(1, len(tmp)+1):
+                self.matched_scale_data.append(tmp[i])
+                
+        return self.matched_scale_data
+            
+
+
 
 
     def add_decay_to_particle(self, position, decay_event):
@@ -823,7 +875,9 @@ class Event(list):
             "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
         
         self.nexternal += decay_event.nexternal -1
-        
+        old_scales = list(self.parse_matching_scale())
+        if old_scales:
+            self.matched_scale_data.pop(position-2)
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
         for particle in decay_event[1:]:
@@ -831,6 +885,8 @@ class Event(list):
             new_particle = Particle(particle, self)
             new_particle.event_id = len(self)
             self.append(new_particle)
+            if old_scales:
+                self.matched_scale_data.append(old_scales[position-2])
             # compute and assign the new four_momenta
             new_momentum = this_4mom.boost(FourMomentum(new_particle))
             new_particle.set_momentum(new_momentum)
@@ -846,8 +902,7 @@ class Event(list):
                 elif tag == "mother2" and isinstance(particle.mother1, Particle):
                     new_particle.mother2 = this_particle
                 else:
-                    misc.sprint("Need to understan why", particle)
-            
+                    raise Exception, "Something weird happens. Please report it for investigation"
         # Need to correct the color information of the particle
         # first find the first available color index
         max_color=501
@@ -874,6 +929,8 @@ class Event(list):
                 else:
                     particle.color2 = color_mapping[particle.color2]                
 
+
+
     def remove_decay(self, pdg_code=0, event_id=None):
         
         to_remove = []
@@ -889,7 +946,7 @@ class Event(list):
         # copy first line information + ...
         for tag in ['nexternal', 'ievent', 'wgt', 'aqcd', 'scale', 'aqed','tag','comment']:
             setattr(new_event, tag, getattr(self, tag))
-            
+        
         for particle in self:
             if isinstance(particle.mother1, Particle) and particle.mother1 in to_remove:
                 to_remove.append(particle)
@@ -910,7 +967,6 @@ class Event(list):
             particle.event_id = pos
             if particle in to_remove:
                 particle.status = 1
-                new_event.nexternal += 1
         return new_event
 
     def get_decay(self, pdg_code=0, event_id=None):
@@ -938,6 +994,7 @@ class Event(list):
         new_decay_part.status =  -1
         old2new[new_decay_part.event_id] = len(old2new) 
         new_event.append(new_decay_part)
+        
         
         # add the other particle   
         for particle in self:
@@ -1191,9 +1248,17 @@ class Event(list):
                         for i in self.reweight_order)
         else:
             reweight_str = '' 
+            
+        tag_str = self.tag
+        if self.matched_scale_data:
+            tag_str = "<scales %s></scales>%s" % (
+                                    ' '.join(['pt_clust_%i=\"%s\"' % (i,v)
+                                   for i,v in enumerate(self.matched_scale_data)]),
+                                                  self.tag)
+            
         out = out % {'scale': scale_str, 
                       'particles': '\n'.join([str(p) for p in self]),
-                      'tag': self.tag,
+                      'tag': tag_str,
                       'comments': self.comment,
                       'reweight': reweight_str}
         return re.sub('[\n]+', '\n', out)
@@ -1243,6 +1308,52 @@ class Event(list):
             
         out = ''.join(out).replace('e','d')
         return out    
+
+class WeightFile(EventFile):
+    """A class to allow to read both gzip and not gzip file.
+       containing only weight from pythia --generated by SysCalc"""
+
+    def __new__(self, path, mode='r', *args, **opt):
+        if  path.endswith(".gz"):
+            try:
+                return gzip.GzipFile.__new__(WeightFileGzip, path, mode, *args, **opt)
+            except IOError, error:
+                raise
+            except Exception, error:
+                if mode == 'r':
+                    misc.gunzip(path)
+                return file.__new__(WeightFileNoGzip, path[:-3], mode, *args, **opt)
+        else:
+            return file.__new__(WeightFileNoGzip, path, mode, *args, **opt)
+    
+    
+    def __init__(self, path, mode='r', *args, **opt):
+        """open file and read the banner [if in read mode]"""
+        
+        super(EventFile, self).__init__(path, mode, *args, **opt)
+        self.banner = ''
+        if mode == 'r':
+            line = ''
+            while '</header>' not in line.lower():
+                try:
+                    line  = super(EventFile, self).next()
+                except StopIteration:
+                    self.seek(0)
+                    self.banner = ''
+                    break 
+                if "<event" in line.lower():
+                    self.seek(0)
+                    self.banner = ''
+                    break                     
+
+                self.banner += line
+
+
+class WeightFileGzip(WeightFile, EventFileGzip):
+    pass
+
+class WeightFileNoGzip(WeightFile, EventFileNoGzip):
+    pass
 
 
 class FourMomentum(object):

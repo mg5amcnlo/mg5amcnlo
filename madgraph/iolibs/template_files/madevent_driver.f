@@ -152,9 +152,9 @@ c
       write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
       call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
       write(*,*) "Completed mapping",nexternal
-      ndim = 3*(nexternal-2)-4
-      if (abs(lpp(1)) .ge. 1) ndim=ndim+1
-      if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+      ndim = 3*(nexternal-nincoming)-4
+      if (nincoming.gt.1.and.abs(lpp(1)) .ge. 1) ndim=ndim+1
+      if (nincoming.gt.1.and.abs(lpp(2)) .ge. 1) ndim=ndim+1
       ninvar = ndim
       do j=mincfig,maxcfig
          if (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then

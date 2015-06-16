@@ -26,6 +26,7 @@ import sys
 import optparse
 import time
 import shutil
+import traceback
 import gzip as ziplib
 
 try:
@@ -236,6 +237,7 @@ def multiple_try(nb_try=5, sleep=20):
                         logger_stderr.debug('fail to do %s function with %s args. %s try on a max of %s (%s waiting time)' %
                                  (str(f), ', '.join([str(a) for a in args]), i+1, nb_try, sleep * (i+1)))
                         logger_stderr.debug('error is %s' % str(error))
+                        if __debug__: logger_stderr.debug('and occurred at :'+traceback.format_exc())
                     wait_once = True
                     time.sleep(sleep * (i+1))
 
@@ -740,8 +742,21 @@ def gunzip(path, keep=False, stdout=None):
         return 0
     
     if not stdout:
-        stdout = path[:-3]        
-    open(stdout,'w').write(ziplib.open(path, "r").read())
+        stdout = path[:-3]
+    try:
+        gfile = ziplib.open(path, "r")
+    except IOError:
+        raise
+    else:    
+        try:    
+            open(stdout,'w').write(gfile.read())
+        except IOError:
+            # this means that the file is actually not gzip
+            if stdout == path:
+                return
+            else:
+                files.cp(path, stdout)
+            
     if not keep:
         os.remove(path)
     return 0

@@ -388,13 +388,18 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
 
     def get_vertex_leg_numbers(self, 
               veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
-              max_n_loop=base_objects.Vertex.max_n_loop_for_multichanneling):
+              max_n_loop=0):
         """Get a list of the number of legs in vertices in this diagram"""
 
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
+
+        # There is no need to check for self.get('interaction_id')==-2 when
+        # applying the max_n_loop check because we already know that this
+        # vertex is a loop one since it is a LoopHelasAmplitude
         vertex_leg_numbers = [len(self.get('mothers'))] if \
                          (self.get('interaction_id') not in veto_inter_id) or \
-          (self.get('interaction_id')==-2 and len(self.get('mothers'))>max_n_loop) \
-                                                                         else []
+                                     len(self.get('mothers'))>max_n_loop else []
         for mother in self.get('mothers'):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
                             veto_inter_id=veto_inter_id, max_n_loop=max_n_loop))
@@ -1510,7 +1515,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     loop_amp.set('orders',loop_amp.get_orders())
                     helas_diagram.get('amplitudes').append(loop_amp)
                     # here we check the two L-cut loop helas wavefunctions are                                                                                                                           
-                    # in consistent flow                    
+                    # in consistent flow                     
                     check_lcut_fermion_flow_consistency(\
                         loop_amp_wfs[0],loop_amp_wfs[1])
                 return wfNumber, amplitudeNumber

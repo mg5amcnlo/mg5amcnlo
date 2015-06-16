@@ -411,14 +411,14 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
             with option: %s
             file missing: %s.
             Stopping all runs.''' % (job_id, args, path))
-            #self.remove()
+            self.remove()
         elif args['nb_submit'] >= self.nb_retry:
             logger.critical('''Fail to run correctly job %s.
             with option: %s
             file missing: %s
             Fails %s times
             No resubmition. ''' % (job_id, args, path, args['nb_submit']))
-            #self.remove()
+            self.remove()
         else:
             args['nb_submit'] += 1            
             logger.warning('resubmit job (for the %s times)' % args['nb_submit'])
@@ -426,11 +426,15 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
             self.submitted_ids.remove(job_id)
             if 'time_check' in args: 
                 del args['time_check']
-            self.submit2(**args)
+            if job_id in self.id_to_packet:
+                self.id_to_packet[job_id].remove_one()
+                args['packet_member'] = self.id_to_packet[job_id]
+                del self.id_to_packet[job_id]            
+                self.cluster_submit(**args)
+            else:
+                self.submit2(**args)
             return 'resubmit'
         return 'done'
-            
-            
             
     @check_interupt()
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
@@ -1024,6 +1028,7 @@ class CondorCluster(Cluster):
         cmd = "condor_rm %s" % ' '.join(self.submitted_ids)
         
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
         
 class PBSCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -1167,6 +1172,7 @@ class PBSCluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 
 class SGECluster(Cluster):
@@ -1317,6 +1323,7 @@ class SGECluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 
 class LSFCluster(Cluster):
@@ -1446,6 +1453,7 @@ class LSFCluster(Cluster):
             return
         cmd = "bkill %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 class GECluster(Cluster):
     """Class for dealing with cluster submission on a GE cluster"""
@@ -1570,6 +1578,7 @@ class GECluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 def asyncrone_launch(exe, cwd=None, stdout=None, argument = [], **opt):
     """start a computation and not wait for it to finish.
@@ -1700,6 +1709,7 @@ class SLURMCluster(Cluster):
             return
         cmd = "scancel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 class HTCaaSCluster(Cluster):
     """Class for dealing with cluster submission on a HTCaaS cluster using GPFS """
@@ -1880,6 +1890,7 @@ class HTCaaSCluster(Cluster):
         for i in range(len(self.submitted_ids)):
          cmd = "htcaas-job-cancel -m %s" % ' '.join(self.submitted_ids[i])
          status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
  
 class HTCaaS2Cluster(Cluster):
@@ -2276,6 +2287,7 @@ class HTCaaS2Cluster(Cluster):
         for i in range(len(self.submitted_ids)):
          cmd = "htcaas-job-cancel -m %s" % ' '.join(self.submitted_ids[i])        
          status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        self.submitted_ids = []
 
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 

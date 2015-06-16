@@ -606,6 +606,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("        default: take value from the model")
         logger.info("  --output=X: path where to write the resulting card. ")
         logger.info("        default: overwrite input file. If no input file, write it in the model directory")
+        logger.info("  --nlo: Compute NLO width [if the model support it]")
         logger.info("")
         logger.info(" example: calculate_width h --body_decay=2 --output=./param_card")
 
@@ -648,30 +649,30 @@ class HelpToCmd(cmd.HelpCmd):
                                           range((len(self._set_options)//4)+1)]:
             logger.info("%s"%(','.join(opts)),'$MG:color:GREEN')
         logger.info("Details of each option:")
-        logger.info("group_subprocesses True/False/Auto: ",'$MG:color:BLACK')
+        logger.info("group_subprocesses True/False/Auto: ",'$MG:color:GREEN')
         logger.info(" > (default Auto) Smart grouping of subprocesses into ")
         logger.info("   directories, mirroring of initial states, and ")
         logger.info("   combination of integration channels.")
-        logger.info(" > Example: p p > j j j w+ gives 5 directories and 184 channels",'$MG:color:GREEN')
-        logger.info("   (cf. 65 directories and 1048 channels for regular output)",'$MG:color:GREEN')
+        logger.info(" > Example: p p > j j j w+ gives 5 directories and 184 channels",'$MG:color:BLACK')
+        logger.info("   (cf. 65 directories and 1048 channels for regular output)",'$MG:color:BLACK')
         logger.info(" > Auto means False for decay computation and True for collisions.")
-        logger.info("ignore_six_quark_processes multi_part_label",'$MG:color:BLACK')
+        logger.info("ignore_six_quark_processes multi_part_label",'$MG:color:GREEN')
         logger.info(" > (default none) ignore processes with at least 6 of any")
         logger.info("   of the quarks given in multi_part_label.")
         logger.info(" > These processes give negligible contribution to the")
         logger.info("   cross section but have subprocesses/channels.")
-        logger.info("stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL",'$MG:color:BLACK')
+        logger.info("stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL",'$MG:color:GREEN')
         logger.info(" > change the default level for printed information")
-        logger.info("fortran_compiler NAME",'$MG:color:BLACK')
+        logger.info("fortran_compiler NAME",'$MG:color:GREEN')
         logger.info(" > (default None) Force a specific fortran compiler.")
         logger.info("   If None, it tries first g77 and if not present gfortran")
         logger.info("   but loop output use gfortran.")
-        logger.info("loop_optimized_output True|False",'$MG:color:BLACK')
+        logger.info("loop_optimized_output True|False",'$MG:color:GREEN')
         logger.info(" > Exploits the open loop thechnique for considerable")
         logger.info("   improvement.")
         logger.info(" > CP relations among helicites are detected and the helicity")
         logger.info("   filter has more potential.")
-        logger.info("loop_color_flows True|False",'$MG:color:BLACK')
+        logger.info("loop_color_flows True|False",'$MG:color:GREEN')
         logger.info(" > Only relevant for the loop optimized output.")
         logger.info(" > Reduces the loop diagrams at the amplitude level")
         logger.info("   rendering possible the computation of the loop amplitude")
@@ -679,26 +680,26 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This option can considerably slow down the loop ME")
         logger.info("   computation time, especially when summing over all color")
         logger.info("   and helicity configuration, hence turned off by default.")        
-        logger.info("gauge unitary|Feynman",'$MG:color:BLACK')
+        logger.info("gauge unitary|Feynman",'$MG:color:GREEN')
         logger.info(" > (default unitary) choose the gauge of the non QCD part.")
         logger.info(" > For loop processes, only Feynman gauge is employable.")
-        logger.info("complex_mass_scheme True|False",'$MG:color:BLACK')
+        logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
         logger.info(" > (default False) Set complex mass scheme.")
         logger.info(" > Complex mass scheme is not yet supported for loop processes.")
-        logger.info("timeout VALUE",'$MG:color:BLACK')
+        logger.info("timeout VALUE",'$MG:color:GREEN')
         logger.info(" > (default 20) Seconds allowed to answer questions.")
         logger.info(" > Note that pressing tab always stops the timer.")
-        logger.info("cluster_temp_path PATH",'$MG:color:BLACK')
+        logger.info("cluster_temp_path PATH",'$MG:color:GREEN')
         logger.info(" > (default None) [Used in Madevent Output]")
         logger.info(" > Allow to perform the run in PATH directory")
         logger.info(" > This allow to not run on the central disk. ")
         logger.info(" > This is not used by condor cluster (since condor has")
         logger.info("   its own way to prevent it).")
-        logger.info("OLP ProgramName",'$MG:color:BLACK')
+        logger.info("OLP ProgramName",'$MG:color:GREEN')
         logger.info(" > (default 'MadLoop') [Used for virtual generation]")
         logger.info(" > Chooses what One-Loop Program to use for the virtual")
         logger.info(" > matrix element generation via the BLAH accord.")
-        logger.info("output_dependencies <mode>",'$MG:color:BLACK')
+        logger.info("output_dependencies <mode>",'$MG:color:GREEN')
         logger.info(" > (default 'external') [Use for NLO outputs]")
         logger.info(" > Choses how the external dependences (such as CutTools)")
         logger.info(" > of NLO outputs are handled. Possible values are:")
@@ -708,8 +709,14 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       copied and compiled locally in the output directory.")
         logger.info("     o environment_paths: The location of all libraries the ")
         logger.info("       output depends on should be found in your env. paths.")        
-        
-        
+        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used for loop-induced outputs]")
+        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
+        logger.info(" > setting up the integration multichannels.") 
+        logger.info(" > The default value of zero automatically picks the apparent")
+        logger.info(" > appropriate choice which is to sometimes pick box loops")
+        logger.info(" > but never higher n-points ones.")
+
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -1259,12 +1266,14 @@ This will take effect only in a NEW terminal
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')
 
-        if args[0] in ['timeout']:
+        if args[0] in ['timeout', 'max_npoint_for_channel']:
             if not args[1].isdigit():
-                raise self.InvalidCmd('timeout values should be a integer')
+                raise self.InvalidCmd('%s values should be a integer' % args[0])
 
         if args[0] in ['loop_optimized_output', 'loop_color_flows']:
-            if args[1] not in ['True', 'False']:
+            try:
+                args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
+            except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
 
         if args[0] in ['gauge']:
@@ -1414,11 +1423,16 @@ This will take effect only in a NEW terminal
 
         particles = set()
         options = {'path':None, 'output':None,
-                   'min_br':None, 'body_decay':4.0025, 'precision_channel':0.01}
+                   'min_br':None, 'body_decay':4.0025, 'precision_channel':0.01,
+                   'nlo':False}
         # check that the firsts argument is valid
+        
         for i,arg in enumerate(args):
             if arg.startswith('--'):
-                if not '=' in arg:
+                if arg.startswith('--nlo'):
+                    options['nlo'] =True  
+                    continue
+                elif not '=' in arg:
                     raise self.InvalidCmd('Options required an equal (and then the value)')
                 arg, value = arg.split('=')
                 if arg[2:] not in options:
@@ -1434,6 +1448,8 @@ This will take effect only in a NEW terminal
             elif arg in self._multiparticles:
                 particles.update([abs(id) for id in self._multiparticles[args[0]]])
             else:
+                if not self._curr_model['case_sensitive']:
+                    arg = arg.lower()                
                 for p in self._curr_model['particles']:
                     if p['name'] == arg or p['antiname'] == arg:
                         particles.add(abs(p.get_pdg_code()))
@@ -1856,7 +1872,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             completion = {}
             completion['options'] = self.list_completion(text,
                             ['--path=', '--output=', '--min_br=0.\$',
-                             '--precision_channel=0.\$', '--body_decay='])
+                             '--precision_channel=0.\$', '--body_decay=', '--nlo'])
             completion['particles'] = self.model_completion(text, '', line)
 
         return self.deal_multiple_categories(completion)
@@ -2433,7 +2449,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'loop_optimized_output',
                     'complex_mass_scheme',
                     'gauge',
-                    'EWscheme']
+                    'EWscheme',
+                    'max_npoint_for_channel']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=']
@@ -2484,7 +2501,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'gauge':'unitary',
                           'stdout_level':None,
                           'loop_optimized_output':True,
-                          'loop_color_flows':False
+                          'loop_color_flows':False,
+                          'max_npoint_for_channel': 0 # 0 means automaticly adapted
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -3777,7 +3795,7 @@ This implies that with decay chains:
                                 " the perturbation orders allowed for by the loop model.")
             if not self.options['loop_optimized_output'] and \
                          LoopOption not in ['tree','real'] and split_orders!=[]:
-                logger.info('The default output mode (loop_optimized_output'+\
+                logger.warning('The default output mode (loop_optimized_output'+\
                   ' = False) does not support evaluations for given powers of'+\
                   ' coupling orders. MadLoop output will therefore not be'+\
                   ' able to provide such quantities.')
@@ -4637,6 +4655,9 @@ This implies that with decay chains:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
                 elif ld_path not in os.environ['LD_LIBRARY_PATH']:
                     os.environ['LD_LIBRARY_PATH'] += ';%s' % ld_path
+                if self.options['lhapdf'] != 'lhapdf-config':
+                    if misc.which('lhapdf-config') != os.path.realpath(self.options['lhapdf']):
+                        os.environ['PATH'] = '%s:%s' % os.environ['PATH']
             else:
                 raise self.InvalidCmd('lhapdf is required to compile/use SysCalc')
 
@@ -4734,11 +4755,15 @@ This implies that with decay chains:
             out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
             out.write(data)
         if args[0] == 'Delphes3':
-            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+            if os.path.exists(pjoin(MG5DIR, 'Delphes','cards')):
+                card_dir = pjoin(MG5DIR, 'Delphes','cards')
+            else:
+                card_dir = pjoin(MG5DIR, 'Delphes','examples')
+            files.cp(pjoin(card_dir,'delphes_card_CMS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))
-            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+            files.cp(pjoin(card_dir,'delphes_card_CMS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_CMS.dat'))
-            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_ATLAS.tcl'),
+            files.cp(pjoin(card_dir,'delphes_card_ATLAS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_ATLAS.dat'))
             
 
@@ -5672,7 +5697,7 @@ This implies that with decay chains:
             if log:
                     logger.info('set loop optimized output to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self.options[args[0]] = eval(args[1])
+            self.options[args[0]] = args[1]
             if not self.options['loop_optimized_output'] and \
                                                self.options['loop_color_flows']:
                 logger.warning("Turning off option 'loop_color_flows'"+\
@@ -5682,7 +5707,7 @@ This implies that with decay chains:
             if log:
                     logger.info('set loop color flows to %s' % args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self.options[args[0]] = eval(args[1])
+            self.options[args[0]] = args[1]
             if self.options['loop_color_flows'] and \
                                       not self.options['loop_optimized_output']:
                 logger.warning("Turning on option 'loop_optimized'"+\
@@ -5744,7 +5769,7 @@ This implies that with decay chains:
                         ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
 
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
-                         'cluster_retry_wait', 'cluster_size']:
+                         'cluster_retry_wait', 'cluster_size', 'max_npoint_for_channel']:
                 self.options[args[0]] = int(args[1])
 
         elif args[0] in ['cluster_local_path']:
@@ -5928,6 +5953,37 @@ This implies that with decay chains:
 
         # Reset _done_export, since we have new directory
         self._done_export = False
+
+        if self._export_format == "madevent":
+            # for MadEvent with MadLoop decide if we keep the box as channel of 
+            #integration or not. Forbid them for matching and for h+j
+            if self.options['max_npoint_for_channel']:
+                base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
+            else:
+                #if default forbid 4 point channel for matching.
+                min_particle = 999
+                max_particle = 0
+                for amp in self._curr_amps:
+                    from madgraph.loop.loop_diagram_generation import LoopAmplitude
+                    if not isinstance(amp, LoopAmplitude):
+                        break
+                    nb = len(amp["process"].get_final_ids())
+                    min_particle = min(min_particle, nb)
+                    max_particle = max(max_particle, nb)
+                if min_particle != max_particle:
+                    base_objects.Vertex.max_n_loop_for_multichanneling = 3
+                else:
+                    #check if H+jet since in that case the box slow down the code
+                    last_proc = amp["process"].get_final_ids()
+                    not_hj = [i for i in last_proc if i not in range(-5,6)+[21,25]]
+                    if not not_hj and 25 in last_proc:
+                        base_objects.Vertex.max_n_loop_for_multichanneling = 3
+                    else:
+                        base_objects.Vertex.max_n_loop_for_multichanneling = 4
+
+                    # Ignore boxes for decay processes
+                    if len(amp["process"].get_initial_ids())==1:
+                        base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, args)
@@ -6347,22 +6403,30 @@ This implies that with decay chains:
 
         """
 
-        warning_text = """Be carefull automatic computation of the width is
-ONLY valid in Narrow-Width Approximation and at Tree-Level."""
-        logger.warning(warning_text)
+
+
         self.change_principal_cmd('MadGraph')
+        if '--nlo' not in line:
+            warning_text = """Please note that the automatic computation of the width is
+    only valid in narrow-width approximation and at tree-level."""
+            logger.warning(warning_text)
+            
         if not model:
-            modelname = self._curr_model['name']
+            modelname = self._curr_model.get('modelpath')
             with misc.MuteLogger(['madgraph'], ['INFO']):
                 model = import_ufo.import_model(modelname, decay=True)
         else:
             self._curr_model = model
             self._curr_fortran_model = \
-                      helas_call_writers.FortranUFOHelasCallWriter(\
-                                                               self._curr_model)
+                helas_call_writers.FortranUFOHelasCallWriter(\
+                self._curr_model)
         if not isinstance(model, model_reader.ModelReader):
             model = model_reader.ModelReader(model)
 
+        if '--nlo' in line:
+            # call SMWidth to calculate NLO Width
+            self.compute_widths_SMWidth(line, model=model)
+            return
 
         # check the argument and return those in a dictionary format
         particles, opts = self.check_compute_widths(self.split_arg(line))
@@ -6456,7 +6520,10 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
                 self.exec_cmd('output %s -f' % decay_dir)
                 # Need to write the correct param_card in the correct place !!!
-                files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
+                if os.path.exists(opts['output']):
+                    files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
+                else:
+                    files.cp(opts['path'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
                     check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 # call a ME interface and define as it as child for correct error handling
@@ -6512,6 +6579,104 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         return
 
 
+
+    # Calculate decay width with SMWidth
+    def compute_widths_SMWidth(self, line, model=None):
+        """Compute widths with SMWidth.
+        """
+
+        # check the argument and return those in a dictionary format
+        particles, opts = self.check_compute_widths(self.split_arg(line))
+
+        if opts['path']:
+            correct = True
+            param_card = check_param_card.ParamCard(opts['path'])
+            for param in param_card['decay']:
+                if param.value == "auto":
+                    param.value = 1
+                    param.format = 'float'
+                    correct = False
+            if not correct:
+                if opts['output']:
+                    param_card.write(opts['output'])
+                    opts['path'] = opts['output']
+                else:
+                    param_card.write(opts['path'])
+
+        if not model:
+            model_path = self._curr_model.get('modelpath')
+            model_name = self._curr_model.get('name')
+            currmodel = self._curr_model
+        else:
+            model_path = model.get('modelpath')
+            model_name = model.get('name')
+            currmodel = model
+
+        if not os.path.exists(pjoin(model_path, 'SMWidth')):
+            raise self.InvalidCmd, "Model %s is not valid for computing NLO width with SMWidth"%model_name
+
+        # determine the EW scheme
+        externparam = [(param.lhablock.lower(),param.name.lower()) for param \
+                           in currmodel.get('parameters')[('external',)]]
+
+        if ('sminputs','aewm1') in externparam:
+            # alpha(MZ) scheme
+            arg2 = "1"
+        elif ('sminputs','mdl_gf') in externparam or ('sminputs','gf') in externparam:
+            # Gmu scheme
+            arg2 = "2"
+        else:
+            raise Exception, "Do not know the EW scheme in the model %s"%model_name
+
+        #compile the code
+        if not os.path.exists(pjoin(model_path, 'SMWidth','smwidth')):
+            logger.info('Compiling SMWidth. This has to be done only once and'+\
+                            ' can take a couple of minutes.','$MG:color:BLACK')
+            current = misc.detect_current_compiler(pjoin(model_path, 'SMWidth',
+                                                         'makefile_MW5'))
+            new = 'gfortran' if self.options_configuration['fortran_compiler'] is None else \
+                self.options_configuration['fortran_compiler']
+            if current != new:
+                misc.mod_compilator(pjoin(model_path, 'SMWidth'), new, current)
+                misc.mod_compilator(pjoin(model_path, 'SMWidth','oneloop'), new, current)
+                misc.mod_compilator(pjoin(model_path, 'SMWidth','hdecay'), new, current)
+            misc.compile(cwd=pjoin(model_path, 'SMWidth'))
+
+        # look for the ident_card.dat
+        identpath=" "
+        carddir=os.path.dirname(opts['path'])
+        if 'ident_card.dat' in os.listdir(carddir):
+            identpath=pjoin(carddir,'ident_card.dat')
+        #run the code
+        output,error = misc.Popen(['./smwidth',opts['path'],identpath,arg2],
+                                  stdout=subprocess.PIPE,
+                                  stdin=subprocess.PIPE,
+                                  cwd=pjoin(model_path, 'SMWidth')).communicate()
+        pattern = re.compile(r'''  decay\s+(\+?\-?\d+)\s+(\+?\-?\d+\.\d+E\+?\-?\d+)''',re.I)
+        width_list = pattern.findall(output)
+        width_dict = {}
+        for pid,width in width_list:
+            width_dict[int(pid)] = float(width)
+
+        for pid in particles:
+            if not pid in width_dict:
+                width = 0
+            else:
+                width = width_dict[pid]
+            param = param_card['decay'].get((pid,))
+            param.value = width
+            param.format = 'float'
+            if pid not in param_card['decay'].decay_table:
+                continue
+            del param_card['decay'].decay_table[pid] # reset the BR
+        # write the output file. (the new param_card)
+        if opts['output']:
+            param_card.write(opts['output'])
+            logger.info('Results are written in %s' % opts['output'])
+        else:
+            param_card.write(opts['path'])
+            logger.info('Results are written in %s' % opts['path'])
+        return
 
     # Calculate decay width
     def do_decay_diagram(self, line, skip_2body=False, model=None):
