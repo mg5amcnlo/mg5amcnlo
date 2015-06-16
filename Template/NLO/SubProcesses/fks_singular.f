@@ -5880,8 +5880,8 @@ C links
         amp_split_poles_FKS(i,1)=0d0
         amp_split_poles_FKS(i,2)=0d0
       enddo
-      aso2pi=g**2/(8*pi**2)
-      aeo2pi=dble(gal(1))**2/(8*pi**2)
+      aso2pi=g**2/(8d0*pi**2)
+      aeo2pi=dble(gal(1))**2/(8d0*pi**2)
       call sborn(p_born,wgt1)
 c QCD Born terms
       contr1 = 0d0
@@ -5971,21 +5971,21 @@ C the following call to born is to setup the goodhel(nfksprocess)
 C wgt includes the gs/w^2 factor
               call sborn_sf(p_born,m,n,wgt)
 c The factor -2 compensate for that missing in sborn_sf
-              wgt=-2*wgt
+              wgt=-2d0*wgt
               if(wgt.ne.0.d0)then
                 if(pmass(m).eq.zero.and.pmass(n).eq.zero)then
                   kikj=dot(p(0,n),p(0,m))
-                  soft_fact=log(2*kikj/QES2)
+                  soft_fact=dlog(2d0*kikj/QES2)
                 elseif(pmass(m).ne.zero.and.pmass(n).eq.zero)then
                   kikj=dot(p(0,n),p(0,m))
-                  soft_fact=-0.5d0*log(pmass(m)**2/QES2)+log(2*kikj/QES2)
+                  soft_fact=-0.5d0*dlog(pmass(m)**2/QES2)+dlog(2d0*kikj/QES2)
                 elseif(pmass(m).eq.zero.and.pmass(n).ne.zero)then
                   kikj=dot(p(0,n),p(0,m))
-                  soft_fact=-0.5d0*log(pmass(n)**2/QES2)+log(2*kikj/QES2)
+                  soft_fact=-0.5d0*dlog(pmass(n)**2/QES2)+dlog(2d0*kikj/QES2)
                 elseif(pmass(m).ne.zero.and.pmass(n).ne.zero)then
                   kikj=dot(p(0,n),p(0,m))
-                  vij=sqrt(1-(pmass(n)*pmass(m)/kikj)**2)
-                  soft_fact=0.5d0*1/vij*log((1+vij)/(1-vij))
+                  vij=dsqrt(1d0-(pmass(n)*pmass(m)/kikj)**2)
+                  soft_fact=0.5d0*1d0/vij*dlog((1d0+vij)/(1d0-vij))
                 else
                   write(*,*)'Error in getpoles',i,j,n,m,pmass(n),pmass(m)
                   stop
@@ -6006,7 +6006,7 @@ C restore need_color/charge_links
       nFKSprocess = nFKSprocess_save
       call fks_inc_chooser()
 
-      if(.not.fksprefact)single=single+double*log(xmu2/QES2)
+      if(.not.fksprefact)single=single+double*dlog(xmu2/QES2)
 c
       return
       end
