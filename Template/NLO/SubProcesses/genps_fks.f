@@ -519,11 +519,15 @@ c     Could add importance sampling here
 c only counter-event exists.
             input_granny_m2=.false.
             only_event_phsp=.false.
-            skip_event_phsp=.true.
+c In principle skip_event_phsp can be set to .true. to save time, but
+c need to set it to .false. to fill shat_ev (et al) to be able to assign
+c a shower scale. The kinematics won't be used, because below jac=-222
+c and p(0,1)=-99d0.
+            skip_event_phsp=.false. 
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
             jac=-222
-            p(0,1)=-99
+            p(0,1)=-99d0
             return
          endif
          if (compute_non_shifted) then
