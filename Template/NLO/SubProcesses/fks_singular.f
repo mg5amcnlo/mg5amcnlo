@@ -397,7 +397,6 @@ c respectively.
       endif
       if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
      $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
-         write (*,*) 'ERROR in MC subtraction: will diverge'
          n_MC_subt_diverge=n_MC_subt_diverge+1
       endif
       call cpu_time(tAfter)
