@@ -102,6 +102,14 @@ c general MadFKS parameters
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
 
+      double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
+     &     ,y_ij_fks_ev_der_max
+      integer ntot_granny,derntot,ncase(0:6)
+      common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
+     &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      integer                     n_MC_subt_diverge
+      common/counter_subt_diverge/n_MC_subt_diverge
+
 C-----
 C  BEGIN CODE
 C-----  
@@ -115,6 +123,12 @@ c
       average_virtual=0d0
       virtual_fraction=virt_fraction
 
+      n_MC_subt_diverge=0
+      ntot_granny=0
+      derntot=0
+      do i=0,6
+         ncase(i)=0
+      enddo
       ntot=0
       nsun=0
       nsps=0
@@ -442,6 +456,19 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
          enddo
       endif
 
+      write (*,*) 'counters for the granny resonances'
+      write (*,*) 'ntot     ',ntot_granny
+      if (ntot_granny.gt.0) then
+         do i=0,6
+            write (*,*) '% icase ',i,' : ',ncase(i)/dble(ntot_granny)
+         enddo
+         write (*,*) 'average,std dev. and max of derivative:',deravg
+     &        ,sqrt(abs(derstd-deravg**2)),dermax
+         write (*,*)
+     &        'and xi_i_fks and y_ij_fks corresponding to max of der.',
+     &        xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      endif
+      write (*,*) 'counter for the diverging MC subtraction',n_MC_subt_diverge
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all

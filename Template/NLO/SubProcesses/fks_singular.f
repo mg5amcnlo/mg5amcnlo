@@ -359,6 +359,8 @@ c respectively.
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      integer                     n_MC_subt_diverge
+      common/counter_subt_diverge/n_MC_subt_diverge
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
@@ -376,12 +378,12 @@ c respectively.
       call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
      $             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
       MCcntcalled=.true.
-      if(ileg.gt.4 .or. ileg.lt.1)then
-         write(*,*)'Error: unrecognized ileg in compute_MC_subt_term',
-     $        ileg
-         stop 1
-      endif
       if (flagmc) then
+         if(ileg.gt.4 .or. ileg.lt.1)then
+            write(*,*)'Error: unrecognized ileg in compute_MC_subt_term'
+     &           ,ileg
+            stop 1
+         endif
          g22=g**(nint(2*wgtbpower+2))
          do i=1,nofpartners
             if(lzone(i))then
@@ -395,8 +397,8 @@ c respectively.
       endif
       if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
      $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
-         write(*,*)'Error in compute_MC_subt_term: will diverge'
-         stop
+         write (*,*) 'ERROR in MC subtraction: will diverge'
+         n_MC_subt_diverge=n_MC_subt_diverge+1
       endif
       call cpu_time(tAfter)
       t_MC_subt=t_MC_subt+(tAfter-tBefore)

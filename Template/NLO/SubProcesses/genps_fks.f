@@ -80,6 +80,8 @@ c
       data igranny_fail /0/
       double precision dot,dummy,pgranny(0:3),jac
       external dot
+      double precision rat_xi_orig
+      common /c_rat_xi/ rat_xi_orig
       double precision granny_m2_red(-1:1)
       common /to_virtgranny/granny_m2_red
 c common block that is filled by this subroutine
@@ -109,7 +111,7 @@ c
          return
       endif
       call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m2_red
-     &     ,itree,qmass_common,qwidth_common,p)
+     &     ,rat_xi_orig,itree,qmass_common,qwidth_common,p)
       if (jac.gt.0d0) then
          do j=0,3
             pgranny(j)=0d0
@@ -137,6 +139,8 @@ c
       external dot,rho
       double precision granny_m2_red(-1:1)
       common /to_virtgranny/granny_m2_red
+      double precision rat_xi_orig
+      common /c_rat_xi/ rat_xi_orig
 c common block that is filled by this subroutine
       logical granny_is_res
       integer igranny,iaunt
@@ -174,7 +178,7 @@ c
          return
       endif
       call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m2_red
-     &     ,itree,qmass_common,qwidth_common,p)
+     &     ,rat_xi_orig,itree,qmass_common,qwidth_common,p)
       if (jac.gt.0d0) then
          do j=1,3
             pcm(j)=0d0
@@ -298,7 +302,7 @@ c     granny stuff
      &     -1:1)
       double precision granny_m2_red(-1:1)
       common /to_virtgranny/granny_m2_red
-      real*8 xmbemin2,xmbemax2
+      real*8 xmbemin2,xmbemax2,xmbemin2_0,xmbemax2_0
       common/cgrannyrange/xmbemin2,xmbemax2
       logical input_granny_m2,compute_mapped,compute_non_shifted
       parameter (tiny=1d-3)
@@ -319,17 +323,17 @@ c common block that is filled by this subroutine
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision rat_xi,rat_xi_orig
+      common /c_rat_xi/ rat_xi_orig
 c     debug stuff
       double precision temp
       logical debug_granny
       parameter (debug_granny=.true.)
       double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
      &     ,y_ij_fks_ev_der_max
-      integer ntot_granny,n0_granny,ncover_granny,nlim_granny
-     &     ,del3_granny,derntot
-      common /c_granny_counters/ ntot_granny,n0_granny,ncover_granny
-     &     ,nlim_granny,del3_granny,derntot,deravg,derstd,dermax
-     &     ,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      integer ntot_granny,derntot,ncase(0:6)
+      common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
+     &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
       logical nocntevents
       common/cnocntevents/nocntevents
       double precision xi_i_fks_ev,y_ij_fks_ev
@@ -347,6 +351,18 @@ c possible resonance.
       logical write_granny(fks_configs)
       integer which_is_granny(fks_configs)
       common/write_granny_resonance/which_is_granny,write_granny
+      integer isolsign
+      common /c_isolsign/isolsign
+      double precision border,border_massive,border_massless,fborder
+      parameter (border_massive=2d0,border_massless=0.1d0,fborder=0.02d0)
+      logical firsttime
+      data firsttime/.true./
+      integer icase
+      logical case_0or1or6
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision pmass(nexternal)
+      common /to_mass/pmass
 c
       write_granny(nFKSprocess)=.true.
       which_is_granny(nFKSprocess)=0
@@ -354,6 +370,7 @@ c
       do i=-1,1
          granny_m2_red(i)=-99d99
       enddo
+      rat_xi=-99d99
 c By default always try to do the mapping if need be. Change the logical
 c 'do_mapping_granny' to false to never do the phase-space mapping to
 c keep the invariant mass of the granny fixed.
@@ -374,18 +391,40 @@ c physical range of the invariant mass in the event!)
             skip_event_phsp=.false.
             input_granny_m2=.false.
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
-     $           ,granny_m2_red,itree,qmass,qwidth,p)
+     $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
+            rat_xi_orig=rat_xi
             granny_m2_red_local( 0)=granny_m2_red( 0)
             granny_m2_red_local(-1)=granny_m2_red(-1)
             granny_m2_red_local( 1)=granny_m2_red( 1)
+            xmbemin2_0=granny_m2_red_local(-1)
+            xmbemax2_0=granny_m2_red_local(1)
+
+            if (pmass(j_fks).gt.0d0) then
+               border=max(border_massive ,fborder*(sqrt(xmbemax2_0)
+     &                                            -sqrt(xmbemin2_0)))
+            else
+               border=max(border_massless,fborder*(sqrt(xmbemax2_0)
+     &                                            -sqrt(xmbemin2_0)))
+            endif
+            xmbemin2=(sqrt(xmbemin2_0)+border)**2
+            xmbemax2=(max(0.d0,sqrt(xmbemax2_0)-border))**2
+            if (firsttime) then
+               write (*,*) 'In phase-space generator, the border'/
+     &              /' for the mapping range is set to ',border,
+     &              'for the first PS point.'
+               firsttime=.false.
+            endif
+            if(xmbemin2.ge.xmbemax2)then
+               icase=0
+               goto 111
+            endif
             granny_m2(0) =virtgranny_red(granny_m2_red_local( 0))
-     &              +granny_m2_red_local(0) ! central value
-            granny_m2(1) =virtgranny_red(granny_m2_red_local( 1)-tiny)
-     &              +granny_m2_red_local(1) ! upper limit
-            granny_m2(-1)=virtgranny_red(granny_m2_red_local(-1)+tiny)
-     &           +granny_m2_red_local(-1) ! lower limit
-            xmbemin2=granny_m2(-1)
-            xmbemax2=granny_m2(1)
+     &           +granny_m2_red_local(0) ! central value
+            granny_m2(1) =virtgranny_red(xmbemax2)
+     &           +xmbemax2      ! upper limit
+            granny_m2(-1)=virtgranny_red(xmbemin2)
+     &           +xmbemin2      ! lower limit
+            
             if (debug_granny) then
                temp =virtgranny(granny_m2_red_local( 0))
                if (abs((temp-granny_m2(0))/temp).gt.1d-3)then
@@ -394,42 +433,75 @@ c physical range of the invariant mass in the event!)
 c$$$                  stop
                endif
             endif
-            if (granny_m2(0).eq.0d0) n0_granny=n0_granny+1
-c     Check that we have a function that is always increasing
-            del1=max(0d0,granny_m2(-1)-granny_m2_red_local(-1))
-            del2=max(0d0,granny_m2_red_local(1)-granny_m2(1))
-            del30=granny_m2_red_local(1)-granny_m2_red_local(-1)
-            del3=del30-del1-del2
-            if (del3.lt.0d0) del3_granny=del3_granny+1
-            if (del1.gt.0d0) then
-               xmbe2hatlow=xmbemin2
+            if(granny_m2(-1).gt.granny_m2(1))then
+               icase=0
             else
-               xmbe2hatlow=xinv_redvirtgranny(xmbemin2)
+               if(granny_m2(1).le.xmbemin2)then
+                  icase=1
+               elseif( granny_m2(-1).le.xmbemin2.and.
+     &                 granny_m2( 1).gt.xmbemin2.and.
+     &                 granny_m2( 1).le.xmbemax2 )then
+                  icase=2
+               elseif( granny_m2(-1).le.xmbemin2.and.
+     &                 granny_m2( 1).gt.xmbemax2 )then
+                  icase=3
+               elseif( granny_m2(-1).gt.xmbemin2.and.
+     &                 granny_m2(-1).le.xmbemax2.and.
+     &                 granny_m2( 1).le.xmbemax2 )then
+                  icase=4
+               elseif( granny_m2(-1).gt.xmbemin2.and.
+     &                 granny_m2(-1).le.xmbemax2.and.
+     &                 granny_m2( 1).gt.xmbemax2 )then
+                  icase=5
+               elseif( granny_m2(-1).gt.xmbemax2 )then
+                  icase=6
+               else
+                  write(*,*)'Error in determining cases in '/
+     &                 /'phase-space generation', granny_m2(-1)
+     &                 ,granny_m2(1),xmbemin2,xmbemax2
+                  stop
+               endif
             endif
-            if(del2.gt.0.d0)then
+ 111        continue
+            ncase(icase)=ncase(icase)+1
+            case_0or1or6=.false.
+            if(icase.eq.0 .or. icase.eq.1 .or. icase.eq.6)then
+               case_0or1or6=.true.
+               xmbe2hatlow=xmbemax2_0 ! makes sure that we always go to 'compute_non_shifted'
+               xmbe2hatupp=xmbemax2_0
+            elseif(icase.eq.2)then
+               xmbe2hatlow=xinv_redvirtgranny(xmbemin2)
                xmbe2hatupp=xmbemax2
-            else
+            elseif(icase.eq.3)then
+               xmbe2hatlow=xinv_redvirtgranny(xmbemin2)
+               xmbe2hatupp=xinv_redvirtgranny(xmbemax2)
+            elseif(icase.eq.4)then
+               xmbe2hatlow=xmbemin2
+               xmbe2hatupp=xmbemax2
+            elseif(icase.eq.5)then
+               xmbe2hatlow=xmbemin2
                xmbe2hatupp=xinv_redvirtgranny(xmbemax2)
             endif
-            if (del1.gt.0d0 .or. del2.gt.0d0) 
-     &           ncover_granny = ncover_granny+1
-c Check that granny_m2_red_local is convering the whole integration range
+
+            
+c Check that granny_m2_red_local is covering the whole integration range
 c of granny_m2. If that's the case, we do the special granny trick, if
 c not, integrate as normal.
-            if ( granny_m2_red_local(0).lt.xmbe2hatlow .or.
-     $           granny_m2_red_local(0).gt.xmbe2hatupp ) then
+            if ( (granny_m2_red_local(0).lt.xmbe2hatlow .or.
+     &            granny_m2_red_local(0).gt.xmbe2hatupp) .or.
+     &           isolsign.eq.-1) then
 c     2nd term in eq.70 of the note
                compute_non_shifted=.true.
             else
                compute_non_shifted=.false.
             endif
-            if ( granny_m2_red_local(0).ge.granny_m2(-1)+tiny .and.
-     $           granny_m2_red_local(0).le.granny_m2(1)-tiny ) then
+            if ( granny_m2_red_local(0).gt.max(granny_m2(-1),xmbemin2) .and.
+     &           granny_m2_red_local(0).lt.min(granny_m2(1),xmbemax2) .and.
+     &           isolsign.ne.-1 .and. (.not.case_0or1or6) ) then
 c     1st term in eq.70 of the note
                compute_mapped=.true.
             else
                compute_mapped=.false.
-               nlim_granny=nlim_granny+1
             endif
             MC_sum_factor=1d0
             if (compute_mapped.and.compute_non_shifted) then
@@ -449,7 +521,7 @@ c only counter-event exists.
             only_event_phsp=.false.
             skip_event_phsp=.true.
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
-     $           ,granny_m2_red,itree,qmass,qwidth,p)
+     $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
             jac=-222
             p(0,1)=-99
             return
@@ -463,7 +535,7 @@ c integrate as normal
                granny_m2_red(i)=-99d99
             enddo
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
-     $           ,granny_m2_red,itree,qmass,qwidth,p)
+     $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
 c In this case, we should not write the grandmother in the event file,
 c because the shower should not keep its inv. mass fixed.
             write_granny(nFKSprocess)=.false.
@@ -492,22 +564,7 @@ c compute the derivative numerically (to compute the Jacobian)
             if (errder.gt.0.1d0) then
                write (*,*) 'ERROR is large in the computation of the'/
      $              /' derivative',errder,der
-c$$$               stop
             endif
-c$$$            if (debug_granny) then
-c$$$               xmbe2inv_temp=xinv_virtgranny(granny_m2_red_local(0))
-c$$$               temp =derivative(virtgranny,xmbe2inv_temp,step,idir
-c$$$     &              ,xmbemin2,xmbemax2,errder)
-c$$$               if(abs(temp).lt.1.d-8)then
-c$$$                  temp=0.d0
-c$$$               else
-c$$$                  temp=1.d0/temp
-c$$$               endif
-c$$$               if (abs(temp-der).gt.1d-3) then
-c$$$                  write (*,*) 'DEBUG derivative error: '/
-c$$$     &                 /'virtgranny,virtgranny_red',temp,der
-c$$$               endif
-c$$$            endif
 c compute the event kinematics using xmbe2inv as mass for the
 c grandmother of the Born (this will give granny_m2_red_local(0) mass to
 c the event).
@@ -516,7 +573,7 @@ c the event).
             only_event_phsp=.true.
             granny_m2_red(0)=xmbe2inv
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
-     $           ,granny_m2_red,itree,qmass,qwidth,p)
+     $           ,granny_m2_red,rat_xi_orig,itree,qmass,qwidth,p)
 c multiply event jacobian by the numerically computed jacobian for the
 c derivative
             jac=jac*abs(der)
@@ -526,7 +583,7 @@ c better compute it again to set all the common blocks correctly.
             only_event_phsp=.false.
             skip_event_phsp=.true.
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
-     $           ,granny_m2_red,itree,qmass,qwidth,p)
+     $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
          endif
          do i=-2,2
             jac_cnt(i)=jac_cnt(i)*MC_sum_factor
@@ -536,13 +593,13 @@ c better compute it again to set all the common blocks correctly.
          only_event_phsp =.false.
          input_granny_m2=.false.
          call generate_momenta_conf(input_granny_m2,ndim,jac,x
-     $        ,granny_m2_red,itree,qmass,qwidth,p)
+     $        ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
       endif
       end
 
 
       subroutine generate_momenta_conf(input_granny_m2,ndim,jac,x
-     &     ,granny_m2_red,itree,qmass,qwidth,p)
+     &     ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
 c
 c x(1)...x(ndim-5) --> invariant mass & angles for the Born
 c x(ndim-4) --> tau_born
@@ -637,6 +694,7 @@ c local
      &     ,m_born(nexternal-1),m_j_fks,xmrec2,xjac,xpswgt,phi_i_fks
      &     ,tau,ycm,xbjrk(2),xiimax,xinorm,xi_i_fks ,y_ij_fks,flux
      &     ,p_i_fks(0:3),pwgt,p_born_CHECK(0:3,nexternal-1),xi_i_hat
+     &     ,rat_xi
       logical one_body,pass,check_cnt
 c external
       double precision lambda
@@ -652,7 +710,8 @@ c parameters
       parameter (zero=0d0)
 c saves
       save m,stot,totmassin,totmass,ns_channel,nt_channel,one_body
-     &     ,ionebody,fksmass,nbranch,isolsign
+     &     ,ionebody,fksmass,nbranch
+      common /c_isolsign/isolsign
 c Conflicting BW stuff
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-1:1,-nexternal:-1),
@@ -981,15 +1040,16 @@ c case 3: j_fks is initial state
          if (m_j_fks.eq.0d0) then
             isolsign=1
             call generate_momenta_massless_final(icountevts,i_fks,j_fks
-     &           ,p_born_l(0,imother),shat,sqrtshat,x(ixEi),xmrec2
-     &           ,input_granny_m2,xp,phi_i_fks,xiimax,xinorm,xi_i_fks
-     &           ,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,pass)
+     &           ,p_born_l(0,imother),shat,sqrtshat,x(ixEi),xmrec2,xp
+     &           ,phi_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat
+     &           ,p_i_fks,xjac,xpswgt,pass)
       if (.not.pass) goto 112
          elseif(m_j_fks.gt.0d0) then
             call generate_momenta_massive_final(icountevts,isolsign
-     &           ,i_fks,j_fks,p_born_l(0,imother),shat,sqrtshat ,m_j_fks
-     &           ,x(ixEi),xmrec2,xp,phi_i_fks,    xiimax,xinorm
-     &           ,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,pass)
+     &           ,input_granny_m2,rat_xi,i_fks,j_fks,p_born_l(0,imother)
+     &           ,shat,sqrtshat,m_j_fks,x(ixEi),xmrec2,xp,phi_i_fks
+     &           ,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac
+     &           ,xpswgt,pass)
             if (.not.pass) goto 112
          endif
       elseif(j_fks.le.nincoming) then
@@ -1155,9 +1215,9 @@ c Set all to negative values and exit
       
 
       subroutine generate_momenta_massless_final(icountevts,i_fks,j_fks
-     &     ,p_born_imother,shat,sqrtshat,x,xmrec2,input_granny_m2,xp
-     &     ,phi_i_fks, xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks
-     &     ,xjac ,xpswgt,pass)
+     &     ,p_born_imother,shat,sqrtshat,x,xmrec2,xp,phi_i_fks,xiimax
+     &     ,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt
+     &     ,pass)
       implicit none
       include 'nexternal.inc'
 c arguments
@@ -1165,7 +1225,7 @@ c arguments
       double precision shat,sqrtshat,x(2),xmrec2,xp(0:3,nexternal)
      &     ,y_ij_fks,p_born_imother(0:3),phi_i_fks,xi_i_hat
       double precision xiimax,xinorm,xi_i_fks,p_i_fks(0:3),xjac,xpswgt
-      logical pass,input_granny_m2
+      logical pass
 c common blocks
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -1423,9 +1483,9 @@ c
       end
 
       subroutine generate_momenta_massive_final(icountevts,isolsign
-     &     ,i_fks,j_fks,p_born_imother,shat,sqrtshat,m_j_fks,x,xmrec2,xp
-     &     ,phi_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks
-     &     ,xjac ,xpswgt,pass)
+     &     ,input_granny_m2,rat_xi,i_fks,j_fks,p_born_imother,shat
+     &     ,sqrtshat,m_j_fks,x,xmrec2,xp,phi_i_fks,xiimax,xinorm
+     &     ,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,pass)
       implicit none
       include 'nexternal.inc'
 c arguments
@@ -1433,7 +1493,7 @@ c arguments
       double precision shat,sqrtshat,x(2),xmrec2,xp(0:3,nexternal)
      &     ,y_ij_fks,p_born_imother(0:3),m_j_fks,phi_i_fks,xi_i_hat
       double precision xiimax,xinorm,xi_i_fks,p_i_fks(0:3),xjac,xpswgt
-      logical pass
+      logical pass,input_granny_m2
 c common blocks
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -1543,7 +1603,11 @@ c
       endif
       xiimax=xirplus
       xinorm=xirplus+xirminus
-      rat_xi=xiimax/xinorm
+c If inputing the granny mass, do not update rat_xi, but use the
+c inputted rat_xi instead.
+      if (.not.input_granny_m2) then
+         rat_xi=xiimax/xinorm
+      endif
 c
 c Generate xi_i_fks
 c
