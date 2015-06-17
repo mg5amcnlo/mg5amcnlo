@@ -69,11 +69,6 @@ aEW = Parameter(name = 'aEW',
                 value = '1/aEWM1',
                 texname = '\\text{aEW}')
 
-MW = Parameter(name = 'MW',
-               nature = 'internal',
-               type = 'real',
-               value = 'cmath.sqrt(MZ**2/2. + cmath.sqrt(MZ**4/4. - (aEW*cmath.pi*MZ**2)/(Gf*cmath.sqrt(2))))',
-               texname = 'M_W')
 
 ee = Parameter(name = 'ee',
                nature = 'internal',

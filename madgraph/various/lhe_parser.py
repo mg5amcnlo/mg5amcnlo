@@ -839,7 +839,7 @@ class Event(list):
         pattern  = re.compile("<scales\s|</scales>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
-            return
+            return []
         else:
             tmp = {}
             start,content, end = data

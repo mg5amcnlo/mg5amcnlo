@@ -153,7 +153,7 @@ MH = Parameter(name = 'MH',
                lhablock = 'MASS',
                lhacode = [ 25 ])
 
-MSk = Parameter(name = 'MSk',
+MSk6 = Parameter(name = 'MSk6',
                 nature = 'external',
                 type = 'real',
                 value = 40,
@@ -161,7 +161,7 @@ MSk = Parameter(name = 'MSk',
                 lhablock = 'MASS',
                 lhacode = [ 9000006 ])
 
-MSk = Parameter(name = 'MSk',
+MSk7 = Parameter(name = 'MSk7',
                 nature = 'external',
                 type = 'real',
                 value = 40,
@@ -169,7 +169,7 @@ MSk = Parameter(name = 'MSk',
                 lhablock = 'MASS',
                 lhacode = [ 9000007 ])
 
-MSk = Parameter(name = 'MSk',
+MSk8 = Parameter(name = 'MSk8',
                 nature = 'external',
                 type = 'real',
                 value = 40,
@@ -177,7 +177,7 @@ MSk = Parameter(name = 'MSk',
                 lhablock = 'MASS',
                 lhacode = [ 9000008 ])
 
-MSk = Parameter(name = 'MSk',
+MSk9 = Parameter(name = 'MSk9',
                 nature = 'external',
                 type = 'real',
                 value = 40,
