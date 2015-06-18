@@ -6374,8 +6374,6 @@ c matrix elements is not the one that should be used for those terms
 c (should be the one in the real instead).
       iden_comp=dble(iden_born_FKS(nFKSprocess))/dble(iden_real_FKS(nFKSprocess))
 
-      write (*,*) nFKSprocess,iden_comp,iden_born_FKS(nFKSprocess),iden_real_FKS(nFKSprocess)
-      
 c Set matrices used by MC counterterms
 c      call set_mc_matrices
 
