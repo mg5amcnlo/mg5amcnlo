@@ -1669,9 +1669,10 @@ class RunCardLO(RunCard):
             # check for beam_id
             beam_id = set()
             for proc in proc_def:
-                for leg in proc[0]['legs']:
-                    if not leg['state']:
-                        beam_id.add(leg['id'])
+                for oneproc in proc:
+                    for leg in oneproc['legs']:
+                        if not leg['state']:
+                            beam_id.add(leg['id'])
             if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
                 maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
