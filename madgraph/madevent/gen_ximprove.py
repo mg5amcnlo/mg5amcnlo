@@ -486,7 +486,13 @@ For offline investigation, the problematic discarded events are stored in:
                         # Keep only the event with a maximum weight, as it surely
                         # is the problematic one.
                         evtRecord = open(pjoin(discardedPath,'discarded_G%s.dat'%G),'a')
-                        evtRecord.write('\n'+str(max(lhe_file,key=lambda evt:abs(evt.wgt))))
+                        lhe_file.seek(0) #rewind the file
+                        try:
+                            evtRecord.write('\n'+str(max(lhe_file,key=lambda evt:abs(evt.wgt))))
+                        except Exception:
+                            #something wrong write the full file.
+                            lhe_file.close()
+                            evtRecord.write(pjoin(gPath,'events.lhe').read())
                         evtRecord.close()
                 
                 return self.combine_grid(Pdir, G, step, exclude_sub_jobs)
