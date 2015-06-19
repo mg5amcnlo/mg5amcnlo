@@ -104,8 +104,8 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             # to make sure we indeed have different matrix elements,
             # and not just identical diagrams disregarding particle order.
             # However, identical particles should be treated symmetrically.
-            comp_dict = IdentifyMETag.prepare_comp_dict(process,
-                                         sorted_tags[0].get_external_numbers())
+            exts = sorted_tags[0].get_external_numbers()            
+            comp_dict = IdentifyMETag.prepare_comp_dict(process, exts)
             perms = [array.array('H',
                      sum([comp_dict[n] for n in p.get_external_numbers()], []))
                      for p in sorted_tags[1:]]
