@@ -4512,6 +4512,32 @@ This implies that with decay chains:
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
+
+        scheme = "old"
+        for qcd_container in ['p', 'j']:
+            multi = self._multiparticles[qcd_container]
+            b = self._curr_model.get_particle(5)
+            if not b:
+                break
+
+            if 5 in multi:
+                if b['mass'] != 'ZERO':
+                    multi.remove(5)
+                    multi.remove(-5)
+                    scheme = 4
+            elif b['mass'] == 'ZERO':
+                multi.append(5)
+                multi.append(-5)
+                scheme = 5
+                
+        if scheme in [4,5]:
+            logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
+            for container in ['p', 'j']:
+                if container in defined_multiparticles:
+                    defined_multiparticles.remove(container)
+
+                
+        
         if defined_multiparticles:
             if 'all' in defined_multiparticles:
                 defined_multiparticles.remove('all')
