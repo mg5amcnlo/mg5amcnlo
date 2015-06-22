@@ -30,7 +30,8 @@ PROGRAM smwidth
   WRITE(*,100)'decay',PID_W,resqcdqed
   resqcdqed=SMZWidth(1,1)
   WRITE(*,100)'decay',PID_Z,resqcdqed
-  resqcdqed=SMtWidth(1,1)
+  ! include finite-width effect which is also at NLO EW order
+  resqcdqed=SMtWidth(1,1,.FALSE.,.TRUE.)
   WRITE(*,100)'decay',PID_t,resqcdqed
   resqcdqed=SMHWidth(0)
   WRITE(*,100)'decay',PID_H,resqcdqed

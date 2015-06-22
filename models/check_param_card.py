@@ -142,6 +142,10 @@ class Block(list):
         """return the parameter associate to the lhacode"""
         if not self.param_dict:
             self.create_param_dict()
+        
+        if isinstance(lhacode, int):
+            lhacode = (lhacode,)
+            
         try:
             return self.param_dict[tuple(lhacode)]
         except KeyError:

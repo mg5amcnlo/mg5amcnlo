@@ -309,7 +309,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
             XTOT=XTOT+AMP2(I)
         ENDDO
 		IF (MULTICHANNEL_THRES.ge.0.0d0) then
-		  IF (((XTOT/hel_jacobian)/DABS(ANS)).lt.MULTICHANNEL_THRES) THEN
+		  IF ((XTOT/hel_jacobian).lt.MULTICHANNEL_THRES*DABS(ANS)) THEN
 			INTERFERENCE_CONTRIB = (MULTICHANNEL_THRES*(DABS(ANS)/hel_jacobian))
             AMP2(%(configID_in_matrix)s) = AMP2(%(configID_in_matrix)s) + (INTERFERENCE_CONTRIB/NMULTICHANNELS)
 			XTOT = XTOT + INTERFERENCE_CONTRIB

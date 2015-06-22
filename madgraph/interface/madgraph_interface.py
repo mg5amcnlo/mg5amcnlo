@@ -163,13 +163,28 @@ class CmdExtended(cmd.Cmd):
                             (30 - len_version - len_date) * ' ',
                             info['date'])
 
+        if os.path.exists(pjoin(MG5DIR, '.bzr')):
+            proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE)
+            bzrname,_ = proc.communicate()
+            proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
+            bzrversion,_ = proc.communicate() 
+            bzrname, bzrversion = bzrname.strip(), bzrversion.strip() 
+            len_name = len(bzrname)
+            len_version = len(bzrversion)            
+            info_line += "#*         BZR %s %s %s         *\n" % \
+                            (bzrname,
+                            (34 - len_name - len_version) * ' ',
+                            bzrversion)
+
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
         self.history_header = banner_module.ProcCard.history_header % {'info_line': info_line}
         banner_module.ProcCard.history_header = self.history_header
 
         if info_line:
-            info_line = info_line[1:]
+            info_line = info_line.replace("#*","*")
+            
+
 
         logger.info(\
         "************************************************************\n" + \
@@ -4497,6 +4512,32 @@ This implies that with decay chains:
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
+
+        scheme = "old"
+        for qcd_container in ['p', 'j']:
+            multi = self._multiparticles[qcd_container]
+            b = self._curr_model.get_particle(5)
+            if not b:
+                break
+
+            if 5 in multi:
+                if b['mass'] != 'ZERO':
+                    multi.remove(5)
+                    multi.remove(-5)
+                    scheme = 4
+            elif b['mass'] == 'ZERO':
+                multi.append(5)
+                multi.append(-5)
+                scheme = 5
+                
+        if scheme in [4,5]:
+            logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
+            for container in ['p', 'j']:
+                if container in defined_multiparticles:
+                    defined_multiparticles.remove(container)
+
+                
+        
         if defined_multiparticles:
             if 'all' in defined_multiparticles:
                 defined_multiparticles.remove('all')
