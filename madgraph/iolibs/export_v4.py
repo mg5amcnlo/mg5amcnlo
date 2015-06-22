@@ -5655,11 +5655,15 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""double complex cond
           double complex condif
           double complex reglog
+          double complex reglogp
+          double complex reglogm
           double complex arg""")
         if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
           %(complex_mp_format)s mp_condif
           %(complex_mp_format)s mp_reglog
+          %(complex_mp_format)s mp_reglogp
+          %(complex_mp_format)s mp_reglogm
           %(complex_mp_format)s mp_arg"""\
           %{'complex_mp_format':self.mp_complex_format})
 
@@ -5700,7 +5704,35 @@ class UFO_model_to_mg4(object):
              reglog=log(arg)
           endif
           end
-          
+
+          double complex function reglogp(arg)
+          implicit none
+          double complex arg
+          if(arg.eq.(0.0d0,0.0d0))then
+             reglogp=(0.0d0,0.0d0)
+          else
+             if(dble(arg).lt.0.0d0.and.dimag(arg).lt.0.0d0)then
+                reglogp=log(arg) + 2.0d0*3.1415926535897932d0*(0.0d0,1.0d0)
+             else
+`               reglogp=log(arg)
+             endif
+          endif
+          end
+
+          double complex function reglogm(arg)
+          implicit none
+          double complex arg
+          if(arg.eq.(0.0d0,0.0d0))then
+             reglogm=(0.0d0,0.0d0)
+          else
+             if(dble(arg).lt.0.0d0.and.dimag(arg).gt.0.0d0)then
+                reglogm=log(arg) - 2.0d0*3.1415926535897932d0*(0.0d0,1.0d0)
+             else
+                reglogm=log(arg)
+             endif
+          endif
+          end
+
           double complex function arg(comnum)
           implicit none
           double complex comnum
@@ -5745,6 +5777,34 @@ class UFO_model_to_mg4(object):
                  mp_reglog=log(arg)
               endif
               end
+
+              %(complex_mp_format)s function mp_reglogp(arg)
+              implicit none
+              %(complex_mp_format)s arg
+              if(arg.eq.(0.0e0_16,0.0e0_16))then
+                 mp_reglogp=(0.0e0_16,0.0e0_16)
+              else
+                 if(real(arg,kind=16).lt.0.0e0_16.and.imagpart(arg).lt.0.0e0_16)then
+                    mp_reglogp=log(arg) + 2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16)
+                 else
+                    mp_reglogp=log(arg)
+                 endif
+              endif
+              end
+ 
+              %(complex_mp_format)s function mp_reglogm(arg)
+              implicit none
+              %(complex_mp_format)s arg
+              if(arg.eq.(0.0e0_16,0.0e0_16))then
+                 mp_reglogm=(0.0e0_16,0.0e0_16)
+              else
+                 if(real(arg,kind=16).lt.0.0e0_16.and.imagpart(arg).gt.0.0e0_16)then
+                    mp_reglogm=log(arg) - 2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16)
+                 else
+                    mp_reglogm=log(arg)
+                 endif 
+              endif
+              end
               
               %(complex_mp_format)s function mp_arg(comnum)
               implicit none
@@ -5773,7 +5833,7 @@ class UFO_model_to_mg4(object):
             for fct in ufo_fct:
                 # already handle by default
                 if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
-                                    "theta_function", "cond", "reglog", "arg"]:
+                                    "theta_function", "cond", "reglog", "reglogp","reglogm","arg"]:
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -5794,7 +5854,7 @@ class UFO_model_to_mg4(object):
                 for fct in ufo_fct:
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
-                                        "theta_function", "cond", "reglog", "arg"]:
+                                        "theta_function", "cond", "reglog", "reglogp", "reglogm", "arg"]:
                         ufo_fct_template = """
           %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
           implicit none
