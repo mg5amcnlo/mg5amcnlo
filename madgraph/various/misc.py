@@ -15,6 +15,7 @@
 
 """A set of functions performing routine administrative I/O tasks."""
 
+import contextlib
 import logging
 import os
 import re
@@ -445,6 +446,49 @@ class MuteLogger(object):
             #for i, h in enumerate(my_logger.handlers):
             #    h.setLevel(cls.logger_saved_info[logname][2][i])
 
+nb_open =0
+@contextlib.contextmanager
+def stdchannel_redirected(stdchannel, dest_filename):
+    """                                                                                                                                                                                                     
+    A context manager to temporarily redirect stdout or stderr                                                                                                                                              
+                                                                                                                                                                                                            
+    e.g.:                                                                                                                                                                                                   
+                                                                                                                                                                                                            
+                                                                                                                                                                                                            
+    with stdchannel_redirected(sys.stderr, os.devnull):                                                                                                                                                     
+        if compiler.has_function('clock_gettime', libraries=['rt']):                                                                                                                                        
+            libraries.append('rt')                                                                                                                                                                          
+    """
+
+    try:
+        oldstdchannel = os.dup(stdchannel.fileno())
+        dest_file = open(dest_filename, 'w')
+        os.dup2(dest_file.fileno(), stdchannel.fileno())
+        yield
+    finally:
+        if oldstdchannel is not None:
+            os.dup2(oldstdchannel, stdchannel.fileno())
+            os.close(oldstdchannel)
+        if dest_file is not None:
+            dest_file.close()
+        
+def get_open_fds():
+    '''
+    return the number of open file descriptors for current process
+
+    .. warning: will only work on UNIX-like os-es.
+    '''
+    import subprocess
+    import os
+
+    pid = os.getpid()
+    procs = subprocess.check_output( 
+        [ "lsof", '-w', '-Ff', "-p", str( pid ) ] )
+    nprocs = filter( 
+            lambda s: s and s[ 0 ] == 'f' and s[1: ].isdigit(),
+            procs.split( '\n' ) )
+        
+    return nprocs
 
 def detect_current_compiler(path, compiler_type='fortran'):
     """find the current compiler for the current directory"""

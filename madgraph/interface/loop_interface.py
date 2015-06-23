@@ -93,7 +93,7 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
 
         if self._export_format not in self.supported_ML_format:
-            raise self.InvalidCmd, "not supported format"
+            raise self.InvalidCmd, "not supported format %s" % self._export_format
         
     def check_launch(self, args, options):
         """ Further check that only valid options are given to the MadLoop
@@ -231,9 +231,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 
         if isinstance(proc, base_objects.ProcessDefinition) and mode.startswith('ML5'):
             if proc.has_multiparticle_label():        
-                logger.warning(
+                raise self.InvalidCmd, \
                   "When running ML5 standalone, multiparticle labels cannot be"+\
-                  " employed. This is currently in test (=no guarantee).")
+                  " employed."
         
         if proc['decay_chains']:
             raise self.InvalidCmd(
@@ -447,11 +447,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                     raise self.InvalidCmd('Could not remove directory %s.'\
                                                          %str(self._export_dir))
 
-        if self._export_format == 'standalone':
+        if self._export_format.startswith('standalone'):
             output_type = 'madloop'
         elif self._export_format == 'matchbox':
             output_type = 'madloop_matchbox'
-
+        
         self._curr_exporter = export_v4.ExportV4Factory(self, \
                                                  noclean, output_type=output_type)
 

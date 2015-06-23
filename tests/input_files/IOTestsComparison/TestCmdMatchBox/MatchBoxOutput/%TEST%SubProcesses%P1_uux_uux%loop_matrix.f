@@ -232,7 +232,7 @@ C
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE
 C      AVAILABLE OR NOT
       LOGICAL LOOPLIBS_AVAILABLE(4)
-      DATA LOOPLIBS_AVAILABLE/.TRUE.,.TRUE.,.TRUE.,.TRUE./
+      DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.TRUE.,.FALSE./
       COMMON/MG5_1_LOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS
 C      AVAILABLE OR NOT IN THE LOOPLIBS
@@ -401,9 +401,9 @@ C       Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero
 C        if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
         IF(.NOT.AUTOMATIC_TIR_CACHE_CLEARING) THEN
           IF(NROTATIONS_DP.NE.0.OR.NROTATIONS_QP.NE.0) THEN
-            WRITE(*,*) 'INFO: AUTOMATIC_TIR_CACHE_CLEARING is disable'
-     $       //'d, so MadLoop automatically resets NROTATIONS_DP an'
-     $       //'d NROTATIONS_QP to 0.'
+            WRITE(*,*) '##INFO: AUTOMATIC_TIR_CACHE_CLEARING i'
+     $       //'s disabled, so MadLoop automatically resets NROTATIONS'
+     $       //'_DP and NROTATIONS_QP to 0.'
             NROTATIONS_QP=0
             NROTATIONS_DP=0
           ENDIF
@@ -498,7 +498,7 @@ C     IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
         ENDDO
       ENDDO
       IF(BOOTANDSTOP) THEN
-        WRITE(*,*) 'Stopped by user request.'
+        WRITE(*,*) '##Stopped by user request.'
         STOP
       ENDIF
 
@@ -1237,6 +1237,9 @@ C          CHECK PHASE
         ENDIF
 C       SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING
 C        THE HELICITY FILTER SETUP
+        HELSAVED(1,HELPICKED)=0.0D0
+        HELSAVED(2,HELPICKED)=0.0D0
+        HELSAVED(3,HELPICKED)=0.0D0
         DO I=1,NSQUAREDSO
           IF (CHOSEN_SO_CONFIGS(I)) THEN
             HELSAVED(1,HELPICKED)=HELSAVED(1,HELPICKED)+ANS(1,I)
@@ -1368,10 +1371,10 @@ C         DOUBLE CHECK THE HELICITY FILTER
      $       ,REF/DBLE(NCOMB),-1,-1)) THEN
               WRITE(*,*) '##W15 Helicity filter could not be successfu'
      $         //'lly double checked.'
-              WRITE(*,*) 'One reason for this is that you might hav'
+              WRITE(*,*) '##One reason for this is that you might hav'
      $         //'e changed sensible parameters which affected wha'
      $         //'t are the zero helicity configurations.'
-              WRITE(*,*) 'MadLoop will try to reset the Helicit'
+              WRITE(*,*) '##MadLoop will try to reset the Helicit'
      $         //'y filter with the next PS points it receives.'
               NTRY=0
               OPEN(29,FILE=HELFILTERFN,ERR=348)
@@ -1384,10 +1387,10 @@ C         DOUBLE CHECK THE HELICITY FILTER
      $       L(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
               WRITE(*,*) '##W15 Helicity filter could not be successfu'
      $         //'lly double checked.'
-              WRITE(*,*) 'One reason for this is that you might hav'
+              WRITE(*,*) '##One reason for this is that you might hav'
      $         //'e changed sensible parameters which affected th'
      $         //'e helicity dependance relations.'
-              WRITE(*,*) 'MadLoop will try to reset the Helicit'
+              WRITE(*,*) '##MadLoop will try to reset the Helicit'
      $         //'y filter with the next PS points it receives.'
               NTRY=0
               OPEN(30,FILE=HELFILTERFN,ERR=349)
@@ -1540,15 +1543,15 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
                 WRITE(*,*) '##W03 WARNING An unstable PS point was'
      $           ,       ' detected.'
                 IF (NSQUAREDSO.NE.1) THEN
-                  WRITE(*,*) 'Accuracies for each split orde'
+                  WRITE(*,*) '##Accuracies for each split orde'
      $             //'r, starting with the summed case'
-                  WRITE(*,*) 'DP accuracies (for each split order): '
-     $             ,(TEMP1(I),I=0,NSQUAREDSO)
-                  WRITE(*,*) 'QP accuracies (for each split order): '
-     $             ,(ACC(I),I=0,NSQUAREDSO)
+                  WRITE(*,*) '##DP accuracies (for each split orde'
+     $             //'r): ',(TEMP1(I),I=0,NSQUAREDSO)
+                  WRITE(*,*) '##QP accuracies (for each split orde'
+     $             //'r): ',(ACC(I),I=0,NSQUAREDSO)
                 ELSE
-                  WRITE(*,*) 'DP accuracy: ',TEMP1(1)
-                  WRITE(*,*) 'QP accuracy: ',ACC(1)
+                  WRITE(*,*) '##DP accuracy: ',TEMP1(1)
+                  WRITE(*,*) '##QP accuracy: ',ACC(1)
                 ENDIF
                 DO J=0,NSQUAREDSO
                   IF (NSQUAREDSO.NE.1.OR.J.NE.0) THEN

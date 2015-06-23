@@ -1776,9 +1776,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if self.format == 'standalone':
             shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
                     pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
-        elif self.format == 'standalone_rw':
-            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'driver_reweight.f'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
                         
         # Add file in Source
         shutil.copy(pjoin(temp_dir, 'Source', 'make_opts'), 
@@ -1795,8 +1792,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         super(ProcessExporterFortranSA,self).export_model_files(model_path)
         # Add the routine update_as_param in v4 model 
-        # This is a function created in the UFO 
-        
+        # This is a function created in the UFO  
+        text="""
+        subroutine update_as_param()
+          call setpara('param_card.dat',.false.)
+          return
+        end
+        """
+        ff = open(os.path.join(self.dir_path, 'Source', 'MODEL', 'couplings.f'),'a')
+        ff.write(text)
+        ff.close()        
         
         text = open(pjoin(self.dir_path,'SubProcesses','check_sa.f')).read()
         text = text.replace('call setpara(\'param_card.dat\')', 'call setpara(\'param_card.dat\', .true.)')

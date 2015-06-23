@@ -774,11 +774,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madweight_card.dat [MW]
         """
 
-        text = open(path).read(50000)
-        if text == '':
+        fulltext = open(path).read(50000)
+        if fulltext == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -809,12 +809,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'shower_card.dat'
         elif 'fo_analysis_format' in text:
             return 'FO_analyse_card.dat'
-        elif 'decay' in text and 'launch' in text and 'madspin' in text:
-            return 'madspin_card.dat'
-        elif 'launch' in text and 'set' in text:
-            return 'reweight_card.dat'
-        elif 'decay' in text and 'launch' in text:
-            return 'madspin_card.dat'
+        elif 'launch' in text:
+            # need to separate madspin/reweight.
+            # decay/set can be in both...
+            if 'madspin' in text:
+                return 'madspin_card.dat'
+            if 'decay' in text:
+                # need to check if this a line like "decay w+" or "set decay"
+                if re.search("(^|;)\s*decay", fulltext):
+                    return 'madspin_card.dat'
+                else:
+                    return 'reweight_card.dat'
+            else:
+                return 'reweight_card.dat'
         else:
             return 'unknown'
 
@@ -1044,7 +1051,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         args = self.split_arg(line) 
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
-        misc.sprint(args[0])
         reweight_cmd = reweight_interface.ReweightInterface(args[0])
         reweight_cmd.mother = self
         self.update_status('Running Reweight', level='madspin')
@@ -1052,7 +1058,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
         reweight_cmd.me_dir = self.me_dir
-        misc.sprint(path)
         reweight_cmd.import_command_file(path)
         
         # re-define current run
@@ -3062,7 +3067,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # check if input is a file
         elif hasattr(self, 'do_%s' % args[0]):
             self.do_set(' '.join(args[1:]))
-        elif os.path.exists(line):
+        elif os.path.isfile(line):
             self.copy_file(line)
             self.value = 'repeat'
         elif os.path.exists(pjoin(self.me_dir, line)):
@@ -3071,6 +3076,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif line.strip() != '0' and line.strip() != 'done' and \
             str(line) != 'EOF' and line.strip() in self.allow_arg:
             self.open_file(line)
+            misc.sprint(self.allow_arg, line)
             self.value = 'repeat'
         else:
             self.value = line

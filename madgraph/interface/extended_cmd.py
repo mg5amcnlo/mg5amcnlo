@@ -705,7 +705,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return self.check_answer_in_input_file(question_instance, default, path)
         elif path:
             line = os.path.expanduser(os.path.expandvars(line))
-            if os.path.exists(line):
+            if os.path.isfile(line):
                 return line
         # No valid answer provides
         if self.haspiping:

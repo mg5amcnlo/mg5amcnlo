@@ -595,11 +595,9 @@ class ReweightInterface(extended_cmd.Cmd):
         if w_orig == 0:
             tag, order = event.get_tag_and_order()
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
-            print w_orig, w_new
-            print event
-            print event.aqcd
-            print event.get_momenta_str(orig_order)
-            print tuple(event.get_helicity(orig_order)), hel_dict[tuple(event.get_helicity(orig_order))]
+            misc.sprint(w_orig, w_new)
+            misc.sprint(event)
+            raise Exception, "Invalid matrix element for original computation (weight=0)"
         return w_new/w_orig*event.wgt
      
     @staticmethod   
@@ -663,12 +661,11 @@ class ReweightInterface(extended_cmd.Cmd):
             assert hypp_id == 1
             Pname = os.path.basename(Pdir)
             misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
-            mymod = __import__("rw_me_second.SubProcesses.%s.matrix2py" % Pname)
-            S = mymod.SubProcesses
-            P = getattr(S, Pname)
-            mymod = P.matrix2py
-            misc.sprint("INIT SECOND")
             with misc.chdir(Pdir):
+                mymod = __import__("rw_me_second.SubProcesses.%s.matrix2py" % Pname)
+                S = mymod.SubProcesses
+                P = getattr(S, Pname)
+                mymod = P.matrix2py
                 mymod.initialise('param_card.dat')              
             space.calculator[run_id] = mymod.get_me
             external = space.calculator[run_id]                
@@ -676,15 +673,24 @@ class ReweightInterface(extended_cmd.Cmd):
         
         p = self.invert_momenta(event.get_momenta(orig_order))
         # add helicity information
+        
         hel_order = event.get_helicity(orig_order)
         if self.helicity_reweighting and 9 not in hel_order:
             nhel = hel_dict[tuple(hel_order)]
         else:
             nhel = 0
+
+        with misc.chdir(Pdir):
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_value = external(p,event.aqcd, nhel)
+        # for NLO we have also the stability status code
+        if isinstance(me_value, tuple):
+            me_value, code = me_value
+            #if code points unstability -> returns 0
+            hundred_value = (code % 1000) //100
+            if hundred_value in [1,4]:
+                me_value = 0.
             
-        nhel = event.get_helicity(orig_order)
-        me_value = external(p,event.aqcd, nhel)
-        
         return me_value
     
     def terminate_fortran_executables(self, new_card_only=False):
@@ -896,11 +902,6 @@ class ReweightInterface(extended_cmd.Cmd):
         mgcmd.exec_cmd(commandline, precmd=True)
         
         matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
-        print "917 start print processes", len(matrix_elements)
-        for me in matrix_elements:
-            for proc in me.get('processes'):
-                print(proc.nice_string())
-        
         
         commandline = 'output standalone_rw %s' % pjoin(path_me,'rw_me_second')
         mgcmd.exec_cmd(commandline, precmd=True)        
@@ -913,20 +914,17 @@ class ReweightInterface(extended_cmd.Cmd):
         to_check = [] # list of tag that do not have a Pdir at creation time. 
         for me in matrix_elements:
             for proc in me.get('processes'):
-                misc.sprint(proc.nice_string())
                 initial = []    #filled in the next line
                 final = [l.get('id') for l in proc.get('legs')\
                       if l.get('state') or initial.append(l.get('id'))]
                 order = (initial, final)
                 tag = proc.get_initial_final_ids()
                 decay_finals = proc.get_final_ids_after_decay()
-                misc.sprint(tag, decay_finals)
 
                 if tag[1] != decay_finals:
                     order = (initial, list(decay_finals))
                     decay_finals.sort()
                     tag = (tag[0], tuple(decay_finals))
-                misc.sprint("final tag", tag)
                 Pdir = pjoin(path_me, 'rw_me_second', 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
                 if not os.path.exists(Pdir):
@@ -954,7 +952,6 @@ class ReweightInterface(extended_cmd.Cmd):
         
         # 4. Check MadLoopParam
         if os.path.exists(pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat')):
-            misc.sprint("Modify ML param")
             MLCard = banner.MadLoopParam(pjoin(path_me, 'rw_me_second', 'Cards', 'MadLoopParams.dat'))
             MLCard.set('WriteOutFilters', False)
             MLCard.set('UseLoopFilter', False)

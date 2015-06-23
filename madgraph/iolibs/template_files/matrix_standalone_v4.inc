@@ -186,7 +186,7 @@ C
 CF2PY INTENT(OUT) :: ANS  
 CF2PY INTENT(IN) :: NHEL   
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
-CF2PY INTENT(IN) :: ALPHA
+CF2PY INTENT(IN) :: ALPHAS
 C     ROUTINE FOR F2PY to read the benchmark point.    
 C     the include file with the values of the parameters and masses 
       include "coupl.inc"

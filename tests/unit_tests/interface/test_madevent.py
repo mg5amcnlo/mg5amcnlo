@@ -79,7 +79,7 @@ class TestMadEventCmd(unittest.TestCase):
                          'pgs_card.dat')
         
         # Reweight
-        card_dir= pjoin(root_path,'..','Template','LO', 'Cards')
+        card_dir= pjoin(root_path,'..','Template','Common', 'Cards')
         self.assertEqual(detect(pjoin(card_dir, 'reweight_card_default.dat')),
                          'reweight_card.dat')
         

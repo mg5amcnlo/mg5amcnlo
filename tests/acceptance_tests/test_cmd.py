@@ -636,7 +636,7 @@ class TestCmdShell2(unittest.TestCase,
                                                'lib', 'libmodel.a')))
         # Check that check_sa.f compiles
         subprocess.call(['make', 'check'],
-                        stdout=devnull, stderr=devnull, 
+#                        stdout=devnull, stderr=devnull, 
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
                                          'P0_gg_hgg'))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,

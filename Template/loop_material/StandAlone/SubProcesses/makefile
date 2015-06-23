@@ -80,4 +80,16 @@ $(OLP)_static: $(OLP_PROCESS)
 	mv libMadLoop.$(libext) $(MADLOOP_LIB)
 
 clean:
-	@rm -f *.o
+	@rm -f *.o *.so
+
+../$(OLP):
+	cd ..; make $(OLP); cd -
+	rm -f libMadLoop.dylib
+	ln -s ../libMadLoop.dylib
+
+libMadLoop.dylib: ../$(OLP)
+
+matrix2py.so: ../$(OLP)
+	touch __init__.py
+	f2py -L. -lMadLoop -m matrix2py -c check_sa.f
+	
