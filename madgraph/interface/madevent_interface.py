@@ -2736,6 +2736,20 @@ Beware that this can be dangerous for local multicore runs.""")
         x_improve = gen_ximprove.gen_ximprove(self, refine_opt)
         # Load the run statistics from the survey
         survey_statistics = dict(self.results.get_detail('run_statistics'))
+        # Printout survey statistics
+        if __debug__ and survey_statistics:
+            globalstat = sum_html.RunStatistics()
+            logger.debug(" === Survey statistics summary ===")
+            for key, value in survey_statistics.items():
+                globalstat.aggregate_statistics(value)
+                level = 5
+                if value.has_warning():
+                    level = 10
+                logger.log(level, 
+                  value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).
+                                                      replace(' statistics',''))
+            logger.debug(globalstat.nice_output('combined', no_warning=True))
+                        
         if survey_statistics:
             x_improve.run_statistics = survey_statistics
         

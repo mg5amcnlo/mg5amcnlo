@@ -21,6 +21,7 @@ import logging
 import os
 import re
 import sys
+import madgraph.various.misc as misc
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir))
