@@ -1,4 +1,4 @@
-FC = gfortran
+FC=gfortran
 FFLAGS = 
 
 WITHLT = yes

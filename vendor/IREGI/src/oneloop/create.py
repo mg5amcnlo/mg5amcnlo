@@ -19,7 +19,12 @@ mpf90mod = ''
 lines = open('makefile_config','r').readlines()
 for line in lines:
     line = line.rstrip('\n')
-    if   re.match(r'^ *FC'      ,line): fc       = re.sub(r'^ *FC *= *'      ,'',line)
+    if   re.match(r'^ *FC'      ,line): 
+        fc       = re.sub(r'^ *FC *= *'      ,'',line)
+    elif re.match(r'^ *#FC'     ,line):
+        # it will be used in compile.py of madgraph
+        fc       = os.environ['FC']
+        
     elif re.match(r'^ *FFLAGS'  ,line): fflags   = re.sub(r'^ *FFLAGS *= *'  ,'',line)
     elif re.match(r'^ *DPKIND'  ,line): dpkind   = re.sub(r'^ *DPKIND *= *'  ,'',line)
     elif re.match(r'^ *QPKIND'  ,line): qpkind   = re.sub(r'^ *QPKIND *= *'  ,'',line)
