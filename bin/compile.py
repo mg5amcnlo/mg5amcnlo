@@ -41,9 +41,6 @@ class Compile_MG5:
     def __init__(self):
         """ launch all the compilation """
         
-        self.make_IREGI()
-        raise TypeError
-
         self.make_UFO_pkl()
         self.make_v4_pkl()
         self.make_stdHep()
