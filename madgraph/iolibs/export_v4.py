@@ -3649,7 +3649,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
-            
+        
         file = file % replace_dict
         
         # Add the split orders helper functions.
