@@ -419,8 +419,42 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
 
 
+    def test_amcantlo_script(self):
+        """test that ./bin/aMCatNLO can be launched with some scripts.
+        Check also that two runs run without border effects"""
+        self.generate_production()
+        script = "launch -p\n"
+        script += "launch -p\n"
+        open(pjoin(self.path, 'script.txt'), 'w').write(script)
+
+        misc.call([pjoin('.','bin','aMCatNLO'), 'script.txt'], cwd='%s' % self.path,
+                stdout = open(os.devnull, 'w'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_02/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/run_02_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
+
+
+
     def test_launch_amcatnlo_name(self):
-        """tests if the p p > e+ ve process works specifying the run name"""
+        """tests if the p p > e+ ve process works specifying the run name.
+        """
         self.generate(['p p > e+ ve [QCD]'], 'sm')
 
         self.do('launch aMC@NLO -fp -n myrun')
