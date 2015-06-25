@@ -219,11 +219,15 @@ C ----------
       glu_ij = ij_values(nfksprocess)
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
       if (NTRY(nFKSprocess).lt.2) then
+       if (glu_ij.eq.0d0) then
+         skip(nfksprocess)=0
+       else
          skip(nFKSprocess)=1			 
          do while(nhel(glu_ij ,skip(nFKSprocess)).ne.-NHEL(GLU_IJ ,1))
             skip(nFKSprocess)=skip(nFKSprocess)+1
          enddo
          skip(nFKSprocess)=skip(nFKSprocess)-1
+       endif
       endif
       DO JJ=1,NGRAPHS
           amp2(jj)=0d0
@@ -259,7 +263,7 @@ C ----------
       ENDDO
       hel_fac=1d0
       DO IHEL=1,NCOMB
-        if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)) then
+        if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             
             CALL BORN(P1,NHEL(1,IHEL),IHEL,T,borns)
@@ -365,15 +369,22 @@ C ----------
       ENDDO
       borns(1,0)=0d0
       borns(2,0)=0d0
-      back_hel = nhel(glu_ij)
-      if (back_hel.ne.0) then
-        step_hel=-2*back_hel
+      if (glu_ij.ne.0) then
+        back_hel = nhel(glu_ij)
+        if (back_hel.ne.0) then
+          step_hel=-2*back_hel
+        else
+          step_hel=1
+        endif
       else
+        back_hel=0
         step_hel=1
       endif
       DO IHEL=back_hel,-back_hel,step_hel
          IF (IHEL.EQ.back_hel.OR.NHEL(GLU_IJ).NE.0) THEN
-        if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
+        if (glu_ij.ne.0) then
+          if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
+        endif
         if (.not. calculatedBorn) then
 %(helas_calls)s
         do i=1,ngraphs
@@ -437,7 +448,7 @@ C ----------
         ENDDO
       ENDDO
       ENDDO
-      nhel(glu_ij) = back_hel
+      if (glu_ij.ne.0) nhel(glu_ij) = back_hel
       END
        
 

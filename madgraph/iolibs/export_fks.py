@@ -3008,14 +3008,17 @@ Parameters              %(params)s\n\
         info_list = fks_born.get_fks_info_list()
         lines = []
         if info_list:
-            # if the reals have been generated, fill with the corresponding value of ij
+            # if the reals have been generated, fill with the corresponding value of ij if
+            # ij is massless, or with 0 if ij is massive (no collinear singularity)
+            ij_list = [info['fks_info']['ij']if \
+                    fks_born.born_me['processes'][0]['legs'][info['fks_info']['ij']-1]['massless'] \
+                    else 0 for info in info_list]
             lines.append('INTEGER IJ_VALUES(%d)' % len(info_list))
-            lines.append('DATA IJ_VALUES /' + \
-                         ', '.join(['%d' % info['fks_info']['ij'] for info in info_list]) + '/')
+            lines.append('DATA IJ_VALUES /' + ', '.join(['%d' % ij for ij in ij_list]) + '/')
         else:
-            #otherwise just put the first leg
+            #otherwise just put zero
             lines.append('INTEGER IJ_VALUES(1)')
-            lines.append('DATA IJ_VALUES / 1 /')
+            lines.append('DATA IJ_VALUES / 0 /')
 
         return lines
 
