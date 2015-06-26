@@ -5,7 +5,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	    due to numerical instabilities. 
         OM: Fixing bug associate to the epsilon_ijk structure
         OM+VH: Various bug fixing for the loop-induced processes
-     
+        PT: Fixed a bug concerning the use of Herwig++ with LHAPDF. Bug was introduced in 2.3.0.beta at the
+            beginning of march 2015  
 
 2.3.0.beta(10/04/15) OM+VH: Adding the possibility to compute cross-section/generate events for loop-induced process
 		JB+OM: Addign matchbox output for matching in the Matchbox framework
