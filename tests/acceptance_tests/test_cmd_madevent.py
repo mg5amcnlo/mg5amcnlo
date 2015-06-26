@@ -225,7 +225,7 @@ class TestMECmdShell(unittest.TestCase):
         interface.exec_cmd("import model loop_qcd_qed_sm", errorhandling=False, 
                                                         printcmd=False, 
                                                         precmd=True, postcmd=False)
-        interface.exec_cmd("compute_widths H Z  --nlo --output=%s" % \
+        interface.exec_cmd("compute_widths H Z W+ t --nlo --output=%s" % \
                            pjoin(self.path, "param_card.dat")
                            , errorhandling=False, 
                                                         printcmd=False, 
@@ -238,10 +238,16 @@ class TestMECmdShell(unittest.TestCase):
         print text
         pattern = re.compile(r"decay\s+23\s+([+-.\de]*)", re.I)
         value = float(pattern.search(text).group(1))
-        self.assertAlmostEqual(2.42862,value, delta=1e-4)
+        self.assertAlmostEqual(2.42823,value, delta=1e-4)
+        pattern = re.compile(r"decay\s+24\s+([+-.\de]*)", re.I)
+        value = float(pattern.search(text).group(1))
+        self.assertAlmostEqual(2.028440,value, delta=1e-4)
         pattern = re.compile(r"decay\s+25\s+([+-.\de]*)", re.I)
         value = float(pattern.search(text).group(1))
-        self.assertAlmostEqual(4.074640e-03,value, delta=1e-4)        
+        self.assertAlmostEqual(3.514960e-03,value, delta=1e-4)
+        pattern = re.compile(r"decay\s+6\s+([+-.\de]*)", re.I)
+        value = float(pattern.search(text).group(1))
+        self.assertAlmostEqual(1.354080,value, delta=1e-4)        
         
 
 
