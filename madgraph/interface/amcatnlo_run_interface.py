@@ -1173,6 +1173,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                                 pjoin(self.me_dir, 'Events', self.run_name))
                 files.rm(pjoin(self.me_dir, 'Events', self.run_name))
                 self.results.delete_run(self.run_name)
+        else:
+            self.run_name = '' # will be set later
 
         if options['multicore']:
             self.cluster_mode = 2

@@ -121,7 +121,11 @@ plot \
 'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+'HistoOut.HwU' index 0 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 22 title '',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 22 title ''
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
@@ -259,7 +263,11 @@ plot \
 'HistoOut.HwU' index 4 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 4 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 4 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 4 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+'HistoOut.HwU' index 4 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 22 title '',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 22 title ''
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
@@ -397,7 +405,11 @@ plot \
 'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+'HistoOut.HwU' index 8 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 22 title '',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 22 title ''
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
@@ -535,7 +547,11 @@ plot \
 'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+'HistoOut.HwU' index 12 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 22 title '',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 22 title ''
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
@@ -673,7 +689,11 @@ plot \
 'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+'HistoOut.HwU' index 16 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 22 title '',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 22 title ''
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
@@ -811,7 +831,11 @@ plot \
 'HistoOut.HwU' index 20 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 20 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 20 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 20 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+'HistoOut.HwU' index 20 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 22 title '',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 22 title ''
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
@@ -949,7 +973,11 @@ plot \
 'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+'HistoOut.HwU' index 24 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 22 title '',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 22 title ''
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
@@ -1087,7 +1115,11 @@ plot \
 'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
 'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title ''
+'HistoOut.HwU' index 28 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 12 title '',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 22 title '',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 22 title ''
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
