@@ -724,13 +724,13 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       copied and compiled locally in the output directory.")
         logger.info("     o environment_paths: The location of all libraries the ")
         logger.info("       output depends on should be found in your env. paths.")        
-        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
-        logger.info(" > (default '0') [Used for loop-induced outputs]")
-        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
-        logger.info(" > setting up the integration multichannels.") 
-        logger.info(" > The default value of zero automatically picks the apparent")
-        logger.info(" > appropriate choice which is to sometimes pick box loops")
-        logger.info(" > but never higher n-points ones.")
+#        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
+#        logger.info(" > (default '0') [Used for loop-induced outputs]")
+#        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
+#        logger.info(" > setting up the integration multichannels.") 
+#        logger.info(" > The default value of zero automatically picks the apparent")
+#        logger.info(" > appropriate choice which is to sometimes pick box loops")
+#        logger.info(" > but never higher n-points ones.")
 
 #===============================================================================
 # CheckValidForCmd
@@ -4515,6 +4515,8 @@ This implies that with decay chains:
 
         scheme = "old"
         for qcd_container in ['p', 'j']:
+            if qcd_container not in self._multiparticles:
+                continue
             multi = self._multiparticles[qcd_container]
             b = self._curr_model.get_particle(5)
             if not b:
@@ -6001,30 +6003,7 @@ This implies that with decay chains:
             if self.options['max_npoint_for_channel']:
                 base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
             else:
-                #if default forbid 4 point channel for matching.
-                min_particle = 999
-                max_particle = 0
-                for amp in self._curr_amps:
-                    from madgraph.loop.loop_diagram_generation import LoopAmplitude
-                    if not isinstance(amp, LoopAmplitude):
-                        break
-                    nb = len(amp["process"].get_final_ids())
-                    min_particle = min(min_particle, nb)
-                    max_particle = max(max_particle, nb)
-                if min_particle != max_particle:
-                    base_objects.Vertex.max_n_loop_for_multichanneling = 3
-                else:
-                    #check if H+jet since in that case the box slow down the code
-                    last_proc = amp["process"].get_final_ids()
-                    not_hj = [i for i in last_proc if i not in range(-5,6)+[21,25]]
-                    if not not_hj and 25 in last_proc:
-                        base_objects.Vertex.max_n_loop_for_multichanneling = 3
-                    else:
-                        base_objects.Vertex.max_n_loop_for_multichanneling = 4
-
-                    # Ignore boxes for decay processes
-                    if len(amp["process"].get_initial_ids())==1:
-                        base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
+                base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, args)

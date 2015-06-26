@@ -2329,8 +2329,8 @@ class Diagram(PhysicsObject):
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
                                 
             mystr = mystr[:-1] + ')'
-            mystr += " (%s) %s" % (",".join(["%s=%d" % (key, self['orders'][key]) \
-                                     for key in sorted(self['orders'].keys())]),id(self))
+            mystr += " (%s)" % (",".join(["%s=%d" % (key, self['orders'][key]) \
+                                     for key in sorted(self['orders'].keys())]))
             
             if not pass_sanity:
                 raise Exception, "invalid diagram: %s. vert_id: %s" % (mystr, responsible) 
