@@ -2639,6 +2639,24 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
         
+        # We must refresh the general replacement dictionary since this function
+        # write_matrix_element is called from within the function
+        # export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory_v4
+        # which of course does not take care of refreshing this replacement
+        # dictionary for each new matrix_element in the group currently being
+        # exported
+        self.general_replace_dict = self.generate_general_replace_dict(
+               matrix_element, group_number = subproc_number, proc_id = proc_id)
+        if matrix_element.get('loop_color_basis'):
+            self.general_replace_dict['nLoopFlows'] = len(matrix_element.get(
+                                                            'loop_color_basis'))
+        else:
+            raise MadGraph5Error('The loop-induced function '+\
+              'write_matrix_element_v4 must be called *after* the color algebra'+\
+              ' for this matrix element has been performed, i.e. typically in'+\
+              ' function write_loop_matrix_element_v4 called by the function'+\
+              ' generate_loop_subprocess.')
+            
         replace_dict = copy.copy(self.general_replace_dict)
         
         # Extract version number and date from VERSION file
@@ -2698,7 +2716,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         
         n_tot_diags = len(matrix_element.get_loop_diagrams())
         replace_dict['n_tot_diags'] = n_tot_diags
-        
+
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
         file = file % replace_dict
@@ -2770,7 +2788,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
             
-        # Then generate the MadLoop files
+        # Generate the MadLoop files
         calls = 0
         matrix_elements = subproc_group.get('matrix_elements')
         for ime, matrix_element in enumerate(matrix_elements):
@@ -2779,7 +2797,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
 #          group_number = str(subproc_group.get('number')), proc_id = str(ime+1),
           config_map = subproc_group.get('diagram_maps')[ime])
         
-        # First generate the MadEvent files
+        # Then generate the MadEvent files
         export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory_v4(
                                  self, subproc_group,fortran_model,group_number)
         

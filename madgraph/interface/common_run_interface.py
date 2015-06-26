@@ -2738,7 +2738,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if len(args) < 3:
                 logger.warning('Invalid set command: %s (not enough arguments)' % line)
                 return
-            
+        elif args[0] in ['madspin_card']:
+            if args[1] == 'default':
+                logging.info('replace madspin_card.dat by the default card')
+                files.cp(pjoin(self.me_dir,'Cards/madspin_card_default.dat'),
+                         pjoin(self.me_dir,'Cards/madspin_card.dat'))
+                return
+            else:
+                logger.warning("""Command set not allowed for modifying the madspin_card. 
+                    Check the command \"decay\" instead.""")
+                return
+
         #### RUN CARD
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
             if args[start] not in self.run_set:
@@ -3083,6 +3093,43 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         return line
 
+    def do_decay(self, line):
+        """edit the madspin_card to define the decay of the associate particle"""
+        signal.alarm(0) # avoid timer if any
+        path = pjoin(self.me_dir,'Cards','madspin_card.dat')
+        
+        if 'madspin_card.dat' not in self.cards or not os.path.exists(path):
+            logger.warning("Command decay not valid. Since MadSpin is not available.")
+            return
+        
+        if ">" not in line:
+            logger.warning("invalid command for decay. Line ignored")
+            return
+        
+        misc.sprint( line, "-add" in line)
+        if "-add" in line:
+            # just to have to add the line to the end of the file
+            particle = line.split('>')[0].strip()
+            text = open(path).read()
+            line = line.replace('--add', '').replace('-add','')
+            logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
+            
+            text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            open(path,'w').write(text)       
+        else:
+            # Here we have to remove all the previous definition of the decay
+            #first find the particle
+            particle = line.split('>')[0].strip()
+            logger.info("change madspin_card to define the decay of %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
+            particle = particle.replace('+','\+').replace('-','\-')
+            decay_pattern = re.compile(r"^\s*decay\s+%s\s*>[\s\w+-~]*?$" % particle, re.I+re.M)
+            text= open(path).read()
+            text = decay_pattern.sub('', text)
+            text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            open(path,'w').write(text)
+        
+        
+
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
         path = pjoin(self.me_dir,'Cards','param_card.dat')
@@ -3108,6 +3155,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         signal.alarm(0) # avoid timer if any
         return self.mother_interface.help_compute_widths()
 
+    def help_decay(self):
+        """help for command decay which modifies MadSpin_card"""
+        
+        signal.alarm(0) # avoid timer if any
+        print '--syntax: decay PROC [--add]'
+        print ' '
+        print '  modify the madspin_card to modify the decay of the associate particle.'
+        print '  and define it to PROC.'
+        print '  if --add is present, just add a new decay for the associate particle.'
+        
     def complete_compute_widths(self, *args, **opts):
         signal.alarm(0) # avoid timer if any
         return self.mother_interface.complete_compute_widths(*args,**opts)

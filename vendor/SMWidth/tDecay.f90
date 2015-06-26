@@ -74,10 +74,10 @@ CONTAINS
     IF(qedord.EQ.1)THEN
        SMtWidth=SMtWidth+SMtWidth_EW(Decay_Scheme)
     ENDIF
-    IF(lwidth)THEN
-       ! subtract the double counting terms
-       SMtWidth=SMtWidth+SMtWidth_cms_dc(qcdord,qedord)
-    ENDIF
+    !IF(lwidth)THEN
+    !   ! subtract the double counting terms
+    !   SMtWidth=SMtWidth+SMtWidth_cms_dc(qcdord,qedord)
+    !ENDIF
     RETURN
   END FUNCTION SMtWidth
   

@@ -61,6 +61,10 @@
  %(dynamical_scale_choice)s = dynamical_scale_choice ! Select one of the preselect dynamical choice
  %(scalefact)s  = scalefact        ! scale factor for event-by-event scales
 #*********************************************************************
+# Time of flight information. (-1 means not run)
+#*********************************************************************
+ %(time_of_flight)s = time_of_flight ! threshold below which info is not written
+#*********************************************************************
 # Matching - Warning! ickkw > 1 is still beta
 #*********************************************************************
  %(ickkw)s = ickkw            ! 0 no matching, 1 MLM, 2 CKKW matching

@@ -3657,7 +3657,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
-            
+        
         file = file % replace_dict
         
         # Add the split orders helper functions.
@@ -5438,7 +5438,7 @@ class UFO_model_to_mg4(object):
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
         if ('aEWM1',) in self.model['parameters']:
             if dp:
-                fsock.writelines(""" gal(1) = 3.5449077018110318 / DSQRT(aEWM1)
+                fsock.writelines(""" gal(1) = 3.5449077018110318d0 / DSQRT(aEWM1)
                                  gal(2) = 1d0
                          """)
             elif mp:
@@ -5449,7 +5449,7 @@ class UFO_model_to_mg4(object):
         # in Gmu scheme, aEWM1 is not external but Gf is an exteranl variable
         elif ('Gf',) in self.model['parameters']:
             if dp:
-                fsock.writelines(""" gal(1) = 2.3784142300054421*MDL_MW*MDL_SW*DSQRT(MDL_Gf)
+                fsock.writelines(""" gal(1) = 2.378414230005442133435d0*MDL_MW*MDL_SW*DSQRT(MDL_Gf)
                                  gal(2) = 1d0
                          """)
             elif mp:
