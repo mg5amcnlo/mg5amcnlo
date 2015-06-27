@@ -1250,8 +1250,7 @@ ANS(0)=0.0d0
               'HELPICKED_BU=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.',
               'IF(SKIPLOOPEVAL) THEN','GOTO 1227','ENDIF'])
             replace_dict['loop_induced_finalize'] = \
-            ("""HELPICKED=HELPICKED_BU
-               DO I=NCTAMPS+1,NLOOPAMPS
+            ("""DO I=NCTAMPS+1,NLOOPAMPS
                IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN
                  WRITE(*,*) '##W03 WARNING Contribution ',I
                  WRITE(*,*) ' is unstable for helicity ',H
@@ -1263,7 +1262,8 @@ C                  WRITE(*,*) 'single pole contribution    = ',AMPL(2,I)
 C                  WRITE(*,*) 'double pole contribution    = ',AMPL(3,I)
 C                ENDIF
                ENDDO
-               1227 CONTINUE""")%replace_dict
+               1227 CONTINUE
+               HELPICKED=HELPICKED_BU""")%replace_dict
             replace_dict['loop_helas_calls']=""
             replace_dict['nctamps_or_nloopamps']='nloopamps'
             replace_dict['nbornamps_or_nloopamps']='nloopamps'
