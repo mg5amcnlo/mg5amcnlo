@@ -328,12 +328,9 @@ C
             WRITE (*,*) '2eps   / (born*ao2pi) = ', MATELEM(3,0)
      $       /MATELEM(0,0)/AO2PI
           ELSE
-            WRITE (*,*) 'finite / ao2pi      = ', MATELEM(1,0)
-     $       /MATELEM(0,0)/AO2PI
-            WRITE (*,*) '1eps   / ao2pi      = ', MATELEM(2,0)
-     $       /MATELEM(0,0)/AO2PI
-            WRITE (*,*) '2eps   / ao2pi      = ', MATELEM(3,0)
-     $       /MATELEM(0,0)/AO2PI
+            WRITE (*,*) 'finite / ao2pi      = ', MATELEM(1,0)/AO2PI
+            WRITE (*,*) '1eps   / ao2pi      = ', MATELEM(2,0)/AO2PI
+            WRITE (*,*) '2eps   / ao2pi      = ', MATELEM(3,0)/AO2PI
           ENDIF
           WRITE (*,*) '---------------------------------'
 
@@ -540,9 +537,9 @@ C     INITIALIZATION STEP: FACTORIALS FOR THE PHASE SPACE WEIGHT
       TWOPI=8.*DATAN(1.D0)
       PO2LOG=LOG(TWOPI/4.)
       Z(2)=PO2LOG
-      DO 101 K=3,(NEXTERNAL-NINCOMING-1)
+      DO 101 K=3,(NEXTERNAL-NINCOMING)
  101  Z(K)=Z(K-1)+PO2LOG-2.*LOG(DFLOAT(K-2))
-      DO 102 K=3,(NEXTERNAL-NINCOMING-1)
+      DO 102 K=3,(NEXTERNAL-NINCOMING)
  102  Z(K)=(Z(K)-LOG(DFLOAT(K-1)))
 C     
 C     CHECK ON THE NUMBER OF PARTICLES

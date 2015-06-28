@@ -7,6 +7,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM+VH: Various bug fixing for the loop-induced processes
         OM: Fix a crash in MadWidth which occurs for some 4 body decay
         PT: Fixed a bug concerning the use of Herwig++ with LHAPDF. Bug was introduced in 2.3.0.beta
+	OM: Fix a crash in ALOHA for form-factor in presence of fermion flow violation
 
 2.3.0.beta(10/04/15) OM+VH: Adding the possibility to compute cross-section/generate events for loop-induced process
 		JB+OM: Addign matchbox output for matching in the Matchbox framework
