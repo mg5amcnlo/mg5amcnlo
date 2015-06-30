@@ -1363,7 +1363,6 @@ c or to fill histograms.
          q2fact(1)=mu2_f
          q2fact(2)=mu2_f
 c call the PDFs
-         write(*,*) 'INCLUDING PDF', xbk, itype(icontr)
          xlum = dlum()
          if (iproc.gt.max_iproc) then
             write (*,*) 'ERROR iproc too large',iproc,max_iproc
