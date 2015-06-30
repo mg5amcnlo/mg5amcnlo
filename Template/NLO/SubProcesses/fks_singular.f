@@ -287,29 +287,25 @@ c the list of weights using the add_wgt subroutine
       s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
       if (s_s.le.0d0) return
       call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s)
+
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
-        wgt1=0d0
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        g22=g**(QCD_power)
+        if (replace_MC_subt.gt.0d0) then
+          wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
+          call add_wgt(8,-wgt1*f_s_MC_H,0d0,0d0)
+          wgt1=wgt1*f_s_MC_S
+        else
+          wgt1=0d0
+        endif
         if (xi_i_fks_ev.le.xiScut_used) then
-          wgt1=wgt1-amp_split(iamp)*s_s*f_s/g**(qcd_power)
+          wgt1=wgt1-amp_split(iamp)*s_s*f_s/g22
         endif
         if (wgt1.ne.0d0) call add_wgt(4,wgt1,0d0,0d0)
       enddo
-CMZ fix for Matching to PS
-CC      g22=g**(nint(2*wgtbpower+2))
-C      if (replace_MC_subt.gt.0d0) then
-C         wgt1=fx_s*s_s/g22*replace_MC_subt
-C         call add_wgt(8,-wgt1*f_s_MC_H,0d0,0d0)
-C         wgt1=wgt1*f_s_MC_S
-C      else
-C         wgt1=0d0
-C      endif
-CC      if (xi_i_fks_ev.le.xiScut_used) then
-CC         wgt1=wgt1-fx_s*s_s*f_s/g22
-CC      endif
-CC      if (wgt1.ne.0d0) call add_wgt(4,wgt1,0d0,0d0)
+
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
       return
@@ -367,44 +363,33 @@ c to the list of weights using the add_wgt subroutine
       call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
      $     ,deg_lxi_c)
       call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c)
+
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_lxi(iamp).eq.0d0) cycle
-        wgt1=0d0
-        wgt3=0d0
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
         g22=g**(QCD_power)
+        if (replace_MC_subt.gt.0d0) then
+          wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
+          call add_wgt(9,-wgt1*f_c_MC_H,0d0,0d0)
+          wgt1=wgt1*f_c_MC_S
+        else
+          wgt1=0d0
+        endif
         if (y_ij_fks_ev.gt.1d0-deltaS) then
           wgt1=wgt1-amp_split(iamp)*s_c*f_c/g22
           wgt1=wgt1+(amp_split_wgtdegrem_xi(iamp)+
      $             amp_split_wgtdegrem_lxi(iamp)*log(xi_i_fks_cnt(1)))*
      $       f_dc/g22
           wgt3=amp_split_wgtdegrem_muF(iamp)*f_dc/g22
+        else
+          wgt3=0d0
         endif
         if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,wgt1,0d0,wgt3)
       enddo
 
-CMZ fix for Matching to PS
-C      if (replace_MC_subt.gt.0d0) then
-C         wgt1=fx_c*s_c/g22*replace_MC_subt
-C         call add_wgt(9,-wgt1*f_c_MC_H,0d0,0d0)
-C         wgt1=wgt1*f_c_MC_S
-C      else
-C         wgt1=0d0
-C      endif
-CC      if (y_ij_fks_ev.gt.1d0-deltaS) then
-CC         wgt1=wgt1-fx_c*s_c*f_c/g22
-CC         call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
-CC     $        ,deg_lxi_c)
-CC         wgt1=wgt1+ ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)) )*
-CC     $        f_dc/g22
-CC         wgt3=wgtdegrem_muF*f_dc/g22
-CC      else
-CC         wgt3=0d0
-CC      endif
-CC      if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,wgt1,0d0,wgt3)
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
       return
@@ -465,15 +450,21 @@ c value to the list of weights using the add_wgt subroutine
       ! in order not to overwrtie the amp_split array
       call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
       call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
+
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_lxi(iamp).eq.0d0) cycle
-        wgt1=0d0
-        wgt3=0d0
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
         g22=g**(QCD_power)
+        if (replace_MC_subt.gt.0d0) then
+          wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
+          call add_wgt(10,-wgt1*f_sc_MC_H,0d0,0d0)
+          wgt1=wgt1*f_sc_MC_S
+        else
+          wgt1=0d0
+        endif
         if (xi_i_fks_cnt(1).lt.xiScut_used .and. 
      $      y_ij_fks_ev.gt.1d0-deltaS) then
           wgt1=wgt1+amp_split(iamp)*s_sc*f_sc/g22
@@ -482,29 +473,12 @@ c value to the list of weights using the add_wgt subroutine
      $       f_dsc(1)-(amp_split_wgtdegrem_xi(iamp)*f_dsc(2)+
      $                 amp_split_wgtdegrem_lxi(iamp)*f_dsc(3)))/g22
           wgt3=-amp_split_wgtdegrem_muF(iamp)*f_dsc(4)/g22
+        else
+          wgt3=0d0
         endif
         if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,wgt1,0d0,wgt3)
       enddo
-CMZ fix for Matching to PS
-C      if (replace_MC_subt.gt.0d0) then
-C         wgt1=-fx_sc*s_sc/g22*replace_MC_subt
-C         call add_wgt(10,-wgt1*f_sc_MC_H,0d0,0d0)
-C         wgt1=wgt1*f_sc_MC_S
-C      else
-C         wgt1=0d0
-C      endif
-CC      if (xi_i_fks_cnt(1).lt.xiScut_used .and. 
-CC     $     y_ij_fks_ev.gt.1d0-deltaS) then
-CC         wgt1=wgt1+fx_sc*s_sc*f_sc/g22
-CC         call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
-CC         wgt1=wgt1+(-(wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(1)))
-CC     $        *f_dsc(1)-(wgtdegrem_xi*f_dsc(2)+wgtdegrem_lxi*f_dsc(3)))
-CC     $        /g22
-CC         wgt3=-wgtdegrem_muF*f_dsc(4)/g22
-CC      else
-CC         wgt3=0d0
-CC      endif
-CC      if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,wgt1,0d0,wgt3)
+
       call cpu_time(tAfter)
       tCount=tCount+(tAfter-tBefore)
       return
@@ -523,6 +497,7 @@ c respectively.
       include 'timing_variables.inc'
       include 'reweight.inc'
       include 'coupl.inc'
+      include 'orders.inc'
       integer nofpartners,i
       double precision p(0:3,nexternal),gfactsf,gfactcl,probne,x,dot
      $     ,fks_Sij,f_damp,ffact,sevmc,dummy,zhw(nexternal)
@@ -548,6 +523,12 @@ c respectively.
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+
+      integer iamp
+      integer orders(nsplitorders)
+      double precision amp_split_xmcxsec(amp_split_size,nexternal)
+      common /to_amp_split_xmcxsec/amp_split_xmcxsec
+
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
@@ -571,7 +552,6 @@ c respectively.
          stop 1
       endif
       if (flagmc) then
-         g22=g**(nint(2*wgtbpower+2))
          do i=1,nofpartners
             if(lzone(i))then
                call get_mc_lum(j_fks,zhw(i),xi_i_fks_ev,xlum_mc_fact)
@@ -579,6 +559,18 @@ c respectively.
                call add_wgt(12,wgt1,0d0,0d0)
                wgt1=sevmc*f_MC_H*xlum_mc_fact*xmcxsec(i)/g22
                call add_wgt(13,-wgt1,0d0,0d0)
+
+              do iamp=1, amp_split_size
+                if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
+                call amp_split_pos_to_orders(iamp, orders)
+                QCD_power=orders(qcd_pos)
+                wgt1=sevmc*f_MC_S*xlum_mc_fact*
+     &               amp_split_xmcxsec(iamp,i)/g**(qcd_power)
+                call add_wgt(12,wgt1,0d0,0d0)
+                wgt1=sevmc*f_MC_H*xlum_mc_fact*
+     &               amp_split_xmcxsec(iamp,i)/g**(qcd_power)
+                call add_wgt(13,-wgt1,0d0,0d0)
+              enddo
             endif
          enddo
       endif
@@ -1371,6 +1363,7 @@ c or to fill histograms.
          q2fact(1)=mu2_f
          q2fact(2)=mu2_f
 c call the PDFs
+         write(*,*) 'INCLUDING PDF', xbk, itype(icontr)
          xlum = dlum()
          if (iproc.gt.max_iproc) then
             write (*,*) 'ERROR iproc too large',iproc,max_iproc
@@ -2088,7 +2081,8 @@ c that has a soft singularity. We set it to 'i_soft'.
          else
             found_S=.true.
          endif
-         if (abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.21) then
+         if (abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.21
+     &     .or.abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.22) then
             i_soft=i
             exit
          endif
@@ -6375,7 +6369,7 @@ c (should be the one in the real instead).
       iden_comp=dble(iden_born_FKS(nFKSprocess))/dble(iden_real_FKS(nFKSprocess))
 
 c Set matrices used by MC counterterms
-c      call set_mc_matrices
+      call set_mc_matrices
 
       fac_i=fac_i_FKS(nFKSprocess)
       fac_j=fac_j_FKS(nFKSprocess)

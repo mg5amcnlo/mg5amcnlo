@@ -3,12 +3,14 @@
       include "genps.inc"
       include 'nexternal.inc'
       include "born_nhel.inc"
-      integer idup(nexternal-1,maxproc)
-      integer mothup(2,nexternal-1,maxproc)
-      integer icolup(2,nexternal-1,max_bcol)
 c Nexternal is the number of legs (initial and final) al NLO, while max_bcol
 c is the number of color flows at Born level
       integer i,j,k,l,k0,mothercol(2),i1(2)
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
       include 'born_leshouche.inc'
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
@@ -314,10 +316,12 @@ c Particle types (=colour) of i_fks, j_fks and fks_mother
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision pmass(nexternal)
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
       include "pmass.inc"
 c
-      if (i_type.eq.8 .and. pmass(i_fks).eq.0d0)then
-c i_fks is gluon
+      if (is_aorg(i_fks))then
+c i_fks is gluon/photon
          call set_cms_stuff(izero)
          call sreal(p1_cnt(0,1,0),zero,y_ij_fks,wgts)
          call set_cms_stuff(ione)
@@ -326,8 +330,8 @@ c i_fks is gluon
          call sreal(p1_cnt(0,1,2),zero,one,wgtsc)
          wgt=wgts+(1-gfactcl)*(wgtc-wgtsc)
          wgt=wgt*(1-gfactsf)
-      elseif (abs(i_type).eq.3)then
-c i_fks is (anti-)quark
+      elseif (abs(i_type).eq.3.or.ch_i.ne.0d0)then
+c i_fks is (anti-)quark/lepton
          wgt=0d0
       else
          write(*,*) 'FATAL ERROR #1 in xmcsubtME',i_type,i_fks
@@ -344,6 +348,7 @@ c Main routine for MC counterterms
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &                   wgt,nofpartners,lzone,flagmc,z,xmcxsec)
       implicit none
+
       include "nexternal.inc"
       include "coupl.inc"
       include "born_nhel.inc"
@@ -352,6 +357,10 @@ c Main routine for MC counterterms
       include "run.inc"
       include "../../Source/MODEL/input.inc"
       include 'nFKSconfigs.inc'
+      include 'orders.inc'
+
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -368,12 +377,13 @@ c Main routine for MC counterterms
       integer jpartner,mpartner
       logical emscasharp
 
-      double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
-     & born_red_tilde
-      double precision bornbars(max_bcol), bornbarstilde(max_bcol)
+      double precision shattmp,dot,xkern(2),xkernazi(2),
+     & born_red(nsplitorders), born_red_tilde(nsplitorders)
+      double precision bornbars(max_bcol,nsplitorders), 
+     &                 bornbarstilde(max_bcol,nsplitorders)
 
-      integer i,j,npartner,cflows,ileg,N_p
-      double precision tk,uk,q1q,q2q,E0sq(nexternal),x,yi,yj,xij,ap,Q,
+      integer i,j,npartner,cflows,ileg,N_p,iord
+      double precision tk,uk,q1q,q2q,E0sq(nexternal),x,yi,yj,xij,ap(2),Q(2),
      & s,w1,w2,beta,xfact,prefact,kn,knbar,kn0,betae0,betad,betas,gfactazi,
      & gfunction,bogus_probne_fun,
      & z(nexternal),xi(nexternal),xjac(nexternal),ztmp,xitmp,xjactmp,
@@ -441,6 +451,19 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision ch_i,ch_j,ch_m
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
+C stuff to keep track of the individual orders
+      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
+     $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
+      common /to_amp_split_bornbars/amp_split_bornbars,
+     $                              amp_split_bornbarstilde
+      double precision amp_split_bornred(amp_split_size,nsplitorders),
+     $                 amp_split_bornredtilde(amp_split_size,nsplitorders),
+     &                 amp_split_xmcxsec(amp_split_size,nexternal)
+      common /to_amp_split_xmcxsec/amp_split_xmcxsec
+      integer iamp
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
+
       double precision zero,one,tiny,vtiny,ymin
       parameter (zero=0d0)
       parameter (one=1d0)
@@ -455,28 +478,41 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtf=1d0/2d0)
       parameter (vca=3d0)
 
-      double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
       include "pmass.inc"
 
 c Initialise
+      do i = 1,nexternal
+        xmcxsec(i) = 0d0
+        do iamp = 1, amp_split_size
+          amp_split_xmcxsec(iamp,i) = 0d0
+        enddo
+      enddo
       flagmc   = .false.
       wgt      = 0d0
       ztmp     = 0d0
       xitmp    = 0d0
       xjactmp  = 0d0
       gfactazi = 0d0
-      xkern    = 0d0
-      xkernazi = 0d0
-      born_red = 0d0
-      born_red_tilde = 0d0
+      do i = 1,2
+        xkern(i)    = 0d0
+        xkernazi(i) = 0d0
+      enddo
+      do i = 1, nsplitorders
+        born_red(i) = 0d0
+        born_red_tilde(i) = 0d0
+      enddo
+      do iamp = 1, amp_split_size
+        amp_split_mc(iamp)=0d0
+        do i = 1,nsplitorders
+          amp_split_bornred(iamp,i)=0d0
+          amp_split_bornredtilde(iamp,i)=0d0
+        enddo
+      enddo
       kn       = veckn_ev
       knbar    = veckbarn_ev
       kn0      = xp0jfks
       nofpartners = ipartners(0)
-      g_ew=sqrt(4.d0*pi/aewm1)
-      qi2=charge(pdg_type(i_fks))**2
-      qj2=charge(pdg_type(j_fks))**2
       tiny = 1d-4
       if (softtest.or.colltest)tiny = 1d-6
 c Logical variables to control the IR limits:
@@ -592,26 +628,31 @@ c Compute dead zones
 c Compute MC subtraction terms
          if(lzone(npartner))then
             if(.not.flagmc)flagmc=.true.
-            if( (ileg.ge.3 .and. (m_type.eq.8.or.m_type.eq.0)) .or.
-     &          (ileg.le.2 .and. (j_type.eq.8.or.j_type.eq.0)) )then
+            if( (ileg.ge.3 .and. (m_type.eq.8.or.(m_type.eq.1.and.dabs(ch_m).lt.tiny))) .or.
+     &          (ileg.le.2 .and. (j_type.eq.8.or.(j_type.eq.1.and.dabs(ch_j).lt.tiny))) )then
                if(i_type.eq.8)then
-c g  --> g  g ( icode = 1 )
-c go --> go g
+c g->gg, go->gog (icode=1)
                   if(ileg.le.2)then
                      N_p=2
                      if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
                         xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                        xkern(2)=0d0
+                        xkernazi(2)=0d0
                      elseif(non_limit)then
                         xfact=(1-yi)*(1-x)/x
                         prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        call Qterms_reduced_spacelike(m_type,i_type,one,z(npartner),Q)
-                        Q=Q/(1-z(npartner))
-                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                        call AP_reduced(m_type,i_type,ch_m,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
+                        call Qterms_reduced_spacelike(m_type,i_type,ch_m,ch_i,one,z(npartner),Q)
+                        do i=1,2
+                          Q(i)=Q(i)/(1-z(npartner))
+                          xkernazi(i)=prefact*xfact*xjac(npartner)*Q(i)/xi(npartner)
+                        enddo
                      endif
 c
                   elseif(ileg.eq.3)then
@@ -620,9 +661,11 @@ c
                      if(non_limit)then
                         xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
-                        call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        call AP_reduced_SUSY(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
                      endif
 c
                   elseif(ileg.eq.4)then
@@ -633,32 +676,39 @@ c
      &                       (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
      &                       ( s*(s-xm12)**2*(s*x-xm12)**2 )
                         xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                        xkern(2)=0d0
+                        xkernazi(2)=0d0
                      elseif(non_limit)then
                         xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
-                        Q=Q/(1-z(npartner))
-                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                        call AP_reduced(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
+                        call Qterms_reduced_timelike(j_type,i_type,ch_j,ch_i,one,z(npartner),Q)
+                        do i=1,2
+                          Q(i)=Q(i)/(1-z(npartner))
+                          xkernazi(i)=prefact*xfact*xjac(npartner)*Q(i)/xi(npartner)
+                        enddo
                      endif
                   endif
-               elseif(abs(i_type).eq.3)then
-c g --> q q~ ( icode = 2 )
-c a --> q q~
+               elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(dabs(ch_i)-1d0).lt.tiny))then
+c g->qq, a->qq, a->ee (icode=2)
                   if(ileg.le.2)then
                      N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                        xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 * 
+     &                                       ch_i**2 * abs(i_type) / vtf
                      elseif(non_limit)then
                         xfact=(1-yi)*(1-x)/x
                         prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                        call AP_reduced(m_type,i_type,ch_m,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
                      endif
 c
                   elseif(ileg.eq.4)then
@@ -668,20 +718,25 @@ c
                         xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &                        (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &                        ( (s-xm12)**2*(s*x-xm12) )
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                        xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 *
+     &                                      ch_i**2 * abs(i_type) / vtf
+                        if(abs(i_type).eq.1)xkern(2)=xkern(2)/vca
                         xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
-                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                        xkernazi(2)=xkernazi(1) * dble(gal(1))**2 / g**2 *
+     &                              ch_i**2 * abs(i_type) / vtf
                      elseif(non_limit)then
                         xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
-                        call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
-                        Q=Q/(1-z(npartner))
-                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
-                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                        call AP_reduced(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
+                        call Qterms_reduced_timelike(j_type,i_type,ch_j,ch_i,one,z(npartner),Q)
+                        do i=1,2
+                          Q(i)=Q(i)/(1-z(npartner))
+                          xkernazi(i)=prefact*xfact*xjac(npartner)*Q(i)/xi(npartner)
+                        enddo
                      endif
                   endif
                else
@@ -689,30 +744,33 @@ c
                   write(*,*)i_type
                   stop
                endif
-            elseif( (ileg.ge.3 .and. abs(m_type).eq.3) .or.
-     &              (ileg.le.2 .and. abs(j_type).eq.3) )then
-               if(abs(i_type).eq.3)then
-c q --> g q ( icode = 3 )
-c a --> a q
+            elseif( (ileg.ge.3 .and. (abs(m_type).eq.3.or.(m_type.eq.1.and.dabs(dabs(ch_m)-1d0).lt.tiny))) .or.
+     &              (ileg.le.2 .and. (abs(j_type).eq.3.or.(j_type.eq.1.and.dabs(dabs(ch_j)-1d0).lt.tiny))) )then
+               if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(dabs(ch_i)-1d0).lt.tiny))then
+c q->gq, q->aq, e->ae (icode=3)
                   if(ileg.le.2)then
                      N_p=2
                      if(isspecial)N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                        xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+     &                                      (ch_i**2 / vcf)
                         xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
-                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
+                        xkernazi(2)=xkernazi(1) * (dble(gal(1))**2 / g**2) *
+     &                                      (ch_i**2 / vcf)
                      elseif(non_limit)then
                         xfact=(1-yi)*(1-x)/x
                         prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
-                        call Qterms_reduced_spacelike(m_type,i_type,one,z(npartner),Q)
-                        Q=Q/(1-z(npartner))
-                        xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
-                        xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
+                        call AP_reduced(m_type,i_type,ch_m,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
+                        call Qterms_reduced_spacelike(m_type,i_type,ch_m,ch_i,one,z(npartner),Q)
+                        do i=1,2
+                          Q(i)=Q(i)/(1-z(npartner))
+                          xkernazi(i)=prefact*xfact*xjac(npartner)*Q(i)/xi(npartner)
+                        enddo
                      endif
 c
                   elseif(ileg.eq.3)then
@@ -720,10 +778,11 @@ c
                      if(non_limit)then
                         xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                        call AP_reduced(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
                      endif
 c
                   elseif(ileg.eq.4)then
@@ -732,29 +791,34 @@ c
                         xkern(1)=(g**2/N_p)*
      &                       ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
      &                       ( (s-xm12)*(s*x-xm12)**2 )
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                        xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+     &                                      (ch_i**2 / vcf)
                      elseif(non_limit)then
                         xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                        call AP_reduced(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
                      endif
                   endif
-               elseif(i_type.eq.8)then
-c q  --> q  g ( icode = 4 )
-c sq --> sq g
+               elseif(i_type.eq.8.or.(i_type.eq.1.and.dabs(ch_i).lt.tiny))then
+c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
                   if(ileg.le.2)then
                      N_p=1
                      if(limit)then
                         xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                        xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+     &                                      (ch_m**2 / vcf)
                      elseif(non_limit)then
                         xfact=(1-yi)*(1-x)/x
                         prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        call AP_reduced(m_type,i_type,ch_m,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
                      endif
 c
                   elseif(ileg.eq.3)then
@@ -764,15 +828,17 @@ c
                         prefact=2/(s*N_p)
                         if(abs(PDG_type(j_fks)).le.6)then
                            if(shower_mc.ne.'HERWIGPP')
-     &                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
+     &                     call AP_reduced(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
                            if(shower_mc.eq.'HERWIGPP')
-     &                     call AP_reduced_massive(j_type,i_type,one,z(npartner),
-     &                                                 xi(npartner),xm12,ap)
+     &                     call AP_reduced_massive(j_type,i_type,one,ch_j,ch_i,z(npartner),
+     &                                                           xi(npartner),xm12,ap)
                         else
-                           call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                           call AP_reduced_SUSY(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
                         endif
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
                      endif
 c
                   elseif(ileg.eq.4)then
@@ -781,62 +847,16 @@ c
                         xkern(1)=(g**2/N_p)*4*vcf*
      &                        ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &                        ( s*(s-xm12)*(s*x-xm12) )
+                        xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+     &                                      (ch_j**2 / vcf)
                      elseif(non_limit)then
                         xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
                         prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                     endif
-                  endif
-               elseif(i_type.eq.0)then
-c q  --> q  a ( icode = 4 )
-c sq --> sq a
-                  if(ileg.le.2)then
-                     N_p=1
-                     if(limit)then
-                        xkern(2)=(g_ew**2/N_p)*4*qj2*(1+x**2)/(s*x)
-                     else
-                        xfact=(1-yi)*(1-x)/x
-                        prefact=4/(s*N_p)
-                        call AP_reduced(m_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
-                     endif
-c
-                  elseif(ileg.eq.3)then
-                     N_p=1
-                     if(non_limit)then
-                        xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        if(abs(PDG_type(j_fks)).le.6)then
-                           if(shower_mc.ne.'HERWIGPP')
-     &                     call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                           if(shower_mc.eq.'HERWIGPP')
-     &                     call AP_reduced_massive(j_type,i_type,one,z(npartner),
-     &                                                 xi(npartner),xm12,ap)
-                        else
-                           call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
-                        endif
-                        ap=ap/(1-z(npartner))
-                        xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
-                     endif
-c
-                  elseif(ileg.eq.4)then
-                     N_p=1
-                     if(limit)then
-                        xkern(2)=(g_ew**2/N_p)*4*qj2*
-     &                       ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
-     &                       ( s*(s-xm12)*(s*x-xm12) )
-                     else
-                        xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                        prefact=2/(s*N_p)
-                        call AP_reduced(j_type,i_type,one,z(npartner),ap)
-                        ap=ap/(1-z(npartner))
-                        xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                        xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                        call AP_reduced(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
+                        do i=1,2
+                          ap(i)=ap(i)/(1-z(npartner))
+                          xkern(i)=prefact*xfact*xjac(npartner)*ap(i)/xi(npartner)
+                        enddo
                      endif
                   endif
                else
@@ -884,20 +904,54 @@ c Dead zone
            endif
         endif
 
-        born_red=0d0
-        born_red_tilde=0d0
         do i=1,2
            xkern(i)=xkern(i)*gfactsf*wcc
            xkernazi(i)=xkernazi(i)*gfactazi*gfactsf*wcc
         enddo
         do cflows=1,colorflow(npartner,0)
-           born_red=born_red+bornbars(colorflow(npartner,cflows))
-           born_red_tilde=born_red_tilde+bornbarstilde(colorflow(npartner,cflows))
+          do iord = 1, nsplitorders
+            born_red(iord)=born_red(iord)+bornbars(colorflow(npartner,cflows),iord)
+            born_red_tilde(iord)=born_red_tilde(iord)+bornbarstilde(colorflow(npartner,cflows),iord)
+            do iamp=1,amp_split_size
+              amp_split_bornred(iamp,iord)=amp_split_bornred(iamp,iord)+
+     &           amp_split_bornbars(iamp,colorflow(npartner,cflows),iord)
+              amp_split_bornredtilde(iamp,iord)=amp_split_bornred(iamp,iord)+
+     &           amp_split_bornbarstilde(iamp,colorflow(npartner,cflows),iord)
+            enddo
+          enddo
         enddo
-c Change here, to include also xkern(2)!
-        xmcxsec(npartner)=xkern(1)*born_red+xkernazi(1)*born_red_tilde
-        if(dampMCsubt)xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
+c check the lines below
+        do iord = 1, nsplitorders
+           if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
+           if (iord.eq.qcd_pos) then
+             xmcxsec(npartner) = xmcxsec(npartner)+
+     &          xkern(1)*born_red(iord)+xkernazi(1)*born_red_tilde(iord)
+             do iamp=1,amp_split_size
+               amp_split_xmcxsec(iamp,npartner) = amp_split_xmcxsec(iamp,npartner) +
+     &            xkern(1)*amp_split_bornred(iamp,iord) + 
+     &            xkernazi(1)*amp_split_bornredtilde(iamp,iord)
+             enddo
+           else if(iord.eq.qed_pos) then
+             xmcxsec(npartner) = xmcxsec(npartner)+
+     &          xkern(2)*born_red(iord)+xkernazi(2)*born_red_tilde(iord)
+             do iamp=1,amp_split_size
+               amp_split_xmcxsec(iamp,npartner) = amp_split_xmcxsec(iamp,npartner) +
+     &            xkern(2)*amp_split_bornred(iamp,iord) + 
+     &            xkernazi(2)*amp_split_bornredtilde(iamp,iord)
+             enddo
+           endif
+        enddo
+        if (dampMCsubt) then 
+          xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
+          do iamp=1,amp_split_size
+            amp_split_xmcxsec(iamp,npartner) = amp_split_xmcxsec(iamp,npartner)*emscwgt(npartner)
+          enddo
+        endif
+
         wgt=wgt+xmcxsec(npartner)
+        do iamp=1,amp_split_size
+          amp_split_mc(iamp)=amp_split_mc(iamp)+amp_split_xmcxsec(iamp,npartner)
+        enddo
 
         if(xmcxsec(npartner).lt.0d0)then
            write(*,*)'Fatal error in xmcsubt'
@@ -969,11 +1023,13 @@ c the same method
       implicit none
 
       include "genps.inc"
-      include 'nexternal.inc'
+      include "nexternal.inc"
       include "born_nhel.inc"
+      include "orders.inc"
 
       double precision p(0:3,nexternal)
-      double precision y_ij_fks,bornbars(max_bcol),bornbarstilde(max_bcol)
+      double precision y_ij_fks,bornbars(max_bcol,nsplitorders),
+     &                          bornbarstilde(max_bcol,nsplitorders)
 
       double precision zero
       parameter (zero=0.d0)
@@ -990,13 +1046,14 @@ c the same method
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double complex wgt1(2),W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
+      double precision wgt_born
+      double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
       double complex azifact
 
       double complex xij_aor
       common/cxij_aor/xij_aor
 
-      double precision born,sumborn,borntilde
+      double precision sumborn
       integer i
 
       double precision vtiny,pi(0:3),pj(0:3),cphi_mother,sphi_mother
@@ -1022,41 +1079,92 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision ch_i,ch_j,ch_m
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
+      double precision born(nsplitorders), borntilde(nsplitorders)
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
+      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
+      common /c_born_cnt/ ans_cnt
+      double complex ans_extra_cnt(2,nsplitorders)
+      integer iord, iextra_cnt, isplitorder_born, isplitorder_cnt
+      common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
+
+      integer iamp
+      double precision amp_split_born(amp_split_size,nsplitorders), 
+     $                 amp_split_borntilde(amp_split_size,nsplitorders)
+      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
+     $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
+      common /to_amp_split_bornbars/amp_split_bornbars,
+     $                              amp_split_bornbarstilde
+
+
 c
-c BORN
-      call sborn(p_born,wgt1)
-      born=dble(wgt1(1))
+C BORN/BORNTILDE
 
-c born is the total born amplitude squared
-      sumborn=0.d0
-      do i=1,max_bcol
-        sumborn=sumborn+jamp2(i)
-c sumborn is the sum of the leading-color amplitudes squared
-      enddo
-      
-
-c BORN TILDE
-      if(ileg.eq.1.or.ileg.eq.2)then
-         if(j_fks.eq.2 .and. nexternal-1.ne.3)then
+C check if momenta have to be rotated
+      if ((ileg.eq.1.or.ileg.eq.2).and.(j_fks.eq.2 .and. nexternal-1.ne.3)) then
 c Rotation according to innerpin.m. Use rotate_invar() if a more 
 c general rotation is needed.
 c Exclude 2->1 (at the Born level) processes: matrix elements are
 c independent of the PS point, but non-zero helicity configurations
 c might flip when rotating the momenta.
-            do i=1,nexternal-1
-               p_born_rot(0,i)=p_born(0,i)
-               p_born_rot(1,i)=-p_born(1,i)
-               p_born_rot(2,i)=p_born(2,i)
-               p_born_rot(3,i)=-p_born(3,i)
+        do i=1,nexternal-1
+           p_born_rot(0,i)=p_born(0,i)
+           p_born_rot(1,i)=-p_born(1,i)
+           p_born_rot(2,i)=p_born(2,i)
+           p_born_rot(3,i)=-p_born(3,i)
+        enddo
+        calculatedBorn=.false.
+        call sborn(p_born_rot,wgt_born)
+        if (iextra_cnt.gt.0) call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
+        calculatedBorn=.false.
+      else
+        call sborn(p_born,wgt_born)
+        calculatedborn=.false.
+        call sborn(p_born,wgt_born)
+        if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
+        calculatedborn=.false.
+      endif
+
+      do iord = 1, nsplitorders
+        if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
+C check if any extra_cnt is needed
+        if (iextra_cnt.gt.0) then
+            write(*,*) 'FIXEXTRACNTMC'
+            stop
+            if (iord.eq.isplitorder_born) then
+            ! this is the contribution from the born ME
+               wgt1(1) = ans_cnt(1,iord)
+               wgt1(2) = ans_cnt(2,iord)
+            else if (iord.eq.isplitorder_cnt) then
+            ! this is the contribution from the extra cnt
+               wgt1(1) = ans_extra_cnt(1,iord)
+               wgt1(2) = ans_extra_cnt(2,iord)
+            else
+               write(*,*) 'ERROR in sborncol_isr', iord
+               stop
+            endif
+        else
+           wgt1(1) = ans_cnt(1,iord)
+           wgt1(2) = ans_cnt(2,iord)
+        endif
+        if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) wgt1(2)=0d0
+        born(iord)=dble(wgt1(1))
+        borntilde(iord)=dble(wgt1(2))
+        do iamp=1, amp_split_size
+          amp_split_born(iamp,iord) = dble(amp_split_cnt(iamp,1,iord))
+          amp_split_borntilde(iamp,iord) = dble(amp_split_cnt(iamp,2,iord))
+        enddo
+      enddo
+
+c BORN TILDE
+      if(ileg.eq.1.or.ileg.eq.2)then
+         if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) then
+            do iord=1, nsplitorders
+               borntilde(iord)=0d0
+               do iamp=1, amp_split_size
+                 amp_split_borntilde(iamp,iord) = 0d0
+               enddo
             enddo
-            calculatedBorn=.false.
-            call sborn(p_born_rot,wgt1)
-            calculatedBorn=.false.
-         else
-            call sborn(p_born,wgt1)
-         endif
-         if (abs(m_type).eq.3) then
-            wgt1(2)=0d0
          else
 c Insert <ij>/[ij] which is not included by sborn()
             if (1d0-y_ij_fks.lt.vtiny)then
@@ -1094,13 +1202,24 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
                cphi_mother=1.d0
                sphi_mother=0.d0
             endif
-            wgt1(2) = -(cphi_mother+ximag*sphi_mother)**2 *
-     #                wgt1(2) * dconjg(azifact)
+            do iord=1, nsplitorders
+               borntilde(iord) = -(cphi_mother+ximag*sphi_mother)**2 *
+     #                borntilde(iord) * dconjg(azifact)
+               do iamp=1, amp_split_size
+                 amp_split_borntilde(iamp,iord) = -(cphi_mother+ximag*sphi_mother)**2 *
+     #                amp_split_borntilde(iamp,iord) * dconjg(azifact)
+               enddo
+            enddo
          endif
       elseif(ileg.eq.3.or.ileg.eq.4)then
-         if(abs(j_type).eq.3.and.i_type.eq.8)then
-            wgt1(2)=0.d0
-         elseif(m_type.eq.8)then
+         if(abs(j_type).eq.3.and.(i_type.eq.8.or.i_type.eq.1).and.ch_i.eq.0d0)then
+            do iord=1, nsplitorders
+               borntilde(iord)=0d0
+               do iamp=1, amp_split_size
+                 amp_split_borntilde(iamp,iord) = 0d0
+               enddo
+            enddo
+         elseif((m_type.eq.8.or.m_type.eq.1).and.ch_m.eq.0d0)then
 c Insert <ij>/[ij] which is not included by sborn()
             if(1.d0-y_ij_fks.lt.vtiny)then
                azifact=xij_aor
@@ -1134,8 +1253,14 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
                call getaziangles(p_born(0,imother_fks),
      #                           cphi_mother,sphi_mother)
             endif
-            wgt1(2) = -(cphi_mother-ximag*sphi_mother)**2 *
-     #                  wgt1(2) * azifact
+            do iord=1, nsplitorders
+               borntilde(iord) = -(cphi_mother-ximag*sphi_mother)**2 *
+     #                  borntilde(iord) * azifact
+               do iamp=1, amp_split_size
+                 amp_split_borntilde(iamp,iord) = -(cphi_mother-ximag*sphi_mother)**2 *
+     #                amp_split_borntilde(iamp,iord) * azifact
+               enddo
+            enddo
          else
             write(*,*)'FATAL ERROR in get_mbar',
      #           i_type,j_type,i_fks,j_fks
@@ -1146,30 +1271,54 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
          stop
       endif
 
-      borntilde=dble(wgt1(2))
+CMZ! this has to be all changed according to the correct jamps
 
+
+c born is the total born amplitude squared
+      sumborn=0.d0
+      do i=1,max_bcol
+        sumborn=sumborn+jamp2(i)
+c sumborn is the sum of the leading-color amplitudes squared
+      enddo
+      
 
 c BARRED AMPLITUDES
       do i=1,max_bcol
-         if (sumborn.ne.0d0) then
-            bornbars(i)=jamp2(i)/sumborn * born
-         elseif (born.eq.0d0 .or. jamp2(i).eq.0d0) then
-            bornbars(i)=0d0
-         else
+        do iord=1,nsplitorders
+          if (sumborn.ne.0d0) then
+            bornbars(i,iord)=jamp2(i)/sumborn * born(iord)
+            do iamp=1,amp_split_size
+              amp_split_bornbars(iamp,i,iord)=jamp2(i)/sumborn * 
+     &                                      amp_split_born(iamp,iord)
+            enddo
+          elseif (born(iord).eq.0d0 .or. jamp2(i).eq.0d0) then
+            bornbars(i,iord)=0d0
+            do iamp=1,amp_split_size
+              amp_split_bornbars(iamp,i,iord)=0d0
+            enddo
+          else
             write (*,*) 'ERROR #1, dividing by zero'
             stop
-         endif
-         if (sumborn.ne.0d0) then
-            bornbarstilde(i)=jamp2(i)/sumborn * borntilde
-         elseif (borntilde.eq.0d0 .or. jamp2(i).eq.0d0) then
-            bornbarstilde(i)=0d0
-         else
+          endif
+          if (sumborn.ne.0d0) then
+            bornbarstilde(i,iord)=jamp2(i)/sumborn * borntilde(iord)
+            do iamp=1,amp_split_size
+              amp_split_bornbarstilde(iamp,i,iord)=jamp2(i)/sumborn * 
+     &                              amp_split_borntilde(iamp,iord)
+            enddo
+          elseif (borntilde(iord).eq.0d0 .or. jamp2(i).eq.0d0) then
+            bornbarstilde(i,iord)=0d0
+            do iamp=1,amp_split_size
+              amp_split_bornbarstilde(iamp,i,iord)=0d0 
+            enddo
+          else
             write (*,*) 'ERROR #2, dividing by zero'
             stop
-         endif      
+          endif      
 c bornbars(i) is the i-th leading-color amplitude squared re-weighted
 c in such a way that the sum of bornbars(i) is born rather than sumborn.
 c the same holds for bornbarstilde(i).
+        enddo
       enddo
 
       return
@@ -1453,7 +1602,7 @@ c azimuth = irrelevant (hence set = 0)
             endif
          endif
       else
-         write(*,*)'Error 4 in kinematics_driver: assigned wrong ileg'
+         write(*,*)'Error 4 in kinematics_driver: assigned wrong ileg',ileg
          stop
       endif
 
@@ -2789,40 +2938,5 @@ c
       return
  999  continue
       lzone=.false.
-      return
-      end
-
-
-
-      function charge(ipdg)
-c computes the electric charge given the pdg code
-      implicit none
-      integer ipdg
-      double precision charge,tmp,dipdg
-
-      dipdg=dble(ipdg)
-c quarks
-      if(abs(dipdg).eq.1) tmp=-1d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.2) tmp= 2d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.3) tmp=-1d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.4) tmp= 2d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.5) tmp=-1d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.6) tmp= 2d0/3d0*sign(1d0,dipdg)
-c leptons
-      if(abs(dipdg).eq.11)tmp=-1d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.12)tmp= 0d0
-      if(abs(dipdg).eq.13)tmp=-1d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.14)tmp= 0d0
-      if(abs(dipdg).eq.15)tmp=-1d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.16)tmp= 0d0
-c bosons
-      if(dipdg.eq.21)     tmp= 0d0
-      if(dipdg.eq.22)     tmp= 0d0
-      if(dipdg.eq.23)     tmp= 0d0
-      if(abs(dipdg).eq.24)tmp= 1d0*sign(1d0,dipdg)
-      if(dipdg.eq.25)     tmp= 0d0
-c
-      charge=tmp
-
       return
       end

@@ -8,8 +8,10 @@ C CONSTANTS
 C 
       implicit none
       include 'nexternal.inc'
-      INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+      INTEGER NAMPSO, NSQAMPSO
+      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
+      INTEGER NGRAPHS
+      PARAMETER (NGRAPHS=   %(ngraphs)d)
 C  
 C ARGUMENTS 
 C 
@@ -32,6 +34,12 @@ C
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
+
+      include 'genps.inc'
+      double precision amp2b(maxamps), jamp2b(0:maxamps,0:nampso)
+      common/to_amps_born/  amp2b,       jamp2b
+      double precision amp2(maxamps), jamp2(0:maxamps)
+      common/to_amps/  amp2,       jamp2
 C
 C     FUNCTIONS
 C
@@ -118,6 +126,18 @@ enddo
 C this is to avoid fake non-zero contributions 
 if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 
+C fill the amp2 and jamp2 arrays
+do i = 1, ngraphs
+amp2(i)=amp2b(i)! amp2 just needs to be copyed
+enddo
+do i = 0, int(jamp2b(0,0))
+jamp2(i)=0d0
+do j = 1, nampso
+c here sum all, this may be refined later
+jamp2(i)=jamp2(i)+jamp2b(i,j)
+enddo
+enddo
+
 %(skip_amp_cnt)s
 C quantities for the counterterms
 do j = 1, nsplitorders
@@ -197,7 +217,7 @@ C
 C GLOBAL VARIABLES
 C  
       Double Precision amp2(maxamps), jamp2(0:maxamps,0:NAMPSO)
-      common/to_amps/  amp2,       jamp2
+      common/to_amps_born/  amp2,       jamp2
       DATA jamp2(0,0) /   %(ncolor)d/          
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
       common /c_goodhel/goodhel
@@ -334,8 +354,8 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      double precision amp2(maxamps), jamp2(0:maxamps,nampso)
-      common/to_amps/  amp2,       jamp2
+      double precision amp2(maxamps), jamp2(0:maxamps,0:nampso)
+      common/to_amps_born/  amp2,       jamp2
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
       double precision hel_fac

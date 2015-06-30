@@ -7,6 +7,7 @@ c absolute value).
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
+      include 'orders.inc'
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
@@ -28,12 +29,20 @@ c absolute value).
      $     ,nequal,equal_to(maxproc,fks_configs)
      $     ,equal_to_inverse(maxproc,fks_configs)
       character*100 buff
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     This is the common block that this subroutine fills
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
      $     ,etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      
+      !MZ safety stop
+      if (split_type(QCD_pos).and.split_type(QED_pos)) then
+          write(*,*) 'IPROCMAP: NOT IMPLEMENTED'
+          stop
+      endif
 
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
@@ -50,11 +59,12 @@ c to get the unique IPROC's
                if (i.eq.min(j_fks,i_fks)) then
                   if (abs(idup(i_fks,j)).eq.abs(idup(j_fks,j))) then
 c     gluon splitting
-                     id_current(i,j)=21
-                  elseif(abs(idup(i_fks,j)).eq.21) then
+                    if (split_type(qcd_pos)) id_current(i,j)=21
+                    if (split_type(qed_pos)) id_current(i,j)=22
+                  elseif(abs(idup(i_fks,j)).eq.21.or.idup(i_fks,j).eq.22) then
 c     final state gluon emitted
                      id_current(i,j)=idup(j_fks,j)
-                  elseif(idup(j_fks,j).eq.21) then 
+                  elseif(idup(j_fks,j).eq.21.or.idup(j_fks,j).eq.22) then 
 c     intial state g->qqbar splitting
                      id_current(i,j)=-idup(i_fks,j)
                   else
