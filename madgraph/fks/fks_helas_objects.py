@@ -362,6 +362,10 @@ class FKSHelasProcess(object):
         if selftag != othertag:
             return False
 
+        # now the virtuals
+        if self.virt_matrix_element != other.virt_matrix_element:
+            return False
+
         # now the reals
         reals2 = copy.copy(other.real_processes)
 
@@ -370,10 +374,17 @@ class FKSHelasProcess(object):
                 reals2.remove(real)
             except ValueError:
                 return False  
+                
         if not reals2:
             return True
         else: 
             return False
+
+
+    def __ne__(self, other):
+        """Inequality operator
+        """
+        return not self.__eq__(other)
 
     
     def add_process(self, other): #test written, ppwj
@@ -490,6 +501,7 @@ class FKSHelasRealProcess(object): #test written
 
         return True
     
+
     def __ne__(self, other):
         """Inequality operator:
         compare two FKSHelasRealProcesses by comparing their dictionaries"""
