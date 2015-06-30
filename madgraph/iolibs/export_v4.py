@@ -2217,13 +2217,14 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                 if ctype in ['ColorOne' ]:
                     continue
                 if ctype not in ['T', 'Tr' ]:
-                    raise MadGraph5Error, 'Color Structure not handle by Matchbox: %s'  % ctype
+                    raise MadGraph5Error, 'Color Structure not handled by Matchbox: %s'  % ctype
                 tmparg += ['0']
                 arg +=tmparg
             for j, v in enumerate(arg):
                     output[(i_color,j)] = v
 
             for key in output:
+                misc.sprint(key, output[key])
                 if matrix_strings == []:
                     #first entry
                     matrix_strings.append(""" 

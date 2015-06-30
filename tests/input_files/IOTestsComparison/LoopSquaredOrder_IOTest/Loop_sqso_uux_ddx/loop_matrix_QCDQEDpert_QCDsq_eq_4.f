@@ -387,8 +387,19 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
       CHARACTER(512) MLPATH
       COMMON/MLPATH/MLPATH
 
+C     This variable controls the general initialization which is
+C      *common* between all MadLoop SubProcesses.
+C     For example setting the MadLoopPath or reading the ML runtime
+C      parameters.
       LOGICAL ML_INIT
       COMMON/ML_INIT/ML_INIT
+
+C     This variable controls the *local* initialization of this
+C      particular SubProcess.
+C     For example, the reading of the filters must be done independentl
+C     y by each SubProcess.
+      LOGICAL LOCAL_ML_INIT
+      DATA LOCAL_ML_INIT/.TRUE./
 
 C     ----------
 C     BEGIN CODE
@@ -418,96 +429,99 @@ C        if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
         ENDIF
       ENDIF
 
-      QP_TOOLS_AVAILABLE=.FALSE.
-      INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
-C     SKIP THE ONES THAT NOT AVAILABLE
-      J=1
-      DO I=1,NLOOPLIB
-        IF(MLREDUCTIONLIB(J).EQ.0)EXIT
-        IF(.NOT.LOOPLIBS_AVAILABLE(MLREDUCTIONLIB(J)))THEN
-          MLREDUCTIONLIB(J:NLOOPLIB-1)=MLREDUCTIONLIB(J+1:NLOOPLIB)
-          MLREDUCTIONLIB(NLOOPLIB)=0
-        ELSE
-          J=J+1
+      IF (LOCAL_ML_INIT) THEN
+        LOCAL_ML_INIT = .FALSE.
+        QP_TOOLS_AVAILABLE=.FALSE.
+        INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
+C       SKIP THE ONES THAT NOT AVAILABLE
+        J=1
+        DO I=1,NLOOPLIB
+          IF(MLREDUCTIONLIB(J).EQ.0)EXIT
+          IF(.NOT.LOOPLIBS_AVAILABLE(MLREDUCTIONLIB(J)))THEN
+            MLREDUCTIONLIB(J:NLOOPLIB-1)=MLREDUCTIONLIB(J+1:NLOOPLIB)
+            MLREDUCTIONLIB(NLOOPLIB)=0
+          ELSE
+            J=J+1
+          ENDIF
+        ENDDO
+        IF(MLREDUCTIONLIB(1).EQ.0)THEN
+          STOP 'No available loop reduction lib is provided. Make sur'
+     $     //'e MLReductionLib is correct.'
         ENDIF
-      ENDDO
-      IF(MLREDUCTIONLIB(1).EQ.0)THEN
-        STOP 'No available loop reduction lib is provided. Make sur'
-     $   //'e MLReductionLib is correct.'
-      ENDIF
-      J=0
-      DO I=1,NLOOPLIB
-        IF(MLREDUCTIONLIB(I).EQ.1)THEN
-          J=J+1
-          IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
-          INDEX_QP_TOOLS(J)=I
-        ENDIF
-      ENDDO
+        J=0
+        DO I=1,NLOOPLIB
+          IF(MLREDUCTIONLIB(I).EQ.1)THEN
+            J=J+1
+            IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
+            INDEX_QP_TOOLS(J)=I
+          ENDIF
+        ENDDO
 
-C     Setup the file paths
-      CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
-      CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
-      CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
-      CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
-      CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
-      CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
-      CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
+C       Setup the file paths
+        CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+        CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
+        CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
+        CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
+        CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
+        CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
+        CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
 
-      CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
+        CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
 
-      OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
-     $  ACTION='READ')
-      DO I=1,NCOLORROWS
-        READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
-      ENDDO
-      GOTO 105
- 104  CONTINUE
-      STOP 'Color factors could not be initialized from file ML5_0_Col'
-     $ //'orNumFactors.dat. File not found'
- 105  CONTINUE
-      CLOSE(1)
-      OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
-     $  ACTION='READ')
-      DO I=1,NCOLORROWS
-        READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
-      ENDDO
-      GOTO 107
- 106  CONTINUE
-      STOP 'Color factors could not be initialized from file ML5_0_Col'
-     $ //'orDenomFactors.dat. File not found'
- 107  CONTINUE
-      CLOSE(1)
-      OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',                
-     $   ACTION='READ')
-      DO H=1,NCOMB
-        READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
-      ENDDO
-      GOTO 109
- 108  CONTINUE
-      STOP 'Color helictiy configurations could not be initialize'
-     $ //'d from file ML5_0_HelConfigs.dat. File not found'
- 109  CONTINUE
-      CLOSE(1)
+        OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
+     $    ACTION='READ')
+        DO I=1,NCOLORROWS
+          READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
+        ENDDO
+        GOTO 105
+ 104    CONTINUE
+        STOP 'Color factors could not be initialized from fil'
+     $   //'e ML5_0_ColorNumFactors.dat. File not found'
+ 105    CONTINUE
+        CLOSE(1)
+        OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
+     $    ACTION='READ')
+        DO I=1,NCOLORROWS
+          READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
+        ENDDO
+        GOTO 107
+ 106    CONTINUE
+        STOP 'Color factors could not be initialized from fil'
+     $   //'e ML5_0_ColorDenomFactors.dat. File not found'
+ 107    CONTINUE
+        CLOSE(1)
+        OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',              
+     $       ACTION='READ')
+        DO H=1,NCOMB
+          READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
+        ENDDO
+        GOTO 109
+ 108    CONTINUE
+        STOP 'Color helictiy configurations could not be initialize'
+     $   //'d from file ML5_0_HelConfigs.dat. File not found'
+ 109    CONTINUE
+        CLOSE(1)
 
-C     SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
-C     IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
-      DO I=0,3
-        PL(I,0)=(0.0D0,0.0D0)
-      ENDDO
-      DO I=1,MAXLWFSIZE
-        DO J=0,LOOPMAXCOEFS-1
-          DO K=1,MAXLWFSIZE
-            IF(I.EQ.K.AND.J.EQ.0) THEN
-              WL(I,J,K,0)=(1.0D0,0.0D0)
-            ELSE
-              WL(I,J,K,0)=(0.0D0,0.0D0)
-            ENDIF
+C       SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
+C       IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
+        DO I=0,3
+          PL(I,0)=(0.0D0,0.0D0)
+        ENDDO
+        DO I=1,MAXLWFSIZE
+          DO J=0,LOOPMAXCOEFS-1
+            DO K=1,MAXLWFSIZE
+              IF(I.EQ.K.AND.J.EQ.0) THEN
+                WL(I,J,K,0)=(1.0D0,0.0D0)
+              ELSE
+                WL(I,J,K,0)=(0.0D0,0.0D0)
+              ENDIF
+            ENDDO
           ENDDO
         ENDDO
-      ENDDO
-      IF(BOOTANDSTOP) THEN
-        WRITE(*,*) 'Stopped by user request.'
-        STOP
+        IF(BOOTANDSTOP) THEN
+          WRITE(*,*) 'Stopped by user request.'
+          STOP
+        ENDIF
       ENDIF
 
       IF(NTRY.EQ.0) THEN
