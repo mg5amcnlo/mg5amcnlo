@@ -140,7 +140,6 @@ c     DATA
 c
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'born_conf.inc'
-      include 'pmass.inc'
 c-----
 c  Begin Code
 c-----
@@ -169,6 +168,7 @@ c-----
 c When doing hadron-hadron collision reduce the effect collision energy.
 c Note that tests are always performed at fixed energy with Bjorken x=1.
       totmass = 0.0d0
+      include 'pmass.inc' ! make sure to set the masses after the model has been included
       do i=1,nexternal
         totmass = totmass + pmass(i)
       enddo
