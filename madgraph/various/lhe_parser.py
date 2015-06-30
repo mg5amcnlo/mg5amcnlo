@@ -519,7 +519,7 @@ class MultiEventFile(EventFile):
         if start_list:
             for p in start_list:
                 self.add(p)
-        self.configure = False
+        self._configure = False
         
     def add(self, path, cross, error, across):
         """ add a file to the pool, across allow to reweight the sum of weight 
@@ -540,14 +540,14 @@ class MultiEventFile(EventFile):
         self.error.append(error)
         self.scales.append(1)
         self.files.append(obj)
-        self.configure = False
+        self._configure = False
         
     def __iter__(self):
         return self
     
     def next(self):
 
-        if not self.configure:
+        if not self._configure:
             self.configure()
 
         remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
@@ -678,12 +678,12 @@ class MultiEventFile(EventFile):
         nb_keep = max(20, int(total_event*trunc_error*10))
         all_wgt = all_wgt[-nb_keep:]  
         self.seek(0)
-        self.configure = True
+        self._configure = True
         return all_wgt, sum_cross, total_event
     
     def configure(self):
         
-        self.configure = True
+        self._configure = True
         for i,f in enumerate(self.files):
             self.initial_nb_events = len(f)
     
