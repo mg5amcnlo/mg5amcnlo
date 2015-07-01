@@ -693,7 +693,7 @@ c
                         enddo
                      endif
                   endif
-               elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(dabs(ch_i)-1d0).lt.tiny))then
+               elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
 c g->qq, a->qq, a->ee (icode=2)
                   if(ileg.le.2)then
                      N_p=1
@@ -744,8 +744,8 @@ c
                   write(*,*)i_type
                   stop
                endif
-            elseif( (ileg.ge.3 .and. (abs(m_type).eq.3.or.(m_type.eq.1.and.dabs(dabs(ch_m)-1d0).lt.tiny))) .or.
-     &              (ileg.le.2 .and. (abs(j_type).eq.3.or.(j_type.eq.1.and.dabs(dabs(ch_j)-1d0).lt.tiny))) )then
+            elseif( (ileg.ge.3 .and. (abs(m_type).eq.3.or.(m_type.eq.1.and.dabs(ch_m).gt.tiny))) .or.
+     &              (ileg.le.2 .and. (abs(j_type).eq.3.or.(j_type.eq.1.and.dabs(ch_j).gt.tiny))) )then
                if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(dabs(ch_i)-1d0).lt.tiny))then
 c q->gq, q->aq, e->ae (icode=3)
                   if(ileg.le.2)then
