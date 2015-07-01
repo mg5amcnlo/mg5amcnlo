@@ -539,8 +539,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             nconfigs)
 
 #write the wrappers for real ME's
-        filename = 'real_me_lum_chooser.f'
-        self.write_real_wrappers(writers.FortranWriter(filename), 
+        filename_me = 'real_me_chooser.f'
+        filename_lum = 'parton_lum_chooser.f'
+        self.write_real_wrappers(writers.FortranWriter(filename_me), 
+                                 writers.FortranWriter(filename_lum),
                                    matrix_element, sqsorders_list,
                                    fortran_model)
 
@@ -1292,7 +1294,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         return nfksconfs, maxproc, maxflow, nexternal
 
 
-    def write_real_wrappers(self, writer, matrix_element, sqsolist, fortran_model):
+    def write_real_wrappers(self, writer_me, writer_lum, matrix_element, sqsolist, fortran_model):
         """writes the wrappers which allows to chose among the different real matrix elements
         and among the different parton luminosities and 
         among the various helper functions for the split-orders"""
@@ -1357,7 +1359,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 """
 
         # Write the file
-        writer.writelines(text + text1)
+        writer_me.writelines(text)
+        writer_lum.writelines(text1)
         return 0
 
 

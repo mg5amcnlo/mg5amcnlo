@@ -554,21 +554,17 @@ c respectively.
       if (flagmc) then
          do i=1,nofpartners
             if(lzone(i))then
-               call get_mc_lum(j_fks,zhw(i),xi_i_fks_ev,xlum_mc_fact)
-               wgt1=sevmc*f_MC_S*xlum_mc_fact*xmcxsec(i)/g22
-               call add_wgt(12,wgt1,0d0,0d0)
-               wgt1=sevmc*f_MC_H*xlum_mc_fact*xmcxsec(i)/g22
-               call add_wgt(13,-wgt1,0d0,0d0)
-
+              call get_mc_lum(j_fks,zhw(i),xi_i_fks_ev,xlum_mc_fact)
               do iamp=1, amp_split_size
                 if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
                 call amp_split_pos_to_orders(iamp, orders)
                 QCD_power=orders(qcd_pos)
+                g22=g**(QCD_power)
                 wgt1=sevmc*f_MC_S*xlum_mc_fact*
-     &               amp_split_xmcxsec(iamp,i)/g**(qcd_power)
+     &               amp_split_xmcxsec(iamp,i)/g22
                 call add_wgt(12,wgt1,0d0,0d0)
                 wgt1=sevmc*f_MC_H*xlum_mc_fact*
-     &               amp_split_xmcxsec(iamp,i)/g**(qcd_power)
+     &               amp_split_xmcxsec(iamp,i)/g22
                 call add_wgt(13,-wgt1,0d0,0d0)
               enddo
             endif
@@ -1223,6 +1219,7 @@ c        the iproc contribution
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
       icontr=icontr+1
       if (icontr.gt.max_contr) then
@@ -1244,6 +1241,7 @@ c        the iproc contribution
       y_bst(icontr)=ybst_til_tolab
       qcdpower(icontr)=QCD_power
       call set_pdg(icontr,nFKSprocess)
+
       if(type.eq.1 .or. type.eq. 8 .or. type.eq.9 .or. type.eq.10 .or.
      &     type.eq.13) then
 c real emission and n+1-body kin. contributions to counter terms and MC
@@ -2343,7 +2341,8 @@ c found the contribution that should be written:
          i_process_addwrite=etoi(iproc_picked,nFKS(icontr_picked))
          do k=1,icontr_sum(0,icontr_picked)
             ict=icontr_sum(k,icontr_picked)
-            if (particle_type_d(nFKS(ict),fks_i_d(nFKS(ict))).eq.8) then
+            !MZif (particle_type_d(nFKS(ict),fks_i_d(nFKS(ict))).eq.8) then
+            if (need_color_links_d(nFKS(ict)).or.need_charge_links_d(nFKS(ict))) then
                iFKS_picked=nFKS(ict)
                exit
             endif
@@ -6438,67 +6437,6 @@ c Check to see if this channel needs to be included in the multi-channeling
  14   continue
       diagramsymmetryfactor=1d0
       goto 12
-      end
-
-
-      subroutine get_mother_col_charge(i_type, ch_i, j_type, ch_j, m_type, ch_m)
-C viven the type (color representation) and charges of i and j, return
-C the type and charges of the mother particle
-      implicit none
-      integer i_type, j_type, m_type
-      double precision ch_i, ch_j, ch_m
-      include 'nexternal.inc'
-      integer i_fks,j_fks
-
-      common/fks_indices/i_fks,j_fks
-
-      if (abs(i_type).eq.abs(j_type) .and. 
-     &    abs(ch_i).eq.abs(ch_j) .and. 
-     &    abs(i_type).gt.1) then
-        ! neutral color octet splitting
-         m_type=8
-         ch_m = 0d0
-         if ( (j_fks.le.nincoming .and.
-     &         abs(i_type).eq.3 .and. j_type.ne.i_type) .or.
-     &        (j_fks.gt.nincoming .and.
-     &         abs(i_type).eq.3 .and. j_type.ne.-i_type)) then
-            write(*,*)'Flavour mismatch #1col in get_mother_col_charge',
-     &                 i_fks,j_fks,i_type,j_type
-            stop
-         endif
-      elseif (abs(i_type).eq.abs(j_type) .and. 
-     &        dabs(ch_i).eq.dabs(ch_j).and.abs(i_type).eq.1) then
-        ! neutral color singlet splitting
-         m_type=1
-         ch_m = 0d0
-         if ( (j_fks.le.nincoming .and.
-     &         dabs(ch_i).gt.0d0 .and. ch_j.ne.ch_i) .or.
-     &        (j_fks.gt.nincoming .and.
-     &         dabs(ch_i).gt.0d0 .and. ch_j.ne.-ch_i)) then
-            write(*,*)'Flavour mismatch #1chg in get_mother_col_charge',
-     &                 i_fks,j_fks,ch_i,ch_j
-            stop
-         endif
-      elseif ((abs(i_type).eq.3 .and. j_type.eq.8) .or.
-     &        (dabs(ch_i).gt.0d0 .and. ch_j.eq.0d0) ) then
-         if(j_fks.le.nincoming)then
-            m_type=-i_type
-            if (m_type.eq.-1) m_type=1
-            ch_m = -ch_i
-         else
-            write(*,*) 'Error in get_mother_col_charge: (i,j)=(q,g)'
-            stop
-         endif
-      elseif ((i_type.eq.8 .and. abs(j_type).eq.3) .or.
-     &         (ch_i.eq.0d0 .and. dabs(ch_j).gt.0d0) ) then
-         m_type=j_type
-         ch_m= ch_j
-      else
-         write(*,*)'Flavour mismatch #2 in get_mother_col_charge',
-     &      i_type,j_type,m_type
-         stop
-      endif
-      return
       end
 
 

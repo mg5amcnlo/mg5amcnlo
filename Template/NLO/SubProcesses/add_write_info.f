@@ -122,6 +122,11 @@ c cFKSprocess
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
+      include 'orders.inc'
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 c
 c Set the leshouche info and fks info
 c
@@ -349,6 +354,10 @@ c Use the MadGraph masses in the event file
          call write_masses_lhe_MG()
       endif
 
+      if (split_type(qcd_pos).and.split_type(qed_pos)) then
+          write(*,*) 'ERROR add_write_info not implemented'
+          stop
+      endif
 c
 c Derive the n-body from the (n+1)-body if we are doing S-events
 c
@@ -361,13 +370,15 @@ c
             elseif(i.eq.min(i_fks,j_fks)) then
                if(jpart(1,i_fks).eq.-jpart(1,j_fks)
      &              .and.j_fks.gt.nincoming) then
-                  jpart(1,i) = 21
+                  if (split_type(qcd_pos)) jpart(1,i)=21
+                  if (split_type(qed_pos)) jpart(1,i)=22
                elseif(jpart(1,i_fks).eq.jpart(1,j_fks)
      &                 .and.j_fks.le.nincoming) then
-                  jpart(1,i)=21
-               elseif(abs(jpart(1,i_fks)).eq.21) then
+                  if (split_type(qcd_pos)) jpart(1,i)=21
+                  if (split_type(qed_pos)) jpart(1,i)=22
+               elseif(abs(jpart(1,i_fks)).eq.21.or.jpart(1,i_fks).eq.22) then
                   jpart(1,i)=jpart(1,j_fks)
-               elseif(jpart(1,j_fks).eq.21.and.j_fks.le.nincoming) then
+               elseif((jpart(1,j_fks).eq.21.or.jpart(1,i_fks).eq.22).and.j_fks.le.nincoming) then
                   jpart(1,i)=-jpart(1,i_fks)
                else
                   write (*,*) 'ERROR #5 in add_write_info()',
@@ -1040,6 +1051,11 @@ c cuts.inc contains maxjetflavor
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+      include 'orders.inc'
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 
 c Masses of the real process, as set by MadGraph
       include 'coupl.inc'
@@ -1057,6 +1073,10 @@ c
       xm2=-1.d0
 c WARNING: what follows will need to be reconsidered the case of 
 c QED corrections, for what is relevant to i_fks and j_fks
+      if (split_type(qcd_pos).and.split_type(qed_pos)) then
+          write(*,*) 'ERROR add_write_info not implemented'
+          stop
+      endif
       do i=1,nexternal
         if(i.eq.i_fks)then
           if(pmass(i).ne.0.d0)then
@@ -1071,12 +1091,14 @@ c QED corrections, for what is relevant to i_fks and j_fks
 c S events
             xmi=0.d0
             if(idparti.eq.-idpartj.and.j_fks.gt.nincoming) then
-               idpart=21
+               if (split_type(qcd_pos)) idpart=21
+               if (split_type(qed_pos)) idpart=22
             elseif(idparti.eq.idpartj.and.j_fks.le.nincoming) then
-               idpart=21
-            elseif(abs(idparti).eq.21) then
+               if (split_type(qcd_pos)) idpart=21
+               if (split_type(qed_pos)) idpart=22
+            elseif(is_aorg(i_fks)) then
                idpart=idpartj
-            elseif(idpartj.eq.21.and.j_fks.le.nincoming) then
+            elseif(is_aorg(j_fks).and.j_fks.le.nincoming) then
                idpart=-idparti
             else
                write(*,*)'Error #2 in put_on_MC_mshell',

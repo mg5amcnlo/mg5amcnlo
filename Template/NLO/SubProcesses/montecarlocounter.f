@@ -915,11 +915,12 @@ c Dead zone
             do iamp=1,amp_split_size
               amp_split_bornred(iamp,iord)=amp_split_bornred(iamp,iord)+
      &           amp_split_bornbars(iamp,colorflow(npartner,cflows),iord)
-              amp_split_bornredtilde(iamp,iord)=amp_split_bornred(iamp,iord)+
+              amp_split_bornredtilde(iamp,iord)=amp_split_bornredtilde(iamp,iord)+
      &           amp_split_bornbarstilde(iamp,colorflow(npartner,cflows),iord)
             enddo
           enddo
         enddo
+
 c check the lines below
         do iord = 1, nsplitorders
            if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
@@ -1006,8 +1007,17 @@ c min() avoids troubles if ran2()=1
       endif
 
       do i=1,nexternal
-         if(i.le.ipartners(0))xmcxsec(i)=xmcxsec(i)*probne
-         if(i.gt.ipartners(0))xmcxsec(i)=0d0
+         if (i.le.ipartners(0)) then 
+           xmcxsec(i)=xmcxsec(i)*probne
+           do iamp = 1, amp_split_size
+             amp_split_xmcxsec(iamp,i)=amp_split_xmcxsec(iamp,i)*probne
+           enddo
+         else
+           xmcxsec(i)=0d0
+           do iamp = 1, amp_split_size
+             amp_split_xmcxsec(iamp,i)=0d0
+           enddo
+         endif
       enddo
 
       return

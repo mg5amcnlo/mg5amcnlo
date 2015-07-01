@@ -368,3 +368,65 @@ c born_leshouche.inc file.
       return 
       end
 
+
+      subroutine get_mother_col_charge(i_type, ch_i, j_type, ch_j, m_type, ch_m)
+C viven the type (color representation) and charges of i and j, return
+C the type and charges of the mother particle
+      implicit none
+      integer i_type, j_type, m_type
+      double precision ch_i, ch_j, ch_m
+      include 'nexternal.inc'
+      integer i_fks,j_fks
+
+      common/fks_indices/i_fks,j_fks
+
+      if (abs(i_type).eq.abs(j_type) .and. 
+     &    abs(ch_i).eq.abs(ch_j) .and. 
+     &    abs(i_type).gt.1) then
+        ! neutral color octet splitting
+         m_type=8
+         ch_m = 0d0
+         if ( (j_fks.le.nincoming .and.
+     &         abs(i_type).eq.3 .and. j_type.ne.i_type) .or.
+     &        (j_fks.gt.nincoming .and.
+     &         abs(i_type).eq.3 .and. j_type.ne.-i_type)) then
+            write(*,*)'Flavour mismatch #1col in get_mother_col_charge',
+     &                 i_fks,j_fks,i_type,j_type
+            stop
+         endif
+      elseif (abs(i_type).eq.abs(j_type) .and. 
+     &        dabs(ch_i).eq.dabs(ch_j).and.abs(i_type).eq.1) then
+        ! neutral color singlet splitting
+         m_type=1
+         ch_m = 0d0
+         if ( (j_fks.le.nincoming .and.
+     &         dabs(ch_i).gt.0d0 .and. ch_j.ne.ch_i) .or.
+     &        (j_fks.gt.nincoming .and.
+     &         dabs(ch_i).gt.0d0 .and. ch_j.ne.-ch_i)) then
+            write(*,*)'Flavour mismatch #1chg in get_mother_col_charge',
+     &                 i_fks,j_fks,ch_i,ch_j
+            stop
+         endif
+      elseif ((abs(i_type).eq.3 .and. j_type.eq.8) .or.
+     &        (dabs(ch_i).gt.0d0 .and. ch_j.eq.0d0) ) then
+         if(j_fks.le.nincoming)then
+            m_type=-i_type
+            if (m_type.eq.-1) m_type=1
+            ch_m = -ch_i
+         else
+            write(*,*) 'Error in get_mother_col_charge: (i,j)=(q,g)'
+            stop
+         endif
+      elseif ((i_type.eq.8 .and. abs(j_type).eq.3) .or.
+     &         (ch_i.eq.0d0 .and. dabs(ch_j).gt.0d0) ) then
+         m_type=j_type
+         ch_m= ch_j
+      else
+         write(*,*)'Flavour mismatch #2 in get_mother_col_charge',
+     &      i_type,j_type,m_type
+         stop
+      endif
+      return
+      end
+
+
