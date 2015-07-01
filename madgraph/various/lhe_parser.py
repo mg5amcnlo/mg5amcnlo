@@ -685,8 +685,8 @@ class MultiEventFile(EventFile):
         
         self._configure = True
         for i,f in enumerate(self.files):
-            self.initial_nb_events = len(f)
-    
+            self.initial_nb_events[i] = len(f)
+        self.total_event_in_files = sum(self.initial_nb_events)
     
     def __len__(self):
         

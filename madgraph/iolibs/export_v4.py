@@ -2224,7 +2224,6 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                     output[(i_color,j)] = v
 
             for key in output:
-                misc.sprint(key, output[key])
                 if matrix_strings == []:
                     #first entry
                     matrix_strings.append(""" 
