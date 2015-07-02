@@ -8,10 +8,10 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: u~ u > t t~ WEIGHTED=2 [ QCD ]
-C     Process: c~ c > t t~ WEIGHTED=2 [ QCD ]
-C     Process: d~ d > t t~ WEIGHTED=2 [ QCD ]
-C     Process: s~ s > t t~ WEIGHTED=2 [ QCD ]
+C     Process: u~ u > t t~ WEIGHTED=2 [ real = QCD ]
+C     Process: c~ c > t t~ WEIGHTED=2 [ real = QCD ]
+C     Process: d~ d > t t~ WEIGHTED=2 [ real = QCD ]
+C     Process: s~ s > t t~ WEIGHTED=2 [ real = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -40,22 +40,22 @@ C
       INTEGER NTRY(6)
       DATA NTRY /6*0/
       INTEGER NHEL(NEXTERNAL-1,NCOMB)
-      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
-      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1, 1/
-      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1,-1/
-      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1, 1/
-      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1,-1/
-      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1, 1/
-      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1,-1/
-      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1, 1/
-      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1,-1/
-      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1, 1/
-      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1,-1/
-      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1, 1/
-      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1,-1/
-      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
-      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
-      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
+      DATA (NHEL(I,   1),I=1,4) /-1, 1,-1, 1/
+      DATA (NHEL(I,   2),I=1,4) /-1, 1,-1,-1/
+      DATA (NHEL(I,   3),I=1,4) /-1, 1, 1, 1/
+      DATA (NHEL(I,   4),I=1,4) /-1, 1, 1,-1/
+      DATA (NHEL(I,   5),I=1,4) /-1,-1,-1, 1/
+      DATA (NHEL(I,   6),I=1,4) /-1,-1,-1,-1/
+      DATA (NHEL(I,   7),I=1,4) /-1,-1, 1, 1/
+      DATA (NHEL(I,   8),I=1,4) /-1,-1, 1,-1/
+      DATA (NHEL(I,   9),I=1,4) / 1, 1,-1, 1/
+      DATA (NHEL(I,  10),I=1,4) / 1, 1,-1,-1/
+      DATA (NHEL(I,  11),I=1,4) / 1, 1, 1, 1/
+      DATA (NHEL(I,  12),I=1,4) / 1, 1, 1,-1/
+      DATA (NHEL(I,  13),I=1,4) / 1,-1,-1, 1/
+      DATA (NHEL(I,  14),I=1,4) / 1,-1,-1,-1/
+      DATA (NHEL(I,  15),I=1,4) / 1,-1, 1, 1/
+      DATA (NHEL(I,  16),I=1,4) / 1,-1, 1,-1/
       INTEGER IDEN_VALUES(6)
       DATA IDEN_VALUES /36, 36, 36, 36, 36, 36/
       INTEGER IJ_VALUES(6)
@@ -87,7 +87,7 @@ C     ----------
       NTRY(NFKSPROCESS)=NTRY(NFKSPROCESS)+1
       IF (NTRY(NFKSPROCESS).LT.2) THEN
         SKIP(NFKSPROCESS)=1
-        DO WHILE(NHEL(GLU_IJ ,SKIP(NFKSPROCESS)).NE.1)
+        DO WHILE(NHEL(GLU_IJ ,SKIP(NFKSPROCESS)).NE.-NHEL(GLU_IJ ,1))
           SKIP(NFKSPROCESS)=SKIP(NFKSPROCESS)+1
         ENDDO
         SKIP(NFKSPROCESS)=SKIP(NFKSPROCESS)-1
@@ -123,7 +123,7 @@ C     ----------
       ANS(2) = 0D0
       HEL_FAC=1D0
       DO IHEL=1,NCOMB
-        IF (NHEL(GLU_IJ,IHEL).LE.0) THEN
+        IF (NHEL(GLU_IJ,IHEL).EQ.NHEL(GLU_IJ,1)) THEN
           IF ((GOODHEL(IHEL,NFKSPROCESS) .OR. GOODHEL(IHEL+SKIP(NFKSPRO
      $     CESS),NFKSPROCESS) .OR. NTRY(NFKSPROCESS) .LT. 2) ) THEN
             ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,BORNS)
@@ -153,10 +153,10 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u~ u > t t~ WEIGHTED=2 [ QCD ]
-C     Process: c~ c > t t~ WEIGHTED=2 [ QCD ]
-C     Process: d~ d > t t~ WEIGHTED=2 [ QCD ]
-C     Process: s~ s > t t~ WEIGHTED=2 [ QCD ]
+C     Process: u~ u > t t~ WEIGHTED=2 [ real = QCD ]
+C     Process: c~ c > t t~ WEIGHTED=2 [ real = QCD ]
+C     Process: d~ d > t t~ WEIGHTED=2 [ real = QCD ]
+C     Process: s~ s > t t~ WEIGHTED=2 [ real = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -204,6 +204,7 @@ C
       COMMON/CCALCULATEDBORN/CALCULATEDBORN
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+      INTEGER STEP_HEL
       INTEGER IJ_VALUES(6)
       DATA IJ_VALUES /1, 2, 3, 4, 1, 2/
 C     
@@ -224,8 +225,13 @@ C     ----------
       BACK_HEL = NHEL(GLU_IJ)
       BORNS(1) = 0D0
       BORNS(2) = 0D0
-      DO IHEL=-1,1,2
-        IF (IHEL.EQ.-1.OR.NHEL(GLU_IJ).NE.0) THEN
+      IF (BACK_HEL.NE.0) THEN
+        STEP_HEL=-2*BACK_HEL
+      ELSE
+        STEP_HEL=1
+      ENDIF
+      DO IHEL=BACK_HEL,-BACK_HEL,STEP_HEL
+        IF (IHEL.EQ.BACK_HEL.OR.NHEL(GLU_IJ).NE.0) THEN
           IF (NHEL(GLU_IJ).NE.0) NHEL(GLU_IJ) = IHEL
           IF (.NOT. CALCULATEDBORN) THEN
             CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
@@ -236,9 +242,9 @@ C     ----------
 C           Amplitude(s) for diagram number 1
             CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_11,AMP(1))
             DO I=1,NGRAPHS
-              IF(IHEL.EQ.-1)THEN
+              IF(IHEL.EQ.BACK_HEL)THEN
                 SAVEAMP(I,HELL)=AMP(I)
-              ELSEIF(IHEL.EQ.1)THEN
+              ELSEIF(IHEL.EQ.-BACK_HEL)THEN
                 SAVEAMP(I,HELL+SKIP(NFKSPROCESS))=AMP(I)
               ELSE
                 WRITE(*,*) 'ERROR #1 in born.f'
@@ -247,9 +253,9 @@ C           Amplitude(s) for diagram number 1
             ENDDO
           ELSEIF (CALCULATEDBORN) THEN
             DO I=1,NGRAPHS
-              IF(IHEL.EQ.-1)THEN
+              IF(IHEL.EQ.BACK_HEL)THEN
                 AMP(I)=SAVEAMP(I,HELL)
-              ELSEIF(IHEL.EQ.1)THEN
+              ELSEIF(IHEL.EQ.-BACK_HEL)THEN
                 AMP(I)=SAVEAMP(I,HELL+SKIP(NFKSPROCESS))
               ELSE
                 WRITE(*,*) 'ERROR #1 in born.f'
@@ -264,15 +270,15 @@ C           Amplitude(s) for diagram number 1
             DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
             ENDDO
-            BORNS(2-(1-IHEL)/2)=BORNS(2-(1-IHEL)/2)+ZTEMP*DCONJG(JAMP(I
-     $       ))/DENOM(I)
+            BORNS(2-(1+BACK_HEL*IHEL)/2)=BORNS(2-(1+BACK_HEL*IHEL)/2)
+     $       +ZTEMP*DCONJG(JAMP(I))/DENOM(I)
           ENDDO
           DO I = 1, NGRAPHS
             AMP2(I)=AMP2(I)+AMP(I)*DCONJG(AMP(I))
           ENDDO
           DO I = 1, NCOLOR
             JAMP2(I)=JAMP2(I)+JAMP(I)*DCONJG(JAMP(I))
-            JAMPH(2-(1-IHEL)/2,I)=JAMP(I)
+            JAMPH(2-(1+BACK_HEL*IHEL)/2,I)=JAMP(I)
           ENDDO
         ENDIF
       ENDDO

@@ -26,6 +26,7 @@ import sys
 import optparse
 import time
 import shutil
+import traceback
 import gzip as ziplib
 
 try:
@@ -236,9 +237,12 @@ def multiple_try(nb_try=5, sleep=20):
                         logger_stderr.debug('fail to do %s function with %s args. %s try on a max of %s (%s waiting time)' %
                                  (str(f), ', '.join([str(a) for a in args]), i+1, nb_try, sleep * (i+1)))
                         logger_stderr.debug('error is %s' % str(error))
+                        if __debug__: logger_stderr.debug('and occurred at :'+traceback.format_exc())
                     wait_once = True
                     time.sleep(sleep * (i+1))
 
+            if __debug__:
+                raise
             raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)
         return deco_f_retry
     return deco_retry
@@ -351,6 +355,8 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
                 lines[iline] = result.group(1) + var + "=" + new
         if mod:
             open(name,'w').write('\n'.join(lines))
+            # reset it to change the next file
+            mod = False
 
 #===============================================================================
 # mute_logger (designed to work as with statement)
@@ -493,6 +499,19 @@ def rm_old_compile_file():
                                  if os.path.exists(os.path.join(lib_pos, lib))]
 
 
+def format_time(n_secs):
+    m, s = divmod(n_secs, 60)
+    h, m = divmod(m, 60)
+    d, h = divmod(h, 24)
+    if d > 0:
+        return "%d day%s,%dh%02dm%02ds" % (d,'' if d<=1 else 's',h, m, s)
+    elif h > 0:
+        return "%dh%02dm%02ds" % (h, m, s)
+    elif m > 0:
+        return "%dm%02ds" % (m, s)                
+    else:
+        return "%d second%s" % (s, '' if s<=1 else 's')   
+
 def rm_file_extension( ext, dirname, names):
 
     [os.remove(os.path.join(dirname, name)) for name in names if name.endswith(ext)]
@@ -543,8 +562,12 @@ def check_system_error(value=1):
 @check_system_error()
 def call(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""
-    return subprocess.call(arg, *args, **opt)
-
+    try:
+        return subprocess.call(arg, *args, **opt)
+    except OSError:
+        arg[0] = './%s' % arg[0]
+        return subprocess.call(arg, *args, **opt)
+        
 @check_system_error()
 def Popen(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""
@@ -721,8 +744,21 @@ def gunzip(path, keep=False, stdout=None):
         return 0
     
     if not stdout:
-        stdout = path[:-3]        
-    open(stdout,'w').write(ziplib.open(path, "r").read())
+        stdout = path[:-3]
+    try:
+        gfile = ziplib.open(path, "r")
+    except IOError:
+        raise
+    else:    
+        try:    
+            open(stdout,'w').write(gfile.read())
+        except IOError:
+            # this means that the file is actually not gzip
+            if stdout == path:
+                return
+            else:
+                files.cp(path, stdout)
+            
     if not keep:
         os.remove(path)
     return 0
@@ -919,6 +955,10 @@ class OptionParser(optparse.OptionParser):
 
 def sprint(*args, **opt):
     """Returns the current line number in our program."""
+    
+    if not __debug__:
+        return
+    
     import inspect
     if opt.has_key('log'):
         log = opt['log']
@@ -928,18 +968,36 @@ def sprint(*args, **opt):
         level = opt['level']
     else:
         level = logging.getLogger('madgraph').level
-        if level == 20:
-            level = 10 #avoid info level
+        #print  "madgraph level",level
+        #if level == 20:
+        #    level = 10 #avoid info level
+        #print "use", level
     lineno  =  inspect.currentframe().f_back.f_lineno
     fargs =  inspect.getframeinfo(inspect.currentframe().f_back)
     filename, lineno = fargs[:2]
     #file = inspect.currentframe().f_back.co_filename
     #print type(file)
+    try:
+        source = inspect.getsourcelines(inspect.currentframe().f_back)
+        line = source[0][lineno-source[1]]
+        line = re.findall(r"misc\.sprint\(\s*(.*)\)\s*($|#)", line)[0][0]
+        if line.startswith("'") and line.endswith("'") and line.count(",") ==0:
+            line= ''
+        elif line.startswith("\"") and line.endswith("\"") and line.count(",") ==0:
+            line= ''
+        elif line.startswith(("\"","'")) and len(args)==1 and "%" in line:
+            line= ''        
+    except Exception:
+        line=''
 
-
-    log.log(level, ' '.join([str(a) for a in args]) + \
-               '\nraised at %s at line %s ' % (filename, lineno))
+    if line:
+        intro = ' %s = \033[0m' % line
+    else:
+        intro = ''
     
+
+    log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
+                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
     return 
 
 ################################################################################
@@ -1019,6 +1077,98 @@ class digest:
     
 digest = digest().test_all()
 
+#===============================================================================
+# Helper class for timing and RAM flashing of subprocesses.
+#===============================================================================
+class ProcessTimer:
+  def __init__(self,*args,**opts):
+    self.cmd_args = args
+    self.cmd_opts = opts
+    self.execution_state = False
 
+  def execute(self):
+    self.max_vms_memory = 0
+    self.max_rss_memory = 0
+
+    self.t1 = None
+    self.t0 = time.time()
+    self.p = subprocess.Popen(*self.cmd_args,**self.cmd_opts)
+    self.execution_state = True
+
+  def poll(self):
+    if not self.check_execution_state():
+      return False
+
+    self.t1 = time.time()
+    flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
+                                              shell=True,stdout=subprocess.PIPE)
+    stdout_list = flash.communicate()[0].split('\n')
+    rss_memory = int(stdout_list[1])
+    # for now we ignore vms
+    vms_memory = 0
+
+    # This is the neat version using psutil
+#    try:
+#      pp = psutil.Process(self.p.pid)
+#
+#      # obtain a list of the subprocess and all its descendants
+#      descendants = list(pp.get_children(recursive=True))
+#      descendants = descendants + [pp]
+#
+#      rss_memory = 0
+#      vms_memory = 0
+#
+#      # calculate and sum up the memory of the subprocess and all its descendants 
+#      for descendant in descendants:
+#        try:
+#          mem_info = descendant.get_memory_info()
+#
+#          rss_memory += mem_info[0]
+#          vms_memory += mem_info[1]
+#        except psutil.error.NoSuchProcess:
+#          # sometimes a subprocess descendant will have terminated between the time
+#          # we obtain a list of descendants, and the time we actually poll this
+#          # descendant's memory usage.
+#          pass
+#
+#    except psutil.error.NoSuchProcess:
+#      return self.check_execution_state()
+
+    self.max_vms_memory = max(self.max_vms_memory,vms_memory)
+    self.max_rss_memory = max(self.max_rss_memory,rss_memory)
+
+    return self.check_execution_state()
+
+  def is_running(self):
+    # Version with psutil
+#    return psutil.pid_exists(self.p.pid) and self.p.poll() == None
+    return self.p.poll() == None
+
+  def check_execution_state(self):
+    if not self.execution_state:
+      return False
+    if self.is_running():
+      return True
+    self.executation_state = False
+    self.t1 = time.time()
+    return False
+
+  def close(self,kill=False):
+
+    if self.p.poll() == None:
+        if kill:
+            self.p.kill()
+        else:
+            self.p.terminate()
+
+    # Again a neater handling with psutil
+#    try:
+#      pp = psutil.Process(self.p.pid)
+#      if kill:
+#        pp.kill()
+#      else:
+#        pp.terminate()
+#    except psutil.error.NoSuchProcess:
+#      pass
 
 

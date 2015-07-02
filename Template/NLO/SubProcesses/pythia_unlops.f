@@ -26,8 +26,11 @@ c arguments
       double precision pin(5,nexternal)
       integer id(nexternal),ist(nexternal)
 c Born momenta
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 c cut
@@ -66,6 +69,9 @@ c convert momenta to pythia8 c++ format
 
       if (npart.eq.nexternal) then
          call get_ID_H(id)
+         do i=1,nexternal
+            if (id(i).eq.-21) id(i)=21
+         enddo
       elseif (npart.eq.nexternal-1) then
          call get_ID_S(id)
       endif
@@ -89,7 +95,7 @@ c or counter-event, we only need one scale.
             if (i.eq.i_fks) cycle
             npart=npart+1
             do j=1,4
-               pin(j,npart)=p_born(mod(j,4),npart)
+               pin(j,npart)=p1_cnt(mod(j,4),i,0)
             enddo
             pin(5,npart)=pmass(i)
             if (i.le.nincoming) then

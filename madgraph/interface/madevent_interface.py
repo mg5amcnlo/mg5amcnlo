@@ -34,6 +34,7 @@ import subprocess
 import sys
 import traceback
 import time
+import tarfile
 
 try:
     import readline
@@ -52,25 +53,12 @@ logger = logging.getLogger('madevent.stdout') # -> stdout
 logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
-    # import from madgraph directory
-    import madgraph.interface.extended_cmd as cmd
-    import madgraph.interface.common_run_interface as common_run
-    import madgraph.iolibs.files as files
-    import madgraph.iolibs.save_load_object as save_load_object
-    import madgraph.various.banner as banner_mod
-    import madgraph.various.cluster as cluster
-    import madgraph.various.gen_crossxhtml as gen_crossxhtml
-    import madgraph.various.sum_html as sum_html
-    import madgraph.various.misc as misc
-    import madgraph.various.combine_runs as combine_runs
+    import madgraph
 
-    import models.check_param_card as check_param_card    
-    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
-    MADEVENT = False
-except ImportError, error:
-    if __debug__:
-        print error
+    
+except ImportError: 
     # import from madevent directory
+    MADEVENT = True
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
     import internal.banner as banner_mod
@@ -78,12 +66,34 @@ except ImportError, error:
     from internal import InvalidCmd, MadGraph5Error, ReadWrite
     import internal.files as files
     import internal.gen_crossxhtml as gen_crossxhtml
+    import internal.gen_ximprove as gen_ximprove
     import internal.save_load_object as save_load_object
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.sum_html as sum_html
     import internal.combine_runs as combine_runs
-    MADEVENT = True
+    import internal.lhe_parser as lhe_parser
+else:
+    # import from madgraph directory
+    MADEVENT = False
+    import madgraph.interface.extended_cmd as cmd
+    import madgraph.interface.common_run_interface as common_run
+    import madgraph.iolibs.files as files
+    import madgraph.iolibs.save_load_object as save_load_object
+    import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
+    import madgraph.madevent.gen_ximprove as gen_ximprove
+    import madgraph.madevent.sum_html as sum_html
+    import madgraph.various.banner as banner_mod
+    import madgraph.various.cluster as cluster
+    import madgraph.various.misc as misc
+    import madgraph.madevent.combine_runs as combine_runs
+    import madgraph.various.lhe_parser as lhe_parser
+
+    import models.check_param_card as check_param_card    
+    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
+
+
+
 
 class MadEventError(Exception):
     pass
@@ -346,7 +356,7 @@ class HelpToCmd(object):
         
 
     def help_generate_events(self):
-        logger.info("syntax: generate_events [run_name] [options])")
+        logger.info("syntax: generate_events [run_name] [options]",)
         logger.info("-- Launch the full chain of script for the generation of events")
         logger.info("   Including possible plotting, shower and detector resolution.")
         logger.info("   Those steps are performed if the related program are installed")
@@ -354,9 +364,20 @@ class HelpToCmd(object):
         self.run_options_help([('-f', 'Use default for all questions.'),
                                ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
-    
+    def help_initMadLoop(self):
+        logger.info("syntax: initMadLoop [options]",'$MG:color:GREEN')
+        logger.info(
+"""-- Command only useful when MadEvent simulates loop-induced processes. This command compiles and run
+   the MadLoop output for the matrix element computation so as to initialize the filter for analytically
+   zero helicity configurations and loop topologies. If you suspect that a change you made in the model
+   parameters can have affected these filters, this command allows you to automatically refresh them. """)
+        logger.info("   The available options are:",'$MG:color:BLUE')
+        logger.info("     -f          : Bypass the edition of MadLoopParams.dat.",'$MG:color:BLUE')
+        logger.info("     -r          : Refresh of the existing filters (erasing them if already present).",'$MG:color:BLUE')
+        logger.info("     --nPS=<int> : Specify how many phase-space points should be tried to set up the filters.",'$MG:color:BLUE')
+        
     def help_add_time_of_flight(self):
-        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--treshold=]")
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--threshold=]")
         logger.info('-- Add in the lhe files the information')
         logger.info('   of how long it takes to a particle to decay.')
         logger.info('   threshold option allows to change the minimal value required to')
@@ -633,7 +654,27 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('No default path for this file')
         elif not os.path.isfile(args[0]):
             raise self.InvalidCmd('No default path for this file') 
-    
+   
+    def check_initMadLoop(self, args):
+        """ check initMadLoop command arguments are valid."""
+        
+        opt = {'refresh': False, 'nPS': None, 'force': False}
+        
+        for arg in args:
+            if arg in ['-r','--refresh']:
+                opt['refresh'] = True
+            if arg in ['-f','--force']:
+                opt['force'] = True
+            elif arg.startswith('--nPS='):
+                n_attempts = arg.split('=')[1]
+                try:
+                    opt['nPS'] = int(n_attempts)
+                except ValueError:
+                    raise InvalidCmd("The number of attempts specified "+
+                                      "'%s' is not a valid integer."%n_attempts)
+        
+        return opt
+        
     def check_treatcards(self, args):
         """check that treatcards arguments are valid
            [param|run|all] [--output_dir=] [--param_card=] [--run_card=]
@@ -641,7 +682,8 @@ class CheckValidForCmd(object):
         
         opt = {'output_dir':pjoin(self.me_dir,'Source'),
                'param_card':pjoin(self.me_dir,'Cards','param_card.dat'),
-               'run_card':pjoin(self.me_dir,'Cards','run_card.dat')}
+               'run_card':pjoin(self.me_dir,'Cards','run_card.dat'),
+               'forbid_MadLoopInit': False}
         mode = 'all'
         for arg in args:
             if arg.startswith('--') and '=' in arg:
@@ -672,8 +714,10 @@ class CheckValidForCmd(object):
                         opt[key] = pjoin(self.me_dir, value)
                     else:
                         raise self.InvalidCmd('No such directory: %s' % value)
-            elif arg in ['param','run','all']:
+            elif arg in ['loop','param','run','all']:
                 mode = arg
+            elif arg == '--no_MadLoopInit':
+                opt['forbid_MadLoopInit'] = True
             else:
                 self.help_treatcards()
                 raise self.InvalidCmd('Unvalid argument %s' % arg)
@@ -945,7 +989,7 @@ class CheckValidForCmd(object):
         if  not os.path.exists('%s.gz' % input_file):
             if not os.path.exists(input_file):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
-            files.cp(input_file, output_file)
+            files.ln(input_file, os.path.dirname(output_file))
         else:
             misc.gunzip(input_file, keep=True, stdout=output_file)
         
@@ -1387,6 +1431,20 @@ class CompleteForCmd(CheckValidForCmd):
         opts = self._run_options + self._generate_options
         return  self.list_completion(text, opts, line)
 
+
+    def complete_initMadLoop(self, text, line, begidx, endidx):
+        "Complete the initMadLoop command"
+       
+        numbers = [str(i) for i in range(10)]
+        opts    = ['-f','-r','--nPS=']
+       
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(line) >=6 and line[begidx-6:begidx]=='--nPS=':
+            return self.list_completion(text, numbers, line)
+        else:
+            return self.list_completion(text, [opt for opt in opts if not opt in
+                                                                    line], line)
+
     def complete_launch(self, *args, **opts):
 
         if self.ninitial == 1:
@@ -1552,6 +1610,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     _clean_mode = _plot_mode
     _display_opts = ['run_name', 'options', 'variable', 'results']
     _save_opts = ['options']
+    _initMadLoop_opts = ['-f','-r','--nPS=']
     # survey options, dict from name to type, default value, and help text
     _survey_options = {'points':('int', 1000,'Number of points for first iteration'),
                        'iterations':('int', 5, 'Number of iterations'),
@@ -1616,6 +1675,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
+        
     
     def pass_in_web_mode(self):
         """configure web data"""
@@ -1642,15 +1702,17 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         super(MadEventCmd,self).set_configuration(amcatnlo=amcatnlo, 
                                                             final=final, **opt)
+
         if not final:
             return self.options # the return is usefull for unittest
+
 
         # Treat each expected input
         # delphes/pythia/... path
         # ONLY the ONE LINKED TO Madevent ONLY!!!
         for key in (k for k in self.options if k.endswith('path')):
             path = self.options[key]
-            if path is None:
+            if path is None or key.startswith("cluster"):
                 continue
             if not os.path.isdir(path):
                 path = pjoin(self.me_dir, self.options[key])
@@ -1880,7 +1942,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
  
 
 
+    def do_edit_cards(self, line):
+        """Advanced commands: Basic edition of the cards"""
+        args = self.split_arg(line)
+        # Check argument's validity
+        mode = self.check_generate_events(args)
+        self.ask_run_configuration(mode)
         
+        return
 
     ############################################################################
 
@@ -1888,6 +1957,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def do_generate_events(self, line):
         """Main Commands: launch the full chain """
         
+        self.banner = None
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
@@ -1922,6 +1992,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
             self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
                           postcmd=False)
+            nb_event = self.run_card['nevents']
+            self.exec_cmd('refine %s' % nb_event, postcmd=False)
             if not float(self.results.current['cross']):
                 # Zero cross-section. Try to guess why
                 text = '''Survey return zero cross section. 
@@ -1933,24 +2005,61 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
    Please check/correct your param_card and/or your run_card.'''
                 logger_stderr.critical(text)
                 raise ZeroResult('See https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/FAQ-General-14')
-            nb_event = self.run_card['nevents']
+
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
-            self.exec_cmd('refine %s' % nb_event, postcmd=False)
+            
             self.exec_cmd('combine_events', postcmd=False)
             self.print_results_in_shell(self.results.current)
-            self.run_syscalc('parton')
-            self.create_plot('parton')
-            self.exec_cmd('store_events', postcmd=False)
-            self.exec_cmd('reweight -from_cards', postcmd=False)
-            self.exec_cmd('decay_events -from_cards', postcmd=False)
-            self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
-            # pythia launches pgs/delphes if needed
-            self.store_result()
+
             
+            self.run_syscalc('parton')
+            self.create_plot('parton')            
+            self.exec_cmd('store_events', postcmd=False)            
+            self.exec_cmd('reweight -from_cards', postcmd=False)            
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
+            if self.run_card['time_of_flight']>=0:
+                self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
+            self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
+            # pythia launches pgs/delphes if needed    
+            self.store_result()
     
+    def do_initMadLoop(self,line):
+        """Compile and run MadLoop for a certain number of PS point so as to 
+        initialize MadLoop (setup the zero helicity and loop filter.)"""
+        
+        args = line.split()
+        # Check argument's validity
+        options = self.check_initMadLoop(args)
+        
+        if not options['force']:
+            self.ask_edit_cards(['MadLoopParams.dat'], mode='fixed', plot=False)
+            self.exec_cmd('treatcards loop --no_MadLoopInit')
+
+        if options['refresh']:
+            for filter in glob.glob(pjoin(
+                   self.me_dir,'SubProcesses','MadLoop5_resources','*Filter*')):
+                logger.debug("Resetting filter '%s'."%os.path.basename(filter))
+                os.remove(filter)
+
+        MLCard = banner_mod.MadLoopParam(pjoin(self.me_dir,
+                                                   'Cards','MadLoopParams.dat'))
+        if options['nPS'] is None:
+            options['nPS'] = MLCard['CheckCycle']+2
+        elif options['nPS'] < MLCard['CheckCycle']+2:
+            new_n_PS = MLCard['CheckCycle']+2
+            logger.debug('Hard-setting user-defined n_PS (%d) to %d, because '\
+              %(options['nPS'],new_n_PS)+"of the 'CheckCycle' value (%d) "%MLCard['CheckCycle']+\
+                                             "specified in the ML param card.")
+            options['nPS'] = new_n_PS
+
+        MadLoopInitializer.init_MadLoop(self.me_dir,n_PS=options['nPS'],
+                                   subproc_prefix='PV', MG_options=self.options)
+
     def do_launch(self, line, *args, **opt):
         """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
         if self.ninitial == 1:
+            logger.info("Note that since 2.3. The launch for 1>N pass in event generation\n"+
+                           "    To have the previous behavior use the calculate_decay_widths function")
             self.do_calculate_decay_widths(line, *args, **opt)
         else:
             self.do_generate_events(line, *args, **opt)
@@ -1958,9 +2067,35 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
         data should be of type: gen_crossxhtml.OneTagResults"""
+
         if not data:
             return
+
+        if data['run_statistics']:
+            globalstat = sum_html.RunStatistics()
+            
+            logger.info(" " )
+            logger.debug(" === Run statistics summary ===")
+            for key, value in data['run_statistics'].items():
+                globalstat.aggregate_statistics(value)
+                level = 5
+                if value.has_warning():
+                    level = 10
+                logger.log(level, value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).\
+                  replace(' statistics',''))
+            logger.info(" " )
+            logger.debug(globalstat.nice_output('combined', no_warning=True))
+            if globalstat.has_warning():
+                logger.warning(globalstat.get_warning_text())
+            logger.info(" ")
+
+            
         logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
+        
+        total_time = int(sum(_['cumulative_timing'] for _ in data['run_statistics'].values()))
+        if total_time > 0:
+            logger.info("     Cumulative sequential time for this run: %s"%misc.format_time(total_time))
+        
         if self.ninitial == 1:
             logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
         else:
@@ -1977,7 +2112,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
         logger.info(" " )
 
-    def print_results_in_file(self, data, path, mode='w'):
+    def print_results_in_file(self, data, path, mode='w', format='full'):
         """Have a nice results prints in the shell,
         data should be of type: gen_crossxhtml.OneTagResults"""
         if not data:
@@ -1985,22 +2120,39 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         fsock = open(path, mode)
         
-        fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
-                    (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
-        
-        if self.ninitial == 1:
-            fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
-        else:
-            fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
-        fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
-        if data['cross_pythia'] and data['nb_event_pythia']:
+        if data['run_statistics']:
+            logger.debug(" === Run statistics summary ===")
+            for key, value in data['run_statistics'].items():
+                logger.debug(value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).\
+                  replace(' statistics',''))
+            logger.info(" " )
+
+        if format == "full":
+            fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
+                        (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
+            
             if self.ninitial == 1:
-                fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
+                fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
             else:
-                fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
-            fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
-        fsock.write(" \n" )
-    
+                fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
+            fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
+            if data['cross_pythia'] and data['nb_event_pythia']:
+                if self.ninitial == 1:
+                    fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
+                else:
+                    fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
+                fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
+            fsock.write(" \n" )
+        elif format == "short":
+            if mode == "w":
+                fsock.write("# run_name tag cross error Nb_event cross_after_matching nb_event_after matching\n")
+                
+            if data['cross_pythia'] and data['nb_event_pythia']:
+                text = "%(run_name)s %(tag)s %(cross)s %(error)s %(nb_event)s %(cross_pythia)s %(nb_event_pythia)s\n"
+            else:
+                text = "%(run_name)s %(tag)s %(cross)s %(error)s %(nb_event)s\n"
+            fsock.write(text % data)
+                
     ############################################################################      
     def do_calculate_decay_widths(self, line):
         """Main Commands: launch decay width calculation and automatic inclusion of
@@ -2010,6 +2162,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # Check argument's validity
         accuracy = self.check_calculate_decay_widths(args)
         self.ask_run_configuration('parton')
+        self.banner = None
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -2031,10 +2184,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                        " ".join(['--' + opt + '=' + str(val) for (opt,val) \
                                  in opts])),
                       postcmd=False)
+        self.refine_mode = "old" # specify how to combine event
         self.exec_cmd('combine_events', postcmd=False)
         self.exec_cmd('store_events', postcmd=False)
         
         self.collect_decay_widths()
+        self.print_results_in_shell(self.results.current)
         self.update_status('calculate_decay_widths done', 
                                                  level='parton', makehtml=False)   
 
@@ -2219,13 +2374,36 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def do_treatcards(self, line, mode=None, opt=None):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
-
         if not mode and not opt:
             args = self.split_arg(line)
             mode,  opt  = self.check_treatcards(args)
+            
+        # To decide whether to refresh MadLoop's helicity filters, it is necessary
+        # to check if the model parameters where modified or not, before doing
+        # anything else.        
+        need_MadLoopFilterUpdate = False
+        # Just to record what triggered the reinitialization of MadLoop for a 
+        # nice debug message.
+        type_of_change           = ''
+        if not opt['forbid_MadLoopInit'] and self.proc_characteristics['loop_induced'] \
+                                                    and mode in ['loop', 'all']:
+            paramDat = pjoin(self.me_dir, 'Cards','param_card.dat')
+            paramInc = pjoin(opt['output_dir'], 'param_card.inc')
+            if (not os.path.isfile(paramDat)) or (not os.path.isfile(paramInc)) or \
+               (os.path.getmtime(paramDat)-os.path.getmtime(paramInc)) > 0.0:
+                need_MadLoopFilterUpdate = True
+                type_of_change           = 'model'
+            
+            ML_in = pjoin(self.me_dir, 'Cards', 'MadLoopParams.dat')
+            ML_out = pjoin(self.me_dir,"SubProcesses",
+                                      "MadLoop5_resources", "MadLoopParams.dat")         
+            if (not os.path.isfile(ML_in)) or (not os.path.isfile(ML_out)) or \
+                (os.path.getmtime(ML_in)-os.path.getmtime(ML_out)) > 0.0:
+                need_MadLoopFilterUpdate = True
+                type_of_change           = 'MadLoop'
+
         #check if no 'Auto' are present in the file
         self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
-    
         
         if mode in ['param', 'all']:
             model = self.find_model_name()
@@ -2262,7 +2440,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                              stdout=devnull)
                 devnull.close()
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
-            param_card.write_inc_file(outfile, ident_card, default)
+
+            need_mp = self.proc_characteristics['loop_induced']                
+            param_card.write_inc_file(outfile, ident_card, default, need_mp=need_mp)
       
       
         if mode in ['run', 'all']:
@@ -2277,6 +2457,142 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 run_card['ebeam2'] = 0
             
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+        
+
+        if self.proc_characteristics['loop_induced'] and mode in ['loop', 'all']:
+            self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.me_dir, 
+                                                  'Cards', 'MadLoopParams.dat'))
+            # The writing out of MadLoop filter is potentially dangerous
+            # when running in multi-core with a central disk. So it is turned
+            # off here. If these filters were not initialized then they will 
+            # have to be re-computed at the beginning of each run.
+            if 'WriteOutFilters' in self.MadLoopparam.user_set and \
+                                       self.MadLoopparam.get('WriteOutFilters'):
+                logger.info(
+"""You chose to have MadLoop writing out filters. 
+Beware that this can be dangerous for local multicore runs.""")
+            self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
+            
+            # The conservative settings below for 'CTModeInit' and 'ZeroThres'
+            # help adress issues for processes like g g > h z, and g g > h g
+            # where there are some helicity configuration heavily suppressed 
+            # (by several orders of magnitude) so that the helicity filter 
+            # needs high numerical accuracy to correctly handle this spread in
+            # magnitude. Also, because one cannot use the Born as a reference
+            # scale, it is better to force quadruple precision *for the 
+            # initialization points only*. This avoids numerical accuracy issues
+            # when setting up the helicity filters and does not significantly
+            # slow down the run.
+#            self.MadLoopparam.set('CTModeInit',4, ifnotdefault=False)
+            # Consequently, we can allow for a finer threshold for vanishing
+            # helicity configuration
+#            self.MadLoopparam.set('ZeroThres',1.0e-11, ifnotdefault=False)
+
+#           It is a bit superficial to use the level 2 which tries to numerically
+#           map matching helicities (because of CP symmetry typically) together.
+#           It is useless in the context of MC over helicities and it can 
+#           potentially make the helicity double checking fail.
+            self.MadLoopparam.set('HelicityFilterLevel',1, ifnotdefault=False)
+
+#           To be on the safe side however, we ask for 4 consecutive matching
+#           helicity filters.
+            self.MadLoopparam.set('CheckCycle',4, ifnotdefault=False)
+            
+            # For now it is tricky to have eahc channel performing the helicity
+            # double check. What we will end up doing is probably some kind
+            # of new initialization round at the beginning of each launch
+            # command, to reset the filters.    
+            self.MadLoopparam.set('DoubleCheckHelicityFilter',False,
+                                                             ifnotdefault=False)
+          
+            # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
+            # processes, so that we place OPP last.
+            if not hasattr(self, 'run_card'):
+                run_card = banner_mod.RunCard(opt['run_card'])
+            else:
+                run_card = self.run_card
+            if run_card['nhel'] == 0:
+                if 'MLReductionLib' in self.MadLoopparam.user_set and \
+                            self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    logger.warning(
+    """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
+    Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
+                # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
+                self.MadLoopparam.set('MLReductionLib','2|3|1', ifnotdefault=False)
+            else:
+                if 'MLReductionLib' in self.MadLoopparam.user_set and \
+                    not self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    logger.warning(
+    """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
+    Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
+                self.MadLoopparam.set('MLReductionLib','1|2|3|4', ifnotdefault=False)
+
+            # Also TIR cache will only work when NRotations_DP=0 (but only matters
+            # when not MC-ing over helicities) so it will be hard-reset by MadLoop
+            # to zero when not MC-ing over helicities, unless the parameter
+            # Force_ML_Helicity_Sum is set to True in the matrix<i>.f codes.
+            if run_card['nhel'] == 0:
+                if ('NRotations_DP' in self.MadLoopparam.user_set and \
+                                     self.MadLoopparam.get('NRotations_DP')!=0) or \
+                   ('NRotations_QP' in self.MadLoopparam.user_set and \
+                                         self.MadLoopparam.get('NRotations_QP')!=0):
+                    logger.warning(
+    """You chose to also use a lorentz rotation for stability tests (see parameter NRotations_[DP|QP]).
+    Beware that, for optimization purposes, MadEvent uses manual TIR cache clearing which is not compatible
+    with the lorentz rotation stability test. The number of these rotations to be used will be reset to 
+    zero by MadLoop. You can avoid this by changing the parameter 'FORCE_ML_HELICITY_SUM' int he matrix<i>.f
+    files to be .TRUE. so that the sum over helicity configurations is performed within MadLoop (in which case
+    the helicity of final state particles cannot be speicfied in the LHE file.""")
+                self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
+                self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)
+            else:
+                # When MC-ing over helicities, the manual TIR cache clearing is
+                # not necessary, so that one can use the lorentz check
+                # Using NRotations_DP=1 slows down the code by close to 100%
+                # but it is typicaly safer.
+                # self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
+                # Revert to the above to be slightly less robust but twice faster.
+                self.MadLoopparam.set('NRotations_DP',1,ifnotdefault=False)
+                self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)                
+            
+            # Finally, the stability tests are slightly less reliable for process
+            # with less or equal than 4 final state particles because the 
+            # accessible kinematic is very limited (i.e. lorentz rotations don't
+            # shuffle invariants numerics much). In these cases, we therefore
+            # increase the required accuracy to 10^-7.
+            # This is important for getting g g > z z [QCD] working with a
+            # ptheavy cut as low as 1 GeV.  
+            if self.proc_characteristics['nexternal']<=4:
+                if ('MLStabThres' in self.MadLoopparam.user_set and \
+                                   self.MadLoopparam.get('MLStabThres')>1.0e-7):
+                    logger.warning(
+    """You chose to increase the default value of the MadLoop parameter 'MLStabThres' above 1.0e-7.
+    Stability tests can be less reliable on the limited kinematic of processes with less or equal
+    than four external legs, so this is not recommended (especially not for g g > z z).""")
+                self.MadLoopparam.set('MLStabThres',1.0e-7,ifnotdefault=False)
+            else:
+                self.MadLoopparam.set('MLStabThres',1.0e-4,ifnotdefault=False)            
+
+            #write the output file
+            self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
+                                          "MadLoopParams.dat"))
+            
+        if self.proc_characteristics['loop_induced'] and mode in ['loop', 'all']:
+            # Now Update MadLoop filters if necessary (if modifications were made to
+            # the model parameters).
+            if need_MadLoopFilterUpdate:
+                logger.debug('Changes to the %s parameters'%type_of_change+\
+                  ' have been detected. Madevent will then now reinitialize'+\
+                                                            ' MadLoop filters.')
+                self.exec_cmd('initMadLoop -r -f')
+            # The need_MadLoopInit condition is just there so as to avoid useless
+            # printout if there is not initialization to be performed. But even
+            # without it, and because we call 'initMadLoop' without the '-r' option
+            # no time would be wasted anyway, since the existing filters would not
+            # be overwritten.
+            elif not opt['forbid_MadLoopInit'] and \
+                                   MadLoopInitializer.need_MadLoopInit(self.me_dir):
+                self.exec_cmd('initMadLoop -f')
          
     ############################################################################      
     def do_survey(self, line):
@@ -2302,68 +2618,34 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if self.cluster_mode:
             logger.info('Creating Jobs')
 
-        logger.info('Working on SubProcesses')
         self.total_jobs = 0
-        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
-                                                                 'subproc.mg'))]
+        subproc = [l.strip() for l in open(pjoin(self.me_dir,
+                                                 'SubProcesses', 'subproc.mg'))]
+
+        P_zero_result = [] # check the number of times where they are no phase-space
+
+        # File for the loop (for loop induced)
+        if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
+                 'MadLoop5_resources')) and cluster.need_transfer(self.options):
+            tf=tarfile.open(pjoin(self.me_dir, 'SubProcesses', 
+                         'MadLoop5_resources.tar.gz'), 'w:gz', dereference=True)
+            tf.add(pjoin(self.me_dir,'SubProcesses','MadLoop5_resources'),
+                                                   arcname='MadLoop5_resources')
+            tf.close()
+
+        logger.info('Working on SubProcesses')
+        ajobcreator = gen_ximprove.gensym(self)
+
         #check difficult PS case
         if float(self.run_card['mmjj']) > 0.01 * (float(self.run_card['ebeam1'])+float(self.run_card['ebeam2'])):
             self.pass_in_difficult_integration_mode()
-          
-        P_zero_result = [] # check the number of times where they are no phase-space
-
-        nb_tot_proc = len(subproc)
-        for nb_proc,subdir in enumerate(subproc):
-            self.update_status('Compiling for process %s/%s. <br> (previous processes already running)' % \
-                               (nb_proc+1,nb_tot_proc), level=None)
-            subdir = subdir.strip()
-            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
-            logger.info('    %s ' % subdir)
-            # clean previous run
-            for match in glob.glob(pjoin(Pdir, '*ajob*')):
-                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
-                    os.remove(match)
-            for match in glob.glob(pjoin(Pdir, 'G*')):
-                if os.path.exists(pjoin(match,'results.dat')):
-                    os.remove(pjoin(match, 'results.dat'))
-            
-            #compile gensym
-            self.compile(['gensym'], cwd=Pdir)
-            if not os.path.exists(pjoin(Pdir, 'gensym')):
-                raise MadEventError, 'Error make gensym not successful'
-
-            # Launch gensym
-            p = misc.Popen(['./gensym'], stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE, 
-                                 stderr=subprocess.STDOUT, cwd=Pdir)
-            sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
-            (stdout, stderr) = p.communicate(sym_input)
-            if os.path.exists(pjoin(self.me_dir,'error')):
-                files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
-                P_zero_result.append(subdir)
-                continue
-            
-            if not os.path.exists(pjoin(Pdir, 'ajob1')) or p.returncode:
-                logger.critical(stdout)
-                raise MadEventError, 'Error gensym run not successful'
-
-
-            self.compile(['madevent'], cwd=Pdir)
-            
-            alljobs = glob.glob(pjoin(Pdir,'ajob*'))
-            self.total_jobs += len(alljobs)
-            for i, job in enumerate(alljobs):
-                job = os.path.basename(job)
-                self.launch_job('%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
-                                                    run_type='survey on %s (%s/%s)' % (subdir,nb_proc+1,len(subproc)))
-                if os.path.exists(pjoin(self.me_dir,'error')):
-                    self.monitor(html=False)
-                    raise MadEventError, 'Error detected Stop running: %s' % \
-                                         open(pjoin(self.me_dir,'error')).read()
-                                         
+        
+        jobs, P_zero_result = ajobcreator.launch()
+        
         # Check if all or only some fails
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
+                Pdir = pjoin(self.me_dir, 'SubProcesses',subproc[0].strip())
                 raise ZeroResult, '%s' % \
                     open(pjoin(Pdir,'ajob.no_ps.log')).read()
             else:
@@ -2372,9 +2654,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
-        cross, error = sum_html.make_all_html_results(self)
-        self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error) 
+        if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
+           self.run_card['gridpack']:
+            #will be done during the refine (more precisely in gen_ximprove)
+            cross, error = sum_html.make_all_html_results(self)
+            self.results.add_detail('cross', cross)
+            self.results.add_detail('error', error)  
+            self.exec_cmd("print_results %s" % self.run_name,
+                           errorhandling=False, printcmd=False, precmd=False, postcmd=False)      
+        
+        self.results.add_detail('run_statistics', dict(ajobcreator.run_statistics))
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################
@@ -2388,27 +2677,22 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.opts['iterations'] = 1 + self._survey_options['iterations'][1]
         if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
             self.opts['accuracy'] = self._survey_options['accuracy'][1]/2  
-            
+        
         # Modify run_config.inc in order to improve the refine
-        conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
-        files.cp(conf_path, conf_path + '.bk')
-
-        text = open(conf_path).read()
-        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
-        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 20000 )''', text)
-        fsock = open(conf_path, 'w')
-        fsock.write(text)
-        fsock.close()
+        #conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
+        #files.cp(conf_path, conf_path + '.bk')
+        #
+        #text = open(conf_path).read()
+        #text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
+        #text = re.sub('''\(max_events = \d+\)''', '''(max_events = 20000 )''', text)
+        #fsock = open(conf_path, 'w')
+        #fsock.write(text)
+        #fsock.close()
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
                      '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
-        
-        
-        
-        
-        
         
         
     ############################################################################      
@@ -2420,11 +2704,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # Check argument's validity
         self.check_refine(args)
         
+        refine_opt = {'err_goal': args[0], 'split_channels': True}   
         precision = args[0]
         if len(args) == 2:
-            max_process = args[1]
-        else:
-            max_process = 5
+            refine_opt['max_process']= args[1]
+
 
         # initialize / remove lhapdf mode
         self.configure_directory()
@@ -2440,42 +2724,74 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
+    
+        # cleanning the previous job
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
-            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
-            bindir = pjoin(os.path.relpath(self.dirbin, Pdir))
-                           
-            logger.info('    %s ' % subdir)
-            # clean previous run
+            Pdir = pjoin(self.me_dir, 'SubProcesses', subdir)
             for match in glob.glob(pjoin(Pdir, '*ajob*')):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(match)
-            
-            proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
-                                    stdout=devnull,
-                                    stdin=subprocess.PIPE,
-                                    cwd=Pdir)
-            proc.communicate('%s %s T\n' % (precision, max_process))
 
-            if os.path.exists(pjoin(Pdir, 'ajob1')):
-                self.compile(['madevent'], cwd=Pdir)
-                alljobs = glob.glob(pjoin(Pdir,'ajob*'))
-                
-                #remove associated results.dat (ensure to not mix with all data)
-                Gre = re.compile("\s*j=(G[\d\.\w]+)")
-                for job in alljobs:
-                    Gdirs = Gre.findall(open(job).read())
-                    for Gdir in Gdirs:
-                        if os.path.exists(pjoin(Pdir, Gdir, 'results.dat')):
-                            os.remove(pjoin(Pdir, Gdir,'results.dat'))
-                
-                nb_tot = len(alljobs)            
-                self.total_jobs += nb_tot
-                for i, job in enumerate(alljobs):
-                    job = os.path.basename(job)
-                    self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
-                             run_type='Refine number %s on %s (%s/%s)' % 
-                             (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+        x_improve = gen_ximprove.gen_ximprove(self, refine_opt)
+        # Load the run statistics from the survey
+        survey_statistics = dict(self.results.get_detail('run_statistics'))
+        # Printout survey statistics
+        if __debug__ and survey_statistics:
+            globalstat = sum_html.RunStatistics()
+            logger.debug(" === Survey statistics summary ===")
+            for key, value in survey_statistics.items():
+                globalstat.aggregate_statistics(value)
+                level = 5
+                if value.has_warning():
+                    level = 10
+                logger.log(level, 
+                  value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).
+                                                      replace(' statistics',''))
+            logger.debug(globalstat.nice_output('combined', no_warning=True))
+                        
+        if survey_statistics:
+            x_improve.run_statistics = survey_statistics
+        
+        x_improve.launch() # create the ajob for the refinment.
+        if not self.history or 'refine' not in self.history[-1]:
+            cross, error = x_improve.update_html() #update html results for survey
+            if  cross == 0:
+                return
+            logger.info("Current estimate of cross-section: %s +- %s" % (cross, error))
+        
+
+        if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
+            # Non splitted mode is based on writting ajob so need to track them
+            # Splitted mode handle the cluster submition internally.
+            for nb_proc,subdir in enumerate(subproc):
+                subdir = subdir.strip()
+                Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
+                bindir = pjoin(os.path.relpath(self.dirbin, Pdir))
+                               
+                logger.info('    %s ' % subdir)
+    
+                if os.path.exists(pjoin(Pdir, 'ajob1')):
+                    self.compile(['madevent'], cwd=Pdir)
+                    
+                    alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                    
+                    #remove associated results.dat (ensure to not mix with all data)
+                    Gre = re.compile("\s*j=(G[\d\.\w]+)")
+                    for job in alljobs:
+                        Gdirs = Gre.findall(open(job).read())
+                        for Gdir in Gdirs:
+                            if os.path.exists(pjoin(Pdir, Gdir, 'results.dat')):
+                                os.remove(pjoin(Pdir, Gdir,'results.dat'))
+                    
+                    nb_tot = len(alljobs)            
+                    self.total_jobs += nb_tot
+                    for i, job in enumerate(alljobs):
+                        job = os.path.basename(job)
+                        self.launch_job('%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
+                                 run_type='Refine number %s on %s (%s/%s)' % 
+                                 (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
                      html=True)
         
@@ -2485,17 +2801,50 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         except Exception:
             pass
         
-        bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
-
-        combine_runs.CombineRuns(self.me_dir)
-        
+        if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
+            # the merge of the events.lhe is handle in the x_improve class
+            # for splitted runs. (and partly in store_events).        
+            combine_runs.CombineRuns(self.me_dir)
+            self.refine_mode = "old"
+        else:
+            self.refine_mode = "new"
+            
         cross, error = sum_html.make_all_html_results(self)
         self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error)   
+        self.results.add_detail('error', error)
+
+        self.results.add_detail('run_statistics', 
+                                dict(self.results.get_detail('run_statistics')))
 
         self.update_status('finish refine', 'parton', makehtml=False)
         devnull.close()
+    
+    ############################################################################ 
+    def do_combine_iteration(self, line):
+        """Not in help: Combine a given iteration combine_iteration Pdir Gdir S|R step
+            S is for survey 
+            R is for refine
+            step is the iteration number (not very critical)""" 
+
+        self.set_run_name("tmp")
+        self.configure_directory(html_opening=False)
+        Pdir, Gdir, mode, step = self.split_arg(line)
+        if Gdir.startswith("G"):
+            Gdir = Gdir[1:]
+        if "SubProcesses" not in Pdir:
+            Pdir = pjoin(self.me_dir, "SubProcesses", Pdir)
+        if mode == "S":
+            self.opts = dict([(key,value[1]) for (key,value) in \
+                          self._survey_options.items()])
+            gensym = gen_ximprove.gensym(self)
+            gensym.combine_iteration(Pdir, Gdir, int(step))
+        elif mode == "R":
+            refine = gen_ximprove.gen_ximprove_share(self)
+            refine.combine_iteration(Pdir, Gdir, int(step))             
         
+            
+
+      
     ############################################################################ 
     def do_combine_events(self, line):
         """Advanced commands: Launch combine events"""
@@ -2505,59 +2854,102 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.check_combine_events(args)
 
         self.update_status('Combining Events', level='parton')
-        try:
-            os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
-        except Exception:
-            pass
+
         
-        if self.options['run_mode'] ==1 and self.options['cluster_tmp_path']:
+        if not hasattr(self, "refine_mode") or self.refine_mode == "old":
+            try:
+                os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
+            except Exception:
+                pass
+
             tmpcluster = cluster.MultiCore(nb_core=1)
             tmpcluster.launch_and_wait('../bin/internal/run_combine', 
-                                        cwd=pjoin(self.me_dir,'SubProcesses'),
-                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-                                        required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-        else:
-            self.cluster.launch_and_wait('../bin/internal/run_combine', 
-                                        cwd=pjoin(self.me_dir,'SubProcesses'),
-                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
-                                        required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
-        
-        output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-        # Store the number of unweighted events for the results object
-        pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
-        try:      
-            nb_event = pat.search(output).groups()[0]
-        except AttributeError:
-            time.sleep(10)
+                                       args=[self.run_name],
+                                       cwd=pjoin(self.me_dir,'SubProcesses'),
+                                       stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
+                                       required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
+
+            #self.cluster.launch_and_wait('../bin/internal/run_combine', 
+            #                                cwd=pjoin(self.me_dir,'SubProcesses'),
+            #                                stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
+            #                                required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
+            
             output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
-            try:
+            # Store the number of unweighted events for the results object
+            pat = re.compile(r'''\s*Unweighting\s*selected\s*(\d+)\s*events''')
+            try:      
                 nb_event = pat.search(output).groups()[0]
             except AttributeError:
-                logger.warning('Fail to read the number of unweighted events in the combine.log file')
-                nb_event = 0
-                
-        self.results.add_detail('nb_event', nb_event)
-        
-        
-        # Define The Banner
-        tag = self.run_card['run_tag']
-        # Update the banner with the pythia card
-        if not self.banner:
-            self.banner = banner_mod.recover_banner(self.results, 'parton')
-        self.banner.load_basic(self.me_dir)
-        # Add cross-section/event information
-        self.banner.add_generation_info(self.results.current['cross'], nb_event)
-        if not hasattr(self, 'random_orig'): self.random_orig = 0
-        self.banner.change_seed(self.random_orig)
-        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                                     '%s_%s_banner.txt' % (self.run_name, tag)))
-        
-        
-        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'))
-        self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'))        
+                time.sleep(10)
+                output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
+                try:
+                    nb_event = pat.search(output).groups()[0]
+                except AttributeError:
+                    logger.warning('Fail to read the number of unweighted events in the combine.log file')
+                    nb_event = 0
 
+            self.results.add_detail('nb_event', nb_event)
+            
+            
+            # Define The Banner
+            tag = self.run_card['run_tag']
+            
+            # Update the banner with the pythia card
+            if not self.banner:
+                self.banner = banner_mod.recover_banner(self.results, 'parton')
+            self.banner.load_basic(self.me_dir)
+            # Add cross-section/event information
+            self.banner.add_generation_info(self.results.current['cross'], nb_event)
+            if not hasattr(self, 'random_orig'): self.random_orig = 0
+            self.banner.change_seed(self.random_orig)
+            if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+                os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                         '%s_%s_banner.txt' % (self.run_name, tag)))
+            
+            
+            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'events.lhe'),
+                                    out=pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+            self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
+                                    out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
+
+                    
+        elif self.refine_mode == "new":
+            # Define The Banner
+            tag = self.run_card['run_tag']
+            # Update the banner with the pythia card
+            if not self.banner:
+                self.banner = banner_mod.recover_banner(self.results, 'parton')
+            self.banner.load_basic(self.me_dir)
+            # Add cross-section/event information
+            self.banner.add_generation_info(self.results.current['cross'], self.run_card['nevents'])
+            if not hasattr(self, 'random_orig'): self.random_orig = 0
+            self.banner.change_seed(self.random_orig)
+            if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+                os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                    '%s_%s_banner.txt' % (self.run_name, tag)))
+            
+            
+            AllEvent = lhe_parser.MultiEventFile()
+            AllEvent.banner = self.banner
+            
+            for Gdir,mfactor in self.get_Gdir():
+                if os.path.exists(pjoin(Gdir, 'events.lhe')):
+                    result = sum_html.OneResult('')
+                    result.read_results(pjoin(Gdir, 'results.dat'))
+                    AllEvent.add(pjoin(Gdir, 'events.lhe'), 
+                                 result.get('xsec'),
+                                 result.get('xerru'),
+                                 result.get('axsec')
+                                 )
+                    
+            get_wgt = lambda event: event.wgt
+            nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+                              get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
+                              log_level=logging.DEBUG)
+            
+            self.results.add_detail('nb_event', nb_event)
         
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
@@ -2569,10 +2961,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 self.create_root_file(output='%s/unweighted_events.root' % \
                                                                   self.run_name)
     
-
-
-
-    
     ############################################################################ 
     def do_store_events(self, line):
         """Advanced commands: Launch store events"""
@@ -2581,8 +2969,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # Check argument's validity
         self.check_combine_events(args)
         self.update_status('Storing parton level results', level='parton')
-
-
 
         run = self.run_name
         tag = self.run_card['run_tag']
@@ -2597,6 +2983,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
         output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
         files.cp(input, output) 
+
 
         # 2) Treat the files present in the P directory
         # Ensure that the number of events is different of 0 
@@ -2652,17 +3039,24 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
                             cwd=pjoin(self.me_dir))
         
+        
         # 4) Move the Files present in Events directory
         E_path = pjoin(self.me_dir, 'Events')
         O_path = pjoin(self.me_dir, 'Events', run)
+        
         # The events file
         for name in ['events.lhe', 'unweighted_events.lhe']:
-            if os.path.exists(pjoin(E_path, name)):
-                if os.path.exists(pjoin(O_path, '%s.gz' % name)):
-                    os.remove(pjoin(O_path, '%s.gz' % name))
-                input = pjoin(E_path, name)
-                output = pjoin(O_path, name)
-                misc.gzip(input, stdout="%s.gz" % output, error=False)
+            finput = pjoin(E_path, name)
+            foutput = pjoin(O_path, name)
+            if os.path.exists(finput):
+                logger.debug("File %s exists BAAAAD. Not move anymore!" % pjoin(E_path, name))
+            if os.path.exists(foutput):
+                misc.gzip(foutput, stdout="%s.gz" % foutput, error=False)
+        #        if os.path.exists(pjoin(O_path, '%s.gz' % name)):
+        #            os.remove(pjoin(O_path, '%s.gz' % name))
+        #        input = pjoin(E_path, name)
+        ##        output = pjoin(O_path, name)
+              
 
         self.update_status('End Parton', level='parton', makehtml=False)
         devnull.close()
@@ -2721,6 +3115,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         """Advanced commands: Create gridpack from present run"""
 
         self.update_status('Creating gridpack', level='parton')
+        # compile gen_ximprove
+        misc.compile(['../bin/internal/gen_ximprove'], cwd=pjoin(self.me_dir, "Source"))
         args = self.split_arg(line)
         self.check_combine_events(args)
         if not self.run_tag: self.run_tag = 'tag_1'
@@ -2761,6 +3157,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.configure_directory(html_opening =False)
             self.check_pythia(args)        
         
+        
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])
@@ -2770,7 +3167,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.options['automatic_html_opening'] = False
 
         # Update the banner with the pythia card
-        if not self.banner:
+        if not self.banner or len(self.banner) <=1:
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
                      
    
@@ -2781,7 +3178,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         try:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
         except Exception:
-            pass
+            pass        
         
         ## LAUNCHING PYTHIA
         tag = self.run_tag
@@ -2790,6 +3187,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                         argument= [pythia_src], stdout= pythia_log,
                         stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
+
+        os.remove(pjoin(self.me_dir, "Events", "unweighted_events.lhe"))
+
+
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
             logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
@@ -2837,6 +3238,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         td = self.options['td_path']
         
         
+ 
+        
         #Update the banner
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
         if int(self.run_card['ickkw']):
@@ -2852,8 +3255,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.run_hep2lhe(banner_path)
         if int(self.run_card['ickkw']):
             misc.gzip(pjoin(self.me_dir,'Events','beforeveto.tree'),
-                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
-                         
+                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))           
         if self.run_card['use_syst'] in self.true:
             # Calculate syscalc info based on syst.dat
             try:
@@ -2878,7 +3280,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.lhe')):
             misc.gzip(pjoin(self.me_dir,'Events','pythia_events.lhe'),
                       stdout=pjoin(self.me_dir,'Events', self.run_name,'%s_pythia_events.lhe.gz' % tag))
-        
+                
         self.update_status('finish', level='pythia', makehtml=False)
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
         if self.options['delphes_path']:
@@ -3053,12 +3455,19 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):
-                misc.gunzip('%s.gz' % filename)
+                misc.gunzip('%s.gz' % filename, keep=True)
             if  os.path.exists(filename):
-                shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
+                files.ln(filename, pjoin(self.me_dir, 'Events'))
                 self.create_plot('parton')
-                misc.gzip(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'),
+                if not os.path.exists(filename+'.gz'):
+                    misc.gzip(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'),
                           stdout= "%s.gz" % filename)
+                else:
+                    try:
+                        os.remove(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
+                        os.remove(filename)
+                    except Exception:
+                        pass
             else:
                 logger.info('No valid files for partonic plot') 
                 
@@ -3201,8 +3610,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                                 self.total_jobs - remaining -1, run_type), level=None, force=False)
             start = time.time()
             #os.system('cd %s; ./%s' % (cwd,exe))
-            status = misc.call(['./'+exe] + argument, cwd=cwd, 
-                                                           stdout=stdout, **opt)
+            status = misc.call([exe] + argument, cwd=cwd, stdout=stdout, **opt)
             logger.info('%s run in %f s' % (exe, time.time() -start))
             if status:
                 raise MadGraph5Error, '%s didn\'t stop properly. Stop all computation' % exe
@@ -3213,6 +3621,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             if 'ajob' in exe: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
+                  'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 'MadLoop5_resources.tar.gz'))
+                
                 output_files = []
                 required_output = []
                 
@@ -3222,7 +3634,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                         
                 #Find the correct ajob
                 Gre = re.compile("\s*j=(G[\d\.\w]+)")
-                Ire = re
+                origre = re.compile("grid_directory=(G[\d\.\w]+)")
                 try : 
                     fsock = open(exe)
                 except Exception:
@@ -3242,15 +3654,97 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                             input_files.append(G)
                             required_output.append('%s/results.dat' % G)
                 
+                if origre.search(text):
+                    G_grid = origre.search(text).groups()[0]
+                    input_files.append(pjoin(G_grid, 'ftn26'))
+                
                 #submitting
                 self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
+            elif 'survey' in exe:
+                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
+                               pjoin(self.me_dir, 'SubProcesses','randinit')]                 
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
+                  'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 
+                                                   'MadLoop5_resources.tar.gz'))
+
+                #Find the correct PDF input file
+                input_files.append(self.get_pdf_input_filename())
+
+
+                output_files = []
+                required_output = []
+                
+                #Find the correct ajob
+                suffix = "_%s" % int(float(argument[0]))
+                if suffix == '_0':
+                    suffix = ''
+                output_files = ['G%s%s' % (i, suffix) for i in argument[1:]]
+                for G in output_files:
+                    required_output.append('%s/results.dat' % G)
+
+                # add the grid information if needed
+                for G in output_files:
+                    if '.' in argument[0]:
+                        offset = int(str(argument[0]).split('.')[1])
+                    else:
+                        offset = 0                    
+                        
+                    if offset ==0 or offset == int(float(argument[0])):
+                        if os.path.exists(pjoin(cwd, G, 'input_app.txt')):
+                            os.remove(pjoin(cwd, G, 'input_app.txt'))
+                    
+                    if os.path.exists(os.path.realpath(pjoin(cwd, G, 'ftn25'))):
+                        if offset == 0 or offset == int(float(argument[0])):
+                            os.remove(pjoin(cwd, G, 'ftn25'))
+                            continue
+                        else:
+                            input_files.append(pjoin(cwd, G, 'ftn25'))
+                            input_files.remove('input_app.txt')
+                            input_files.append(pjoin(cwd, G, 'input_app.txt'))
+                    elif os.path.lexists(pjoin(cwd, G, 'ftn25')):
+                        try:
+                            os.remove(pjoin(cwd,G,'ftn25'))
+                        except:
+                            pass
+                    
+                #submitting
+                self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output, **opt)
+            elif "refine_splitted.sh" in exe:
+                input_files = ['madevent','symfact.dat','iproc.dat',
+                               pjoin(self.me_dir, 'SubProcesses','randinit')]                 
+                
+                if os.path.exists(pjoin(self.me_dir,'SubProcesses',
+                  'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
+                    input_files.append(pjoin(self.me_dir,'SubProcesses', 
+                                                   'MadLoop5_resources.tar.gz'))
+
+                #Find the correct PDF input file
+                input_files.append(self.get_pdf_input_filename())
+
+
+                output_files = [argument[0]]
+                required_output = []
+                for G in output_files:
+                    required_output.append('%s/results.dat' % G)                
+                input_files.append(pjoin(argument[1], "input_app.txt"))
+                input_files.append(pjoin(argument[1], "ftn26"))
+                
+                #submitting
+                self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output, **opt)                
+
+                
             
             else:
-                self.cluster.submit(exe, stdout=stdout, cwd=cwd)
+                self.cluster.submit(exe, stdout=stdout, cwd=cwd, **opt)
             
-            
+
     ############################################################################
     def find_madevent_mode(self):
         """Find if Madevent is in Group mode or not"""
@@ -3268,6 +3762,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def monitor(self, run_type='monitor', mode=None, html=False):
         """ monitor the progress of running job """
         
+
         starttime = time.time()
         if mode is None:
             mode = self.cluster_mode
@@ -3276,19 +3771,25 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 update_status = lambda idle, run, finish: \
                     self.update_status((idle, run, finish, run_type), level=None,
                                        force=False, starttime=starttime)
+                update_first = lambda idle, run, finish: \
+                    self.update_status((idle, run, finish, run_type), level=None,
+                                       force=True, starttime=starttime)
             else:
                 update_status = lambda idle, run, finish: None
-            try:    
-                self.cluster.wait(self.me_dir, update_status)            
+                update_first = None
+            try:   
+                self.cluster.wait(self.me_dir, update_status, update_first=update_first)            
             except Exception, error:
                 logger.info(error)
                 if not self.force:
-                    ans = self.ask('Cluster Error detected. Do you want to clean the queue?',
-                             default = 'y', choices=['y','n'])
+                    ans = self.ask('Cluster Error detected. Do you want to clean the queue? ("c"=continue the run anyway)',
+                             default = 'y', choices=['y','n', 'c'])
                 else:
                     ans = 'y'
                 if ans == 'y':
                     self.cluster.remove()
+                elif ans == 'c':
+                    return self.monitor(run_type=run_type, mode=mode, html=html)
                 raise
             except KeyboardInterrupt, error:
                 self.cluster.remove()
@@ -3347,14 +3848,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.pdffile = None
             
         # set random number
-        if self.run_card['iseed'] != '0':
+        if self.run_card['iseed'] != 0:
             self.random = int(self.run_card['iseed'])
-            self.run_card['iseed'] = '0'
+            self.run_card['iseed'] = 0
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
-            text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
-            (t,n) = re.subn(r'\d+\s*= iseed','0 = iseed',text)
-            open(pjoin(self.me_dir, 'Cards','run_card.dat'),'w').write(t)
+            self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
         elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
@@ -3364,16 +3863,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             self.random = random.randint(1, 30107)
                                                                
-        if self.run_card['ickkw'] == '2':
+        if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_CKKW_matching()
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
         
+        logger.info("compile Source Directory")
         # Compile
-        for name in ['../bin/internal/gen_ximprove', 'all', 
-                     '../bin/internal/combine_events']:
+        for name in [ 'all', '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
@@ -3389,7 +3888,37 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             return path
         else:
             return default
+
+    ############################################################################
+    def get_Pdir(self):
+        """get the list of Pdirectory if not yet saved."""
         
+        if hasattr(self, "Pdirs"):
+            if self.me_dir in self.Pdirs[0]:
+                return self.Pdirs
+        self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
+        return self.Pdirs
+        
+    ############################################################################
+    def get_Gdir(self):
+        """get the list of Gdirectory if not yet saved."""
+        
+        if hasattr(self, "Gdirs"):
+            if self.me_dir in self.Gdirs[0]:
+                return self.Gdirs
+
+        Pdirs = self.get_Pdir()
+        Gdirs = []        
+        for P in Pdirs:
+            for line in open(pjoin(P, "symfact.dat")):
+                tag, mfactor = line.split()
+                Gdirs.append( (pjoin(P, "G%s" % tag), int(mfactor)) )
+            
+        
+        self.Gdirs = Gdirs
+        return self.Gdirs
+                
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False,
                      allow_new_tag=True):
@@ -3545,7 +4074,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     ############################################################################
     def save_random(self):
         """save random number in appropirate file"""
-        
+
         fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
         fsock.writelines('r=%s\n' % self.random)
 
@@ -3627,10 +4156,13 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def run_syscalc(self, mode='parton', event_path=None, output=None):
         """create the syscalc output""" 
 
-        logger.info('running syscalc on mode %s' % mode)
+        os.environ['LHAPATH']=''
+
+
         if self.run_card['use_syst'] not in self.true:
             return
         
+        logger.info('running syscalc on mode %s' % mode)        
         scdir = self.options['syscalc_path']
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
@@ -3648,7 +4180,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
         if not event_path:
             if mode == 'parton':
-                event_path = pjoin(event_dir,'unweighted_events.lhe')
+                event_path = pjoin(event_dir,self.run_name, 'unweighted_events.lhe')
+                if not (os.path.exists(event_path) or os.path.exists(event_path+".gz")):
+                    event_path = pjoin(event_dir, 'unweighted_events.lhe')
                 output = pjoin(event_dir, 'syscalc.lhe')
             elif mode == 'Pythia':
                 if 'mgpythiacard' in self.banner:
@@ -3671,7 +4205,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
         if not os.path.exists(event_path):
             if os.path.exists(event_path+'.gz'):
-                misc.gzip(event_path)
+                misc.gunzip(event_path+'.gz')
             else:
                 raise SysCalcError, 'Events file %s does not exits' % event_path
         
@@ -3846,6 +4380,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if switch['reweight'] == 'ON':
             cards.append('reweight_card.dat')
         self.keep_cards(cards)
+        
+        if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
+            cards.append('MadLoopParams.dat')
+        
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return
@@ -4134,6 +4672,388 @@ class GridPackCmd(MadEventCmd):
         devnull.close()
 
 
+class MadLoopInitializer(object):
+    """ A container class for the various methods for initializing MadLoop. It is
+    placed in MadEventInterface because it is used by Madevent for loop-induced 
+    simulations. """
+
+    @staticmethod
+    def make_and_run(dir_name,checkRam=False):
+        """ Compile the check program in the directory dir_name.
+        Return the compilation and running time. """
+
+        # Make sure to recreate the executable and modified source
+        # (The time stamps are sometimes not actualized if it is too fast)
+        if os.path.isfile(pjoin(dir_name,'check')):
+            os.remove(pjoin(dir_name,'check'))
+            os.remove(pjoin(dir_name,'check_sa.o'))
+            os.remove(pjoin(dir_name,'loop_matrix.o'))            
+        # Now run make
+        devnull = open(os.devnull, 'w')
+        start=time.time()
+        retcode = subprocess.call(['make','check'],
+                                   cwd=dir_name, stdout=devnull, stderr=devnull)
+        compilation_time = time.time()-start
+        if retcode != 0:
+            logging.info("Error while executing make in %s" % dir_name)
+            return None, None, None
+
+        if not checkRam:
+            start=time.time()
+            retcode = subprocess.call('./check',
+                                   cwd=dir_name, stdout=devnull, stderr=devnull)
+
+            run_time = time.time()-start
+            ram_usage = None
+        else:
+            ptimer = misc.ProcessTimer(['./check'], cwd=dir_name, shell=False, \
+                                 stdout=devnull, stderr=devnull, close_fds=True)
+            try:
+                ptimer.execute()
+                #poll as often as possible; otherwise the subprocess might 
+                # "sneak" in some extra memory usage while you aren't looking
+                # Accuracy of .2 seconds is enough for the timing.
+                while ptimer.poll():
+                    time.sleep(.2)
+            finally:
+                #make sure that we don't leave the process dangling.
+                ptimer.close()
+            # Notice that ptimer.max_vms_memory is also available if needed.
+            ram_usage = ptimer.max_rss_memory
+            # Unfortunately the running time is less precise than with the
+            # above version
+            run_time = (ptimer.t1 - ptimer.t0)
+            retcode = ptimer.p.returncode
+
+        devnull.close()
+
+        if retcode != 0:
+            logging.warning("Error while executing ./check in %s" % dir_name)
+            return None, None, None
+
+        return compilation_time, run_time, ram_usage
+
+    @staticmethod
+    def fix_PSPoint_in_check(dir_path, read_ps = True, npoints = 1,
+                             hel_config = -1, mu_r=0.0, split_orders=-1):
+        """Set check_sa.f to be reading PS.input assuming a working dir dir_name.
+        if hel_config is different than -1 then check_sa.f is configured so to
+        evaluate only the specified helicity.
+        If mu_r > 0.0, then the renormalization constant value will be hardcoded
+        directly in check_sa.f, if is is 0 it will be set to Sqrt(s) and if it
+        is < 0.0 the value in the param_card.dat is used.
+        If the split_orders target (i.e. the target squared coupling orders for 
+        the computation) is != -1, it will be changed in check_sa.f via the
+        subroutine CALL SET_COUPLINGORDERS_TARGET(split_orders)."""
+
+        file_path = dir_path
+        if not os.path.isfile(dir_path) or \
+                                   not os.path.basename(dir_path)=='check_sa.f':
+            file_path = pjoin(dir_path,'check_sa.f')
+            if not os.path.isfile(file_path):
+                directories = [d for d in glob.glob(pjoin(dir_path,'P*_*')) \
+                         if (re.search(r'.*P\d+_\w*$', d) and os.path.isdir(d))]
+                if len(directories)>0:
+                     file_path = pjoin(directories[0],'check_sa.f')
+        if not os.path.isfile(file_path):
+            raise MadGraph5Error('Could not find the location of check_sa.f'+\
+                                  ' from the specified path %s.'%str(file_path))    
+
+        file = open(file_path, 'r')
+        check_sa = file.read()
+        file.close()
+        
+        file = open(file_path, 'w')
+        check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
+                                                      else '.FALSE.'), check_sa)
+        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = %d"%npoints, check_sa)
+        if hel_config != -1:
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                      "SLOOPMATRIXHEL_THRES(P,%d,MATELEM,"%hel_config, check_sa)
+        else:
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                                        "SLOOPMATRIX_THRES(P,MATELEM,",check_sa)
+        if mu_r > 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
+                                        (("%.17e"%mu_r).replace('e','d')),check_sa)
+        elif mu_r < 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","",check_sa)
+        
+        if split_orders > 0:
+            check_sa = re.sub(r"SET_COUPLINGORDERS_TARGET\(-?\d+\)",
+                     "SET_COUPLINGORDERS_TARGET(%d)"%split_orders,check_sa) 
+        
+        file.write(check_sa)
+        file.close()
+
+    @staticmethod    
+    def run_initialization(run_dir=None, SubProc_dir=None, infos=None,\
+                            req_files = ['HelFilter.dat','LoopFilter.dat'],
+                            attempts = [4,15]):
+        """ Run the initialization of the process in 'run_dir' with success 
+        characterized by the creation of the files req_files in this directory.
+        The directory containing the driving source code 'check_sa.f'.
+        The list attempt gives the successive number of PS points the 
+        initialization should be tried with before calling it failed.
+        Returns the number of PS points which were necessary for the init.
+        Notice at least run_dir or SubProc_dir must be provided.
+        A negative attempt number given in input means that quadprec will be
+        forced for initialization."""
+        
+        # If the user does not want detailed info, then set the dictionary
+        # to a dummy one.
+        if infos is None:
+            infos={}
+        
+        if SubProc_dir is None and run_dir is None:
+            raise MadGraph5Error, 'At least one of [SubProc_dir,run_dir] must'+\
+                                           ' be provided in run_initialization.'
+        
+        # If the user does not specify where is check_sa.f, then it is assumed
+        # to be one levels above run_dir
+        if SubProc_dir is None:
+            SubProc_dir = os.path.abspath(pjoin(run_dir,os.pardir))
+            
+        if run_dir is None:
+            directories =[ dir for dir in glob.glob(pjoin(SubProc_dir,\
+                                             'P[0-9]*')) if os.path.isdir(dir) ]
+            if directories:
+                run_dir = directories[0]
+            else:
+                raise MadGraph5Error, 'Could not find a valid running directory'+\
+                                                      ' in %s.'%str(SubProc_dir)
+
+        # Use the presence of the file born_matrix.f to decide if it is a 
+        # loop-induced process or not. It's not crucial, but just that because
+        # of the dynamic adjustment of the ref scale used for deciding what are
+        # the zero contributions, more points are neeeded for loop-induced.
+        if not os.path.isfile(pjoin(run_dir,'born_matrix.f')):
+            if len(attempts)>=1 and attempts[0]<8:
+                attempts[0]=8
+            if len(attempts)>=2 and attempts[1]<25:
+                attempts[1]=25
+
+        to_attempt = list(attempts)
+        to_attempt.reverse()
+        my_req_files = list(req_files)
+
+        MLCardPath = pjoin(SubProc_dir,'MadLoopParams.dat')
+        if not os.path.isfile(MLCardPath):
+            raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
+                                                                     %MLCardPath
+        else:
+            MLCard      = banner_mod.MadLoopParam(MLCardPath) 
+            MLCard_orig = banner_mod.MadLoopParam(MLCard)
+
+        # Make sure that LoopFilter really is needed.
+        if not MLCard['UseLoopFilter']:
+            try:
+                my_req_files.remove('LoopFilter.dat')
+            except ValueError:
+                pass
+        
+        if MLCard['HelicityFilterLevel']==0:
+            try:
+                my_req_files.remove('HelFilter.dat')
+            except ValueError:
+                pass
+        
+        def need_init():
+            """ True if init not done yet."""
+            proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
+            proc_prefix = proc_prefix_file.read()
+            proc_prefix_file.close()
+            return any([not os.path.exists(pjoin(run_dir,'MadLoop5_resources',
+                            proc_prefix+fname)) for fname in my_req_files]) or \
+                         not os.path.isfile(pjoin(run_dir,'check')) or \
+                         not os.access(pjoin(run_dir,'check'), os.X_OK)
+        
+        # Check if this is a process without born by checking the presence of the
+        # file born_matrix.f
+        is_loop_induced = os.path.exists(pjoin(run_dir,'born_matrix.f'))
+        
+        # For loop induced processes, always attempt quadruple precision if
+        # double precision attempts fail and the user didn't specify himself
+        # quadruple precision initializations attempts
+        if not any(attempt<0 for attempt in to_attempt):
+            to_attempt = [-attempt for attempt in to_attempt] + to_attempt
+        use_quad_prec = 1
+        curr_attempt = 1
+
+        MLCard.set('WriteOutFilters',True)  
+        while to_attempt!=[] and need_init():
+            curr_attempt = to_attempt.pop()
+            # if the attempt is a negative number it means we must force 
+            # quadruple precision at initialization time
+            if curr_attempt < 0:
+                use_quad_prec = -1
+                # In quadruple precision we can lower the ZeroThres threshold
+                MLCard.set('CTModeInit',4)
+                MLCard.set('ZeroThres',1e-11)
+            else:
+                # Restore the default double precision intialization params
+                MLCard.set('CTModeInit',1)
+                MLCard.set('ZeroThres',1e-9)
+            # Plus one because the filter are written on the next PS point after
+            curr_attempt = abs(curr_attempt+1)
+            MLCard.set('MaxAttempts',curr_attempt) 
+            MLCard.write(pjoin(SubProc_dir,'MadLoopParams.dat'))
+
+            # initialization is performed.
+            MadLoopInitializer.fix_PSPoint_in_check(run_dir, read_ps = False, 
+                                                         npoints = curr_attempt)
+            compile_time, run_time, ram_usage = \
+                                        MadLoopInitializer.make_and_run(run_dir)
+            if compile_time==None:
+                logging.error("Failed at running the process in %s."%run_dir)
+                attempts = None
+                return None
+            # Only set process_compilation time for the first compilation.
+            if 'Process_compilation' not in infos.keys() or \
+                                             infos['Process_compilation']==None:
+                infos['Process_compilation'] = compile_time
+            infos['Initialization'] = run_time
+        
+        MLCard_orig.write(pjoin(SubProc_dir,'MadLoopParams.dat'))
+        if need_init():
+            return None
+        else:
+            return use_quad_prec*(curr_attempt-1)
+
+    @staticmethod
+    def need_MadLoopInit(proc_dir, subproc_prefix='PV'):
+        """Checks whether the necessary filters are present or not."""
+
+        def need_init(ML_resources_path, proc_prefix, r_files):
+            """ Returns true if not all required files are present. """
+            return any([not os.path.exists(pjoin(ML_resources_path,
+                            proc_prefix+fname)) for fname in r_files])
+
+        MLCardPath = pjoin(proc_dir,'SubProcesses','MadLoopParams.dat')
+        if not os.path.isfile(MLCardPath):
+            raise MadGraph5Error, 'Could not find MadLoopParams.dat at %s.'\
+                                                                     %MLCardPath        
+        MLCard      = banner_mod.MadLoopParam(MLCardPath) 
+
+        req_files = ['HelFilter.dat','LoopFilter.dat']
+        # Make sure that LoopFilter really is needed.
+        if not MLCard['UseLoopFilter']:
+            try:
+                req_files.remove('LoopFilter.dat')
+            except ValueError:
+                pass
+        if MLCard['HelicityFilterLevel']==0:
+            try:
+                req_files.remove('HelFilter.dat')
+            except ValueError:
+                pass
+        
+        for v_folder in glob.iglob(pjoin(proc_dir,'SubProcesses',
+                                                         '%s*'%subproc_prefix)):        
+            # Make sure it is a valid MadLoop directory
+            if not os.path.isdir(v_folder) or not os.path.isfile(\
+                                               pjoin(v_folder,'loop_matrix.f')):
+                continue
+            proc_prefix_file = open(pjoin(v_folder,'proc_prefix.txt'),'r')
+            proc_prefix = proc_prefix_file.read()
+            proc_prefix_file.close()
+            if need_init(pjoin(proc_dir,'SubProcesses','MadLoop5_resources'),
+                                                        proc_prefix, req_files):
+                return True
+        
+        return False
+
+    @staticmethod
+    def init_MadLoop(proc_dir, n_PS=None, subproc_prefix='PV', MG_options=None):
+        """Advanced commands: Compiles and run MadLoop on RAMBO random PS points to initilize the
+        filters."""
+
+        logger.debug('Compiling Source materials necessary for MadLoop '+
+                                                              'initialization.')
+        # Initialize all the virtuals directory, so as to generate the necessary
+        # filters (essentially Helcity filter).
+        # Make sure that the MadLoopCard has the loop induced settings
+        misc.compile(arg=['treatCardsLoopNoInit'], cwd=pjoin(proc_dir,'Source'))
+        # First make sure that IREGI and CUTTOOLS are compiled if needed
+        if os.path.exists(pjoin(proc_dir,'Source','CUTTOOLS')):
+            misc.compile(arg=['libcuttools'],cwd=pjoin(proc_dir,'Source'))
+        if os.path.exists(pjoin(proc_dir,'Source','IREGI')):
+            misc.compile(arg=['libiregi'],cwd=pjoin(proc_dir,'Source'))
+        # Then make sure DHELAS and MODEL are compiled
+        misc.compile(arg=['libmodel'],cwd=pjoin(proc_dir,'Source'))
+        misc.compile(arg=['libdhelas'],cwd=pjoin(proc_dir,'Source'))        
+        
+        # Now initialize the MadLoop outputs
+        logger.info('Initializing MadLoop loop-induced matrix elements '+\
+                                                 '(this can take some time)...')
+
+        # Setup parallelization
+        if MG_options:
+            mcore = cluster.MultiCore(**MG_options)
+        else:
+            mcore = cluster.MultiCore(nb_core=1)
+        def run_initialization_wrapper(run_dir, infos, attempts):
+                if attempts is None:
+                    n_PS = MadLoopInitializer.run_initialization(
+                                                   run_dir=run_dir, infos=infos)
+                else:
+                    n_PS = MadLoopInitializer.run_initialization(
+                                run_dir=run_dir, infos=infos, attempts=attempts)                    
+                infos['nPS'] = n_PS
+                return 0
+    
+        def wait_monitoring(Idle, Running, Done):
+            if Idle+Running+Done == 0:
+                return
+            logger.debug('MadLoop initialization jobs: %d Idle, %d Running, %d Done'\
+                                                         %(Idle, Running, Done))
+
+        init_info = {}
+        # List all virtual folders while making sure they are valid MadLoop folders
+        VirtualFolders = [f for f in glob.iglob(pjoin(proc_dir,'SubProcesses',
+                    '%s*'%subproc_prefix)) if (os.path.isdir(f) or 
+                                      os.path.isfile(pjoin(f,'loop_matrix.f')))]
+        logger.debug("Now Initializing MadLoop matrix element in %d folder%s:"%\
+                         (len(VirtualFolders),'s' if len(VirtualFolders)>1 else ''))
+        logger.debug(', '.join("'%s'"%os.path.basename(v_folder) for v_folder in 
+                                                                    VirtualFolders))
+        for v_folder in VirtualFolders:
+            init_info[v_folder] = {}
+            
+            # We try all multiples of n_PS from 1 to max_mult, first in DP and then
+            # in QP before giving up, or use default values if n_PS is None.
+            max_mult = 3
+            if n_PS is None:
+                # Then use the default list of number of PS points to try
+                mcore.submit(run_initialization_wrapper, 
+                                   [pjoin(v_folder), init_info[v_folder], None])
+            else:
+                # Use specific set of PS points
+                mcore.submit(run_initialization_wrapper, [pjoin(v_folder),
+                       init_info[v_folder],
+                       [n_PS*multiplier for multiplier in range(1,max_mult+1)]])
+
+        # Wait for all jobs to finish.
+        mcore.wait('',wait_monitoring,update_first=wait_monitoring)
+        for v_folder in VirtualFolders:
+            init = init_info[v_folder]
+            if init['nPS'] is None:
+                raise MadGraph5Error, 'Failed the initialization of'+\
+                  " loop-induced matrix element '%s'%s."%\
+                  (os.path.basename(v_folder),' (using default n_PS points)' if\
+                    n_PS is None else ' (trying with a maximum of %d PS points)'\
+                                                               %(max_mult*n_PS))
+            if init['nPS']==0:
+                logger.debug("Nothing to be done in '%s', all filters already "%\
+                             os.path.basename(v_folder)+\
+                   "present (use the '-r' option to force their recomputation)")
+            else:
+                logger.debug("'%s' finished using "%os.path.basename(v_folder)+
+                  '%d PS points (%s), in %.3g(compil.) + %.3g(init.) secs.'%(
+                  abs(init['nPS']),'DP' if init['nPS']>0 else 'QP',
+                  init['Process_compilation'],init['Initialization']))
+        
+        logger.info('MadLoop initialization finished.')        
 
 AskforEditCard = common_run.AskforEditCard
 

@@ -65,7 +65,7 @@ C ----------
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
       if (NTRY(nFKSprocess).lt.2) then
          skip(nFKSprocess)=1			 
-         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.1)
+         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.-NHEL(GLU_IJ ,1))
             skip(nFKSprocess)=skip(nFKSprocess)+1
          enddo
          skip(nFKSprocess)=skip(nFKSprocess)-1
@@ -100,7 +100,7 @@ C ----------
       ANS(2) = 0D0
       hel_fac=1d0
       DO IHEL=1,NCOMB
-        if (nhel(glu_ij,ihel).le.0) then
+        if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,borns)
             ANS(2)=ANS(2)+BORNTILDE
@@ -172,6 +172,7 @@ C
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
+      integer step_hel
 %(ij_lines)s
 C  
 C COLOR DATA
@@ -186,15 +187,20 @@ C ----------
       back_hel = nhel(glu_ij)
       borns(1) = 0d0
       borns(2) = 0d0
-      do ihel=-1,1,2
-        if (ihel.eq.-1.or.nhel(glu_ij).ne.0) then
+      if (back_hel.ne.0) then
+        step_hel=-2*back_hel
+      else
+        step_hel=1
+      endif
+      DO IHEL=back_hel,-back_hel,step_hel
+         IF (IHEL.EQ.back_hel.OR.NHEL(GLU_IJ).NE.0) THEN
         if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         if (.not. calculatedBorn) then
 %(helas_calls)s
         do i=1,ngraphs
-          if(ihel.eq.-1)then
+          if(ihel.eq.BACK_HEL)then
             saveamp(i,hell)=amp(i)
-          elseif(ihel.eq.1)then
+          elseif(ihel.eq.-BACK_HEL)then
             saveamp(i,hell+skip(nFKSprocess))=amp(i)
           else
             write(*,*) "ERROR #1 in born.f"
@@ -203,9 +209,9 @@ C ----------
         enddo
         elseif (calculatedBorn) then
         do i=1,ngraphs
-          if(ihel.eq.-1)then
+          if(ihel.eq.BACK_HEL)then
             amp(i)=saveamp(i,hell)
-          elseif(ihel.eq.1)then
+          elseif(ihel.eq.-BACK_HEL)then
             amp(i)=saveamp(i,hell+skip(nFKSprocess))
           else
             write(*,*) "ERROR #1 in born.f"
@@ -219,14 +225,14 @@ C ----------
           DO J = 1, NCOLOR
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          BORNS(2-(1-ihel)/2)=BORNS(2-(1-ihel)/2)+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+          BORNS(2-(1+back_hel*ihel)/2)=BORNS(2-(1+back_hel*ihel)/2)+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
         ENDDO
         Do I = 1, NGRAPHS
           amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
         Enddo
         Do I = 1, NCOLOR
           Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
-          Jamph(2-(1-ihel)/2,i)=Jamp(i)
+          Jamph(2-(1+back_hel*ihel)/2,i)=Jamp(i)
         Enddo
       endif
       Enddo

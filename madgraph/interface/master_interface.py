@@ -200,14 +200,26 @@ class Switcher(object):
                 if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD( \
                     'The NLO mode %s is not valid. Please choose one among: %s' \
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
-                elif nlo_mode == 'all':
+                elif nlo_mode in ['all', 'real', 'LOonly']:
                     self.change_principal_cmd('aMC@NLO')
-                elif nlo_mode == 'real':
-                    self.change_principal_cmd('aMC@NLO')
-                elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
+                elif nlo_mode in ['virt', 'sqrvirt']:
                     self.change_principal_cmd('MadLoop')
-                    
-        return self.cmd.do_add(self, line, *args, **opts)
+                elif nlo_mode == 'noborn': 
+                    self.change_principal_cmd('MadLoop')
+                    self.cmd.validate_model(self, loop_type=nlo_mode,
+                                                            coupling_type=orders)
+                    self.change_principal_cmd('MadGraph')
+                    return self.cmd.create_loop_induced(self, line, *args, **opts)
+        try:
+            return  self.cmd.do_add(self, line, *args, **opts)
+        except fks_base.NoBornException:
+            logger.info("------------------------------------------------------------------------", '$MG:color:BLACK')
+            logger.info(" No Born diagrams found. Now switching to the loop-induced mode.        ", '$MG:color:BLACK')
+            logger.info(" Please cite ref. 'arXiv:1507.00020' when using results from this mode. ", '$MG:color:BLACK')
+            logger.info("------------------------------------------------------------------------", '$MG:color:BLACK')            
+            self.change_principal_cmd('MadGraph')
+            return self.cmd.create_loop_induced(self, line, *args, **opts)
+
         
     def do_check(self, line, *args, **opts):
 
@@ -240,7 +252,7 @@ class Switcher(object):
                 if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCmd( \
                     'The NLO mode %s is not valid. Please chose one among: %s' \
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
-                elif nlo_mode == 'all' or nlo_mode == 'real':
+                elif nlo_mode in ['all', 'real', 'LOonly']:
                     self._fks_multi_proc = fks_base.FKSMultiProcess()
                     self.change_principal_cmd('aMC@NLO')
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':

@@ -1,0 +1,16 @@
+  
+  
+ loop 666 MU_R
+  
+ sminputs 1 aEWM1
+  
+ sminputs 3 aS
+  
+ mass 6 mdl_MT
+  
+ mass 23 mdl_MZ
+  
+ mass 24 mdl_MW
+  
+ mass 25 mdl_MH
+  

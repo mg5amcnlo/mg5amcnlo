@@ -1,0 +1,3 @@
+      DATA (ISYM(I,1),I=1,NEXTERNAL)/1,2,3,4/
+      DATA (ISYM(I,2),I=1,NEXTERNAL)/1,2,4,3/
+      DATA NSYM/2/

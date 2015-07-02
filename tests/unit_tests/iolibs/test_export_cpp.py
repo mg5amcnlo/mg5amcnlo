@@ -20,6 +20,8 @@ import copy
 import fractions
 import os
 import re
+import tests.IOTests as IOTests
+
 
 import tests.unit_tests as unittest
 
@@ -45,17 +47,25 @@ from madgraph import MG5DIR
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
+pjoin = os.path.join
+
 #===============================================================================
 # IOExportPythia8Test
 #===============================================================================
-class IOExportPythia8Test(unittest.TestCase,
-                         test_file_writers.CheckFileCreate):
+class IOExportPythia8Test(IOTests.IOTestManager, test_file_writers.CheckFileCreate):
     """Test class for the export v4 module"""
 
     mymodel = base_objects.Model()
     mymatrixelement = helas_objects.HelasMatrixElement()
     created_files = ['test.h', 'test.cc'
                     ]
+
+    def assertFileContains(self,*args,**opts):
+        """Wrapper to make sure that the function assertFileContains, of
+        test_file_writers is used. We cannot put IOTests.IOTestManager last
+        in the hierarchy because the structure requires it to be first always."""
+        return test_file_writers.CheckFileCreate.assertFileContains(
+                                                              self,*args,**opts)
 
     def setUp(self):
 
@@ -616,8 +626,8 @@ void Sigma_sm_qqx_qqx::setIdColAcol()
   setId(id1, id2, id3, id4); 
   // Pick color flow
   int ncolor[1] = {2}; 
-  if(id1 == 2 && id2 == -2 && id3 == 2 && id4 == -2 || id1 == 4 && id2 == -4 &&
-      id3 == 4 && id4 == -4)
+  if((id1 == 2 && id2 == -2 && id3 == 2 && id4 == -2) || (id1 == 4 && id2 == -4
+      && id3 == 4 && id4 == -4))
   {
     vector<double> probs; 
     double sum = jamp2[0][0] + jamp2[0][1]; 
@@ -929,7 +939,7 @@ void Sigma_sm_qq_six::setIdColAcol()
   setId(id1, id2, id3); 
   // Pick color flow
   int ncolor[1] = {1}; 
-  if(id1 == 2 && id2 == 2 && id3 == 6000001)
+  if((id1 == 2 && id2 == 2 && id3 == 6000001))
   {
     vector<double> probs; 
     double sum = jamp2[0][0]; 
@@ -1025,8 +1035,11 @@ double Sigma_sm_qq_six::matrix_uu_six()
         #print open(self.give_pos('test.cc')).read()
         self.assertFileContains('test.cc', goal_string)
 
-    def test_write_dec_multiprocess_files(self):
-        """Test writing the .cc C++ standalone file for p p > z j, z > j j"""
+    @IOTests.createIOTest()
+    def testIO_write_dec_multiprocess_files(self):
+        """target: write_dec_multiprocess_files.h
+           target: write_dec_multiprocess_files.cc
+        """
 
         # Setup a model
 
@@ -1273,1151 +1286,19 @@ double Sigma_sm_qq_six::matrix_uu_six()
 
         # Test .h file output
         exporter.write_process_h_file(\
-            writers.CPPWriter(self.give_pos('test.h')))
-
-        goal_string = """//==========================================================================
-// This file has been automatically generated for Pythia 8
-// MadGraph5_aMC@NLO v. %(version)s, %(date)s
-// By the MadGraph5_aMC@NLO Development Team
-// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-//==========================================================================
-
-#ifndef Pythia8_Sigma_sm_gd_ddxd_H
-#define Pythia8_Sigma_sm_gd_ddxd_H
-
-#include <complex> 
-
-#include "Pythia8/SigmaProcess.h"
-#include "Parameters_sm.h"
-
-using namespace std; 
-
-namespace Pythia8 
-{
-//==========================================================================
-// A class for calculating the matrix elements for
-// Process: g d > z d WEIGHTED=3
-// *   Decay: z > d d~ WEIGHTED=2
-// Process: g s > z s WEIGHTED=3
-// *   Decay: z > d d~ WEIGHTED=2
-// Process: g d > z d WEIGHTED=3
-// *   Decay: z > u u~ WEIGHTED=2
-// Process: g s > z s WEIGHTED=3
-// *   Decay: z > u u~ WEIGHTED=2
-// Process: g d > z d WEIGHTED=3
-// *   Decay: z > s s~ WEIGHTED=2
-// Process: g s > z s WEIGHTED=3
-// *   Decay: z > s s~ WEIGHTED=2
-// Process: g u > z u WEIGHTED=3
-// *   Decay: z > d d~ WEIGHTED=2
-// Process: g u > z u WEIGHTED=3
-// *   Decay: z > s s~ WEIGHTED=2
-// Process: g u > z u WEIGHTED=3
-// *   Decay: z > u u~ WEIGHTED=2
-// Process: g d~ > z d~ WEIGHTED=3
-// *   Decay: z > d d~ WEIGHTED=2
-// Process: g s~ > z s~ WEIGHTED=3
-// *   Decay: z > d d~ WEIGHTED=2
-// Process: g d~ > z d~ WEIGHTED=3
-// *   Decay: z > u u~ WEIGHTED=2
-// Process: g s~ > z s~ WEIGHTED=3
-// *   Decay: z > u u~ WEIGHTED=2
-// Process: g d~ > z d~ WEIGHTED=3
-// *   Decay: z > s s~ WEIGHTED=2
-// Process: g s~ > z s~ WEIGHTED=3
-// *   Decay: z > s s~ WEIGHTED=2
-// Process: g u~ > z u~ WEIGHTED=3
-// *   Decay: z > d d~ WEIGHTED=2
-// Process: g u~ > z u~ WEIGHTED=3
-// *   Decay: z > s s~ WEIGHTED=2
-// Process: g u~ > z u~ WEIGHTED=3
-// *   Decay: z > u u~ WEIGHTED=2
-//--------------------------------------------------------------------------
-
-class Sigma_sm_gd_ddxd : public Sigma3Process 
-{
-  public:
-
-    // Constructor.
-    Sigma_sm_gd_ddxd() {}
-
-    // Initialize process.
-    virtual void initProc(); 
-
-    // Calculate flavour-independent parts of cross section.
-    virtual void sigmaKin(); 
-
-    // Evaluate sigmaHat(sHat).
-    virtual double sigmaHat(); 
-
-    // Select flavour, colour and anticolour.
-    virtual void setIdColAcol(); 
-
-    // Evaluate weight for decay angles.
-    virtual double weightDecay(Event& process, int iResBeg, int iResEnd); 
-
-    // Info on the subprocess.
-    virtual string name() const {return "g d > d d~ d (sm)";}
-
-    virtual int code() const {return 10000;}
-
-    virtual string inFlux() const {return "qg";}
-
-    virtual int resonanceA() const {return 23;}
-    // Tell Pythia that sigmaHat returns the ME^2
-    virtual bool convertM2() const {return true;}
-
-  private:
-
-    // Private functions to calculate the matrix element for all subprocesses
-    // Calculate wavefunctions
-    void calculate_wavefunctions(const int perm[], const int hel[]); 
-    static const int nwavefuncs = 13; 
-    std::complex<double> w[nwavefuncs][18]; 
-    static const int namplitudes = 18; 
-    std::complex<double> amp[namplitudes]; 
-    double matrix_gd_zd_z_ddx(); 
-    double matrix_gd_zd_z_uux(); 
-    double matrix_gd_zd_z_ssx(); 
-    double matrix_gu_zu_z_ddx(); 
-    double matrix_gu_zu_z_uux(); 
-    double matrix_gdx_zdx_z_ddx(); 
-    double matrix_gdx_zdx_z_uux(); 
-    double matrix_gdx_zdx_z_ssx(); 
-    double matrix_gux_zux_z_ddx(); 
-    double matrix_gux_zux_z_uux(); 
-
-    // Constants for array limits
-    static const int nexternal = 5; 
-    static const int nprocesses = 20; 
-
-    // Store the matrix element value from sigmaKin
-    double matrix_element[nprocesses]; 
-
-    // Color flows, used when selecting color
-    double * jamp2[nprocesses]; 
-
-    // Pointer to the model parameters
-    Parameters_sm * pars; 
-
-}; 
-
-}  // end namespace Pythia8
-
-#endif  // Pythia8_Sigma_sm_gd_ddxd_H
-""" % misc.get_pkg_info()
-        #print open(self.give_pos('test.h')).read()
-        self.assertFileContains('test.h', goal_string)
+         writers.CPPWriter(pjoin(self.IOpath,'write_dec_multiprocess_files.h')))
 
         # Test .cc file output
-
         text = exporter.get_process_function_definitions()
-
-        goal_string = """//==========================================================================
-// Class member functions for calculating the matrix elements for
-# Process: g d > z d WEIGHTED=3
-# *   Decay: z > d d~ WEIGHTED=2
-# Process: g s > z s WEIGHTED=3
-# *   Decay: z > d d~ WEIGHTED=2
-# Process: g d > z d WEIGHTED=3
-# *   Decay: z > u u~ WEIGHTED=2
-# Process: g s > z s WEIGHTED=3
-# *   Decay: z > u u~ WEIGHTED=2
-# Process: g d > z d WEIGHTED=3
-# *   Decay: z > s s~ WEIGHTED=2
-# Process: g s > z s WEIGHTED=3
-# *   Decay: z > s s~ WEIGHTED=2
-# Process: g u > z u WEIGHTED=3
-# *   Decay: z > d d~ WEIGHTED=2
-# Process: g u > z u WEIGHTED=3
-# *   Decay: z > s s~ WEIGHTED=2
-# Process: g u > z u WEIGHTED=3
-# *   Decay: z > u u~ WEIGHTED=2
-# Process: g d~ > z d~ WEIGHTED=3
-# *   Decay: z > d d~ WEIGHTED=2
-# Process: g s~ > z s~ WEIGHTED=3
-# *   Decay: z > d d~ WEIGHTED=2
-# Process: g d~ > z d~ WEIGHTED=3
-# *   Decay: z > u u~ WEIGHTED=2
-# Process: g s~ > z s~ WEIGHTED=3
-# *   Decay: z > u u~ WEIGHTED=2
-# Process: g d~ > z d~ WEIGHTED=3
-# *   Decay: z > s s~ WEIGHTED=2
-# Process: g s~ > z s~ WEIGHTED=3
-# *   Decay: z > s s~ WEIGHTED=2
-# Process: g u~ > z u~ WEIGHTED=3
-# *   Decay: z > d d~ WEIGHTED=2
-# Process: g u~ > z u~ WEIGHTED=3
-# *   Decay: z > s s~ WEIGHTED=2
-# Process: g u~ > z u~ WEIGHTED=3
-# *   Decay: z > u u~ WEIGHTED=2
-
-//--------------------------------------------------------------------------
-// Initialize process. 
-  
-void Sigma_sm_gd_ddxd::initProc() {
-// Instantiate the model class and set parameters that stay fixed during run
-    pars = Parameters_sm::getInstance();
-    pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr);
-    pars->setIndependentCouplings();
-    // Set massive/massless matrix elements for c/b/mu/tau
-mcME = 0.;
-mbME = 0.;
-mmuME = 0.;
-mtauME = 0.;
-jamp2[0] = new double[1];
-jamp2[1] = new double[1];
-jamp2[2] = new double[1];
-jamp2[3] = new double[1];
-jamp2[4] = new double[1];
-jamp2[5] = new double[1];
-jamp2[6] = new double[1];
-jamp2[7] = new double[1];
-jamp2[8] = new double[1];
-jamp2[9] = new double[1];
-} 
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2, part independent of incoming flavour. 
-
-void Sigma_sm_gd_ddxd::sigmaKin() { 
-    // Set the parameters which change event by event
-    pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS);
-    pars->setDependentCouplings();
-    // Reset color flows
-    for(int i=0;i < 1; i++)
-            jamp2[0][i]=0.;
-for(int i=0;i < 1; i++)
-            jamp2[1][i]=0.;
-for(int i=0;i < 1; i++)
-            jamp2[2][i]=0.;
-for(int i=0;i < 1; i++)
-            jamp2[3][i]=0.;
-for(int i=0;i < 1; i++)
-            jamp2[4][i]=0.;
-for(int i=0;i < 1; i++)
-            jamp2[5][i]=0.;
-for(int i=0;i < 1; i++)
-            jamp2[6][i]=0.;
-for(int i=0;i < 1; i++)
-            jamp2[7][i]=0.;
-for(int i=0;i < 1; i++)
-            jamp2[8][i]=0.;
-for(int i=0;i < 1; i++)
-            jamp2[9][i]=0.;
-
-    // Local variables and constants
-const int ncomb = 32;
-static bool goodhel[ncomb] = {ncomb * false};
-static int ntry = 0, sum_hel = 0, ngood = 0;
-static int igood[ncomb];
-static int jhel;
-double t[nprocesses];
-// Helicities for the process
-static const int helicities[ncomb][nexternal] = {{-1,-1,-1,-1,-1},{-1,-1,-1,-1,1},{-1,-1,-1,1,-1},{-1,-1,-1,1,1},{-1,-1,1,-1,-1},{-1,-1,1,-1,1},{-1,-1,1,1,-1},{-1,-1,1,1,1},{-1,1,-1,-1,-1},{-1,1,-1,-1,1},{-1,1,-1,1,-1},{-1,1,-1,1,1},{-1,1,1,-1,-1},{-1,1,1,-1,1},{-1,1,1,1,-1},{-1,1,1,1,1},{1,-1,-1,-1,-1},{1,-1,-1,-1,1},{1,-1,-1,1,-1},{1,-1,-1,1,1},{1,-1,1,-1,-1},{1,-1,1,-1,1},{1,-1,1,1,-1},{1,-1,1,1,1},{1,1,-1,-1,-1},{1,1,-1,-1,1},{1,1,-1,1,-1},{1,1,-1,1,1},{1,1,1,-1,-1},{1,1,1,-1,1},{1,1,1,1,-1},{1,1,1,1,1}};
-// Denominators: spins, colors and identical particles
-const int denominators[nprocesses] = {96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96};
-
-ntry=ntry+1;
-
-// Reset the matrix elements
-for(int i = 0; i < nprocesses; i++){
-    matrix_element[i] = 0.;
-    t[i] = 0.;
-}
-
-// Define permutation
-int perm[nexternal];
-for(int i = 0; i < nexternal; i++){
-  perm[i]=i;
-}
-
-// For now, call setupForME() here
-id1 = 21;
-id2 = 1;
-if(!setupForME()){
-    return;
-}
-
-if (sum_hel == 0 || ntry < 10){
-// Calculate the matrix element for all helicities
-  for(int ihel = 0; ihel < ncomb; ihel ++){
-    if (goodhel[ihel] || ntry < 2){
-      calculate_wavefunctions(perm, helicities[ihel]);
-      t[0]=matrix_gd_zd_z_ddx();
-t[1]=matrix_gd_zd_z_uux();
-t[2]=matrix_gd_zd_z_ssx();
-t[3]=matrix_gu_zu_z_ddx();
-t[4]=matrix_gu_zu_z_uux();
-t[5]=matrix_gdx_zdx_z_ddx();
-t[6]=matrix_gdx_zdx_z_uux();
-t[7]=matrix_gdx_zdx_z_ssx();
-t[8]=matrix_gux_zux_z_ddx();
-t[9]=matrix_gux_zux_z_uux();
-             // Mirror initial state momenta for mirror process
-                perm[0]=1;
-                perm[1]=0;
-                // Calculate wavefunctions
-                calculate_wavefunctions(perm, helicities[ihel]);
-                // Mirror back
-                perm[0]=0;
-                perm[1]=1;
-                // Calculate matrix elements
-                t[10]=matrix_gd_zd_z_ddx();
-t[11]=matrix_gd_zd_z_uux();
-t[12]=matrix_gd_zd_z_ssx();
-t[13]=matrix_gu_zu_z_ddx();
-t[14]=matrix_gu_zu_z_uux();
-t[15]=matrix_gdx_zdx_z_ddx();
-t[16]=matrix_gdx_zdx_z_uux();
-t[17]=matrix_gdx_zdx_z_ssx();
-t[18]=matrix_gux_zux_z_ddx();
-t[19]=matrix_gux_zux_z_uux();
-      double tsum = 0;
-      for(int iproc = 0;iproc < nprocesses; iproc++){
-         matrix_element[iproc]+=t[iproc];
-         tsum += t[iproc];
-      }
-      // Store which helicities give non-zero result
-      if (tsum != 0. && !goodhel[ihel]){
-	goodhel[ihel]=true;
-	ngood ++;
-	igood[ngood] = ihel;
-      }
-    }
-  }
-  jhel = 0;
-  sum_hel=min(sum_hel, ngood);
-}
-else              
-{
-// Only use the "good" helicities
-  for(int j=0; j < sum_hel; j++){
-    jhel++;
-    if (jhel >= ngood) jhel=0;
-    double hwgt = double(ngood)/double(sum_hel);
-    int ihel = igood[jhel];
-    calculate_wavefunctions(perm, helicities[ihel]);
-    t[0]=matrix_gd_zd_z_ddx();
-t[1]=matrix_gd_zd_z_uux();
-t[2]=matrix_gd_zd_z_ssx();
-t[3]=matrix_gu_zu_z_ddx();
-t[4]=matrix_gu_zu_z_uux();
-t[5]=matrix_gdx_zdx_z_ddx();
-t[6]=matrix_gdx_zdx_z_uux();
-t[7]=matrix_gdx_zdx_z_ssx();
-t[8]=matrix_gux_zux_z_ddx();
-t[9]=matrix_gux_zux_z_uux();
-             // Mirror initial state momenta for mirror process
-                perm[0]=1;
-                perm[1]=0;
-                // Calculate wavefunctions
-                calculate_wavefunctions(perm, helicities[ihel]);
-                // Mirror back
-                perm[0]=0;
-                perm[1]=1;
-                // Calculate matrix elements
-                t[10]=matrix_gd_zd_z_ddx();
-t[11]=matrix_gd_zd_z_uux();
-t[12]=matrix_gd_zd_z_ssx();
-t[13]=matrix_gu_zu_z_ddx();
-t[14]=matrix_gu_zu_z_uux();
-t[15]=matrix_gdx_zdx_z_ddx();
-t[16]=matrix_gdx_zdx_z_uux();
-t[17]=matrix_gdx_zdx_z_ssx();
-t[18]=matrix_gux_zux_z_ddx();
-t[19]=matrix_gux_zux_z_uux();
-    for(int iproc = 0;iproc < nprocesses; iproc++){
-      matrix_element[iproc]+=t[iproc]*hwgt;
-    }
-  }
-}
-
-for (int i=0;i < nprocesses; i++)
-    matrix_element[i] /= denominators[i];
-
-
-
-}
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2, including incoming flavour dependence. 
-
-double Sigma_sm_gd_ddxd::sigmaHat() {  
-    // Select between the different processes
-if(id1 == 21 && id2 == -2){
-// Add matrix elements for processes with beams (21, -2)
-return matrix_element[8]*2+matrix_element[9];
-}
-else if(id1 == -2 && id2 == 21){
-// Add matrix elements for processes with beams (-2, 21)
-return matrix_element[18]*2+matrix_element[19];
-}
-else if(id1 == -1 && id2 == 21){
-// Add matrix elements for processes with beams (-1, 21)
-return matrix_element[15]+matrix_element[16]+matrix_element[17];
-}
-else if(id1 == 1 && id2 == 21){
-// Add matrix elements for processes with beams (1, 21)
-return matrix_element[10]+matrix_element[11]+matrix_element[12];
-}
-else if(id1 == 21 && id2 == 1){
-// Add matrix elements for processes with beams (21, 1)
-return matrix_element[0]+matrix_element[1]+matrix_element[2];
-}
-else if(id1 == 2 && id2 == 21){
-// Add matrix elements for processes with beams (2, 21)
-return matrix_element[13]*2+matrix_element[14];
-}
-else if(id1 == 21 && id2 == 2){
-// Add matrix elements for processes with beams (21, 2)
-return matrix_element[3]*2+matrix_element[4];
-}
-else if(id1 == 21 && id2 == -3){
-// Add matrix elements for processes with beams (21, -3)
-return matrix_element[5]+matrix_element[6]+matrix_element[7];
-}
-else if(id1 == 21 && id2 == 3){
-// Add matrix elements for processes with beams (21, 3)
-return matrix_element[0]+matrix_element[1]+matrix_element[2];
-}
-else if(id1 == 21 && id2 == -1){
-// Add matrix elements for processes with beams (21, -1)
-return matrix_element[5]+matrix_element[6]+matrix_element[7];
-}
-else if(id1 == -3 && id2 == 21){
-// Add matrix elements for processes with beams (-3, 21)
-return matrix_element[15]+matrix_element[16]+matrix_element[17];
-}
-else if(id1 == 3 && id2 == 21){
-// Add matrix elements for processes with beams (3, 21)
-return matrix_element[10]+matrix_element[11]+matrix_element[12];
-}
-else {
-// Return 0 if not correct initial state assignment
- return 0.;}
-}
-
-//--------------------------------------------------------------------------
-// Select identity, colour and anticolour.
-
-void Sigma_sm_gd_ddxd::setIdColAcol() {
-    if(id1 == 21 && id2 == -2){
-// Pick one of the flavor combinations (1, -1, -2), (2, -2, -2), (3, -3, -2)
-int flavors[3][3] = {{1,-1,-2},{2,-2,-2},{3,-3,-2}};
-vector<double> probs;
-double sum = matrix_element[8]+matrix_element[9]+matrix_element[8];
-probs.push_back(matrix_element[8]/sum);
-probs.push_back(matrix_element[9]/sum);
-probs.push_back(matrix_element[8]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == -2 && id2 == 21){
-// Pick one of the flavor combinations 
-int flavors[3][3] = {{1,-1,-2},{2,-2,-2},{3,-3,-2}};
-vector<double> probs;
-double sum = matrix_element[18]+matrix_element[19]+matrix_element[18];
-probs.push_back(matrix_element[18]/sum);
-probs.push_back(matrix_element[19]/sum);
-probs.push_back(matrix_element[18]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == -1 && id2 == 21){
-// Pick one of the flavor combinations 
-int flavors[3][3] = {{1,-1,-1},{2,-2,-1},{3,-3,-1}};
-vector<double> probs;
-double sum = matrix_element[15]+matrix_element[16]+matrix_element[17];
-probs.push_back(matrix_element[15]/sum);
-probs.push_back(matrix_element[16]/sum);
-probs.push_back(matrix_element[17]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == 1 && id2 == 21){
-// Pick one of the flavor combinations 
-int flavors[3][3] = {{3,-3,1},{2,-2,1},{1,-1,1}};
-vector<double> probs;
-double sum = matrix_element[12]+matrix_element[11]+matrix_element[10];
-probs.push_back(matrix_element[12]/sum);
-probs.push_back(matrix_element[11]/sum);
-probs.push_back(matrix_element[10]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == 21 && id2 == 1){
-// Pick one of the flavor combinations (3, -3, 1), (2, -2, 1), (1, -1, 1)
-int flavors[3][3] = {{3,-3,1},{2,-2,1},{1,-1,1}};
-vector<double> probs;
-double sum = matrix_element[2]+matrix_element[1]+matrix_element[0];
-probs.push_back(matrix_element[2]/sum);
-probs.push_back(matrix_element[1]/sum);
-probs.push_back(matrix_element[0]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == 2 && id2 == 21){
-// Pick one of the flavor combinations 
-int flavors[3][3] = {{3,-3,2},{1,-1,2},{2,-2,2}};
-vector<double> probs;
-double sum = matrix_element[13]+matrix_element[13]+matrix_element[14];
-probs.push_back(matrix_element[13]/sum);
-probs.push_back(matrix_element[13]/sum);
-probs.push_back(matrix_element[14]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == 21 && id2 == 2){
-// Pick one of the flavor combinations (3, -3, 2), (1, -1, 2), (2, -2, 2)
-int flavors[3][3] = {{3,-3,2},{1,-1,2},{2,-2,2}};
-vector<double> probs;
-double sum = matrix_element[3]+matrix_element[3]+matrix_element[4];
-probs.push_back(matrix_element[3]/sum);
-probs.push_back(matrix_element[3]/sum);
-probs.push_back(matrix_element[4]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == 21 && id2 == -3){
-// Pick one of the flavor combinations (2, -2, -3), (1, -1, -3), (3, -3, -3)
-int flavors[3][3] = {{2,-2,-3},{1,-1,-3},{3,-3,-3}};
-vector<double> probs;
-double sum = matrix_element[6]+matrix_element[5]+matrix_element[7];
-probs.push_back(matrix_element[6]/sum);
-probs.push_back(matrix_element[5]/sum);
-probs.push_back(matrix_element[7]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == 21 && id2 == 3){
-// Pick one of the flavor combinations (3, -3, 3), (1, -1, 3), (2, -2, 3)
-int flavors[3][3] = {{3,-3,3},{1,-1,3},{2,-2,3}};
-vector<double> probs;
-double sum = matrix_element[2]+matrix_element[0]+matrix_element[1];
-probs.push_back(matrix_element[2]/sum);
-probs.push_back(matrix_element[0]/sum);
-probs.push_back(matrix_element[1]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == 21 && id2 == -1){
-// Pick one of the flavor combinations (1, -1, -1), (2, -2, -1), (3, -3, -1)
-int flavors[3][3] = {{1,-1,-1},{2,-2,-1},{3,-3,-1}};
-vector<double> probs;
-double sum = matrix_element[5]+matrix_element[6]+matrix_element[7];
-probs.push_back(matrix_element[5]/sum);
-probs.push_back(matrix_element[6]/sum);
-probs.push_back(matrix_element[7]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == -3 && id2 == 21){
-// Pick one of the flavor combinations 
-int flavors[3][3] = {{2,-2,-3},{1,-1,-3},{3,-3,-3}};
-vector<double> probs;
-double sum = matrix_element[16]+matrix_element[15]+matrix_element[17];
-probs.push_back(matrix_element[16]/sum);
-probs.push_back(matrix_element[15]/sum);
-probs.push_back(matrix_element[17]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-else if(id1 == 3 && id2 == 21){
-// Pick one of the flavor combinations 
-int flavors[3][3] = {{3,-3,3},{1,-1,3},{2,-2,3}};
-vector<double> probs;
-double sum = matrix_element[12]+matrix_element[10]+matrix_element[11];
-probs.push_back(matrix_element[12]/sum);
-probs.push_back(matrix_element[10]/sum);
-probs.push_back(matrix_element[11]/sum);
-int choice = rndmPtr->pick(probs);
-id3 = flavors[choice][0];
-id4 = flavors[choice][1];
-id5 = flavors[choice][2];
-}
-setId(id1,id2,id3,id4,id5);
-// Pick color flow
-int ncolor[10] = {1,1,1,1,1,1,1,1,1,1};
-if(id1 == 21&&id2 == 1&&id3 == 1&&id4 == -1&&id5 == 1||id1 == 21&&id2 == 3&&id3 == 1&&id4 == -1&&id5 == 3){
-vector<double> probs;
-                  double sum = jamp2[0][0];
-                  for(int i=0;i<ncolor[0];i++)
-                  probs.push_back(jamp2[0][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 21&&id2 == 1&&id3 == 2&&id4 == -2&&id5 == 1||id1 == 21&&id2 == 3&&id3 == 2&&id4 == -2&&id5 == 3){
-vector<double> probs;
-                  double sum = jamp2[1][0];
-                  for(int i=0;i<ncolor[1];i++)
-                  probs.push_back(jamp2[1][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 21&&id2 == 1&&id3 == 3&&id4 == -3&&id5 == 1||id1 == 21&&id2 == 3&&id3 == 3&&id4 == -3&&id5 == 3){
-vector<double> probs;
-                  double sum = jamp2[2][0];
-                  for(int i=0;i<ncolor[2];i++)
-                  probs.push_back(jamp2[2][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 21&&id2 == 2&&id3 == 1&&id4 == -1&&id5 == 2||id1 == 21&&id2 == 2&&id3 == 3&&id4 == -3&&id5 == 2){
-vector<double> probs;
-                  double sum = jamp2[3][0];
-                  for(int i=0;i<ncolor[3];i++)
-                  probs.push_back(jamp2[3][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 21&&id2 == 2&&id3 == 2&&id4 == -2&&id5 == 2){
-vector<double> probs;
-                  double sum = jamp2[4][0];
-                  for(int i=0;i<ncolor[4];i++)
-                  probs.push_back(jamp2[4][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 21&&id2 == -1&&id3 == 1&&id4 == -1&&id5 == -1||id1 == 21&&id2 == -3&&id3 == 1&&id4 == -1&&id5 == -3){
-vector<double> probs;
-                  double sum = jamp2[5][0];
-                  for(int i=0;i<ncolor[5];i++)
-                  probs.push_back(jamp2[5][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 21&&id2 == -1&&id3 == 2&&id4 == -2&&id5 == -1||id1 == 21&&id2 == -3&&id3 == 2&&id4 == -2&&id5 == -3){
-vector<double> probs;
-                  double sum = jamp2[6][0];
-                  for(int i=0;i<ncolor[6];i++)
-                  probs.push_back(jamp2[6][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 21&&id2 == -1&&id3 == 3&&id4 == -3&&id5 == -1||id1 == 21&&id2 == -3&&id3 == 3&&id4 == -3&&id5 == -3){
-vector<double> probs;
-                  double sum = jamp2[7][0];
-                  for(int i=0;i<ncolor[7];i++)
-                  probs.push_back(jamp2[7][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 21&&id2 == -2&&id3 == 1&&id4 == -1&&id5 == -2||id1 == 21&&id2 == -2&&id3 == 3&&id4 == -3&&id5 == -2){
-vector<double> probs;
-                  double sum = jamp2[8][0];
-                  for(int i=0;i<ncolor[8];i++)
-                  probs.push_back(jamp2[8][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 21&&id2 == -2&&id3 == 2&&id4 == -2&&id5 == -2){
-vector<double> probs;
-                  double sum = jamp2[9][0];
-                  for(int i=0;i<ncolor[9];i++)
-                  probs.push_back(jamp2[9][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 1&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 1||id1 == 3&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 3){
-vector<double> probs;
-                  double sum = jamp2[0][0];
-                  for(int i=0;i<ncolor[0];i++)
-                  probs.push_back(jamp2[0][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 1&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 1||id1 == 3&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 3){
-vector<double> probs;
-                  double sum = jamp2[1][0];
-                  for(int i=0;i<ncolor[1];i++)
-                  probs.push_back(jamp2[1][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 1&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 1||id1 == 3&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 3){
-vector<double> probs;
-                  double sum = jamp2[2][0];
-                  for(int i=0;i<ncolor[2];i++)
-                  probs.push_back(jamp2[2][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 2&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 2||id1 == 2&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 2){
-vector<double> probs;
-                  double sum = jamp2[3][0];
-                  for(int i=0;i<ncolor[3];i++)
-                  probs.push_back(jamp2[3][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == 2&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 2){
-vector<double> probs;
-                  double sum = jamp2[4][0];
-                  for(int i=0;i<ncolor[4];i++)
-                  probs.push_back(jamp2[4][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == -1&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -1||id1 == -3&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -3){
-vector<double> probs;
-                  double sum = jamp2[5][0];
-                  for(int i=0;i<ncolor[5];i++)
-                  probs.push_back(jamp2[5][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == -1&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -1||id1 == -3&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -3){
-vector<double> probs;
-                  double sum = jamp2[6][0];
-                  for(int i=0;i<ncolor[6];i++)
-                  probs.push_back(jamp2[6][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == -1&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -1||id1 == -3&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -3){
-vector<double> probs;
-                  double sum = jamp2[7][0];
-                  for(int i=0;i<ncolor[7];i++)
-                  probs.push_back(jamp2[7][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == -2&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -2||id1 == -2&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -2){
-vector<double> probs;
-                  double sum = jamp2[8][0];
-                  for(int i=0;i<ncolor[8];i++)
-                  probs.push_back(jamp2[8][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-else if(id1 == -2&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -2){
-vector<double> probs;
-                  double sum = jamp2[9][0];
-                  for(int i=0;i<ncolor[9];i++)
-                  probs.push_back(jamp2[9][i]/sum);
-                  int ic = rndmPtr->pick(probs);
-static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
-setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
-}
-}
-
-//--------------------------------------------------------------------------
-// Evaluate weight for angles of decay products in process 
-
-double Sigma_sm_gd_ddxd::weightDecay(Event& process, int iResBeg, int iResEnd) {
-    // Just use isotropic decay (default)
-return 1.;
-}
-
-//==========================================================================
-// Private class member functions
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2 for each subprocess
-
-void Sigma_sm_gd_ddxd::calculate_wavefunctions(const int perm[], const int hel[]){
-// Calculate wavefunctions for all processes
-double p[nexternal][4];
-int i;
- 
-// Convert Pythia 4-vectors to double[]
-for(i=0;i < nexternal;i++){
-    p[i][0] = pME[i].e();
-    p[i][1] = pME[i].px();
-    p[i][2] = pME[i].py();
-    p[i][3] = pME[i].pz();
-}
-
-// Calculate all wavefunctions
-vxxxxx(p[perm[0]],mME[0],hel[0],-1,w[0]);
-ixxxxx(p[perm[1]],mME[1],hel[1],+1,w[1]);
-oxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);
-ixxxxx(p[perm[3]],mME[3],hel[3],-1,w[3]);
-FFV1_3(w[3],w[2],pars->GDZ2,pars->MZ,pars->WZ,w[4]);
-oxxxxx(p[perm[4]],mME[4],hel[4],+1,w[5]);
-FFV1_2(w[1],w[0],pars->GQQ,pars->zero,pars->zero,w[6]);
-FFV1_1(w[5],w[0],pars->GQQ,pars->zero,pars->zero,w[7]);
-FFV1_2_3(w[3],w[2],pars->GUZ1,pars->GUZ2,pars->MZ,pars->WZ,w[8]);
-oxxxxx(p[perm[1]],mME[1],hel[1],-1,w[9]);
-ixxxxx(p[perm[4]],mME[4],hel[4],-1,w[10]);
-FFV1_2(w[10],w[0],pars->GQQ,pars->zero,pars->zero,w[11]);
-FFV1_1(w[9],w[0],pars->GQQ,pars->zero,pars->zero,w[12]);
-
-// Calculate all amplitudes
-# Amplitude(s) for diagram number 0
-FFV1_0(w[6],w[5],w[4],pars->GDZ2,amp[0]);
-FFV1_0(w[1],w[7],w[4],pars->GDZ2,amp[1]);
-FFV1_0(w[6],w[5],w[8],pars->GDZ2,amp[2]);
-FFV1_0(w[1],w[7],w[8],pars->GDZ2,amp[3]);
-FFV1_2_0(w[6],w[5],w[4],pars->GUZ1,pars->GUZ2,amp[4]);
-FFV1_2_0(w[1],w[7],w[4],pars->GUZ1,pars->GUZ2,amp[5]);
-FFV1_2_0(w[6],w[5],w[8],pars->GUZ1,pars->GUZ2,amp[6]);
-FFV1_2_0(w[1],w[7],w[8],pars->GUZ1,pars->GUZ2,amp[7]);
-FFV1_0(w[11],w[9],w[4],pars->GDZ2,amp[8]);
-FFV1_0(w[10],w[12],w[4],pars->GDZ2,amp[9]);
-FFV1_0(w[11],w[9],w[8],pars->GDZ2,amp[10]);
-FFV1_0(w[10],w[12],w[8],pars->GDZ2,amp[11]);
-FFV1_0(w[11],w[9],w[4],pars->GDZ2,amp[12]);
-FFV1_0(w[10],w[12],w[4],pars->GDZ2,amp[13]);
-FFV1_2_0(w[11],w[9],w[4],pars->GUZ1,pars->GUZ2,amp[14]);
-FFV1_2_0(w[10],w[12],w[4],pars->GUZ1,pars->GUZ2,amp[15]);
-FFV1_2_0(w[11],w[9],w[8],pars->GUZ1,pars->GUZ2,amp[16]);
-FFV1_2_0(w[10],w[12],w[8],pars->GUZ1,pars->GUZ2,amp[17]);
-
-
-}
-double Sigma_sm_gd_ddxd::matrix_gd_zd_z_ddx() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=-amp[0]-amp[1];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[0][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-double Sigma_sm_gd_ddxd::matrix_gd_zd_z_uux() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=-amp[2]-amp[3];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[1][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-double Sigma_sm_gd_ddxd::matrix_gd_zd_z_ssx() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=-amp[0]-amp[1];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[2][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-double Sigma_sm_gd_ddxd::matrix_gu_zu_z_ddx() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=-amp[4]-amp[5];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[3][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-double Sigma_sm_gd_ddxd::matrix_gu_zu_z_uux() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=-amp[6]-amp[7];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[4][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_ddx() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=+amp[8]+amp[9];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[5][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_uux() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=+amp[10]+amp[11];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[6][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_ssx() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=+amp[12]+amp[13];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[7][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-double Sigma_sm_gd_ddxd::matrix_gux_zux_z_ddx() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=+amp[14]+amp[15];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[8][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-double Sigma_sm_gd_ddxd::matrix_gux_zux_z_uux() { 
-int i, j;
-// Local variables
-const int ngraphs = 2;
-const int ncolor = 1;
-std::complex<double> ztemp;
-std::complex<double> jamp[ncolor];
-// The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
-
-// Calculate color flows
-jamp[0]=+amp[16]+amp[17];
-
-// Sum and square the color flows to get the matrix element
-double matrix = 0;
-for(i=0;i < ncolor; i++){
-  ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
-}
-
-// Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
-    jamp2[9][i] += real(jamp[i]*conj(jamp[i]));
-    
-return matrix;
-}
-
-"""
-
-        self.assertEqual(text.replace('\t', '    ').split('\n'), 
-                         goal_string.replace('\t', '    ').split('\n'))        
-        
-
-
-
-    def test_write_cpp_go_process_cc_file(self):
-        """Test writing the .cc C++ standalone file for u u~ > go go"""
+        my_writer = writers.CPPWriter(pjoin(
+                                 self.IOpath,'write_dec_multiprocess_files.cc'))  
+        my_writer.write(text)
+
+    @IOTests.createIOTest()
+    def testIO_write_cpp_go_process_cc_file(self):
+        """ target: cpp_go_process.cc
+        """
+        #Test writing the .cc C++ standalone file for u u~ > go go
 
         myleglist = base_objects.LegList()
 
@@ -2439,258 +1320,11 @@ return matrix;
         matrix_element.get('matrix_elements')[0].set('has_mirror_process',
                                                      True)
 
-        goal_string = \
-"""//==========================================================================
-// This file has been automatically generated for C++ Standalone by
-// MadGraph5_aMC@NLO v. %(version)s, %(date)s
-// By the MadGraph5_aMC@NLO Development Team
-// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-//==========================================================================
-
-#include "CPPProcess.h"
-#include "HelAmps_sm.h"
-
-using namespace MG5_sm; 
-
-//==========================================================================
-// Class member functions for calculating the matrix elements for
-// Process: u u~ > go go
-
-//--------------------------------------------------------------------------
-// Initialize process.
-
-void CPPProcess::initProc(string param_card_name) 
-{
-  // Instantiate the model class and set parameters that stay fixed during run
-  pars = Parameters_sm::getInstance(); 
-  SLHAReader slha(param_card_name); 
-  pars->setIndependentParameters(slha); 
-  pars->setIndependentCouplings(); 
-  pars->printIndependentParameters(); 
-  pars->printIndependentCouplings(); 
-  // Set external particle masses for this matrix element
-  mME.push_back(pars->ZERO); 
-  mME.push_back(pars->ZERO); 
-  mME.push_back(pars->MGO); 
-  mME.push_back(pars->MGO); 
-  jamp2[0] = new double[2]; 
-}
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2, part independent of incoming flavour.
-
-void CPPProcess::sigmaKin() 
-{
-  // Set the parameters which change event by event
-  pars->setDependentParameters(); 
-  pars->setDependentCouplings(); 
-  static bool firsttime = true; 
-  if (firsttime)
-  {
-    pars->printDependentParameters(); 
-    pars->printDependentCouplings(); 
-    firsttime = false; 
-  }
-
-  // Reset color flows
-  for(int i = 0; i < 2; i++ )
-    jamp2[0][i] = 0.; 
-
-  // Local variables and constants
-  const int ncomb = 16; 
-  static bool goodhel[ncomb] = {ncomb * false}; 
-  static int ntry = 0, sum_hel = 0, ngood = 0; 
-  static int igood[ncomb]; 
-  static int jhel; 
-  std::complex<double> * * wfs; 
-  double t[nprocesses]; 
-  // Helicities for the process
-  static const int helicities[ncomb][nexternal] = {{-1, -1, -1, -1}, {-1, -1,
-      -1, 1}, {-1, -1, 1, -1}, {-1, -1, 1, 1}, {-1, 1, -1, -1}, {-1, 1, -1, 1},
-      {-1, 1, 1, -1}, {-1, 1, 1, 1}, {1, -1, -1, -1}, {1, -1, -1, 1}, {1, -1,
-      1, -1}, {1, -1, 1, 1}, {1, 1, -1, -1}, {1, 1, -1, 1}, {1, 1, 1, -1}, {1,
-      1, 1, 1}};
-  // Denominators: spins, colors and identical particles
-  const int denominators[nprocesses] = {72, 72}; 
-
-  ntry = ntry + 1; 
-
-  // Reset the matrix elements
-  for(int i = 0; i < nprocesses; i++ )
-  {
-    matrix_element[i] = 0.; 
-  }
-  // Define permutation
-  int perm[nexternal]; 
-  for(int i = 0; i < nexternal; i++ )
-  {
-    perm[i] = i; 
-  }
-
-  if (sum_hel == 0 || ntry < 10)
-  {
-    // Calculate the matrix element for all helicities
-    for(int ihel = 0; ihel < ncomb; ihel++ )
-    {
-      if (goodhel[ihel] || ntry < 2)
-      {
-        calculate_wavefunctions(perm, helicities[ihel]); 
-        t[0] = matrix_uux_gogo(); 
-        // Mirror initial state momenta for mirror process
-        perm[0] = 1; 
-        perm[1] = 0; 
-        // Calculate wavefunctions
-        calculate_wavefunctions(perm, helicities[ihel]); 
-        // Mirror back
-        perm[0] = 0; 
-        perm[1] = 1; 
-        // Calculate matrix elements
-        t[1] = matrix_uux_gogo(); 
-        double tsum = 0; 
-        for(int iproc = 0; iproc < nprocesses; iproc++ )
-        {
-          matrix_element[iproc] += t[iproc]; 
-          tsum += t[iproc]; 
-        }
-        // Store which helicities give non-zero result
-        if (tsum != 0. && !goodhel[ihel])
-        {
-          goodhel[ihel] = true; 
-          ngood++; 
-          igood[ngood] = ihel; 
-        }
-      }
-    }
-    jhel = 0; 
-    sum_hel = min(sum_hel, ngood); 
-  }
-  else
-  {
-    // Only use the "good" helicities
-    for(int j = 0; j < sum_hel; j++ )
-    {
-      jhel++; 
-      if (jhel >= ngood)
-        jhel = 0; 
-      double hwgt = double(ngood)/double(sum_hel); 
-      int ihel = igood[jhel]; 
-      calculate_wavefunctions(perm, helicities[ihel]); 
-      t[0] = matrix_uux_gogo(); 
-      // Mirror initial state momenta for mirror process
-      perm[0] = 1; 
-      perm[1] = 0; 
-      // Calculate wavefunctions
-      calculate_wavefunctions(perm, helicities[ihel]); 
-      // Mirror back
-      perm[0] = 0; 
-      perm[1] = 1; 
-      // Calculate matrix elements
-      t[1] = matrix_uux_gogo(); 
-      for(int iproc = 0; iproc < nprocesses; iproc++ )
-      {
-        matrix_element[iproc] += t[iproc] * hwgt; 
-      }
-    }
-  }
-
-  for (int i = 0; i < nprocesses; i++ )
-    matrix_element[i] /= denominators[i]; 
-
-
-
-}
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2, including incoming flavour dependence.
-
-double CPPProcess::sigmaHat() 
-{
-  // Select between the different processes
-  if(id1 == 2 && id2 == -2)
-  {
-    // Add matrix elements for processes with beams (2, -2)
-    return matrix_element[0]; 
-  }
-  else if(id1 == -2 && id2 == 2)
-  {
-    // Add matrix elements for processes with beams (-2, 2)
-    return matrix_element[1]; 
-  }
-  else
-  {
-    // Return 0 if not correct initial state assignment
-    return 0.; 
-  }
-}
-
-//==========================================================================
-// Private class member functions
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2 for each subprocess
-
-void CPPProcess::calculate_wavefunctions(const int perm[], const int hel[])
-{
-  // Calculate wavefunctions for all processes
-  int i, j; 
-
-  // Calculate all wavefunctions
-  ixxxxx(p[perm[0]], mME[0], hel[0], +1, w[0]); 
-  oxxxxx(p[perm[1]], mME[1], hel[1], -1, w[1]); 
-  ixxxxx(p[perm[2]], mME[2], hel[2], -1, w[2]); 
-  oxxxxx(p[perm[3]], mME[3], hel[3], +1, w[3]); 
-  FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
-
-  // Calculate all amplitudes
-  // Amplitude(s) for diagram number 0
-  FFV1_0(w[2], w[3], w[4], pars->GC_8, amp[0]); 
-
-}
-double CPPProcess::matrix_uux_gogo() 
-{
-  int i, j; 
-  // Local variables
-  const int ngraphs = 1; 
-  const int ncolor = 2; 
-  std::complex<double> ztemp; 
-  std::complex<double> jamp[ncolor]; 
-  // The color matrix;
-  static const double denom[ncolor] = {3, 3}; 
-  static const double cf[ncolor][ncolor] = {{16, -2}, {-2, 16}}; 
-
-  // Calculate color flows
-  jamp[0] = -std::complex<double> (0, 1) * amp[0]; 
-  jamp[1] = +std::complex<double> (0, 1) * amp[0]; 
-
-  // Sum and square the color flows to get the matrix element
-  double matrix = 0; 
-  for(i = 0; i < ncolor; i++ )
-  {
-    ztemp = 0.; 
-    for(j = 0; j < ncolor; j++ )
-      ztemp = ztemp + cf[i][j] * jamp[j]; 
-    matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
-  }
-
-  // Store the leading color flows for choice of color
-  for(i = 0; i < ncolor; i++ )
-    jamp2[0][i] += real(jamp[i] * conj(jamp[i])); 
-
-  return matrix; 
-}
-
-
-
-""" % misc.get_pkg_info()
-
         exporter = export_cpp.ProcessExporterCPP(matrix_element,
                                                  self.mycppwriter)
 
         exporter.write_process_cc_file(\
-                  writers.CPPWriter(self.give_pos('test.cc')))
-
-        #print open(self.give_pos('test.cc')).read()
-        self.assertFileContains('test.cc', goal_string)
+               writers.CPPWriter(os.path.join(self.IOpath,'cpp_go_process.cc')))
 
     def disabled_test_write_process_files(self):
         """Test writing the .h  and .cc Pythia file for a matrix element"""
@@ -3268,4 +1902,321 @@ cout << setw(20) << "GC_10 " << "= " << setiosflags(ios::scientific) << setw(10)
         file_h, file_cc = self.model_builder.generate_parameters_class_files()
         self.assertEqual(file_h.split('\n'), goal_file_h.split('\n'))
         self.assertEqual(file_cc.replace('\t', '    ').split('\n'), goal_file_cc.replace('\t', '    ').split('\n'))
+
+
+
+#===============================================================================
+# IOExportPythia8Test
+#===============================================================================
+class IOExportMatchBox(unittest.TestCase,
+                         test_file_writers.CheckFileCreate):
+    """Test class for the export v4 module"""
+
+    def setUp(self):
+
+        if not hasattr(self, 'model'):
+            self.mymodel = base_objects.Model()
+            self.mymatrixelement = helas_objects.HelasMatrixElement()
+
+
+        test_file_writers.CheckFileCreate.clean_files
+
+        # Set up model
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # u and c quarkd and their antiparticles
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'ZERO',
+                      'width':'ZERO',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'c',
+                      'antiname':'c~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MC',
+                      'width':'ZERO',
+                      'texname':'c',
+                      'antitexname':'\bar c',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':4,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        c = mypartlist[len(mypartlist) - 1]
+        antic = copy.copy(c)
+        antic.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'ZERO',
+                      'width':'ZERO',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[len(mypartlist) - 1]
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'Z',
+                      'antiname':'Z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[len(mypartlist) - 1]
+
+        # A gluino
+        mypartlist.append(base_objects.Particle({'name':'go',
+                      'antiname':'go',
+                      'spin':2,
+                      'color':8,
+                      'mass':'MGO',
+                      'width':'WGO',
+                      'texname':'go',
+                      'antitexname':'go',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000021,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        go = mypartlist[len(mypartlist) - 1]
+
+        # A sextet diquark
+        mypartlist.append(base_objects.Particle({'name':'six',
+                      'antiname':'six~',
+                      'spin':1,
+                      'color':6,
+                      'mass':'MSIX',
+                      'width':'WSIX',
+                      'texname':'six',
+                      'antitexname':'sixbar',
+                      'line':'straight',
+                      'charge':4./3.,
+                      'pdg_code':6000001,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+
+        six = mypartlist[len(mypartlist) - 1]
+        antisix = copy.copy(six)
+        antisix.set('is_part', False)
+        
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2, 1, 0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GC_10'},
+                      'orders':{'QCD':1}}))
+
+        # Gamma couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             z]),
+                      'color': [color.ColorString([color.T(1, 0)])],
+                      'lorentz':['FFV2', 'FFV5'],
+                      'couplings':{(0,0): 'GC_35', (0,1): 'GC_47'},
+                      'orders':{'QED':1}}))
+
+        # Gluon couplings to gluinos
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             go, \
+                                             g]),
+                      'color': [color.ColorString([color.f(0,1,2)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GC_8'},
+                      'orders':{'QCD':1}}))
+
+        # Sextet couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             u, \
+                                             antisix]),
+                      'color': [color.ColorString([color.K6Bar(2, 0, 1)])],
+                      'lorentz':['FFS1'],
+                      'couplings':{(0,0): 'GC_24'},
+                      'orders':{'QSIX':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             antiu, \
+                                             six]),
+                      'color': [color.ColorString([color.K6(2, 0, 1)])],
+                      'lorentz':['FFS1'],
+                      'couplings':{(0,0): 'GC_24'},
+                      'orders':{'QSIX':1}}))
+
+        self.mymodel.set('particles', mypartlist)
+        self.mymodel.set('interactions', myinterlist)
+        self.mymodel.set('name', 'sm')
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel,
+                                       'orders':{'QSIX':0}})
+        
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        self.mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':4,
+                                           'state':False,
+                                           'number' : 1}))
+        myleglist.append(base_objects.Leg({'id':-4,
+                                         'state':False,
+                                           'number' : 2}))
+        myleglist.append(base_objects.Leg({'id':4,
+                                         'state':True,
+                                           'number' : 3}))
+        myleglist.append(base_objects.Leg({'id':-4,
+                                         'state':True,
+                                           'number' : 4}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel,
+                                       'orders':{'QSIX':0}})
+
+        self.mymatrixelement.get('matrix_elements')[0].\
+                                               get('processes').append(myproc)
+
+        self.mycppwriter = helas_call_writer.CPPUFOHelasCallWriter(self.mymodel)
+    
+#         self.pythia8_exporter = export_cpp.ProcessExporterMatchbox(\
+#             self.mymatrixelement, self.mycppwriter,
+#             process_string = "q q~ > q q~")
+#         
+#         self.cpp_exporter = export_cpp.ProcessExporterCPP(\
+#             self.mymatrixelement, self.mycppwriter,
+#             process_string = "q q~ > q q~")
+
+    tearDown = test_file_writers.CheckFileCreate.clean_files
+
+    def test_fail_on_process_cc_file_uu_six(self):
+        """Test writing the .cc Pythia file for u u > six"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number' : 1}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number' : 2}))
+        myleglist.append(base_objects.Leg({'id':6000001,
+                                           'number' : 3}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
+
+        exporter = export_cpp.ProcessExporterMatchbox( mymatrixelement, self.mycppwriter, process_string="q q > six")
+        
+        self.assertRaises(export_cpp.ProcessExporterCPP.ProcessExporterCPPError,
+                          exporter.write_process_cc_file,
+                          writers.CPPWriter(self.give_pos('test.cc')))
+
+                          
+    def test_write_match_go_process_cc_file(self):
+        """Test writing the .cc C++ standalone file for u u~ > go go"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000021,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000021,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+        
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMultiProcess(myamplitude)
+        matrix_element.get('matrix_elements')[0].set('has_mirror_process',
+                                                     True)
+
+        exporter = export_cpp.ProcessExporterMatchbox(matrix_element,
+                                                 self.mycppwriter)
+
+        exporter.write_process_cc_file(\
+                  writers.CPPWriter(self.give_pos('test.cc')))
+
+        goal_string = """int CPPProcess::colorstring(int i, int j) 
+{
+  static const double res[2][5] = {{3, 4, 2, 1, 0}, {4, 3, 2, 1, 0}}; 
+  return res[i][j]; 
+}"""
+
+        #print open(self.give_pos('test.cc')).read()
+        self.assertFileContains('test.cc', goal_string, partial=True)
+
+
 

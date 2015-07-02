@@ -18,7 +18,8 @@ C---  the include file with the values of the parameters and masses
 C---  integer nexternal ! number particles (incoming+outgoing) in the me 
       INCLUDE "nexternal.inc" 
 C---  particle masses
-      REAL*8 PMASS(NEXTERNAL)	
+      REAL*8 PMASS(NEXTERNAL)
+      REAL*8 TOTALMASS      
 C---  integer    n_max_cg
       INCLUDE "ngraphs.inc"     !how many diagrams (could be useful to know...)
 
@@ -51,6 +52,11 @@ c     in coupl.inc .
       call setpara('param_card.dat')  !first call to setup the paramaters
       include "pmass.inc"             !set up masses
 
+      TOTALMASS = 0.0d0
+      DO I=1,NEXTERNAL
+        TOTALMASS = TOTALMASS + PMASS(I)
+      ENDDO
+
 c---  Now use a simple multipurpose PS generator (RAMBO) just to get a 
 c     RANDOM set of four momenta of given masses pmass(i) to be used to evaluate 
 c     the MadGraph5_aMC@NLO matrix-element.       
@@ -60,6 +66,9 @@ c
          SQRTS=PMASS(1)
       ELSE
          SQRTS=1000d0              !CMS energy in GEV
+         IF (SQRTS.le.2.0d0*TOTALMASS) THEN
+            SQRTS = 2.0d0*TOTALMASS
+         ENDIF
       ENDIF
 
       call printout()
@@ -227,9 +236,9 @@ C         LOCAL
       TWOPI=8.*DATAN(1.D0)
       PO2LOG=LOG(TWOPI/4.)
       Z(2)=PO2LOG
-      DO 101 K=3,NEXTERNAL-NINCOMING-1
+      DO 101 K=3,NEXTERNAL-NINCOMING
   101 Z(K)=Z(K-1)+PO2LOG-2.*LOG(DFLOAT(K-2))
-      DO 102 K=3,NEXTERNAL-NINCOMING-1
+      DO 102 K=3,NEXTERNAL-NINCOMING
   102 Z(K)=(Z(K)-LOG(DFLOAT(K-1)))
 *
 * CHECK ON THE NUMBER OF PARTICLES

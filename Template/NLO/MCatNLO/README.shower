@@ -1,39 +1,47 @@
-All user-adjustable parameters related to the shower are stored in
-Cards/shower_card.dat. On top of various pyhiscs settings, the user can
-specify the analysis procedure to adopt. There are three main options.
-
-1) StdHep/HepMC output (default).
-StdHep/HepMC n-tuples are stored at the end of the run in the file
-  Events/run_**/events**.hep.gz (StdHep) 
-or 
-  Events/run_**/events**.hepmc.gz (HepMC). 
-Herwig6 and Pythia6 will produce StdHep files, while Herwig++ and Pythia8 will
-produce HepMC files.  These samples can be analysed afterwards with external
-tools, like for example MadAnalysis5. This default option is used when
-the ANALYSE variable is empty.
-WARNING: the final files produced in this way are extremely large.
-Please make sure to have enough disk space.
-
-2) TopDrawer analyses.
-The user can build her/his own analyses for TopDrawer output on the basis 
-of many examples in the MCatNLO/**Analyzer folders. Plots are stored at the
-end of the run in the file 
-  Events/run_*/plot*.top.  
-To use one such analysis files (to be put in MCatNLO/**Analyzer) the user has
-in principle to assign non-default values to the EXTRALIBS, EXTRAPATHS,
-INCLUDEPATHS, ANALYSE variables.  For example, to shower p p > h HERWIG6
-events with the ready-to-use mcatnlo_hwan_pp_h.f analysis, a typical setup is
-  EXTRALIBS = stdc++ fastjet 
-  EXTRAPATHS = <path-to-fastjet>/lib 
-  INCLUDEPATHS = <path-to-fastjet>/include 
+All user-adjustable parameters related to the shower are stored in
+Cards/shower_card.dat. On top of various pyhiscs settings, the user can
+specify the analysis procedure to adopt. There are three main options.
 
-  ANALYSE = mcatnlo_hwan_pp_h.o mcatnlo_hbook_gfortran8.o myfastjetfortran.o 
-If the user has Fastjet in her/his own PATH, it is not necessary to fill 
+1) StdHep/HepMC output (default).
+StdHep/HepMC n-tuples are stored at the end of the run in the file
+  Events/run_**/events**.hep.gz (StdHep)
+or
+  Events/run_**/events**.hepmc.gz (HepMC).
+Herwig6 and Pythia6 will produce StdHep files, while Herwig++ and Pythia8 will
+produce HepMC files.  These samples can be analysed afterwards with external
+tools, like for example MadAnalysis5. This default option is used when
+the ANALYSE variable is empty.
+WARNING: the final files produced in this way are extremely large.
+Please make sure to have enough disk space.
+
+2) TopDrawer analyses.
+The user can build her/his own analyses for TopDrawer output on the basis
+of many examples in the MCatNLO/**Analyzer folders. Plots are stored at the
+end of the run in the file Events/run_*/plot*.top.
+To use one such analysis files (to be put in MCatNLO/**Analyzer) the user has
+in principle to assign non-default values to the EXTRALIBS, EXTRAPATHS,
+INCLUDEPATHS, ANALYSE variables.  For example, to shower p p > h HERWIG6
+events with the ready-to-use mcatnlo_hwan_pp_h.f analysis, a typical setup is
+  EXTRALIBS = stdc++ fastjet
+  EXTRAPATHS = <path-to-fastjet>/lib
+  INCLUDEPATHS = <path-to-fastjet>/include 
+  ANALYSE = mcatnlo_hwan_pp_h.o mcatnlo_hbook_gfortran8.o myfastjetfortran.o
+If the user has Fastjet in her/his own PATH, it is not necessary to fill
 the EXTRAPATHS and INCLUDEPATHS variables. The use of FastJet, and of file
 myfastjetfortran.f is required only if in the analysis there is a call to function
-fastjetppgenkt.
-
-4) User's own analyses.
-The user has to assign non-default values to the EXTRALIBS, EXTRAPATHS,
-INCLUDEPATHS, ANALYSE environmental variables.  Analysis files have to be put
-in MCatNLO/**Analyzer.
+fastjetppgenkt.
+Results from the various runs can be combined by means of the dedicated scripts
+in the Utilities folder.
+
+3) HwU analyses.
+Same as for item 2) for HwU output. HwU is an internal plotting package that
+allows flexibility in the output and in the combination of plots. The user can
+write an own analysis on the basis of the many examples in the MCatNLO/**Analyzer
+folders.
+Output files are stored in Events/run_*, and results from the various runs can
+be combined by means of the python script in bin/internal/histograms.py.
+
+4) User's own analyses.
+The user has to assign non-default values to the EXTRALIBS, EXTRAPATHS,
+INCLUDEPATHS, ANALYSE environmental variables.  Analysis files have to be put
+in MCatNLO/**Analyzer.

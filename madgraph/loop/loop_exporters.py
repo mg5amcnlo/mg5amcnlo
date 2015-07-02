@@ -51,6 +51,8 @@ import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
 from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
 
+import madgraph.various.banner as banner_mod
+
 pjoin = os.path.join
 
 import aloha.create_aloha as create_aloha
@@ -74,23 +76,29 @@ class LoopExporterFortran(object):
         ProcessExporterFortran but give access to arguments like dir_path and
         clean using options. This avoids method resolution object ambiguity"""
 
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madloop', 'mp':True,
+                        'loop_dir':'', 'cuttools_dir':'', 
+                        'fortran_compiler':'gfortran',
+                        'SubProc_prefix': 'P',
+                        'output_dependencies': 'external',
+                        'compute_color_flows': False}
+
+
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
+        self.opt = dict(self.default_opt)
         if opt:
-            self.opt = opt
-        else: 
-            self.opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madloop', 'mp':True,
-                        'loop_dir':'', 'cuttools_dir':'', 
-                        'fortran_compiler':'gfortran',
-                        'output_dependencies':'external'}
+            self.opt.update(opt)
 
+        self.SubProc_prefix = self.opt['SubProc_prefix']
         self.loop_dir = self.opt['loop_dir']
         self.cuttools_dir = self.opt['cuttools_dir']
         self.fortran_compiler = self.opt['fortran_compiler']
         self.dependencies = self.opt['output_dependencies']
+        self.compute_color_flows = self.opt['compute_color_flows']
 
         super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)        
 
@@ -193,6 +201,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
        Fortran format."""
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
+    madloop_makefile_name = 'makefile'
 
     MadLoop_banner = MadLoopBannerStyles.get_MadLoop_Banner(
                style='classic2', color='green', 
@@ -200,36 +209,48 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                left_frame_char = '{',right_frame_char = '}',
                print_frame=True, side_margin = 7, up_margin = 1)
 
-    def copy_v4template(self, modelname):
-        """Additional actions needed for setup of Template
+    def copy_v4template(self, modelname = ''):
+        """Additional actions needed to setup the Template.
         """
         super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
-        
+
+        self.loop_additional_template_setup()
+    
+    def loop_additional_template_setup(self, copy_Source_makefile = True):
+        """ Perform additional actions specific for this class when setting
+        up the template with the copy_v4template function."""
+
         # We must change some files to their version for NLO computations
-        cpfiles= ["Source/makefile",
-                  "Cards/MadLoopParams.dat",
+        cpfiles= ["Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParamReader.f",
                   "SubProcesses/MadLoopParams.inc"]
-        # first write SubProcesses/makefile from SubProcesses/makefile.inc
-        # dummy variables
-        link_tir_libs=[]
-        tir_libs=[]
-        cwd = os.getcwd()
-        dirpath = os.path.join(self.dir_path, 'SubProcesses')
-        try:
-            os.chdir(dirpath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % dirpath)
-            return 0
-        filename = 'makefile'
-        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                                         link_tir_libs,tir_libs)
-        # Return to original PWD
-        os.chdir(cwd)
+        if copy_Source_makefile:
+            cpfiles.append("Source/makefile")
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+
+        self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.loop_dir,'StandAlone',
+                                                  'Cards', 'MadLoopParams.dat'))
+        # write the output file
+        self.MadLoopparam.write(pjoin(self.dir_path,"SubProcesses",
+                                                           "MadLoopParams.dat"))
+
+        # We might need to give a different name to the MadLoop makefile\
+        shutil.copy(pjoin(self.loop_dir,'StandAlone','SubProcesses','makefile'),
+                pjoin(self.dir_path, 'SubProcesses',self.madloop_makefile_name))
+
+        # Write SubProcesses/MadLoop_makefile_definitions with dummy variables
+        # for the non-optimized output
+        link_tir_libs=[]
+        tir_libs=[]
+
+        filePath = pjoin(self.dir_path, 'SubProcesses',
+                                                 'MadLoop_makefile_definitions')
+        calls = self.write_loop_makefile_definitions(
+                        writers.MakefileWriter(filePath),link_tir_libs,tir_libs)
+
             
         # We need minimal editing of MadLoopCommons.f
         MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
@@ -248,9 +269,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                     'MadLoop5_resources'),pjoin(self.dir_path,'SubProcesses'))
 
         # Link relevant cards from Cards inside the MadLoop5_resources
-        ln(pjoin(self.dir_path,'Cards','MadLoopParams.dat'), 
+        ln(pjoin(self.dir_path,'SubProcesses','MadLoopParams.dat'), 
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
-        ln(pjoin(self.dir_path,'Cards','param_card.dat'), 
+        ln(pjoin(self.dir_path,'Cards','param_card.dat'),
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
         ln(pjoin(self.dir_path,'Cards','ident_card.dat'), 
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
@@ -280,15 +301,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
     # This function is placed here and not in optimized exporterd,
     # because the same makefile.inc should be used in all cases.
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,tir_include=[]):
+    def write_loop_makefile_definitions(self, writer, link_tir_libs,
+                                                       tir_libs,tir_include=[]):
         """ Create the file makefile which links to the TIR libraries."""
             
         file = open(os.path.join(self.loop_dir,'StandAlone',
-                                 'SubProcesses','makefile.inc')).read()  
+                      'SubProcesses','MadLoop_makefile_definitions.inc')).read()  
         replace_dict={}
         replace_dict['link_tir_libs']=' '.join(link_tir_libs)
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
+        replace_dict['prefix']= self.SubProc_prefix
         replace_dict['doto']='%.o'
         replace_dict['tir_include']=' '.join(tir_include)
         file=file%replace_dict
@@ -306,17 +329,45 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         super(LoopProcessExporterFortranSA, self).convert_model_to_mg4(model,
            wanted_lorentz = wanted_lorentz, wanted_couplings = wanted_couplings)
 
-
-    def get_ME_identifier(self, matrix_element):
+    def get_ME_identifier(self, matrix_element, 
+                                 group_number = None, group_elem_number = None):
         """ A function returning a string uniquely identifying the matrix 
         element given in argument so that it can be used as a prefix to all
         MadLoop5 subroutines and common blocks related to it. This allows
         to compile several processes into one library as requested by the 
-        BLHA (Binoth LesHouches Accord) guidelines. """
+        BLHA (Binoth LesHouches Accord) guidelines.
+        The arguments group_number and proc_id are just for the LoopInduced
+        output with MadEvent."""
 
-        # return 'ML5_%s_'%matrix_element.get('processes')[0].shell_string()    
-        # The version below is shorter
-        return 'ML5_%d_'%matrix_element.get('processes')[0].get('id')   
+        # When disabling the loop grouping in the LoopInduced MadEvent output,
+        # we have only the group_number set and the proc_id set to None. In this
+        # case we don't print the proc_id.
+        if (not group_number is None) and group_elem_number is None:
+            return 'ML5_%d_%s_'%(matrix_element.get('processes')[0].get('id'),
+                                                                   group_number)            
+        elif group_number is None or group_elem_number is None:
+            return 'ML5_%d_'%matrix_element.get('processes')[0].get('id') 
+        else:
+            return 'ML5_%d_%s_%s_'%(matrix_element.get('processes')[0].get('id'),
+                                                group_number, group_elem_number)
+
+    def get_SubProc_folder_name(self, process, 
+                                 group_number = None, group_elem_number = None):
+        """Returns the name of the SubProcess directory, which can contain
+        the process goup and group element number for the case of loop-induced
+        integration with MadEvent."""
+        
+        # When disabling the loop grouping in the LoopInduced MadEvent output,
+        # we have only the group_number set and the proc_id set to None. In this
+        # case we don't print the proc_id.
+        if not group_number is None and group_elem_number is None:
+            return "%s%d_%s_%s"%(self.SubProc_prefix, process.get('id'), 
+                              group_number,process.shell_string(print_id=False))
+        elif group_number is None or group_elem_number is None:
+            return "%s%s" %(self.SubProc_prefix,process.shell_string())
+        else:
+            return "%s%d_%s_%s_%s"%(self.SubProc_prefix, process.get('id'), 
+           group_number, group_elem_number,process.shell_string(print_id=False))
 
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
@@ -482,22 +533,26 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             # This can be pretty long for processes with many color flows.
             # So, if necessary (i.e. for more than 15s), we tell the user the
             # estimated time for the processing.
-            if i==10:
+            if i==5:
                 elapsed_time = time.time()-start
-                t = int(len(ampl_to_jampl)*(elapsed_time/10.0))
-                if t > 20:
+                t = len(ampl_to_jampl)*(elapsed_time/5.0)
+                if t > 10.0:
                     time_info = True
                     logger.info('The color factors computation will take '+\
-                      ' about %s to run. '%str(datetime.timedelta(seconds=t))+\
+                      ' about %s to run. '%str(datetime.timedelta(seconds=int(t)))+\
                       'Started on %s.'%datetime.datetime.now().strftime(\
                                                               "%d-%m-%Y %H:%M"))
                     if logger.getEffectiveLevel()<logging.WARNING:
                         widgets = ['Color computation:', pbar.Percentage(), ' ', 
                                                 pbar.Bar(),' ', pbar.ETA(), ' ']
                         progress_bar = pbar.ProgressBar(widgets=widgets, 
-                                        maxval=len(ampl_to_jampl),fd=sys.stdout)
-            if progress_bar!=None:
+                                       maxval=len(ampl_to_jampl), fd=sys.stdout)
+            
+            if not progress_bar is None:
                 progress_bar.update(i+1)
+                # Flush to force the printout of the progress_bar to be updated
+                sys.stdout.flush()
+
             line_num=[]
             line_denom=[]
 
@@ -566,21 +621,56 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 
+    def get_context(self,matrix_element):
+        """ Returns the contextual variables which need to be set when
+        pre-processing the template files."""
+
+        # The nSquaredSO entry of the general replace dictionary should have
+        # been set in write_loopmatrix prior to the first call to this function
+        # However, for cases where the TIRCaching contextual variable is 
+        # irrelevant (like in the default output), this might not be the case
+        # so we set it to 1. 
+        try:
+            n_squared_split_orders = self.general_replace_dict['nSquaredSO']
+        except (KeyError, AttributeError):
+            n_squared_split_orders = 1
+
+        LoopInduced = not matrix_element.get('processes')[0].get('has_born')
+        
+        # Force the computation of loop color flows for loop_induced processes
+        ComputeColorFlows = self.compute_color_flows or LoopInduced
+        # The variable AmplitudeReduction is just to make the contextual
+        # conditions more readable in the include files.
+        AmplitudeReduction = LoopInduced or ComputeColorFlows
+        # Even when not reducing at the amplitude level, the TIR caching
+        # is useful when there is more than one squared split order config.
+        TIRCaching = AmplitudeReduction or n_squared_split_orders>1
+        MadEventOutput = False
+
+        return {'LoopInduced': LoopInduced,
+                'ComputeColorFlows': ComputeColorFlows,
+                'AmplitudeReduction': AmplitudeReduction,
+                'TIRCaching': TIRCaching,
+                'MadEventOutput': MadEventOutput}
+
     #===========================================================================
     # generate_subprocess_directory_v4
     #===========================================================================
-    
-    def generate_loop_subprocess(self, matrix_element, fortran_model):
+    def generate_loop_subprocess(self, matrix_element, fortran_model,
+                          group_number = None, proc_id = None, config_map=None):
         """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
         including the necessary loop_matrix.f, born_matrix.f and include files.
         Notice that this is too different from generate_subprocess_directory_v4
-        so that there is no point reusing this mother function."""
+        so that there is no point reusing this mother function.
+        The 'group_number' and 'proc_id' options are only used for the LoopInduced
+        MadEvent output and only to specify the ME_identifier and the P* 
+        SubProcess directory name."""
 
         cwd = os.getcwd()
-        # Create the directory PN_xx_xxxxx in the specified path
-        dirpath = os.path.join(self.dir_path, 'SubProcesses', \
-                      "P%s" % matrix_element.get('processes')[0].shell_string())
-
+        proc_dir_name = self.get_SubProc_folder_name(
+                        matrix_element.get('processes')[0],group_number,proc_id)
+        dirpath = os.path.join(self.dir_path, 'SubProcesses', proc_dir_name)
+        
         try:
             os.mkdir(dirpath)
         except os.error as error:
@@ -597,7 +687,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        calls=self.write_loop_matrix_element_v4(None,matrix_element,
+                         fortran_model, group_number = group_number, 
+                                     proc_id = proc_id, config_map = config_map)
 
         # We assume here that all processes must share the same property of 
         # having a born or not, which must be true anyway since these are two
@@ -609,10 +701,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 writers.FortranWriter(filename),
                 matrix_element,
                 fortran_model)
-
-        filename = 'nexternal.inc'
-        self.write_nexternal_file(writers.FortranWriter(filename),
-                             (nexternal-2), ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -626,8 +714,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # The user can always decide to do it manually, if really needed
         loop_diags = [loop_diag for loop_diag in\
 		  matrix_element.get('base_amplitude').get('loop_diagrams')\
-		  if isinstance(loop_diag,LoopDiagram) and \
-                                                      loop_diag.get('type') > 0]
+		     if isinstance(loop_diag,LoopDiagram) and loop_diag.get('type') > 0]
         if len(loop_diags)>5000:
             logger.info("There are more than 5000 loop diagrams."+\
                                               "Only the first 5000 are drawn.")
@@ -652,8 +739,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                           print_weighted=False))
             plot.draw()
 
-        self.link_files_from_Subprocesses(proc_name=\
-                              matrix_element.get('processes')[0].shell_string())
+        self.link_files_from_Subprocesses(self.get_SubProc_folder_name(
+                       matrix_element.get('processes')[0],group_number,proc_id))
         
         # Return to original PWD
         os.chdir(cwd)
@@ -662,11 +749,11 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             calls = 0
         return calls
 
-    def link_files_from_Subprocesses(self,proc_name=""):
+    def link_files_from_Subprocesses(self,proc_name):
         """ To link required files from the Subprocesses directory to the
         different P* ones"""
         
-        linkfiles = ['coupl.inc', 'makefile',
+        linkfiles = ['coupl.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
                      'mp_coupl_same_name.inc',
                      'MadLoopParamReader.f','MadLoopCommons.f',
@@ -674,6 +761,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         
         for file in linkfiles:
             ln('../%s' % file)
+        
+        ln('../%s'%self.madloop_makefile_name, name='makefile')
 
         # The mp module
         ln('../../lib/mpmodule.mod')
@@ -681,15 +770,19 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Also like the whole MadLoop5_files directory
         ln('../MadLoop5_resources')
 
-    def generate_general_replace_dict(self,matrix_element):
+    def generate_general_replace_dict(self,matrix_element,
+                                           group_number = None, proc_id = None):
         """Generates the entries for the general replacement dictionary used
-        for the different output codes for this exporter"""
+        for the different output codes for this exporter.The arguments 
+        group_number and proc_id are just for the LoopInduced output with MadEvent."""
         
         dict={}
         # A general process prefix which appears in front of all MadLooop
         # subroutines and common block so that several processes can be compiled
         # together into one library, as necessary to follow BLHA guidelines.
-        dict['proc_prefix'] = self.get_ME_identifier(matrix_element)
+        
+        dict['proc_prefix'] = self.get_ME_identifier(matrix_element,
+                       group_number = group_number, group_elem_number = proc_id)
 
         # The proc_id is used for MadEvent grouping, so none of our concern here
         # and it is simply set to an empty string.        
@@ -702,13 +795,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         dict['process_lines'] = process_lines
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-        dict['nexternal'] = nexternal-2
+        dict['nexternal'] = nexternal
+        dict['nincoming'] = ninitial
         # Extract ncomb
         ncomb = matrix_element.get_helicity_combinations()
         dict['ncomb'] = ncomb
         # Extract nloopamps
         nloopamps = matrix_element.get_number_of_loop_amplitudes()
         dict['nloopamps'] = nloopamps
+        # Extract nloopdiags
+        nloopdiags = len(matrix_element.get('diagrams'))
+        dict['nloopdiags'] = nloopdiags
         # Extract nctamps
         nctamps = matrix_element.get_number_of_CT_amplitudes()
         dict['nctamps'] = nctamps
@@ -724,6 +821,11 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Set format of the masses
         dict['mass_dp_format'] = dict['complex_dp_format']
         dict['mass_mp_format'] = dict['complex_mp_format']
+        # Fill in default values for the placeholders for the madevent 
+        # loop-induced output
+        dict['nmultichannels'] = 0
+        dict['config_map_definition'] = ''
+        dict['config_index_map_definition'] = ''        
         # Color matrix size
         # For loop induced processes it is NLOOPAMPSxNLOOPAMPS and otherwise
         # it is NLOOPAMPSxNBORNAMPS
@@ -759,15 +861,23 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             dict['copy_mp_to_dp_born_amps'] = ''
             dict['mp_born_amps_decl'] = ''
             dict['nbornamps_decl'] = ''
+            dict['nbornamps'] = 0
             dict['nBornAmps'] = 0
         
         return dict
     
-    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                                proc_id = "", config_map = []):
-        """ Writes loop_matrix.f, CT_interface.f and loop_num.f only"""
+    def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
+                        group_number = None, proc_id = None, config_map = None):
+        """ Writes loop_matrix.f, CT_interface.f, loop_num.f and
+        mp_born_amps_and_wfs.
+        The arguments group_number and proc_id are just for the LoopInduced
+        output with MadEvent and only used in get_ME_identifier."""
         
         # Create the necessary files for the loop matrix element subroutine
+        
+        if config_map:
+            raise MadGraph5Error, 'The default loop output cannot be used with'+\
+              'MadEvent and cannot compute the AMP2 for multi-channeling.'
 
         if not isinstance(fortran_model,\
           helas_call_writers.FortranUFOHelasCallWriter):
@@ -788,7 +898,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.
         self.general_replace_dict=\
-                              self.generate_general_replace_dict(matrix_element)                                 
+                              self.generate_general_replace_dict(matrix_element,
+                                 group_number = group_number, proc_id = proc_id)                                 
         
         # Extract max number of loop couplings (specific to this output type)
         self.general_replace_dict['maxlcouplings']= \
@@ -811,40 +922,44 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         if writer:
             raise MadGraph5Error, 'Matrix output mode no longer supported.'
         
-        else:
-            filename = 'loop_matrix.f'
-            calls = self.write_loopmatrix(writers.FortranWriter(filename),
-                                          matrix_element,
-                                          LoopFortranModel)
+        filename = 'loop_matrix.f'
+        calls = self.write_loopmatrix(writers.FortranWriter(filename),
+                                      matrix_element,
+                                      LoopFortranModel)       
 
-            # Write out the proc_prefix in a file, this is quite handy
-            proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
-            proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
-            proc_prefix_writer.close()
-                        
-            filename = 'check_sa.f'
-            self.write_check_sa(writers.FortranWriter(filename),matrix_element)
-            
-            filename = 'CT_interface.f'
-            self.write_CT_interface(writers.FortranWriter(filename),\
-                                    matrix_element)
-            
-            filename = 'improve_ps.f'
-            calls = self.write_improve_ps(writers.FortranWriter(filename),
-                                                                 matrix_element)
-            
-            filename = 'loop_num.f'
-            self.write_loop_num(writers.FortranWriter(filename),\
-                                    matrix_element,LoopFortranModel)
-            
-            filename = 'mp_born_amps_and_wfs.f'
-            self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
-                                         matrix_element,LoopFortranModel)
+        # Write out the proc_prefix in a file, this is quite handy
+        proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
+        proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
+        proc_prefix_writer.close()
+                    
+        filename = 'check_sa.f'
+        self.write_check_sa(writers.FortranWriter(filename),matrix_element)
+        
+        filename = 'CT_interface.f'
+        self.write_CT_interface(writers.FortranWriter(filename),\
+                                matrix_element)
+        
+        filename = 'improve_ps.f'
+        calls = self.write_improve_ps(writers.FortranWriter(filename),
+                                                             matrix_element)
+        
+        filename = 'loop_num.f'
+        self.write_loop_num(writers.FortranWriter(filename),\
+                                matrix_element,LoopFortranModel)
+        
+        filename = 'mp_born_amps_and_wfs.f'
+        self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
+                                     matrix_element,LoopFortranModel)
 
-            return calls
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        filename = 'nexternal.inc'
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                                                            nexternal, ninitial)
 
-    def generate_subprocess_directory_v4(self, matrix_element,
-                                         fortran_model):
+        return calls
+
+    def generate_subprocess_directory_v4(self, matrix_element, fortran_model):
         """ To overload the default name for this function such that the correct
         function is used when called from the command interface """
         
@@ -1050,7 +1165,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         file="\n".join(files)
         
         if writer:
-            writer.writelines(file)
+            writer.writelines(file,context=self.get_context(matrix_element))
         else:
             return file
 
@@ -1059,12 +1174,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     def split_HELASCALLS(self, writer, replace_dict, template_name, masterfile, \
                          helas_calls, entry_name, bunch_name,n_helas=2000,
                          required_so_broadcaster = 'LOOP_REQ_SO_DONE',
-                         continue_label = 1000):
+                         continue_label = 1000, context={}):
         """ Finish the code generation with splitting.         
         Split the helas calls in the argument helas_calls into bunches of 
         size n_helas and place them in dedicated subroutine with name 
         <bunch_name>_i. Also setup the corresponding calls to these subroutine 
-        in the replace_dict dictionary under the entry entry_name. """
+        in the replace_dict dictionary under the entry entry_name.
+        The context specified will be forwarded to the the fileWriter."""
         helascalls_replace_dict=copy.copy(replace_dict)
         helascalls_replace_dict['bunch_name']=bunch_name
         helascalls_files=[]
@@ -1087,14 +1203,15 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         if writer:
             for i, helascalls_file in enumerate(helascalls_files):
                 filename = '%s_%d.f'%(bunch_name,i+1)
-                writers.FortranWriter(filename).writelines(helascalls_file)
+                writers.FortranWriter(filename).writelines(helascalls_file,
+                                                                context=context)
         else:
                 masterfile='\n'.join([masterfile,]+helascalls_files)                
 
         return masterfile
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
-                         noSplit=False):
+                                                                 noSplit=False):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \
@@ -1133,8 +1250,7 @@ ANS(0)=0.0d0
               'HELPICKED_BU=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.',
               'IF(SKIPLOOPEVAL) THEN','GOTO 1227','ENDIF'])
             replace_dict['loop_induced_finalize'] = \
-            ("""HELPICKED=HELPICKED_BU
-               DO I=NCTAMPS+1,NLOOPAMPS
+            ("""DO I=NCTAMPS+1,NLOOPAMPS
                IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN
                  WRITE(*,*) '##W03 WARNING Contribution ',I
                  WRITE(*,*) ' is unstable for helicity ',H
@@ -1146,7 +1262,8 @@ C                  WRITE(*,*) 'single pole contribution    = ',AMPL(2,I)
 C                  WRITE(*,*) 'double pole contribution    = ',AMPL(3,I)
 C                ENDIF
                ENDDO
-               1227 CONTINUE""")%replace_dict
+               1227 CONTINUE
+               HELPICKED=HELPICKED_BU""")%replace_dict
             replace_dict['loop_helas_calls']=""
             replace_dict['nctamps_or_nloopamps']='nloopamps'
             replace_dict['nbornamps_or_nloopamps']='nloopamps'
@@ -1301,7 +1418,6 @@ C               ENDIF""")%replace_dict
         # This is to decide wether once to reuse old wavefunction to store new
         # ones (provided they are not used further in the code.)
         bornME.optimization = True
-        
         return super(LoopProcessExporterFortranSA,self).write_matrix_element_v4(
                                                   writer, bornME, fortran_model, 
                            proc_prefix=self.general_replace_dict['proc_prefix'])
@@ -1367,7 +1483,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop_optimized')
     # The option below controls wether one wants to group together in one single
     # CutTools/TIR call the loops with same denominator structure
-    group_loops=True
+    forbid_loop_grouping = False
     
     # List of potential TIR library one wants to link to
     all_tir=['pjfry','iregi','golem']
@@ -1390,10 +1506,34 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             else:
                 setattr(self,tir_dir,'')
 
-    def copy_v4template(self, modelname):
-        """Additional actions needed for setup of Template
+    def copy_v4template(self, modelname = ''):
+        """Additional actions needed to setup the Template. 
         """
-        super(LoopProcessOptimizedExporterFortranSA, self).copy_v4template(modelname)
+        
+        super(LoopProcessOptimizedExporterFortranSA, self).copy_v4template(
+                                                                      modelname)
+        
+        self.loop_optimized_additional_template_setup()
+
+    def get_context(self,matrix_element, **opts):
+        """ Additional contextual information which needs to be created for
+        the optimized output."""
+        
+        context = LoopProcessExporterFortranSA.get_context(self, matrix_element, 
+                                                                         **opts)
+
+        for tir in self.all_tir:
+            context['%s_available'%tir]=self.tir_available_dict[tir]
+            # safety check
+            if tir not in ['golem','pjfry','iregi']:
+                raise MadGraph5Error,"%s was not a TIR currently interfected."%tir_name
+
+        return context
+
+    def loop_optimized_additional_template_setup(self):
+        """ Perform additional actions specific for this class when setting
+        up the template with the copy_v4template function."""
+        
         # We must link the TIR to the Library folder of the active Template
         link_tir_libs=[]
         tir_libs=[]
@@ -1421,7 +1561,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         golem_include = misc.find_includes_path(trgt_path,'.mod')
                         if golem_include is None:
                             logger.error(
-'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
+'Could not find the include directory for golem, looking in %s.\n' % str(trgt_path)+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
                             golem_include = '<Not_found_define_it_yourself>'                
                         tir_include.append('-I %s'%str(golem_include))
@@ -1431,28 +1571,23 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         # place here an easy handle on the golem includes
                         ln(golem_include, starting_dir=pjoin(self.dir_path,'lib'),
                                             name='golem95_include',abspath=True)
+                        ln(libpath, starting_dir=pjoin(self.dir_path,'lib'),
+                                            name='golem95_lib',abspath=True)
                         
                 else :
                     link_tir_libs.append('-l%s'%tir)
                     tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
 
-        os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
-        cwd = os.getcwd()
-        dirpath = os.path.join(self.dir_path, 'SubProcesses')
-        try:
-            os.chdir(dirpath)
-        except os.error:
-            logger.error('Could not cd to directory %s' % dirpath)
-            return 0
-        filename = 'makefile'
-        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                                     link_tir_libs,tir_libs,
-                                                     tir_include=tir_include)
-        # Return to original PWD
-        os.chdir(cwd)
-                     
+        MadLoop_makefile_definitions = pjoin(self.dir_path,'SubProcesses',
+                                                 'MadLoop_makefile_definitions')
+        if os.path.isfile(MadLoop_makefile_definitions):
+            os.remove(MadLoop_makefile_definitions)
 
-    def link_files_from_Subprocesses(self,proc_name=""):
+        calls = self.write_loop_makefile_definitions(
+                        writers.MakefileWriter(MadLoop_makefile_definitions),
+                                link_tir_libs,tir_libs, tir_include=tir_include)
+
+    def link_files_from_Subprocesses(self,proc_name):
         """ Does the same as the mother routine except that it also links
         coef_specs.inc in the HELAS folder."""
 
@@ -1460,7 +1595,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Link the coef_specs.inc for aloha to define the coefficient
         # general properties (of course necessary in the optimized mode only)
-        ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
+        ln(os.path.join(self.dir_path, 'SubProcesses', proc_name,
                  'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
 
 
@@ -1574,11 +1709,26 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             
         self.tir_available_dict[tir_name]=True
         return libpath
+    
+    def set_group_loops(self, matrix_element):
+        """ Decides whether we must group loops or not for this matrix element"""
+
+        # Decide if loops sharing same denominator structures have to be grouped
+        # together or not.
+        if self.forbid_loop_grouping:
+            self.group_loops = False
+        else:
+            self.group_loops = (not self.get_context(matrix_element)['ComputeColorFlows'])\
+                          and matrix_element.get('processes')[0].get('has_born')
         
-    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                                proc_id = "", config_map = []):
+        return self.group_loops
+    
+    def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
+                        group_number = None, proc_id = None, config_map = None):
         """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f,GOLEM_inteface.f 
-        and loop_num.f only but with the optimized FortranModel"""
+        and loop_num.f only but with the optimized FortranModel.
+        The arguments group_number and proc_id are just for the LoopInduced
+        output with MadEvent and only used in get_ME_identifier."""
                 
         # Warn the user that the 'matrix' output where all relevant code is
         # put together in a single file is not supported in this loop output.
@@ -1593,6 +1743,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
           helas_call_writers.FortranUFOHelasCallWriterOptimized(\
           fortran_model.get('model'),False)
 
+
+        if not matrix_element.get('processes')[0].get('has_born') and \
+                                                   not self.compute_color_flows:
+            logger.debug("Color flows will be employed despite the option"+\
+              " 'loop_color_flows' being set to False because it is necessary"+\
+                                                          " for optimizations.")
+
         # Compute the analytical information of the loop wavefunctions in the
         # loop helas matrix elements using the cached aloha model to reuse
         # as much as possible the aloha computations already performed for
@@ -1600,13 +1757,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         matrix_element.compute_all_analytic_information(
           self.get_aloha_model(matrix_element.get('processes')[0].get('model')))
 
+        self.set_group_loops(matrix_element)
+
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.
         self.general_replace_dict=LoopProcessExporterFortranSA.\
-                              generate_general_replace_dict(self,matrix_element)
+                        generate_general_replace_dict(self, matrix_element, 
+                                 group_number = group_number, proc_id = proc_id)
 
-        # Now fill in the replace dict entries specific to the TIR implementation
-        self.set_TIR_replace_dict_entries()
         # and those specific to the optimized output
         self.set_optimized_output_specific_replace_dict_entries(matrix_element)
 
@@ -1618,7 +1776,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         filename = 'loop_matrix.f'
         calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                       matrix_element,
-                                      OptimizedFortranModel)
+                                      OptimizedFortranModel)    
         
         filename = 'check_sa.f'
         self.write_check_sa(writers.FortranWriter(filename),matrix_element)
@@ -1630,7 +1788,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         filename = 'improve_ps.f'
         calls = self.write_improve_ps(writers.FortranWriter(filename),
-                                                             matrix_element)
+                                                                 matrix_element)
         
         filename = 'CT_interface.f'
         self.write_CT_interface(writers.FortranWriter(filename),\
@@ -1647,89 +1805,28 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         filename = 'loop_num.f'
         self.write_loop_num(writers.FortranWriter(filename),\
-                                matrix_element,OptimizedFortranModel)
+                                           matrix_element,OptimizedFortranModel)
         
         filename = 'mp_compute_loop_coefs.f'
         self.write_mp_compute_loop_coefs(writers.FortranWriter(filename),\
                                      matrix_element,OptimizedFortranModel)
 
+        if self.get_context(matrix_element)['ComputeColorFlows']:
+            filename = 'compute_color_flows.f'
+            self.write_compute_color_flows(writers.FortranWriter(filename),
+                                        matrix_element, config_map = config_map)
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        filename = 'nexternal.inc'
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                                                            nexternal, ninitial)
+
+        if self.get_context(matrix_element)['TIRCaching']:
+            filename = 'tir_cache_size.inc'
+            self.write_tir_cache_size_include(writers.FortranWriter(filename))
+
         return calls
-
-    def set_TIR_replace_dict_entries(self):
-        """ Specify the entries of the replacement dictionary which depend on
-        the choice of Tensor Integral Reduction (TIR) libraries specified by the
-        user and their availability on the system."""
-        
-        for tir in self.all_tir:
-            if self.tir_available_dict[tir]:
-                if tir=="pjfry":
-                    self.general_replace_dict['pjfry_calling']=\
-                    ("        CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,"\
-                    +"PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)\n"\
-                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
-                    +"         CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
-                    )%self.general_replace_dict
-                elif tir=="iregi":
-                    self.general_replace_dict['iregi_calling']=\
-                    ("        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
-                    +"RANK,PDEN,M2L,MU_R,PJCOEFS,STABLE)\n"\
-                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
-                    +"        CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)"\
-                    )%self.general_replace_dict
-                    self.general_replace_dict['iregi_free_ps']=\
-                    "IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS"
-                    self.general_replace_dict['initiregi']=\
-                    "      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)"
-                elif tir=="golem":
-                    self.general_replace_dict['golem_calling']=\
-                    ("IF(MLReductionLib(I_LIB).EQ.4)THEN\n"\
-                     +"C      Using Golem95\n"\
-                     +"        CALL %(proc_prefix)sGOLEMLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)\n"\
-                     +"        RETURN\n"\
-                     +"ENDIF")%self.general_replace_dict
-                else:
-                    raise MadGraph5Error,"%s was not a well-defined TIR."%tir_name
-            else:
-                if tir=="pjfry":
-                    self.general_replace_dict['pjfry_calling']=\
-                    "        WRITE(*,*)'PJFRY is not installed correctly !'\n"\
-                    +"        STOP"
-                elif tir=="iregi":
-                    self.general_replace_dict['iregi_calling']=\
-                    "        WRITE(*,*)'IREGI is not installed correctly !'\n"\
-                    +"        STOP"
-                    self.general_replace_dict['initiregi']=''
-                    self.general_replace_dict['iregi_free_ps']=''
-                elif tir=="golem":
-                    self.general_replace_dict['golem_calling']=''
-        # the first entry is the CutTools, we make sure it is available
-        looplibs_av=['.TRUE.']
-        # one should be careful about the order in the following
-        if "pjfry" in self.all_tir:
-            if self.tir_available_dict["pjfry"]:             
-                looplibs_av.extend(['.TRUE.'])
-            else:
-                looplibs_av.extend(['.FALSE.'])
-        else:
-            looplibs_av.extend(['.FALSE.'])
-        if "iregi" in self.all_tir:
-            if self.tir_available_dict["iregi"]:             
-                looplibs_av.extend(['.TRUE.'])
-            else:
-                looplibs_av.extend(['.FALSE.'])
-        else:
-            looplibs_av.extend(['.FALSE.'])
-            
-        if "golem" in self.all_tir:
-            if self.tir_available_dict["golem"]:
-                looplibs_av.extend(['.TRUE.'])
-            else:
-                looplibs_av.extend(['.FALSE.'])
-        else:
-            looplibs_av.extend(['.FALSE.'])
-        self.general_replace_dict['data_looplibs_av']="DATA LOOPLIBS_AVAILABLE /"\
-        +','.join(looplibs_av)+"/"
-
 
     def set_optimized_output_specific_replace_dict_entries(self, matrix_element):
         """ Specify the entries of the replacement dictionary which are specific
@@ -1743,6 +1840,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         max_loop_vertex_rank=matrix_element.get_max_loop_vertex_rank()
         self.general_replace_dict['vertex_max_coefs']=\
                  q_polynomial.get_number_of_coefs_for_rank(max_loop_vertex_rank)
+                 
         self.general_replace_dict['nloopwavefuncs']=\
                                matrix_element.get_number_of_loop_wavefunctions()
         max_spin=matrix_element.get_max_loop_particle_spin()
@@ -1753,23 +1851,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict['nloops']=len(\
                         [1 for ldiag in matrix_element.get_loop_diagrams() for \
                                            lamp in ldiag.get_loop_amplitudes()])
-        if self.group_loops and \
-                             matrix_element.get('processes')[0].get('has_born'):
+        
+        if self.set_group_loops(matrix_element):
             self.general_replace_dict['nloop_groups']=\
                                           len(matrix_element.get('loop_groups'))
         else:
             self.general_replace_dict['nloop_groups']=\
                                               self.general_replace_dict['nloops']
-
-        # The born amp declaration suited for also outputing the loop-induced
-        # processes as well. (not used for now, but later)
-        if matrix_element.get('processes')[0].get('has_born'):
-            self.general_replace_dict['dp_born_amps_decl'] = \
-                  self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS)"+\
-                  "\n common/%sAMPS/AMP"%self.general_replace_dict['proc_prefix']
-            self.general_replace_dict['mp_born_amps_decl'] = \
-                  self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
-                  "\n common/%sMP_AMPS/AMP"%self.general_replace_dict['proc_prefix']
     
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools
@@ -1779,13 +1867,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         file = open(os.path.join(self.template_dir,'loop_num.inc')).read()  
         file = file % replace_dict
-        writer.writelines(file)
+        writer.writelines(file,context=self.get_context(matrix_element))
 
     def write_CT_interface(self, writer, matrix_element):
         """ We can re-use the mother one for the loop optimized output."""
         LoopProcessExporterFortranSA.write_CT_interface(\
                             self, writer, matrix_element,optimized_output=True)
-        
+
     def write_TIR_interface(self, writer, matrix_element):
         """ Create the file TIR_interface.f which does NOT contain the subroutine
          defining the loop HELAS-like calls along with the general interfacing 
@@ -1793,31 +1881,21 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         # First write TIR_interface which interfaces MG5 with TIR.
         replace_dict=copy.copy(self.general_replace_dict)
-        
-        # We finalize TIR result differently wether we used the built-in 
-        # squaring against the born.
-        if matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['finalize_TIR']='\n'.join([\
-         'RES(%d)=NORMALIZATION*2.0d0*DBLE(RES(%d))'%(i,i) for i in range(1,4)])
-        else:
-            replace_dict['finalize_TIR']='\n'.join([\
-                     'RES(%d)=NORMALIZATION*RES(%d)'%(i,i) for i in range(1,4)])
             
         file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
 
         file = file % replace_dict
         
-        
-        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
-                                                    coef_format=replace_dict['complex_dp_format'],\
-                                                    sub_prefix=replace_dict['proc_prefix'])
+        FPR = q_polynomial.FortranPolynomialRoutines(
+        replace_dict['maxrank'],coef_format=replace_dict['complex_dp_format'],\
+                                         sub_prefix=replace_dict['proc_prefix'])
         if self.tir_available_dict['pjfry']:
             file += '\n\n'+FPR.write_pjfry_mapping()
         if self.tir_available_dict['iregi']:
             file += '\n\n'+FPR.write_iregi_mapping()
         
         if writer:
-            writer.writelines(file)
+            writer.writelines(file,context=self.get_context(matrix_element))
         else:
             return file
 
@@ -1831,15 +1909,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # We finalize TIR result differently wether we used the built-in 
         # squaring against the born.
-        if matrix_element.get('processes')[0].get('has_born'):
-            factor='2.0D0'
+        if not self.get_context(matrix_element)['AmplitudeReduction']:
+            replace_dict['loop_induced_sqsoindex']=',SQSOINDEX'
         else:
-            factor='1.0D0'
-        replace_dict['finalize_GOLEM']='\n'.join([
-        'RES(1)=NORMALIZATION*%s*DBLE(RES_GOLEM%%c+'%factor+\
-        '2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)',\
-            'RES(2)=NORMALIZATION*%s*DBLE(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)'%factor,\
-            'RES(3)=NORMALIZATION*%s*DBLE(RES_GOLEM%%a)'%factor])
+            replace_dict['loop_induced_sqsoindex']=''
             
         file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
  
@@ -1852,7 +1925,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         file += '\n\n'+FPR.write_golem95_mapping()
         
         if writer:
-            writer.writelines(file)
+            writer.writelines(file,context=self.get_context(matrix_element))
         else:
             return file
 
@@ -1882,7 +1955,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # create_loop_coefs
         replace_dict['complex_format'] = replace_dict['complex_dp_format']
         replace_dict['real_format'] = replace_dict['real_dp_format']
-        replace_dict['born_amps_decl'] = replace_dict['dp_born_amps_decl']
         replace_dict['mp_prefix'] = ''
         replace_dict['kind'] = 8
         replace_dict['zero_def'] = '0.0d0'
@@ -1891,7 +1963,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # The quadruple precision version of the basic polynomial routines
         replace_dict['complex_format'] = replace_dict['complex_mp_format']
         replace_dict['real_format'] = replace_dict['real_mp_format']
-        replace_dict['born_amps_decl'] = replace_dict['mp_born_amps_decl']
         replace_dict['mp_prefix'] = 'MP_'
         replace_dict['kind'] = 16
         replace_dict['zero_def'] = '0.0e0_16'
@@ -1922,7 +1993,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                      wl_update[0],wl_update[1]))
             subroutines.append(mp_poly_writer.write_wl_updater(\
                                                      wl_update[0],wl_update[1]))
-        writer.writelines('\n\n'.join(subroutines))
+        writer.writelines('\n\n'.join(subroutines),
+                                       context=self.get_context(matrix_element))
 
     def write_mp_compute_loop_coefs(self, writer, matrix_element, fortran_model, \
                                     noSplit=False):
@@ -1938,31 +2010,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         replace_dict = copy.copy(self.general_replace_dict)                 
 
-        # These entries are specific for the output for loop-induced processes
-        # Also sets here the details of the squaring of the loop ampltiudes
-        # with the born or the loop ones.
-        if not matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['nctamps_or_nloopamps']='nctamps'
-            replace_dict['nbornamps_or_nloopamps']='nctamps'
-            replace_dict['mp_squaring']=\
-"""ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
-TEMP2 = DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J)),KIND=16)
-IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
-  ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2
-  ANS(1,0)=ANS(1,0)+TEMP2
-ENDIF"""%self.general_replace_dict  
-        else:
-            replace_dict['nctamps_or_nloopamps']='nctamps'
-            replace_dict['nbornamps_or_nloopamps']='nbornamps'
-            replace_dict['mp_squaring']=\
-"""ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
-IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN                               
-DO K=1,3
-TEMP2 = DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
-ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
-ANS(K,0)=ANS(K,0)+TEMP2
-ENDDO
-ENDIF"""%self.general_replace_dict
         # Extract helas calls
         squared_orders = matrix_element.get_squared_order_contribs()
         split_orders = matrix_element.get('processes')[0].get('split_orders')
@@ -1984,6 +2031,9 @@ ENDIF"""%self.general_replace_dict
         file = open(os.path.join(self.template_dir,\
                                            'mp_compute_loop_coefs.inc')).read()
 
+        # Setup the contextual environment which is used in the splitting
+        # functions below
+        context = self.get_context(matrix_element)
         # Decide here wether we need to split the loop_matrix.f file or not.
         # 200 is reasonable but feel free to change it.
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
@@ -1991,29 +2041,144 @@ ENDIF"""%self.general_replace_dict
                             'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
                             'mp_born_ct_helas_calls','mp_helas_calls_ampb',
                             required_so_broadcaster = 'MP_CT_REQ_SO_DONE',
-                            continue_label = 2000)
+                            continue_label = 2000,context=context)
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'mp_helas_calls_split.inc',file,uvct_helas_calls,\
                             'mp_uvct_helas_calls','mp_helas_calls_uvct',
                             required_so_broadcaster = 'MP_UVCT_REQ_SO_DONE',
-                            continue_label = 3000)
+                            continue_label = 3000,context=context)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'mp_helas_calls_split.inc',file,coef_construction,\
                     'mp_coef_construction','mp_coef_construction',
                     required_so_broadcaster = 'MP_LOOP_REQ_SO_DONE',
-                    continue_label = 4000)
+                    continue_label = 4000,context=context)
         else:
             replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['mp_uvct_helas_calls']='\n'.join(uvct_helas_calls)
             replace_dict['mp_coef_construction']='\n'.join(coef_construction)
         
         replace_dict['mp_coef_merging']='\n'.join(coef_merging)
-        
+                    
         file = file % replace_dict
  
         # Write the file
-        writer.writelines(file)  
+        writer.writelines(file,context=context)
 
+    def write_color_matrix_data_file(self, writer, col_matrix):
+        """Writes out the files (Loop|Born)ColorFlowMatrix.dat corresponding
+        to the color coefficients for JAMP(L|B)*JAMP(L|B)."""
+        
+        res = []
+        for line in range(len(col_matrix._col_basis1)):
+            numerators = []
+            denominators = []
+            for row in range(len(col_matrix._col_basis2)):
+                coeff = col_matrix.col_matrix_fixed_Nc[(line,row)]
+                numerators.append('%6r'%coeff[0].numerator)
+                denominators.append('%6r'%(
+                                  coeff[0].denominator*(-1 if coeff[1] else 1)))
+            res.append(' '.join(numerators))
+            res.append(' '.join(denominators))            
+        
+        res.append('EOF')
+        
+        writer.writelines('\n'.join(res))
+    
+    def write_color_flow_coefs_data_file(self, writer, color_amplitudes, 
+                                                                   color_basis):
+        """ Writes the file '(Loop|Born)ColorFlowCoefs.dat using the coefficients
+        list of the color_amplitudes in the argument of this function."""
+
+        my_cs = color.ColorString()        
+        
+        res = []
+
+        for jamp_number, coeff_list in enumerate(color_amplitudes):
+            my_cs.from_immutable(sorted(color_basis.keys())[jamp_number])
+            # Order the ColorString so that its ordering is canonical.
+            ordered_cs = color.ColorFactor([my_cs]).full_simplify()[0]    
+            res.append('%d # Coefficient for flow number %d with expr. %s'\
+                            %(len(coeff_list), jamp_number+1, repr(ordered_cs)))
+            # A line element is a tuple (numerator, denominator, amplitude_id)
+            line_element = []
+
+            for (coefficient, amp_number) in coeff_list:
+                coef = self.cat_coeff(\
+                    coefficient[0],coefficient[1],coefficient[2],coefficient[3])
+                line_element.append((coef[0].numerator,
+                         coef[0].denominator*(-1 if coef[1] else 1),amp_number))
+            # Sort them by growing amplitude number
+            line_element.sort(key=lambda el:el[2])
+
+            for i in range(3):
+                res.append(' '.join('%6r'%elem[i] for elem in line_element))
+        
+        res.append('EOF')
+        writer.writelines('\n'.join(res))
+    
+    def write_compute_color_flows(self, writer, matrix_element, config_map):
+        """Writes the file compute_color_flows.f which uses the AMPL results
+        from a common block to project them onto the color flow space so as 
+        to compute the JAMP quantities. For loop induced processes, this file
+        will also contain a subroutine computing AMPL**2 for madevent
+        multichanneling."""
+        
+        loop_col_amps = matrix_element.get_loop_color_amplitudes()
+        self.general_replace_dict['nLoopFlows'] = len(loop_col_amps)
+        
+        dat_writer = open(pjoin('..','MadLoop5_resources',
+                                     '%(proc_prefix)sLoopColorFlowCoefs.dat'
+                                                %self.general_replace_dict),'w')
+        self.write_color_flow_coefs_data_file(dat_writer,
+                        loop_col_amps, matrix_element.get('loop_color_basis'))
+        dat_writer.close()
+
+        dat_writer = open(pjoin('..','MadLoop5_resources',
+                                     '%(proc_prefix)sLoopColorFlowMatrix.dat'
+                                                %self.general_replace_dict),'w')
+        self.write_color_matrix_data_file(dat_writer,
+                                             matrix_element.get('color_matrix'))
+        dat_writer.close() 
+
+        if matrix_element.get('processes')[0].get('has_born'):
+            born_col_amps = matrix_element.get_born_color_amplitudes()
+            self.general_replace_dict['nBornFlows'] = len(born_col_amps)
+            dat_writer = open(pjoin('..','MadLoop5_resources',
+                                      '%(proc_prefix)sBornColorFlowCoefs.dat'
+                                                %self.general_replace_dict),'w')
+            self.write_color_flow_coefs_data_file(dat_writer,
+                          born_col_amps, matrix_element.get('loop_color_basis'))
+            dat_writer.close()
+            
+            dat_writer = open(pjoin('..','MadLoop5_resources',
+                                     '%(proc_prefix)sBornColorFlowMatrix.dat'
+                                                %self.general_replace_dict),'w')
+            self.write_color_matrix_data_file(dat_writer,
+                  color_amp.ColorMatrix(matrix_element.get('born_color_basis')))
+            dat_writer.close()
+        else:
+            self.general_replace_dict['nBornFlows'] = 0
+
+        replace_dict = copy.copy(self.general_replace_dict)
+        
+        # The following variables only have to be defined for the LoopInduced
+        # output for madevent.
+        if self.get_context(matrix_element)['MadEventOutput']:
+            self.get_amp2_lines(matrix_element, replace_dict, config_map)
+        else:
+            replace_dict['config_map_definition'] = ''
+            replace_dict['config_index_map_definition'] = ''            
+            replace_dict['nmultichannels'] = 0
+            
+        # The nmultichannels entry will be used in the matrix<i> wrappers as 
+        # well, so we add it to the general_replace_dict too.
+        self.general_replace_dict['nmultichannels'] = replace_dict['nmultichannels']
+
+        file = open(os.path.join(self.template_dir,\
+                                 'compute_color_flows.inc')).read()%replace_dict
+
+        writer.writelines(file,context=self.get_context(matrix_element))
+    
     def fix_coef_specs(self, overall_max_lwf_size, overall_max_loop_vert_rank):
         """ If processes with different maximum loop wavefunction size or
         different maximum loop vertex rank have to be output together, then
@@ -2109,6 +2274,20 @@ ENDIF"""%self.general_replace_dict
                              '\nwrite (*,*) "---------------------------------"'
         self.general_replace_dict['print_so_loop_results'] += \
                              '\nwrite (*,*) "---------------------------------"'
+                             
+    def write_tir_cache_size_include(self, writer):
+        """Write the file 'tir_cache_size.inc' which sets the size of the TIR
+        cache the the user wishes to employ and the default value for it.
+        This can have an impact on MadLoop speed when using stability checks
+        but also impacts in a non-negligible way MadLoop's memory footprint.
+        It is therefore important that the user can chose its size."""
+
+        # For the standalone optimized output, a size of one is necessary.
+        # The MadLoop+MadEvent output sets it to 2 because it can gain further
+        # speed increase with a TIR cache of size 2 due to the structure of the
+        # calls to MadLoop there.
+        tir_cach_size = "parameter(TIR_CACHE_SIZE=1)"
+        writer.writelines(tir_cach_size)
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False, write_auxiliary_files=True,):
@@ -2119,10 +2298,9 @@ ENDIF"""%self.general_replace_dict
             return 0
 
         # Set lowercase/uppercase Fortran code
-        
         writers.FortranWriter.downcase = False
 
-        # We start off with the treatment of the split_orders since some 
+        # Starting off with the treatment of the split_orders since some 
         # of the information extracted there will come into the 
         # general_replace_dict. Split orders are abbreviated SO in all the 
         # keys of the replacement dictionaries.
@@ -2135,7 +2313,7 @@ ENDIF"""%self.general_replace_dict
         sqso_contribs = [sqso[0] for sqso in squared_orders]
         split_orders = matrix_element.get('processes')[0].get('split_orders')
         # The entries set in the function below are only for check_sa written
-        # out in write_matrix_element_v4 (it is however placed here because the
+        # out in write_loop__matrix_element_v4 (it is however placed here because the
         # split order information is only available here).
         self.setup_check_sa_replacement_dictionary(\
                                          split_orders,sqso_contribs,amps_orders)
@@ -2193,6 +2371,15 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
         replace_dict['BornAmpSO'] = '\n'.join(self.format_integer_list(
                                                     ampSO_list,'BORNAMPORDERS'))
 
+        # We then go to the TIR setup
+        # The first entry is the CutTools, we make sure it is available
+        looplibs_av=['.TRUE.']
+        # one should be careful about the order in the following
+        for tir_lib in ['pjfry','iregi','golem']:
+            looplibs_av.append('.TRUE.' if tir_lib in self.all_tir and \
+                                self.tir_available_dict[tir_lib] else '.FALSE.')
+        replace_dict['data_looplibs_av']=','.join(looplibs_av)
+
         # Helicity offset convention
         # For a given helicity, the attached integer 'i' means
         # 'i' in ]-inf;-HELOFFSET[ -> Helicity is equal, up to a sign, 
@@ -2211,90 +2398,6 @@ PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
         # When the user asks for the polarized matrix element we must 
         # multiply back by the helicity averaging factor
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
-
-        # These entries are specific for the output for loop-induced processes
-        # Also sets here the details of the squaring of the loop ampltiudes
-        # with the born or the loop ones.
-        if not matrix_element.get('processes')[0].get('has_born'):
-            replace_dict['compute_born']=\
-"""
-C The born is of course 0 for loop-induced processes.
-DO I=0,NSQUAREDSO
-  ANS(0,I)=0.0d0
-ENDDO
-"""
-            replace_dict['set_reference']='\n'.join([
-              'C Chose the arbitrary scale of reference to use for comparisons'+\
-              ' for this loop-induced process.','ref=1.0d-50',
-              'DO I=0,NSQUAREDSO','ANS(I,0)=0.0d0','ENDDO'])
-            replace_dict['nctamps_or_nloopamps']='nctamps'
-            replace_dict['nbornamps_or_nloopamps']='nctamps'
-            replace_dict['squaring']='\n'.join([\
-              'ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))'%self.general_replace_dict,
-              'TEMP2 = DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))',
-              'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
-              'ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2',
-              'ANS(1,0)=ANS(1,0)+TEMP2',
-              'ENDIF'])       
-        else:
-            replace_dict['compute_born']=\
-"""
-C First compute the borns, it will store them in ANS(0,I)
-C It is left untouched for the rest of MadLoop evaluation.
-C Notice that the squared split order index I does NOT
-C correspond to the same ordering of J for the loop ME 
-C results stored in ANS(K,J), with K in [1-3].The ordering 
-C of each can be obtained with ML5SOINDEX_FOR_SQUARED_ORDERS 
-C and SQSOINDEX_FROM_ORDERS for the loop ME and born ME 
-C respectively. For this to work, we assume that there is 
-C always more squared split orders in the loop ME than in the
-C born ME, which is practically always true. In any case, only
-C the split_order summed value I=0 is used in ML5 code.
-DO I=0,NSQSO_BORN
-  BORNBUFF(I)=0.0d0
-ENDDO
-CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,BORNBUFF(0))
-DO I=0,NSQSO_BORN
-  ANS(0,I)=BORNBUFF(I)
-ENDDO
-"""%self.general_replace_dict
-            replace_dict['set_reference']='\n'.join(
-              ['C We set here the reference to the born summed over all split orders',
-              'REF=0.0d0','DO I=1,NSQSO_BORN','REF=REF+ANS(0,I)','ENDDO'])
-            replace_dict['nctamps_or_nloopamps']='nctamps'
-            replace_dict['nbornamps_or_nloopamps']='nbornamps'
-            replace_dict['squaring']='\n'.join([
-              'ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))'%self.general_replace_dict,
-              'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
-              'DO K=1,3',
-              'TEMP2 = 2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
-              'ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2',
-              'ANS(K,0)=ANS(K,0)+TEMP2',
-              'ENDDO',                   
-              'ENDIF'])
-
-        # Actualize results from the loops computed. Only necessary for
-        # processes with a born.
-        actualize_ans=[]
-        if matrix_element.get('processes')[0].get('has_born'):
-            actualize_ans.append(
-"""DO I=1,NLOOPGROUPS
-LTEMP=.TRUE.
-DO K=1,NSQUAREDSO
-  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.K) THEN
-    IF (.NOT.S(K,I)) LTEMP=.FALSE.
-    DO J=1,3
-      ANS(J,K)=ANS(J,K)+LOOPRES(J,K,I)
-      ANS(J,0)=ANS(J,0)+LOOPRES(J,K,I)
-    ENDDO
-  ENDIF
-ENDDO""")
-            actualize_ans.append(\
-               "IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.LTEMP)) THEN")
-            actualize_ans.append(\
-                   "WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'")            
-            actualize_ans.extend(["ENDIF","ENDDO"])            
-        replace_dict['actualize_ans']='\n'.join(actualize_ans)
         
         if write_auxiliary_files:
             # Write out the color matrix
@@ -2337,45 +2440,589 @@ ENDDO""")
         file = open(os.path.join(self.template_dir,\
                                            'loop_matrix_standalone.inc')).read()
 
+        # Setup the contextual environment which is used in the splitting
+        # functions below
+        context = self.get_context(matrix_element)
         # Decide here wether we need to split the loop_matrix.f file or not.
-        # 200 is reasonable but feel free to change it.        
-        if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
+        # 200 is reasonable but feel free to change it.
+        if not noSplit and (len(matrix_element.get_all_amplitudes())>200):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
                             'born_ct_helas_calls','helas_calls_ampb',
                             required_so_broadcaster = 'CT_REQ_SO_DONE',
-                            continue_label = 2000)
+                            continue_label = 2000, context = context)
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,uvct_helas_calls,\
                             'uvct_helas_calls','helas_calls_uvct',
                             required_so_broadcaster = 'UVCT_REQ_SO_DONE',
-                            continue_label = 3000)
+                            continue_label = 3000, context=context)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,coef_construction,\
                     'coef_construction','coef_construction',
                     required_so_broadcaster = 'LOOP_REQ_SO_DONE',
-                    continue_label = 4000)
-            file=self.split_HELASCALLS(writer,replace_dict,\
-                    'helas_calls_split.inc',file,loop_CT_calls,\
-                    'loop_CT_calls','loop_CT_calls',
-                    required_so_broadcaster = 'CTCALL_REQ_SO_DONE',
-                    continue_label = 5000)
+                    continue_label = 4000, context=context)
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['uvct_helas_calls']='\n'.join(uvct_helas_calls)
             replace_dict['coef_construction']='\n'.join(coef_construction)
+    
+        # For loop induced processes, always split the loop_CT_calls because
+        # they are used both in loop_matrix.f and mp_compute_loop_coef.f so 
+        # that it is quite nice to have them placed in the same subroutine.
+        if not noSplit and ( (len(matrix_element.get_all_amplitudes())>200) or
+                        not matrix_element.get('processes')[0].get('has_born')):
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                    'helas_calls_split.inc',file,loop_CT_calls,\
+                    'loop_CT_calls','loop_CT_calls',
+                    required_so_broadcaster = 'CTCALL_REQ_SO_DONE',
+                    continue_label = 5000, context=context)
+        else:
             replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
+       
+        # For loop induced processes, add the 'loop_CT_calls' entry to the
+        # general_replace_dict so that it can be used by 
+        # write_mp_compute_loop_coefs later
+        self.general_replace_dict['loop_CT_calls']=replace_dict['loop_CT_calls']            
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
-        replace_dict['iregi_free_ps']=self.general_replace_dict['iregi_free_ps']
-        replace_dict['data_looplibs_av']=self.general_replace_dict['data_looplibs_av']
+
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
                                                                  loop_CT_calls))   
         if writer:
             # Write the file
-            writer.writelines(file)  
+            writer.writelines(file,context=context)
             return number_of_calls
         else:
             # Return it to be written along with the others
             return number_of_calls, file
+
+#===============================================================================
+# LoopProcessExporterFortranSA
+#===============================================================================
+class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
+                                      export_v4.ProcessExporterFortranMatchBox):                                  
+    """Class to take care of exporting a set of loop matrix elements in the
+       Fortran format."""
+
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madloop_matchbox', 'mp':True,
+                        'loop_dir':'', 'cuttools_dir':'', 
+                        'fortran_compiler':'gfortran',
+                        'output_dependencies':'external',
+                        'sa_symmetry':True}
+
+
+
+    def get_color_string_lines(self, matrix_element):
+        """Return the color matrix definition lines for this matrix element. Split
+        rows in chunks of size n."""
+
+        return export_v4.ProcessExporterFortranMatchBox.get_color_string_lines(matrix_element)
+
+
+    def get_JAMP_lines(self, *args, **opts):
+        """Adding leading color part of the colorflow"""
+            
+        return export_v4.ProcessExporterFortranMatchBox.get_JAMP_lines(self, *args, **opts)
+      
+    def get_ME_identifier(self, matrix_element, group_number = None, group_elem_number = None):
+        """ To not mix notations between borns and virtuals we call it here also MG5 """
+        return 'MG5_%d_'%matrix_element.get('processes')[0].get('id')         
+      
+
+#===============================================================================
+# LoopInducedExporter
+#===============================================================================
+class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
+    """ A class to specify all the functions common to LoopInducedExporterMEGroup
+    and LoopInducedExporterMENoGroup (but not relevant for the original
+    Madevent exporters)"""
+
+    madloop_makefile_name = 'makefile_MadLoop'
+    
+    
+    def __init__(self, *args, **opts):
+        """ Initialize the process, setting the proc characteristics."""
+        super(LoopInducedExporterME, self).__init__(*args, **opts)
+        self.proc_characteristic['loop_induced'] = True
+    
+    def get_context(self,*args,**opts):
+        """ Make sure that the contextual variable MadEventOutput is set to
+        True for this exporter"""
+        
+        context = super(LoopInducedExporterME,self).get_context(*args,**opts)
+        context['MadEventOutput'] = True
+        return context
+        
+    
+    def get_source_libraries_list(self):
+        """ Returns the list of libraries to be compiling when compiling the
+        SOURCE directory. It is different for loop_induced processes and 
+        also depends on the value of the 'output_dependencies' option"""
+        
+        libraries_list = super(LoopInducedExporterME,self).\
+                                                     get_source_libraries_list()
+
+        if self.dependencies=='internal':
+            libraries_list.append('$(LIBDIR)libcts.$(libext)')
+            libraries_list.append('$(LIBDIR)libiregi.$(libext)')
+
+        return libraries_list
+
+    def link_files_in_SubProcess(self, Ppath):
+        """ Add the loop-induced related links to the P* directory Ppath"""
+        
+        super(LoopInducedExporterME,self).link_files_in_SubProcess(Ppath)
+        
+        ln(pjoin('../MadLoop5_resources') , cwd=Ppath)
+
+    def copy_v4template(self, *args, **opts):
+        """Pick the right mother functions
+        """
+        # Call specifically the necessary building functions for the mixed
+        # template setup for both MadEvent and MadLoop standalone
+        LoopProcessExporterFortranSA.loop_additional_template_setup(self,
+                                                     copy_Source_makefile=False)
+
+        LoopProcessOptimizedExporterFortranSA.\
+                                  loop_optimized_additional_template_setup(self)
+                                  
+    
+    #===========================================================================
+    # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
+    #===========================================================================
+    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, 
+                              online = False, compiler='g77'):
+        """Function to finalize v4 directory, for inheritance.
+        """
+        
+        self.proc_characteristic['loop_induced'] = True
+        
+        # This can be uncommented if one desires to have the MadLoop
+        # initialization performed at the end of the output phase.
+        # Alternatively, one can simply execute the command 'initMadLoop' in
+        # the madevent interactive interface after the output.
+        # from madgraph.interface.madevent_interface import MadLoopInitializer
+        # MadLoopInitializer.init_MadLoop(self.dir_path,
+        #                   subproc_prefix=self.SubProc_prefix, MG_options=None)
+
+    def write_tir_cache_size_include(self, writer):
+        """Write the file 'tir_cache_size.inc' which sets the size of the TIR
+        cache the the user wishes to employ and the default value for it.
+        This can have an impact on MadLoop speed when using stability checks
+        but also impacts in a non-negligible way MadLoop's memory footprint.
+        It is therefore important that the user can chose its size."""
+
+        # In this case of MadLoop+MadEvent output, we set it to 2 because we
+        # gain further speed increase with a TIR cache of size 2 due to the 
+        # the fact that we call MadLoop once per helicity configuration in this 
+        # case.
+        tir_cach_size = "parameter(TIR_CACHE_SIZE=2)"
+        writer.writelines(tir_cach_size)
+
+    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
+                        proc_id = None, config_map = [], subproc_number = None):
+        """ Write it the wrapper to call the ML5 subroutine in the library.""" 
+        
+        # Generating the MadEvent wrapping ME's routines
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        
+        # We must refresh the general replacement dictionary since this function
+        # write_matrix_element is called from within the function
+        # export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory_v4
+        # which of course does not take care of refreshing this replacement
+        # dictionary for each new matrix_element in the group currently being
+        # exported
+        self.general_replace_dict = self.generate_general_replace_dict(
+               matrix_element, group_number = subproc_number, proc_id = proc_id)
+        if matrix_element.get('loop_color_basis'):
+            self.general_replace_dict['nLoopFlows'] = len(matrix_element.get(
+                                                            'loop_color_basis'))
+        else:
+            raise MadGraph5Error('The loop-induced function '+\
+              'write_matrix_element_v4 must be called *after* the color algebra'+\
+              ' for this matrix element has been performed, i.e. typically in'+\
+              ' function write_loop_matrix_element_v4 called by the function'+\
+              ' generate_loop_subprocess.')
+            
+        replace_dict = copy.copy(self.general_replace_dict)
+        
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+        
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        replace_dict['process_lines'] = process_lines
+
+        # Set proc_id
+        # It can be set to None when write_matrix_element_v4 is called without
+        # grouping. In this case the subroutine SMATRIX should take an empty
+        # suffix.
+        if proc_id is None:
+            replace_dict['proc_id'] = ''
+        else:
+            replace_dict['proc_id'] = proc_id
+        
+        #set the average over the number of initial helicities
+        replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
+        
+        # Extract helicity lines
+        helicity_lines = self.get_helicity_lines(matrix_element)
+        replace_dict['helicity_lines'] = helicity_lines
+        
+        
+        # Extract ndiags
+        ndiags = len(matrix_element.get('diagrams'))
+        replace_dict['ndiags'] = ndiags
+        
+        # Set define_iconfigs_lines
+        replace_dict['define_iconfigs_lines'] = \
+             """INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+             COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG"""
+
+        if proc_id:
+            # Set lines for subprocess group version
+            # Set define_iconfigs_lines
+            replace_dict['define_iconfigs_lines'] += \
+                 """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
+                 COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
+            # Set set_amp2_line
+            replace_dict['configID_in_matrix'] = "SUBDIAG(%s)"%proc_id
+        else:
+            # Standard running
+            # Set set_amp2_line
+            replace_dict['configID_in_matrix'] = "MAPCONFIG(ICONFIG)"
+        
+        # If group_numer
+        replace_dict['ml_prefix'] = \
+                 self.get_ME_identifier(matrix_element, subproc_number, proc_id)
+        
+        # Extract ncolor
+        ncolor = max(1, len(matrix_element.get('color_basis')))
+        replace_dict['ncolor'] = ncolor
+        
+        n_tot_diags = len(matrix_element.get_loop_diagrams())
+        replace_dict['n_tot_diags'] = n_tot_diags
+
+        file = open(pjoin(_file_path, \
+                          'iolibs/template_files/%s' % self.matrix_file)).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+
+        return 0, ncolor
+
+    def get_amp2_lines(self, *args, **opts):
+        """Make sure the function is implemented in the daughters"""
+
+        raise NotImplemented, 'The function get_amp2_lines must be called in '+\
+                                       ' the daugthers of LoopInducedExporterME'
+
+#===============================================================================
+# LoopInducedExporterMEGroup
+#===============================================================================
+class LoopInducedExporterMEGroup(LoopInducedExporterME,
+                                       export_v4.ProcessExporterFortranMEGroup):
+    """Class to take care of exporting a set of grouped loop induced matrix 
+    elements"""
+    
+    matrix_file = "matrix_loop_induced_madevent_group.inc"
+
+    def make_source_links(self,*args, **opts):
+        """ In the loop-induced output with MadEvent, we need the files from the 
+        Source folder """
+        export_v4.ProcessExporterFortranMEGroup.make_source_links(
+                                                            self, *args, **opts)
+
+    def write_source_makefile(self, *args, **opts):
+        """Pick the correct write_source_makefile function from 
+        ProcessExporterFortranMEGroup"""
+        
+        export_v4.ProcessExporterFortranMEGroup.write_source_makefile(self,
+                                                                  *args, **opts)
+
+    def copy_v4template(self, *args, **opts):
+        """Pick the right mother functions
+        """
+        # Call specifically the necessary building functions for the mixed
+        # template setup for both MadEvent and MadLoop standalone
+        
+        # Start witht the MadEvent one
+        export_v4.ProcessExporterFortranMEGroup.copy_v4template(self,*args,**opts)
+
+        # Then the MadLoop-standalone related one
+        LoopInducedExporterME.copy_v4template(self, *args, **opts)
+
+    def finalize_v4_directory(self, *args, **opts):
+        """Pick the right mother functions
+        """
+        # Call specifically what finalize_v4_directory must be used, so that the
+        # MRO doesn't interfere.
+
+        self.proc_characteristic['loop_induced'] = True
+        
+        export_v4.ProcessExporterFortranMEGroup.finalize_v4_directory(
+                                                              self,*args,**opts)
+        
+        # And the finilize_v4 from LoopInducedExporterME which essentially takes
+        # care of MadLoop virtuals initialization
+        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
+        
+    def generate_subprocess_directory_v4(self, subproc_group,
+                                                    fortran_model,group_number):
+        """Generate the Pn directory for a subprocess group in MadEvent,
+        including the necessary matrix_N.f files, configs.inc and various
+        other helper files"""
+            
+        # Generate the MadLoop files
+        calls = 0
+        matrix_elements = subproc_group.get('matrix_elements')
+        for ime, matrix_element in enumerate(matrix_elements):
+            calls += self.generate_loop_subprocess(matrix_element,fortran_model,
+          group_number = group_number, proc_id = str(ime+1),
+#          group_number = str(subproc_group.get('number')), proc_id = str(ime+1),
+          config_map = subproc_group.get('diagram_maps')[ime])
+        
+        # Then generate the MadEvent files
+        export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory_v4(
+                                 self, subproc_group,fortran_model,group_number)
+        
+        return calls
+    
+    def get_amp2_lines(self, matrix_element, replace_dict, config_map):
+        """Return the various replacement dictionary inputs necessary for the 
+        multichanneling amp2 definition for the loop-induced MadEvent output.
+        """
+
+        if not config_map:
+            raise MadGraph5Error, 'A multi-channeling configuration map is '+\
+              ' necessary for the MadEvent Loop-induced output with grouping.'
+
+        nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+
+        ret_lines = []
+        # In this case, we need to sum up all amplitudes that have
+        # identical topologies, as given by the config_map (which
+        # gives the topology/config for each of the diagrams
+        diagrams = matrix_element.get('diagrams')
+                
+        # Note that we need to use AMP2 number corresponding to the first 
+        # diagram number used for that AMP2.
+        # The dictionary below maps the config ID to this corresponding first 
+        # diagram number
+        config_index_map = {}
+        # For each diagram number, the dictionary below gives the config_id it
+        # belongs to or 0 if it doesn't belong to any.
+        loop_amp_ID_to_config = {}
+        
+        # Combine the diagrams with identical topologies
+        config_to_diag_dict = {}
+        for idiag, diag in enumerate(matrix_element.get('diagrams')):
+            try:
+                config_to_diag_dict[config_map[idiag]].append(idiag)
+            except KeyError:
+                config_to_diag_dict[config_map[idiag]] = [idiag]
+
+        for config in sorted(config_to_diag_dict.keys()):
+            config_index_map[config] = (config_to_diag_dict[config][0] + 1)
+                   
+            # First add the UV and R2 counterterm amplitudes of each selected
+            # diagram for the multichannel config
+            CT_amp_numbers = [a.get('number') for a in \
+                                    sum([diagrams[idiag].get_ct_amplitudes() for \
+                                     idiag in config_to_diag_dict[config]], [])]
+            
+            for CT_amp_number in CT_amp_numbers:
+                loop_amp_ID_to_config[CT_amp_number] = config 
+
+            # Now add here the loop amplitudes.
+            loop_amp_numbers = [a.get('amplitudes')[0].get('number')
+                       for a in sum([diagrams[idiag].get_loop_amplitudes() for \
+                                     idiag in config_to_diag_dict[config]], [])]
+            
+            for loop_amp_number in loop_amp_numbers:
+                loop_amp_ID_to_config[loop_amp_number] = config
+                
+        # Notice that the config_id's are not necessarily sequential here, so
+        # the size of the config_index_map array has to be the maximum over all
+        # config_ids.
+        # config_index_map should never be empty unless there was no diagram,
+        # so the expression below is ok.
+        n_configs = max(config_index_map.keys())
+        replace_dict['nmultichannels'] = n_configs
+        # We must fill the empty entries of the map with the dummy amplitude 
+        # number 0.
+        conf_list = [(config_index_map[i] if i in config_index_map else 0) \
+                                                  for i in range(1,n_configs+1)]
+        
+        # Now write the amp2 related inputs in the replacement dictionary
+        res_list = []
+        chunk_size = 6
+        for k in xrange(0, len(conf_list), chunk_size):
+            res_list.append("DATA (config_index_map(i),i=%6r,%6r) /%s/" % \
+                (k + 1, min(k + chunk_size, len(conf_list)),
+                    ','.join(["%6r" % i for i in conf_list[k:k + chunk_size]])))
+
+        replace_dict['config_index_map_definition'] = '\n'.join(res_list)
+
+        res_list = []
+        n_loop_amps = max(loop_amp_ID_to_config.keys())
+        amp_list = [loop_amp_ID_to_config[i] for i in \
+                                   sorted(loop_amp_ID_to_config.keys()) if i!=0]
+        chunk_size = 6
+        for k in xrange(0, len(amp_list), chunk_size):
+            res_list.append("DATA (CONFIG_MAP(i),i=%6r,%6r) /%s/" % \
+                (k + 1, min(k + chunk_size, len(amp_list)),
+                    ','.join(["%6r" % i for i in amp_list[k:k + chunk_size]])))
+
+        replace_dict['config_map_definition'] = '\n'.join(res_list)
+
+        return
+    
+#===============================================================================
+# LoopInducedExporterMENoGroup
+#===============================================================================
+class LoopInducedExporterMENoGroup(LoopInducedExporterME,
+                                            export_v4.ProcessExporterFortranME):
+    """Class to take care of exporting a set of individual loop induced matrix 
+    elements"""
+
+    matrix_file = "matrix_loop_induced_madevent.inc"
+
+    def make_source_links(self,*args, **opts):
+        """ In the loop-induced output with MadEvent, we need the files from the 
+        Source folder """
+        super(export_v4.ProcessExporterFortranME,self).\
+                                                make_source_links(*args, **opts)
+
+    def write_source_makefile(self, *args, **opts):
+        """Pick the correct write_source_makefile function from 
+        ProcessExporterFortran"""
+        
+        super(export_v4.ProcessExporterFortranME,self).\
+                                            write_source_makefile(*args, **opts)
+
+    def copy_v4template(self, *args, **opts):
+        """Pick the right mother functions
+        """
+        # Call specifically the necessary building functions for the mixed
+        # template setup for both MadEvent and MadLoop standalone
+        
+        # Start witht the MadEvent one
+        export_v4.ProcessExporterFortranME.copy_v4template(self,*args,**opts)
+
+        # Then the MadLoop-standalone related one
+        LoopInducedExporterME.copy_v4template(self, *args, **opts)
+
+    def finalize_v4_directory(self, *args, **opts):
+        """Pick the right mother functions
+        """
+        
+        self.proc_characteristic['loop_induced'] = True
+        # Call specifically what finalize_v4_directory must be used, so that the
+        # MRO doesn't interfere.
+        export_v4.ProcessExporterFortranME.finalize_v4_directory(
+                                                              self,*args,**opts)
+
+        # And the finilize_v4 from LoopInducedExporterME which essentially takes
+        # care of MadLoop virtuals initialization
+        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
+
+    def generate_subprocess_directory_v4(self, matrix_element, fortran_model, me_number):
+        """Generate the Pn directory for a subprocess group in MadEvent,
+        including the necessary matrix_N.f files, configs.inc and various
+        other helper files"""
+    
+        # Then generate the MadLoop files
+        calls = self.generate_loop_subprocess(matrix_element,fortran_model,                           
+                                                       group_number = me_number)
+        
+        
+        # First generate the MadEvent files
+        calls += export_v4.ProcessExporterFortranME.generate_subprocess_directory_v4(
+                                 self, matrix_element, fortran_model, me_number)
+        return calls
+
+    def get_amp2_lines(self, matrix_element, replace_dict, config_map):
+        """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
+
+        if config_map:
+            raise MadGraph5Error, 'A configuration map should not be specified'+\
+                              ' for the Loop induced exporter without grouping.'
+
+        nexternal, ninitial = matrix_element.get_nexternal_ninitial()
+        # Get minimum legs in a vertex
+        vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+        matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
+
+        # Note that we need to use AMP2 number corresponding to the first 
+        # diagram number used for that AMP2.
+        # The dictionary below maps the config ID to this corresponding first 
+        # diagram number
+        config_index_map = {}
+        # For each diagram number, the dictionary below gives the config_id it
+        # belongs to or 0 if it doesn't belong to any.
+        loop_amp_ID_to_config = {}
+
+        n_configs = 0
+        for idiag, diag in enumerate(matrix_element.get('diagrams')):
+            # Ignore any diagrams with 4-particle vertices.
+            use_for_multichanneling = True
+            if diag.get_vertex_leg_numbers()!=[] and max(diag.get_vertex_leg_numbers()) > minvert:
+                use_for_multichanneling = False
+                curr_config = 0
+            else:
+                n_configs += 1
+                curr_config = n_configs
+
+            if not use_for_multichanneling:
+                if 0 not in config_index_map: 
+                    config_index_map[0] = idiag + 1
+            else:
+                config_index_map[curr_config] = idiag + 1
+                   
+            CT_amps = [ a.get('number') for a in diag.get_ct_amplitudes()]
+            for CT_amp in CT_amps:
+                loop_amp_ID_to_config[CT_amp] = curr_config
+                            
+            Loop_amps = [a.get('amplitudes')[0].get('number')
+                                            for a in diag.get_loop_amplitudes()]
+            for Loop_amp in Loop_amps:
+                loop_amp_ID_to_config[Loop_amp] = curr_config
+ 
+        # Now write the amp2 related inputs in the replacement dictionary
+        n_configs = len([k for k in config_index_map.keys() if k!=0])
+        replace_dict['nmultichannels'] = n_configs
+        
+        res_list = []
+        conf_list = [config_index_map[i] for i in sorted(config_index_map.keys())
+                                                                        if i!=0]
+        chunk_size = 6
+        for k in xrange(0, len(conf_list), chunk_size):
+            res_list.append("DATA (config_index_map(i),i=%6r,%6r) /%s/" % \
+                (k + 1, min(k + chunk_size, len(conf_list)),
+                    ','.join(["%6r" % i for i in conf_list[k:k + chunk_size]])))
+
+        replace_dict['config_index_map_definition'] = '\n'.join(res_list)
+
+        res_list = []
+        n_loop_amps = max(loop_amp_ID_to_config.keys())
+        amp_list = [loop_amp_ID_to_config[i] for i in \
+                                   sorted(loop_amp_ID_to_config.keys()) if i!=0]
+        chunk_size = 6
+        for k in xrange(0, len(amp_list), chunk_size):
+            res_list.append("DATA (CONFIG_MAP(i),i=%6r,%6r) /%s/" % \
+                (k + 1, min(k + chunk_size, len(amp_list)),
+                    ','.join(["%6r" % i for i in amp_list[k:k + chunk_size]])))
+
+        replace_dict['config_map_definition'] = '\n'.join(res_list)
