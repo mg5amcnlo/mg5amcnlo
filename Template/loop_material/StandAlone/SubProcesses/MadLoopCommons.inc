@@ -30,6 +30,30 @@
 
       end
 
+      SUBROUTINE SET_FORBID_HEL_DOUBLECHECK(ONOFF)
+C
+C Give the possibility to overwrite the value of MadLoopParams.dat
+c for the helicity double checking.
+C Make sure to call this subroutine before the first time you 
+C call MadLoop.
+C
+      IMPLICIT NONE
+C
+C ARGUMENT
+C
+      LOGICAL ONOFF
+C
+C GLOBAL VARIABLES
+C
+      LOGICAL FORBID_HEL_DOUBLECHECK
+	  DATA FORBID_HEL_DOUBLECHECK/.False./
+	  COMMON/FORBID_HEL_DOUBLECHECK/FORBID_HEL_DOUBLECHECK
+C ----------
+C BEGIN CODE
+C ----------
+      FORBID_HEL_DOUBLECHECK = ONOFF
+      END
+
       subroutine setMadLoopPath(path)
 
       character(512) path
@@ -294,7 +318,7 @@ C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.7.OR.RANK.GE.7)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.8.OR.RANK.GE.8)LPASS=.FALSE.
       RETURN
       END
 
@@ -328,8 +352,103 @@ C ----------
       RETURN
       END
 
+C     Now some sorting related routines. Only to be used for small 
+C     arrays since these are not the most optimized sorting algorithms.
+
+! --------------------------------------------------------------------
+! INTEGER FUNCTION  FindMinimum():
+!    This function returns the location of the minimum in the section
+! between Start and End.
+! --------------------------------------------------------------------
+
+      INTEGER FUNCTION  FindMinimum(x, mStart, mEnd)
+      IMPLICIT  NONE
+      INTEGER MAXNREF_EVALS
+      PARAMETER (MAXNREF_EVALS=100)
+      INTEGER, DIMENSION(MAXNREF_EVALS), INTENT(IN) :: x
+      INTEGER, INTENT(IN)							  :: mStart, mEnd
+      INTEGER										  :: Minimum
+      INTEGER										  :: Location
+      INTEGER										  :: i
+
+      Minimum  = x(mStart)           ! assume the first is the min
+      Location = mStart              ! record its position
+      DO i = mStart+1, mEnd          ! start with next elements
+         IF (x(i) < Minimum) THEN    !   if x(i) less than the min?
+            Minimum  = x(i)          !      Yes, a new minimum found
+            Location = i             !      record its position
+         END IF
+      END DO
+      FindMinimum = Location         ! return the position
+      END FUNCTION  FindMinimum
+
+! --------------------------------------------------------------------
+! SUBROUTINE  Swap():
+!    This subroutine swaps the values of its two formal arguments.
+! --------------------------------------------------------------------
+
+      SUBROUTINE  Swap(a, b)
+      IMPLICIT  NONE
+      REAL*8,  INTENT(INOUT) :: a, b
+      REAL*8                 :: Temp
+
+      Temp = a
+      a    = b
+      b    = Temp
+      END SUBROUTINE  Swap
+
+! --------------------------------------------------------------------
+! SUBROUTINE  Sort():
+!    This subroutine receives an array x() and sorts it into ascending
+! order.
+! --------------------------------------------------------------------
+
+      SUBROUTINE  Sort(x, mSize)
+      IMPLICIT  NONE
+      INTEGER MAXNREF_EVALS
+      PARAMETER (MAXNREF_EVALS=100)
+      REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(INOUT)  :: x
+      INTEGER, INTENT(IN)							   :: mSize
+      INTEGER										   :: i
+      INTEGER										   :: Location
+      INTEGER 										   :: FindMinimum
+      DO i = 1, mSize-1                          ! except for the last
+         Location = FindMinimum(x, i, mSize)     ! find min from this to last
+         CALL  Swap(x(i), x(Location))           ! swap this and the minimum
+      END DO
+      END SUBROUTINE  Sort
+
+! --------------------------------------------------------------------
+! REAL*8 FUNCTION  Median() :
+!    This function receives an array X of N entries, copies its value
+! to a local array Temp(), sorts Temp() and computes the median.
+!    The returned value is of REAL type.
+! --------------------------------------------------------------------
+
+      REAL*8 FUNCTION  Median(X, N)
+      IMPLICIT  NONE
+      INTEGER MAXNREF_EVALS
+      PARAMETER (MAXNREF_EVALS=100)
+      REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(IN)  :: X
+      INTEGER, INTENT(IN)                			  :: N
+      REAL*8, DIMENSION(MAXNREF_EVALS)              :: Temp
+      INTEGER                                         :: i
+
+      DO i = 1, N                       ! make a copy
+         Temp(i) = X(i)
+      END DO
+      CALL  Sort(Temp, N)               ! sort the copy
+      IF (MOD(N,2) == 0) THEN           ! compute the median
+         Median = (Temp(N/2) + Temp(N/2+1)) / 2.0d0
+      ELSE
+         Median = Temp(N/2+1)
+      END IF
+      END FUNCTION  Median
+
+
       SUBROUTINE PRINT_MADLOOP_BANNER()
 
       %(print_banner_commands)s
 
       END
+

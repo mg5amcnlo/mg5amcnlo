@@ -19,6 +19,7 @@ import re
 import shutil
 import sys
 import logging
+import tempfile
 
 pjoin = os.path.join
 
@@ -172,7 +173,11 @@ class TestCmdShell1(unittest.TestCase):
                     'hwpp_path': './herwigPP',
                     'thepeg_path': './thepeg',
                     'amcfast': 'amcfast-config',
-                    'applgrid': 'applgrid-config'
+                    'applgrid': 'applgrid-config',
+                    'cluster_size': 100,
+                    'loop_color_flows': False,
+                    'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/',
+                    'max_npoint_for_channel': 0
                     }
 
         self.assertEqual(config, expected)
@@ -194,23 +199,24 @@ class TestCmdShell2(unittest.TestCase,
                     test_file_writers.CheckFileCreate):
     """Test all command line related to MG_ME"""
 
+    debugging = False
     def setUp(self):
-        """ basic building of the class to test """
         
         self.cmd = Cmd.MasterCmd()
-        if  MG4DIR:
-            logger.debug("MG_ME dir: " + MG4DIR)
-            self.out_dir = os.path.join(MG4DIR, 'AUTO_TEST_MG5')
+        if not self.debugging:
+            self.tmpdir = tempfile.mkdtemp(prefix='amc')
         else:
-            raise Exception, 'NO MG_ME dir for this test'   
-        if os.path.exists(self.out_dir):
-            shutil.rmtree(self.out_dir)
+            if os.path.exists(pjoin(MG5DIR, 'TEST_AMC')):
+                shutil.rmtree(pjoin(MG5DIR, 'TEST_AMC'))
+            os.mkdir(pjoin(MG5DIR, 'TEST_AMC'))
+            self.tmpdir = pjoin(MG5DIR, 'TEST_AMC')
+            
+        self.out_dir = pjoin(self.tmpdir,'MGProcess')
+        
         
     def tearDown(self):
-        """ basic destruction after have run """
-        if os.path.exists(self.out_dir):
-            shutil.rmtree(self.out_dir)
-
+        if not self.debugging and os.path.exists(self.out_dir):
+            shutil.rmtree(self.tmpdir)
     
     join_path = TestCmdShell1.join_path
 
@@ -1146,12 +1152,8 @@ C
         proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
 
-        # Check the new contents of the symfact.dat file
-        self.assertEqual(open(os.path.join(self.out_dir,
-                                           'SubProcesses',
-                                           'P0_qq_gogo_go_qqn1_go_qqn1',
-                                           'symfact.dat')).read(),
-                         """   1   1
+
+        target =                          """   1   1
    2  -1
    3  -1
    4  -1
@@ -1163,8 +1165,18 @@ C
   10  -9
   11  -9
   12  -9
-""")
-        
+"""
+        data = [[int(i) for i in line.split()] for line in target.split('\n')]
+        result = []
+        ii=0
+        for line in open(os.path.join(self.out_dir,
+                                           'SubProcesses',
+                                           'P0_qq_gogo_go_qqn1_go_qqn1',           
+                                           'symfact.dat')):
+            info = [int(i) for i in line.split()]
+            self.assertEqual(info, data[ii])
+            ii+=1
+
     def test_madevent_subproc_group_decay_chain(self):
         """Test decay chain output using the SubProcess group functionality"""
 
@@ -1489,7 +1501,7 @@ P1_qq_wp_wp_lvl
         """check that the import banner command works"""
         
         cwd = os.getcwd()
-        os.chdir(MG5DIR)
+        os.chdir(self.tmpdir)
         self.do('import banner %s --no_launch' % pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt'))
         
         # check that the output exists:

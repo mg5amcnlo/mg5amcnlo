@@ -586,6 +586,7 @@ c
       integer ires,icol(2,-nexternal+2:2*nexternal-3)
       integer is_colors(2,nincoming)
       integer i,j,i3,i3bar,max3,max3bar,min3,min3bar,maxcol,mincol
+      integer count
 
 c     Successively eliminate color indices in pairs until only the wanted
 c     indices remain
@@ -692,6 +693,7 @@ c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
      $        mo_color.eq.8.and.i3.eq.2.and.i3bar.eq.2) then
 c     Replace the maximum index with the minimum one everywhere
 c     (we don't know if we should replace i3 with i3bar or vice versa)
+c     Actually we know if one of the index is repeated (we do not want to replace that one)
          maxcol=max(max3,max3bar)
          if(maxcol.eq.max3) then
             mincol=min3bar
@@ -704,23 +706,90 @@ c     (we don't know if we should replace i3 with i3bar or vice versa)
      $              icol(j,i)=mincol
             enddo
          enddo
-c     Fix the color for ires (remember 3<->3bar for t-channels)
-         icol(1,ires)=0
-         icol(2,ires)=0
-c         print *,'Replaced ',maxcol,' by ',mincol
-         if(max3.eq.maxcol)then
-            if(i3-i3bar.ge.0) icol(2,ires)=min3
-            if(i3bar-i3.ge.0) icol(1,ires)=max3bar
+
+         if (mincol.eq.0.and.mo_color.eq.3) then
+c            situation like (possible if they are epsilon in the gluon decay
+c            (503,0)----------+ggggggggggggg (509,508)
+c                             |
+c                             |(x,y)
+c            in this case maxcol=509 and mincol=0
+c            The correct solution in this case is:
+c            (503,0)----------+ggggggggggggg (503,508)
+c                             |
+c                             |(0,508)
+            if(icolmp(2,1).eq.0)then
+               maxcol = icolmp(1,2)
+               mincol = icolmp(1,1)
+               icol(1,ires) = 0
+               icol(2,ires) = icolmp(2,2)
+            elseif(icolmp(1,1).eq.0)then
+               maxcol = icolmp(2,2)
+               mincol = icolmp(2,1)
+               icol(1,ires) = icolmp(1,2)
+               icol(2,ires) = 0 
+            elseif(icolmp(2,2).eq.0)then
+               maxcol = icolmp(1,1)
+               mincol = icolmp(1,2)
+               icol(1,ires) = 0
+               icol(2,ires) = icolmp(2,1)
+            elseif(icolmp(1,2).eq.0)then
+               maxcol = icolmp(2,1)
+               mincol = icolmp(2,2)
+               icol(1,ires) = icolmp(1,1)
+               icol(2,ires) = 0
+            else
+               !should not happen
+               write(*,*) "weird color combination in addmothers.f"
+               write(*,*) icolmp(1,1), icolmp(2,1), icolmp(1,2), icolmp(2,2)
+               call write_error(1001,0,0) 
+            endif
+c           now maxcol=509 and mincol=503 so replace all occurence of 509-> 503
+c            print *,'Replaced ',maxcol,' by ',mincol
+            do i=ires+1,nexternal
+               do j=1,2
+                  if(icol(j,i).eq.maxcol)
+     $                 icol(j,i)=mincol
+               enddo
+            enddo
          else
-            if(i3-i3bar.ge.0) icol(2,ires)=max3
-            if(i3bar-i3.ge.0) icol(1,ires)=min3bar
+c        standard case
+c     First check that mincol is not a going trough index. If it is it 
+C     should not be assign to one of the temporary index
+            count=0
+            do i=1,nexternal
+               do j=1,2
+                  if (icol(j,i).eq.mincol) count = count +1
+               enddo
+            enddo
+
+            if(count.eq.2)then
+c     we do not want to use that index pass to the other one
+               if (mincol.eq.min3)then
+                  mincol = min3bar
+                  maxcol = max3
+               else
+                  mincol = min3
+                  maxcol = max3bar
+               endif
+            endif
+
+c     Fix the color for ires (remember 3<->3bar for t-channels)
+            icol(1,ires)=0
+            icol(2,ires)=0
+c         print *,'Replaced ',maxcol,' by ',mincol
+            if(max3.eq.maxcol)then
+               if(i3-i3bar.ge.0) icol(2,ires)=min3
+               if(i3bar-i3.ge.0) icol(1,ires)=max3bar
+            else
+               if(i3-i3bar.ge.0) icol(2,ires)=max3
+               if(i3bar-i3.ge.0) icol(1,ires)=min3bar
+            endif
          endif
-c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+c     print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else
 c     Don't know how to deal with this
          call write_error(i3,i3bar,mo_color)
       endif
-
       fix_tchannel_color=maxcolor
       
       return
@@ -783,7 +852,7 @@ c      print *,'icol(1,ires),icol(2,ires): ',icol(1,ires),icol(2,ires)
       if(n3.le.1.and.n3bar.eq.0) icol(2,ires)=0
 
       if(i3.ne.n3.or.i3bar.ne.n3bar) then
-         if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0)then
+         if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0.and.i3.eq.0)then
 c        This is an epsilon index interaction
 c            write(*,*) i3, n3, i3bar, n3bar, ires
             maxcolor=maxcolor+1
@@ -792,7 +861,7 @@ c            write(*,*) i3, n3, i3bar, n3bar, ires
                maxcolor=maxcolor+1
                icol(2,ires)=-maxcolor
             endif
-         elseif(n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.0)then
+         elseif(n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.0.and.i3bar.eq.0)then
 c        This is an epsilonbar index interaction
 c            write(*,*) i3, n3, i3bar, n3bar, ires
             maxcolor=maxcolor+1
@@ -804,7 +873,9 @@ c            write(*,*) i3, n3, i3bar, n3bar, ires
          elseif(n3.gt.0.and.n3bar.eq.0.and.i3-i3bar.eq.n3.or.
      $          n3bar.gt.0.and.n3.eq.0.and.i3bar-i3.eq.n3bar.or.
      $          n3.eq.1.and.n3bar.eq.1.and.i3-i3bar.eq.0.or.
-     $          n3.eq.0.and.n3bar.eq.0.and.i3-i3bar.eq.0)then
+     $          n3.eq.0.and.n3bar.eq.0.and.i3-i3bar.eq.0.or.
+     $      n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.0.and.i3bar.ne.0.or.
+     $      n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0.and.i3.ne.0)then
 c        We have a previous epsilon which gives the wrong pop-up index
             call fix_s_color_indices(n3,n3bar,i3,i3bar,ncolmp,icolmp,
      $           ires,icol,is_colors)
@@ -850,9 +921,48 @@ c      print *,'max3,min3bar,min3,max3bar: ',max_n3,min_n3bar,min_n3,max_n3bar
       if(n3.eq.1.and.n3bar.eq.0.and.i3-i3bar.eq.n3.or.
      $   n3bar.eq.1.and.n3.eq.0.and.i3bar-i3.eq.n3bar.or.
      $   n3bar.eq.1.and.n3.eq.1.and.i3bar-i3.eq.0.or.
-     $   n3bar.eq.0.and.n3.eq.0.and.i3bar-i3.eq.0)then
+     $   n3bar.eq.0.and.n3.eq.0.and.i3bar-i3.eq.0.or.
+     $      n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.0.and.i3bar.ne.0.or.
+     $      n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0.and.i3.ne.0)then
+
+      if ((i3.eq.2.or.i3bar.eq.2).and.(n3bar+n3.eq.1))then
+c     Special case:
+c     -------------------- (0,503)
+c              g
+c              g
+c              g (504,505)
+c
+c    need to correct to 
+c    -------------------------  (0,503)
+c    (0,505)   g
+c              g
+c              g (503,505)
+         if (i3.eq.2) then
+            icol(1,ires) = max(icolmp(1,1), icolmp(1,2))
+            icol(2,ires) = 0
+            maxcol = max(icolmp(2,1), icolmp(2,2))
+            mincol = min(icolmp(1,1), icolmp(1,2))
+c           replace maxcol by mincol
+         elseif (i3bar.eq.2) then
+            icol(1,ires) = 0
+            icol(2,ires) = max(icolmp(2,1), icolmp(2,2))
+            maxcol = max(icolmp(1,1), icolmp(1,2))
+            mincol = min(icolmp(2,1), icolmp(2,2))
+         endif
+c         write(*,*) "replace ", maxcol,"by",mincol
+            do i=ires+1,nexternal
+               do j=1,2
+                  if(icol(j,i).eq.maxcol)
+     $                 icol(j,i)=mincol
+               enddo
+            enddo            
+        
+
+      else
 c     Replace the highest 3bar-index with the lowest 3-index,
 c     or vice versa
+
+
          maxcol=max(max_n3,max_n3bar)
          if(maxcol.eq.max_n3) then
             mincol=min_n3bar
@@ -874,7 +984,7 @@ c         print *,'Replaced ',maxcol,' with ',mincol
             if(n3bar.eq.1) icol(2,ires)=min_n3bar
          endif
 c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
-
+      endif
       else
 c     Don't know how to deal with this
          call write_error(1001,n3,n3bar)
@@ -898,7 +1008,7 @@ c         write(*,*) i, icol(1,i), icol(2,i),(jpart(j,i) , j=1,3)
 c      enddo
       do i=-nexternal+3,-1
          if (jpart(2,i).eq.0.or.jpart(3,i).eq.0) goto 20 ! not define mother -> continue
-         if (jpart(1,i).eq.1000.or.icol(2,i).eq.1000) goto 20 ! special color value -> continue
+         if (icol(1,i).eq.1000.or.icol(2,i).eq.1000) goto 20 ! special color value -> continue
          do k = 1,2
             found=.false.
             do j=1,nexternal
@@ -965,7 +1075,7 @@ c             write(*,*) "child has not colour", mincol, "add", icol(2,j)
                         potential_index(k) = icol(2,j)
                         mothers(1) = i 
                      else
-                        stop 1
+                        call write_error(1001,0,0) 
                      endif
                   endif
                enddo
@@ -1131,7 +1241,7 @@ c           search a new pair but with a different index!
 c           This should not happen.
             if (max3bar.eq.0)then
                write(*,*) "colorflow problem"
-               stop 3
+               call write_error(1001,0,0) 
             endif
          endif
       endif

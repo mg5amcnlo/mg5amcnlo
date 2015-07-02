@@ -106,10 +106,15 @@ if __debug__:
 try:
     if __debug__ and options.logging == 'INFO':
         options.logging = 'DEBUG'    
+    if options.logging.isdigit():
+        level = int(options.logging)
+    else:
+        level = eval('logging.' + options.logging)
+
     logging.config.fileConfig(os.path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
-    logging.root.setLevel(eval('logging.' + options.logging))
-    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
-    logging.getLogger('madevent').setLevel(eval('logging.' + options.logging))
+    logging.root.setLevel(level)
+    logging.getLogger('madgraph').setLevel(level)
+    logging.getLogger('madevent').setLevel(level)
 except:
     pass
 import madgraph.interface.master_interface as interface

@@ -119,14 +119,30 @@ then
   if [ "$PDFCODE" -lt -1 ]; then PDFSET=$((PDFCODE*-1)); fi
   linklhapdf
 # convert PDF number to name reading PDFsets.index
+  ISLHA5=0
+  ISLHA6=0
+  LHAVERSION=`$LHAPDFPATH/bin/lhapdf-config --version`
+  if [ "${LHAVERSION:0:1}" == "5" ]
+  then
+      LHAINDEX=$LHAPDFPATH/share/lhapdf/PDFsets.index
+      ISLHA5=1
+  elif [ "${LHAVERSION:0:1}" == "6" ]
+  then
+      LHAINDEX=$LHAPDFPATH/share/LHAPDF/pdfsets.index
+      ISLHA6=1
+  else
+      echo 'Unable to understand LHAPDF version!'
+      exit 1
+  fi
   while read pdfline
   do
     pdfinfo=($(echo ${pdfline}))
     if [ "$PDFSET" == "${pdfinfo[0]}" ]
     then
-       PDFSETN="${pdfinfo[4]}"
+	if [ "$ISLHA5" -eq 1 ]; then PDFSETN="${pdfinfo[4]}"; fi
+	if [ "$ISLHA6" -eq 1 ]; then PDFSETN="${pdfinfo[1]}"; fi
     fi
-  done < $LHAPDFPATH/share/lhapdf/PDFsets.index
+  done < $LHAINDEX
 elif [ "$PDFCODE" -eq 0 ]
 then
   PYTPDF='DEFAULT'
@@ -365,7 +381,7 @@ then
  then
   cat <<EOF >> $ifile
 PDF:useLHAPDF = on                 ! Use of LHAPDF
-PDF:LHAPDFSET = $PDFSETN           ! PDF set
+PDF:LHAPDFset = $PDFSETN           ! PDF set
 EOF
   if [ $PDFGROUP = "LHAPDF" ]
   then
@@ -382,7 +398,7 @@ EOF
   exit 1
   fi
  else
-  if [ -f $PYTHIA8LOCATION/lib/libpythia8lhapdf5.so ]
+  if [ "$ISLHA5" -eq 1 ]
   then
   cat <<EOF >> $ifile
 PDF:pSet = LHAPDF5:$PDFSETN
@@ -401,7 +417,7 @@ EOF
    echo "Unknown PDFGROUP " $PDFGROUP
    exit 1
    fi
-  elif [ -f $PYTHIA8LOCATION/lib/libpythia8lhapdf6.so ]
+  elif [ "$ISLHA6" -eq 1 ]
   then
   cat <<EOF >> $ifile
 PDF:pSet = LHAPDF6:$PDFSETN
@@ -416,7 +432,8 @@ PDF:useLHAPDF = off                ! Use of LHAPDF
 EOF
  fi
  cat <<EOF >> $ifile
-PDF:pSet = 7                       ! CTEQ6L
+#PDF:pSet = 7                       ! CTEQ6L
+PDF:pSet = 13                       ! NNPDF2.3 QCD+QED
 EOF
 fi
 

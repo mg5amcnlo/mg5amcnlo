@@ -1,7 +1,7 @@
-#FC = f95
-#FC = lf95
-#FC = gfortran
-FC = gfortran
+FC=gfortran
+FC=gfortran
+FC=gfortran
+FC=gfortran
 
 CDFUN = yes
 #CDFUN = no

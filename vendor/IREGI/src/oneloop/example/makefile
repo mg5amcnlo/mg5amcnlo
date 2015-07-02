@@ -1,4 +1,4 @@
-FC = gfortran
+FC=gfortran
 FFLAGS =
 
 FILE = example.f

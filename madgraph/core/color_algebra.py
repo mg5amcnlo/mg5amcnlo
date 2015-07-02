@@ -607,12 +607,16 @@ class ColorString(list):
     coeff = fractions.Fraction(1, 1)
     is_imaginary = False
     Nc_power = 0
+    # The loop_NC_power attribute is the power of Nc that comes from the
+    # possible color trace that appear in loop diagrams. It is typically
+    # equal to 1 if the loop diagrams is a closed fermion loop and 0 otherwise.
+    loop_Nc_power = 0
     canonical = None
     immutable = None
     
     def __init__(self, init_list=[],
                  coeff=fractions.Fraction(1, 1),
-                 is_imaginary=False, Nc_power=0):
+                 is_imaginary=False, Nc_power=0, loop_Nc_power=0):
         """Overrides norm list constructor to implement easy modification
         of coeff, is_imaginary and Nc_power"""
 
@@ -623,6 +627,7 @@ class ColorString(list):
         self.coeff = coeff
         self.is_imaginary = is_imaginary
         self.Nc_power = Nc_power
+        self.loop_Nc_power = loop_Nc_power
 
     def __str__(self):
         """Returns a standard string representation based on color object
@@ -763,7 +768,6 @@ class ColorString(list):
     def create_copy(self):
         """Returns a real copy of self, non trivial because bug in 
         copy.deepcopy"""
-        
         res = ColorString()
         for col_obj in self:
             assert type(col_obj) != array.array
@@ -771,6 +775,7 @@ class ColorString(list):
         res.coeff = self.coeff
         res.is_imaginary = self.is_imaginary
         res.Nc_power = self.Nc_power
+        res.loop_Nc_power = self.loop_Nc_power
 
         return res
 
@@ -799,7 +804,7 @@ class ColorString(list):
         """Force a specific order for the summation indices 
            in case we have Clebsch Gordan coefficients K6's or K6Bar's
            This is necessary to correctly recognize later on the equivalent 
-           color strings (otherwise the color basis is degenerate)
+           color strings (otherwise the color basis is degenerate).
            The new ordering is as follow:
                 1. put K and KBar Clebsch Gordan coefficients at the end of the list of color factors
                    the other factors are re-arranged in the reversed order compared with immutable 

@@ -8,10 +8,10 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u~ u > t t~ g WEIGHTED=3 [ QCD ]
-C     Process: c~ c > t t~ g WEIGHTED=3 [ QCD ]
-C     Process: d~ d > t t~ g WEIGHTED=3 [ QCD ]
-C     Process: s~ s > t t~ g WEIGHTED=3 [ QCD ]
+C     Process: u~ u > t t~ g WEIGHTED=3 [ real = QCD ]
+C     Process: c~ c > t t~ g WEIGHTED=3 [ real = QCD ]
+C     Process: d~ d > t t~ g WEIGHTED=3 [ real = QCD ]
+C     Process: s~ s > t t~ g WEIGHTED=3 [ real = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -32,38 +32,38 @@ C
       REAL*8 T,T_SAVE(NCOMB)
       SAVE T_SAVE,T_IDENT
       INTEGER NHEL(NEXTERNAL,NCOMB)
-      DATA (NHEL(I,   1),I=1,5) /-1,-1,-1,-1,-1/
-      DATA (NHEL(I,   2),I=1,5) /-1,-1,-1,-1, 1/
-      DATA (NHEL(I,   3),I=1,5) /-1,-1,-1, 1,-1/
-      DATA (NHEL(I,   4),I=1,5) /-1,-1,-1, 1, 1/
-      DATA (NHEL(I,   5),I=1,5) /-1,-1, 1,-1,-1/
-      DATA (NHEL(I,   6),I=1,5) /-1,-1, 1,-1, 1/
-      DATA (NHEL(I,   7),I=1,5) /-1,-1, 1, 1,-1/
-      DATA (NHEL(I,   8),I=1,5) /-1,-1, 1, 1, 1/
-      DATA (NHEL(I,   9),I=1,5) /-1, 1,-1,-1,-1/
-      DATA (NHEL(I,  10),I=1,5) /-1, 1,-1,-1, 1/
-      DATA (NHEL(I,  11),I=1,5) /-1, 1,-1, 1,-1/
-      DATA (NHEL(I,  12),I=1,5) /-1, 1,-1, 1, 1/
-      DATA (NHEL(I,  13),I=1,5) /-1, 1, 1,-1,-1/
-      DATA (NHEL(I,  14),I=1,5) /-1, 1, 1,-1, 1/
-      DATA (NHEL(I,  15),I=1,5) /-1, 1, 1, 1,-1/
-      DATA (NHEL(I,  16),I=1,5) /-1, 1, 1, 1, 1/
-      DATA (NHEL(I,  17),I=1,5) / 1,-1,-1,-1,-1/
-      DATA (NHEL(I,  18),I=1,5) / 1,-1,-1,-1, 1/
-      DATA (NHEL(I,  19),I=1,5) / 1,-1,-1, 1,-1/
-      DATA (NHEL(I,  20),I=1,5) / 1,-1,-1, 1, 1/
-      DATA (NHEL(I,  21),I=1,5) / 1,-1, 1,-1,-1/
-      DATA (NHEL(I,  22),I=1,5) / 1,-1, 1,-1, 1/
-      DATA (NHEL(I,  23),I=1,5) / 1,-1, 1, 1,-1/
-      DATA (NHEL(I,  24),I=1,5) / 1,-1, 1, 1, 1/
-      DATA (NHEL(I,  25),I=1,5) / 1, 1,-1,-1,-1/
-      DATA (NHEL(I,  26),I=1,5) / 1, 1,-1,-1, 1/
-      DATA (NHEL(I,  27),I=1,5) / 1, 1,-1, 1,-1/
-      DATA (NHEL(I,  28),I=1,5) / 1, 1,-1, 1, 1/
-      DATA (NHEL(I,  29),I=1,5) / 1, 1, 1,-1,-1/
-      DATA (NHEL(I,  30),I=1,5) / 1, 1, 1,-1, 1/
-      DATA (NHEL(I,  31),I=1,5) / 1, 1, 1, 1,-1/
-      DATA (NHEL(I,  32),I=1,5) / 1, 1, 1, 1, 1/
+      DATA (NHEL(I,   1),I=1,5) /-1, 1,-1, 1,-1/
+      DATA (NHEL(I,   2),I=1,5) /-1, 1,-1, 1, 1/
+      DATA (NHEL(I,   3),I=1,5) /-1, 1,-1,-1,-1/
+      DATA (NHEL(I,   4),I=1,5) /-1, 1,-1,-1, 1/
+      DATA (NHEL(I,   5),I=1,5) /-1, 1, 1, 1,-1/
+      DATA (NHEL(I,   6),I=1,5) /-1, 1, 1, 1, 1/
+      DATA (NHEL(I,   7),I=1,5) /-1, 1, 1,-1,-1/
+      DATA (NHEL(I,   8),I=1,5) /-1, 1, 1,-1, 1/
+      DATA (NHEL(I,   9),I=1,5) /-1,-1,-1, 1,-1/
+      DATA (NHEL(I,  10),I=1,5) /-1,-1,-1, 1, 1/
+      DATA (NHEL(I,  11),I=1,5) /-1,-1,-1,-1,-1/
+      DATA (NHEL(I,  12),I=1,5) /-1,-1,-1,-1, 1/
+      DATA (NHEL(I,  13),I=1,5) /-1,-1, 1, 1,-1/
+      DATA (NHEL(I,  14),I=1,5) /-1,-1, 1, 1, 1/
+      DATA (NHEL(I,  15),I=1,5) /-1,-1, 1,-1,-1/
+      DATA (NHEL(I,  16),I=1,5) /-1,-1, 1,-1, 1/
+      DATA (NHEL(I,  17),I=1,5) / 1, 1,-1, 1,-1/
+      DATA (NHEL(I,  18),I=1,5) / 1, 1,-1, 1, 1/
+      DATA (NHEL(I,  19),I=1,5) / 1, 1,-1,-1,-1/
+      DATA (NHEL(I,  20),I=1,5) / 1, 1,-1,-1, 1/
+      DATA (NHEL(I,  21),I=1,5) / 1, 1, 1, 1,-1/
+      DATA (NHEL(I,  22),I=1,5) / 1, 1, 1, 1, 1/
+      DATA (NHEL(I,  23),I=1,5) / 1, 1, 1,-1,-1/
+      DATA (NHEL(I,  24),I=1,5) / 1, 1, 1,-1, 1/
+      DATA (NHEL(I,  25),I=1,5) / 1,-1,-1, 1,-1/
+      DATA (NHEL(I,  26),I=1,5) / 1,-1,-1, 1, 1/
+      DATA (NHEL(I,  27),I=1,5) / 1,-1,-1,-1,-1/
+      DATA (NHEL(I,  28),I=1,5) / 1,-1,-1,-1, 1/
+      DATA (NHEL(I,  29),I=1,5) / 1,-1, 1, 1,-1/
+      DATA (NHEL(I,  30),I=1,5) / 1,-1, 1, 1, 1/
+      DATA (NHEL(I,  31),I=1,5) / 1,-1, 1,-1,-1/
+      DATA (NHEL(I,  32),I=1,5) / 1,-1, 1,-1, 1/
       LOGICAL GOODHEL(NCOMB)
       DATA GOODHEL/NCOMB*.FALSE./
       INTEGER NTRY
@@ -120,10 +120,10 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u~ u > t t~ g WEIGHTED=3 [ QCD ]
-C     Process: c~ c > t t~ g WEIGHTED=3 [ QCD ]
-C     Process: d~ d > t t~ g WEIGHTED=3 [ QCD ]
-C     Process: s~ s > t t~ g WEIGHTED=3 [ QCD ]
+C     Process: u~ u > t t~ g WEIGHTED=3 [ real = QCD ]
+C     Process: c~ c > t t~ g WEIGHTED=3 [ real = QCD ]
+C     Process: d~ d > t t~ g WEIGHTED=3 [ real = QCD ]
+C     Process: s~ s > t t~ g WEIGHTED=3 [ real = QCD ]
 C     
       IMPLICIT NONE
 C     

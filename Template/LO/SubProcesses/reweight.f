@@ -538,9 +538,18 @@ c     Variables for keeping track of jets
       external isqcd, isjet, isparton, cluster, isjetvx, alphas, ifsno
       setclscales=.true.
 
-      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0)
-     $     return
-
+      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0) then
+         if(use_syst)then
+            s_scale=scale
+            n_qcd=nqcd(iconfig)
+            n_alpsem=0
+            do i=1,2
+               n_pdfrw(i)=0
+            enddo
+            s_rwfact=1d0
+         endif
+      return
+      endif
 c   
 c   Cluster the configuration
 c   
@@ -729,7 +738,7 @@ c                special case for g > g h remove also the hardest gluon
            endif
            if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c             The ishft gives the FS particle corresponding to imocl
-              if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21.and.
+              if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21.or.
      $                                   ipdgcl(imocl(n),igraphs(1),iproc).ne.21) then
 c                 The second condition is to prevent the case of ggh where the gluon split in quark later.
 c                 The first quark is already remove so we shouldn't remove this one.      
@@ -993,7 +1002,7 @@ c     Take care of case when jcentral are zero
             q2fact(1) = pt2ijcl(jfirst(1))
       elseif(jcentral(2).eq.0)then
             q2fact(2) = pt2ijcl(jfirst(2))
-      elseif(ickkw.eq.2.or.pdfwgt)then
+      elseif(ickkw.eq.2.or.(pdfwgt.and.ickkw.gt.0))then
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
 c     Use the minimum scale found for fact scale in ME
@@ -1175,7 +1184,7 @@ c   Since we use pdf reweighting, need to know particle identities
          write(*,*) 'Set process number ',ipsel
       endif
 
-      if (use_syst.and.igraphs(1).eq.0) igraphs(1) = 1 ! happens if use_syst=T BUT fix scale
+      if (use_syst.and.igraphs(1).eq.0) igraphs(1) = iconfig ! happens if use_syst=T BUT fix scale
 c     Set incoming particle identities
       ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
       ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)
@@ -1197,8 +1206,10 @@ c     Store pdf information for systematics studies (initial)
          enddo
       endif
 
-      if(ickkw.le.0) goto 100
-
+      if(ickkw.le.0)then
+         asref=0 ! usefull for syscalc
+         goto 100
+      endif
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
       do i=1,nexternal
@@ -1210,7 +1221,7 @@ c        ilast(i)=ishft(1,i)
      $              max(pt2min,p(0,i)**2-p(1,i)**2-p(2,i)**2-p(3,i)**2)
             endif
             pt2pdf(ishft(1,i-1))=pt2prev(ishft(1,i-1))
-         else if(pdfwgt) then
+         else if(pdfwgt.and.ickkw.gt.0) then
             pt2pdf(ishft(1,i-1))=0d0
          endif
          ipart(1,ishft(1,i-1))=i
@@ -1323,7 +1334,7 @@ c             Store information for systematics studies
               endif
            endif
         endif
-        if(ickkw.eq.2.or.pdfwgt) then
+        if(ickkw.eq.2.or.(pdfwgt.and.ickkw.gt.0)) then
 c       Perform PDF and, if ickkw=2, Sudakov reweighting
           isvx=.false.
           do i=1,2
@@ -1495,7 +1506,7 @@ c           fs sudakov weight
       if(ickkw.eq.2.and.lpp(1).eq.0.and.lpp(2).eq.0)then
          q2fact(1)=pt2min
          q2fact(2)=q2fact(1)
-      else if (ickkw.eq.1.and.pdfwgt) then
+      else if (ickkw.gt.0.and.pdfwgt) then
          q2fact(1)=q2bck(1)
          q2fact(2)=q2bck(2)         
          if (btest(mlevel,3))
@@ -1512,14 +1523,21 @@ c           fs sudakov weight
 c     Set reweight factor for systematics studies
       if(use_syst)then
          s_rwfact = rewgt
+         
 c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
 c     factor in front of matrix element
          do i=1,2
-            s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
+            if (lpp(IB(i)).ne.0) then
+                s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
      $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),
      $           s_xpdf(1,i),s_qpdf(1,i))
+            endif
          enddo
-         s_rwfact=s_rwfact*asref**n_qcd
+         if (asref.gt.0d0.and.n_qcd.le.nexternal)then
+            s_rwfact=s_rwfact*asref**n_qcd
+c         else
+c            s_rwfact=0d0
+         endif
       endif
 
       return

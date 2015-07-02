@@ -1,20 +1,11 @@
 
-# Check for ../make_opts
-ifeq ($(wildcard ../../make_opts), ../../make_opts)
-  include ../../make_opts
-else
-  FFLAGS=
-  FC=gfortran
-endif
-
-FFLAGS+= -O -fPIC -I$(onelooppath)
-
+FC=gfortran
 qcdlooppath=$(PWD)/qcdloop
 QLDIR=$(qcdlooppath)/ql
 FFDIR=$(qcdlooppath)/ff
 onelooppath=$(PWD)/oneloop
 #FFLAGS=-O -g -ggdb -fno-automatic -fbounds-check -I$(onelooppath) # -fbounds-check is very useful in checking mermory error,-g is for debuging,-ggdb is for debuging special in gdb
-
+FFLAGS=-O -g -fPIC -I$(onelooppath)
 obj= global.o funlib.o linear_algebra.o kinematics.o matrices.o matrix_base.o cmatrix_base.o mis_warp.o special_fun.o pave_reduce.o cpave_reduce.o si_reduce.o csi_reduce.o ti_reduce.o cti_reduce.o gti_reduce.o binary_tree.o IREGI4ML5_interface.o
 mod= global.mod funlib.mod linear_algebra.mod kinematics.mod matrices.mod matrix_base.mod cmatrix_base.mod mis_warp.mod special_fun.mod pave_reduce.mod cpave_reduce.mod si_reduce.mod csi_reduce.mod ti_reduce.mod cti_reduce.mod gti_reduce.mod binary_tree.mod
 libiregi.a:make_ql make_oneloop $(obj)

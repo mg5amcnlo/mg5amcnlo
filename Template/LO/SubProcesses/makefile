@@ -7,9 +7,19 @@ LIBDIR = ../../lib/
 BINDIR = ../../bin/
 PROG   = madevent
 
-LINKLIBS =  -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf)
+ifneq ("$(wildcard ../MadLoop_makefile_definitions)","")
+    include ../MadLoop_makefile_definitions
+else
+    LINK_LOOP_LIBS =
+    LOOP_LIBS =
+    LOOP_INCLUDE =
+    LINK_MADLOOP_LIB =
+    MADLOOP_LIB =
+endif
 
-LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)
+LINKLIBS = $(LINK_MADLOOP_LIB) $(LINK_LOOP_LIBS) -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf) 
+
+LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(MADLOOP_LIB) $(LOOP_LIBS)
 
 # Source files
 
@@ -18,17 +28,16 @@ PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o get_color.o \
 	 idenparts.o \
          $(patsubst %.f,%.o,$(wildcard auto_dsig*.f)) \
          $(patsubst %.f,%.o,$(wildcard matrix*.f))
-SYMMETRY = symmetry.o setcuts.o cuts.o cluster.o myamp.o genps.o \
-	   initcluster.o setscales.o reweight.o get_color.o idenparts.o \
-           $(patsubst %.f,%.o,$(wildcard matrix*.f))
+
+SYMMETRY = symmetry.o idenparts.o 
 
 # Binaries
 
 $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 
-gensym: $(SYMMETRY) configs.inc $(LIBS)
-	$(FC) $(FFLAGS) -o gensym $(SYMMETRY) $(LINKLIBS)
+gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
+	$(FC) $(FFLAGS) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric
 
 $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
 	cd ../../Source/MODEL; make
@@ -39,12 +48,13 @@ $(LIBDIR)libgeneric.$(libext): ../../Cards/run_card.dat
 $(LIBDIR)libpdf.$(libext): 
 	cd ../../Source/PDF; make
 
+# Add source so that the compiler finds the DiscreteSampler module.
+%.o: %.f
+	$(FC) $(FFLAGS) -c $< -I../../Source/
+
 # Dependencies
 
-driver.f: genps.inc qmass.inc
-setcuts.f: qmass.inc
-qmass.inc: nexternal.inc
-	   touch qmass.inc
+driver.f: genps.inc
 symmetry.o: genps.inc nexternal.inc configs.inc run_config.inc
 genps.o: genps.inc nexternal.inc configs.inc
 cuts.o: genps.inc nexternal.inc pmass.inc

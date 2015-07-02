@@ -1005,6 +1005,7 @@ c
 c     Here we cluster event and reset factorization and renormalization
 c     scales on an event-by-event basis, as well as check xqcut for jets
 c
+c     Note the following condition is the first line of setclscales
 
       IF (FIRSTTIME2) THEN
         FIRSTTIME2=.FALSE.

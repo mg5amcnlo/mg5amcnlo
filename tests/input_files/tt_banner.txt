@@ -384,7 +384,7 @@ define vl~ = ve~ vm~ vt~
 # Specify process(es) to run
 generate p p > t t~ @1
 # Output processes to MadEvent directory
-output AUTO_TEST_MG5 -f
+output MGProcess -f
 
 </MG5ProcCard>
 </LesHouchesEvents>

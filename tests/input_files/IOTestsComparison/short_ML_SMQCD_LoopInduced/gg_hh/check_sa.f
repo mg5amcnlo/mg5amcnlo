@@ -16,7 +16,12 @@ C
       PARAMETER (READPS = .FALSE.)
 
       INTEGER NPSPOINTS
-      PARAMETER (NPSPOINTS = 4)
+      PARAMETER (NPSPOINTS = 10)
+
+C     integer nexternal C number particles (incoming+outgoing) in the
+C      me 
+      INTEGER NEXTERNAL, NINCOMING
+      PARAMETER (NEXTERNAL=4,NINCOMING=2)
 
       CHARACTER(512) MADLOOPRESOURCEPATH
 
@@ -26,9 +31,6 @@ C
 C     the include file with the values of the parameters and masses   
 C        
       INCLUDE 'coupl.inc'
-C     integer nexternal C number particles (incoming+outgoing) in the
-C      me 
-      INCLUDE 'nexternal.inc'
 C     particle masses
       REAL*8 PMASS(NEXTERNAL)
 C     integer    n_max_cg
@@ -43,7 +45,7 @@ C     four momenta. Energy is the zeroth component.
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER MATELEM_ARRAY_DIM
       REAL*8 , ALLOCATABLE :: MATELEM(:,:)
-      REAL*8 SQRTS,AO2PI
+      REAL*8 SQRTS,AO2PI,TOTMASS
 C     sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
@@ -123,8 +125,12 @@ C
       IF(NINCOMING.EQ.1) THEN
         SQRTS=PMASS(1)
       ELSE
+        TOTMASS = 0.0D0
+        DO I=1,NEXTERNAL
+          TOTMASS = TOTMASS + PMASS(I)
+        ENDDO
 C       CMS energy in GEV
-        SQRTS=1000D0
+        SQRTS=MAX(1000D0,2.0D0*TOTMASS)
       ENDIF
 
       CALL PRINTOUT()
@@ -366,7 +372,8 @@ C     auxiliary function to change convention between madgraph and
 C      rambo
 C     four momenta.         
       IMPLICIT NONE
-      INCLUDE 'nexternal.inc'
+      INTEGER NEXTERNAL, NINCOMING
+      PARAMETER (NEXTERNAL=4,NINCOMING=2)
 C     ARGUMENTS
       REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
 C     LOCAL
@@ -452,7 +459,8 @@ C      *
 C     *****************************************************************
 C     *****
       IMPLICIT REAL*8(A-H,O-Z)
-      INCLUDE 'nexternal.inc'
+      INTEGER NEXTERNAL, NINCOMING
+      PARAMETER (NEXTERNAL=4,NINCOMING=2)
       DIMENSION XM(NEXTERNAL-NINCOMING),P(4,NEXTERNAL-NINCOMING)
       DIMENSION Q(4,NEXTERNAL-NINCOMING),Z(NEXTERNAL-NINCOMING),R(4)
      $ ,B(3),P2(NEXTERNAL-NINCOMING),XM2(NEXTERNAL-NINCOMING)
@@ -466,9 +474,9 @@ C     INITIALIZATION STEP: FACTORIALS FOR THE PHASE SPACE WEIGHT
       TWOPI=8.*DATAN(1.D0)
       PO2LOG=LOG(TWOPI/4.)
       Z(2)=PO2LOG
-      DO 101 K=3,(NEXTERNAL-NINCOMING-1)
+      DO 101 K=3,(NEXTERNAL-NINCOMING)
  101  Z(K)=Z(K-1)+PO2LOG-2.*LOG(DFLOAT(K-2))
-      DO 102 K=3,(NEXTERNAL-NINCOMING-1)
+      DO 102 K=3,(NEXTERNAL-NINCOMING)
  102  Z(K)=(Z(K)-LOG(DFLOAT(K-1)))
 C     
 C     CHECK ON THE NUMBER OF PARTICLES

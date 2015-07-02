@@ -6,9 +6,10 @@ c     Scales
 c
       real*8          scale,scalefact,alpsfact
       logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
-      integer         ickkw,nhmult,asrwgtflavor
+      integer         ickkw,nhmult,asrwgtflavor, dynamical_scale_choice
       common/to_scale/scale,scalefact,alpsfact,fixed_ren_scale,fixed_fac_scale,
-     $                fixed_couplings,ickkw,nhmult,hmult,asrwgtflavor
+     $                fixed_couplings,ickkw,nhmult,hmult,asrwgtflavor,
+     $                dynamical_scale_choice
 c
 c     Collider
 c
@@ -56,3 +57,9 @@ c
       logical clusinfo
       double precision lhe_version
       COMMON/TO_LHEFORMAT/lhe_version,clusinfo
+
+c     
+C     Controls wheter to perform Monte-Carlo sampling over grouped subprocesses
+C
+      logical MC_grouped_subproc
+      common/to_MC_grouped_subproc/MC_grouped_subproc

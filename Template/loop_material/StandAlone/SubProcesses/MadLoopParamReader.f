@@ -111,6 +111,14 @@
      &           ImprovePSPoint .gt. 2 ) then
                stop 'ImprovePSPoint must be >= -1 and <=2.'
              endif
+
+          else if (buff .eq. '#HelicityFilterLevel') then
+             read(666,*,end=999) HelicityFilterLevel
+             if (HelicityFilterLevel .lt. 0 .or.
+     &           HelicityFilterLevel .gt. 2 ) then
+               stop 'HelicityFilterLevel must be >= 0 and <=2.'
+             endif
+
           else if (buff .eq. '#MLReductionLib') then
              read(666,*,end=999) MLReductionLib_str
              MLReductionLib(1:5)=0
@@ -212,6 +220,7 @@ C     a non existing or malformed parameter file
       write(*,*) ' > CheckCycle                = ',CheckCycle
       write(*,*) ' > MaxAttempts               = ',MaxAttempts
       write(*,*) ' > UseLoopFilter             = ',UseLoopFilter
+      write(*,*) ' > HelicityFilterLevel       = ',HelicityFilterLevel
       write(*,*) ' > ImprovePSPoint            = ',ImprovePSPoint
       write(*,*) ' > DoubleCheckHelicityFilter = ',
      &DoubleCheckHelicityFilter
@@ -248,6 +257,7 @@ C     a non existing or malformed parameter file
       CTLoopLibrary=3
       CheckCycle=3
       MaxAttempts=10
+      HelicityFilterLevel=2
       UseLoopFilter=.False.
       DoubleCheckHelicityFilter=.True.
       LoopInitStartOver=.False.

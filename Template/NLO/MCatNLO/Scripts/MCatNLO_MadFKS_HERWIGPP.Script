@@ -153,19 +153,36 @@ then
   cp -f $LHAPDFPATH"/lib/libLHAPDF.a" `pwd`"/../lib"
   LHALIBPATH=`pwd`"/../"
   LHALINK=DYNAMIC
-  LHAOFL=FREEZE
+  if [ "$PDFCODE" -gt 0 ]; then LHAOFL=FREEZE; fi
   if [ "$PDFCODE" -gt 1 ]; then PDFSET=$PDFCODE; fi
+  if [ "$PDFCODE" -lt 0 ]; then LHAOFL=EXTRAPOLATE; fi
   if [ "$PDFCODE" -lt -1 ]; then PDFSET=$((PDFCODE*-1)); fi
   linklhapdf
 # convert PDF number to name reading PDFsets.index
+  ISLHA5=0
+  ISLHA6=0
+  LHAVERSION=`$LHAPDFPATH/bin/lhapdf-config --version`
+  if [ "${LHAVERSION:0:1}" == "5" ]
+  then
+      LHAINDEX=$LHAPDFPATH/share/lhapdf/PDFsets.index
+      ISLHA5=1
+  elif [ "${LHAVERSION:0:1}" == "6" ]
+  then
+      LHAINDEX=$LHAPDFPATH/share/LHAPDF/pdfsets.index
+      ISLHA6=1
+  else
+      echo 'Unable to understand LHAPDF version!'
+      exit 1
+  fi
   while read pdfline
-  do 
+  do
     pdfinfo=($(echo ${pdfline}))
     if [ "$PDFSET" == "${pdfinfo[0]}" ]
     then
-       PDFSETN="${pdfinfo[4]}"
+	if [ "$ISLHA5" -eq 1 ]; then PDFSETN="${pdfinfo[4]}"; fi
+	if [ "$ISLHA6" -eq 1 ]; then PDFSETN="${pdfinfo[1]}"; fi
     fi
-  done < $LHAPDFPATH/share/lhapdf/PDFsets.index
+  done < $LHAINDEX
 elif [ "$PDFCODE" -eq 0 ]
 then
   HERPDF='DEFAULT'
@@ -206,7 +223,6 @@ INCLMAKE="INCLOPTION="$ExtraIncl
 INCDIRMK="INCDIR="`pwd`"/include"
 COMSRCMK="COMSRC="`pwd`"/srcCommon"
 EVTDIR=`pwd`"/../Events"
-
 if [ "$LD_LIBRARY_PATH" = "" ]
 then
   LD_LIBRARY_PATH="$ExtraPathsDyn"
@@ -243,6 +259,7 @@ then
   EXEC_NAME="$EXEC_NAMEF"
 fi
 EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
+
 rm -f $thisdir/$EXEC_NAMEFF
 # new compilation step for HW++ mode
   # compile the analyzer & link it into the EXE directory
@@ -402,11 +419,23 @@ cat <<EOF >> ./$ifile
 # Define PDF from MCatNLO.inputs PDFSET number
 mkdir /LHAPDF
 create ThePEG::LHAPDF /LHAPDF/MCNLOPDF ThePEGLHAPDF.so
+EOF
 
-#set /LHAPDF/MCNLOPDF:PDFNumber $PDFSET
+if [ "$ISLHA5" -eq 1 ]
+then
+cat <<EOF >> ./$ifile
+set /LHAPDF/MCNLOPDF:PDFNumber $PDFSET
+EOF
+fi
+if [ "$ISLHA6" -eq 1 ]
+then
+cat <<EOF >> ./$ifile
 set /LHAPDF/MCNLOPDF:PDFName $PDFSETN
-set /LHAPDF/MCNLOPDF:RemnantHandler /Herwig/Partons/HadronRemnants
+EOF
+fi
 
+cat <<EOF >> ./$ifile
+set /LHAPDF/MCNLOPDF:RemnantHandler /Herwig/Partons/HadronRemnants
 set /Herwig/EventHandlers/LHEReader:PDFA /LHAPDF/MCNLOPDF
 set /Herwig/EventHandlers/LHEReader:PDFB /LHAPDF/MCNLOPDF
 set /Herwig/Particles/p+:PDF /LHAPDF/MCNLOPDF

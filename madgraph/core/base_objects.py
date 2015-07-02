@@ -24,8 +24,9 @@ import os
 import re
 import StringIO
 import madgraph.core.color_algebra as color
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
+
 
 logger = logging.getLogger('madgraph.base_objects')
 pjoin = os.path.join
@@ -420,38 +421,43 @@ class Particle(PhysicsObject):
         else:
             return self['name']
 
-    def get_helicity_states(self):
+    def get_helicity_states(self, allow_reverse=True):
         """Return a list of the helicity states for the onshell particle"""
 
         spin = self.get('spin')
         if spin ==1:
             # Scalar
-            return [ 0 ]
+            res = [ 0 ]
         elif spin == 2:
             # Spinor
-            return [ -1, 1 ]
+            res = [ -1, 1 ]                
         elif spin == 3 and self.get('mass').lower() == 'zero':
             # Massless vector
-            return [ -1, 1 ]
+            res = [ -1, 1 ]
         elif spin == 3:
             # Massive vector
-            return [ -1, 0, 1 ]
+            res = [ -1, 0, 1 ]
         elif spin == 4 and self.get('mass').lower() == 'zero':
             # Massless tensor
-            return [-3, 3]
+            res = [-3, 3]
         elif spin == 4:
             # Massive tensor
-            return [-3, -1, 1, 3]
-        
+            res = [-3, -1, 1, 3]
         elif spin == 5 and self.get('mass').lower() == 'zero':
             # Massless tensor
-            return [-2, -1, 1, 2]
+            res = [-2, -1, 1, 2]
         elif spin in [5, 99]:
             # Massive tensor
-            return [-2, -1, 0, 1, 2]
-        
-        raise self.PhysicsObjectError, \
+            res = [-2, -1, 0, 1, 2]
+        else:
+            raise self.PhysicsObjectError, \
               "No helicity state assignment for spin %d particles" % spin
+                  
+        if allow_reverse and not self.get('is_part'):
+            res.reverse()
+
+
+        return res
 
     def is_fermion(self):
         """Returns True if this is a fermion, False if boson"""
@@ -1557,6 +1563,45 @@ class Model(PhysicsObject):
         
         return default
 
+    def change_electroweak_mode(self, mode):
+        """Change the electroweak mode. The only valid mode now is external.
+        Where in top of the default MW and sw2 are external parameters."""
+        
+        assert mode == "external"
+        
+        try:
+            W = self.get('particle_dict')[24]
+        except KeyError:
+            raise InvalidCmd('No W particle in the model impossible to change the EW scheme!')
+        
+        MW = self.get_parameter(W.get('mass'))
+        if not isinstance(MW, ParamCardVariable):
+            newMW = ParamCardVariable(MW.name, MW.value, 'MASS', [24])
+            if not newMW.value:
+                newMW.value = 80.385
+            #remove the old definition
+            self.get('parameters')[MW.depend].remove(MW)
+            # add the new one
+            self.add_param(newMW, ['external'])
+            
+        # Now check for sw2. if not define bypass this
+        try:
+            sw2 = self.get_parameter('sw2')
+        except KeyError:
+            try:
+                sw2 = self.get_parameter('mdl_sw2')
+            except KeyError:
+                sw2=None
+        
+        if sw2:
+            newsw2 = ParamCardVariable(sw2.name,sw2.value, 'SMINPUTS', [4])
+            if not newsw2.value:
+                newsw2.value = 0.222246485786
+            #remove the old definition
+            self.get('parameters')[sw2.depend].remove(sw2)
+            # add the new one
+            self.add_param(newsw2, ['external'])            
+
     def change_mass_to_complex_scheme(self):
         """modify the expression changing the mass to complex mass scheme"""
         
@@ -2043,9 +2088,36 @@ class Vertex(PhysicsObject):
     
     sorted_keys = ['id', 'legs']
     
+    # This sets what are the ID's of the vertices that must be ignored for the
+    # purpose of the multi-channeling. 0 and -1 are ID's of various technical
+    # vertices which have no relevance from the perspective of the diagram 
+    # topology, while -2 is the ID of a vertex that results from a shrunk loop
+    # (for loop-induced integration with MadEvent) and one may or may not want
+    # to consider these higher point loops for the purpose of the multi-channeling.
+    # So, adding -2 to the list below makes sur that all loops are considered
+    # for multichanneling.
+    ID_to_veto_for_multichanneling = [0,-1,-2]
+    
+    # For loop-induced integration, considering channels from up to box loops 
+    # typically leads to better efficiencies. Beyond that, it is detrimental 
+    # because the phase-space generation is not suited to map contact interactions
+    # This parameter controls up to how many legs should loop-induced diagrams
+    # be considered for multichanneling.
+    # Notice that, in the grouped subprocess case mode, if -2 is not added to 
+    # the list ID_to_veto_for_multichanneling then all loop are considered by 
+    # default and the constraint below is not applied.
+    max_n_loop_for_multichanneling = 4
+    
     def default_setup(self):
         """Default values for all properties"""
 
+        # The 'id' of the vertex corresponds to the interaction ID it is made of.
+        # Notice that this 'id' can take the special values :
+        #  -1 : A two-point vertex which either 'sews' the two L-cut particles
+        #       together or simply merges two wavefunctions to create an amplitude
+        #       (in the case of tree-level diagrams).
+        #  -2 : The id given to the ContractedVertices (i.e. a shrunk loop) so 
+        #       that it can be easily identified when constructing the DiagramChainLinks.
         self['id'] = 0
         self['legs'] = LegList()
 
@@ -2068,6 +2140,17 @@ class Vertex(PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return self.sorted_keys  #['id', 'legs']
+
+    def nice_string(self):
+        """return a nice string"""
+        
+        mystr = []
+        for leg in self['legs']:
+            mystr.append( str(leg['number']) + '(%s)' % str(leg['id']))
+        mystr = '(%s,id=%s ,obj_id:%s)' % (', '.join(mystr), self['id'], id(self))
+        
+        return(mystr)
+
 
     def get_s_channel_id(self, model, ninitial):
         """Returns the id for the last leg as an outgoing
@@ -2139,6 +2222,58 @@ class VertexList(PhysicsObjectList):
         if isinstance(orders, dict):
             self.orders = orders
 
+#===============================================================================
+# ContractedVertex
+#===============================================================================
+class ContractedVertex(Vertex):
+    """ContractedVertex: When contracting a loop to a given vertex, the created
+    vertex object is then a ContractedVertex object which has additional 
+    information with respect to a regular vertex object. For example, it contains
+    the PDG of the particles attached to it. (necessary because the contracted
+    vertex doesn't have an interaction ID which would allow to retrieve such
+    information).
+    """
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        self['PDGs'] = []
+        self['loop_tag'] = tuple()
+        self['loop_orders'] = {}
+        super(ContractedVertex, self).default_setup()
+
+    def filter(self, name, value):
+        """Filter for valid vertex property values."""
+
+        if name == 'PDGs':
+            if isinstance(value, list):
+                for elem in value:
+                    if not isinstance(elem,int):
+                        raise self.PhysicsObjectError, \
+                            "%s is not a valid integer for leg PDG" % str(elem)
+            else:
+                raise self.PhysicsObjectError, \
+                  "%s is not a valid list for contracted vertex PDGs"%str(value)                
+        if name == 'loop_tag':
+            if isinstance(value, tuple):
+                for elem in value:
+                    if not (isinstance(elem,int) or isinstance(elem,tuple)):
+                        raise self.PhysicsObjectError, \
+                          "%s is not a valid int or tuple for loop tag element"%str(elem)
+            else:
+                raise self.PhysicsObjectError, \
+                  "%s is not a valid tuple for a contracted vertex loop_tag."%str(value)
+        if name == 'loop_orders':
+            Interaction.filter(Interaction(), 'orders', value)
+        else:
+            return super(ContractedVertex, self).filter(name, value)
+
+        return True
+
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+
+        return super(ContractedVertex, self).get_sorted_keys()+['PDGs']
 
 #===============================================================================
 # Diagram
@@ -2174,21 +2309,32 @@ class Diagram(PhysicsObject):
     def nice_string(self):
         """Returns a nicely formatted string of the diagram content."""
 
+        pass_sanity = True
         if self['vertices']:
             mystr = '('
             for vert in self['vertices']:
+                used_leg = [] 
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
                     mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
-
+                    used_leg.append(leg['number'])
+                if __debug__ and len(used_leg) != len(set(used_leg)):
+                    pass_sanity = False
+                    responsible = id(vert)
+                    
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
                 mystr = mystr + str(vert['legs'][-1]['number']) + '(%s)' % str(vert['legs'][-1]['id']) + ','
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
+                                
             mystr = mystr[:-1] + ')'
-            mystr += " (%s)" % ",".join(["%s=%d" % (key, self['orders'][key]) \
-                                     for key in sorted(self['orders'].keys())])
+            mystr += " (%s)" % (",".join(["%s=%d" % (key, self['orders'][key]) \
+                                     for key in sorted(self['orders'].keys())]))
+            
+            if not pass_sanity:
+                raise Exception, "invalid diagram: %s. vert_id: %s" % (mystr, responsible) 
+                
             return mystr
         else:
             return '()'
@@ -2202,8 +2348,11 @@ class Diagram(PhysicsObject):
         weight = 0
         for vertex in self['vertices']:
             if vertex.get('id') in [0,-1]: continue
-            couplings = model.get('interaction_dict')[vertex.get('id')].\
-                        get('orders')
+            if vertex.get('id') == -2:
+                couplings = vertex.get('loop_orders')
+            else:
+                couplings = model.get('interaction_dict')[vertex.get('id')].\
+                                                                   get('orders')
             for coupling in couplings:
                 coupling_orders[coupling] += couplings[coupling]
             weight += sum([model.get('order_hierarchy')[c]*n for \
@@ -2238,8 +2387,26 @@ class Diagram(PhysicsObject):
         except Exception:
             return 0
 
+    def get_contracted_loop_diagram(self, struct_rep=None):
+        """ Returns a Diagram which correspond to the loop diagram with the 
+        loop shrunk to a point. Of course for a instance of base_objects.Diagram
+        one must simply return self."""
+        
+        return self
+        
+    def get_external_legs(self):
+        """ Return the list of external legs of this diagram """
+        
+        external_legs = LegList([])
+        for leg in sum([vert.get('legs') for vert in self.get('vertices')],[]):
+            if not leg.get('number') in [l.get('number') for l in external_legs]:
+               external_legs.append(leg) 
+               
+        return external_legs
+        
     def renumber_legs(self, perm_map, leg_list):
         """Renumber legs in all vertices according to perm_map"""
+
         vertices = VertexList()
         min_dict = copy.copy(perm_map)
         # Dictionary from leg number to state
@@ -2276,12 +2443,25 @@ class Diagram(PhysicsObject):
         state_dict = {True:'T',False:'F'}
         return new_diag
 
-    def get_vertex_leg_numbers(self):
+    def get_vertex_leg_numbers(self, 
+                        veto_inter_id=Vertex.ID_to_veto_for_multichanneling,
+                        max_n_loop=0):
         """Return a list of the number of legs in the vertices for
-        this diagram"""
+        this diagram. 
+        This function is only used for establishing the multi-channeling, so that
+        we exclude from it all the fake vertices and the vertices resulting from
+        shrunk loops (id=-2)"""
 
-        return [len(v.get('legs')) for v in self.get('vertices')]
 
+        if max_n_loop == 0:
+            max_n_loop = Vertex.max_n_loop_for_multichanneling
+        
+        res = [len(v.get('legs')) for v in self.get('vertices') if (v.get('id') \
+                                  not in veto_inter_id) or (v.get('id')==-2 and 
+                                                 len(v.get('legs'))>max_n_loop)]
+
+        return res
+    
     def get_num_configs(self, model, ninitial):
         """Return the maximum number of configs from this diagram,
         given by 2^(number of non-zero width s-channel propagators)"""
@@ -2594,7 +2774,8 @@ class Process(PhysicsObject):
                         "%s is not a valid ProcessList" % str(value)
 
         if name == 'NLO_mode':
-            if value not in ['real','all','virt','tree']:
+            import madgraph.interface.madgraph_interface as mg
+            if value not in mg.MadGraphCmd._valid_nlo_modes:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid NLO_mode" % str(value)
         return True
@@ -2694,7 +2875,10 @@ class Process(PhysicsObject):
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
             if self['NLO_mode']!='tree':
-                mystr = mystr + self['NLO_mode'] + ' = '
+                if self['NLO_mode']=='virt' and not self['has_born']:
+                    mystr = mystr + 'sqrvirt = '
+                else:
+                    mystr = mystr + self['NLO_mode'] + ' = '
             for order in self['perturbation_couplings']:
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
@@ -2853,14 +3037,15 @@ class Process(PhysicsObject):
         # Remove last space
         return mystr[:-1]
 
-    def shell_string(self, schannel=True, forbid=True, main=True, pdg_order=False):
+    def shell_string(self, schannel=True, forbid=True, main=True, pdg_order=False,
+                                                                print_id = True):
         """Returns process as string with '~' -> 'x', '>' -> '_',
         '+' -> 'p' and '-' -> 'm', including process number,
         intermediate s-channels and forbidden particles,
         pdg_order allow to order to leg order by pid."""
 
         mystr = ""
-        if not self.get('is_decay_chain'):
+        if not self.get('is_decay_chain') and print_id:
             mystr += "%d_" % self['id']
         
         prevleg = None
@@ -3372,8 +3557,11 @@ class ProcessDefinition(Process):
         # Add perturbation_couplings
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
-            if self['NLO_mode']:
-                mystr = mystr + self['NLO_mode'] + ' = '
+            if self['NLO_mode']!='tree':
+                if self['NLO_mode']=='virt' and not self['has_born']:
+                    mystr = mystr + 'sqrvirt = '
+                else:
+                    mystr = mystr + self['NLO_mode'] + ' = '
             for order in self['perturbation_couplings']:
                 mystr = mystr + order + ' '
             mystr = mystr + '] '

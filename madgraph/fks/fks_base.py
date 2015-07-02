@@ -25,11 +25,13 @@ import madgraph.fks.fks_common as fks_common
 import copy
 import logging
 import array
-
+import madgraph.various.misc as misc
 from madgraph import InvalidCmd
 
 logger = logging.getLogger('madgraph.fks_base')
 
+
+class NoBornException(Exception): pass
 
 #===============================================================================
 # FKS Process
@@ -99,17 +101,30 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             self['OLP']=options['OLP']
             del options['OLP']
 
+
         try:
             # Now generating the borns for the first time.
             super(FKSMultiProcess, self).__init__(*arguments,**options)
-        except InvalidCmd as error:
+        except diagram_generation.NoDiagramException as error:
             # If no born, then this process most likely does not have any.
-            raise InvalidCmd, "Born diagrams could not be generated for the "+\
+            raise NoBornException, "Born diagrams could not be generated for the "+\
                self['process_definitions'][0].nice_string().replace('Process',\
                'process')+". Notice that aMC@NLO does not handle loop-induced"+\
                " processes yet, but you can still use MadLoop if you want to "+\
                "only generate them."+\
-               " For this, use the 'virt=' mode, without multiparticle labels." 
+               " For this, use the 'virt=' mode, without multiparticle labels."
+        
+        #check limitation of FKS
+        if arguments and isinstance(arguments, MG.Process):
+            myprocdef = arguments[0]
+            misc.sprint( myprocdef.keys())
+            if myprocdef['perturbation_couplings']!=['QCD']:
+                raise InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
+                            % ', '.join(myprocdef['perturbation_couplings']))
+            elif myprocdef.get_ninitial()==1:
+                raise InvalidCmd("At this stage aMC@NLO cannot handle decay process.\n"+\
+                 "   Only Leading Order (loop-induced and tree level) decay are supported.") 
+            
         #check process definition(s):
         # a process such as g g > g g will lead to real emissions 
         #   (e.g: u g > u g g ) which will miss some corresponding born,
@@ -157,12 +172,11 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             for real in born.real_amps:
                 real.find_fks_j_from_i(born_pdg_list)
 
-
         if amps:
             if self['process_definitions'][0].get('NLO_mode') == 'all':
                 self.generate_virtuals()
             
-            elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
+            elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real','LOonly']:
                 raise fks_common.FKSProcessError(\
                    "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
                    self['process_definitions'][0].get('NLO_mode'))
@@ -175,7 +189,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             n_diag_virt = sum([len(amp.get('loop_diagrams')) 
                      for amp in self.get_virt_amplitudes()])
 
-            if n_diag_virt == 0 and n_diag_real ==0:
+            if n_diag_virt == 0 and n_diag_real ==0 and \
+                    not self['process_definitions'][0].get('NLO_mode') == 'LOonly':
                 raise fks_common.FKSProcessError(
                         'This process does not have any correction up to NLO in %s'\
                         %','.join(perturbation))
@@ -455,8 +470,12 @@ class FKSProcess(object):
                 self.orders = fks_common.find_orders(self.born_amp)
                 
             self.ndirs = 0
-            for order in self.born_proc.get('perturbation_couplings'):
-                self.find_reals(order)
+            # generate reals, when the mode is not LOonly
+            # when is LOonly it is supposed to be a 'fake' NLO process
+            # e.g. to be used in merged sampels at high multiplicities
+            if self.born_proc['NLO_mode'] != 'LOonly':
+                for order in self.born_proc.get('perturbation_couplings'):
+                    self.find_reals(order)
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):
