@@ -1227,6 +1227,8 @@ c H events
      #          ( (abs(idpartj).eq.4.or.abs(idpartj).eq.5) .and.
      #            pmass(j_fks).eq.0.d0 ) )then
               xmj=mcmass(idpartj)
+            elseif(idpartj.eq.22) then
+              xmj=0d0
             else
 c j_fks is an heavy particle
               if(.not.is_aorg(i_fks))then
