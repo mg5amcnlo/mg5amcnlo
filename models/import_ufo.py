@@ -329,12 +329,13 @@ class UFOMG5Converter(object):
                                                                   
         # For each CTParameter, check that there is no name conflict with the
         # set of re-defined CTParameters with EPS and FIN suffixes.
-        for CTparam in self.ufomodel.all_CTparameters:
-            for pole in pole_dict:
-                if CTparam.pole(pole)!='ZERO':
-                    new_param_name = '%s_%s_'%(CTparam.name,pole_dict[pole])
-                    if new_param_name in def_name:
-                        raise InvalidModel, "CT name %s"% (new_param_name)+\
+        if hasattr(self.ufomodel,'all_CTparameters'):
+            for CTparam in self.ufomodel.all_CTparameters:
+                for pole in pole_dict:
+                    if CTparam.pole(pole)!='ZERO':
+                        new_param_name = '%s_%s_'%(CTparam.name,pole_dict[pole])
+                        if new_param_name in def_name:
+                            raise InvalidModel, "CT name %s"% (new_param_name)+\
                                            " the model. Please change its name."
 
         if hasattr(self.ufomodel, 'gauge'):    
@@ -361,8 +362,9 @@ class UFOMG5Converter(object):
         # load the lorentz structure.
         self.model.set('lorentz', self.ufomodel.all_lorentz)
 
-        logger.debug('Handling couplings defined with CTparameters')
-        self.treat_couplings(self.ufomodel.all_couplings, 
+        if hasattr(self.ufomodel,'all_CTparameters'):
+            logger.debug('Handling couplings defined with CTparameters')
+            self.treat_couplings(self.ufomodel.all_couplings, 
                                                  self.ufomodel.all_CTparameters)
 
         logger.info('load vertices')
@@ -1171,7 +1173,8 @@ class OrganizeModelExpression:
         params/couplings. Possibly consider additional_couplings in addition
         to those defined in the UFO model attribute all_couplings """
 
-        self.treat_CTparameters()
+        if hasattr(self.model,'all_CTparameters'):
+            self.treat_CTparameters()
         self.analyze_parameters()
         self.analyze_couplings(additional_couplings = additional_couplings)
         return self.params, self.couplings
