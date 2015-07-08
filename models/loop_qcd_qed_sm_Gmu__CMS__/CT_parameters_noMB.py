@@ -4,7 +4,7 @@
 
 from object_library import all_CTparameters, CTParameter
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec, arg, reglog, reglogp, reglogm
+from function_library import complexconjugate, re, im, csc, sec, acsc, asec, arg, reglog,reglogp,reglogm
 
 ################
 # R2 vertices  #
