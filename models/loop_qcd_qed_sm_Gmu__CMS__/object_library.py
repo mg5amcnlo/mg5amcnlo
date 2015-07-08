@@ -257,11 +257,12 @@ class Coupling(UFOBaseClass):
                 return self.value[-x]
             else:
                 return 'ZERO'
-        
+
         if x==0:
             return self.value
         else:
             return 'ZERO'
+
 
 all_lorentz = []
 

@@ -5156,7 +5156,8 @@ class UFO_model_to_mg4(object):
         file = open(os.path.join(MG5DIR,\
                               'models/template_files/fortran/rw_para.f')).read()
 
-        includes=["include \'coupl.inc\'","include \'input.inc\'"]
+        includes=["include \'coupl.inc\'","include \'input.inc\'",
+                                              "include \'model_functions.inc\'"]
         if self.opt['mp']:
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         # In standalone and madloop we do no use the compiled param card but
@@ -5500,7 +5501,8 @@ class UFO_model_to_mg4(object):
                             double precision PI, ZERO
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)
-                            parameter  (ZERO=0d0)""")
+                            parameter  (ZERO=0d0)
+                            include \'model_functions.inc\'""")
         if self.opt['mp']:
             fsock.writelines("""%s MP__PI, MP__ZERO
                                 parameter (MP__PI=3.1415926535897932384626433832795e0_16)
@@ -5538,7 +5540,8 @@ class UFO_model_to_mg4(object):
                             double precision PI, ZERO
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)            
-                            parameter  (ZERO=0d0)""")
+                            parameter  (ZERO=0d0)
+                            include \'model_functions.inc\'""")
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
@@ -5561,7 +5564,8 @@ class UFO_model_to_mg4(object):
                             implicit none
                             double precision PI
                             parameter  (PI=3.141592653589793d0)
-                            double precision mu_r2, as2""")
+                            double precision mu_r2, as2
+                            include \'model_functions.inc\'""")
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'""")
         fsock.writelines("""
@@ -5577,7 +5581,8 @@ class UFO_model_to_mg4(object):
             fsock.writelines("""subroutine mp_update_as_param()
     
                                 implicit none
-                                logical READLHA""")
+                                logical READLHA
+                                include \'model_functions.inc\'""")
             fsock.writelines("""%s MP__PI, MP__ZERO
                                     parameter (MP__PI=3.1415926535897932384626433832795e0_16)
                                     parameter (MP__ZERO=0e0_16)
@@ -5613,7 +5618,8 @@ class UFO_model_to_mg4(object):
                                                      nb_file), format='fortran')
         fsock.writelines("""subroutine %scoup%s()
           
-          implicit none"""%('mp_' if mp and not dp else '',nb_file))
+          implicit none
+          include \'model_functions.inc\'"""%('mp_' if mp and not dp else '',nb_file))
         if dp:
             fsock.writelines("""
               double precision PI, ZERO
@@ -5628,8 +5634,7 @@ class UFO_model_to_mg4(object):
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
                         """%self.mp_real_format) 
-        fsock.writelines("""
-          include 'model_functions.inc'""")
+
         for coupling in data:
             if dp:            
                 fsock.writelines('%s = %s' % (coupling.name,
