@@ -245,14 +245,14 @@ c
 c
       enddo
 c
-      if( (notagluon.and.ntot.ne.max_bcol) .or.
-     #    ( (.not.notagluon).and.
-     #      ( (.not.isspecial).and.ntot.ne.(2*max_bcol) .or.
-     #        (isspecial.and.ntot.ne.max_bcol) ) ) )then
-         write(*,*)'Error #6 in check_mc_matrices',
-     #     notagluon,ntot,max_bcol
-         stop
-      endif
+CMZ      if( (notagluon.and.ntot.ne.max_bcol) .or.
+C     #    ( (.not.notagluon).and.
+C     #      ( (.not.isspecial).and.ntot.ne.(2*max_bcol) .or.
+C     #        (isspecial.and.ntot.ne.max_bcol) ) ) )then
+C         write(*,*)'Error #6 in check_mc_matrices',
+C     #     notagluon,ntot,max_bcol
+C         stop
+C      endif
 c
       return
       end

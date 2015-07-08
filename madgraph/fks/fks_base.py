@@ -215,12 +215,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             n_diag_virt = sum([len(amp.get('loop_diagrams')) 
                      for amp in self.get_virt_amplitudes()])
 
-            if n_diag_virt == 0 and n_diag_real ==0 and \
-                    not self['process_definitions'][0].get('NLO_mode') == 'LOonly':
-                raise fks_common.FKSProcessError(
-                        'This process does not have any correction up to NLO in %s'\
-                        %','.join(perturbation))
-
             logger.info(('Generated %d subprocesses with %d real emission diagrams, ' + \
                         '%d born diagrams and %d virtual diagrams') % \
                                 (len(self['born_processes']), n_diag_real, n_diag_born, n_diag_virt))
@@ -294,9 +288,11 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                     % (myproc.nice_string(print_weighted = False).replace(\
                                                              'Process', ''),
                         i + 1, len(self['born_processes'])))
-            myamp = loop_diagram_generation.LoopAmplitude(myproc)
-            if myamp.get('diagrams'):
+            try:
+                myamp = loop_diagram_generation.LoopAmplitude(myproc)
                 born.virt_amp = myamp
+            except InvalidCmd:
+                pass
 
 
 class FKSRealProcess(object): 
@@ -541,11 +537,12 @@ class FKSProcess(object):
             try:
                 amp.amplitude = real_amp_list[pdg_list.index(amp.pdgs)]
             except ValueError:
-                pdg_list.append(amp.pdgs)
-                real_amp_list.append(amp.generate_real_amplitude())
-
-            if not amp.amplitude['diagrams']:
-                no_diags_amps.append(amp)
+                amplitude = amp.generate_real_amplitude()
+                if amplitude['diagrams']:
+                    pdg_list.append(amp.pdgs)
+                    real_amp_list.append(amplitude)
+                else:
+                    no_diags_amps.append(amp)
         
         for amp in no_diags_amps:
             self.real_amps.remove(amp)
