@@ -43,11 +43,11 @@ reglog = Function(name = 'reglog',
 
 reglogp = Function(name = 'reglogp',
                    arguments = ('z'),
-                   expression = '(0.0 if z.imag==z.real==0.0 else ( cmath.log(z) + 2*math.pi*1j if (z.real < 0.0 and z.imag < 0.0) else cmath.log(z) ) )')
+                   expression = '(0.0 if z.imag==0.0 and z.real==0.0 else ( cmath.log(z) + 2*cmath.pi*1j if (z.real < 0.0 and z.imag < 0.0) else cmath.log(z) ) )')
 
 reglogm = Function(name = 'reglogm',
                 arguments = ('z'),
-                expression = '(0.0 if z.imag==z.real==0.0 else ( cmath.log(z) - 2*math.pi*1j if (z.real < 0.0 and z.imag > 0.0) else cmath.log(z) ) )')
+                expression = '(0.0 if z.imag==0.0 and z.real==0.0 else ( cmath.log(z) - 2*cmath.pi*1j if (z.real < 0.0 and z.imag > 0.0) else cmath.log(z) ) )')
 
 arg = Function(name = 'arg',
 		arguments = ('z',),
