@@ -1082,6 +1082,8 @@ class Model(PhysicsObject):
             if not value in [True ,False]:
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a boolean" % type(value)
+            
+
         return True
 
     def get(self, name):

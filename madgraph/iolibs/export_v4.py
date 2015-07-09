@@ -5077,11 +5077,14 @@ class UFO_model_to_mg4(object):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
         
-        self.pass_parameter_to_case_insensitive()
+        self.pass_parameter_to_case_insensitive() 
         self.refactorize(wanted_couplings)
 
         # write the files
         if full:
+            if wanted_couplings:
+                # extract the wanted ct parameters
+                self.extract_needed_CTparam(wanted_couplings=wanted_couplings)
             self.write_all()
             
 
@@ -5365,6 +5368,11 @@ class UFO_model_to_mg4(object):
                             if param.type == 'real'and 
                                is_valid(param.name)]
 
+        # check the parameter is a CT parameter or not
+        # if yes, just use the needed ones        
+        real_parameters = [param for param in real_parameters \
+                           if self.check_needed_CTparam(param)]
+
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         if self.opt['mp']:
@@ -5377,6 +5385,11 @@ class UFO_model_to_mg4(object):
                             self.params_indep if param.type == 'complex' and
                             is_valid(param.name)]
 
+        # check the parameter is a CT parameter or not
+        # if yes, just use the needed ones        
+        complex_parameters = [param for param in complex_parameters \
+                             if self.check_needed_CTparam(param)]
+
         if complex_parameters:
             fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
             fsock.writelines('common/params_C/ '+','.join(complex_parameters)+'\n\n')
@@ -5384,7 +5397,47 @@ class UFO_model_to_mg4(object):
                 mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
                             self.mp_prefix+p for p in complex_parameters])+'\n')
                 mp_fsock.writelines('common/MP_params_C/ '+','.join([\
-                          self.mp_prefix+p for p in complex_parameters])+'\n\n')                
+                          self.mp_prefix+p for p in complex_parameters])+'\n\n')
+
+    def check_needed_CTparam(self,param):
+        """ check whether the CT param is needed or not"""
+        if not hasattr(self,'allCTparameters'): return True
+        if not hasattr(self,'usedCTparameters'): return True
+        if not self.allCTparameters: return True
+        # it is not a CT parameter
+        if param.lower() not in self.allCTparameters: return True
+        return (param.lower() in self.usedCTparameters)
+                
+    def extract_needed_CTparam(self,wanted_couplings=[]):
+        """ extract the needed CTparam by the wanted_couplings"""
+        if not hasattr(self.model,'map_CTcoup_CTparam') or not wanted_couplings: return
+        # try to only ouput the needed CT parameters
+        # a list of all CT parameters that will be used in all possible CT couplings        
+        allCTparameters=self.model.map_CTcoup_CTparam.values()
+        allCTparameters=list(set(itertools.chain.from_iterable(allCTparameters)))
+        # take to be lower capital
+        allCTparameters=[ctpara.lower() for ctpara in allCTparameters]
+        # take the names of the all couplings
+        allcouplings = list(set(self.model.map_CTcoup_CTparam.keys()))
+        # take the names of the used couplings
+        allusedcouplings = [coup.lower() for coup in wanted_couplings]
+        allusedcouplings = list(set(allusedcouplings).intersection(allcouplings))
+        usedCTparameters = []
+        for param in allCTparameters:
+            used=False
+            # check the CT parameter is needed or not
+            for usedcoupl in allusedcouplings:
+                if param.lower() in self.model.map_CTcoup_CTparam[usedcoupl]:
+                    used=True
+                    break
+            # if the CT parameter is not used
+            # do not export it
+            if not used:
+                continue
+            else:
+                usedCTparameters.append(param)
+        self.allCTparameters = allCTparameters
+        self.usedCTparameters = usedCTparameters         
     
     def create_intparam_def(self, dp=True, mp=False):
         """ create intparam_definition.inc setting the internal parameters.
@@ -5403,8 +5456,13 @@ class UFO_model_to_mg4(object):
             fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
         if mp:
             fsock.writelines("MP__G = 2 * SQRT(MP__AS*MP__PI) ! for the first init\n")
+            
         for param in self.params_indep:
             if param.name == 'ZERO':
+                continue
+            # check whether the parameter is a CT parameter
+            # if yes,just used the needed ones
+            if not self.check_needed_CTparam(param.name):
                 continue
             if dp:
                 fsock.writelines("%s = %s\n" % (param.name,
@@ -5421,6 +5479,10 @@ class UFO_model_to_mg4(object):
         if mp:
             fsock.writelines("MP__aS = MP__G**2/4/MP__PI\n")
         for param in self.params_dep:
+            # check whether the parameter is a CT parameter
+            # if yes,just used the needed ones
+            if not self.check_needed_CTparam(param.name):
+                continue
             if dp:
                 fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))
@@ -5852,12 +5914,14 @@ class UFO_model_to_mg4(object):
                             write(*,*)  ' ---------------------------------'
                             write(*,*)  ' '""")        
         lines = [format(data.name) for data in self.params_indep 
-                                                         if data.name != 'ZERO']
+                                                         if data.name != 'ZERO' \
+                                                         and self.check_needed_CTparam(data.name)]
         fsock.writelines('\n'.join(lines))
         fsock.writelines("""write(*,*)  ' Internal Params evaluated point by point'
                             write(*,*)  ' ----------------------------------------'
                             write(*,*)  ' '""")         
-        lines = [format(data.name) for data in self.params_dep]
+        lines = [format(data.name) for data in self.params_dep \
+                 if self.check_needed_CTparam(data.name)]
         
         fsock.writelines('\n'.join(lines))                
         

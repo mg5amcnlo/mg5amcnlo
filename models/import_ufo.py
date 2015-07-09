@@ -112,13 +112,22 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
     
     #import the FULL model
     model = import_full_model(model_path, decay, prefix)
+    newprefix=prefix
+    if prefix is True:
+        newprefix='mdl_'
+    map_CTcoup_CTparam = None
+    if hasattr(model,'map_CTcoup_CTparam'):
+        map_CTcoup_CTparam = model.map_CTcoup_CTparam
+        for CTcoup,CTparam in map_CTcoup_CTparam.items():
+            newCTparam=[ newprefix+ctpar for ctpar in CTparam]
+            map_CTcoup_CTparam[CTcoup] = newCTparam
+            
     
     if os.path.exists(pjoin(model_path, "README")):
         logger.info("Please read carefully the README of the model file for instructions/restrictions of the model.",'$MG:color:BLACK') 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name
-    
     #restrict it if needed       
     if restrict_file:
         try:
@@ -131,6 +140,8 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
+        if map_CTcoup_CTparam != None:
+            model.map_CTcoup_CTparam = map_CTcoup_CTparam
         
         if model_name == 'mssm' or os.path.basename(model_name) == 'mssm':
             keep_external=True
@@ -361,7 +372,6 @@ class UFOMG5Converter(object):
 
         # load the lorentz structure.
         self.model.set('lorentz', self.ufomodel.all_lorentz)
-
         if hasattr(self.ufomodel,'all_CTparameters'):
             logger.debug('Handling couplings defined with CTparameters')
             self.treat_couplings(self.ufomodel.all_couplings, 
@@ -422,7 +432,7 @@ class UFOMG5Converter(object):
         else:
             self.model.set('expansion_order', expansion_order)
             self.model.set('expansion_order', expansion_order)            
-
+            
         #clean memory
         del self.checked_lor
                 
@@ -649,28 +659,28 @@ class UFOMG5Converter(object):
 
             if isinstance(CTCoupling.value,dict):
                 if -pole in CTCoupling.value.keys():
-                    return 0, CTCoupling.value[-pole]
+                    return 0, CTCoupling.value[-pole], []
                 else:
-                    return 0, 'ZERO'            
-
-#            CTCoupling( name = 'MyCoupl', value= 'param1 + param2 + CTParam3') 
-            
-#            --> MyCoupl_eps = {value=CTParam3}
-#            --> MyCoupl_fin = {value='param1 + param2 + CTParam3_fin'}  
+                    return 0, 'ZERO', []              
 
             new_expression           = CTCoupling.value
             number_of_CTparams_found = 0
-            for _, value in CTparameter_patterns.items():
+            CTparamNames = []
+            for paramname, value in CTparameter_patterns.items():
                 pattern = value[0]
                 if re.search(pattern,new_expression):
                     number_of_CTparams_found += 1
+                    CTparamNames.append(('%s_%s_'%(paramname,pole_dict[-pole])).lower())
+                    # and its conjugated one
+                    # look at shorten_conjugate
+                    CTparamNames.append(('conjg__%s_%s_'%(paramname,pole_dict[-pole])).lower())
                 substitute_function = value[1][pole]
                 new_expression = pattern.sub(substitute_function,new_expression)
 
             # If no CTParam was found and we ask for a pole, then it can only
             # be zero.
             if pole!=0 and number_of_CTparams_found==0:
-                return number_of_CTparams_found, 'ZERO'
+                return number_of_CTparams_found, 'ZERO',[]
 
             # Check if resulting expression is analytically zero or not.
             # Remember that when the value of a CT_coupling is not a dictionary
@@ -678,20 +688,25 @@ class UFOMG5Converter(object):
             # and each term added or subtracted must contain *exactly one*
             # CTParameter and never at the denominator. 
             if number_of_CTparams_found > 0 and is_value_zero(new_expression):
-                return number_of_CTparams_found, 'ZERO'
+                return number_of_CTparams_found, 'ZERO',[]
             else:
-                return number_of_CTparams_found, new_expression
+                return number_of_CTparams_found, new_expression,CTparamNames
 
         # For each coupling we substitute its value if necessary
         for coupl in couplings:
             new_value = {}
             for pole in range(0,3):
-                n_CTParams, expression = CTCoupling_pole(coupl, pole)
+                n_CTParams, expression, CTparamNames = CTCoupling_pole(coupl, pole)
                 # Make sure it uses CT parameters, otherwise do nothing
                 if n_CTParams == 0:
                     break
                 elif expression!='ZERO':
                     new_value[-pole] = expression
+                    couplname = coupl.name
+                    if pole!=0:
+                        couplname += "_%deps"%pole
+                    # take the lower capital to make it capital insensitive
+                    self.model.map_CTcoup_CTparam[couplname.lower()]=CTparamNames
             if new_value:
                 coupl.value = new_value
 
@@ -750,6 +765,13 @@ The expression of the non-zero double pole coupling is:
                     if poleOrder!=0:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
                     newCoupling.value = expression
+                    # assign the CT parameter dependences
+                    #if hasattr(coupling,'CTparam_dependence') and \
+                    #        (-poleOrder in coupling.CTparam_dependence) and \
+                    #        coupling.CTparam_dependence[-poleOrder]:
+                    #    newCoupling.CTparam_dependence = coupling.CTparam_dependence[-poleOrder]
+                    #elif hasattr(newCoupling,'CTparam_dependence'):
+                    #    delattr(newCoupling,"CTparam_dependence")
                     new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling  
               
         # Now we can add an interaction for each.         
@@ -1154,6 +1176,7 @@ class OrganizeModelExpression:
     #RE expression for is_event_dependent
     separator = re.compile(r'''[+,\-*/()\s]*''')
     
+    
     def __init__(self, model):
     
         self.model = model  # UFOMODEL
@@ -1167,6 +1190,7 @@ class OrganizeModelExpression:
         self.params = {}     # depend on -> ModelVariable
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
+        #self.CTparamIndices = [] # the index in ufomodel.all_parameters
     
     def main(self, additional_couplings = []):
         """Launch the actual computation and return the associate 
@@ -1184,6 +1208,7 @@ class OrganizeModelExpression:
         """ For each CTparameter split it into spimple parameter for each pole
         and the finite part if not zero."""
 
+        #indexstart=len(self.model.all_parameters)
         for CTparam in self.model.all_CTparameters:
             for pole in range(3):
                 if CTparam.pole(pole) != 'ZERO':
@@ -1193,6 +1218,8 @@ class OrganizeModelExpression:
                     type   = CTparam.type,
                     value  = CTparam.pole(pole),
                     texname= '%s_{%s}'%(CTparam.texname,pole_dict[-pole]))
+                  #self.CTparamIndices.append(indexstart)
+                  #indexstart=indexstart+1
 
     def analyze_parameters(self):
         """ separate the parameters needed to be recomputed events by events and
@@ -1266,6 +1293,13 @@ class OrganizeModelExpression:
                             if poleOrder!=0:
                                 newCoupling.name += "_%deps"%poleOrder
                             newCoupling.value=coupling.pole(poleOrder)
+                            # assign the CT parameter dependences
+#                             if hasattr(coupling,'CTparam_dependence') and \
+#                                     (-poleOrder in coupling.CTparam_dependence) and \
+#                                     coupling.CTparam_dependence[-poleOrder]:
+#                                 newCoupling.CTparam_dependence = coupling.CTparam_dependence[-poleOrder]
+#                             elif hasattr(newCoupling,'CTparam_dependence'):
+#                                 delattr(newCoupling,"CTparam_dependence")
                             couplings_list.append(newCoupling)
         else:
             couplings_list = self.model.all_couplings + additional_couplings

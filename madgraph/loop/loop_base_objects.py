@@ -1451,6 +1451,8 @@ class LoopModel(base_objects.Model):
        # representing the counterterm and finally 'laurent_order' is to which
        # laurent order this counterterm contributes.
        self['coupling_orders_counterterms']={}
+       self.map_CTcoup_CTparam = {}
+       
     
     def filter(self, name, value):
         """Filter for model property values"""
