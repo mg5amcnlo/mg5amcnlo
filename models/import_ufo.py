@@ -648,9 +648,9 @@ class UFOMG5Converter(object):
 
             if isinstance(CTCoupling.value,dict):
                 if -pole in CTCoupling.value.keys():
-                    return CTCoupling.value[-pole], []
+                    return CTCoupling.value[-pole], [], 0
                 else:
-                    return 'ZERO', []              
+                    return 'ZERO', [], 0              
 
             new_expression           = CTCoupling.value
             CTparamNames = []
