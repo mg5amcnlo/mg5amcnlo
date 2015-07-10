@@ -319,17 +319,20 @@ class TestAMCatNLOEW(unittest.TestCase):
 
         self.interface.do_import('model loop_qcd_qed_sm-no_widths')
 
-        self.interface.do_generate('u u~ > z QED=2 QCD=0 [QED]')
+        self.interface.do_generate('u u~ > e+ e- QED=2 QCD=0 [QED]')
         fksproc1 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('c c~ > z QED=2 QCD=0 [QED]')
+        self.interface.do_generate('c c~ > e+ e- QED=2 QCD=0 [QED]')
         fksproc2 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('d d~ > z QED=2 QCD=0 [QED]')
+        self.interface.do_generate('d d~ > e+ e- QED=2 QCD=0 [QED]')
         fksproc3 = copy.copy(self.interface._fks_multi_proc)
 
-        self.interface.do_generate('b b~ > z QED=2 QCD=0 [QED]')
+        self.interface.do_generate('b b~ > e+ e- QED=2 QCD=0 [QED]')
         fksproc4 = copy.copy(self.interface._fks_multi_proc)
+
+        self.interface.do_generate('s s~ > e+ e- QED=2 QCD=0 [QED]')
+        fksproc5 = copy.copy(self.interface._fks_multi_proc)
 
         # this is to avoid effects on other tests
         self.interface.do_import('model sm')
@@ -338,6 +341,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         fksme2 = fks_helas.FKSHelasMultiProcess(fksproc2)['matrix_elements'][0]
         fksme3 = fks_helas.FKSHelasMultiProcess(fksproc3)['matrix_elements'][0]
         fksme4 = fks_helas.FKSHelasMultiProcess(fksproc4)['matrix_elements'][0]
+        fksme5 = fks_helas.FKSHelasMultiProcess(fksproc5)['matrix_elements'][0]
 
         # check that the u and d initiated are not equal
         self.assertNotEqual(fksme2,fksme3)
@@ -349,6 +353,9 @@ class TestAMCatNLOEW(unittest.TestCase):
         
         # check that the u and c initiated are equal
         self.assertEqual(fksme1, fksme2)
+
+        # check that the d and s initiated are equal
+        self.assertEqual(fksme3, fksme5)
 
 
 
