@@ -670,8 +670,10 @@ if __name__ == '__main__':
         else:
             calc = UFOExpressionParserPythonIF()
     else:
-        print "Please specify a parser: fortran, mpfortran or c++"
+        print "Please specify a parser: fortran, mpfortran, c++ or pythonif"
         print "You gave", sys.argv[1]
+        if len(sys.argv) > 2:
+            print "with the second argument",sys.argv[2]
         exit()
 
     while 1:
