@@ -21,10 +21,11 @@ import logging
 import os
 import re
 import sys
-import madgraph.various.misc as misc
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir))
+
+import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error
 import vendor.ply.lex as lex
@@ -536,6 +537,117 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         '''expression : PI'''
         p[0] = 'M_PI'
            
+class UFOExpressionParserPythonIF(UFOExpressionParser):
+    """An ad hoc parser for UFO algebraic expressions with if statement, outputting
+    Python-style code."""
+
+    logical_equiv = {'==':'==',
+                     '>=':'>=',
+                     '<=':'<=',
+                     '!=':'!=',
+                     '>':'>',
+                     '<':'<',
+                     'or':'or',
+                     'and':'and'}
+
+    def __init__(self, *args,**kw):
+        """Initialize the lex and yacc"""
+
+        if len(args) > 0:
+            locals=[keystr.replace("{","").replace("}","").split(":") \
+                         for keystr in args[0].split(",")]
+            self.locals={}
+            for val in locals:
+                self.locals[val[0]]=eval(val[1])
+  
+        super(UFOExpressionParserPythonIF,self).__init__(**kw)
+        
+    def p_expression_number(self, p):
+        "expression : NUMBER"
+        p[0] = p[1]
+
+    def p_expression_variable(self, p):
+        "expression : VARIABLE"
+        p[0] = p[1]
+
+    def p_expression_power(self, p):
+        'expression : expression POWER expression'
+        p[0] = p[1] + "**" + p[3]
+    
+    def p_expression_if(self,p):
+        "expression :   expression IF boolexpression ELSE expression "
+        if hasattr(self,'locals'):
+            try:
+                isTrue = eval(p[3],self.locals)
+            except Exception:
+                p[0] = '(%s if %s else %s)'%(p[1],p[3],p[5])
+                return
+            else:
+                if isTrue:
+                    p[0] = '(%s)'%p[1]
+                else:
+                    p[0] = '(%s)'%p[5]
+                return
+        else:
+            p[0] = '(%s if %s else %s)'%(p[1],p[3],p[5])
+            return
+            
+    def p_expression_ifimplicit(self,p):
+        "expression :   expression IF expression ELSE expression "
+        if hasattr(self,'locals'):
+            try:
+                isTrue = eval(p[3]+'== 0',self.locals)
+            except Exception:
+                p[0] = '(%s if %s else %s)'%(p[1],p[3],p[5])
+                return
+            else:
+                if isTrue:
+                    p[0] = '(%s)'%p[1]
+                else:
+                    p[0] = '(%s)'%p[5]
+                return
+        else:
+            p[0] = '(%s if %s else %s)'%(p[1],p[3],p[5])
+            return            
+                                                             
+    def p_expression_cond(self, p):
+        "expression :  COND '(' expression ',' expression ',' expression ')'"
+        p[0] = 'cond('+p[3]+','+p[5]+','+p[7]+')'
+
+    def p_expression_complex(self, p):
+        "expression : COMPLEX '(' expression ',' expression ')'"
+        p[0] = 'complex(' + p[3] + ',' + p[5] + ')'
+
+    def p_expression_func(self, p):
+        '''expression : CSC group
+                      | SEC group
+                      | ACSC group
+                      | ASEC group
+                      | RE group
+                      | IM group
+                      | ARG group
+                      | SQRT group
+                      | CONJ group
+                      | REGLOG group'''
+        if p[1] == 'csc': p[0] = 'csc' + p[2]
+        elif p[1] == 'sec': p[0] = 'sec' + p[2]
+        elif p[1] == 'acsc': p[0] = 'acsc' + p[2]
+        elif p[1] == 'asec': p[0] = 'asec' + p[2]
+        elif p[1] == 're': p[0] = 're' + p[2]
+        elif p[1] == 'im': p[0] = 'im' + p[2]
+        elif p[1] == 'arg': p[0] = 'arg' + p[2]
+        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'cmath.sqrt' + p[2]
+        elif p[1] == 'complexconjugate': p[0] = 'complexconjugate' + p[2]
+        elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
+
+    def p_expression_real(self, p):
+        ''' expression : expression RE2 '''
+        p[0] = p[1]+p[2]                   
+
+    def p_expression_pi(self, p):
+        '''expression : PI'''
+        p[0] = 'cmath.pi'
+         
 
 
 # Main program, allows to interactively test the parser
@@ -552,6 +664,11 @@ if __name__ == '__main__':
         calc = UFOExpressionParserCPP()
     elif sys.argv[1] == "aloha":
         calc = UFOExpressionParserCPP()
+    elif sys.argv[1] == "pythonif":
+        if len(sys.argv) > 2:
+            calc = UFOExpressionParserPythonIF(sys.argv[2])
+        else:
+            calc = UFOExpressionParserPythonIF()
     else:
         print "Please specify a parser: fortran, mpfortran or c++"
         print "You gave", sys.argv[1]
@@ -564,3 +681,4 @@ if __name__ == '__main__':
             break
         if not s: continue
         print calc.parse(s)
+    
