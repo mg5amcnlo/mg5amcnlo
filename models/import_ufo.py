@@ -112,16 +112,6 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
     
     #import the FULL model
     model = import_full_model(model_path, decay, prefix)
-    newprefix=prefix
-    if prefix is True:
-        newprefix='mdl_'
-    map_CTcoup_CTparam = None
-    if hasattr(model,'map_CTcoup_CTparam'):
-        map_CTcoup_CTparam = model.map_CTcoup_CTparam
-        for CTcoup,CTparam in map_CTcoup_CTparam.items():
-            newCTparam=[ newprefix+ctpar for ctpar in CTparam]
-            map_CTcoup_CTparam[CTcoup] = newCTparam
-            
     
     if os.path.exists(pjoin(model_path, "README")):
         logger.info("Please read carefully the README of the model file for instructions/restrictions of the model.",'$MG:color:BLACK') 
@@ -140,9 +130,6 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
-        if map_CTcoup_CTparam != None:
-            model.map_CTcoup_CTparam = map_CTcoup_CTparam
-        
         if model_name == 'mssm' or os.path.basename(model_name) == 'mssm':
             keep_external=True
         else:
@@ -294,7 +281,7 @@ class UFOMG5Converter(object):
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
         self.wavefunction_CT_couplings = []
-                        
+ 
         # Check here if we can extract the couplings perturbed in this model
         # which indicate a loop model or if this model is only meant for 
         # tree-level computations
@@ -586,6 +573,8 @@ class UFOMG5Converter(object):
         # entry and the list of substituting functions (one for each pole)
         # as the second entry of this tuple.
         CTparameter_patterns = {}
+        zero_substitution = lambda matchedObj: matchedObj.group('first')+\
+                                               'ZERO'+matchedObj.group('second')
         def function_factory(arg):
             return lambda matchedObj: \
                     matchedObj.group('first')+arg+matchedObj.group('second')
@@ -593,9 +582,9 @@ class UFOMG5Converter(object):
             pattern_finder = re.compile(r"(?P<first>\A|\*|\+|\-|\(|\s)(?P<name>"+
                         CTparam.name+r")(?P<second>\Z|\*|\+|\-|\)|/|\\|\s)")
             
-            sub_functions = [function_factory('ZERO' if 
-                    CTparam.pole(pole)=='ZERO' else '%s_%s_'%
-                      (CTparam.name,pole_dict[-pole])) for pole in range(3)]
+            sub_functions = [None if CTparam.pole(pole)=='ZERO' else
+                function_factory('%s_%s_'%(CTparam.name,pole_dict[-pole]))
+                                                           for pole in range(3)]
             CTparameter_patterns[CTparam.name] = (pattern_finder,sub_functions)
         
         times_zero = re.compile('\*\s*-?ZERO')
@@ -659,54 +648,68 @@ class UFOMG5Converter(object):
 
             if isinstance(CTCoupling.value,dict):
                 if -pole in CTCoupling.value.keys():
-                    return 0, CTCoupling.value[-pole], []
+                    return CTCoupling.value[-pole], []
                 else:
-                    return 0, 'ZERO', []              
+                    return 'ZERO', []              
 
             new_expression           = CTCoupling.value
-            number_of_CTparams_found = 0
             CTparamNames = []
+            n_CTparams   = 0
             for paramname, value in CTparameter_patterns.items():
                 pattern = value[0]
-                if re.search(pattern,new_expression):
-                    number_of_CTparams_found += 1
-                    CTparamNames.append(('%s_%s_'%(paramname,pole_dict[-pole])).lower())
-                    # and its conjugated one
-                    # look at shorten_conjugate
-                    CTparamNames.append(('conjg__%s_%s_'%(paramname,pole_dict[-pole])).lower())
-                substitute_function = value[1][pole]
+                # Keep track of which CT parameters enter in the definition of
+                # which coupling.
+                if not re.search(pattern,new_expression):
+                    continue
+                n_CTparams += 1
+                # If the contribution of this CTparam to this pole is non
+                # zero then the substituting function is not None:
+                if not value[1][pole] is None:
+                    CTparamNames.append('%s_%s_'%(paramname,pole_dict[-pole]))
+  
+                substitute_function = zero_substitution if \
+                                      value[1][pole] is None else value[1][pole]
                 new_expression = pattern.sub(substitute_function,new_expression)
 
             # If no CTParam was found and we ask for a pole, then it can only
             # be zero.
-            if pole!=0 and number_of_CTparams_found==0:
-                return number_of_CTparams_found, 'ZERO',[]
+            if pole!=0 and n_CTparams==0:
+                return 'ZERO', [], n_CTparams
 
             # Check if resulting expression is analytically zero or not.
             # Remember that when the value of a CT_coupling is not a dictionary
             # then the only operators allowed in the definition are +,-,*,/
             # and each term added or subtracted must contain *exactly one*
             # CTParameter and never at the denominator. 
-            if number_of_CTparams_found > 0 and is_value_zero(new_expression):
-                return number_of_CTparams_found, 'ZERO',[]
+            if n_CTparams > 0 and is_value_zero(new_expression):
+                return 'ZERO', [], n_CTparams
             else:
-                return number_of_CTparams_found, new_expression,CTparamNames
+                return new_expression, CTparamNames, n_CTparams
 
         # For each coupling we substitute its value if necessary
         for coupl in couplings:
             new_value = {}
             for pole in range(0,3):
-                n_CTParams, expression, CTparamNames = CTCoupling_pole(coupl, pole)
+                expression, CTparamNames, n_CTparams = CTCoupling_pole(coupl, pole)
                 # Make sure it uses CT parameters, otherwise do nothing
-                if n_CTParams == 0:
+                if n_CTparams == 0:
                     break
                 elif expression!='ZERO':
                     new_value[-pole] = expression
                     couplname = coupl.name
                     if pole!=0:
                         couplname += "_%deps"%pole
-                    # take the lower capital to make it capital insensitive
-                    self.model.map_CTcoup_CTparam[couplname.lower()]=CTparamNames
+                    # Add the parameter dependency found to the dependency map
+                    # of the model being built. In principle, since we should
+                    # be building a loop model now, it should always have this
+                    # attribute defined, but it is better to make sure.
+                    if hasattr(self.model, 'map_CTcoup_CTparam'):
+                        self.model.map_CTcoup_CTparam[couplname] = CTparamNames
+
+            # Finally modify the value of this CTCoupling so that it is no
+            # longer a string expression in terms of CTParameters but rather
+            # a dictionary with the CTparameters replaced by their _FIN_ and
+            # _EPS_ counterparts.
             if new_value:
                 coupl.value = new_value
 

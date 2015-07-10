@@ -1441,7 +1441,7 @@ class Model(PhysicsObject):
     def change_parameter_name_with_prefix(self, prefix='mdl_'):
         """ Change all model parameter by a given prefix.
         Modify the parameter if some of them are identical up to the case"""
-        
+
         lower_dict={}
         duplicate = set()
         keys = self.get('parameters').keys()
@@ -1496,6 +1496,13 @@ class Model(PhysicsObject):
             new_dict = dict( (change[name] if (name in change) else name, value) for
                              name, value in self['parameter_dict'].items())
             self['parameter_dict'] = new_dict
+        
+        if hasattr(self,'map_CTcoup_CTparam'):
+            # If the map for the dependence of couplings to CTParameters has
+            # been defined, we must apply the renaming there as well. 
+            self.map_CTcoup_CTparam = dict( (coup_name, 
+            [change[name] if (name in change) else name for name in params]) 
+                  for coup_name, params in self.map_CTcoup_CTparam.items() )
         
         i=0
         while i*1000 <= len(to_change): 
