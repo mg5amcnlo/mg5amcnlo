@@ -1480,7 +1480,7 @@ c must do MC over FKS directories.
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
-      if (icontr.gt.6) then
+      if (icontr.gt.7) then
          write (*,*) 'ERROR: too many applgrid weights. '/
      &        /'Should have at most one of each itype.',icontr
          stop 1
@@ -1522,8 +1522,9 @@ c     born
             appl_QES2(2)=scales2(1,i)
             appl_muR2(2)=scales2(2,i)
             appl_muF2(2)=scales2(3,i)
-         elseif (itype(i).eq.3 .or. itype(i).eq.4) then
-c     soft-virtual or soft-counter
+         elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14)
+     $           then
+c     virtual, soft-virtual or soft-counter
             appl_w0(2)=appl_w0(2)+wgt(1,i)*final_state_rescaling
             appl_wR(2)=appl_wR(2)+wgt(2,i)*final_state_rescaling
             appl_wF(2)=appl_wF(2)+wgt(3,i)*final_state_rescaling
