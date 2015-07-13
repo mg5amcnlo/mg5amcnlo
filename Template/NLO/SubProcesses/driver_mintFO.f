@@ -476,6 +476,10 @@ c The n+1-body contributions (including counter terms)
          MC_int_wgt=1d0/vol
       endif
       do iFKS=nFKS_min,nFKS_max
+         calculatedBorn=.false. 
+         ! MZ this is a temporary fix for processes without
+         ! soft singularities associated to the initial state
+         ! DO NOT extend this fix to event generation
          jac=MC_int_wgt
          call update_fks_dir(iFKS,iconfig)
          call generate_momenta(ndim,iconfig,jac,x,p)
