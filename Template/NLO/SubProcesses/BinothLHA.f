@@ -453,7 +453,7 @@ c Write out the unstable, non-rescued phase-space points (MadLoop return
 c code is in the four hundreds) or the ones that are found by the pole
 c check (only available when not doing MC over hels)
       if (.not.firsttime .and. (ret_code/100.eq.4 .or. cpol .or.
-     $     prec_found.gt.0.05d0)) then
+     $     prec_found.gt.0.05d0.or.isnan(virt_wgt))) then
          if (neps.lt.10) then
             if (neps.eq.1) then
                open(unit=78, file='UPS.log')

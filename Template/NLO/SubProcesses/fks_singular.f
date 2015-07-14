@@ -368,6 +368,7 @@ c to the list of weights using the add_wgt subroutine
         if (amp_split(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_lxi(iamp).eq.0d0) cycle
+
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
         g22=g**(QCD_power)
@@ -3921,6 +3922,14 @@ C keep track of each split orders
       double precision iden_comp
       common /c_iden_comp/iden_comp
 
+      do iamp = 1, amp_split_size
+        amp_split_collrem_xi(iamp) = 0d0
+        amp_split_collrem_lxi(iamp) = 0d0
+        amp_split_wgtdegrem_xi(iamp) = 0d0
+        amp_split_wgtdegrem_lxi(iamp) = 0d0
+        amp_split_wgtdegrem_muF(iamp) = 0d0
+      enddo
+
       if(j_fks.gt.nincoming)then
 c Do not include this contribution for final-state branchings
          collrem_xi=0.d0
@@ -3954,14 +3963,6 @@ c entering this function
         write(*,*)shattmp,shat
         stop
       endif
-
-      do iamp = 1, amp_split_size
-        amp_split_collrem_xi(iamp) = 0d0
-        amp_split_collrem_lxi(iamp) = 0d0
-        amp_split_wgtdegrem_xi(iamp) = 0d0
-        amp_split_wgtdegrem_lxi(iamp) = 0d0
-        amp_split_wgtdegrem_muF(iamp) = 0d0
-      enddo
 
 c A factor gS^2 is included in the Altarelli-Parisi kernels
       oo2pi=one/(8d0*PI**2)
