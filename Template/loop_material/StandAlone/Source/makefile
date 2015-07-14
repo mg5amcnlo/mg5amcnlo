@@ -34,8 +34,10 @@ $(LIBDIR)libdhelas.$(libext): DHELAS
 $(LIBDIR)libmodel.$(libext): MODEL
 	cd MODEL; make	 
 
+CutTools: $(LIBDIR)libcts.a
 libcuttools: $(LIBDIR)libcts.a
 
+IREGI: $(LIBDIR)libiregi.a
 libiregi: $(LIBDIR)libiregi.a
 
 $(LIBDIR)libcts.a: $(CUTTOOLSDIR)
