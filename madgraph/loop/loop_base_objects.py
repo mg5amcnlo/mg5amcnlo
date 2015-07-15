@@ -1438,7 +1438,6 @@ class LoopModel(base_objects.Model):
     """A class to store all the model information with advanced feature
        to compute loop process."""
     
-    
     def __init__(self,*args,**opts):
         """Make sure to copy over the attribute map_CTcoup_CTparam if the 
         first instance used is a LoopModel"""

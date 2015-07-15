@@ -5,6 +5,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       SUBROUTINE COUP1()
 
       IMPLICIT NONE
+      INCLUDE 'model_functions.inc'
 
       DOUBLE PRECISION PI, ZERO
       PARAMETER  (PI=3.141592653589793D0)
@@ -17,8 +18,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       INCLUDE 'mp_input.inc'
       INCLUDE 'mp_coupl.inc'
 
-
-      INCLUDE 'model_functions.inc'
       GC_47 = (MDL_EE*MDL_COMPLEXI*MDL_CONJG__CKM33)/(MDL_SW*MDL_SQRT__
      $ 2)
       MP__GC_47 = (MP__MDL_EE*MP__MDL_COMPLEXI*MP__MDL_CONJG__CKM33)

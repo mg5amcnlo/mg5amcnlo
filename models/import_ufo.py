@@ -31,7 +31,7 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 import madgraph.various.misc as misc
-
+import madgraph.iolibs.ufo_expression_parsers as parsers
 
 import aloha
 import aloha.create_aloha as create_aloha
@@ -359,10 +359,23 @@ class UFOMG5Converter(object):
 
         # load the lorentz structure.
         self.model.set('lorentz', self.ufomodel.all_lorentz)
+        
+        # Substitute the expression of CT couplings which include CTparameters
+        # in their definition with the corresponding dictionaries, e.g.
+        #      CTCoupling.value = 2*CTParam           ->
+        #      CTCoupling.value = {-1: 2*CTParam_1EPS_, 0: 2*CTParam_FIN_}
+        # for example if CTParam had a non-zero finite and single pole.
+        # This change affects directly the UFO model and it will be reverted in
+        # OrganizeModelExpression only, so that the main() function of this class
+        # *must* be run on the UFO to have this change reverted.
         if hasattr(self.ufomodel,'all_CTparameters'):
-            logger.debug('Handling couplings defined with CTparameters')
+            logger.debug('Handling couplings defined with CTparameters...')
+            start_treat_coupling = time.time()
             self.treat_couplings(self.ufomodel.all_couplings, 
                                                  self.ufomodel.all_CTparameters)
+            tot_time = time.time()-start_treat_coupling
+            if tot_time>5.0:
+                logger.debug('... done in %s'%misc.format_time(tot_time))        
 
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
@@ -376,7 +389,7 @@ class UFOMG5Converter(object):
 
             for interaction_info in self.ufomodel.all_CTvertices:
                 self.add_CTinteraction(interaction_info, color_info)
-                    
+    
         self.model.set('conserved_charge', self.conservecharge)
 
         # If we deal with a Loop model here, the order hierarchy MUST be 
@@ -422,7 +435,7 @@ class UFOMG5Converter(object):
             
         #clean memory
         del self.checked_lor
-                
+
         return self.model
         
     
@@ -710,7 +723,11 @@ class UFOMG5Converter(object):
             # longer a string expression in terms of CTParameters but rather
             # a dictionary with the CTparameters replaced by their _FIN_ and
             # _EPS_ counterparts.
+            # This is useful for the addCT_interaction() step. I will be reverted
+            # right after the addCT_interaction() function so as to leave
+            # the UFO intact, as it should. 
             if new_value:
+                coupl.old_value = coupl.value
                 coupl.value = new_value
 
     def add_CTinteraction(self, interaction, color_info):
@@ -1193,38 +1210,59 @@ class OrganizeModelExpression:
         self.params = {}     # depend on -> ModelVariable
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
-        #self.CTparamIndices = [] # the index in ufomodel.all_parameters
     
     def main(self, additional_couplings = []):
         """Launch the actual computation and return the associate 
         params/couplings. Possibly consider additional_couplings in addition
         to those defined in the UFO model attribute all_couplings """
 
+        additional_params = []
         if hasattr(self.model,'all_CTparameters'):
-            self.treat_CTparameters()
-        self.analyze_parameters()
+            additional_params = self.get_additional_CTparameters()
+
+        self.analyze_parameters(additional_params = additional_params)
         self.analyze_couplings(additional_couplings = additional_couplings)
+        
+        # Finally revert the possible modifications done by treat_couplings()
+        if hasattr(self.model,'all_CTparameters'):
+            self.revert_CTCoupling_modifications()
+
         return self.params, self.couplings
 
+    def revert_CTCoupling_modifications(self):
+        """ Finally revert the possible modifications done by treat_couplings()
+        in UFOMG5Converter which were useful for the add_CTinteraction() in 
+        particular. This modification consisted in expanding the value of a
+        CTCoupling which consisted in an expression in terms of a CTParam to 
+        its corresponding dictionary (e.g 
+              CTCoupling.value = 2*CTParam           ->
+              CTCoupling.value = {-1: 2*CTParam_1EPS_, 0: 2*CTParam_FIN_}
+        for example if CTParam had a non-zero finite and single pole."""
+        
+        for coupl in self.model.all_couplings:
+            if hasattr(coupl,'old_value'):
+                coupl.value = coupl.old_value
+                del(coupl.old_value)
 
-    def treat_CTparameters(self):
+    def get_additional_CTparameters(self):
         """ For each CTparameter split it into spimple parameter for each pole
         and the finite part if not zero."""
 
-        #indexstart=len(self.model.all_parameters)
+        additional_params = []
         for CTparam in self.model.all_CTparameters:
             for pole in range(3):
                 if CTparam.pole(pole) != 'ZERO':
-                  self.model.object_library.Parameter(
-                    name   = '%s_%s_'%(CTparam.name,pole_dict[-pole]),
-                    nature = 'internal',
-                    type   = CTparam.type,
-                    value  = CTparam.pole(pole),
-                    texname= '%s_{%s}'%(CTparam.texname,pole_dict[-pole]))
-                  #self.CTparamIndices.append(indexstart)
-                  #indexstart=indexstart+1
+                  CTparam_piece = copy.copy(CTparam)
+                  CTparam_piece.name = '%s_%s_'%(CTparam.name,pole_dict[-pole])
+                  CTparam_piece.nature = 'internal'
+                  CTparam_piece.type = CTparam.type
+                  CTparam_piece.value = CTparam.pole(pole)
+                  CTparam_piece.texname = '%s_{%s}'%\
+                                              (CTparam.texname,pole_dict[-pole])
+                  additional_params.append(CTparam_piece)
+        return additional_params
 
-    def analyze_parameters(self):
+    def analyze_parameters(self, additional_params=[]):
         """ separate the parameters needed to be recomputed events by events and
         the others"""
         # in order to match in Gmu scheme
@@ -1236,7 +1274,7 @@ class OrganizeModelExpression:
         if not present_aEWM1:
             self.track_dependant = ['aS','Gf','MU_R']
 
-        for param in self.model.all_parameters:
+        for param in self.model.all_parameters+additional_params:
             if param.nature == 'external':
                 parameter = base_objects.ParamCardVariable(param.name, param.value, \
                                                param.lhablock, param.lhacode)
@@ -1246,8 +1284,7 @@ class OrganizeModelExpression:
                 depend_on = self.find_dependencies(expr)
                 parameter = base_objects.ModelVariable(param.name, expr, param.type, depend_on)
             
-            self.add_parameter(parameter)
-
+            self.add_parameter(parameter)     
             
     def add_parameter(self, parameter):
         """ add consistently the parameter in params and all_expr.
@@ -1457,6 +1494,7 @@ class RestrictModel(model_reader.ModelReader):
         the model.
         keep_external if the param_card need to be kept intact
         """
+        
         if self.get('name') == "mssm" and not keep_external:
             raise Exception
         self.restrict_card = param_card
@@ -1464,7 +1502,17 @@ class RestrictModel(model_reader.ModelReader):
         self.set('particles', self.get('particles'))
 
         # compute the value of all parameters
-        self.set_parameters_and_couplings(param_card)
+        # Keep the list of definition of model functions, parameter values. 
+        model_definitions = self.set_parameters_and_couplings(param_card)
+        
+        # Simplify conditional statements
+        logger.debug('Simplifying conditional expressions')
+        modified_params, modified_couplings = \
+           self.detect_conditional_statements_simplifications(model_definitions)
+        
+        # Apply simplifications
+        self.apply_conditional_simplifications(modified_params, modified_couplings)
+        
         # associate to each couplings the associated vertex: def self.coupling_pos
         self.locate_coupling()
         # deal with couplings
@@ -1495,7 +1543,7 @@ class RestrictModel(model_reader.ModelReader):
         iden_parameters = self.detect_identical_parameters()
         for iden_param in iden_parameters:
             self.merge_iden_parameters(iden_param, keep_external)
-            
+              
         # change value of default parameter if they have special value:
         # 9.999999e-1 -> 1.0
         # 0.000001e-99 -> 0 Those value are used to avoid restriction
@@ -1574,6 +1622,69 @@ class RestrictModel(model_reader.ModelReader):
         
         return null_parameters, one_parameters
     
+    def apply_conditional_simplifications(self, modified_params,
+                                                            modified_couplings):
+        """ Apply the conditional statement simplifications for parameters and
+        couplings detected by 'simplify_conditional_statements'.
+        modified_params (modified_couplings) are list of tuples (a,b) with a
+        parameter (resp. coupling) instance and b is the simplified expression."""
+        
+        if modified_params:
+            logger.debug("Conditional expressions are simplified for parameters:")
+            logger.debug(",".join("%s"%param[0].name for param in modified_params))
+        for param, new_expr in modified_params:
+            param.expr = new_expr
+        
+        if modified_couplings:
+            logger.debug("Conditional expressions are simplified for couplings:")
+            logger.debug(",".join("%s"%coupl[0].name for coupl in modified_couplings))
+        for coupl, new_expr in modified_couplings:
+            coupl.expr = new_expr
+    
+    def detect_conditional_statements_simplifications(self, model_definitions,
+          objects=['couplings','parameters']):
+        """ Simplifies the 'if' statements in the pythonic UFO expressions
+        of parameters using the default variables specified in the restrict card.
+        It returns a list of objects (parameters or couplings) and the new
+        expression that they should take. Model definitions include all definitons
+        of the model functions and parameters."""
+        
+        param_modifications = []
+        coupl_modifications = []
+        ifparser = parsers.UFOExpressionParserPythonIF(model_definitions)
+        
+        start_param = time.time()
+        if 'parameters' in objects:
+            for dependences, param_list in self['parameters'].items():
+                if 'external' in dependences:
+                    continue
+                for param in param_list:
+                    new_expr, n_changes = ifparser.parse(param.expr)
+                    if n_changes > 0:
+                        param_modifications.append((param, new_expr))
+      
+        end_param = time.time()
+  
+        if 'couplings' in objects:         
+            for dependences, coupl_list in self['couplings'].items():
+                for coupl in coupl_list:
+                    new_expr, n_changes = ifparser.parse(coupl.expr)
+                    if n_changes > 0:
+                        coupl_modifications.append((coupl, new_expr))        
+
+        end_coupl = time.time()
+        
+        tot_param_time = end_param-start_param
+        tot_coupl_time = end_coupl-end_param
+        if tot_param_time>5.0:
+            logger.debug("Simplification of conditional statements"+\
+              " in parameter expressions done in %s."%misc.format_time(tot_param_time))
+        if tot_coupl_time>5.0:
+            logger.debug("Simplification of conditional statements"+\
+              " in couplings expressions done in %s."%misc.format_time(tot_coupl_time))
+
+        return param_modifications, coupl_modifications
+    
     def detect_identical_parameters(self):
         """ return the list of tuple of name of parameter with the same 
         input value """
@@ -1650,7 +1761,7 @@ class RestrictModel(model_reader.ModelReader):
             
         logger_mod.debug('Parameters set to identical values: %s '% \
                  ', '.join(['%s*%s' % (f, obj.name.replace('mdl_','')) for (obj,f) in parameters]))
-        
+
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
         for i, (obj, factor) in enumerate(parameters):
@@ -1808,7 +1919,7 @@ class RestrictModel(model_reader.ModelReader):
             
 
         if simplify:
-            # check if the parameters is still usefull:
+            # check if the parameters is still useful:
             re_str = '|'.join(special_parameters)
             if len(re_str) > 25000: # size limit on mac
                 split = len(special_parameters) // 2
