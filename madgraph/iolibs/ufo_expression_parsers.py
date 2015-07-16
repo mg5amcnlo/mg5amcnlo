@@ -265,7 +265,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
     def p_expression_number(self, p):
         "expression : NUMBER"
         if p[1].endswith('j'):
-            p[0] = ('DCOMPLX(0d0, %e)' % float(p[1][:-1])).replace('e', 'd')
+            p[0] = ('DCMPLX(0d0, %e)' % float(p[1][:-1])).replace('e', 'd')
         else:
             p[0] = ('%e' % float(p[1])).replace('e', 'd')
 
