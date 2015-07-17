@@ -5971,14 +5971,12 @@ class UFO_model_to_mg4(object):
                 translator.make_valid_param_card(out_path, out_path2)
             translator.convert_to_slha1(out_path)
         
-def ExportV4Factory(cmd, noclean, output_type='default'):
+def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True):
     """ Determine which Export_v4 class is required. cmd is the command 
         interface containing all potential usefull information.
         The output_type argument specifies from which context the output
         is called. It is 'madloop' for MadLoop5, 'amcatnlo' for FKS5 output
         and 'default' for tree-level outputs."""
-
-    group_subprocesses = cmd.options['group_subprocesses']
 
     opt = cmd.options
 
@@ -6036,14 +6034,6 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
 
     # Then the default tree-level output
     elif output_type=='default':
-
-        #check if we need to group processes
-        if cmd.options['group_subprocesses'] == 'Auto':
-            if cmd._curr_amps[0].get_ninitial()  == 2:
-                group_subprocesses = True
-            else:
-                group_subprocesses = False
-
         assert group_subprocesses in [True, False]
         
         opt = dict(opt)
