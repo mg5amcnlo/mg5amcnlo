@@ -5993,23 +5993,19 @@ This implies that with decay chains:
             # But we turn if off for decay processes which
             # have been defined with multiparticle labels, because then
             # branching ratios necessitates to keep subprocesses independent.
-            # That applies if there is more than one subprocess of course.
+            # That applies only if there is more than one subprocess of course.
             if self._curr_amps[0].get_ninitial() == 1 and \
                                                      len(self._curr_amps)>1:
-                if ',' in self._generate_info:
-                    proc_def, line = self.extract_decay_chain_process(
-                                                    self._generate_info)                  
-                else:
-                    proc_def = self.extract_process(self._generate_info)
-                if proc_def.has_multiparticle_label():
+                processes = [amp.get('process') for amp in self._curr_amps]            
+                if len(set(proc.get('id') for proc in processes))!=len(processes):
                     # Special warning for loop-induced
-                    if proc_def['perturbation_couplings'] != [] and \
-                                          self._export_format == 'madevent':
+                    if any(proc['perturbation_couplings'] != [] for proc in
+                               processes) and self._export_format == 'madevent':
                         logger.warning("""
-|| The loop-induced decay process you have specified contains multiparticle
-|| labels but, in order to be able to compute individual branching ratios, 
-|| MG5_aMC will *not* group these subprocesses. Integration channels will then 
-|| also be kept separate and as a result integration will be inefficient. 
+|| The loop-induced decay process you have specified contains several
+|| subprocesses and, in order to be able to compute individual branching ratios, 
+|| MG5_aMC will *not* group them. Integration channels will also be considered
+|| for each diagrams and as a result integration will be inefficient.
 || It is therefore recommended to perform this simulation by setting the MG5_aMC
 || option 'group_subprocesses' to 'True' (before the output of the process).
 || Notice that when doing so, processes for which one still wishes to compute
