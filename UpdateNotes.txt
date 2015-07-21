@@ -5,7 +5,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	    where additional wf were created during the fix of fermion flow in presence of majorana fermions.         
 	RF: Fixed a bug in the aMCFast/ApplGrid interfaced introduced in the previous version.
         OM: Fix a crash when using mssm-no_b_mass model (due to the SLHA1-SLHA2 conversion)
-
+        OM: Fix a bug in the add_time_of_flight function (not called by default) where the displaced vertex information
+            was written in second and not in mm as it should. Note that this function can now be run on the flight
+	    by adding the following line in the run_card: "  1e-2 = time_of_flight #threshold for the displaced vertex" 
 2.3.0  
      OM+VH: Automation of event generation for loop-induced processes.
 		OM: Automatic change of the p/j definition to include the b particle if the model has a massless b.

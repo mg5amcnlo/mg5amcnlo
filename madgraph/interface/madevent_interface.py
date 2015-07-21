@@ -1783,14 +1783,15 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         param_card = lhe.banner[begin_param+6:end_param].split('\n')
         param_card = check_param_card.ParamCard(param_card)
 
-        cst = 6.58211915e-25
+        cst = 6.58211915e-25 # hbar in GeV s
+        c = 299792458000 # speed of light in mm/s
         # Loop over all events
         for event in lhe:
             for particle in event:
                 id = particle.pid
                 width = param_card['decay'].get((abs(id),)).value
                 if width:
-                    vtim = random.expovariate(width/cst)
+                    vtim = c * random.expovariate(width/cst)
                     if vtim > threshold:
                         particle.vtim = vtim
             #write this modify event
