@@ -3086,7 +3086,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif line.strip() != '0' and line.strip() != 'done' and \
             str(line) != 'EOF' and line.strip() in self.allow_arg:
             self.open_file(line)
-            misc.sprint(self.allow_arg, line)
             self.value = 'repeat'
         else:
             self.value = line

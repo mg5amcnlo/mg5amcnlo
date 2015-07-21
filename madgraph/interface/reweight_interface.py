@@ -159,7 +159,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
         if '[' in process:
-            logger.warning("Do remember that the reweighting is performed at Leading Order. NLO precision is not guarantee.")
+            logger.warning("Remember that the reweighting is performed at Leading Order. NLO precision is not guarantee.")
 
         if not process:
             msg = 'Invalid proc_card information in the file (no generate line):\n %s' % self.banner['mg5proccard']
@@ -174,18 +174,22 @@ class ReweightInterface(extended_cmd.Cmd):
     def get_LO_definition_from_NLO(self, proc):
         """return the LO definitions of the process corresponding to the born/real"""
         
-        
+        # split the line definition with the part before and after the NLO tag
         process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-        commandline="add process %s --no_warning=duplicate;" % (process)
+        # add the part without any additional jet.
+        commandline="add process %s %s --no_warning=duplicate;" % (process, final)
         if not order:
+            #NO NLO tag => nothing to do actually return input
             return proc
         elif not order.startswith(('virt=','loonly=')):
+            # OK this a standard NLO process
             if '=' in order:
+                # get the type NLO QCD/QED/...
                 order = order.split('=',1)[1]
             # define the list of particles that are needed for the radiation
             pert = fks_common.find_pert_particles_interactions(self.model,
                                            pert_order = order)['soft_particles']
-            commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
+            commandline += "define pert_%s = %s;" % (order.replace(' ',''), ' '.join(map(str,pert)) )
             
             # check if we have to increase by one the born order
             if '%s=' % order in process:
@@ -200,10 +204,11 @@ class ReweightInterface(extended_cmd.Cmd):
             result = re.split('([/$@]|\w+=\w+)', process, 1)                    
             if len(result) ==3:
                 process, split, rest = result
-                commandline+="add process %s pert_%s %s%s --no_warning=duplicate;" % (process, order ,split, rest)
+                commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
             else:
-                commandline +='add process %s pert_%s  --no_warning=duplicate;' % (process,order)
+                commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
         else:
+            #just return the input. since this Madloop.
             return proc                                       
         logger.info(commandline)
         return commandline
@@ -277,7 +282,11 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.critical("not enough argument (need at least two). Discard line")
         if args[0] == "model":
             self.second_model = " ".join(args[1:])
+            if self.has_standalone_dir:
+                raise Exception, "command %s can only be run before the first launch. please run multiple times the re-weighting module to achieve this. (please quit python between each run)"
         elif args[0] == "process":
+            if self.has_standalone_dir:
+                raise Exception, "command %s can only be run before the first launch. please run multiple times the re-weighting module to achieve this.(please quit python between each run)"
             if args[-1] == "--add":
                 self.second_process.append(" ".join(args[1:-1]))
             else:
@@ -318,6 +327,7 @@ class ReweightInterface(extended_cmd.Cmd):
         model_line = self.banner.get('proc_card', 'full_model_line')
 
         if not self.has_standalone_dir:
+            misc.sprint("recreate standalone directory")
             self.create_standalone_directory()        
         
         if self.second_model or self.second_process:
@@ -345,7 +355,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup type=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'mg_reweight_(?P<id>\d+)\'>(?P<info>[^<>]*)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'mg_reweight_(?P<id>\d+)\'>(?P<info>[^<]*)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 maxid = 0
                 for i, diff in mg_rwgt_info:
@@ -362,9 +372,7 @@ class ReweightInterface(extended_cmd.Cmd):
             header_rwgt_other = ''
             mg_rwgt_info = []
             rewgtid = 1
-        
 
-        
         
         # add the reweighting in the banner information:
         #starts by computing the difference in the cards.
@@ -375,7 +383,14 @@ class ReweightInterface(extended_cmd.Cmd):
             new_param =  check_param_card.ParamCard(s_new.splitlines())
             card_diff = old_param.create_diff(new_param)
             if card_diff == '' and not self.second_process:
-                raise self.InvalidCmd, 'original card and new card are identical'
+                logger.warning(' REWEIGHTING: original card and new card are identical. Is this really the run that you expect?')
+                #raise self.InvalidCmd, 'original card and new card are identical'
+            try:
+                if old_param['sminputs'].get(3)- new_param['sminputs'].get(3) > 1e-3 * new_param['sminputs'].get(3):
+                    logger.warning("We found different value of alpha_s. Note that the value of alpha_s used is the one associate with the event and not the one from the cards.")
+            except Exception, error:
+                logger.debug("error in check of alphas: %s" % str(error))
+                pass #this is a security                
             if not self.second_process:
                 mg_rwgt_info.append((str(rewgtid), card_diff))
             else:
@@ -420,8 +435,6 @@ class ReweightInterface(extended_cmd.Cmd):
             self.run_card['run_tag'] = 'reweight_%s' % rewgtid
             new_banner['slha'] = s_new   
             del new_banner['initrwgt']
-            #ensure that original banner is kept untouched
-            assert new_banner['slha'] != self.banner['slha'] or self.second_process
             assert 'initrwgt' in self.banner 
             ff = open(pjoin(self.mother.me_dir,'Events',self.mother.run_name, '%s_%s_banner.txt' % \
                           (self.mother.run_name, self.run_card['run_tag'])),'w') 
@@ -436,6 +449,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
+            misc.sprint("using", self.lhe_input.name)
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
 #        Multicore option not really stable -> not use it
@@ -663,6 +677,7 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
             with misc.chdir(Pdir):
                 mymod = __import__("rw_me_second.SubProcesses.%s.matrix2py" % Pname)
+                reload(mymod)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
                 mymod = P.matrix2py
@@ -895,7 +910,7 @@ class ReweightInterface(extended_cmd.Cmd):
             elif 'sqrvirt' in proc:
                 commandline+="add process %s ;" % proc
             else:
-                raise self.InvalidCmd('NLO processes can\'t be reweight (for Loop induce use [sqrvirt =]')
+                raise self.InvalidCmd('NLO processes can\'t be reweight (for Loop induced reweighting use [sqrvirt =])')
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)

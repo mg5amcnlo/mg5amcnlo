@@ -170,6 +170,20 @@ def which(program):
                 return exe_file
     return None
 
+def has_f2py():
+    has_f2py = False
+    if which('f2py'):
+        has_f2py = True
+    elif sys.version_info[1] == 6:
+        if which('f2py-2.6'):
+            has_f2py = True
+    else:
+        if which('f2py-2.7'):
+            has_f2py = True 
+    return has_f2py       
+        
+        
+        
 #===============================================================================
 # find a library
 #===============================================================================

@@ -4089,6 +4089,13 @@ Integrated cross-section
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
+            if misc.which('f2py'):
+                if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                    switch['reweight'] = 'ON'
+                else:
+                    switch['reweight'] = 'OFF'
+            else:
+                switch['reweight'] = 'Numpy python package not available.'
 
         if not aMCatNLO or self.options['mg5_path']:
             available_mode.append('5')
@@ -4100,7 +4107,7 @@ Integrated cross-section
         answers = list(available_mode) + ['auto', 'done']
         alias = {}
         for id, key in enumerate(switch_order):
-            if switch[key] != void:
+            if switch[key] != void and switch[key] in allowed_switch_value[key]:
                 answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
                 #allow lower case for on/off
                 alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))

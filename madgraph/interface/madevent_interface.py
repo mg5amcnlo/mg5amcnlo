@@ -4232,16 +4232,19 @@ Beware that this can be dangerous for local multicore runs.""")
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
-            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                switch['reweight'] = 'ON'
-            else:
-                switch['reweight'] = 'OFF'
+            if misc.which('f2py'):
+                if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                    switch['reweight'] = 'ON'
+                else:
+                    switch['reweight'] = 'OFF'
+            else: 
+                switch['reweight'] = 'Numpy python package not available.'
                  
 
 
         options = list(available_mode) + ['auto', 'done']
         for id, key in enumerate(switch_order):
-            if switch[key] != void:
+            if switch[key] not in [void, 'Numpy python package not available.']:
                 options += ['%s=%s' % (key, s) for s in ['ON','OFF']]
                 options.append(key)
         options.append('parton')    
