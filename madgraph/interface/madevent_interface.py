@@ -3571,14 +3571,14 @@ Beware that this can be dangerous for local multicore runs.""")
             return 
         
         tag = self.run_card['run_tag']
-        self.update_status('storring files of Previous run', level=None,\
+        self.update_status('storring files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
             if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')):
                 misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))
         
         if 'pythia' in self.to_store:
-            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
+            self.update_status('Storing Pythia files of previous run', level='pythia', error=True)
             
             p = pjoin(self.me_dir,'Events')
             n = self.run_name

@@ -1314,7 +1314,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_pdf_input_filename(self):
         """return the name of the file which is used by the pdfset"""
 
-        if self.options["cluster_local_path"] and self.options['run_mode'] ==1:
+        if self.options["cluster_local_path"] and \
+               os.path.exists(self.options["cluster_local_path"]) and \
+               self.options['run_mode'] ==1:
             # no need to transfer the pdf.
             return ''
         

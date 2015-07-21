@@ -110,7 +110,7 @@ class Cluster(object):
         for key,value in opts.items():
             self.options[key] = value
         self.nb_retry = opts['cluster_nb_retry'] if 'cluster_nb_retry' in opts else 0
-        self.cluster_retry_wait = opts['cluster_retry_wait'] if 'cluster_retry_wait' in opts else 300
+        self.cluster_retry_wait = float(opts['cluster_retry_wait']) if 'cluster_retry_wait' in opts else 300
         self.options = dict(opts)
         self.retry_args = {}
         # controlling jobs in controlled type submision
