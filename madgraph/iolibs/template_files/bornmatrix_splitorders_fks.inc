@@ -40,6 +40,8 @@ C
       common/to_amps_born/  amp2b,       jamp2b
       double precision amp2(maxamps), jamp2(0:maxamps)
       common/to_amps/  amp2,       jamp2
+      logical split_type_used(nsplitorders)
+      common/to_split_type_used/split_type_used
 C
 C     FUNCTIONS
 C
@@ -143,6 +145,7 @@ C quantities for the counterterms
 do j = 1, nsplitorders
  ans_cnt(1,j) = (0d0, 0d0)
  ans_cnt(2,j) = (0d0, 0d0)
+ if (.not.split_type_used(j)) cycle
  do i = 1, nsqampso
   if (keep_order_cnt(j,i)) then 
    ANS_CNT(1,j) = ANS_CNT(1,J) + ANS(1,I)

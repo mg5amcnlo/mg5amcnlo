@@ -105,6 +105,8 @@ c For backward compatibility
       scalefact=muR_over_ref
       ellissextonfact=QES_over_ref
 
+      call fill_needed_splittings()! this sub is inside fks_singular.f
+
 c check that the event normalization input is reasoble
       buff = event_norm 
       call case_trap2(buff) ! requires a string of length 20 at least

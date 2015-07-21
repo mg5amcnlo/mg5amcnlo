@@ -1,3 +1,28 @@
+      subroutine fill_needed_splittings()
+      ! loop over the FKS configurations and fill the split_type_used
+      ! common blocks
+      implicit none
+      include "nexternal.inc"
+      include "nFKSconfigs.inc"
+      include "fks_info.inc"
+      include "orders.inc"
+      logical split_type_used(nsplitorders)
+      common/to_split_type_used/split_type_used
+      integer i, j
+      do j = 1, nsplitorders
+        split_type_used(j)=.false.
+      enddo
+      do i = 1, fks_configs
+        do j = 1, nsplitorders
+          split_type_used(j)=split_type_used(j).or.
+     %      split_type_d(i,j)
+        enddo
+      enddo
+      write(*,*) 'SPLIT TYPE USED:', split_type_used
+      return
+      end
+      
+      
       integer function orders_to_amp_split_pos(ord)
 C helper function to keep track of the different coupling order combinations
 C given the squared orders ord, return the corresponding position into the amp_split array
@@ -4913,7 +4938,7 @@ c For the MINT folding
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       logical split_type_used(nsplitorders)
-      data split_type_used /nsplitorders * .false./
+      common/to_split_type_used/split_type_used
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       complex*16 ans_cnt(2, nsplitorders)
@@ -4966,9 +4991,6 @@ C links
      1          nFKSprocess_col = nFKSprocess
             if (need_charge_links.and.nFKSprocess_chg.eq.0)
      1          nFKSprocess_chg = nFKSprocess
-            do i=1, nsplitorders
-              split_type_used(i) = split_type_used(i) .or. split_type(i)
-            enddo
          enddo
          if (need_charge_links_used) then
              write(*,*) 'Charge-linked born are used'
