@@ -3769,10 +3769,6 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         param_card = options['cached_param_card'][mode][0]
         name2block = options['cached_param_card'][mode][1]
     result = []
-    if NLO:
-        param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/original_NLO_%s.dat'%mode)
-    else:
-        param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/original_LO_%s.dat'%mode)
     
     for res in resonances:
         # First add a dictionary for this resonance to the result with already
@@ -3812,13 +3808,9 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             # Apply these changes for the purpose of the final computation
             if NLO:
                 new_param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
-                if lambdaCMS==1.0:
-                    new_param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/NLO_%s_%d.dat'%(mode,int(1.0/lambdaCMS)))
             else:
                 evaluator.full_model.set_parameters_and_couplings(
                                                       param_card=new_param_card)
-                if lambdaCMS==1.0:
-                    new_param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/LO_%s_%d.dat'%(mode,int(1.0/lambdaCMS)))
 
             # Finally ready to compute the matrix element
             if NLO:
