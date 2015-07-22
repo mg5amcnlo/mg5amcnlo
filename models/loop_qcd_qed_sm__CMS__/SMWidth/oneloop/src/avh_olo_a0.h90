@@ -1,0 +1,63 @@
+!!
+!! Copyright (C) 2014 Andreas van Hameren. 
+!!
+!! This file is part of OneLOop-3.4.
+!!
+!! OneLOop-3.4 is free software: you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation, either version 3 of the License, or
+!! (at your option) any later version.
+!!
+!! OneLOop-3.4 is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with OneLOop-3.4.  If not, see <http://www.gnu.org/licenses/>.
+!!
+!
+  use avh_olo_bub ,only: tadp
+!
+  include 'avh_olo_complex.h90'
+    ,intent(out) :: rslt(0:2)
+  include 'avh_olo_complex.h90' !|masses=complex
+!#  include 'avh_olo_real.h90'    !|masses=real
+    ,intent(in)  :: mm
+!#  include 'avh_olo_real.h90' !|mulocal=rmu
+!#   ,intent(in)  :: rmu       !|mulocal=rmu
+!
+  include 'avh_olo_complex.h90'
+    :: ss
+  include 'avh_olo_real.h90'
+    :: am,hh,mulocal,mulocal2
+  character(25+99) ,parameter :: warning=&
+                     'WARNING from OneLOop a0: '//warnonshell
+  if (initz) call init
+!
+  mulocal = muscale !|mulocal=muscale
+!#  mulocal = rmu     !|mulocal=rmu
+!
+  am = abs(mm)
+!
+  mulocal2 = mulocal*mulocal
+!
+  if (nonzerothrs) then
+    hh = onshellthrs
+    if (am.lt.hh) am = 0
+  elseif (wunit.gt.0) then
+    hh = onshellthrs*max(am,mulocal2)
+    if (RZRO.lt.am.and.am.lt.hh) write(wunit,*) warning
+  endif
+!
+  ss = mm
+  call tadp( rslt ,ss ,am ,mulocal2 )
+!
+  if (punit.gt.0) then
+    if (nonzerothrs) write(punit,*) 'onshell:',trim(myprint(onshellthrs))
+    write(punit,*) 'muscale:',trim(myprint(mulocal))
+    write(punit,*) ' mm:',trim(myprint(mm))
+    write(punit,*) 'a0(2):',trim(myprint(rslt(2)))
+    write(punit,*) 'a0(1):',trim(myprint(rslt(1)))
+    write(punit,*) 'a0(0):',trim(myprint(rslt(0)))
+  endif
