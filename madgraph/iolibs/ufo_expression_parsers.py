@@ -62,7 +62,7 @@ class UFOExpressionParser(object):
     tokens = (
         'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
         'SQRT', 'CONJ', 'RE', 'RE2', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
-        'VARIABLE', 'NUMBER','COND','REGLOG', 'REGLOGP', 'REGLOGM','ARG'
+        'VARIABLE', 'NUMBER','COND','REGLOG', 'REGLOGP', 'REGLOGM','RECMS','ARG'
         )
     literals = "=+-*/(),"
 
@@ -88,6 +88,9 @@ class UFOExpressionParser(object):
         return t
     def t_REGLOGM(self, t):
         r'(?<!\w)reglogm(?=\()'
+        return t
+    def t_RECMS(self,t):
+        r'(?<!\w)recms(?=\()'
         return t
     def t_COND(self, t):
         r'(?<!\w)cond(?=\()'
@@ -171,6 +174,7 @@ class UFOExpressionParser(object):
         ('right','REGLOG'),
         ('right','REGLOGP'),
         ('right','REGLOGM'),
+        ('right','RECMS'),
         ('right','ARG'),
         ('right','CSC'),
         ('right','SEC'),
@@ -496,6 +500,10 @@ class UFOExpressionParserCPP(UFOExpressionParser):
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
         p[0] = 'COND('+p[3]+','+p[5]+','+p[7]+')'
+
+    def p_expression_recms(self, p):
+        "expression : RECMS '(' expression ',' expression ')'"
+        p[0] = 'RECMS('+p[3]+','+p[5]+')'
 
     def p_expression_power(self, p):
         'expression : expression POWER expression'

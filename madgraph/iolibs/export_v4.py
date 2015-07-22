@@ -5650,6 +5650,7 @@ class UFO_model_to_mg4(object):
           double complex reglog
           double complex reglogp
           double complex reglogm
+          double complex recms
           double complex arg""")
         if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
@@ -5657,6 +5658,7 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_reglog
           %(complex_mp_format)s mp_reglogp
           %(complex_mp_format)s mp_reglogm
+          %(complex_mp_format)s mp_recms
           %(complex_mp_format)s mp_arg"""\
           %{'complex_mp_format':self.mp_complex_format})
 
@@ -5685,6 +5687,17 @@ class UFO_model_to_mg4(object):
              condif=truecase
           else
              condif=falsecase
+          endif
+          end
+
+          double complex function recms(condition,expr)
+          implicit none
+          logical condition
+          double complex expr
+          if(condition)then
+             recms=expr
+          else
+             recms=dcmplx(dble(expr))
           endif
           end
           
@@ -5760,6 +5773,16 @@ class UFO_model_to_mg4(object):
                  mp_condif=falsecase
               endif
               end
+
+              %(complex_mp_format)s function mp_recms(condition,expr)
+              implicit none
+              logical condition
+              %(complex_mp_format)s expr
+              if(condition)then
+                 mp_recms=expr
+              else
+                 mp_recms=cmplx(real(expr),kind=16)
+              endif
               
               %(complex_mp_format)s function mp_reglog(arg)
               implicit none
@@ -5826,7 +5849,7 @@ class UFO_model_to_mg4(object):
             for fct in ufo_fct:
                 # already handle by default
                 if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
-                                    "theta_function", "cond", "reglog", "reglogp", "reglogm", "arg"]:
+                                    "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg"]:
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -5847,7 +5870,7 @@ class UFO_model_to_mg4(object):
                 for fct in ufo_fct:
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
-                                        "theta_function", "cond", "reglog", "reglogp","reglogm", "arg"]:
+                                        "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg"]:
                         ufo_fct_template = """
           %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
           implicit none
