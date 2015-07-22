@@ -94,6 +94,7 @@ class UFOExpressionParser(object):
         return t
     def t_ARG(self,t):
         r'(?<!\w)arg(?=\()'
+        return t
     def t_IF(self, t):
         r'(?<!\w)if\s'
         return t
