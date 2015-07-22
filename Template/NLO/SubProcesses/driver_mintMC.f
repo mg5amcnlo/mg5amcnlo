@@ -20,7 +20,7 @@ C
 C
 C     LOCAL
 C
-      integer i,j,l,l1,l2,ndim,nevts
+      integer i,j,k,l,l1,l2,ndim,nevts
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -30,6 +30,7 @@ c
 cc
       include 'run.inc'
       include 'coupl.inc'
+      include "mint.inc"
       
       integer           iconfig
       common/to_configs/iconfig
@@ -49,12 +50,11 @@ c Vegas stuff
 
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      double precision average_virtual,virtual_fraction
+      double precision average_virtual(0:n_ave_virt),virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
 
       double precision weight
 c For MINT:
-      include "mint.inc"
       real* 8 xgrid(0:nintervals,ndimmax),ymax(nintervals,ndimmax)
      $     ,ymax_virt,ans(nintegrals),unc(nintegrals),chi2(nintegrals)
      $     ,x(ndimmax)
@@ -70,13 +70,16 @@ c For MINT:
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
-     $     ,ndimmax)
-      double precision ave_virt(nintervals_virt,ndimmax)
-     $     ,ave_virt_acc(nintervals_virt,ndimmax)
-     $     ,ave_born_acc(nintervals_virt ,ndimmax)
+      integer nvirt(nintervals_virt,ndimmax,0:n_ave_virt)
+     &     ,nvirt_acc(nintervals_virt,ndimmax,0:n_ave_virt)
+      double precision ave_virt(nintervals_virt,ndimmax,0:n_ave_virt)
+     $     ,ave_virt_acc(nintervals_virt,ndimmax,0:n_ave_virt)
+     $     ,ave_born_acc(nintervals_virt ,ndimmax,0:n_ave_virt)
       common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
      $     ,nvirt_acc
+      include 'orders.inc'
+      integer              n_ord_virt
+      common /c_n_ord_virt/n_ord_virt
       double precision ran2
       external ran2
       
@@ -112,9 +115,12 @@ C-----
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
-      average_virtual=0d0
+      do i=0,n_ave_virt
+         average_virtual(i)=0d0
+      enddo
       virtual_fraction=virt_fraction
-
+      n_ord_virt=amp_split_size
+      
       ntot=0
       nsun=0
       nsps=0
@@ -194,11 +200,13 @@ c to restore grids:
                read (12,*) (xgrid(j,i),i=1,ndim)
             enddo
             do j=1,nintervals_virt
-               read (12,*) (ave_virt(j,i),i=1,ndim)
+               do k=0,n_ord_virt
+                  read (12,*) (ave_virt(j,i,k),i=1,ndim)
+               enddo
             enddo
             read (12,*) (ans(i),i=1,nintegrals)
             read (12,*) ifold_energy,ifold_phi,ifold_yij
-            read (12,*) virtual_fraction,average_virtual
+            read (12,*) virtual_fraction,average_virtual(0)
             close (12)
          endif
 c
@@ -222,11 +230,13 @@ c to save grids:
             write (12,*) (xgrid(j,i),i=1,ndim)
          enddo
          do j=1,nintervals_virt
-            write (12,*) (ave_virt(j,i),i=1,ndim)
+            do k=0,n_ord_virt
+               write (12,*) (ave_virt(j,i,k),i=1,ndim)
+            enddo
          enddo
          write (12,*) (ans(i),i=1,nintegrals)
          write (12,*) ifold_energy,ifold_phi,ifold_yij
-         write (12,*) virtual_fraction,average_virtual
+         write (12,*) virtual_fraction,average_virtual(0)
          close (12)
 
 c*************************************************************
@@ -239,11 +249,13 @@ c to restore grids:
             read (12,*) (xgrid(j,i),i=1,ndim)
          enddo
          do j=1,nintervals_virt
-            read (12,*) (ave_virt(j,i),i=1,ndim)
+            do k=0,n_ord_virt
+               read (12,*) (ave_virt(j,i,k),i=1,ndim)
+            enddo
          enddo
          read (12,*) (ans(i),i=1,nintegrals)
          read (12,*) ifold_energy,ifold_phi,ifold_yij
-         read (12,*) virtual_fraction,average_virtual
+         read (12,*) virtual_fraction,average_virtual(0)
          close (12)
 
 c Prepare the MINT folding
@@ -292,13 +304,15 @@ c to save grids:
             write (12,*) (ymax(j,i),i=1,ndim)
          enddo
          do j=1,nintervals_virt
-            write (12,*) (ave_virt(j,i),i=1,ndim)
+            do k=0,n_ord_virt
+               write (12,*) (ave_virt(j,i,k),i=1,ndim)
+            enddo
          enddo
          write (12,*) ymax_virt
          write (12,*) (ifold(i),i=1,ndim)
          write (12,*) (ans(i),i=1,nintegrals)
          write (12,*) (unc(i),i=1,nintegrals)
-         write (12,*) virtual_fraction,average_virtual
+         write (12,*) virtual_fraction,average_virtual(0)
          close (12)
 
 
@@ -330,13 +344,15 @@ c to restore grids:
             read (12,*) (ymax(j,i),i=1,ndim)
          enddo
          do j=1,nintervals_virt
-            read (12,*) (ave_virt(j,i),i=1,ndim)
+            do k=0,n_ord_virt
+               read (12,*) (ave_virt(j,i,k),i=1,ndim)
+            enddo
          enddo
          read (12,*) ymax_virt
          read (12,*) (ifold(i),i=1,ndim)
          read (12,*) (ans(i),i=1,nintegrals)
          read (12,*) (unc(i),i=1,nintegrals)
-         read (12,*) virtual_fraction,average_virtual
+         read (12,*) virtual_fraction,average_virtual(0)
          close (12)
 
 c determine how many events for the virtual and how many for the no-virt
@@ -734,10 +750,11 @@ c From dsample_fks
       include 'nFKSconfigs.inc'
       include 'c_weight.inc'
       include 'run.inc'
+      include 'orders.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum
+     $     ,iFKS,sum,iamp
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
@@ -754,7 +771,8 @@ c From dsample_fks
       common/ccalculatedBorn/calculatedBorn
       logical              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
-      double precision           virt_wgt_mint,born_wgt_mint
+      double precision           virt_wgt_mint(0:n_ave_virt),
+     &                           born_wgt_mint(0:n_ave_virt)
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
@@ -792,8 +810,10 @@ c "npNLO".
       fold=ifl
       if (ifl.eq.0) then
          icontr=0
-         virt_wgt_mint=0d0
-         born_wgt_mint=0d0
+         do iamp=0,amp_split_size
+            virt_wgt_mint(iamp)=0d0
+            born_wgt_mint(iamp)=0d0
+         enddo
          virtual_over_born=0d0
          MCcntcalled=.false.
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
