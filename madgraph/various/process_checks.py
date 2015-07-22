@@ -4291,7 +4291,7 @@ def output_complex_mass_scheme(result,output_path,options={}):
             #plt.xlabel('lambdaCMS')
             plt.legend()
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
-                            minvalue-(maxvalue-maxvalue)/5., maxvalue+(maxvalue-maxvalue)/5.])
+                            minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
             
             plt.subplot(212)
             minvalue=1e+99
@@ -4311,7 +4311,7 @@ def output_complex_mass_scheme(result,output_path,options={}):
             plt.xlabel('lambdaCMS')
             plt.legend()
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
-                        minvalue-(maxvalue-maxvalue)/5., maxvalue+(maxvalue-maxvalue)/5.])
+                        minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
             
             plt.savefig(pp,format='pdf')
 
