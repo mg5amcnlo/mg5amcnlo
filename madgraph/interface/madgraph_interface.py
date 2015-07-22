@@ -3337,6 +3337,10 @@ This implies that with decay chains:
                 except ValueError:
                     raise self.InvalidCmd("CMS expansion specification '%s'"%\
                                                        args[i]+" is incorrect.")
+                if CMS_expansion_order:
+                    CMS_options['expansion_order'] = [CMS_expansion_order]
+                else:
+                    CMS_options['expansion_order'] = []                    
                 CMS_options['expansion_parameters'] = {}
                 for expansion_parameter in CMS_expansion_parameters.split(';'):
                     try:
@@ -3635,7 +3639,7 @@ This implies that with decay chains:
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_result:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
-            text += process_checks.output_complex_mass_scheme(cms_result) + '\n'             
+            text += process_checks.output_complex_mass_scheme(cms_result,output_path,CMS_options) + '\n'             
         if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'
             text += process_checks.output_comparisons(comparisons[0]) + '\n'

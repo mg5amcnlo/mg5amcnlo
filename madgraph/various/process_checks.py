@@ -3664,7 +3664,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     if NLO:
         # We must first create the matrix element, export it and set it up.
         # If the reuse option is specified, it will be recycled.
-        proc_name = "SAVED%s_%s__%s__"%(temp_dir_prefix,
+        proc_name = "%s%s_%s__%s__"%(('SAVED' if options['reuse'] else '')
+                          ,temp_dir_prefix,
                           '_'.join(process.shell_string().split('_')[1:]), mode)
         # Generate the ME
         timing, matrix_element = generate_loop_matrix_element(process, 
@@ -4178,7 +4179,7 @@ def output_unitary_feynman(comparison_results, output='text'):
         return fail_proc
 
 
-def output_complex_mass_scheme(result):
+def output_complex_mass_scheme(result,output_path,options={}):
     """ Outputs nicely the outcome of the complex mass scheme check performed
     by varying the width in the offshell region of resonances found for eahc process"""
     
@@ -4191,6 +4192,134 @@ def output_complex_mass_scheme(result):
 
     # Well for now, that only.
     misc.sprint(result)
+    
+    processes=result['ordered_processes']
+    pert_orders=result['perturbation_orders']
+    logFile = open(pjoin(output_path, 'cms_check_%s.log'\
+                                           %('_'.join(pert_orders) if \
+                                                pert_orders else 'born')), 'w')
+    fig_output_file = str(pjoin(output_path, 
+                     'cms_check_plot_%s.pdf'%('_'.join(pert_orders) if \
+                                                pert_orders else 'born')))
+    
+    lambdaCMS_list=options['lambdaCMS']
+    process_data_plot_dict={}
+    misc.sprint(options)
+    for iproc,process in enumerate(processes):
+        data1={} # for subplot 1,i.e. CMS and NWA
+        data2={} # for subplot 2,i.e. diff
+        proc_res = result[process]
+        cms_res = proc_res['CMS'][0]
+        nwa_res = proc_res['NWA'][0]
+        res_str += "\n= Complex Mass Scheme checking for %s \n"%process
+        # Born result
+        cms_born=cms_res['born']
+        nwa_born=nwa_res['born']
+        if len(cms_born) != len(lambdaCMS_list) or\
+             len(nwa_born) != len(lambdaCMS_list):
+            res_str += "\n= The Born result CANNOT match the list of lambdaCMS for %s"%process
+            return res_str
+        if not pert_orders:
+            # Born result
+            # guess the lambdaCMS power in the amplitude squared
+            # However, it would be wrong with the mixed-orders
+            bpower=round(math.log(nwa_born[0]/nwa_born[1],\
+                                    lambdaCMS_list[0]/lambdaCMS_list[1]))
+            CMSData = []
+            NWAData = []
+            DiffData = []
+            for idata in range(len(lambdaCMS_list)):
+                new_cms=cms_born[idata]/lambdaCMS_list[idata]**bpower
+                new_nwa=nwa_born[idata]/lambdaCMS_list[idata]**bpower
+                new_diff=(new_cms-new_nwa)/lambdaCMS_list[idata]
+                CMSData.append(new_cms)
+                NWAData.append(new_nwa)
+                DiffData.append(new_diff)
+            data1['CMS=born_cms/lambdaCMS**%d'%bpower]=CMSData
+            data1['NWA=born_nwa/lambdaCMS**%d'%bpower]=NWAData
+            data2['Diff=(CMS-NWA)/lambdaCMS']=DiffData
+        else:
+            # NLO result
+            cms_finite=cms_res['finite']
+            nwa_finite=nwa_res['finite']
+            if len(cms_finite) != len(lambdaCMS_list) or\
+                len(nwa_finite) != len(lambdaCMS_list):
+                res_str += "\n= The Finite result CANNOT match the list of lambdaCMS for %s"%process
+                return res_str 
+            CMSData = []
+            NWAData = []
+            DiffData = []
+            for idata in range(len(lambdaCMS_list)):
+                new_cms=cms_finite[idata]+cms_born[idata]-nwa_born[idata]
+                new_nwa=nwa_finite[idata]
+                new_cms=new_cms/(lambdaCMS_list[idata]*nwa_born[idata])
+                new_nwa=new_nwa/(lambdaCMS_list[idata]*nwa_born[idata])
+                new_diff=(new_cms-new_nwa)/lambdaCMS_list[idata]
+                CMSData.append(new_cms)
+                NWAData.append(new_nwa)
+                DiffData.append(new_diff)
+            data1['CMS=(finite_cms+born_cms-born_nwa)/(lambdaCMS*born_nwa)']=CMSData
+            data1['NWA=finite_nwa/(lambdaCMS*born_nwa)']=NWAData
+            data2['Diff=(CMS-NWA)/lambdaCMS']=DiffData
+        process_data_plot_dict[process]=[data1,data2]
+                
+    # output the figures
+    try:
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_pdf import PdfPages
+        pp=PdfPages(fig_output_file)            
+        colorlist=['b','r','g','y']
+        for iproc, process in enumerate(processes):
+            data_plot1_dict,data_plot2_dict=process_data_plot_dict[process]
+            plt.figure(iproc+1)
+            plt.subplot(211)
+            for i,key in enumerate(data_plot1_dict.keys()):
+                color=colorlist[i]
+                data_plot=data_plot1_dict[key]
+                plt.plot(lambdaCMS_list, data_plot, color=color, marker='', linestyle='-',\
+                         label=key)
+#                plt.axis([min_acc,max_acc,\
+#                                10**(-int(math.log(nPSmax-0.5)/math.log(10))-1), 1])
+            plt.yscale('linear')
+            plt.xscale('log')
+            plt.title('Complex Mass Scheme check plot for %s '%process)
+            plt.ylabel('Value')
+            #plt.xlabel('lambdaCMS')
+            plt.legend()
+            
+            plt.subplot(212)
+            for i,key in enumerate(data_plot2_dict.keys()):
+                color=colorlist[i]
+                data_plot=data_plot2_dict[key]
+                plt.plot(lambdaCMS_list, data_plot, color=color, marker='', linestyle='-',\
+                         label=key)
+            plt.yscale('linear')
+            plt.xscale('log')
+            plt.ylabel('Difference')
+            plt.xlabel('lambdaCMS')
+            plt.legend()
+            
+            plt.savefig(pp,format='pdf')
+
+        pp.close()
+        
+        logger.info('Some cms check statistics will be displayed once you '+\
+                        'close the plot window')
+        logger.info('Complex Mass Scheme check plot output to file %s. '%fig_output_file)
+        
+        if sys.platform.startswith('linux'):
+            misc.call(["xdg-open", fig_output_file])
+        elif sys.platform.startswith('darwin'):
+            misc.call(["open", fig_output_file])
+            
+    except Exception as e:
+        if isinstance(e, ImportError):
+            res_str += "\n= Install matplotlib to get a "+\
+                "graphical display of the results of this check."
+        else:
+            res_str += "\n= Could not produce the cms check plot because of "+\
+                                                "the following error: %s"%str(e)
+    
     
     return res_str
 
