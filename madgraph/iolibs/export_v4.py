@@ -5783,6 +5783,7 @@ class UFO_model_to_mg4(object):
               else
                  mp_recms=cmplx(real(expr),kind=16)
               endif
+              end
               
               %(complex_mp_format)s function mp_reglog(arg)
               implicit none
