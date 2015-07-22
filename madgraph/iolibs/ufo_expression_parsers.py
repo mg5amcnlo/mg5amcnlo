@@ -89,7 +89,7 @@ class UFOExpressionParser(object):
     def t_REGLOGM(self, t):
         r'(?<!\w)reglogm(?=\()'
         return t
-    def t_RECMS(self,t):
+    def t_RECMS(self, t):
         r'(?<!\w)recms(?=\()'
         return t
     def t_COND(self, t):
@@ -308,6 +308,10 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
         p[0] = 'COND(DCMPLX('+p[3]+'),DCMPLX('+p[5]+'),DCMPLX('+p[7]+'))'
 
+    def p_expression_recms(self, p):
+        "expression : RECMS '(' boolexpression ',' expression ')'"
+        p[0] = 'RECMS('+p[3]+',DCMPLX('+p[5]+'))'
+
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
         p[0] = 'DCMPLX(' + p[3] + ',' + p[5] + ')'
@@ -410,6 +414,10 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         p[0] = 'MP_COND(CMPLX('+p[3]+',KIND=16),CMPLX('+p[5]+\
                                           ',KIND=16),CMPLX('+p[7]+',KIND=16))'
 
+    def p_expression_recms(self, p):
+        "expression : RECMS '(' boolexpression ',' expression ')'"
+        p[0] = 'MP_RECMS('+p[3]+',CMPLX('+p[5]+',KIND=16))'
+
     def p_expression_func(self, p):
         '''expression : CSC group
                       | SEC group
@@ -502,7 +510,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         p[0] = 'COND('+p[3]+','+p[5]+','+p[7]+')'
 
     def p_expression_recms(self, p):
-        "expression : RECMS '(' expression ',' expression ')'"
+        "expression : RECMS '(' boolexpression ',' expression ')'"
         p[0] = 'RECMS('+p[3]+','+p[5]+')'
 
     def p_expression_power(self, p):

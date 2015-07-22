@@ -185,7 +185,7 @@ class ModelReader(loop_base_objects.LoopModel):
         couplings = sum(self['couplings'].values(), [])
         # Now calculate all couplings
         for coup in couplings:
-            #print "I execute %s = %s"%(coup.name, coup.expr)
+            print "I execute %s = %s"%(coup.name, coup.expr)
             exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
             coup.value = complex(eval(coup.name))
             if not eval(coup.name) and eval(coup.name) != 0:

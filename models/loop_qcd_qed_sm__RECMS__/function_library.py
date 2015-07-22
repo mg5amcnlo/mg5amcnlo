@@ -73,7 +73,7 @@ acsc = Function(name = 'acsc',
 
 recms = Function(name= 'recms',
                  arguments = ('cms','z'),
-                 expression = '(z if cms else re(z))')
+                 expression = '(z if cms else z.real)')
 
 
 # Overwriting of original definition of reglog for the CMS

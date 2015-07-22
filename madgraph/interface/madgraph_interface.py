@@ -4396,7 +4396,7 @@ This implies that with decay chains:
                     args[1].split('/')[-1].startswith('loop_qcd_qed_sm')) and\
                      self.options['gauge']!='Feynman':
                     logger.info('Switching to Feynman gauge because '+\
-                          'it is the only one supported by the model loop_qcd_qed_sm.')
+                          'it is the only one supported by the model %s.'%args[1])
                     self._curr_model = None
                     self.do_set('gauge Feynman',log=False)
                 prefix = not '--noprefix' in args
