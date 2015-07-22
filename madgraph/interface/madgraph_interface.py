@@ -474,6 +474,26 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("o lorentz_invariance:",'$MG:color:GREEN')
         logger.info("   Check that the amplitude is lorentz invariant by")
         logger.info("   comparing the amplitiude in different frames")
+        logger.info("o cms:",'$MG:color:GREEN')
+        logger.info("   Check the complex mass scheme consistency by comparing")
+        logger.info("   it to the narrow width approximation in the off-shell")
+        logger.info("   region of detected resonances and by progressively")
+        logger.info("   decreasing the width. Additional options for this check are:")
+        logger.info("    --offshellness=f : f is a positive or negative float specifying ")
+        logger.info("      the distance from the pole as -x*particle_width. Default is 100.0")
+        logger.info("    --seed=i : to force a specific RNG integer seed i (default is random)")
+        logger.info("    --cms=order,p1->f(p,lambdaCMS);p2->f2(p,lambdaCMS);...")
+        logger.info("      'order' specifies the expansion order considered for the test.")
+        logger.info("      The substitution lists specifies how internal parameter must be modified")
+        logger.info("      with the width scaling 'lambdaCMS'. The default value for this option is:")
+        logger.info("       --cms=QED,aEWM1->aEWM1/lambdaCMS;ymt->ymt*lambdaCMS;ymb->ymb*lambdaCMS")
+        logger.info("    --recompute_width= never|first_time|always")
+        logger.info("      Decides when to use MadSpin to automatically recompute the width")
+        logger.info("      Default value is 'never'.")
+        logger.info("      'never' uses the default width value for lambdaCMS=1.0.")
+        logger.info("      'first_time' uses MadSpin to compute the width for lambdaCMS=1.0.")
+        logger.info("      'first_time' and 'never' assume linear scaling of the widths with lambdaCMS")
+        logger.info("      'always' uses MadSpin to compute the widths for all values of lambdaCMS")
         logger.info("Comments",'$MG:color:GREEN')
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
@@ -872,7 +892,27 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                                                       '--reduction':'1|2|3|4'}
+                        '--reduction':'1|2|3|4'}
+        
+        if args[0] in ['full', 'cms']:
+            # The first argument gives the name of the coupling order in which
+            # the cms expansion is carried, and the expression following the 
+            # comma gives the relation of an external parameter with the
+            # CMS expansions parameter called 'lambdaCMS'.
+            parameters = ['aEWM1->aEWM1/lambdaCMS',
+                          'ymt->ymt*lambdaCMS',
+                          'ymb->ymb*lambdaCMS']
+            user_options['--cms']='QED,'+';'.join(parameters)
+            # Widths are assumed to scale linearly with lambdaCMS unless
+            # --force_recompute_width='always' or 'first_time' is used.
+            user_options['--recompute_width']='never'
+            # It can be negative so as to be offshell below the resonant mass
+            user_options['--offshellness']='100.0'
+            # Pick the lambdaCMS values for the test
+            user_options['--lambdaCMS']='[(1/2.0)**exp for exp in range(0,20)]'
+            # Set the RNG seed, -1 is default (random).
+            user_options['--seed']=-1
+        
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
                 key, value = arg.split('=')
@@ -2448,7 +2488,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation',
-                   'gauge','lorentz', 'brs']
+                   'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
                      'update', 'Delphes2', 'SysCalc', 'Golem95']
@@ -3255,9 +3295,10 @@ This implies that with decay chains:
         if args[0] in ['stability', 'profile']:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-            
+        
         MLoptions={}
         i=-1
+        CMS_options = {}
         while args[i].startswith('--'):
             option = args[i].split('=')
             if option[0] =='--energy':
@@ -3266,6 +3307,61 @@ This implies that with decay chains:
                 options['split_orders']=int(option[1])
             elif option[0]=='--reduction':
                 MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
+            elif option[0]=='--offshellness':
+                CMS_options['offshellness'] = float(option[1])
+            elif option[0]=='--seed':
+                CMS_options['seed'] = int(option[1])
+            elif option[0]=='--recompute_width':
+                if option[1].lower() not in ['never','always','first_time']:
+                    raise self.InvalidCmd("The option 'recompute_width' can "+\
+                                     "only be 'never','always' or 'first_time'")
+                CMS_options['recompute_width'] = option[1]
+            elif option[0]=='--lambdaCMS':
+                try:
+                    lambda_values = eval(option[1])
+                except SyntaxError:
+                    raise self.InvalidCmd("'%s' is not a correct"%option[1]+
+                              " expression for a list of lambdaCMS values.")
+                if lambda_values[0]!=1.0:
+                    raise self.InvalidCmd("The first value of the lambdaCMS values"+
+                            " specified must be 1.0, not %s"%str(lambda_values))
+                for l in lambda_values:
+                    if not isinstance(l,float):
+                        raise self.InvalidCmd("All lambda CMS values must be"+
+                                                      " float, not '%s'"%str(l))
+                CMS_options['lambdaCMS'] = lambda_values
+            elif option[0]=='--cms':
+                try:
+                    CMS_expansion_order, CMS_expansion_parameters = \
+                                                            option[1].split(',')
+                except ValueError:
+                    raise self.InvalidCmd("CMS expansion specification '%s'"%\
+                                                       args[i]+" is incorrect.")
+                CMS_options['expansion_parameters'] = {}
+                for expansion_parameter in CMS_expansion_parameters.split(';'):
+                    try:
+                        param, replacement = expansion_parameter.split('->')
+                    except ValueError:
+                        raise self.InvalidCmd("CMS expansion specification '%s'"%\
+                          expansion_parameter+" is incorrect. It should be of"+\
+                                 " the form a->_any_function_of_(a,lambdaCMS).")
+                    try:
+                        res = (98.85 == float(eval(replacement.lower(),
+                                        {'lambdacms':1.0,param.lower():98.85})))
+                    except:
+                      raise self.InvalidCmd("CMS expansion parameter expression "+
+                      "'%s' could not be interpreted."%replacement+" It must be"+
+                      " an expression of the parameter 'lambdaCMS'.")
+                    if res:
+                        # Put everything lower case as it will be done when
+                        # accessing model variables
+                        CMS_options['expansion_parameters'][param.lower()]=\
+                                                             replacement.lower()
+                    else:
+                      raise self.InvalidCmd("CMS expansion parameter must be"+
+                        " a function such that funct(param,lambdaCMS=1.0)=param")
+                      
+
             i=i-1
         args = args[:i+1]
         
@@ -3466,15 +3562,46 @@ This implies that with decay chains:
                                           options=options)
             nb_processes += len(gauge_result)
 
+        if args[0] in ['cms', 'full']:
+            
+            cms_original_setup = self.options['complex_mass_scheme']
+
+            process_line = " ".join(args[1:])
+            # Merge in the CMS_options to the options
+            for key, value in CMS_options.items():
+                if key not in options:
+                    options[key] = value
+                else:
+                    raise MadGraph5Error,"Option '%s' is both in the option"%key+\
+                                                   " and CMS_option dictionary." 
+            cms_result = process_checks.check_complex_mass_scheme(
+                                          process_line,
+                                          param_card = param_card,
+                                          cuttools=CT_dir,
+                                          tir=TIR_dir,
+                                          cmd = self,
+                                          output_path = output_path,
+                                          MLOptions = MLoptions,
+                                          options=options)
+
+            # restore previous settings
+            self.do_set('complex_mass_scheme %s'%str(cms_original_setup),
+                                                                      log=False)
+            # Use here additional key 'ordered_processes'
+            nb_processes += len(cms_result['ordered_processes'])
+
         cpu_time2 = time.time()
         logger.info("%i checked performed in %0.3f s" \
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
 
-        if args[0] not in ['timing','stability', 'profile']:
+        if args[0] in ['cms']:
+                text = "Note that the complex mass scheme test in principle only\n"
+                text+= "works for stable particles in final states.\n\ns"            
+        if args[0] not in ['timing','stability', 'profile', 'cms']:
             if self.options['complex_mass_scheme']:
                 text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
-                text+= "results only for stable particles in final states.\n\n"
+                text+= "results only for stable particles in final states.\n\ns"
             elif not myprocdef.get('perturbation_couplings'):
                 text = "Note That all width have been set to zero for those checks\n\n"
             else:
@@ -3506,7 +3633,9 @@ This implies that with decay chains:
         if gauge_result_no_brs:
             text += 'Gauge results (switching between Unitary/Feynman):\n'
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
-
+        if cms_result:
+            text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
+            text += process_checks.output_complex_mass_scheme(cms_result) + '\n'             
         if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'
             text += process_checks.output_comparisons(comparisons[0]) + '\n'
@@ -6832,7 +6961,7 @@ This implies that with decay chains:
             self._generate_info = process[9:]
             #print self._generate_info
         else:
-            print "No decay is found"
+            logger.info("No decay is found")
 
 class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
     """Temporary parser"""

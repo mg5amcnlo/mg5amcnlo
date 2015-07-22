@@ -13,6 +13,8 @@ try:
 except:
     import internal.file_writers as file_writers
     import internal.misc as misc
+
+import StringIO
     
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
@@ -274,9 +276,8 @@ class ParamCard(dict):
         self.order = []
         
         if isinstance(input_path, ParamCard):
-            self.order = list(input_path.order)
-            self.update(input_path)
-            self.input_path = input_path.input_path 
+            self.read(StringIO.StringIO(input_path.write())) 
+            self.input_path = input_path.input_path
         else:
             self.input_path = input_path
             if input_path:
@@ -342,7 +343,7 @@ class ParamCard(dict):
                   
         return self
     
-    def write(self, outpath):
+    def write(self, outpath=None):
         """schedular for writing a card"""
   
         # order the block in a smart way

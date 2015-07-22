@@ -1536,9 +1536,9 @@ class Model(PhysicsObject):
     def write_param_card(self):
         """Write out the param_card, and return as string."""
         
-        import models.write_param_card as writter
+        import models.write_param_card as writer
         out = StringIO.StringIO() # it's suppose to be written in a file
-        param = writter.ParamCardWriter(self)
+        param = writer.ParamCardWriter(self)
         param.define_output_file(out)
         param.write_card()
         return out.getvalue()

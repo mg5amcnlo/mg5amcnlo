@@ -36,6 +36,7 @@ import subprocess
 import time
 import datetime
 import errno
+import pickle
 # If psutil becomes standard, the RAM check can be performed with it instead
 #import psutil
 
@@ -62,13 +63,15 @@ import madgraph.various.banner as bannermod
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
+import models.check_param_card as check_param_card
 
 from madgraph.interface.madevent_interface import MadLoopInitializer
-
+from madgraph.interface.common_run_interface import AskforEditCard
 from madgraph import MG5DIR, InvalidCmd, MadGraph5Error
 
 from madgraph.iolibs.files import cp
 
+import StringIO
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
@@ -170,7 +173,8 @@ class MatrixElementEvaluator(object):
         except MadGraph5Error:
             if isinstance(param_card, (str,file)):
                 raise
-            logger.warning('param_card present in the event file not compatible. We will use the default one.')
+            logger.warning('param_card present in the event file not compatible.'+
+                                                ' We will use the default one.')
             self.full_model.set_parameters_and_couplings()
             
         self.auth_skipping = auth_skipping
@@ -288,11 +292,10 @@ class MatrixElementEvaluator(object):
         # Export the matrix element to Python calls
         exporter = export_python.ProcessExporterPython(matrix_element,
                                                        self.helas_writer)
-
         try:
             matrix_methods = exporter.get_python_matrix_methods(\
                 gauge_check=gauge_check)
-            # print "I got matrix_methods=",str(matrix_methods.items()[0][1])
+#            print "I got matrix_methods=",str(matrix_methods.items()[0][1])
         except helas_call_writers.HelasWriterError, error:
             logger.info(error)
             return None
@@ -320,11 +323,14 @@ class MatrixElementEvaluator(object):
     #===============================================================================
     # Helper function get_momenta
     #===============================================================================
-    def get_momenta(self, process, options=None):
+    def get_momenta(self, process, options=None, special_mass=None):
         """Get a point in phase space for the external states in the given
         process, with the CM energy given. The incoming particles are
         assumed to be oriented along the z axis, with particle 1 along the
-        positive z axis."""
+        positive z axis.
+        For the CMS check, one must be able to chose the mass of the special
+        resonance particle with id = -1, and the special_mass option allows
+        to specify it."""
 
         if not options:
             energy=1000
@@ -371,10 +377,17 @@ class MatrixElementEvaluator(object):
         nfinal = len(sorted_legs) - nincoming
 
         # Find masses of particles
-        mass_strings = [self.full_model.get_particle(l.get('id')).get('mass') \
-                         for l in sorted_legs]        
-        mass = [self.full_model.get('parameter_dict')[m] for m in mass_strings]
-        mass = [m.real for m in mass]
+        mass = []
+        for l in sorted_legs:
+            if l.get('id') != -10:
+                mass_string = self.full_model.get_particle(l.get('id')).get('mass')        
+                mass.append(self.full_model.get('parameter_dict')[mass_string].real)
+            else:
+                if isinstance(special_mass, float):
+                    mass.append(special_mass)
+                else:
+                    raise Exception, "A 'special_mass' option must be specified"+\
+                 " in get_momenta when a leg with id=-10 is present (for CMS check)"
         #mass = [math.sqrt(m.real) for m in mass]
 
 
@@ -400,10 +413,8 @@ class MatrixElementEvaluator(object):
             masses[i+1] = mass[nincoming + i]
 
         if nincoming == 1:
-
             # Momenta for the incoming particle
-            p.append([abs(m1), 0., 0., 0.])
-
+            p.append([abs(m1), 0., 0., 0.])           
             p_rambo, w_rambo = rambo.RAMBO(nfinal, abs(m1), masses)
 
             # Reorder momenta from px,py,pz,E to E,px,py,pz scheme
@@ -660,8 +671,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         MLCard.write(pjoin(dir_name,os.pardir,'SubProcesses','MadLoopParams.dat'))
 
     @classmethod
-    def get_me_value(cls, proc, proc_id, working_dir, PSpoint=[], \
-                                                  PS_name = None, verbose=True):
+    def get_me_value(cls, proc, proc_id, working_dir, PSpoint=[], PS_name = None,
+                          verbose=True, format='tuple', skip_compilation=False):
         """Compile and run ./check, then parse the output and return the result
         for process with id = proc_id and PSpoint if specified.
         If PS_name is not none the written out PS.input will be saved in 
@@ -684,23 +695,24 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         if verbose: logging.debug("Working on process %s in dir %s" % (proc, shell_name))
         
         dir_name = pjoin(working_dir, 'SubProcesses', shell_name)
-        # Make sure to recreate the executable and modified sources
-        if os.path.isfile(pjoin(dir_name,'check')):
-            os.remove(pjoin(dir_name,'check'))
-            try:
-                os.remove(pjoin(dir_name,'check_sa.o'))
-                os.remove(pjoin(dir_name,'loop_matrix.o'))
-            except OSError:
-                pass
-        # Now run make
-        devnull = open(os.devnull, 'w')
-        retcode = subprocess.call(['make','check'],
-                                   cwd=dir_name, stdout=devnull, stderr=devnull)
-        devnull.close()
-                     
-        if retcode != 0:
-            logging.info("Error while executing make in %s" % shell_name)
-            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        if not skip_compilation:
+            # Make sure to recreate the executable and modified sources
+            if os.path.isfile(pjoin(dir_name,'check')):
+                os.remove(pjoin(dir_name,'check'))
+                try:
+                    os.remove(pjoin(dir_name,'check_sa.o'))
+                    os.remove(pjoin(dir_name,'loop_matrix.o'))
+                except OSError:
+                    pass
+            # Now run make
+            devnull = open(os.devnull, 'w')
+            retcode = subprocess.call(['make','check'],
+                                       cwd=dir_name, stdout=devnull, stderr=devnull)
+            devnull.close()
+                         
+            if retcode != 0:
+                logging.info("Error while executing make in %s" % shell_name)
+                return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
         # If a PS point is specified, write out the corresponding PS.input
         if PSpoint:
@@ -719,7 +731,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             output.close()
             if os.path.exists(pjoin(dir_name,'result.dat')):
                 return cls.parse_check_output(file(pjoin(dir_name,\
-                                                  'result.dat')),format='tuple')  
+                                                   'result.dat')),format=format)  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
                                            .join(dir_name,'result.dat')))
@@ -767,6 +779,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 continue
             elif splitline[0]=='PS':
                 res_p.append([float(s) for s in splitline[1:]])
+            elif splitline[0]=='ASO2PI':
+                res_dict['alphaS_over_2pi']=float(splitline[1])
             elif splitline[0]=='BORN':
                 res_dict['born']=float(splitline[1])
             elif splitline[0]=='FIN':
@@ -924,7 +938,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.close()
 
     def setup_process(self, matrix_element, export_dir, reusing = False,
-                                      param_card = None,MLOptions={},clean=True):
+                                      param_card = None, MLOptions={},clean=True):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
@@ -993,8 +1007,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             else:
                 param_card.write(pjoin(export_dir,'Cards','param_card.dat'))
                 
-        # First Initialize filters (in later versions where this will be done
-        # at generation time, it can be skipped)
+        # First Initialize filters (in later versions where this will hopefully
+        # be done at generation time, then it will be able to skip it)
         MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                                                    read_ps = False, npoints = 4)
         self.fix_MadLoopParamCard(pjoin(export_dir,'Cards'),
@@ -1796,13 +1810,30 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 # Generate a loop matrix element
 #===============================================================================
 def generate_loop_matrix_element(process_definition, reuse, output_path=None,
-                                                         cmd = FakeInterface()):
+                                         cmd = FakeInterface(), proc_name=None):
     """ Generate a loop matrix element from the process definition, and returns
     it along with the timing information dictionary.
-    If reuse is True, it reuses the already output directory if found."""
+    If reuse is True, it reuses the already output directory if found.
+    There is the possibility of specifying the proc_name."""
 
-    assert isinstance(process_definition,base_objects.ProcessDefinition)
+    assert isinstance(process_definition,
+                          (base_objects.ProcessDefinition,base_objects.Process))
     assert process_definition.get('perturbation_couplings')!=[]
+
+    if isinstance(process_definition,base_objects.ProcessDefinition):
+        if any(len(l.get('ids'))>1 for l in process_definition.get('legs')):
+            raise InvalidCmd("This check can only be performed on single "+
+                             " processes. (i.e. without multiparticle labels).")
+    
+        isids = [leg.get('ids')[0] for leg in process_definition.get('legs') \
+                  if not leg.get('state')]
+        fsids = [leg.get('ids')[0] for leg in process_definition.get('legs') \
+                 if leg.get('state')]
+    
+        # Now generate a process based on the ProcessDefinition given in argument.
+        process = process_definition.get_process(isids,fsids)
+    else:
+        process = process_definition
     
     if not output_path is None:
         root_path = output_path
@@ -1815,20 +1846,11 @@ def generate_loop_matrix_element(process_definition, reuse, output_path=None,
               'n_loop_groups': None,
               'n_loop_wfs': None,
               'loop_wfs_ranks': None}
-    
-    if any(len(l.get('ids'))>1 for l in process_definition.get('legs')):
-        raise InvalidCmd("This check can only be performed on single "+
-                         " processes. (i.e. without multiparticle labels).")
 
-    isids = [leg.get('ids')[0] for leg in process_definition.get('legs') \
-              if not leg.get('state')]
-    fsids = [leg.get('ids')[0] for leg in process_definition.get('legs') \
-             if leg.get('state')]
-
-    # Now generate a process based on the ProcessDefinition given in argument.
-    process = process_definition.get_process(isids,fsids)
-    
-    proc_dir = pjoin(root_path,"SAVED"+temp_dir_prefix+"_%s"%(
+    if proc_name:
+        proc_dir = pjoin(root_path,proc_name)
+    else:
+        proc_dir = pjoin(root_path,"SAVED"+temp_dir_prefix+"_%s"%(
                                '_'.join(process.shell_string().split('_')[1:])))
     if reuse and os.path.isdir(proc_dir):
         logger.info("Reusing directory %s"%str(proc_dir))
@@ -1865,7 +1887,7 @@ def generate_loop_matrix_element(process_definition, reuse, output_path=None,
             timing['loop_wfs_ranks'].append(\
                 len([1 for l in lwfs if \
                                l.get_analytic_info('wavefunction_rank')==rank]))
-    
+
     return timing, matrix_element
 
 #===============================================================================
@@ -1932,7 +1954,6 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
     keep_folder = reuse
     model=process_definition.get('model')
 
-    
     timing, matrix_element = generate_loop_matrix_element(process_definition,
                                         reuse, output_path=output_path, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
@@ -3155,7 +3176,7 @@ def check_lorentz_process(process, evaluator,options=None):
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
-                                                      gen_color = True)
+                                                               gen_color = True)
     else:
         matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                                        optimized_output = evaluator.loop_optimized_output)
@@ -3335,6 +3356,493 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 #        pass
     else:
         raise InvalidCmd("processes is of non-supported format")
+
+#===============================================================================
+# check_cms
+#===============================================================================
+def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={}, 
+         cmd = FakeInterface(), output_path=None, MLOptions = {}, options={}):
+    """Check complex mass scheme consistency in the offshell region of s-channels
+    detected for this process, by varying the expansion paramer consistently
+    with the corresponding width and making sure that the difference between
+    the complex mass-scheme and the narrow-width approximation is higher order.
+    """
+
+    if not isinstance(process_line, str):
+        raise InvalidCmd("Proces definition must be given as a stirng for this check")
+
+    run_options = copy.deepcopy(options)
+    
+    # Set the seed if chosen by user
+    if options['seed'] > 0:
+        random.seed(options['seed'])
+    
+    # Add useful entries
+    run_options['param_card'] = param_card
+    if isinstance(cmd, FakeInterface):
+        raise MadGraph5Error, "Check CMS cannot be run with a FakeInterface."
+    run_options['cmd']        = cmd
+    run_options['MLOptions']  = MLOptions
+    if output_path:
+        run_options['output_path'] = output_path
+    else:
+        run_options['output_path'] = cmd._mgme_dir
+    # And one for caching the widths computed along the way
+    run_options['cached_widths'] = {}
+    # Cached param_cards, first is param_card instance, second is
+    # param_name dictionary
+    run_options['cached_param_card'] = {'NWA':[None,None],'CMS':[None,None]}
+    
+    # Generate a list of unique processes in the NWA scheme
+    cmd.do_set('complex_mass_scheme False', log=False)
+    multiprocess_nwa = cmd.extract_process(process_line)    
+    model = multiprocess_nwa.get('model')
+    if multiprocess_nwa.get('perturbation_couplings')==[]:
+        evaluator = MatrixElementEvaluator(model, param_card,
+                                   cmd=cmd,auth_skipping = False, reuse = True)
+    else:
+        evaluator = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
+                                           cmd=cmd, model=model,
+                                           param_card=param_card,
+                                           auth_skipping = False, 
+                                           output_path=output_path,
+                                           reuse = False)
+
+    cached_information = []
+    output_nwa = run_multiprocs_no_crossings(check_complex_mass_scheme_process,
+                                           multiprocess_nwa,
+                                           evaluator,
+    # This empty list 'opt' will be passed to the check_complex_mass_scheme_process
+    # function which will fill it with the specification of the particle for which
+    # the the complex mass scheme must be checked. The fact that it is a list
+    # at this stage tells the function check_complex_mass_scheme_process that
+    # we are doing nwa. It will then be converted to a dictionary when doing cms.
+                                           opt = cached_information,
+                                           options=run_options)
+    
+    # Make sure to start from fresh for LO runs
+    clean_added_globals(ADDED_GLOBAL)
+
+    # Generate a list of unique processes in the CMS scheme
+    cmd.do_set('complex_mass_scheme True', log=False)
+    multiprocess_cms = cmd.extract_process(process_line)    
+    model = multiprocess_cms.get('model')
+    if multiprocess_cms.get('perturbation_couplings')==[]:
+        evaluator = MatrixElementEvaluator(model, param_card,
+                                    cmd=cmd,auth_skipping = False, reuse = True)
+    else:
+        evaluator = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
+                                           cmd=cmd, model=model,
+                                           param_card=param_card,
+                                           auth_skipping = False, 
+                                           output_path=output_path,
+                                           reuse = False)
+
+    output_cms = run_multiprocs_no_crossings(check_complex_mass_scheme_process,
+                                   multiprocess_cms,
+                                   evaluator,
+                                   # We now substituted the cached information
+                                   opt = dict(cached_information),
+                                   options=run_options)
+
+    if multiprocess_cms.get('perturbation_couplings')!=[] and not options['reuse']:
+        # Clean temporary folders created for the running of the loop processes
+        clean_up(output_path)
+
+    # Now reformat a bit the output by putting the CMS and NWA results together
+    # as values of a dictionary with the process name as key. 
+    # Also a 'processes_order' to list all processes in their order of appearance
+    result = {'ordered_processes':[]}
+    # Recall what perturbation orders were used
+    result['perturbation_orders']=multiprocess_nwa.get('perturbation_couplings')
+    for i, proc_res in enumerate(output_nwa):
+        result['ordered_processes'].append(proc_res[0])
+        result[proc_res[0]] = {'NWA':proc_res[1], 'CMS':output_cms[i][1]}
+    
+    return result
+
+
+# Check CMS for a given process
+def check_complex_mass_scheme_process(process, evaluator, opt = [], 
+                                                                  options=None):
+    """Check CMS for the process in argument. The options 'opt' is quite important.
+    When opt is a list, it means that we are doing NWA and we are filling the
+    list with the following tuple 
+                       ('proc_name',({'ParticlePDG':ParticlePDG,
+                                      'FinalStateMothersNumbers':set([]), 
+                                      'PS_point_used':[]},...))
+    When opt is a dictionary, we are in the CMS mode and it will be reused then.
+    """
+
+    # a useful logical to check if we are in LO (python on the flight) or 
+    # NLO (output and compilation) mode
+    NLO = process.get('perturbation_couplings') != []
+    
+    def glue_momenta(production, decay):
+        """ Merge together the kinematics for the production of particle 
+        positioned last in the 'production' array with the 1>N 'decay' kinematic' 
+        provided where the decay particle is first."""
+        
+        from MadSpin.decay import momentum
+        
+        full = production[:-1]
+        
+        # Consistency check:
+        # target  =  production[decay_number-1]
+        # boosted = momentum(decay[0][0],decay[0][1],decay[0][2],decay[0][3])
+        # print 'Consistency check ',target==boosted
+        for p in decay[1:]:
+            bp = momentum(*p).boost(momentum(*production[-1]))
+            full.append([bp.E,bp.px,bp.py,bp.pz])
+        
+        return full
+    
+    def find_resonances(diagrams):
+        """ Find all the resonances in the matrix element in argument """
+        
+        model = process['model']
+        resonances_found = []
+
+        for ll, diag in enumerate(diagrams):
+            for amp in diag.get('amplitudes'):
+                # 0 specifies the PDG given to the fake s-channels from 
+                # vertices with more than four legs
+                s_channels, t_channels = amp.\
+                 get_s_and_t_channels(process.get_ninitial(), model, 0)
+                # The s-channel are given from the outmost ones going inward as
+                # vertices, so we must replace parent legs with the outermost ones
+                replacement_dict = {}
+                for s_channel in s_channels:
+                    new_resonance = {
+                        'ParticlePDG':s_channel.get('legs')[-1].get('id'),
+                        'FSMothersNumbers':[],
+                        'PS_point_used':[]}
+                    for leg in s_channel.get('legs')[:-1]:
+                        if leg.get('number')>0:
+                            new_resonance['FSMothersNumbers'].append(
+                                                            leg.get('number'))
+                        else:
+                            try:
+                                new_resonance['FSMothersNumbers'].extend(
+                                            replacement_dict[leg.get('number')])
+                            except KeyError:
+                                raise Exception, 'The following diagram '+\
+                                              'is malformed:'+diag.nice_string()
+                                               
+                    replacement_dict[s_channel.get('legs')[-1].get('number')] = \
+                                               new_resonance['FSMothersNumbers']
+                    new_resonance['FSMothersNumbers'] = set(
+                                              new_resonance['FSMothersNumbers'])
+                    if new_resonance not in resonances_found:
+                        resonances_found.append(new_resonance)
+
+        # Now we setup the phase-space point for each resonance found
+        kept_resonances = []
+        for resonance in resonances_found:
+            # Discard fake s-channels
+            if resonance['ParticlePDG'] == 0:
+                continue
+
+            mass_string = evaluator.full_model.get_particle(                                           resonance['ParticlePDG']).get('mass')
+            mass  = evaluator.full_model.get('parameter_dict')[mass_string].real
+            # Discard massless s-channels
+            if mass==0.0:
+                continue
+            
+            width_string = evaluator.full_model.get_particle(
+                                           resonance['ParticlePDG']).get('width')
+            width  = evaluator.full_model.get('parameter_dict')[width_string].real
+
+            # Discard stable s-channels
+            if width==0.0:
+                continue
+            
+            # Choose the offshellness
+            special_mass = mass + options['offshellness']*width
+            final_state_energy = sum(
+                evaluator.full_model.get('parameter_dict')[
+                evaluator.full_model.get_particle(l.get('id')).get('mass')].real
+                for l in process.get('legs') if l.get('number') in 
+                                                  resonance['FSMothersNumbers'])
+            # Discard impossible kinematics
+            if special_mass<final_state_energy:
+                logger.warning('The offshellness specified (%s) is such'\
+                  %options['offshellness']+' that the resulting kinematic is '+\
+                  'impossible for resonance with PDG %d.'%resonance['ParticlePDG'])
+                continue
+            
+            # Create a fake production and decay process
+            prod_proc = base_objects.Process({'legs':base_objects.LegList(
+                 copy.copy(leg) for leg in process.get('legs') if 
+                       leg.get('number') not in resonance['FSMothersNumbers'])})
+            # Add the resonant particle as a final state
+            # ID set to -10 since its mass will be forced
+            # Number set so as to be first in the list in get_momenta
+            prod_proc.get('legs').append(base_objects.Leg({
+                    'number':max(l.get('number') for l in process.get('legs'))+1,
+                    'state':True,
+                    'id':-10}))
+            # now the decay process
+            decay_proc = base_objects.Process({'legs':base_objects.LegList(
+               copy.copy(leg) for leg in process.get('legs') if leg.get('number') 
+               in resonance['FSMothersNumbers'] and not leg.get('state')==False)})
+            # Add the resonant particle as an initial state
+            # ID set to -10 since its mass will be forced
+            # Number set to -1 as well so as to be sure it appears first in 
+            # get_momenta
+            decay_proc.get('legs').insert(0,base_objects.Leg({
+                    'number':-1,
+                    'state':False,
+                    'id':-10}))
+            prod_kinematic = evaluator.get_momenta(prod_proc, options=options,
+                                                   special_mass=special_mass)[0]
+            decay_kinematic = evaluator.get_momenta(decay_proc, options=options, 
+                                                   special_mass=special_mass)[0]
+            resonance['PS_point_used'] = glue_momenta(prod_kinematic,
+                                                                decay_kinematic)
+            kept_resonances.append(resonance)
+#        misc.sprint(kept_resonances)
+#        misc.sprint(len(kept_resonances))
+        return tuple(kept_resonances)
+
+    @misc.mute_logger()
+    def get_width(PDG, lambdaCMS, param_card):
+        """ Returns the width to use for particle with absolute PDG 'PDG' and
+        for the the lambdaCMS value 'lambdaCMS' using the cache if possible."""
+        
+        particle = evaluator.full_model.get_particle(PDG)
+        if (PDG,lambdaCMS) in options['cached_widths']:
+            return options['cached_widths'][(PDG,lambdaCMS)]
+        
+        if options['recompute_width'] == 'never':
+            width = evaluator.full_model.\
+                               get('parameter_dict')[particle.get('width')].real
+            
+        # Use MadWith
+        if options['recompute_width'] in ['always','first_time']:
+            particle_name = particle.get('name')
+            with misc.TMP_directory(dir=options['output_path']) as path:
+                param_card.write(pjoin(path,'tmp.dat'))
+                # 2-body decay is the maximum that can matter for NLO check.
+                command = '%s --output=%s'%(particle_name,pjoin(path,'tmp.dat'))+\
+                    ' --path=%s --body_decay=2'%pjoin(path,'tmp.dat')
+                options['cmd'].do_compute_widths(command, 
+                                                     model=evaluator.full_model)
+                try:
+                    tmp_param_card = check_param_card.ParamCard(pjoin(path,'tmp.dat'))
+                except:
+                    raise MadGraph5Error, 'Error occured during width '+\
+                       'computation with command:\n   compute_widths %s'%command                   
+                width = tmp_param_card['decay'].get(PDG).value
+                misc.sprint('lambdaCMS checked is', lambdaCMS, 'for particle',particle_name)
+                misc.sprint('Width obtained :', width)
+                if lambdaCMS != 1.0:
+                    misc.sprint('Naively expected (lin. scaling) :', options['cached_widths'][(PDG,1.0)]*lambdaCMS)
+                
+        if options['recompute_width'] in ['never','first_time']:
+            # Assume linear scaling of the width
+            for lam in options['lambdaCMS']:
+                options['cached_widths'][(PDG,lam)]=width*(lam/lambdaCMS)
+        else:
+            options['cached_widths'][(PDG,lambdaCMS)] = width
+        
+        return options['cached_widths'][(PDG,lambdaCMS)]
+            
+    MLoptions = copy.copy(options['MLOptions'])
+    # Make sure double-check helicities is set to False
+    MLoptions['DoubleCheckHelicityFilter'] = False
+    
+    mode = 'CMS' if aloha.complex_mass else 'NWA'
+    for i, leg in enumerate(process.get('legs')):
+        leg.set('number', i+1)
+
+    logger.info("Running CMS check for process %s  (now doing %s scheme)" % \
+                  ( process.nice_string().replace('Process:', 'process'), mode))
+    
+    proc_dir = None
+    resonances = None
+    if NLO:
+        # We must first create the matrix element, export it and set it up.
+        # If the reuse option is specified, it will be recycled.
+        proc_name = "SAVED%s_%s__%s__"%(temp_dir_prefix,
+                          '_'.join(process.shell_string().split('_')[1:]), mode)
+        # Generate the ME
+        timing, matrix_element = generate_loop_matrix_element(process, 
+                         options['reuse'], output_path=options['output_path'], 
+                                      cmd = options['cmd'], proc_name=proc_name)
+        reusing = isinstance(matrix_element, base_objects.Process)
+        proc_dir = pjoin(options['output_path'],proc_name)
+        # Export the ME
+        infos = evaluator.setup_process(matrix_element, proc_dir, 
+                        reusing = reusing, param_card = options['param_card'], 
+                                                            MLOptions=MLoptions)
+        # Now make sure it is setup to probe a specified PS point
+        MadLoopInitializer.fix_PSPoint_in_check(pjoin(proc_dir,'SubProcesses'),
+                                                    read_ps = True, npoints = 1)
+        # And recompile while making sure to recreate the executable and 
+        # modified sources
+        for dir in glob.glob(pjoin(proc_dir,'SubProcesses','P*_*')):
+            if not (re.search(r'.*P\d+_\w*$', dir) or not os.path.isdir(dir)):
+                continue
+            try:
+                os.remove(pjoin(dir,'check'))
+                os.remove(pjoin(dir,'check_sa.o'))
+            except OSError:
+                pass
+            # Now run make
+            with open(os.devnull, 'w') as devnull:
+                retcode = subprocess.call(['make','check'],
+                                   cwd=dir, stdout=devnull, stderr=devnull)                     
+            if retcode != 0:
+                raise MadGraph5Error, "Compilation error with "+\
+                                                        "'make check' in %s"%dir
+
+        # Now find all the resonances of the ME, if not saved from a previous run
+        pkl_path = pjoin(proc_dir,'resonance_specs.pkl')
+        if reusing:
+            # Second run (CMS), we can reuse the information if it is a dictionary
+            if isinstance(opt, list):
+                if not os.path.isfile(pkl_path):
+                    raise InvalidCmd('The folder %s could'%proc_dir+\
+                     " not be reused because the resonance specification file "+
+                                                "'resonance_specs.pkl' is missing.")
+                else:
+                    proc_name, resonances = pickle.load(open(pkl_path,"rb"))
+                    opt.append((proc_name, resonances))
+            else:
+                resonances = opt
+        else:
+            helas_born_diagrams = matrix_element.get_born_diagrams()
+            if len(helas_born_diagrams)==0:
+                logger.warning('The CMS check for loop-induced process is '+\
+                                  'not yet available (nor is it very interesting).')
+                return None
+            # Second run (CMS), we can reuse the information if it is a dictionary
+            if isinstance(opt, list):
+                opt.append((process.base_string(),find_resonances(helas_born_diagrams)))
+                resonances = opt[-1][1]
+            else:
+                resonances = opt
+            # Save the resonances to a pickle file in the output directory so that
+            # it can potentially be reused.
+            pickle.dump((process.base_string(),resonances),open(pkl_path,"wb"))
+    else:
+        # The LO equivalent
+        try:
+            amplitude = diagram_generation.Amplitude(process)
+        except InvalidCmd:
+            logging.info("No diagrams for %s" % \
+                            process.nice_string().replace('Process', 'process'))
+            return None
+        if not amplitude.get('diagrams'):
+            # This process has no diagrams; go to next process
+            logging.info("No diagrams for %s" % \
+                             process.nice_string().replace('Process', 'process'))
+            return None
+
+        matrix_element = helas_objects.HelasMatrixElement(amplitude,
+                                                                 gen_color=True)
+        # Find all the resonances of the ME, if not already given in opt
+        if isinstance(opt, list):
+            opt.append((process.base_string(),find_resonances(
+                                               matrix_element.get('diagrams'))))
+            resonances = opt[-1][1]
+        else:
+            resonances= opt
+    
+    if len(resonances)==0:
+        return None
+    
+    # Cache the default param_card for NLO
+    if not options['cached_param_card'][mode][0]:
+        if NLO:
+            param_card = check_param_card.ParamCard(
+                                       pjoin(proc_dir,'Cards','param_card.dat'))
+        else:
+            param_card = check_param_card.ParamCard(
+                     StringIO.StringIO(evaluator.full_model.write_param_card()))
+        options['cached_param_card'][mode][0] = param_card
+        name2block, _ = AskforEditCard.analyze_param_card(param_card)
+        options['cached_param_card'][mode][1] = name2block
+        
+    else:
+        param_card = options['cached_param_card'][mode][0]
+        name2block = options['cached_param_card'][mode][1]
+    result = []
+    if NLO:
+        param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/original_NLO_%s.dat'%mode)
+    else:
+        param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/original_LO_%s.dat'%mode)
+    
+    for res in resonances:
+        # First add a dictionary for this resonance to the result with already
+        # one key specifying the resonance
+        result.append({'resonance':res,'born':[]})
+        if NLO:
+            result[-1]['finite'] = []
+        # Now scan the different lambdaCMS values
+        for lambdaCMS in options['lambdaCMS']:
+            # Setup the model for that value of lambdaCMS
+            # The copy constructor below creates a deep copy
+            new_param_card = check_param_card.ParamCard(param_card)
+            # Change all specified parameters
+            for param, replacement in options['expansion_parameters'].items():
+                if param not in name2block:
+                    # It can be that some parameter ar in the NWA model but not
+                    # in the CMS, such as the Yukawas for example.
+                    # logger.warning("Unknown parameter '%s' in mode '%s'."%(param,mode))
+                    continue
+                for block, lhaid in name2block[param]:
+                    orig_value = float(param_card[block].get(lhaid).value)
+                    new_value  = eval(replacement,
+                                       {param:orig_value,'lambdacms':lambdaCMS})
+                    new_param_card[block].get(lhaid).value=new_value
+
+            # Apply these changes already (for the purpose of Width computation.
+            # although it is optional since we now provide the new_param_card to
+            # the width computation function.)
+            evaluator.full_model.set_parameters_and_couplings(
+                                                      param_card=new_param_card)
+            # Now compute or recyle the corresponding width
+            new_width = get_width(abs(res['ParticlePDG']), lambdaCMS, new_param_card)
+            new_param_card['decay'].get([abs(res['ParticlePDG'])]).value=new_width
+
+            # To debug one can printout here intermediate param cards
+#            new_param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/BOUH_%d.dat'%int(1.0/lambdaCMS))
+            # Apply these changes for the purpose of the final computation
+            if NLO:
+                new_param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
+                if lambdaCMS==1.0:
+                    new_param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/NLO_%s_%d.dat'%(mode,int(1.0/lambdaCMS)))
+            else:
+                evaluator.full_model.set_parameters_and_couplings(
+                                                      param_card=new_param_card)
+                if lambdaCMS==1.0:
+                    new_param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/LO_%s_%d.dat'%(mode,int(1.0/lambdaCMS)))
+
+            # Finally ready to compute the matrix element
+            if NLO:
+                ME_res = LoopMatrixElementEvaluator.get_me_value(process, 0, 
+                       proc_dir, PSpoint=res['PS_point_used'], verbose=False, 
+                                           format='dict', skip_compilation=True)
+                # Notice that there is much more information in ME_res. It can
+                # be forwarded to check_complex_mass_scheme in this result
+                # dictionary if necessary for the analysis. (or even the full 
+                # dictionary ME_res can be added).
+                result[-1]['born'].append(ME_res['born'])
+                result[-1]['finite'].append(
+                      ME_res['finite']*ME_res['born']*ME_res['alphaS_over_2pi'])                
+            else:
+                ME_res = evaluator.evaluate_matrix_element(matrix_element,
+                    p=res['PS_point_used'], auth_skipping=False, output='m2')[0]
+                result[-1]['born'].append(ME_res)
+
+    # Restore the original model parameters
+    evaluator.full_model.set_parameters_and_couplings(param_card=param_card)
+    if NLO:
+        param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
+    
+    return (process.nice_string().replace('Process:', '').strip(),result)
 
 def get_value(process, evaluator, p=None, options=None):
     """Return the value/momentum for a phase space point"""
@@ -3678,5 +4186,19 @@ def output_unitary_feynman(comparison_results, output='text'):
         return fail_proc
 
 
+def output_complex_mass_scheme(result):
+    """ Outputs nicely the outcome of the complex mass scheme check performed
+    by varying the width in the offshell region of resonances found for eahc process"""
+    
+    res_str = \
+"""  
+    -----------------------------------------------------------------
+    ||> Results produced (see above) but analysis yet to be coded <||
+    -----------------------------------------------------------------
+"""
 
+    # Well for now, that only.
+    misc.sprint(result)
+    
+    return res_str
 
