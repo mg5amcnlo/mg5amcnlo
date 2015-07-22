@@ -4204,7 +4204,6 @@ def output_complex_mass_scheme(result,output_path,options={}):
     
     lambdaCMS_list=options['lambdaCMS']
     process_data_plot_dict={}
-    misc.sprint(options)
     for iproc,process in enumerate(processes):
         data1={} # for subplot 1,i.e. CMS and NWA
         data2={} # for subplot 2,i.e. diff
@@ -4273,24 +4272,37 @@ def output_complex_mass_scheme(result,output_path,options={}):
             data_plot1_dict,data_plot2_dict=process_data_plot_dict[process]
             plt.figure(iproc+1)
             plt.subplot(211)
+            minvalue=1e+99
+            maxvalue=-1e+99
             for i,key in enumerate(data_plot1_dict.keys()):
                 color=colorlist[i]
                 data_plot=data_plot1_dict[key]
+                if minvalue > min(data_plot):
+                    minvalue=min(data_plot)
+                if maxvalue < max(data_plot):
+                    maxvalue=max(data_plot)
                 plt.plot(lambdaCMS_list, data_plot, color=color, marker='', linestyle='-',\
                          label=key)
-#                plt.axis([min_acc,max_acc,\
-#                                10**(-int(math.log(nPSmax-0.5)/math.log(10))-1), 1])
+
             plt.yscale('linear')
             plt.xscale('log')
             plt.title('Complex Mass Scheme check plot for %s '%process)
             plt.ylabel('Value')
             #plt.xlabel('lambdaCMS')
             plt.legend()
+            plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
+                            minvalue-(maxvalue-maxvalue)/5., maxvalue+(maxvalue-maxvalue)/5.])
             
             plt.subplot(212)
+            minvalue=1e+99
+            maxvalue=-1e+99
             for i,key in enumerate(data_plot2_dict.keys()):
                 color=colorlist[i]
                 data_plot=data_plot2_dict[key]
+                if minvalue > min(data_plot):
+                    minvalue=min(data_plot)
+                if maxvalue < max(data_plot):
+                    maxvalue=max(data_plot)
                 plt.plot(lambdaCMS_list, data_plot, color=color, marker='', linestyle='-',\
                          label=key)
             plt.yscale('linear')
@@ -4298,6 +4310,8 @@ def output_complex_mass_scheme(result,output_path,options={}):
             plt.ylabel('Difference')
             plt.xlabel('lambdaCMS')
             plt.legend()
+            plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
+                        minvalue-(maxvalue-maxvalue)/5., maxvalue+(maxvalue-maxvalue)/5.])
             
             plt.savefig(pp,format='pdf')
 
