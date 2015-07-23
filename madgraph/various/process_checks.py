@@ -4299,6 +4299,9 @@ def output_complex_mass_scheme(result,output_path, options, model):
     fig_output_file = str(pjoin(output_path, 
                      'cms_check_plot_%s.pdf'%('_'.join(pert_orders) if \
                                                 pert_orders else 'born')))
+    if os.path.isfile(fig_output_file):
+        os.remove(fig_output_file)
+
     
     lambdaCMS_list=options['lambdaCMS']
     process_data_plot_dict={}
@@ -4436,7 +4439,9 @@ def output_complex_mass_scheme(result,output_path, options, model):
             misc.call(["xdg-open", fig_output_file])
         elif sys.platform.startswith('darwin'):
             misc.call(["open", fig_output_file])
-            
+        
+        plt.close("all")
+    
     except Exception as e:
         if isinstance(e, ImportError):
             res_str += "\n= Install matplotlib to get a "+\
@@ -4445,6 +4450,6 @@ def output_complex_mass_scheme(result,output_path, options, model):
             res_str += "\n= Could not produce the cms check plot because of "+\
                                                 "the following error: %s"%str(e)
     
-    
+        
     return res_str
 
