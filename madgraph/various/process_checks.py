@@ -3395,8 +3395,32 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     
     # Generate a list of unique processes in the NWA scheme
     cmd.do_set('complex_mass_scheme False', log=False)
-    multiprocess_nwa = cmd.extract_process(process_line)    
+    multiprocess_nwa = cmd.extract_process(process_line)
     model = multiprocess_nwa.get('model')
+
+    veto_orders = [order for order in model.get('coupling_orders') if \
+                                       order not in options['expansion_orders']]
+    if len(veto_orders)>0:
+        logger.warning('You did not define any parameter scaling rule for the'+\
+          " coupling orders %s. They will be "%','.join(veto_orders))+\
+          "forced to zero in the tests. Consider adding the scaling rule to"+\
+          "avoid this. (see option '--cms' in 'help check')"
+        for order in veto_orders:
+            multiprocess_nwa.get('orders')[order]==0
+        multiprocess_nwa.set('perturbation_couplings', [order for order in
+        multiprocess_nwa['perturbation_couplings'] if order not in veto_orders])
+
+    # Make sure all masses are defined as external
+    for particle in model.get('particles'):
+        mass_param = model.get_parameter(particle.get('mass'))
+        if abs(mass_param.value)!=0.0 and 'external' not in mass_param.depend:
+            logger.warning("The mass '%s' of particle '%s' is not an external"%\
+              (model.get_parameter(particle.get('mass')).name,particle.get('name'))+\
+              " parameter as required by this check. \nMG5_aMC will try to"+\
+              " modify the model to remedy the situation. No guarantee.")
+            model.change_electroweak_mode('external')
+            break
+
     if multiprocess_nwa.get('perturbation_couplings')==[]:
         evaluator = MatrixElementEvaluator(model, param_card,
                                    cmd=cmd,auth_skipping = False, reuse = True)
@@ -3427,6 +3451,13 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     cmd.do_set('complex_mass_scheme True', log=False)
     multiprocess_cms = cmd.extract_process(process_line)    
     model = multiprocess_cms.get('model')
+    # Apply veto
+    if len(veto_orders)>0:
+        for order in veto_orders:
+            multiprocess_cms.get('orders')[order]==0
+        multiprocess_cms.set('perturbation_couplings', [order for order in
+        multiprocess_cms['perturbation_couplings'] if order not in veto_orders])
+        
     if multiprocess_cms.get('perturbation_couplings')==[]:
         evaluator = MatrixElementEvaluator(model, param_card,
                                     cmd=cmd,auth_skipping = False, reuse = True)
@@ -3457,7 +3488,11 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     result['perturbation_orders']=multiprocess_nwa.get('perturbation_couplings')
     for i, proc_res in enumerate(output_nwa):
         result['ordered_processes'].append(proc_res[0])
-        result[proc_res[0]] = {'NWA':proc_res[1], 'CMS':output_cms[i][1]}
+        result[proc_res[0]] = {
+                'NWA':proc_res[1]['resonances_result'],
+                'CMS':output_cms[i][1]['resonances_result'],
+                'born_order':proc_res[1]['born_order'],
+                'loop_order':proc_res[1]['loop_order']}
     
     return result
 
@@ -3610,6 +3645,11 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         """ Returns the width to use for particle with absolute PDG 'PDG' and
         for the the lambdaCMS value 'lambdaCMS' using the cache if possible."""
         
+        # If an unstable particle is in the external state, then set its width
+        # to zero and don't cache the result of course.
+        if abs(PDG) in [abs(leg.get('id')) for leg in process.get('legs')]:
+            return 0.0
+        
         particle = evaluator.full_model.get_particle(PDG)
         if (PDG,lambdaCMS) in options['cached_widths']:
             return options['cached_widths'][(PDG,lambdaCMS)]
@@ -3648,6 +3688,22 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         
         return options['cached_widths'][(PDG,lambdaCMS)]
             
+    def get_order(diagrams, diagsName):
+        """Compute the common summed of coupling orders used for this cms check
+         in the diagrams specified. When inconsistency occurs, use orderName
+         in the warning message if throwm."""
+         
+        orders = set([])
+        for diag in diagrams:
+            diag_orders = diag.calculate_orders()
+            orders.add(sum((diag_orders[order] if order in diag_orders else 0)
+                                      for order in options['expansion_orders']))
+            if len(orders)>1:
+                logger.warning(msg%('%s '%diagsName,str(orders)))
+                return min(list(orders))
+            else:
+                return list(orders)[0]
+         
     MLoptions = copy.copy(options['MLOptions'])
     # Make sure double-check helicities is set to False
     MLoptions['DoubleCheckHelicityFilter'] = False
@@ -3661,12 +3717,15 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     
     proc_dir = None
     resonances = None
+    warning_msg = "All %sdiagrams do not share the same sum of orders "+\
+            "%s; found %%s."%(','.join(options['expansion_orders']))+\
+            " This potentially problematic for the CMS check."
     if NLO:
         # We must first create the matrix element, export it and set it up.
         # If the reuse option is specified, it will be recycled.
-        proc_name = "%s%s_%s__%s__"%(('SAVED' if options['reuse'] else '')
-                          ,temp_dir_prefix,
-                          '_'.join(process.shell_string().split('_')[1:]), mode)
+        proc_name = "%s%s_%s__%s__"%(('SAVED' if options['reuse'] else ''),
+         temp_dir_prefix, '_'.join(process.shell_string().split('_')[1:]), mode)
+            
         # Generate the ME
         timing, matrix_element = generate_loop_matrix_element(process, 
                          options['reuse'], output_path=options['output_path'], 
@@ -3708,7 +3767,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                      " not be reused because the resonance specification file "+
                                                 "'resonance_specs.pkl' is missing.")
                 else:
-                    proc_name, resonances = pickle.load(open(pkl_path,"rb"))
+                    proc_name, born_order, loop_order, resonances = pickle.load(
+                                                            open(pkl_path,"rb"))
                     opt.append((proc_name, resonances))
             else:
                 resonances = opt
@@ -3718,6 +3778,9 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 logger.warning('The CMS check for loop-induced process is '+\
                                   'not yet available (nor is it very interesting).')
                 return None
+            born_order = get_order(helas_born_diagrams,'Born')
+            loop_order = get_order(matrix_element.get_loop_diagrams(),'loop')
+
             # Second run (CMS), we can reuse the information if it is a dictionary
             if isinstance(opt, list):
                 opt.append((process.base_string(),find_resonances(helas_born_diagrams)))
@@ -3726,7 +3789,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 resonances = opt
             # Save the resonances to a pickle file in the output directory so that
             # it can potentially be reused.
-            pickle.dump((process.base_string(),resonances),open(pkl_path,"wb"))
+            pickle.dump((process.base_string(), born_order, loop_order, 
+                                                resonances),open(pkl_path,"wb"))
     else:
         # The LO equivalent
         try:
@@ -3743,10 +3807,13 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                                  gen_color=True)
+        diagrams = matrix_element.get('diagrams')
+        born_order = get_order(diagrams,'Born')
+        # Loop order set to -1 indicates an LO result
+        loop_order = -1
         # Find all the resonances of the ME, if not already given in opt
         if isinstance(opt, list):
-            opt.append((process.base_string(),find_resonances(
-                                               matrix_element.get('diagrams'))))
+            opt.append((process.base_string(),find_resonances(diagrams)))
             resonances = opt[-1][1]
         else:
             resonances= opt
@@ -3769,14 +3836,21 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     else:
         param_card = options['cached_param_card'][mode][0]
         name2block = options['cached_param_card'][mode][1]
-    result = []
-    
+
+    # Already add the coupling order for this sqaured ME.
+    if loop_order != -1 and (loop_order+born_order)%2 != 0:
+        raise MadGraph5Error, 'The summed squared matrix element '+\
+                              " order '%d' is not even."%(loop_order+born_order)
+    result = {'born_order':born_order, 
+              'loop_order': (-1 if loop_order==-1 else (loop_order+born_order)/2),
+              'resonances_result':[]}
+
     for res in resonances:
         # First add a dictionary for this resonance to the result with already
         # one key specifying the resonance
-        result.append({'resonance':res,'born':[]})
+        result['resonances_result'].append({'resonance':res,'born':[]})
         if NLO:
-            result[-1]['finite'] = []
+            result['resonances_result'][-1]['finite'] = []
         # Now scan the different lambdaCMS values
         for lambdaCMS in options['lambdaCMS']:
             # Setup the model for that value of lambdaCMS
@@ -3784,12 +3858,15 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             new_param_card = check_param_card.ParamCard(param_card)
             # Change all specified parameters
             for param, replacement in options['expansion_parameters'].items():
-                if param not in name2block:
+                # Replace the temporary prefix used for evaluation of the 
+                # substitution expression 
+                orig_param = param.replace('__tmpprefix__','')
+                if orig_param not in name2block:
                     # It can be that some parameter ar in the NWA model but not
                     # in the CMS, such as the Yukawas for example.
                     # logger.warning("Unknown parameter '%s' in mode '%s'."%(param,mode))
                     continue
-                for block, lhaid in name2block[param]:
+                for block, lhaid in name2block[orig_param]:
                     orig_value = float(param_card[block].get(lhaid).value)
                     new_value  = eval(replacement,
                                        {param:orig_value,'lambdacms':lambdaCMS})
@@ -3797,21 +3874,37 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
             # Apply these changes already (for the purpose of Width computation.
             # although it is optional since we now provide the new_param_card to
-            # the width computation function.)
+            # the width computation function.). Also in principle this matters
+            # only in the CMS and there the widths would be reused from their 
+            # prior computation within NWA with zero widths. So, all in all,
+            # the line below is really not crucial.
             evaluator.full_model.set_parameters_and_couplings(
                                                       param_card=new_param_card)
-            # Now compute or recyle the corresponding width
-            new_width = get_width(abs(res['ParticlePDG']), lambdaCMS, new_param_card)
-            new_param_card['decay'].get([abs(res['ParticlePDG'])]).value=new_width
+            # Now compute or recyle all widths
+            for decay in new_param_card['decay']:
+                if mode=='CMS':
+                    new_width = get_width(abs(res['ParticlePDG']), lambdaCMS, 
+                                                                 new_param_card)
+                else:
+                    new_width = 0.0
+                new_param_card['decay'].get([abs(res['ParticlePDG'])]).value=\
+                                                                       new_width
 
             # To debug one can printout here intermediate param cards
-#            new_param_card.write('/Users/valentin/Documents/Work/MG5/2.3.1_CMS/BOUH_%d.dat'%int(1.0/lambdaCMS))
+#            new_param_card.write(pjoin('.','BOUH_%d.dat'%int(1.0/lambdaCMS))
             # Apply these changes for the purpose of the final computation
+            evaluator.full_model.set_parameters_and_couplings(
+                                                      param_card=new_param_card)
             if NLO:
                 new_param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
-            else:
-                evaluator.full_model.set_parameters_and_couplings(
-                                                      param_card=new_param_card)
+
+            # If recomputing widths with MadSpin, we want to do it within
+            # the NWA models with zero widths.
+            if options['recompute_width']=='always' or (
+                   options['recompute_width']=='first_time' and lambdaCMS==1.0):
+                # We don't use the result here, it is just so that it is put
+                # in the cache and reused in the CMS run that follows.
+                _ = get_width(abs(res['ParticlePDG']),lambdaCMS,new_param_card)
 
             # Finally ready to compute the matrix element
             if NLO:
@@ -3822,13 +3915,13 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # be forwarded to check_complex_mass_scheme in this result
                 # dictionary if necessary for the analysis. (or even the full 
                 # dictionary ME_res can be added).
-                result[-1]['born'].append(ME_res['born'])
-                result[-1]['finite'].append(
-                      ME_res['finite']*ME_res['born']*ME_res['alphaS_over_2pi'])                
+                result['resonances_result'][-1]['born'].append(ME_res['born'])
+                result['resonances_result'][-1]['finite'].append(
+                      ME_res['finite']*ME_res['born']*ME_res['alphaS_over_2pi'])
             else:
                 ME_res = evaluator.evaluate_matrix_element(matrix_element,
                     p=res['PS_point_used'], auth_skipping=False, output='m2')[0]
-                result[-1]['born'].append(ME_res)
+                result['resonances_result'][-1]['born'].append(ME_res)
 
     # Restore the original model parameters
     evaluator.full_model.set_parameters_and_couplings(param_card=param_card)
@@ -4179,18 +4272,23 @@ def output_unitary_feynman(comparison_results, output='text'):
         return fail_proc
 
 
-def output_complex_mass_scheme(result,output_path,options={}):
+def output_complex_mass_scheme(result,output_path, options, model):
     """ Outputs nicely the outcome of the complex mass scheme check performed
     by varying the width in the offshell region of resonances found for eahc process"""
-    
+
     res_str = \
-"""  
+"""
     -----------------------------------------------------------------
     ||> Results produced (see above) but analysis yet to be coded <||
     -----------------------------------------------------------------
 """
+    
+    def resonance_str(resonance):
+        """ Provides a concise string to characterize the resonance """
+        particle_name = model.get_particle(abs(resonance['ParticlePDG'])).get('name')
+        mothersID = ['%d'%id for id in sorted(resonance['FSMothersNumbers'])]
+        return "%s(%s)"%(particle_name,','.join(mothersID))
 
-    # Well for now, that only.
     misc.sprint(result)
     
     processes=result['ordered_processes']
@@ -4210,20 +4308,33 @@ def output_complex_mass_scheme(result,output_path,options={}):
         proc_res = result[process]
         cms_res = proc_res['CMS'][0]
         nwa_res = proc_res['NWA'][0]
-        res_str += "\n= Complex Mass Scheme checking for %s \n"%process
+        resonance = resonance_str(cms_res['resonance'])
+        res_str += "\n= Complex mass scheme check for process %s \n"%process
         # Born result
         cms_born=cms_res['born']
         nwa_born=nwa_res['born']
         if len(cms_born) != len(lambdaCMS_list) or\
              len(nwa_born) != len(lambdaCMS_list):
-            res_str += "\n= The Born result CANNOT match the list of lambdaCMS for %s"%process
+            raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
+                            ' lambdaCMS values specified for process %s'%process
             return res_str
         if not pert_orders:
             # Born result
             # guess the lambdaCMS power in the amplitude squared
-            # However, it would be wrong with the mixed-orders
-            bpower=round(math.log(nwa_born[0]/nwa_born[1],\
-                                    lambdaCMS_list[0]/lambdaCMS_list[1]))
+            bpowers = []
+            for i, lambdaCMS in enumerate(lambdaCMS_list):
+                bpowers.append(round(math.log(nwa_born[0]/nwa_born[1],\
+                                          lambdaCMS_list[0]/lambdaCMS_list[1])))
+
+            # Pick the most representative power
+            bpower = sorted([(el, bpowers.count(el)) for el in set(bpowers)],
+                                                         lambda el: el[1])[0][0]
+            if bpower != proc_res['born_order']:
+                logger.warning('The apparent scaling of the squared amplitude'+
+                 'seems inconsistent w.r.t to detected value '+
+                 '(%i vs %i). %i will be used.'%(proc_res['born_order'],bpower,bpower)+
+                 ' This happend for process %s and resonance %s'%\
+                                                           (process, resonance))
             CMSData = []
             NWAData = []
             DiffData = []

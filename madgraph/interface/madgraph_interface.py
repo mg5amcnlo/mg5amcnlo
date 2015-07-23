@@ -480,20 +480,29 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   region of detected resonances and by progressively")
         logger.info("   decreasing the width. Additional options for this check are:")
         logger.info("    --offshellness=f : f is a positive or negative float specifying ")
-        logger.info("      the distance from the pole as -x*particle_width. Default is 100.0")
+        logger.info("      the distance from the pole as f*particle_width. Default is 100.0")
         logger.info("    --seed=i : to force a specific RNG integer seed i (default is random)")
-        logger.info("    --cms=order,p1->f(p,lambdaCMS);p2->f2(p,lambdaCMS);...")
-        logger.info("      'order' specifies the expansion order considered for the test.")
+        logger.info("    --cms=order1;order2;...,p1->f(p,lambdaCMS);p2->f2(p,lambdaCMS);...")
+        logger.info("      'order_i' specifies the expansion orders considered for the test.")
         logger.info("      The substitution lists specifies how internal parameter must be modified")
         logger.info("      with the width scaling 'lambdaCMS'. The default value for this option is:")
-        logger.info("       --cms=QED,aEWM1->aEWM1/lambdaCMS;ymt->ymt*lambdaCMS;ymb->ymb*lambdaCMS")
+        logger.info("        --cms=QED;QCD,aewm1->aewm1/lambdaCMS,as->as*lambdaCMS ")
+        logger.info("      The number of order and parameters don't have to be the same.")
+        logger.info("      The scaling must be specified so that one occurrence of the coupling order.")
+        logger.info("      brings in exactly one power of lambdaCMS.")
         logger.info("    --recompute_width= never|first_time|always")
-        logger.info("      Decides when to use MadSpin to automatically recompute the width")
+        logger.info("      Decides when to use MadWidth to automatically recompute the width")
         logger.info("      Default value is 'never'.")
         logger.info("      'never' uses the default width value for lambdaCMS=1.0.")
-        logger.info("      'first_time' uses MadSpin to compute the width for lambdaCMS=1.0.")
+        logger.info("      'first_time' uses MadWidth to compute the width for lambdaCMS=1.0.")
         logger.info("      'first_time' and 'never' assume linear scaling of the widths with lambdaCMS")
-        logger.info("      'always' uses MadSpin to compute the widths for all values of lambdaCMS")
+        logger.info("      'always' uses MadWidth to compute the widths for all values of lambdaCMS")
+        logger.info("               the test relies on linear scaling of the width, so 'always' is ")
+        logger.info("               only for double-checks")
+        logger.info("    --lambdaCMS = <python_list> : specifies the list of lambdaCMS values to ")
+        logger.info("      use for the test. Default is '[(1/2.0)**exp\ for\ exp\ in\ range(0,20)]'")
+        logger.info("      in the list expression, you must escape spaces. Also, this option")
+        logger.info("      *must* appear last in the list.")
         logger.info("Comments",'$MG:color:GREEN')
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
@@ -875,7 +884,6 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         if args[0] in ['timing'] and os.path.isfile(args[2]):
             param_card = args.pop(2)
-            misc.sprint(param_card)
         if args[0] in ['stability', 'profile'] and len(args)>1:
             # If the first argument after 'stability' is not the integer
             # specifying the desired statistics (i.e. number of points), then
@@ -887,8 +895,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         if args[0] in ['stability', 'profile'] and os.path.isfile(args[3]):
             param_card = args.pop(3)
-
-        if any([',' in elem for elem in args]):
+        if any([',' in elem for elem in args if not elem.startswith('--')]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
@@ -899,10 +906,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             # the cms expansion is carried, and the expression following the 
             # comma gives the relation of an external parameter with the
             # CMS expansions parameter called 'lambdaCMS'.
-            parameters = ['aEWM1->aEWM1/lambdaCMS',
-                          'ymt->ymt*lambdaCMS',
-                          'ymb->ymb*lambdaCMS']
-            user_options['--cms']='QED,'+';'.join(parameters)
+            parameters = ['aewm1->aewm1/lambdaCMS','as->as*lambdaCMS']
+            user_options['--cms']='QED;QCD,'+';'.join(parameters)
             # Widths are assumed to scale linearly with lambdaCMS unless
             # --force_recompute_width='always' or 'first_time' is used.
             user_options['--recompute_width']='never'
@@ -3275,8 +3280,10 @@ This implies that with decay chains:
         """Check a given process or set of processes"""
 
         args = self.split_arg(line)
+
         # Check args validity
         param_card = self.check_check(args)
+
         options= {'events':None} # If the momentum needs to be picked from a event file
         if param_card and 'banner' == madevent_interface.MadEventCmd.detect_card_type(param_card):
             logger.info("Will use the param_card contained in the banner and  the events associated")
@@ -3332,15 +3339,13 @@ This implies that with decay chains:
                 CMS_options['lambdaCMS'] = lambda_values
             elif option[0]=='--cms':
                 try:
-                    CMS_expansion_order, CMS_expansion_parameters = \
+                    CMS_expansion_orders, CMS_expansion_parameters = \
                                                             option[1].split(',')
                 except ValueError:
                     raise self.InvalidCmd("CMS expansion specification '%s'"%\
                                                        args[i]+" is incorrect.")
-                if CMS_expansion_order:
-                    CMS_options['expansion_order'] = [CMS_expansion_order]
-                else:
-                    CMS_options['expansion_order'] = []                    
+                CMS_options['expansion_orders'] = [expansion_order for 
+                             expansion_order in CMS_expansion_orders.split(';')]
                 CMS_options['expansion_parameters'] = {}
                 for expansion_parameter in CMS_expansion_parameters.split(';'):
                     try:
@@ -3350,12 +3355,19 @@ This implies that with decay chains:
                           expansion_parameter+" is incorrect. It should be of"+\
                                  " the form a->_any_function_of_(a,lambdaCMS).")
                     try:
+                        # for safety prefix parameters, because 'as' for alphas
+                        # is a python reserved name for example
+                        orig_param, orig_replacement = param, replacement
+                        replacement = replacement.replace(param,
+                                                        '__tmpprefix__%s'%param)
+                        param = '__tmpprefix__%s'%param
                         res = (98.85 == float(eval(replacement.lower(),
                                         {'lambdacms':1.0,param.lower():98.85})))
-                    except:
-                      raise self.InvalidCmd("CMS expansion parameter expression "+
-                      "'%s' could not be interpreted."%replacement+" It must be"+
-                      " an expression of the parameter 'lambdaCMS'.")
+                    except:                    
+                        raise self.InvalidCmd("The substitution expression "+
+                        "'%s' for CMS expansion parameter"%orig_replacement+
+                        " '%s' could not be evaluated. It must be an "%orig_param+
+                        "expression of the parameter and 'lambdaCMS'.")
                     if res:
                         # Put everything lower case as it will be done when
                         # accessing model variables
@@ -3364,7 +3376,8 @@ This implies that with decay chains:
                     else:
                       raise self.InvalidCmd("CMS expansion parameter must be"+
                         " a function such that funct(param,lambdaCMS=1.0)=param")
-                      
+            else:
+                raise self.InvalidCmd("The option '%s' is not reckognized."%option[0])
 
             i=i-1
         args = args[:i+1]
@@ -3639,7 +3652,8 @@ This implies that with decay chains:
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_result:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
-            text += process_checks.output_complex_mass_scheme(cms_result,output_path,CMS_options) + '\n'             
+            text += process_checks.output_complex_mass_scheme(
+                      cms_result, output_path, options, self._curr_model) + '\n'             
         if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'
             text += process_checks.output_comparisons(comparisons[0]) + '\n'

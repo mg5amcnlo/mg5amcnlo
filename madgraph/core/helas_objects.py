@@ -3164,7 +3164,7 @@ class HelasDiagram(base_objects.PhysicsObject):
         """Calculate the actual coupling orders of this diagram"""
 
         wavefunctions = HelasWavefunctionList.extract_wavefunctions(\
-            self.get('amplitudes')[0].get('mothers'))
+                                       self.get('amplitudes')[0].get('mothers'))
 
         coupling_orders = {}
         for wf in wavefunctions + [self.get('amplitudes')[0]]:

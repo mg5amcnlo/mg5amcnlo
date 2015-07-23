@@ -1667,7 +1667,9 @@ class Model(PhysicsObject):
                         # Use the new mass for the future modification
                         mass = MW
                     elif isinstance(mass, ModelVariable):
-                        logger.warning('W mass is not an external parameter. This is not adviced for the complex mass scheme.')
+                        logger.warning('The W mass is not an external parameter '+
+                          'in this model. This is not advised for applying the'+
+                                                        ' complex mass scheme.')
                 
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
