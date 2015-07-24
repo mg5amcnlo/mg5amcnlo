@@ -4362,7 +4362,12 @@ def output_complex_mass_scheme(result,output_path, options, model):
 
     def save_path(basename, extension):
         """Creates a suitable filename for saving these results."""
-        # Use process name if there is only one process
+        
+        if options['analyze']!='None':
+            # Reuse the same name then
+            return '%s.%s'%(os.path.splitext(options['analyze'])[0],extension)
+    
+        # Use process name if there is only one process            
         if len(result['ordered_processes'])==1:
             proc = result['ordered_processes'][0]
             replacements = {' ':'','+':'p','-':'m','~':'x', '>':'_','=':'eq'}
