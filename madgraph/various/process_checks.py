@@ -3483,7 +3483,6 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # we are doing nwa. It will then be converted to a dictionary when doing cms.
                                            opt = cached_information,
                                            options=run_options)
-    misc.sprint(cmd._curr_model['order_hierarchy'].keys())
     
     model = multiprocess_nwa.get('model')
 
@@ -3836,8 +3835,9 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                  " not be reused because the resonance specification file "+
                                             "'resonance_specs.pkl' is missing.")
             else:
-                proc_name, born_order, loop_order, resonances = pickle.load(
-                                                        open(pkl_path,"rb"))
+                proc_name, born_order, loop_order, resonances = \
+                                       save_load_object.load_from_file(pkl_path)
+
             # Second run (CMS), we can reuse the information if it is a dictionary
             if isinstance(opt, list):
                 opt.append((proc_name, resonances))
@@ -3860,8 +3860,9 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 resonances = opt
             # Save the resonances to a pickle file in the output directory so that
             # it can potentially be reused.
-            pickle.dump((process.base_string(), born_order, loop_order, 
-                                                resonances),open(pkl_path,"wb"))
+            save_load_object.save_to_file(pkl_path, (process.base_string(),
+                                             born_order, loop_order,resonances))
+
     else:
         # The LO equivalent
         try:
@@ -4348,7 +4349,8 @@ def output_complex_mass_scheme(result,output_path, options, model):
     """ Outputs nicely the outcome of the complex mass scheme check performed
     by varying the width in the offshell region of resonances found for eahc process"""
 
-    misc.sprint(result)
+#   One can print out the raw results by uncommenting the line below
+#    misc.sprint(result)
 
     res_str = \
 """
@@ -4356,6 +4358,14 @@ def output_complex_mass_scheme(result,output_path, options, model):
     ||> Results produced (see above) but analysis yet to be coded <||
     -----------------------------------------------------------------
 """
+    if options['analyze']=='None':
+        pickle_path = pjoin(output_path,'cms_check_%s.pkl'%
+                         datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%Ss"))
+        res_str += "The results of this check have been stored on disk and its "+\
+              "analysis can be rerun at anytime with the MG5aMC command:\n   "+\
+              "      check cms --analyze=%s"%pickle_path
+        save_load_object.save_to_file(pickle_path, result)
+
     # Chose here whether to use Latex particle names or not
     # Possible values are 'none', 'model' or 'built-in'
     useLatexParticleName = 'built-in'

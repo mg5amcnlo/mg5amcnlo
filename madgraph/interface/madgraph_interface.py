@@ -917,6 +917,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             user_options['--lambdaCMS']='[(1/2.0)**exp for exp in range(0,20)]'
             # Set the RNG seed, -1 is default (random).
             user_options['--seed']=-1
+            # The option below can help the user re-analyze existing pickled check
+            user_options['--analyze']='None'
         
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
@@ -926,7 +928,12 @@ class CheckValidForCmd(cmd.CheckCmd):
                 user_options[key] = value
                 args.remove(arg)
 
-        self.check_process_format(" ".join(args[1:]))
+        # If we are just re-analyzing saved data, then we shouldn't check the 
+        # process format.
+        if not (args[0]=='cms' and '--analyze' in user_options and \
+                                             user_options['--analyze']!='None'):
+            
+            self.check_process_format(" ".join(args[1:]))
 
         for option, value in user_options.items():
             args.append('%s=%s'%(option,value))
@@ -3316,6 +3323,8 @@ This implies that with decay chains:
                 MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
             elif option[0]=='--offshellness':
                 CMS_options['offshellness'] = float(option[1])
+            elif option[0]=='--analyze':
+                options['analyze'] = option[1]
             elif option[0]=='--seed':
                 CMS_options['seed'] = int(option[1])
             elif option[0]=='--recompute_width':
@@ -3383,15 +3392,19 @@ This implies that with decay chains:
         args = args[:i+1]
         
         proc_line = " ".join(args[1:])
-        myprocdef = self.extract_process(proc_line)
+        # Don't try to extract the process if just re-analyzing a saved run
+        if not (args[0]=='cms' and options['analyze']!='None'):
+            myprocdef = self.extract_process(proc_line)
+
+            # Check that we have something
+            if not myprocdef:
+                raise self.InvalidCmd("Empty or wrong format process, please try again.")
+        else:
+            myprocdef = None
 
         # If the test has to write out on disk, it should do so at the location
         # specified below where the user must be sure to have writing access.
         output_path = os.getcwd()
-
-        # Check that we have something
-        if not myprocdef:
-            raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
         if args[0] in ['timing','stability', 'profile'] and not \
                                         myprocdef.get('perturbation_couplings'):
@@ -3432,8 +3445,9 @@ This implies that with decay chains:
         # So as a temporary fix for the problem that after doing a check at NLO
         # then a check at LO will fail, I make sure I set it to False if the
         # process is a tree-level one
-        if myprocdef.get('perturbation_couplings')==[]:
-            aloha.loop_mode = False
+        if myprocdef:
+            if myprocdef.get('perturbation_couplings')==[]:
+                aloha.loop_mode = False
 
         comparisons = []
         gauge_result = []
@@ -3591,7 +3605,9 @@ This implies that with decay chains:
                 else:
                     raise MadGraph5Error,"Option '%s' is both in the option"%key+\
                                                    " and CMS_option dictionary." 
-            cms_result = process_checks.check_complex_mass_scheme(
+            
+            if options['analyze']=='None':
+                cms_result = process_checks.check_complex_mass_scheme(
                                           process_line,
                                           param_card = param_card,
                                           cuttools=CT_dir,
@@ -3600,6 +3616,13 @@ This implies that with decay chains:
                                           output_path = output_path,
                                           MLOptions = MLoptions,
                                           options=options)
+            else:
+                try:
+                    cms_result = save_load_object.load_from_file(
+                                                             options['analyze'])
+                except:
+                    raise self.InvalidCmd('The complex mass scheme check result'+
+                       " saved file '%s' could not be read."%options['analyze'])
 
             # restore previous settings
             self.do_set('complex_mass_scheme %s'%str(cms_original_setup),
