@@ -3383,13 +3383,22 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
             # NLO, so it is necessary to have the correct LO width for the check
             options['recompute_width'] = 'first_time'
         else:
-            options['recompute_width'] = 'never'            
+            options['recompute_width'] = 'never'
+
+    # Some warnings
     if options['recompute_width'] in ['first_time', 'always'] and not has_FRdecay:
         logger.warning('The LO width will need to be recomputed but the '+
          'model considered does not appear to have a decay module.\nThe widths'+
          ' will need to be computed numerically and it will slow down the test.\n'+
          'Consider using a param_card already specifying correct LO widths and'+
          " adding the option --recompute_width='never' when doing this check.")
+
+    if options['recompute_width']=='never' and \
+        any(order in multiprocess_nwa.get('perturbation_couplings') for order in
+                                                   options['expansion_orders']):
+        logger.warning('You chose not to recompute the widths while including'+
+          ' loop corrections. The check will be successful only if the width'+\
+                         ' specified in the default param_card is LO accurate.')
 
     # Reload the model including the decay.py to have efficient MadWidth if
     # possible (this model will be directly given to MadWidth. Notice that 
@@ -3429,7 +3438,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     for particle in model.get('particles'):
         mass_param = model.get_parameter(particle.get('mass'))
         if particle.get('mass')!='ZERO' and 'external' not in mass_param.depend:
-            if model.get('name')!='sm':
+            if model.get('name') not in ['sm','loop_sm']:
                 logger.warning("The mass '%s' of particle '%s' is not an external"%\
               (model.get_parameter(particle.get('mass')).name,particle.get('name'))+\
               " parameter as required by this check. \nMG5_aMC will try to"+\
@@ -3709,7 +3718,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # 2-body decay is the maximum that can matter for NLO check.
                 command = '%s --output=%s'%(particle_name,pjoin(path,'tmp.dat'))+\
                     ' --path=%s --body_decay=2'%pjoin(path,'tmp.dat')
-                misc.sprint(command)
+#                misc.sprint(command)
                 param_card.write(pjoin(options['output_path'],'tmp.dat'))
                 options['cmd'].do_compute_widths(command, evaluator.full_model)
                 try:
@@ -3806,16 +3815,18 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         # Now find all the resonances of the ME, if not saved from a previous run
         pkl_path = pjoin(proc_dir,'resonance_specs.pkl')
         if reusing:
+            # We recover the information from the pickle dumped during the
+            # original run
+            if not os.path.isfile(pkl_path):
+                raise InvalidCmd('The folder %s could'%proc_dir+\
+                 " not be reused because the resonance specification file "+
+                                            "'resonance_specs.pkl' is missing.")
+            else:
+                proc_name, born_order, loop_order, resonances = pickle.load(
+                                                        open(pkl_path,"rb"))
             # Second run (CMS), we can reuse the information if it is a dictionary
             if isinstance(opt, list):
-                if not os.path.isfile(pkl_path):
-                    raise InvalidCmd('The folder %s could'%proc_dir+\
-                     " not be reused because the resonance specification file "+
-                                                "'resonance_specs.pkl' is missing.")
-                else:
-                    proc_name, born_order, loop_order, resonances = pickle.load(
-                                                            open(pkl_path,"rb"))
-                    opt.append((proc_name, resonances))
+                opt.append((proc_name, resonances))
             else:
                 resonances = opt
         else:
@@ -4323,22 +4334,72 @@ def output_complex_mass_scheme(result,output_path, options, model):
     """ Outputs nicely the outcome of the complex mass scheme check performed
     by varying the width in the offshell region of resonances found for eahc process"""
 
+    misc.sprint(result)
+
     res_str = \
 """
     -----------------------------------------------------------------
     ||> Results produced (see above) but analysis yet to be coded <||
     -----------------------------------------------------------------
 """
-    
+    # Chose here whether to use Latex particle names or not
+    # Possible values are 'none', 'model' or 'built-in'
+    useLatexParticleName = 'built-in'
+    name2tex = {'e+':r'e^+','w+':r'W^+','a':r'\gamma',
+                'e-':r'e^-','w-':r'W^-','z':'Z','h':'H',
+                'mu+':r'\mu^+',
+                'mu-':r'\mu^-',
+                'ta+':r'\tau^+',
+                'ta-':r'\tau^-'}
+    for p in ['e','m','t']:
+        d = {'e':'e','m':r'\mu','t':r'\tau'}
+        name2tex['v%s'%p]=r'\nu_{%s}'%d[p]
+        name2tex['v%s~'%p]=r'\bar{\nu_{%s}}'%d[p]
+        
+    for p in ['u','d','c','s','b','t']:
+        name2tex[p]=p
+        name2tex['%s~'%p]=r'\bar{%s}'%p
+      
+    def format_particle_name(particle):
+        p_name = particle
+        if useLatexParticleName=='model':
+            try:
+                texname = model.get_particle(particle).get('texname')
+                if texname and texname!='none':
+                    p_name = r'$\displaystyle %s$'%texname
+            except:
+                pass
+        elif useLatexParticleName=='built-in':
+            try:
+                p_name = r'$\displaystyle %s$'%name2tex[particle]
+            except:
+                pass
+        return p_name
+
     def resonance_str(resonance):
         """ Provides a concise string to characterize the resonance """
-        particle_name = model.get_particle(abs(resonance['ParticlePDG'])).get('name')
-        mothersID = ['%d'%id for id in sorted(resonance['FSMothersNumbers'])]
-        return "%s(%s)"%(particle_name,','.join(mothersID))
+        particle_name = model.get_particle(
+                                      abs(resonance['ParticlePDG'])).get('name')
+        mothersID=['%d'%n for n in sorted(resonance['FSMothersNumbers'])]
+        return r"%s [%s]"%(format_particle_name(particle_name),','.join(mothersID))
 
-    misc.sprint(result)
+    def format_title(process, resonance):
+        """ Format the plot title given the process and resonance """
+        
+        process_string = []
+        for particle in process.split():
+            if particle=='>':
+                process_string.append(r'$\displaystyle \rightarrow$')
+                continue
+            process_string.append(format_particle_name(particle))              
+
+        return r'CMS check for %s ( resonance %s )'\
+                                           %(' '.join(process_string),resonance)
     
-    processes=result['ordered_processes']
+    checks = []
+    for process in result['ordered_processes']:
+        checks.extend([(process,resID) for resID in \
+                                            range(len(result[process]['CMS']))])
     pert_orders=result['perturbation_orders']
     logFile = open(pjoin(output_path, 'cms_check_%s.log'\
                                            %('_'.join(pert_orders) if \
@@ -4352,13 +4413,15 @@ def output_complex_mass_scheme(result,output_path, options, model):
     
     lambdaCMS_list=options['lambdaCMS']
     process_data_plot_dict={}
-    for iproc,process in enumerate(processes):
+    for process, resID in checks:
         data1={} # for subplot 1,i.e. CMS and NWA
         data2={} # for subplot 2,i.e. diff
+        info ={} # info to be passed to the plotter
         proc_res = result[process]
-        cms_res = proc_res['CMS'][0]
-        nwa_res = proc_res['NWA'][0]
+        cms_res = proc_res['CMS'][resID]
+        nwa_res = proc_res['NWA'][resID]
         resonance = resonance_str(cms_res['resonance'])
+        info['title'] = format_title(process, resonance)
         res_str += "\n= Complex mass scheme check for process %s \n"%process
         # Born result
         cms_born=cms_res['born']
@@ -4395,9 +4458,9 @@ def output_complex_mass_scheme(result,output_path, options, model):
                 CMSData.append(new_cms)
                 NWAData.append(new_nwa)
                 DiffData.append(new_diff)
-            data1['CMS=born_cms/lambdaCMS**%d'%bpower]=CMSData
-            data1['NWA=born_nwa/lambdaCMS**%d'%bpower]=NWAData
-            data2['Diff=(CMS-NWA)/lambdaCMS']=DiffData
+            data1[r'$\displaystyle CMS\;=\;\mathcal{B}_{CMS}/\lambda^%d$'%bpower]=CMSData
+            data1[r'$\displaystyle NWA\;=\;\mathcal{B}_{NWA}/\lambda^%d$'%bpower]=NWAData
+            data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda$']=DiffData
         else:
             # NLO result
             cms_finite=cms_res['finite']
@@ -4418,61 +4481,64 @@ def output_complex_mass_scheme(result,output_path, options, model):
                 CMSData.append(new_cms)
                 NWAData.append(new_nwa)
                 DiffData.append(new_diff)
-            data1['CMS=(finite_cms+born_cms-born_nwa)/(lambdaCMS*born_nwa)']=CMSData
-            data1['NWA=finite_nwa/(lambdaCMS*born_nwa)']=NWAData
-            data2['Diff=(CMS-NWA)/lambdaCMS']=DiffData
-        process_data_plot_dict[process]=[data1,data2]
+            data1[r'$\displaystyle CMS\;=\;(\mathcal{M}^{(1)}_{CMS}+\mathcal{M}_{CMS}^{(0)}-\mathcal{M}^{(0)}_{NWA})/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$']=CMSData
+            data1[r'$\displaystyle NWA\;=\;\mathcal{M}^{(1)}_{NWA}/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$']=NWAData
+            data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda$']=DiffData
+        process_data_plot_dict[(process,resID)]=[data1,data2, info]
                 
     # output the figures
     try:
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_pdf import PdfPages
-        pp=PdfPages(fig_output_file)            
+
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
+        pp=PdfPages(fig_output_file)
         colorlist=['b','r','g','y']
-        for iproc, process in enumerate(processes):
-            data_plot1_dict,data_plot2_dict=process_data_plot_dict[process]
+        for iproc, (process, resID) in enumerate(checks):
+            data1,data2, info=process_data_plot_dict[(process,resID)]
             plt.figure(iproc+1)
             plt.subplot(211)
             minvalue=1e+99
             maxvalue=-1e+99
-            for i,key in enumerate(data_plot1_dict.keys()):
+            for i,key in enumerate(data1.keys()):
                 color=colorlist[i]
-                data_plot=data_plot1_dict[key]
+                data_plot=data1[key]
                 if minvalue > min(data_plot):
                     minvalue=min(data_plot)
                 if maxvalue < max(data_plot):
                     maxvalue=max(data_plot)
-                plt.plot(lambdaCMS_list, data_plot, color=color, marker='', linestyle='-',\
-                         label=key)
+                plt.plot(lambdaCMS_list, data_plot, color=color, marker='', \
+                                                       linestyle='-', label=key)
 
             plt.yscale('linear')
             plt.xscale('log')
-            plt.title('Complex Mass Scheme check plot for %s '%process)
-            plt.ylabel('Value')
+            plt.title(info['title'],fontsize=12)
+            plt.ylabel(r'$\displaystyle |\mathcal{M}|^2$')
             #plt.xlabel('lambdaCMS')
-            plt.legend()
+            plt.legend(prop={'size':12},loc='lower left')
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
-                            minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
+              minvalue-(maxvalue-minvalue)/3., maxvalue+(maxvalue-minvalue)/5.])
             
             plt.subplot(212)
             minvalue=1e+99
             maxvalue=-1e+99
-            for i,key in enumerate(data_plot2_dict.keys()):
+            for i,key in enumerate(data2.keys()):
                 color=colorlist[i]
-                data_plot=data_plot2_dict[key]
+                data_plot=data2[key]
                 if minvalue > min(data_plot):
                     minvalue=min(data_plot)
                 if maxvalue < max(data_plot):
                     maxvalue=max(data_plot)
-                plt.plot(lambdaCMS_list, data_plot, color=color, marker='', linestyle='-',\
-                         label=key)
+                plt.plot(lambdaCMS_list, data_plot, color=color, marker='',\
+                                                       linestyle='-', label=key)
             plt.yscale('linear')
             plt.xscale('log')
-            plt.ylabel('Difference')
-            plt.xlabel('lambdaCMS')
-            plt.legend()
+            plt.ylabel(r'$\displaystyle \Delta$')
+            plt.xlabel(r'$\displaystyle \lambda$')
+            plt.legend(prop={'size':12}, loc='lower left')
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
-                        minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
+              minvalue-(maxvalue-minvalue)/3., maxvalue+(maxvalue-minvalue)/5.])
             
             plt.savefig(pp,format='pdf')
 
@@ -4489,7 +4555,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
         
         plt.close("all")
     
-    except Exception as e:
+    except KeyError as e:
         if isinstance(e, ImportError):
             res_str += "\n= Install matplotlib to get a "+\
                 "graphical display of the results of this check."
