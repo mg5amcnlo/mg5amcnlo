@@ -2217,8 +2217,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
                         }
     
-    @classmethod
-    def analyze_param_card(cls, param_card):
+    @staticmethod
+    def analyze_param_card(param_card):
         """ Analyzes the comment of the parameter in the param_card and returns
         a dictionary with parameter names in values and the tuple (lhablock, id)
         in value as well as a dictionary for restricted values."""
@@ -2308,7 +2308,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Read the comment of the param_card_default to find name variable for
         # the param_card also check which value seems to be constrained in the
         # model.
-        self.pname2block, self.restricted_value = self.analyze_param_card(default_param)
+        self.pname2block, self.restricted_value = self.analyze_param_card(
+                                                                  default_param)
 
         if run_card_def:
             self.run_set = run_card_def.keys() + self.run_card.hidden_param

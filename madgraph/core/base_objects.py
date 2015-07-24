@@ -1566,55 +1566,109 @@ class Model(PhysicsObject):
     def change_electroweak_mode(self, mode):
         """Change the electroweak mode. The only valid mode now is external.
         Where in top of the default MW and sw2 are external parameters."""
-        
-        assert mode == "external"
+
+        assert mode in ["external",set(['mz','mw','alpha'])]
         
         try:
             W = self.get('particle_dict')[24]
         except KeyError:
-            raise InvalidCmd('No W particle in the model impossible to change the EW scheme!')
+            raise InvalidCmd('No W particle in the model impossible to '+
+                                                        'change the EW scheme!')
         
-        MW = self.get_parameter(W.get('mass'))
-        if not isinstance(MW, ParamCardVariable):
-            newMW = ParamCardVariable(MW.name, MW.value, 'MASS', [24])
-            if not newMW.value:
-                newMW.value = 80.385
-            #remove the old definition
-            self.get('parameters')[MW.depend].remove(MW)
-            # add the new one
-            self.add_param(newMW, ['external'])
-            
-        # Now check for sw2. if not define bypass this
-        try:
-            sw2 = self.get_parameter('sw2')
-        except KeyError:
+        if mode=='external':
+            MW = self.get_parameter(W.get('mass'))
+            if not isinstance(MW, ParamCardVariable):
+                newMW = ParamCardVariable(MW.name, MW.value, 'MASS', [24])
+                if not newMW.value:
+                    newMW.value = 80.385
+                #remove the old definition
+                self.get('parameters')[MW.depend].remove(MW)
+                # add the new one
+                self.add_param(newMW, ['external'])
+                
+            # Now check for sw2. if not define bypass this
             try:
-                sw2 = self.get_parameter('mdl_sw2')
+                sw2 = self.get_parameter('sw2')
             except KeyError:
-                sw2=None
-        
-        if sw2:
-            newsw2 = ParamCardVariable(sw2.name,sw2.value, 'SMINPUTS', [4])
-            if not newsw2.value:
-                newsw2.value = 0.222246485786
-            #remove the old definition
-            self.get('parameters')[sw2.depend].remove(sw2)
-            # add the new one
-            self.add_param(newsw2, ['external'])            
+                try:
+                    sw2 = self.get_parameter('mdl_sw2')
+                except KeyError:
+                    sw2=None
+    
+            if sw2:
+                newsw2 = ParamCardVariable(sw2.name,sw2.value, 'SMINPUTS', [4])
+                if not newsw2.value:
+                    newsw2.value = 0.222246485786
+                #remove the old definition
+                self.get('parameters')[sw2.depend].remove(sw2)
+                # add the new one
+                self.add_param(newsw2, ['external'])
+            # Force a refresh of the parameter dictionary
+            self.parameters_dict = None
+            return true
+
+        elif mode==set(['mz','mw','alpha']):
+            # For now, all we support is to go from mz, Gf, alpha to mz, mw, alpha
+            W = self.get('particle_dict')[24]
+            mass = self.get_parameter(W.get('mass'))
+            mass_expr = 'cmath.sqrt(%(prefix)sMZ__exp__2/2. + cmath.sqrt('+\
+              '%(prefix)sMZ__exp__4/4. - (%(prefix)saEW*cmath.pi*%(prefix)s'+\
+              'MZ__exp__2)/(%(prefix)sGf*%(prefix)ssqrt__2)))'
+            if 'external' in mass.depend:
+                # Nothing to be done
+                return True
+            match = False
+            if mass.expr == mass_expr%{'prefix':''}:
+                prefix = ''
+                match = True
+            elif mass.expr == mass_expr%{'prefix':'mdl_'}:
+                prefix = 'mdl_'
+                match = True
+            if match:
+                MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
+                if not MW.value:
+                    MW.value = 80.385                
+                self.get('parameters')[('external',)].append(MW)
+                self.get('parameters')[mass.depend].remove(mass)
+                # Make Gf an internal parameter
+                new_param = ModelVariable('Gf',
+                '-%(prefix)saEW*%(prefix)sMZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - %(prefix)sMZ**2))' %\
+                {'MW': mass.name,'prefix':prefix}, 'complex', mass.depend)
+                Gf = self.get_parameter('%sGf'%prefix)
+                self.get('parameters')[('external',)].remove(Gf)
+                self.add_param(new_param, ['%saEW'%prefix])
+                # Force a refresh of the parameter dictionary
+                self.parameters_dict = None
+                return True
+            else:
+                return False
 
     def change_mass_to_complex_scheme(self):
         """modify the expression changing the mass to complex mass scheme"""
         
-        # 1) Find All input parameter mass and width associated
+        # 1) Change the 'CMSParam' of loop_qcd_qed model to 1.0 so as to remove
+        #    the 'real' prefix fromall UVCT wf renormalization expressions.
+        # 2) Find All input parameter mass and width associated
         #   Add a internal parameter and replace mass with that param
-        # 2) Find All mass fixed by the model and width associated
+        # 3) Find All mass fixed by the model and width associated
         #   -> Both need to be fixed with a real() /Imag()
-        # 3) Find All width fixed by the model
+        # 4) Find All width fixed by the model
         #   -> Need to be fixed with a real()
-        # 4) Fix the Yukawa mass to the value of the complex mass/ real mass
-        # 5) Loop through all expression and modify those accordingly
+        # 5) Fix the Yukawa mass to the value of the complex mass/ real mass
+        # 6) Loop through all expression and modify those accordingly
         #    Including all parameter expression as complex
+        
+        try:
+            CMSParam = self.get_parameter('CMSParam')
+        except KeyError:
+            try:
+                CMSParam = self.get_parameter('mdl_CMSParam')
+            except KeyError:
+                CMSParam = None
+        if CMSParam:
+            CMSParam.expr = '1.0'
 
+        
         to_change = {}
         mass_widths = [] # parameter which should stay real
         for particle in self.get('particles'):
@@ -1632,45 +1686,18 @@ class Model(PhysicsObject):
             if particle.get('mass') != 'ZERO':
                 mass = self.get_parameter(particle.get('mass'))
                 # special SM treatment to change the gauge scheme automatically.
-                if particle.get('pdg_code') == 24:
-                    if hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2)))':
-                        # Make MW an external parameter
-                        MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
-                        if not MW.value:
-                            MW.value = 80.385
-                        self.get('parameters')[('external',)].append(MW)
-                        self.get('parameters')[mass.depend].remove(mass)
-                        # Make Gf an internal parameter
-                        new_param = ModelVariable('Gf',
-                        '-aEW*MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - MZ**2))' %\
-                        {'MW': mass.name}, 'complex', mass.depend)
-                        Gf = self.get_parameter('Gf')
-                        self.get('parameters')[('external',)].remove(Gf)
-                        self.add_param(new_param, ['aEW'])
-                        # Use the new mass for the future modification
-                        mass = MW
-                    #option with prefixing
-                    elif hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(mdl_MZ__exp__2/2. + cmath.sqrt(mdl_MZ__exp__4/4. - (mdl_aEW*cmath.pi*mdl_MZ__exp__2)/(mdl_Gf*mdl_sqrt__2)))':
-                        # Make MW an external parameter
-                        MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
-                        if not MW.value:
-                            MW.value = 80.385
-                        self.get('parameters')[('external',)].append(MW)
-                        self.get('parameters')[mass.depend].remove(mass)
-                        # Make Gf an internal parameter
-                        new_param = ModelVariable('mdl_Gf',
-                        '-mdl_aEW*mdl_MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - mdl_MZ**2))' %\
-                        {'MW': mass.name}, 'complex', mass.depend)
-                        Gf = self.get_parameter('mdl_Gf')
-                        self.get('parameters')[('external',)].remove(Gf)
-                        self.add_param(new_param, ['mdl_aEW'])
-                        # Use the new mass for the future modification
-                        mass = MW
-                    elif isinstance(mass, ModelVariable):
-                        logger.warning('The W mass is not an external parameter '+
-                          'in this model. This is not advised for applying the'+
-                                                        ' complex mass scheme.')
-                
+                if particle.get('pdg_code') == 24 and isinstance(mass, 
+                                                                 ModelVariable):
+                    status = self.change_electroweak_mode(
+                                                   set(['mz','mw','alpha']))
+                    # Use the newly defined parameter for the W mass
+                    mass = self.get_parameter(particle.get('mass'))
+                    if not status:
+                        logger.warning('The W mass is not an external '+
+                        'parameter in this model and the automatic change of'+
+                        ' electroweak scheme changed. This is not advised for '+
+                                            'applying the complex mass scheme.')
+
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
                 depend = list(set(mass.depend + width.depend))

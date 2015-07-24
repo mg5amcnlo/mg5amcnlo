@@ -490,9 +490,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      The number of order and parameters don't have to be the same.")
         logger.info("      The scaling must be specified so that one occurrence of the coupling order.")
         logger.info("      brings in exactly one power of lambdaCMS.")
-        logger.info("    --recompute_width= never|first_time|always")
+        logger.info("    --recompute_width= never|first_time|always|auto")
         logger.info("      Decides when to use MadWidth to automatically recompute the width")
-        logger.info("      Default value is 'never'.")
+        logger.info("      'auto' (default) let MG5 chose the most appropriate behavior.")
         logger.info("      'never' uses the default width value for lambdaCMS=1.0.")
         logger.info("      'first_time' uses MadWidth to compute the width for lambdaCMS=1.0.")
         logger.info("      'first_time' and 'never' assume linear scaling of the widths with lambdaCMS")
@@ -910,7 +910,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             user_options['--cms']='QED;QCD,'+';'.join(parameters)
             # Widths are assumed to scale linearly with lambdaCMS unless
             # --force_recompute_width='always' or 'first_time' is used.
-            user_options['--recompute_width']='never'
+            user_options['--recompute_width']='auto'
             # It can be negative so as to be offshell below the resonant mass
             user_options['--offshellness']='100.0'
             # Pick the lambdaCMS values for the test
@@ -3319,9 +3319,9 @@ This implies that with decay chains:
             elif option[0]=='--seed':
                 CMS_options['seed'] = int(option[1])
             elif option[0]=='--recompute_width':
-                if option[1].lower() not in ['never','always','first_time']:
+                if option[1].lower() not in ['never','always','first_time','auto']:
                     raise self.InvalidCmd("The option 'recompute_width' can "+\
-                                     "only be 'never','always' or 'first_time'")
+                  "only be 'never','always', 'first_time' or 'auto' (default).")
                 CMS_options['recompute_width'] = option[1]
             elif option[0]=='--lambdaCMS':
                 try:
@@ -6600,14 +6600,13 @@ This implies that with decay chains:
             logger.warning(warning_text)
             
         if not model:
-            modelname = self._curr_model.get('modelpath')
+            modelname = self._curr_model.get('modelpath+restriction')
             with misc.MuteLogger(['madgraph'], ['INFO']):
                 model = import_ufo.import_model(modelname, decay=True)
         else:
             self._curr_model = model
             self._curr_fortran_model = \
-                helas_call_writers.FortranUFOHelasCallWriter(\
-                self._curr_model)
+                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         if not isinstance(model, model_reader.ModelReader):
             model = model_reader.ModelReader(model)
 

@@ -218,8 +218,7 @@ class EventFile(object):
         self.len = nb_event
         self.seek(init_pos)
         return self.len
-        
-    
+
     def next(self):
         """get next event"""
         text = ''

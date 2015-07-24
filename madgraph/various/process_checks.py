@@ -3371,6 +3371,36 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     if not isinstance(process_line, str):
         raise InvalidCmd("Proces definition must be given as a stirng for this check")
 
+    # Generate a list of unique processes in the NWA scheme
+    cmd.do_set('complex_mass_scheme False', log=False)
+    multiprocess_nwa = cmd.extract_process(process_line)
+
+    # Change the option 'recompute_width' to the optimal value if set to 'auto'.
+    has_FRdecay = os.path.isfile(pjoin(cmd._curr_model.get('modelpath'),
+                                                                   'decays.py'))
+    if options['recompute_width']=='auto':
+        if multiprocess_nwa.get('perturbation_couplings')!=[]:
+            # NLO, so it is necessary to have the correct LO width for the check
+            options['recompute_width'] = 'first_time'
+        else:
+            options['recompute_width'] = 'never'            
+    if options['recompute_width'] in ['first_time', 'always'] and not has_FRdecay:
+        logger.warning('The LO width will need to be recomputed but the '+
+         'model considered does not appear to have a decay module.\nThe widths'+
+         ' will need to be computed numerically and it will slow down the test.\n'+
+         'Consider using a param_card already specifying correct LO widths and'+
+         " adding the option --recompute_width='never' when doing this check.")
+
+    # Reload the model including the decay.py to have efficient MadWidth if
+    # possible (this model will be directly given to MadWidth. Notice that 
+    # this will not be needed for the CMS run because MadWidth is not supposed
+    # to be used there (the widths should be recycled from those of the NWA run).
+    if options['recompute_width'] in ['first_time', 'always'] and has_FRdecay:
+        modelname = cmd._curr_model.get('modelpath+restriction')
+        with misc.MuteLogger(['madgraph'], ['INFO']):
+            model = import_ufo.import_model(modelname, decay=True)
+        multiprocess_nwa.set('model', model)
+
     run_options = copy.deepcopy(options)
     
     # Set the seed if chosen by user
@@ -3392,11 +3422,24 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # Cached param_cards, first is param_card instance, second is
     # param_name dictionary
     run_options['cached_param_card'] = {'NWA':[None,None],'CMS':[None,None]}
-    
-    # Generate a list of unique processes in the NWA scheme
-    cmd.do_set('complex_mass_scheme False', log=False)
-    multiprocess_nwa = cmd.extract_process(process_line)
+
     model = multiprocess_nwa.get('model')
+    
+    # Make sure all masses are defined as external
+    for particle in model.get('particles'):
+        mass_param = model.get_parameter(particle.get('mass'))
+        if particle.get('mass')!='ZERO' and 'external' not in mass_param.depend:
+            if model.get('name')!='sm':
+                logger.warning("The mass '%s' of particle '%s' is not an external"%\
+              (model.get_parameter(particle.get('mass')).name,particle.get('name'))+\
+              " parameter as required by this check. \nMG5_aMC will try to"+\
+              " modify the model to remedy the situation. No guarantee.")
+            status = model.change_electroweak_mode(set(['mz','mw','alpha']))
+            if not status:
+                raise InvalidCmd('The EW scheme could apparently not be changed'+\
+                  ' so as to have the W-boson mass external. The check cannot'+\
+                  ' proceed.')
+            break
 
     veto_orders = [order for order in model.get('coupling_orders') if \
                                        order not in options['expansion_orders']]
@@ -3409,17 +3452,6 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
             multiprocess_nwa.get('orders')[order]==0
         multiprocess_nwa.set('perturbation_couplings', [order for order in
         multiprocess_nwa['perturbation_couplings'] if order not in veto_orders])
-
-    # Make sure all masses are defined as external
-    for particle in model.get('particles'):
-        mass_param = model.get_parameter(particle.get('mass'))
-        if abs(mass_param.value)!=0.0 and 'external' not in mass_param.depend:
-            logger.warning("The mass '%s' of particle '%s' is not an external"%\
-              (model.get_parameter(particle.get('mass')).name,particle.get('name'))+\
-              " parameter as required by this check. \nMG5_aMC will try to"+\
-              " modify the model to remedy the situation. No guarantee.")
-            model.change_electroweak_mode('external')
-            break
 
     if multiprocess_nwa.get('perturbation_couplings')==[]:
         evaluator = MatrixElementEvaluator(model, param_card,
@@ -3644,20 +3676,31 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     def get_width(PDG, lambdaCMS, param_card):
         """ Returns the width to use for particle with absolute PDG 'PDG' and
         for the the lambdaCMS value 'lambdaCMS' using the cache if possible."""
-        
+
         # If an unstable particle is in the external state, then set its width
         # to zero and don't cache the result of course.
         if abs(PDG) in [abs(leg.get('id')) for leg in process.get('legs')]:
             return 0.0
-        
+
         particle = evaluator.full_model.get_particle(PDG)
+        
+        # If its width is analytically set to zero, then return zero right away
+        if particle.get('width')=='ZERO':
+            return 0.0
+    
         if (PDG,lambdaCMS) in options['cached_widths']:
             return options['cached_widths'][(PDG,lambdaCMS)]
-        
+
         if options['recompute_width'] == 'never':
             width = evaluator.full_model.\
                                get('parameter_dict')[particle.get('width')].real
-            
+        else:
+            # Crash if we are doing CMS and the width was not found and recycled above
+            if aloha.complex_mass:
+                raise MadGraph5Error, "The width for particle with PDG %d and"%PDG+\
+                  " lambdaCMS=%f should have already been "%lambdaCMS+\
+                  "computed during the NWA run."
+
         # Use MadWith
         if options['recompute_width'] in ['always','first_time']:
             particle_name = particle.get('name')
@@ -3666,18 +3709,21 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # 2-body decay is the maximum that can matter for NLO check.
                 command = '%s --output=%s'%(particle_name,pjoin(path,'tmp.dat'))+\
                     ' --path=%s --body_decay=2'%pjoin(path,'tmp.dat')
-                options['cmd'].do_compute_widths(command, 
-                                                     model=evaluator.full_model)
+                misc.sprint(command)
+                param_card.write(pjoin(options['output_path'],'tmp.dat'))
+                options['cmd'].do_compute_widths(command, evaluator.full_model)
                 try:
                     tmp_param_card = check_param_card.ParamCard(pjoin(path,'tmp.dat'))
                 except:
                     raise MadGraph5Error, 'Error occured during width '+\
                        'computation with command:\n   compute_widths %s'%command                   
                 width = tmp_param_card['decay'].get(PDG).value
-                misc.sprint('lambdaCMS checked is', lambdaCMS, 'for particle',particle_name)
-                misc.sprint('Width obtained :', width)
-                if lambdaCMS != 1.0:
-                    misc.sprint('Naively expected (lin. scaling) :', options['cached_widths'][(PDG,1.0)]*lambdaCMS)
+#                misc.sprint('lambdaCMS checked is', lambdaCMS,
+#                                                   'for particle',particle_name)
+#                misc.sprint('Width obtained :', width)
+#                if lambdaCMS != 1.0:
+#                    misc.sprint('Naively expected (lin. scaling) :',
+#                                  options['cached_widths'][(PDG,1.0)]*lambdaCMS)
                 
         if options['recompute_width'] in ['never','first_time']:
             # Assume linear scaling of the width
@@ -3877,18 +3923,18 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             # the width computation function.). Also in principle this matters
             # only in the CMS and there the widths would be reused from their 
             # prior computation within NWA with zero widths. So, all in all,
-            # the line below is really not crucial.
+            # the line below is really not crucial, but semantically, it ought
+            # to be there.
             evaluator.full_model.set_parameters_and_couplings(
                                                       param_card=new_param_card)
             # Now compute or recyle all widths
-            for decay in new_param_card['decay']:
+            for decay in new_param_card['decay'].keys():
                 if mode=='CMS':
-                    new_width = get_width(abs(res['ParticlePDG']), lambdaCMS, 
+                    new_width = get_width(abs(decay[0]), lambdaCMS, 
                                                                  new_param_card)
                 else:
                     new_width = 0.0
-                new_param_card['decay'].get([abs(res['ParticlePDG'])]).value=\
-                                                                       new_width
+                new_param_card['decay'].get([abs(decay[0])]).value= new_width
 
             # To debug one can printout here intermediate param cards
 #            new_param_card.write(pjoin('.','BOUH_%d.dat'%int(1.0/lambdaCMS))
@@ -3900,11 +3946,12 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
             # If recomputing widths with MadSpin, we want to do it within
             # the NWA models with zero widths.
-            if options['recompute_width']=='always' or (
-                   options['recompute_width']=='first_time' and lambdaCMS==1.0):
+            if mode=='NWA' and (options['recompute_width']=='always' or (
+                  options['recompute_width']=='first_time' and lambdaCMS==1.0)):
                 # We don't use the result here, it is just so that it is put
                 # in the cache and reused in the CMS run that follows.
-                _ = get_width(abs(res['ParticlePDG']),lambdaCMS,new_param_card)
+                for decay in new_param_card['decay'].keys():
+                    _ = get_width(abs(decay[0]),lambdaCMS,new_param_card)
 
             # Finally ready to compute the matrix element
             if NLO:
