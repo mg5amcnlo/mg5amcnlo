@@ -3527,7 +3527,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # Now reformat a bit the output by putting the CMS and NWA results together
     # as values of a dictionary with the process name as key. 
     # Also a 'processes_order' to list all processes in their order of appearance
-    result = {'ordered_processes':[]}
+    result = {'ordered_processes':[],'lambdaCMS':options['lambdaCMS']}
     # Recall what perturbation orders were used
     result['perturbation_orders']=multiprocess_nwa.get('perturbation_couplings')
     for i, proc_res in enumerate(output_nwa):
@@ -4357,14 +4357,30 @@ def output_complex_mass_scheme(result,output_path, options, model):
     -----------------------------------------------------------------
     ||> Results produced (see above) but analysis yet to be coded <||
     -----------------------------------------------------------------
+
 """
-    if options['analyze']=='None':
-        pickle_path = pjoin(output_path,'cms_check_%s.pkl'%
-                         datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%Ss"))
+
+    def save_path(basename, extension):
+        """Creates a suitable filename for saving these results."""
+        # Use process name if there is only one process
+        if len(result['ordered_processes'])==1:
+            proc = result['ordered_processes'][0]
+            replacements = {' ':'','+':'p','-':'m','~':'x', '>':'_'}
+            for key, value in replacements.items():
+                proc = proc.replace(key,value)
+
+            suffix = proc+( ('_'+'_'.join(result['perturbation_orders'])) if \
+                                      result['perturbation_orders']!=[] else '')
+        # Use timestamp otherwise
+        else:
+            suffix = datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%Ss")
+        return pjoin(output_path,'%s_%s.%s'%(basename,suffix,extension))
+
+    if options['analyze']=='None' and options['reuse']:
         res_str += "The results of this check have been stored on disk and its "+\
               "analysis can be rerun at anytime with the MG5aMC command:\n   "+\
-              "      check cms --analyze=%s"%pickle_path
-        save_load_object.save_to_file(pickle_path, result)
+            "      check cms --analyze=%s\n\n"%save_path('check_cms_res','pkl')
+        save_load_object.save_to_file(save_path('check_cms_res','pkl'), result)
 
     # Chose here whether to use Latex particle names or not
     # Possible values are 'none', 'model' or 'built-in'
@@ -4384,28 +4400,29 @@ def output_complex_mass_scheme(result,output_path, options, model):
         name2tex[p]=p
         name2tex['%s~'%p]=r'\bar{%s}'%p
       
-    def format_particle_name(particle):
+    def format_particle_name(particle, latex=useLatexParticleName):
         p_name = particle
-        if useLatexParticleName=='model':
+        if latex=='model':
             try:
                 texname = model.get_particle(particle).get('texname')
                 if texname and texname!='none':
                     p_name = r'$\displaystyle %s$'%texname
             except:
                 pass
-        elif useLatexParticleName=='built-in':
+        elif latex=='built-in':
             try:
                 p_name = r'$\displaystyle %s$'%name2tex[particle]
             except:
                 pass
         return p_name
 
-    def resonance_str(resonance):
+    def resonance_str(resonance, latex=useLatexParticleName):
         """ Provides a concise string to characterize the resonance """
         particle_name = model.get_particle(
                                       abs(resonance['ParticlePDG'])).get('name')
         mothersID=['%d'%n for n in sorted(resonance['FSMothersNumbers'])]
-        return r"%s [%s]"%(format_particle_name(particle_name),','.join(mothersID))
+        return r"%s [%s]"%(format_particle_name(particle_name,latex=latex),
+                                                            ','.join(mothersID))
 
     def format_title(process, resonance):
         """ Format the plot title given the process and resonance """
@@ -4419,23 +4436,42 @@ def output_complex_mass_scheme(result,output_path, options, model):
 
         return r'CMS check for %s ( resonance %s )'\
                                            %(' '.join(process_string),resonance)
-    
+            
     checks = []
     for process in result['ordered_processes']:
         checks.extend([(process,resID) for resID in \
                                             range(len(result[process]['CMS']))])
     pert_orders=result['perturbation_orders']
-    logFile = open(pjoin(output_path, 'cms_check_%s.log'\
-                                           %('_'.join(pert_orders) if \
-                                                pert_orders else 'born')), 'w')
-    fig_output_file = str(pjoin(output_path, 
-                     'cms_check_plot_%s.pdf'%('_'.join(pert_orders) if \
-                                                pert_orders else 'born')))
+    if options['reuse']:
+        logFile = open(save_path('check_cms_log','log'), 'w')
+    
+    lambdaCMS_list=result['lambdaCMS']
+    
+    # Doing the analysis to printout to the MG5 interface and determine whether
+    # the test is passed or not
+    for process, resID in checks:
+        proc_res = result[process]
+        cms_res = proc_res['CMS'][resID]
+        nwa_res = proc_res['NWA'][resID]
+        resonance = resonance_str(cms_res['resonance'], latex='none')    
+        res_str += "= Complex mass scheme check for process %s (resonance %s)\n"\
+                                                            %(process,resonance)
+        res_str +=\
+"""        ####################################################
+        #               YET TO BE IMPLEMENTED              #
+        ####################################################\n"""
+
+    # Now we turn to the plots
+    if not options['show_plot']:
+        if options['reuse']:
+            logFile.write(res_str)
+            logFile.close()
+        return res_str
+    
+    fig_output_file = save_path('check_cms_plots','pdf')
     if os.path.isfile(fig_output_file):
         os.remove(fig_output_file)
 
-    
-    lambdaCMS_list=options['lambdaCMS']
     process_data_plot_dict={}
     for process, resID in checks:
         data1={} # for subplot 1,i.e. CMS and NWA
@@ -4446,7 +4482,6 @@ def output_complex_mass_scheme(result,output_path, options, model):
         nwa_res = proc_res['NWA'][resID]
         resonance = resonance_str(cms_res['resonance'])
         info['title'] = format_title(process, resonance)
-        res_str += "\n= Complex mass scheme check for process %s \n"%process
         # Born result
         cms_born=cms_res['born']
         nwa_born=nwa_res['born']
@@ -4579,14 +4614,16 @@ def output_complex_mass_scheme(result,output_path, options, model):
         
         plt.close("all")
     
-    except KeyError as e:
+    except Exception as e:
         if isinstance(e, ImportError):
             res_str += "\n= Install matplotlib to get a "+\
-                "graphical display of the results of this check."
+                "graphical display of the results of the cms check."
         else:
             res_str += "\n= Could not produce the cms check plot because of "+\
                                                 "the following error: %s"%str(e)
     
-        
+    if options['reuse']:
+        logFile.write(res_str)
+        logFile.close()
     return res_str
 

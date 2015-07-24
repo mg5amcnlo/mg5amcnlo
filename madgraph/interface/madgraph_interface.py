@@ -502,7 +502,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("    --lambdaCMS = <python_list> : specifies the list of lambdaCMS values to ")
         logger.info("      use for the test. Default is '[(1/2.0)**exp\ for\ exp\ in\ range(0,20)]'")
         logger.info("      in the list expression, you must escape spaces. Also, this option")
-        logger.info("      *must* appear last in the list.")
+        logger.info("      *must* appear last in the otpion list.")
+        logger.info("    --show_plot = True or False: Whether to show plot during analysis (default is True)")
         logger.info("Comments",'$MG:color:GREEN')
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
@@ -919,6 +920,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             user_options['--seed']=-1
             # The option below can help the user re-analyze existing pickled check
             user_options['--analyze']='None'
+            # Decides whether to show plot or not during the analysis
+            user_options['--show_plot']='True'         
         
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
@@ -3325,6 +3328,8 @@ This implies that with decay chains:
                 CMS_options['offshellness'] = float(option[1])
             elif option[0]=='--analyze':
                 options['analyze'] = option[1]
+            elif option[0]=='--show_plot':
+                options['show_plot'] = 'true' in option[1].lower()
             elif option[0]=='--seed':
                 CMS_options['seed'] = int(option[1])
             elif option[0]=='--recompute_width':
@@ -3593,7 +3598,9 @@ This implies that with decay chains:
                                           options=options)
             nb_processes += len(gauge_result)
 
-        if args[0] in ['cms', 'full']:
+        # The CMS check is typically more complicated and slower than others
+        # so we don't run it automatically with 'full'.
+        if args[0] in ['cms']:
             
             cms_original_setup = self.options['complex_mass_scheme']
 
