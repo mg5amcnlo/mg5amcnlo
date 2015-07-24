@@ -302,7 +302,7 @@ class Banner(dict):
         if len(data) != 10:
             misc.sprint(len(data), self['init'])
             raise Exception, "init block has a wrong format"
-        return int(data[-2])
+        return int(float(data[-2]))
         
     def set_lha_strategy(self, value):
         """set the lha_strategy: how the weight have to be handle by the shower"""

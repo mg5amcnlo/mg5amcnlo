@@ -292,7 +292,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 self.second_process = [" ".join(args[1:])]
         elif args[0] == "output":
-            if args[1] in ['default', '2.0']:
+            if args[1] in ['default', '2.0', 'unweight']:
                 self.output_type = args[1]
         elif args[0] == "helicity":
             self.helicity_reweighting = banner.ConfigFile.format_variable(args[1], bool, "helicity")
@@ -502,6 +502,12 @@ class ReweightInterface(extended_cmd.Cmd):
             for t in multicore.demons:
                 cross += t.local.cross
                 
+        # check normalisation of the events:
+        if 'event_norm' in self.run_card:
+            if self.run_card['event_norm'] == 'average':
+                cross /= event_nb+1
+
+                
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
         
@@ -550,12 +556,27 @@ class ReweightInterface(extended_cmd.Cmd):
                 #self.run_card['run_tag'] = self.run_card['run_tag'][9:]
                 #self.mother.run_name = old_name
         self.lhe_input.close()
-        if self.output_type == "default" and self.mother:
-            files.mv(output.name, self.lhe_input.name)
-        elif self.mother:
-            files.mv(output2.name, pjoin(self.mother.me_dir, 'Events', run_name, 'events.lhe'))
+        if not self.mother or self.output_type != "default" :
+            target = pjoin(self.mother.me_dir, 'Events', run_name, 'events.lhe')
         else:
-            files.mv(output2.name, self.lhe_input.name)      
+            target = self.lhe_input.name
+        
+        if self.output_type == "default":
+            files.mv(output.name, target)
+        elif self.output_type == "unweight":
+            output2.close()
+            lhe = lhe_parser.EventFile(output2.name)
+            nb_event = lhe.unweight(target)
+            if self.mother and  hasattr(self.mother, 'results'):
+                results = self.mother.results
+                results.add_detail('nb_event', nb_event)
+                results.current.parton.append('lhe')
+                
+        else:
+            files.mv(output2.name, self.lhe_input.name)     
+            if self.mother and  hasattr(self.mother, 'results'):
+                results = self.mother.results
+                results.current.parton.append('lhe')   
 
         logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         logger.info('new cross-section is : %g pb (indicative error: %g pb)' % (cross,error))

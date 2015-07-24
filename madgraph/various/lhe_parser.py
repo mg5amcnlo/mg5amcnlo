@@ -283,6 +283,7 @@ class EventFile(object):
             def weight(event):
                 return event.wgt
             get_wgt  = weight
+            unwgt_name = "central weight"
         elif isinstance(get_wgt, str):
             unwgt_name =get_wgt 
             def get_wgt(event):
