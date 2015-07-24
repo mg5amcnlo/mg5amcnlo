@@ -21,8 +21,11 @@ C
     Include 'maxamps.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
+C   Below is the maximum config ID for multichannels which is always less than
+C   the number of loop diagrams, so we use the latter.
     INTEGER    NLOOPDIAGRAMS
-    PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
+    PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)  
+C   Below is the number of multi-channel actually contributing to this process
 	INTEGER    NMULTICHANNELS
     PARAMETER (NMULTICHANNELS=%(nmultichannels)d)
     INTEGER    NLOOPFLOWS
@@ -296,7 +299,7 @@ c           Include the Jacobian from helicity sampling
             XTOT=XTOT+AMP2(I)
         ENDDO
 		IF (MULTICHANNEL_THRES.ge.0.0d0) then
-		  IF (((XTOT/hel_jacobian)/DABS(ANS)).lt.MULTICHANNEL_THRES) THEN
+		  IF (XTOT.lt.MULTICHANNEL_THRES*(DABS(ANS)/hel_jacobian)) THEN
 			INTERFERENCE_CONTRIB = (MULTICHANNEL_THRES*(DABS(ANS)/hel_jacobian))
             AMP2(%(configID_in_matrix)s) = AMP2(%(configID_in_matrix)s) + (INTERFERENCE_CONTRIB/NMULTICHANNELS)
 			XTOT = XTOT + INTERFERENCE_CONTRIB

@@ -176,7 +176,8 @@ class TestCmdShell1(unittest.TestCase):
                     'applgrid': 'applgrid-config',
                     'cluster_size': 100,
                     'loop_color_flows': False,
-                    'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/'
+                    'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/',
+                    'max_npoint_for_channel': 0
                     }
 
         self.assertEqual(config, expected)
@@ -1160,6 +1161,7 @@ C
         self.assertEqual(proc.returncode, 0)
 
 
+
         target ="""   1   1
    2  -1
    3  -1
@@ -1180,8 +1182,7 @@ C
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat'))), 
                          analyse(target.split('\n')))
-                         
-        
+
     def test_madevent_subproc_group_decay_chain(self):
         """Test decay chain output using the SubProcess group functionality"""
 

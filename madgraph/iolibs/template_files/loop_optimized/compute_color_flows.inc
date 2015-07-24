@@ -40,7 +40,7 @@ C
       PARAMETER (IMAG1=(0.0d0,1.0d0))
 ## if(LoopInduced and MadEventOutput){
 	  INTEGER NCONFIGS
-	  PARAMETER (NCONFIGS=%(nmultichannels)i)
+	  PARAMETER (NCONFIGS=%(nmultichannel_configs)i)
 ## }
 
 ## if (not LoopInduced) {
@@ -434,7 +434,7 @@ C
 	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)
 ## if(LoopInduced and MadEventOutput){
       INTEGER NCONFIGS
-      PARAMETER (NCONFIGS=%(nmultichannels)i)
+      PARAMETER (NCONFIGS=%(nmultichannel_configs)i)
 ## }
 ## if(not LoopInduced){
 	  INTEGER NBORNFLOWS
@@ -661,7 +661,7 @@ C
       INTEGER    NLOOPDIAGRAMS
       PARAMETER (NLOOPDIAGRAMS=%(nloopdiags)d)
 	  INTEGER    NCONFIGS
-	  PARAMETER (NCONFIGS=%(nmultichannels)i)
+	  PARAMETER (NCONFIGS=%(nmultichannel_configs)i)
       INTEGER    NSQUAREDSO, NLOOPAMPSO, NSO
 	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d, NLOOPAMPSO=%(nAmpSO)d, NSO=%(nSO)d)
 C  
@@ -721,7 +721,7 @@ C
 	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)
 ## if(LoopInduced and MadEventOutput){
       INTEGER NCONFIGS
-      PARAMETER (NCONFIGS=%(nmultichannels)i)
+      PARAMETER (NCONFIGS=%(nmultichannel_configs)i)
 ## }
 ## if(not LoopInduced){
 	  INTEGER NBORNFLOWS
@@ -792,7 +792,7 @@ C
 	  %(real_dp_format)s ZERO
       PARAMETER (ZERO=0.0d0)
       INTEGER NCONFIGS
-      PARAMETER (NCONFIGS=%(nmultichannels)i)
+      PARAMETER (NCONFIGS=%(nmultichannel_configs)i)
 C
 C LOCAL VARIABLES
 C
@@ -835,7 +835,7 @@ C
 	  PARAMETER (NLOOPFLOWS=%(nLoopFlows)d)
 ## if(LoopInduced and MadEventOutput){
       INTEGER NCONFIGS
-      PARAMETER (NCONFIGS=%(nmultichannels)i)
+      PARAMETER (NCONFIGS=%(nmultichannel_configs)i)
 ## }
 C
 C LOCAL VARIABLES

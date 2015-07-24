@@ -213,7 +213,10 @@ class Switcher(object):
         try:
             return  self.cmd.do_add(self, line, *args, **opts)
         except fks_base.NoBornException:
-            logger.info("No Born diagrams found. Now switching to loop-induced mode.", '$MG:color:BLACK')
+            logger.info("------------------------------------------------------------------------", '$MG:color:BLACK')
+            logger.info(" No Born diagrams found. Now switching to the loop-induced mode.        ", '$MG:color:BLACK')
+            logger.info(" Please cite ref. 'arXiv:1507.00020' when using results from this mode. ", '$MG:color:BLACK')
+            logger.info("------------------------------------------------------------------------", '$MG:color:BLACK')            
             self.change_principal_cmd('MadGraph')
             return self.cmd.create_loop_induced(self, line, *args, **opts)
 
@@ -647,10 +650,18 @@ class MasterCmdWeb(MGcmd.MadGraphCmdWeb, Switcher, LoopCmd.LoopInterfaceWeb):
     def do_shell(self, *args):
         raise Exception
     
-    def finalize(self, nojpeg):
+    def finalize(self, nojpeg, flaglist=[]):
+        """Finalize web generation"""
+
+        if flaglist != []:
+            raise Exception
+        self.cmd.finalize(self, nojpeg, online = True)
+    
+    def finalize(self, nojpeg, **opts):
         """Finalize web generation""" 
         
-        self.cmd.finalize(self, nojpeg, online = True)
+        opts['online'] = True
+        self.cmd.finalize(self, nojpeg, opts)
 
     # Generate a new amplitude
     def do_generate(self, line):

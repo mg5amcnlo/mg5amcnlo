@@ -764,7 +764,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertEqual(cmd, os.getcwd())
         #change splitevent generation
         card = open('%s/Cards/run_card.dat' % self.path).read()
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace(' -1 = nevt_job', ' 100 = nevt_job'))
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace(' -1 = nevt_job', ' 1000 = nevt_job'))
         self.do('generate_events aMC@NLO -fp')        
         
         # test the lhe event file exists

@@ -584,6 +584,10 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         #replace init information
         generate_all.banner['init'] = self.banner['init']
+
+        #replace run card if present in header (to make sure correct random seed is recorded in output file)
+        if 'mgruncard' in self.banner:
+            generate_all.banner['mgruncard'] = self.banner['mgruncard']   
         
         # NOW we have all the information available for RUNNING
         
