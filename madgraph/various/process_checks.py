@@ -4365,7 +4365,13 @@ def output_complex_mass_scheme(result,output_path, options, model):
         # Use process name if there is only one process
         if len(result['ordered_processes'])==1:
             proc = result['ordered_processes'][0]
-            replacements = {' ':'','+':'p','-':'m','~':'x', '>':'_'}
+            replacements = {' ':'','+':'p','-':'m','~':'x', '>':'_','=':'eq'}
+            # Remove the perturbation couplings:
+            try:
+                proc=proc[:proc.index('[')]
+            except ValueError:
+                pass
+
             for key, value in replacements.items():
                 proc = proc.replace(key,value)
 
@@ -4376,7 +4382,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
             suffix = datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%Ss")
         return pjoin(output_path,'%s_%s.%s'%(basename,suffix,extension))
 
-    if options['analyze']=='None' and options['reuse']:
+    if True or (options['analyze']=='None' and options['reuse']):
         res_str += "The results of this check have been stored on disk and its "+\
               "analysis can be rerun at anytime with the MG5aMC command:\n   "+\
             "      check cms --analyze=%s\n\n"%save_path('check_cms_res','pkl')
