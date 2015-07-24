@@ -3387,7 +3387,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
 
     # Some warnings
     if options['recompute_width'] in ['first_time', 'always'] and not has_FRdecay:
-        logger.warning('The LO width will need to be recomputed but the '+
+        logger.info('The LO width will need to be recomputed but the '+
          'model considered does not appear to have a decay module.\nThe widths'+
          ' will need to be computed numerically and it will slow down the test.\n'+
          'Consider using a param_card already specifying correct LO widths and'+
@@ -3433,7 +3433,6 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     run_options['cached_param_card'] = {'NWA':[None,None],'CMS':[None,None]}
 
     model = multiprocess_nwa.get('model')
-    
     # Make sure all masses are defined as external
     for particle in model.get('particles'):
         mass_param = model.get_parameter(particle.get('mass'))
@@ -3472,7 +3471,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
                                            auth_skipping = False, 
                                            output_path=output_path,
                                            reuse = False)
-
+        
     cached_information = []
     output_nwa = run_multiprocs_no_crossings(check_complex_mass_scheme_process,
                                            multiprocess_nwa,
@@ -3484,12 +3483,17 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # we are doing nwa. It will then be converted to a dictionary when doing cms.
                                            opt = cached_information,
                                            options=run_options)
+    misc.sprint(cmd._curr_model['order_hierarchy'].keys())
     
+    model = multiprocess_nwa.get('model')
+
     # Make sure to start from fresh for LO runs
     clean_added_globals(ADDED_GLOBAL)
 
     # Generate a list of unique processes in the CMS scheme
     cmd.do_set('complex_mass_scheme True', log=False)
+    model = multiprocess_nwa.get('model')
+
     multiprocess_cms = cmd.extract_process(process_line)    
     model = multiprocess_cms.get('model')
     # Apply veto
@@ -3720,7 +3724,15 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                     ' --path=%s --body_decay=2'%pjoin(path,'tmp.dat')
 #                misc.sprint(command)
                 param_card.write(pjoin(options['output_path'],'tmp.dat'))
+                # The MG5 command get_width will change the cmd._curr_model
+                # and the cmd._curr_fortran_model which what we specified, so 
+                # we must make sure to restore them after it finishes
+                orig_model = options['cmd']._curr_model
+                orig_fortran_model = options['cmd']._curr_fortran_model
                 options['cmd'].do_compute_widths(command, evaluator.full_model)
+                # Restore the models
+                options['cmd']._curr_model = orig_model
+                options['cmd']._curr_fortran_model = orig_fortran_model
                 try:
                     tmp_param_card = check_param_card.ParamCard(pjoin(path,'tmp.dat'))
                 except:
@@ -3782,7 +3794,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
          temp_dir_prefix, '_'.join(process.shell_string().split('_')[1:]), 
          ('_' if process.get('perturbation_couplings') else '')+
          '_'.join(process.get('perturbation_couplings')),mode)
-            
+        
         # Generate the ME
         timing, matrix_element = generate_loop_matrix_element(process, 
                          options['reuse'], output_path=options['output_path'], 
