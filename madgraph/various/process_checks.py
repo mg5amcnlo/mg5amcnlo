@@ -3778,8 +3778,10 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     if NLO:
         # We must first create the matrix element, export it and set it up.
         # If the reuse option is specified, it will be recycled.
-        proc_name = "%s%s_%s__%s__"%(('SAVED' if options['reuse'] else ''),
-         temp_dir_prefix, '_'.join(process.shell_string().split('_')[1:]), mode)
+        proc_name = "%s%s_%s%s__%s__"%(('SAVED' if options['reuse'] else ''),
+         temp_dir_prefix, '_'.join(process.shell_string().split('_')[1:]), 
+         ('_' if process.get('perturbation_couplings') else '')+
+         '_'.join(process.get('perturbation_couplings')),mode)
             
         # Generate the ME
         timing, matrix_element = generate_loop_matrix_element(process, 
