@@ -4454,12 +4454,12 @@ def output_complex_mass_scheme(result,output_path, options, model):
             for idata in range(len(lambdaCMS_list)):
                 new_cms=cms_born[idata]/lambdaCMS_list[idata]**bpower
                 new_nwa=nwa_born[idata]/lambdaCMS_list[idata]**bpower
-                new_diff=(new_cms-new_nwa)/lambdaCMS_list[idata]
+                new_diff=(new_cms-new_nwa)/lambdaCMS_list[idata]**2
                 CMSData.append(new_cms)
                 NWAData.append(new_nwa)
                 DiffData.append(new_diff)
-            data1[r'$\displaystyle CMS\;=\;\mathcal{B}_{CMS}/\lambda^%d$'%bpower]=CMSData
-            data1[r'$\displaystyle NWA\;=\;\mathcal{B}_{NWA}/\lambda^%d$'%bpower]=NWAData
+            data1[r'$\displaystyle CMS\;=\;\mathcal{M}_{CMS}^{(0)}/\lambda^%d$'%bpower]=CMSData
+            data1[r'$\displaystyle NWA\;=\;\mathcal{M}_{NWA}^{(0)}/\lambda^%d$'%bpower]=NWAData
             data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda$']=DiffData
         else:
             # NLO result
@@ -4514,7 +4514,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
             plt.yscale('linear')
             plt.xscale('log')
             plt.title(info['title'],fontsize=12)
-            plt.ylabel(r'$\displaystyle |\mathcal{M}|^2$')
+            plt.ylabel(r'$\displaystyle \mathcal{M}$')
             #plt.xlabel('lambdaCMS')
             plt.legend(prop={'size':12},loc='lower left')
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
