@@ -3715,7 +3715,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
         # Use MadWith
         if options['recompute_width'] in ['always','first_time']:
-            particle_name = particle.get('name')
+            particle_name = particle.get_name()
             with misc.TMP_directory(dir=options['output_path']) as path:
                 param_card.write(pjoin(path,'tmp.dat'))
                 # 2-body decay is the maximum that can matter for NLO check.
@@ -4429,8 +4429,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
 
     def resonance_str(resonance, latex=useLatexParticleName):
         """ Provides a concise string to characterize the resonance """
-        particle_name = model.get_particle(
-                                      abs(resonance['ParticlePDG'])).get('name')
+        particle_name = model.get_particle(resonance['ParticlePDG']).get_name()
         mothersID=['%d'%n for n in sorted(resonance['FSMothersNumbers'])]
         return r"%s [%s]"%(format_particle_name(particle_name,latex=latex),
                                                             ','.join(mothersID))
