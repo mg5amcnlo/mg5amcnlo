@@ -4396,7 +4396,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
     # Chose here whether to use Latex particle names or not
     # Possible values are 'none', 'model' or 'built-in'
     useLatexParticleName = 'built-in'
-    name2tex = {'e+':r'e^+','w+':r'W^+','a':r'\gamma',
+    name2tex = {'e+':r'e^+','w+':r'W^+','a':r'\gamma','g':'g',
                 'e-':r'e^-','w-':r'W^-','z':'Z','h':'H',
                 'mu+':r'\mu^+',
                 'mu-':r'\mu^-',
