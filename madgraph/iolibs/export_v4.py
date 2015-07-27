@@ -4980,7 +4980,7 @@ class UFO_model_to_mg4(object):
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
-        
+    
         lower_dict={}
         duplicate = set()
         keys = self.model['parameters'].keys()
@@ -4999,16 +4999,30 @@ class UFO_model_to_mg4(object):
                                  % lower_name)
         if not duplicate:
             return
+        misc.sprint(duplicate)
         
         re_expr = r'''\b(%s)\b'''
         to_change = []
         change={}
         for value in duplicate:
-            for i, var in enumerate(lower_dict[value][1:]):
+            for i, var in enumerate(lower_dict[value]):
                 to_change.append(var.name)
-                change[var.name] = '%s__%s' %( var.name.lower(), i+2)
-                var.name = '%s__%s' %( var.name.lower(), i+2)
-        
+                new_name = '%s%s' % (var.name.lower(), 
+                                                  ('__%d'%(i+1) if i>0 else ''))
+                change[var.name] = new_name
+                var.name = new_name
+    
+        # Apply the modification to the map_CTcoup_CTparam of the model
+        # if it has one (giving for each coupling the CT parameters whcih
+        # are necessary and which should be exported to the model.
+        if hasattr(self.model,'map_CTcoup_CTparam'):
+            for coup, ctparams in self.model.map_CTcoup_CTparam:
+                for i, ctparam in enumerate(ctparams):
+                    try:
+                        self.model.map_CTcoup_CTparam[coup][i] = change[ctparam]
+                    except KeyError:
+                        pass
+
         replace = lambda match_pattern: change[match_pattern.groups()[0]]
         rep_pattern = re.compile(re_expr % '|'.join(to_change))
         
@@ -5419,7 +5433,7 @@ class UFO_model_to_mg4(object):
         # was not needed.
         param = param.lower()
         cjg_param = param.replace('conjg__','',1)
-        
+                
         # First make sure it is a CTparameter
         if param not in self.allCTparameters and \
            cjg_param not in self.allCTparameters:
@@ -5459,7 +5473,7 @@ class UFO_model_to_mg4(object):
         # Now at last, make these list case insensitive
         self.allCTparameters = [ct.lower() for ct in self.allCTparameters]
         self.usedCTparameters = [ct.lower() for ct in self.usedCTparameters]
-    
+        
     def create_intparam_def(self, dp=True, mp=False):
         """ create intparam_definition.inc setting the internal parameters.
         Output the double precision and/or the multiple precision parameters
