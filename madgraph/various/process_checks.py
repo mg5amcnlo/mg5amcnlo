@@ -4513,7 +4513,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
             raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
                             ' lambdaCMS values specified for process %s'%process
             return res_str
-        if not pert_orders or True:
+        if not pert_orders:
             # Born result
             # guess the lambdaCMS power in the amplitude squared
             bpowers = []
