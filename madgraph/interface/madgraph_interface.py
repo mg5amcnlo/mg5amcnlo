@@ -480,13 +480,13 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   region of detected resonances and by progressively")
         logger.info("   decreasing the width. Additional options for this check are:")
         logger.info("    --offshellness=f : f is a positive or negative float specifying ")
-        logger.info("      the distance from the pole as f*particle_width. Default is 100.0")
+        logger.info("      the distance from the pole as f*particle_mass. Default is 0.5")
         logger.info("    --seed=i : to force a specific RNG integer seed i (default is random)")
         logger.info("    --cms=order1;order2;...,p1->f(p,lambdaCMS);p2->f2(p,lambdaCMS);...")
         logger.info("      'order_i' specifies the expansion orders considered for the test.")
         logger.info("      The substitution lists specifies how internal parameter must be modified")
         logger.info("      with the width scaling 'lambdaCMS'. The default value for this option is:")
-        logger.info("        --cms=QED;QCD,aewm1->aewm1/lambdaCMS,as->as*lambdaCMS ")
+        logger.info("        --cms=QED;QCD,aewm1->10.0/lambdaCMS,as->0.1*lambdaCMS ")
         logger.info("      The number of order and parameters don't have to be the same.")
         logger.info("      The scaling must be specified so that one occurrence of the coupling order.")
         logger.info("      brings in exactly one power of lambdaCMS.")
@@ -907,13 +907,13 @@ class CheckValidForCmd(cmd.CheckCmd):
             # the cms expansion is carried, and the expression following the 
             # comma gives the relation of an external parameter with the
             # CMS expansions parameter called 'lambdaCMS'.
-            parameters = ['aewm1->aewm1/lambdaCMS','as->as*lambdaCMS']
+            parameters = ['aewm1->10.0/lambdaCMS','as->0.1*lambdaCMS']
             user_options['--cms']='QED;QCD,'+';'.join(parameters)
             # Widths are assumed to scale linearly with lambdaCMS unless
             # --force_recompute_width='always' or 'first_time' is used.
             user_options['--recompute_width']='auto'
             # It can be negative so as to be offshell below the resonant mass
-            user_options['--offshellness']='100.0'
+            user_options['--offshellness']='0.5'
             # Pick the lambdaCMS values for the test
             user_options['--lambdaCMS']='[(1/2.0)**exp for exp in range(0,20)]'
             # Set the RNG seed, -1 is default (random).
@@ -3375,8 +3375,8 @@ This implies that with decay chains:
                         replacement = replacement.replace(param,
                                                         '__tmpprefix__%s'%param)
                         param = '__tmpprefix__%s'%param
-                        res = (98.85 == float(eval(replacement.lower(),
-                                        {'lambdacms':1.0,param.lower():98.85})))
+                        res = float(eval(replacement.lower(),
+                                         {'lambdacms':1.0,param.lower():98.85}))
                     except:                    
                         raise self.InvalidCmd("The substitution expression "+
                         "'%s' for CMS expansion parameter"%orig_replacement+
@@ -3463,6 +3463,7 @@ This implies that with decay chains:
         stability = []
         profile_time = []
         profile_stab = []
+        cms_result = {}
 
         if "_cuttools_dir" in dir(self):
             CT_dir = self._cuttools_dir

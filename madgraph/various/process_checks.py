@@ -3398,7 +3398,9 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
                                                    options['expansion_orders']):
         logger.warning('You chose not to recompute the widths while including'+
           ' loop corrections. The check will be successful only if the width'+\
-                         ' specified in the default param_card is LO accurate.')
+          ' specified in the default param_card is LO accurate (Remember that'+\
+          ' the default values of alpha_s and awem1 are set to 0.1 and 100.0'+\
+          ' respectively.).')
 
     # Reload the model including the decay.py to have efficient MadWidth if
     # possible (this model will be directly given to MadWidth. Notice that 
@@ -3637,7 +3639,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 continue
             
             # Choose the offshellness
-            special_mass = mass + options['offshellness']*width
+            special_mass = (1.0 + options['offshellness'])*mass
+            
             final_state_energy = sum(
                 evaluator.full_model.get('parameter_dict')[
                 evaluator.full_model.get_particle(l.get('id')).get('mass')].real
@@ -3675,6 +3678,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                     'id':-10}))
             prod_kinematic = evaluator.get_momenta(prod_proc, options=options,
                                                    special_mass=special_mass)[0]
+
             decay_kinematic = evaluator.get_momenta(decay_proc, options=options, 
                                                    special_mass=special_mass)[0]
             resonance['PS_point_used'] = glue_momenta(prod_kinematic,
@@ -3732,6 +3736,10 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # Restore the models
                 options['cmd']._curr_model = orig_model
                 options['cmd']._curr_fortran_model = orig_fortran_model
+                # Restore the width of the model passed in argument since
+                # MadWidth will automatically update the width
+                evaluator.full_model.set_parameters_and_couplings(
+                                                          param_card=param_card)
                 try:
                     tmp_param_card = check_param_card.ParamCard(pjoin(path,'tmp.dat'))
                 except:
@@ -3960,7 +3968,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                                                                  new_param_card)
                 else:
                     new_width = 0.0
-                new_param_card['decay'].get([abs(decay[0])]).value= new_width
+                new_param_card['decay'].get(decay).value= new_width
 
             # To debug one can printout here intermediate param cards
 #            new_param_card.write(pjoin('.','BOUH_%d.dat'%int(1.0/lambdaCMS))
@@ -4351,7 +4359,11 @@ def output_complex_mass_scheme(result,output_path, options, model):
 
 #   One can print out the raw results by uncommenting the line below
 #    misc.sprint(result)
-
+#    for i, res in enumerate(result['u d~ > e+ ve a']['CMS']):
+#        if res['resonance']['FSMothersNumbers'] == set([3, 4]):
+#            misc.sprint(res['resonance']['PS_point_used'])
+#    stop
+    
     res_str = \
 """
     -----------------------------------------------------------------
@@ -4380,7 +4392,8 @@ def output_complex_mass_scheme(result,output_path, options, model):
             for key, value in replacements.items():
                 proc = proc.replace(key,value)
 
-            suffix = proc+( ('_'+'_'.join(result['perturbation_orders'])) if \
+            suffix = proc+'_%s_'%model.get('name')+\
+                      ( ('_'+'_'.join(result['perturbation_orders'])) if \
                                       result['perturbation_orders']!=[] else '')
         # Use timestamp otherwise
         else:
@@ -4500,7 +4513,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
             raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
                             ' lambdaCMS values specified for process %s'%process
             return res_str
-        if not pert_orders:
+        if not pert_orders or True:
             # Born result
             # guess the lambdaCMS power in the amplitude squared
             bpowers = []
