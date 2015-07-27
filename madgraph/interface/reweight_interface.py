@@ -51,6 +51,10 @@ logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
+# global to check which f2py module have been already loaded. (to avoid border effect)
+dir_to_f2py_free_mod ={}
+
+
 
 
 class ReweightInterface(extended_cmd.Cmd):
@@ -283,10 +287,12 @@ class ReweightInterface(extended_cmd.Cmd):
         if args[0] == "model":
             self.second_model = " ".join(args[1:])
             if self.has_standalone_dir:
-                raise Exception, "command %s can only be run before the first launch. please run multiple times the re-weighting module to achieve this. (please quit python between each run)"
+                self.terminate_fortran_executables()
+                self.has_standalone_dir = False
         elif args[0] == "process":
             if self.has_standalone_dir:
-                raise Exception, "command %s can only be run before the first launch. please run multiple times the re-weighting module to achieve this.(please quit python between each run)"
+                self.terminate_fortran_executables()
+                self.has_standalone_dir = False
             if args[-1] == "--add":
                 self.second_process.append(" ".join(args[1:-1]))
             else:
@@ -327,7 +333,6 @@ class ReweightInterface(extended_cmd.Cmd):
         model_line = self.banner.get('proc_card', 'full_model_line')
 
         if not self.has_standalone_dir:
-            misc.sprint("recreate standalone directory")
             self.create_standalone_directory()        
         
         if self.second_model or self.second_process:
@@ -645,6 +650,18 @@ class ReweightInterface(extended_cmd.Cmd):
                 new_p[j][i] = x
         return new_p
     
+    @staticmethod
+    def rename_f2py_lib(Pdir, tag, hypp_id=0):
+        dir_to_f2py_free_mod[(Pdir, hypp_id)] = tag
+        if tag == 2:
+            return
+        
+        if os.path.exists(pjoin(Pdir, 'matrix%spy.so' % tag)):
+            raise Exception
+        else:
+            open(pjoin(Pdir, 'matrix%spy.so' % tag),'w').write(open(pjoin(Pdir, 'matrix2py.so')
+                                        ).read().replace('matrix2py', 'matrix%spy' % tag))
+    
     def calculate_matrix_element(self, event, hypp_id, space):
         """routine to return the matrix element"""
 
@@ -658,7 +675,7 @@ class ReweightInterface(extended_cmd.Cmd):
         run_id = (tag, hypp_id)
 
 
-
+        assert space == self
         start = False
         if run_id in space.calculator:
             external = space.calculator[run_id]
@@ -668,22 +685,26 @@ class ReweightInterface(extended_cmd.Cmd):
             if self.me_dir not in sys.path:
                 sys.path.insert(0,self.me_dir)
             Pname = os.path.basename(Pdir)
-            if hypp_id == 0:         
+            if hypp_id == 0:
+                if (Pdir, 0) not in dir_to_f2py_free_mod:
+                    tag = 2
+                else:
+                    tag = dir_to_f2py_free_mod[(Pdir,0)] + 1
                 misc.compile(['matrix2py.so'], cwd=Pdir)
-                mymod = __import__('rw_me.SubProcesses.%s.matrix2py' % Pname, globals(), locals(), [],-1)
+                self.rename_f2py_lib(Pdir, tag)
+                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, tag), globals(), locals(), [],-1)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = P.matrix2py
+                mymod = getattr(P, 'matrix%spy' % tag)
                 with misc.chdir(Pdir):
                     mymod.initialise('param_card_orig.dat')
             if hypp_id == 1:
-                if not os.path.exists(pjoin(Pdir, 'matrix3py.so')):
-                    open(pjoin(Pdir, 'matrix3py.so'),'w').write(open(pjoin(Pdir, 'matrix2py.so')
-                                        ).read().replace('matrix2py', 'matrix3py'))
-                mymod = __import__('rw_me.SubProcesses.%s.matrix3py' % Pname, globals(), locals(), [],-1)
+                tag = dir_to_f2py_free_mod[(Pdir,0)] + 1
+                self.rename_f2py_lib(Pdir, tag)
+                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, tag), globals(), locals(), [],-1)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = P.matrix3py
+                mymod = getattr(P, 'matrix%spy' % tag)
                 with misc.chdir(Pdir):
                     mymod.initialise('param_card.dat') 
             space.calculator[run_id] = mymod.get_me
@@ -696,12 +717,17 @@ class ReweightInterface(extended_cmd.Cmd):
             assert hypp_id == 1
             Pname = os.path.basename(Pdir)
             misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
+            if (Pdir, 1) not in dir_to_f2py_free_mod:
+                tag = 2
+            else:
+                tag = dir_to_f2py_free_mod[(Pdir, 1)] + 1
+            self.rename_f2py_lib(Pdir, tag, 1)
             with misc.chdir(Pdir):
-                mymod = __import__("rw_me_second.SubProcesses.%s.matrix2py" % Pname)
+                mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, tag))
                 reload(mymod)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = P.matrix2py
+                mymod = getattr(P, 'matrix%spy' % tag)
                 mymod.initialise('param_card.dat')              
             space.calculator[run_id] = mymod.get_me
             external = space.calculator[run_id]                

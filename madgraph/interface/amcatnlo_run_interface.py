@@ -4063,7 +4063,7 @@ Integrated cross-section
         force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
                        ('madspin', 'ON'): {'fixed_order':'OFF'},
                        ('reweight', 'ON'): {'fixed_order':'OFF'},
-                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'ON'}
+                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'OFF'}
                        }
         special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
 
