@@ -921,7 +921,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # spread in each interval [1.0e-i,1.0e-(i+1)].
             # Some points close to each other will be added at the end for the
             # stability test.
-            user_options['--lambdaCMS']='(1.0e-8,4)'
+            user_options['--lambdaCMS']='(1.0e-7,5)'
             # Set the RNG seed, -1 is default (random).
             user_options['--seed']=0
             # The option below can help the user re-analyze existing pickled check

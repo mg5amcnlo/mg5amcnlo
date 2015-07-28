@@ -4379,6 +4379,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     Output just specifies whether text should be returned or a list of failed
     processes."""
     
+    pert_orders=result['perturbation_orders']
+    
     ######## CHECK PARAMETERS #########
     #
     # DISLAIMER:
@@ -4392,7 +4394,11 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     # right value to consistently report failure when the CMS is incorrectly
     # implemented (incorrect LO width, wrong analytical continuation of logs, etc..)
     # while returning a successful check when correctly implemented.
-    CMS_test_threshold = 5e-2
+    # be tighter at LO
+    if pert_orders:
+        CMS_test_threshold = 5e-2
+    else:
+        CMS_test_threshold = 1e-2
     # This threshold sets how flat the diff line must be when approaching it from
     # the left to start considering its value 
     consideration_threshold = 1e-2
@@ -4555,7 +4561,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     for process in result['ordered_processes']:
         checks.extend([(process,resID) for resID in \
                                             range(len(result[process]['CMS']))])
-    pert_orders=result['perturbation_orders']
+        
     if options['reuse']:
         logFile = open(save_path('check_cms_log','log'), 'w')
     
