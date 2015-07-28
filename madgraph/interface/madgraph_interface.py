@@ -481,7 +481,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   decreasing the width. Additional options for this check are:")
         logger.info("    --offshellness=f : f is a positive or negative float specifying ")
         logger.info("      the distance from the pole as f*particle_mass. Default is 100.0")
-        logger.info("    --seed=i : to force a specific RNG integer seed i (default is random)")
+        logger.info("    --seed=i : to force a specific RNG integer seed i (default is fixed to 0)")
         logger.info("    --cms=order1;order2;...,p1->f(p,lambdaCMS);p2->f2(p,lambdaCMS);...")
         logger.info("      'order_i' specifies the expansion orders considered for the test.")
         logger.info("      The substitution lists specifies how internal parameter must be modified")
@@ -923,7 +923,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # stability test.
             user_options['--lambdaCMS']='(1.0e-5,10)'
             # Set the RNG seed, -1 is default (random).
-            user_options['--seed']=-1
+            user_options['--seed']=0
             # The option below can help the user re-analyze existing pickled check
             user_options['--analyze']='None'
             # Decides whether to show plot or not during the analysis
