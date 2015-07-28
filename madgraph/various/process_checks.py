@@ -4400,7 +4400,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     else:
         CMS_test_threshold = 1e-2
     # This threshold sets how flat the diff line must be when approaching it from
-    # the left to start considering its value 
+    # the right to start considering its value 
     consideration_threshold = 1e-2
     # Number of values groupes with the median technique to avoid being
     # sensitive to unstabilities
