@@ -3809,6 +3809,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                                       cmd = options['cmd'], proc_name=proc_name)
         reusing = isinstance(matrix_element, base_objects.Process)
         proc_dir = pjoin(options['output_path'],proc_name)
+
         # Export the ME
         infos = evaluator.setup_process(matrix_element, proc_dir, 
                         reusing = reusing, param_card = options['param_card'], 
@@ -3926,6 +3927,14 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
               'loop_order': (-1 if loop_order==-1 else (loop_order+born_order)/2),
               'resonances_result':[]}
 
+    # Create a physical backup of the param_card
+    if NLO:
+        try:
+            shutil.copy(pjoin(proc_dir,'Cards','param_card.dat'),
+                             pjoin(proc_dir,'Cards','param_card.dat__backUp__'))
+        except:
+            pass
+
     for res in resonances:
         # First add a dictionary for this resonance to the result with already
         # one key specifying the resonance
@@ -3978,7 +3987,12 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                                                       param_card=new_param_card)
             if NLO:
                 new_param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
-
+                # Write the recomputed widths so that it can potentially be
+                # used for future runs
+                if lambdaCMS==1.0 and mode=='CMS' and \
+                          options['recompute_width'] in ['always','first_time']:
+                    new_param_card.write(pjoin(proc_dir,
+                                    'Cards','param_card.dat_recomputed_widths'))
             # If recomputing widths with MadSpin, we want to do it within
             # the NWA models with zero widths.
             if mode=='NWA' and (options['recompute_width']=='always' or (
@@ -3987,6 +4001,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # in the cache and reused in the CMS run that follows.
                 for decay in new_param_card['decay'].keys():
                     _ = get_width(abs(decay[0]),lambdaCMS,new_param_card)
+
 
             # Finally ready to compute the matrix element
             if NLO:
@@ -4008,7 +4023,11 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     # Restore the original model parameters
     evaluator.full_model.set_parameters_and_couplings(param_card=param_card)
     if NLO:
-        param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
+        try:
+            shutil.copy(pjoin(proc_dir,'Cards','param_card.dat__backUp__'),
+                                      pjoin(proc_dir,'Cards','param_card.dat'))
+        except:
+            param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
     
     return (process.nice_string().replace('Process:', '').strip(),result)
 
@@ -4667,9 +4686,14 @@ def output_complex_mass_scheme(result,output_path, options, model):
             plt.title(info['title'],fontsize=12)
             plt.ylabel(r'$\displaystyle \mathcal{M}$')
             #plt.xlabel('lambdaCMS')
-            plt.legend(prop={'size':12},loc='lower left')
+            if sum(data1[key][0] for key in data1)>\
+                                           sum(data1[key][-1] for key in data1):
+                plt.legend(prop={'size':12},loc='upper left')
+            else:
+                plt.legend(prop={'size':12},loc='lower left')
+                
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
-              minvalue-(maxvalue-minvalue)/3., maxvalue+(maxvalue-minvalue)/5.])
+              minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
             
             plt.subplot(212)
             minvalue=1e+99
@@ -4687,9 +4711,14 @@ def output_complex_mass_scheme(result,output_path, options, model):
             plt.xscale('log')
             plt.ylabel(r'$\displaystyle \Delta$')
             plt.xlabel(r'$\displaystyle \lambda$')
-            plt.legend(prop={'size':12}, loc='lower left')
+            if sum(data2[key][0] for key in data2)>\
+                                           sum(data2[key][-1] for key in data2):
+                plt.legend(prop={'size':12},loc='upper left')
+            else:
+                plt.legend(prop={'size':12},loc='lower left')
+
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
-              minvalue-(maxvalue-minvalue)/3., maxvalue+(maxvalue-minvalue)/5.])
+              minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
             
             plt.savefig(pp,format='pdf')
 
