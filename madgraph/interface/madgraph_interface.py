@@ -3685,12 +3685,11 @@ This implies that with decay chains:
                                           MLOptions = MLoptions,
                                           options=options)
             else:
-                try:
-                    cms_result = save_load_object.load_from_file(
+                cms_result = save_load_object.load_from_file(
                                                              options['analyze'])
-                except:
+                if cms_result is None:
                     raise self.InvalidCmd('The complex mass scheme check result'+
-                       " saved file '%s' could not be read."%options['analyze'])
+                       " file below could not be read.\n     %s"%options['analyze'])
 
             # restore previous settings
             self.do_set('complex_mass_scheme %s'%str(cms_original_setup),

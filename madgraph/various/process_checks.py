@@ -4373,10 +4373,39 @@ def output_unitary_feynman(comparison_results, output='text'):
         return fail_proc
 
 
-def output_complex_mass_scheme(result,output_path, options, model):
+def output_complex_mass_scheme(result,output_path, options, model, output='text'):
     """ Outputs nicely the outcome of the complex mass scheme check performed
-    by varying the width in the offshell region of resonances found for eahc process"""
-
+    by varying the width in the offshell region of resonances found for eahc process.
+    Output just specifies whether text should be returned or a list of failed
+    processes."""
+    
+    ######## CHECK PARAMETERS #########
+    #
+    # DISLAIMER:
+    # The CMS check is non trivial to automate and it is actually best done
+    # manually by looking at plots for various implementation of the CMS.
+    # The automatic check performed here with the default parameters below
+    # should typically capture the main features of the CMS implementation.
+    # There will always be exceptions however.
+    #
+    # Set here the global threshold sensitivity for the CMS check, 5% seems the
+    # right value to consistently report failure when the CMS is incorrectly
+    # implemented (incorrect LO width, wrong analytical continuation of logs, etc..)
+    # while returning a successful check when correctly implemented.
+    CMS_test_threshold = 5e-2
+    # This threshold sets how flat the diff line must be when approaching it from
+    # the left to start considering its value 
+    consideration_threshold = 1e-2
+    # Number of values groupes with the median technique to avoid being
+    # sensitive to unstabilities
+    group_val = 3
+    # Starting from which value, relative to the averaged diff, should one consider
+    # the asymptotic diff median to be exactly 0.0 in which case one would use this
+    # average instead of this asymptotic median. u d~ > e+ ve LO exhibit a \
+    # difference at zero for example.
+    diff_zero_threshold = 1e-3
+    ##################################
+    
 #   One can print out the raw results by uncommenting the line below
 #    misc.sprint(result)
 #    for i, res in enumerate(result['u d~ > e+ ve a']['CMS']):
@@ -4384,13 +4413,8 @@ def output_complex_mass_scheme(result,output_path, options, model):
 #            misc.sprint(res['resonance']['PS_point_used'])
 #    stop
     
-    res_str = \
-"""
-    -----------------------------------------------------------------
-    ||> Results produced (see above) but analysis yet to be coded <||
-    -----------------------------------------------------------------
-
-"""
+    res_str = ''
+    
     ####### BEGIN helper functions
     def save_path(basename, extension):
         """Creates a suitable filename for saving these results."""
@@ -4518,9 +4542,9 @@ def output_complex_mass_scheme(result,output_path, options, model):
     ####### END helper functions
     
     if True or (options['analyze']=='None' and options['reuse']):
-        res_str += "The results of this check have been stored on disk and its "+\
+        res_str += "\nThe results of this check have been stored on disk and its "+\
               "analysis can be rerun at anytime with the MG5aMC command:\n   "+\
-            "      check cms --analyze=%s\n\n"%save_path('check_cms_res','pkl')
+            "      check cms --analyze=%s\n"%save_path('check_cms_res','pkl')
         save_load_object.save_to_file(save_path('check_cms_res','pkl'), result)
     
     ############################
@@ -4537,6 +4561,12 @@ def output_complex_mass_scheme(result,output_path, options, model):
     
     lambdaCMS_list=result['lambdaCMS']
     
+    # List of failed processes
+    failed_procs = []
+
+    # A bar printing function helper. Change the length here for esthetics
+    bar = lambda char: char*35
+
     # Doing the analysis to printout to the MG5 interface and determine whether
     # the test is passed or not
     # Number of last points to consider for the stability test
@@ -4548,11 +4578,16 @@ def output_complex_mass_scheme(result,output_path, options, model):
         resonance = resonance_str(cms_res['resonance'], latex='none')
         cms_born=cms_res['born']
         nwa_born=nwa_res['born']
-        res_str += "= Complex mass scheme check for process %s (resonance %s)\n"\
-                                                            %(process,resonance)
+        # Starting top thick bar
+        res_str += '\n%s%s%s\n'%(bar('='),'='*8,bar('='))
+        # Centered process and resonance title
+        proc_title = "%s (resonance %s)"%(process,resonance)
+        centering = (bar(2)+8-len(proc_title))//2
+        res_str += "%s%s\n"%(' '*centering,proc_title)
+        # Starting bottom thin bar
+        res_str += '%s%s%s\n'%(bar('-'),'-'*8,bar('-'))
         born_power = guess_lambdaorder(nwa_born,lambdaCMS_list,
                expected=proc_res['born_order'], proc=process, res=resonance)
-        res_str += "== Born scaling lambda^n_born. nborn       = %d\n"%born_power
         stab_cms_born = check_stability(cms_born[-nstab_points:], 
                          lambdaCMS_list[-nstab_points:], born_power, 'CMS Born')
         if stab_cms_born:
@@ -4561,12 +4596,15 @@ def output_complex_mass_scheme(result,output_path, options, model):
                          lambdaCMS_list[-nstab_points:], born_power, 'NWA Born')
         if stab_nwa_born:
             res_str += stab_nwa_born
-        if pert_orders:
+        if not pert_orders:
+            res_str += "== Born scaling lambda^n_born. nborn       = %d\n"%born_power
+        else:
             cms_finite=cms_res['finite']
             nwa_finite=nwa_res['finite']
             loop_power = guess_lambdaorder(nwa_finite,lambdaCMS_list,
-                   expected=proc_res['loop_order'], proc=process, res=resonance)     
-            res_str += "== Loop scaling lambda^n_loop. nloop       = %d\n"%loop_power
+                   expected=proc_res['loop_order'], proc=process, res=resonance)  
+            res_str += "== Scaling lambda^n. nborn, nloop          = %d, %d\n"\
+                                                        %(born_power,loop_power)
             stab_cms_finite = check_stability(cms_finite[-nstab_points:], 
                                   lambdaCMS_list[-nstab_points:], loop_power, 'CMS finite')
             if stab_cms_finite:
@@ -4575,11 +4613,100 @@ def output_complex_mass_scheme(result,output_path, options, model):
                       lambdaCMS_list[-nstab_points:], loop_power, 'NWA finite')
             if stab_nwa_finite:
                 res_str += stab_nwa_finite
+        # Now organize data
+        CMSData = []
+        NWAData = []
+        DiffData = []
+        for idata, lam in enumerate(lambdaCMS_list):
+            if not pert_orders:
+                new_cms=cms_born[idata]/(lam**born_power)
+                new_nwa=nwa_born[idata]/(lam**born_power)
+            else:
+                new_cms=(cms_finite[idata]+cms_born[idata]-nwa_born[idata])/(lam*nwa_born[idata])
+                new_nwa=nwa_finite[idata]/(lam*nwa_born[idata])
+            new_diff=(new_cms-new_nwa)/lam
+            CMSData.append(new_cms)
+            NWAData.append(new_nwa)
+            DiffData.append(new_diff)
 
-        res_str +=\
-"""        ####################################################
-        #               YET TO BE IMPLEMENTED              #
-        ####################################################\n"""
+
+        # NWA Born median
+        diff_average = sum(abs(data) for data in DiffData)/len(DiffData)
+
+        # Find which values to start the test at by looking at the CMSdata scaling
+        # First compute the median of the last 50% of entries in the plot
+        data_span = int(len(DiffData)*0.5)
+        low_diff_median = abs(sorted(DiffData[-data_span:])[data_span//2])
+        
+        # Now walk the values from the right of the diff plot until we reaches
+        # values stable with respect to the CMS_tale_median. This value will
+        # be limit of the range considered for the CMS test. Do it in a way which
+        # is insensitive to instabilities, by considering medians of group_val 
+        # consecutive points.
+        current_median = 0
+        # We really want to select only the very stable region
+        scan_index = 0
+        reference = low_diff_median if abs(low_diff_median/diff_average)\
+                                      >=diff_zero_threshold else diff_average
+        while True:
+            scanner = DiffData[scan_index:group_val+scan_index]
+            current_median = abs(sorted(scanner)[len(scanner)//2])
+            # Useful for debugging
+            # misc.sprint(scanner,current_median,abs(current_median-low_diff_median)/reference,consideration_threshold)
+            if abs(current_median-low_diff_median)/reference<\
+                                                        consideration_threshold:
+                break;
+            scan_index += 1
+            if (group_val+scan_index)>=len(DiffData):
+                # this should not happen, but in this case we arbitrarily take
+                # half of the data
+                logger.info('The median scanning failed during the CMS check.'+
+                  'This is means that the difference plot has not stable'+\
+                  'intermediate region and MG5_aMC will arbitrarily consider the'+\
+                                                     'left half of the values.')
+                scan_index = -1
+                break;
+        
+        if scan_index == -1:
+            cms_check_data_range = len(DiffData)//2
+        else:
+            cms_check_data_range = scan_index + group_val
+
+        res_str += "== Data range considered (min, max, n_val) = (%.1e, %.1e, %d)\n"\
+                  %(lambdaCMS_list[-1],lambdaCMS_list[scan_index],
+                                                 len(lambdaCMS_list)-scan_index)
+        # Now setup the list of values affecting the CMScheck
+        CMScheck_values = DiffData[cms_check_data_range:]
+        # Now apply the same same technique, as above but to the difference plot
+        diff_tale_median = abs(sorted(CMScheck_values)[len(CMScheck_values)//2])
+        scan_index = 0
+        max_diff = 0.0
+        is_ref_zero = abs(diff_tale_median/diff_average)<diff_zero_threshold
+        reference = diff_tale_median if not is_ref_zero else diff_average
+        res_str += "== Asymptotic ref. difference value used   = %s\n"\
+          %('%.3g'%reference if not is_ref_zero else 'ZERO->%.3g'%diff_average)  
+        while True:
+            current_vals = CMScheck_values[scan_index:scan_index+group_val]
+            max_diff = max(max_diff, abs(diff_tale_median-
+                     abs(sorted(current_vals)[len(current_vals)//2]))/reference)
+            if (scan_index+group_val)>=len(CMScheck_values):
+                break
+            scan_index += 1
+        
+        # Now use the CMS check result
+        res_str += "== CMS check result (threshold)            = "+\
+                   "%.3g%% (%s%.3g%%)\n"%(max_diff*100.0, 
+                     '>' if max_diff>CMS_test_threshold else '<',
+                                                       CMS_test_threshold*100.0)
+        if max_diff>CMS_test_threshold:
+            failed_procs.append((process,resonance))
+        res_str += "%s %s %s\n"%(bar('='),
+                 'FAILED' if max_diff>CMS_test_threshold else 'PASSED',bar('='))
+
+    res_str += "\nSummary: %i/%i passed"%(len(checks)-len(failed_procs),len(checks))+\
+                    ('.\n' if not failed_procs else ', failed checks are for:\n')  
+    for process, resonance in failed_procs:
+        res_str += ">  %s, %s\n"%(process, resonance)
 
     ############################
     # Now we turn to the plots #
@@ -4588,8 +4715,11 @@ def output_complex_mass_scheme(result,output_path, options, model):
         if options['reuse']:
             logFile.write(res_str)
             logFile.close()
-        return res_str
-    
+        if output=='text':
+            return res_str
+        else:
+            return failed_procs
+        
     fig_output_file = save_path('check_cms_plots','pdf')
     if os.path.isfile(fig_output_file):
         os.remove(fig_output_file)
@@ -4611,7 +4741,6 @@ def output_complex_mass_scheme(result,output_path, options, model):
              len(nwa_born) != len(lambdaCMS_list):
             raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
                             ' lambdaCMS values specified for process %s'%process
-            return res_str
         if not pert_orders:
             # Born result
             bpower = guess_lambdaorder(nwa_born,lambdaCMS_list,
@@ -4637,8 +4766,8 @@ def output_complex_mass_scheme(result,output_path, options, model):
    
             if len(cms_finite) != len(lambdaCMS_list) or\
                 len(nwa_finite) != len(lambdaCMS_list):
-                res_str += "\n= The Finite result CANNOT match the list of lambdaCMS for %s"%process
-                return res_str 
+                raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
+                            ' lambdaCMS values specified for process %s'%process
             CMSData = []
             NWAData = []
             DiffData = []
@@ -4711,11 +4840,32 @@ def output_complex_mass_scheme(result,output_path, options, model):
             plt.xscale('log')
             plt.ylabel(r'$\displaystyle \Delta$')
             plt.xlabel(r'$\displaystyle \lambda$')
+            # The unreadable stuff below is just to check if the left of the 
+            # plot is stable or not
+            sd = [sorted(data2[key][-len(data2[key])//2:]) for key in data2]
+            medians = [s[len(s)//2] for s in sd]
+            medians = [abs(m) if m!=0.0 else 1.0 for m in medians]
+            left_stability = (sum(abs(sd[i][0]-sd[i][-1])/m for i, m in 
+                                                 enumerate(medians))/len(data2))
+            sd = [sorted(data2[key]) for key in data2]
+            medians = [s[len(s)//2] for s in sd]
+            medians = [abs(m) if m!=0.0 else 1.0 for m in medians]
+            full_stability = (sum(abs(sd[i][0]-sd[i][-1])/m for i, m in 
+                                                 enumerate(medians))/len(data2))
+            left_stable =  True if full_stability==0.0 else \
+                                            (left_stability/full_stability)<0.05
             if sum(data2[key][0] for key in data2)>\
-                                           sum(data2[key][-1] for key in data2):
-                plt.legend(prop={'size':12},loc='upper left')
+                    sum(min(data2[key][-len(data2[key])//2:]) for key in data2):
+                if left_stable:
+                    plt.legend(prop={'size':12},loc='upper left')                    
+                else:
+                    plt.legend(prop={'size':12},loc='lower right')                    
             else:
-                plt.legend(prop={'size':12},loc='lower left')
+                height = 'upper'
+                if left_stable:
+                    plt.legend(prop={'size':12},loc='lower left')
+                else:
+                    plt.legend(prop={'size':12},loc='upper right')
 
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
               minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
@@ -4746,5 +4896,8 @@ def output_complex_mass_scheme(result,output_path, options, model):
     if options['reuse']:
         logFile.write(res_str)
         logFile.close()
-    return res_str
 
+    if output=='text':
+        return res_str
+    else:
+        return failed_procs
