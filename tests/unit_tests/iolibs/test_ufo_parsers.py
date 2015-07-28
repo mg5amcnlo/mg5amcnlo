@@ -173,8 +173,8 @@ class UFOParserTest(unittest.TestCase):
         """Test that we can parse a series of expression including
         1j and .real"""
         
-        tests = [('1j', 'DCOMPLX(0d0, 1.000000d+00)'),
-                 ('3+3j', '3.000000d+00+DCOMPLX(0d0, 3.000000d+00)'),
+        tests = [('1j', 'DCMPLX(0d0, 1.000000d+00)'),
+                 ('3+3j', '3.000000d+00+DCMPLX(0d0, 3.000000d+00)'),
                  ('re1j', 're1j'),
                  ('re(x)', 'dble(x)'),
                  ('x.real', 'dble(x)'),

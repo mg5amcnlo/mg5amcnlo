@@ -5626,7 +5626,7 @@ This implies that with decay chains:
                 self.options[args[0]] = args[1]
             if log:
                 logger.info('Set group_subprocesses to %s' % \
-                        str(self.options[args[0]]))
+                                                    str(self.options[args[0]]))
                 logger.info('Note that you need to regenerate all processes')
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -5983,9 +5983,41 @@ This implies that with decay chains:
             else:
                 shutil.rmtree(self._export_dir)
 
+        # Choose here whether to group subprocesses or not, if the option was
+        # set to 'Auto' and propagate this choice down the line:
+        if self.options['group_subprocesses'] in [True, False]:
+            group_processes = self.options['group_subprocesses']
+        elif self.options['group_subprocesses'] == 'Auto':
+            # By default we set it to True
+            group_processes = True
+            # But we turn if off for decay processes which
+            # have been defined with multiparticle labels, because then
+            # branching ratios necessitates to keep subprocesses independent.
+            # That applies only if there is more than one subprocess of course.
+            if self._curr_amps[0].get_ninitial() == 1 and \
+                                                     len(self._curr_amps)>1:
+                processes = [amp.get('process') for amp in self._curr_amps]            
+                if len(set(proc.get('id') for proc in processes))!=len(processes):
+                    # Special warning for loop-induced
+                    if any(proc['perturbation_couplings'] != [] for proc in
+                               processes) and self._export_format == 'madevent':
+                        logger.warning("""
+|| The loop-induced decay process you have specified contains several
+|| subprocesses and, in order to be able to compute individual branching ratios, 
+|| MG5_aMC will *not* group them. Integration channels will also be considered
+|| for each diagrams and as a result integration will be inefficient.
+|| It is therefore recommended to perform this simulation by setting the MG5_aMC
+|| option 'group_subprocesses' to 'True' (before the output of the process).
+|| Notice that when doing so, processes for which one still wishes to compute
+|| branching ratios independently can be specified using the syntax:
+||   -> add process <proc_def>
+""")
+                    group_processes = False
+
         #Exporter + Template
         if options['exporter'] == 'v4':
-            self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
+            self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
+                                             group_subprocesses=group_processes)
             if options['output'] == 'Template':
                 self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
         if  options['exporter'] == 'cpp' and options['output'] == 'Template':
@@ -6006,7 +6038,7 @@ This implies that with decay chains:
                 base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
 
         # Perform export and finalize right away
-        self.export(nojpeg, main_file_name, args)
+        self.export(nojpeg, main_file_name, group_processes, args)
 
         # Automatically run finalize
         self.finalize(nojpeg, flaglist=flaglist)
@@ -6018,12 +6050,16 @@ This implies that with decay chains:
         self._export_dir = None
 
     # Export a matrix element
-    def export(self, nojpeg = False, main_file_name = "", args=[]):
-        """Export a generated amplitude to file"""
+    def export(self, nojpeg = False, main_file_name = "", group_processes=True, 
+                                                                       args=[]):
+        """Export a generated amplitude to file."""
 
-        def generate_matrix_elements(self):
+        def generate_matrix_elements(self, group_processes=True):
             """Helper function to generate the matrix elements before
-            exporting"""
+            exporting. Uses the main function argument 'group_processes' to decide 
+            whether to use group_subprocess or not. (it has been set in do_output to
+            the appropriate value if the MG5 option 'group_subprocesses' was set
+            to 'Auto'."""
 
             if self._export_format in ['standalone_msP', 'standalone_msF', 'standalone_mw']:
                 to_distinguish = []
@@ -6036,20 +6072,10 @@ This implies that with decay chains:
             self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
                                  a1.get_number_of_diagrams())
 
-            # Check if we need to group the SubProcesses or not
-            group = True
-            if self.options['group_subprocesses'] is False:
-                group = False
-            elif self.options['group_subprocesses'] == 'Auto' and \
-                                         self._curr_amps[0].get_ninitial() == 1:
-                group = False
-
-
-
             cpu_time1 = time.time()
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
-                if group:
+                if group_processes:
                     cpu_time1 = time.time()
                     dc_amps = diagram_generation.DecayChainAmplitudeList(\
                         [amp for amp in self._curr_amps if isinstance(amp, \
@@ -6119,10 +6145,8 @@ This implies that with decay chains:
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine
-
-
-
-        ndiags, cpu_time = generate_matrix_elements(self)
+        
+        ndiags, cpu_time = generate_matrix_elements(self,group_processes)
 
         calls = 0
 
@@ -6432,7 +6456,7 @@ This implies that with decay chains:
             logger.warning(warning_text)
             
         if not model:
-            modelname = self._curr_model.get('modelpath')
+            modelname = self._curr_model.get('modelpath+restriction')
             with misc.MuteLogger(['madgraph'], ['INFO']):
                 model = import_ufo.import_model(modelname, decay=True)
         else:

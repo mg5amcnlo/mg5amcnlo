@@ -3429,6 +3429,10 @@ class ProcessDefinition(Process):
         """ Check that this process definition will yield a single process, as
         each multileg only has one leg"""
         
+        for process in self['decay_chains']:
+            if process.has_multiparticle_label():
+                return True
+            
         for mleg in self['legs']:
             if len(mleg['ids'])>1:
                 return True

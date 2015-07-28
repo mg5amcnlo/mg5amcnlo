@@ -978,7 +978,10 @@ def convert_to_slha1(path, outputpath=None ):
     # Td
     yd = card['yd'].get([3, 3]).value
     td = card['td'].get([3, 3]).value
-    card.mod_param('td', [3,3], 'ad', [3,3], value= td/yd, comment='A_b(Q) DRbar')
+    if td:
+        card.mod_param('td', [3,3], 'ad', [3,3], value= td/yd, comment='A_b(Q) DRbar')
+    else:
+        card.mod_param('td', [3,3], 'ad', [3,3], value= 0., comment='A_b(Q) DRbar')
     card.add_param('ad', [1,1], 0, 'A_d(Q) DRbar')
     card.add_param('ad', [2,2], 0, 'A_s(Q) DRbar')
     card['ad'].scale = scale

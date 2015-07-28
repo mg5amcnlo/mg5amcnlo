@@ -709,6 +709,10 @@ class TMP_directory(object):
 
     
     def __exit__(self, ctype, value, traceback ):
+        #True only for debugging:
+        if False and isinstance(value, Exception):
+            sprint("Directory %s not cleaned. This directory can be removed manually" % self.path)
+            return False
         try:
             shutil.rmtree(self.path)
         except OSError:

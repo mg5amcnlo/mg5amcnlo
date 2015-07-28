@@ -448,8 +448,9 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         elif self._export_format == 'matchbox':
             output_type = 'madloop_matchbox'
 
+        # The option group_subprocesses doesn't matter here
         self._curr_exporter = export_v4.ExportV4Factory(self, \
-                                                 noclean, output_type=output_type)
+                     noclean, output_type=output_type, group_subprocesses=False)
 
         if self._export_format in ['standalone', 'matchbox']:
             self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))

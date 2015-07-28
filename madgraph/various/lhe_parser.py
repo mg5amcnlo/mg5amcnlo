@@ -1263,6 +1263,17 @@ class Event(list):
                       'reweight': reweight_str}
         return re.sub('[\n]+', '\n', out)
     
+    
+    def get_ht_scale(self, prefactor=1):
+        
+        scale = 0 
+        for particle in self:
+            if particle.status != 1:
+                continue 
+            scale += particle.mass**2 + particle.momentum.pt**2
+    
+        return prefactor * scale
+    
     def get_momenta_str(self, get_order, allow_reversed=True):
         """return the momenta str in the order asked for"""
         

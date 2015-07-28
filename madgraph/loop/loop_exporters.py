@@ -1634,8 +1634,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if self.dependencies=='internal':
             if tir_name in ["pjfry","golem"]:
                 self.tir_available_dict[tir_name]=False
-                logger.warning("When using the 'output_dependencies=internal' "+\
-" MG5_aMC option, the tensor integral library %s cannot be employed because"%tir_name+\
+                logger.info("When using the 'output_dependencies=internal' "+\
+" MG5_aMC option, the (optional) tensor integral library %s cannot be employed because"%tir_name+\
 " it is not distributed with the MG5_aMC code so that it cannot be copied locally.")
                 return ""
             elif tir_name == "iregi":
