@@ -480,7 +480,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   region of detected resonances and by progressively")
         logger.info("   decreasing the width. Additional options for this check are:")
         logger.info("    --offshellness=f : f is a positive or negative float specifying ")
-        logger.info("      the distance from the pole as f*particle_mass. Default is 0.5")
+        logger.info("      the distance from the pole as f*particle_mass. Default is 100.0")
         logger.info("    --seed=i : to force a specific RNG integer seed i (default is random)")
         logger.info("    --cms=order1;order2;...,p1->f(p,lambdaCMS);p2->f2(p,lambdaCMS);...")
         logger.info("      'order_i' specifies the expansion orders considered for the test.")
@@ -913,7 +913,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # --force_recompute_width='always' or 'first_time' is used.
             user_options['--recompute_width']='auto'
             # It can be negative so as to be offshell below the resonant mass
-            user_options['--offshellness']='0.5'
+            user_options['--offshellness']='100.0'
             # Pick the lambdaCMS values for the test
             user_options['--lambdaCMS']='[(1/2.0)**exp for exp in range(0,20)]'
             # Set the RNG seed, -1 is default (random).

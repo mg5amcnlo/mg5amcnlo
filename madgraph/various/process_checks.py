@@ -3624,7 +3624,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             if resonance['ParticlePDG'] == 0:
                 continue
 
-            mass_string = evaluator.full_model.get_particle(                                           resonance['ParticlePDG']).get('mass')
+            mass_string = evaluator.full_model.get_particle(
+                                           resonance['ParticlePDG']).get('mass')
             mass  = evaluator.full_model.get('parameter_dict')[mass_string].real
             # Discard massless s-channels
             if mass==0.0:
@@ -4452,6 +4453,9 @@ def output_complex_mass_scheme(result,output_path, options, model):
         
         process_string = []
         for particle in process.split():
+            if particle=='$$':
+                process_string.append(r'\$\$')
+                continue
             if particle=='>':
                 process_string.append(r'$\displaystyle \rightarrow$')
                 continue
@@ -4536,7 +4540,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
             for idata in range(len(lambdaCMS_list)):
                 new_cms=cms_born[idata]/lambdaCMS_list[idata]**bpower
                 new_nwa=nwa_born[idata]/lambdaCMS_list[idata]**bpower
-                new_diff=(new_cms-new_nwa)/lambdaCMS_list[idata]**2
+                new_diff=(new_cms-new_nwa)/lambdaCMS_list[idata]
                 CMSData.append(new_cms)
                 NWAData.append(new_nwa)
                 DiffData.append(new_diff)
