@@ -3391,7 +3391,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
          'model considered does not appear to have a decay module.\nThe widths'+
          ' will need to be computed numerically and it will slow down the test.\n'+
          'Consider using a param_card already specifying correct LO widths and'+
-         " adding the option --recompute_width='never' when doing this check.")
+         " adding the option --recompute_width=never when doing this check.")
 
     if options['recompute_width']=='never' and \
         any(order in multiprocess_nwa.get('perturbation_couplings') for order in
@@ -4401,12 +4401,6 @@ def output_complex_mass_scheme(result,output_path, options, model):
             suffix = datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%Ss")
         return pjoin(output_path,'%s_%s.%s'%(basename,suffix,extension))
 
-    if True or (options['analyze']=='None' and options['reuse']):
-        res_str += "The results of this check have been stored on disk and its "+\
-              "analysis can be rerun at anytime with the MG5aMC command:\n   "+\
-            "      check cms --analyze=%s\n\n"%save_path('check_cms_res','pkl')
-        save_load_object.save_to_file(save_path('check_cms_res','pkl'), result)
-
     # Chose here whether to use Latex particle names or not
     # Possible values are 'none', 'model' or 'built-in'
     useLatexParticleName = 'built-in'
@@ -4504,6 +4498,12 @@ def output_complex_mass_scheme(result,output_path, options, model):
             return None
     ####### END helper functions
     
+    if True or (options['analyze']=='None' and options['reuse']):
+        res_str += "The results of this check have been stored on disk and its "+\
+              "analysis can be rerun at anytime with the MG5aMC command:\n   "+\
+            "      check cms --analyze=%s\n\n"%save_path('check_cms_res','pkl')
+        save_load_object.save_to_file(save_path('check_cms_res','pkl'), result)
+    
     ############################
     # Numerical check first    #
     ############################
@@ -4548,12 +4548,12 @@ def output_complex_mass_scheme(result,output_path, options, model):
             loop_power = guess_lambdaorder(nwa_finite,lambdaCMS_list,
                    expected=proc_res['loop_order'], proc=process, res=resonance)     
             res_str += "== Loop scaling lambda^n_loop. nloop       = %d\n"%loop_power
-            stab_cms_finite, prec = check_stability(cms_finite[-nstab_points:], 
-                                  lambdaCMS_list[-nstab_points:], nwa_finite, 'CMS finite')
+            stab_cms_finite = check_stability(cms_finite[-nstab_points:], 
+                                  lambdaCMS_list[-nstab_points:], loop_power, 'CMS finite')
             if stab_cms_finite:
                 res_str += stab_cms_finite
-            stab_nwa_finite, prec = check_stability(nwa_finite[-nstab_points:], 
-                      lambdaCMS_list[-nstab_points:], nwa_finite, 'NWA finite')
+            stab_nwa_finite = check_stability(nwa_finite[-nstab_points:], 
+                      lambdaCMS_list[-nstab_points:], loop_power, 'NWA finite')
             if stab_nwa_finite:
                 res_str += stab_nwa_finite
 
