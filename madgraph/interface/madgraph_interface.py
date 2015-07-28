@@ -500,9 +500,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("               the test relies on linear scaling of the width, so 'always' is ")
         logger.info("               only for double-checks")
         logger.info("    --lambdaCMS = <python_list> : specifies the list of lambdaCMS values to ")
-        logger.info("      use for the test. Default is '[(1/2.0)**exp\ for\ exp\ in\ range(0,20)]'")
-        logger.info("      in the list expression, you must escape spaces. Also, this option")
-        logger.info("      *must* appear last in the otpion list.")
+        logger.info("      use for the test. For example: '[(1/2.0)**exp\ for\ exp\ in\ range(0,20)]'")
+        logger.info("      In the list expression, you must escape spaces. Also, this option")
+        logger.info("      *must* appear last in the otpion list. Finally, the default value is '1.0e-5'")
+        logger.info("      for which an optimal list of progressive values is picked up to 1.0e-5")        
         logger.info("    --show_plot = True or False: Whether to show plot during analysis (default is True)")
         logger.info("Comments",'$MG:color:GREEN')
         logger.info(" > If param_card is given, that param_card is used ")
@@ -914,8 +915,13 @@ class CheckValidForCmd(cmd.CheckCmd):
             user_options['--recompute_width']='auto'
             # It can be negative so as to be offshell below the resonant mass
             user_options['--offshellness']='100.0'
-            # Pick the lambdaCMS values for the test
-            user_options['--lambdaCMS']='[(1/2.0)**exp for exp in range(0,20)]'
+            # Pick the lambdaCMS values for the test. Instead of a python list
+            # we specify here (low,N) which means that do_check will automatically
+            # pick lambda values up to the value low and with N values uniformly
+            # spread in each interval [1.0e-i,1.0e-(i+1)].
+            # Some points close to each other will be added at the end for the
+            # stability test.
+            user_options['--lambdaCMS']='(1.0e-5,10)'
             # Set the RNG seed, -1 is default (random).
             user_options['--seed']=-1
             # The option below can help the user re-analyze existing pickled check
@@ -3288,6 +3294,31 @@ This implies that with decay chains:
     # Perform checks
     def do_check(self, line):
         """Check a given process or set of processes"""
+        
+        ###### BEGIN do_check
+        def create_lambda_values_list(lower_bound, N):
+            """ Returns a list of values spanning the range [1.0, lower_bound] with
+             lower_bound < 1.0 and with each interval [1e-i, 1e-(i+1)] covered
+             by N values uniformly distributed. For example, lower_bound=1e-2
+             and N=5 returns:
+             [1, 0.8, 0.6, 0.4, 0.2, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]"""
+            
+            lCMS_values = [1]
+            exp = 0
+            n   = 0
+            while lCMS_values[-1]>=lower_bound:
+                n = (n+1)
+                lCMS_values.append(float('1.0e-%d'%exp)*((N-n%N)/float(N)))
+                if lCMS_values[-1]==lCMS_values[-2]:
+                    lCMS_values.pop()
+                exp = (n+1)//N
+            
+            lCMS_values = lCMS_values[:-1]
+            if lCMS_values[-1]!=lower_bound:
+                lCMS_values.append(lower_bound)
+                
+            return lCMS_values
+        ###### BEGIN do_check
 
         args = self.split_arg(line)
 
@@ -3342,14 +3373,43 @@ This implies that with decay chains:
                     lambda_values = eval(option[1])
                 except SyntaxError:
                     raise self.InvalidCmd("'%s' is not a correct"%option[1]+
-                              " expression for a list of lambdaCMS values.")
-                if lambda_values[0]!=1.0:
-                    raise self.InvalidCmd("The first value of the lambdaCMS values"+
-                            " specified must be 1.0, not %s"%str(lambda_values))
-                for l in lambda_values:
-                    if not isinstance(l,float):
-                        raise self.InvalidCmd("All lambda CMS values must be"+
-                                                      " float, not '%s'"%str(l))
+                                     " python expression for lambdaCMS values.")
+                if isinstance(lambda_values,list):
+                    if lambda_values[0]!=1.0:
+                        raise self.InvalidCmd("The first value of the lambdaCMS values"+
+                                " specified must be 1.0, not %s"%str(lambda_values))
+                    for l in lambda_values:
+                        if not isinstance(l,float):
+                            raise self.InvalidCmd("All lambda CMS values must be"+
+                                                          " float, not '%s'"%str(l))
+                elif isinstance(lambda_values,(tuple,float)):
+                    # Format here is then (lower_bound, N) were lower_bound is
+                    # the minimum lambdaCMS value that must be probed and the
+                    # integer N is the number of such values that must be 
+                    # uniformly distributed in each intervale [1.0e-i,1.0e-(i+1)]
+                    if isinstance(lambda_values, float):
+                        # Use default of 10 for the number of lambda values
+                        lower_bound = lambda_values
+                        N = 10
+                    else:
+                        if isinstance(lambda_values[0],float) and \
+                           isinstance(lambda_values[1],int):
+                            lower_bound = lambda_values[0]
+                            N = lambda_values[1]
+                        else:
+                            raise self.InvalidCmd("'%s' must be a "%option[1]+
+                                               "tuple with types (float, int).")
+                    lambda_values = create_lambda_values_list(lower_bound,N)
+                else:
+                    raise self.InvalidCmd("'%s' must be an expression"%option[1]+
+                                          " for either a float, tuple or list.")
+                lower_bound = lambda_values[-1]
+                # and finally add 5 points for stability test on the last values
+                # Depending on how the stab test will behave at NLO, we can 
+                # consider automatically adding the values below
+#                for stab in range(1,6):
+#                    lambda_values.append((1.0+(stab/100.0))*lower_bound)
+
                 CMS_options['lambdaCMS'] = lambda_values
             elif option[0]=='--cms':
                 try:

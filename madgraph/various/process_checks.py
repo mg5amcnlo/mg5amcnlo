@@ -4372,7 +4372,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
     -----------------------------------------------------------------
 
 """
-
+    ####### BEGIN helper functions
     def save_path(basename, extension):
         """Creates a suitable filename for saving these results."""
         
@@ -4463,7 +4463,51 @@ def output_complex_mass_scheme(result,output_path, options, model):
 
         return r'CMS check for %s ( resonance %s )'\
                                            %(' '.join(process_string),resonance)
-            
+
+    def guess_lambdaorder(ME_values_list,lambda_values, expected=None,
+                                                           proc=None, res=None):
+        """ Guess the lambda scaling from a list of ME values and return it.
+        Also compare with the expected result if specified and trigger a 
+        warning if not in agreement."""
+        # guess the lambdaCMS power in the amplitude squared
+        bpowers = []
+        for i, lambdaCMS in enumerate(lambda_values[1:]):
+            bpowers.append(round(math.log(ME_values_list[0]/ME_values_list[i+1],\
+                                                   lambda_values[0]/lambdaCMS)))
+
+        # Pick the most representative power
+        bpower = sorted([(el, bpowers.count(el)) for el in set(bpowers)],
+                                                         lambda el: el[1])[0][0]
+        if not expected:
+            return bpower
+        if bpower != expected:
+            logger.warning('The apparent scaling of the squared amplitude'+
+             'seems inconsistent w.r.t to detected value '+
+             '(%i vs %i). %i will be used.'%(expected,bpower,bpower)+
+             ' This happend for process %s and resonance %s'%(proc, res))
+        return bpower    
+
+    def check_stability(ME_values, lambda_values, lambda_scaling, values_name):
+        """ Checks if the values passed in argument are stable and return the 
+        stability check outcome warning if it is not precise enough. """
+        values = sorted([
+            abs(val*(lambda_values[0]/lambda_values[i])**lambda_scaling) for \
+                                                i, val in enumerate(ME_values)])
+        median = values[len(values)//2]
+        max_diff = max(abs(values[0]-median),abs(values[-1]-median))
+        stability = max_diff/median
+        stab_threshold = 1e-2
+        if stability >= stab_threshold:
+            return "== WARNING: Stability check failed for '%s' with stability %.2e.\n"\
+                                                       %(values_name, stability)
+        else:
+            return None
+    ####### END helper functions
+    
+    ############################
+    # Numerical check first    #
+    ############################
+    
     checks = []
     for process in result['ordered_processes']:
         checks.extend([(process,resID) for resID in \
@@ -4476,19 +4520,51 @@ def output_complex_mass_scheme(result,output_path, options, model):
     
     # Doing the analysis to printout to the MG5 interface and determine whether
     # the test is passed or not
+    # Number of last points to consider for the stability test
+    nstab_points=5
     for process, resID in checks:
         proc_res = result[process]
         cms_res = proc_res['CMS'][resID]
         nwa_res = proc_res['NWA'][resID]
-        resonance = resonance_str(cms_res['resonance'], latex='none')    
+        resonance = resonance_str(cms_res['resonance'], latex='none')
+        cms_born=cms_res['born']
+        nwa_born=nwa_res['born']
         res_str += "= Complex mass scheme check for process %s (resonance %s)\n"\
                                                             %(process,resonance)
+        born_power = guess_lambdaorder(nwa_born,lambdaCMS_list,
+               expected=proc_res['born_order'], proc=process, res=resonance)
+        res_str += "== Born scaling lambda^n_born. nborn       = %d\n"%born_power
+        stab_cms_born = check_stability(cms_born[-nstab_points:], 
+                         lambdaCMS_list[-nstab_points:], born_power, 'CMS Born')
+        if stab_cms_born:
+            res_str += stab_cms_born
+        stab_nwa_born = check_stability(nwa_born[-nstab_points:], 
+                         lambdaCMS_list[-nstab_points:], born_power, 'NWA Born')
+        if stab_nwa_born:
+            res_str += stab_nwa_born
+        if pert_orders:
+            cms_finite=cms_res['finite']
+            nwa_finite=nwa_res['finite']
+            loop_power = guess_lambdaorder(nwa_finite,lambdaCMS_list,
+                   expected=proc_res['loop_order'], proc=process, res=resonance)     
+            res_str += "== Loop scaling lambda^n_loop. nloop       = %d\n"%loop_power
+            stab_cms_finite, prec = check_stability(cms_finite[-nstab_points:], 
+                                  lambdaCMS_list[-nstab_points:], nwa_finite, 'CMS finite')
+            if stab_cms_finite:
+                res_str += stab_cms_finite
+            stab_nwa_finite, prec = check_stability(nwa_finite[-nstab_points:], 
+                      lambdaCMS_list[-nstab_points:], nwa_finite, 'NWA finite')
+            if stab_nwa_finite:
+                res_str += stab_nwa_finite
+
         res_str +=\
 """        ####################################################
         #               YET TO BE IMPLEMENTED              #
         ####################################################\n"""
 
-    # Now we turn to the plots
+    ############################
+    # Now we turn to the plots #
+    ############################
     if not options['show_plot']:
         if options['reuse']:
             logFile.write(res_str)
@@ -4519,21 +4595,9 @@ def output_complex_mass_scheme(result,output_path, options, model):
             return res_str
         if not pert_orders:
             # Born result
-            # guess the lambdaCMS power in the amplitude squared
-            bpowers = []
-            for i, lambdaCMS in enumerate(lambdaCMS_list):
-                bpowers.append(round(math.log(nwa_born[0]/nwa_born[1],\
-                                          lambdaCMS_list[0]/lambdaCMS_list[1])))
+            bpower = guess_lambdaorder(nwa_born,lambdaCMS_list,
+                   expected=proc_res['born_order'], proc=process, res=resonance)
 
-            # Pick the most representative power
-            bpower = sorted([(el, bpowers.count(el)) for el in set(bpowers)],
-                                                         lambda el: el[1])[0][0]
-            if bpower != proc_res['born_order']:
-                logger.warning('The apparent scaling of the squared amplitude'+
-                 'seems inconsistent w.r.t to detected value '+
-                 '(%i vs %i). %i will be used.'%(proc_res['born_order'],bpower,bpower)+
-                 ' This happend for process %s and resonance %s'%\
-                                                           (process, resonance))
             CMSData = []
             NWAData = []
             DiffData = []
@@ -4551,6 +4615,7 @@ def output_complex_mass_scheme(result,output_path, options, model):
             # NLO result
             cms_finite=cms_res['finite']
             nwa_finite=nwa_res['finite']
+   
             if len(cms_finite) != len(lambdaCMS_list) or\
                 len(nwa_finite) != len(lambdaCMS_list):
                 res_str += "\n= The Finite result CANNOT match the list of lambdaCMS for %s"%process
