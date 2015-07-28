@@ -502,8 +502,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("    --lambdaCMS = <python_list> : specifies the list of lambdaCMS values to ")
         logger.info("      use for the test. For example: '[(1/2.0)**exp\ for\ exp\ in\ range(0,20)]'")
         logger.info("      In the list expression, you must escape spaces. Also, this option")
-        logger.info("      *must* appear last in the otpion list. Finally, the default value is '1.0e-5'")
-        logger.info("      for which an optimal list of progressive values is picked up to 1.0e-5")        
+        logger.info("      *must* appear last in the otpion list. Finally, the default value is '1.0e-8'")
+        logger.info("      for which an optimal list of progressive values is picked up to 1.0e-8")
         logger.info("    --show_plot = True or False: Whether to show plot during analysis (default is True)")
         logger.info("Comments",'$MG:color:GREEN')
         logger.info(" > If param_card is given, that param_card is used ")
@@ -921,7 +921,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # spread in each interval [1.0e-i,1.0e-(i+1)].
             # Some points close to each other will be added at the end for the
             # stability test.
-            user_options['--lambdaCMS']='(1.0e-5,10)'
+            user_options['--lambdaCMS']='(1.0e-8,4)'
             # Set the RNG seed, -1 is default (random).
             user_options['--seed']=0
             # The option below can help the user re-analyze existing pickled check
