@@ -923,7 +923,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # stability test.
             user_options['--lambdaCMS']='(1.0e-6,5)'
             # Set the RNG seed, -1 is default (random).
-            user_options['--seed']=0
+            user_options['--seed']=666
             # The option below can help the user re-analyze existing pickled check
             user_options['--analyze']='None'
             # Decides whether to show plot or not during the analysis
