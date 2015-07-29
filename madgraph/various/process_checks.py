@@ -3399,8 +3399,8 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
         logger.warning('You chose not to recompute the widths while including'+
           ' loop corrections. The check will be successful only if the width'+\
           ' specified in the default param_card is LO accurate (Remember that'+\
-          ' the default values of alpha_s and awem1 are set to 0.1 and 100.0'+\
-          ' respectively.).')
+          ' the default values of alpha_s and awem1 are set to 0.1 and 10.0'+\
+          ' respectively by default).')
 
     # Reload the model including the decay.py to have efficient MadWidth if
     # possible (this model will be directly given to MadWidth. Notice that 
@@ -4404,7 +4404,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     # while returning a successful check when correctly implemented.
     # be tighter at LO
     if pert_orders:
-        CMS_test_threshold = 5e-2
+        CMS_test_threshold = 1e-1
     else:
         CMS_test_threshold = 1e-2
     # This threshold sets how flat the diff line must be when approaching it from
