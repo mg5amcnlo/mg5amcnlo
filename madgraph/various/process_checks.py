@@ -4694,34 +4694,35 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             cms_check_data_range = len(DiffData)//2
         else:
             cms_check_data_range = scan_index + group_val
-            
-        # try to find the numerical instability region
-        scan_index_2 = len(DiffData)
-        group_val_2 = max([3,group_val])
-        while True:
-            scanner = DiffData[scan_index_2-group_val_2:scan_index_2]
-            current_median = abs(sorted(scanner)[len(scanner)//2])
-            if abs(current_median-low_diff_median)/reference<\
+
+        if scan_index >= 0:            
+            # try to find the numerical instability region
+            scan_index_2 = len(DiffData)
+            group_val_2 = max([3,group_val])
+            while True:
+                scanner = DiffData[scan_index_2-group_val_2:scan_index_2]
+                current_median = abs(sorted(scanner)[len(scanner)//2])
+                if abs(current_median-low_diff_median)/reference<\
                                                         consideration_threshold:
-                break;
-            scan_index_2 -= 1
-            if (scan_index_2-group_val_2)< 0:
-                # this only happens when no stable intermediate region can be found
-                # skip the warning here
-                scan_index_2 = -1
-                break;
-        # to check whether it is because of the numerical instability issue
-        # judging it is a monotonous curve or not
-        if scan_index_2 > scan_index and len(DiffData)-scan_index_2 >= 2:
-            instab_check=DiffData[scan_index_2:]
-            upper = [val for val in instab_check if val > DiffData[scan_index_2-1]]
-            lower = [val for val in instab_check if val < DiffData[scan_index_2-1]]
-            if len(upper)*len(lower) > 0:
-                logger.info('It detects a numerical unstable region starting from '+\
-                            ('lambdaCMS < %.1e.\n'%lambdaCMS_list[scan_index_2-1])+\
-                            'Please look at the plot (and throw more points via the '+\
-                            'option --lambdaCMS) in this region.\n'+\
-                            'Please exclude this region to pass the cms check.')
+                    break;
+                scan_index_2 -= 1
+                if (scan_index_2-group_val_2)< 0:
+                    # this only happens when no stable intermediate region can be found
+                    # skip the warning here
+                    scan_index_2 = -1
+                    break;
+            # to check whether it is because of the numerical instability issue
+            # judging it is a monotonous curve or not
+            if scan_index_2 > scan_index and len(DiffData)-scan_index_2 >= 2:
+                instab_check=DiffData[scan_index_2:]
+                upper = [val for val in instab_check if val > DiffData[scan_index_2-1]]
+                lower = [val for val in instab_check if val < DiffData[scan_index_2-1]]
+                if len(upper)*len(lower) > 0:
+                    logger.info('It detects a numerical unstable region starting from '+\
+                                ('lambdaCMS < %.1e in %s.\n'%(lambdaCMS_list[scan_index_2-1],proc_title))+\
+                                'Please look at the plot (and throw more points via the '+\
+                                'option --lambdaCMS) in this region.\n'+\
+                                'Please exclude this region to pass the cms check.')
 
         res_str += "== Data range considered (min, max, n_val) = (%.1e, %.1e, %d)\n"\
                   %(lambdaCMS_list[-1],lambdaCMS_list[scan_index],
