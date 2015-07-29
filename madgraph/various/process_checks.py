@@ -3682,8 +3682,19 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
             decay_kinematic = evaluator.get_momenta(decay_proc, options=options, 
                                                    special_mass=special_mass)[0]
-            resonance['PS_point_used'] = glue_momenta(prod_kinematic,
-                                                                decay_kinematic)
+            momenta = glue_momenta(prod_kinematic,decay_kinematic)
+            # Reshuffle the momentum so as to put it back in the order specified
+            # in the process definition.
+            # First the production momenta, without the special decayed particle
+            ordered_momenta = [(prod_proc.get('legs')[i].get('number'),momenta[i])
+                    for i in range(len(prod_proc.get('legs'))-1)]
+            # And then the decay ones.
+            ordered_momenta += [(decay_proc.get('legs')[-i].get('number'),
+                     momenta[-i]) for i in range(1,len(decay_proc.get('legs')))]
+
+            # And now use them put in the right order
+            resonance['PS_point_used'] = [m[1] for m in sorted(ordered_momenta,
+                                                        key = lambda el: el[0])]
             kept_resonances.append(resonance)
 #        misc.sprint(kept_resonances)
 #        misc.sprint(len(kept_resonances))
@@ -4565,7 +4576,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             "      check cms --analyze=%s\n"%save_path('check_cms_res','pkl')
         save_load_object.save_to_file(save_path('check_cms_res','pkl'), result)
     else:
-        res_str += "\nUse the following synthax if you want to store the raw results on disk.\n"+\
+        if len(result['ordered_processes'])>0:
+            res_str += "\nUse the following synthax if you want to store the raw results on disk.\n"+\
                     "    check cms -reuse <proc_def> <options>\n"
     
     ############################
@@ -4772,8 +4784,12 @@ minimum value of lambda to consider in the CMS check."""\
         res_str += "%s %s %s\n"%(bar('='),
                  'FAILED' if max_diff>CMS_test_threshold else 'PASSED',bar('='))
 
-    res_str += "\nSummary: %i/%i passed"%(len(checks)-len(failed_procs),len(checks))+\
-                    ('.\n' if not failed_procs else ', failed checks are for:\n')  
+    if len(checks):
+        res_str += "\nSummary: %i/%i passed"%(len(checks)-len(failed_procs),len(checks))+\
+                    ('.\n' if not failed_procs else ', failed checks are for:\n')
+    else:
+        res_str += "\nNo CMS check to perform."
+        
     for process, resonance in failed_procs:
         res_str += ">  %s, %s\n"%(process, resonance)
 
@@ -4916,7 +4932,7 @@ minimum value of lambda to consider in the CMS check."""\
 
             plt.yscale('linear')
             plt.xscale('log')
-            plt.title(info['title'],fontsize=12)
+            plt.title(info['title'],fontsize=12,y=1.08)
             plt.ylabel(r'$\displaystyle \mathcal{M}$')
             #plt.xlabel('lambdaCMS')
             if sum(data1[key][0] for key in data1)>\
@@ -4952,17 +4968,13 @@ minimum value of lambda to consider in the CMS check."""\
             # The unreadable stuff below is just to check if the left of the 
             # plot is stable or not
             sd = [sorted(data2[key][-len(data2[key])//2:]) for key in data2]
-            medians = [s[len(s)//2] for s in sd]
-            medians = [abs(m) if m!=0.0 else 1.0 for m in medians]
-            left_stability = (sum(abs(sd[i][0]-sd[i][-1])/m for i, m in 
-                                                 enumerate(medians))/len(data2))
+            left_stability = sum(abs(s[0]-s[-1]) for s in sd)
             sd = [sorted(data2[key][:-len(data2[key])//2]) for key in data2]
-            medians = [s[len(s)//2] for s in sd]
-            medians = [abs(m) if m!=0.0 else 1.0 for m in medians]
-            right_stability = (sum(abs(sd[i][0]-sd[i][-1])/m for i, m in 
-                                                 enumerate(medians))/len(data2))
+            right_stability = sum(abs(s[0]-s[-1]) for s in sd)
+            misc.sprint(left_stability,right_stability)
             left_stable =  False if right_stability==0.0 else \
                                             (left_stability/right_stability)<0.1
+            misc.sprint(left_stable)
             if sum(data2[key][0] for key in data2)>\
                     sum(min(data2[key][-len(data2[key])//2:]) for key in data2):
                 if left_stable:
@@ -4983,14 +4995,15 @@ minimum value of lambda to consider in the CMS check."""\
 
         pp.close()
         
-        logger.info('Some cms check statistics will be displayed once you '+\
-                        'close the plot window')
-        logger.info('Complex Mass Scheme check plot output to file %s. '%fig_output_file)
-        
-        if sys.platform.startswith('linux'):
-            misc.call(["xdg-open", fig_output_file])
-        elif sys.platform.startswith('darwin'):
-            misc.call(["open", fig_output_file])
+        if len(checks)>0:
+            logger.info('Some cms check statistics will be displayed once you '+\
+                            'close the plot window')
+            logger.info('Complex Mass Scheme check plot output to file %s. '%fig_output_file)
+            
+            if sys.platform.startswith('linux'):
+                misc.call(["xdg-open", fig_output_file])
+            elif sys.platform.startswith('darwin'):
+                misc.call(["open", fig_output_file])
         
         plt.close("all")
     
