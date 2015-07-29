@@ -4373,7 +4373,8 @@ def output_unitary_feynman(comparison_results, output='text'):
         return fail_proc
 
 
-def output_complex_mass_scheme(result,output_path, options, model, output='text'):
+def output_complex_mass_scheme(result,output_path, options, model, output='text',
+                                                            diff_lambda_power=1):
     """ Outputs nicely the outcome of the complex mass scheme check performed
     by varying the width in the offshell region of resonances found for eahc process.
     Output just specifies whether text should be returned or a list of failed
@@ -4382,6 +4383,13 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     pert_orders=result['perturbation_orders']
     
     ######## CHECK PARAMETERS #########
+    #
+    # diff_lambda_power choses the power by which one should divide the difference
+    # curve. The test should only work with 1, but it is useful for the LO
+    # check to see the difference has O(\lambda) contribution by setting this
+    # parameter to 2. If the Born does not have O(\lambda) contributions
+    # (i.e. if the test still pas with diff_lambda_power=2) then the NLO test
+    # will not be sensitive to the CMS implementation details.
     #
     # DISLAIMER:
     # The CMS check is non trivial to automate and it is actually best done
@@ -4547,11 +4555,14 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             return None
     ####### END helper functions
     
-    if True or (options['analyze']=='None' and options['reuse']):
+    if (options['analyze']=='None' and options['reuse']):
         res_str += "\nThe results of this check have been stored on disk and its "+\
               "analysis can be rerun at anytime with the MG5aMC command:\n   "+\
             "      check cms --analyze=%s\n"%save_path('check_cms_res','pkl')
         save_load_object.save_to_file(save_path('check_cms_res','pkl'), result)
+    else:
+        res_str += "\nUse the following synthax if you want to store the raw results on disk.\n"+\
+                    "    check cms -reuse <proc_def> <options>\n"
     
     ############################
     # Numerical check first    #
@@ -4592,6 +4603,12 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         res_str += "%s%s\n"%(' '*centering,proc_title)
         # Starting bottom thin bar
         res_str += '%s%s%s\n'%(bar('-'),'-'*8,bar('-'))
+        # Reminder if diff_lambda_power is not 1
+        
+        if diff_lambda_power!=1:
+            res_str += "== WARNING diff_lambda_power is not 1 but  = %d\n"%diff_lambda_power
+            res_str += '%s%s%s\n'%(bar('-'),'-'*8,bar('-'))
+
         born_power = guess_lambdaorder(nwa_born,lambdaCMS_list,
                expected=proc_res['born_order'], proc=process, res=resonance)
         stab_cms_born = check_stability(cms_born[-nstab_points:], 
@@ -4630,7 +4647,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             else:
                 new_cms=(cms_finite[idata]+cms_born[idata]-nwa_born[idata])/(lam*nwa_born[idata])
                 new_nwa=nwa_finite[idata]/(lam*nwa_born[idata])
-            new_diff=(new_cms-new_nwa)/lam
+            new_diff=(new_cms-new_nwa)/(lam**diff_lambda_power)
             CMSData.append(new_cms)
             NWAData.append(new_nwa)
             DiffData.append(new_diff)
@@ -4653,7 +4670,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         # We really want to select only the very stable region
         scan_index = 0
         reference = low_diff_median if abs(low_diff_median/diff_average)\
-                                      >=diff_zero_threshold else diff_average
+                                    >=diff_zero_threshold else abs(diff_average)
         while True:
             scanner = DiffData[scan_index:group_val+scan_index]
             current_median = abs(sorted(scanner)[len(scanner)//2])
@@ -4684,16 +4701,16 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         # Now setup the list of values affecting the CMScheck
         CMScheck_values = DiffData[cms_check_data_range:]
         # Now apply the same same technique, as above but to the difference plot
-        diff_tale_median = abs(sorted(CMScheck_values)[len(CMScheck_values)//2])
+        diff_tale_median = sorted(CMScheck_values)[len(CMScheck_values)//2]
         scan_index = 0
         max_diff = 0.0
         is_ref_zero = abs(diff_tale_median/diff_average)<diff_zero_threshold
-        reference = diff_tale_median if not is_ref_zero else diff_average
+        reference = abs(diff_tale_median) if not is_ref_zero else abs(diff_average)
         res_str += "== Asymptotic ref. difference value used   = %s\n"\
-          %('%.3g'%reference if not is_ref_zero else 'ZERO->%.3g'%diff_average)  
+          %('%.3g'%diff_tale_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)  
         while True:
             current_vals = CMScheck_values[scan_index:scan_index+group_val]
-            max_diff = max(max_diff, abs(diff_tale_median-
+            max_diff = max(max_diff, abs(abs(diff_tale_median)-
                      abs(sorted(current_vals)[len(current_vals)//2]))/reference)
             if (scan_index+group_val)>=len(CMScheck_values):
                 break
@@ -4758,13 +4775,14 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             for idata in range(len(lambdaCMS_list)):
                 new_cms=cms_born[idata]/lambdaCMS_list[idata]**bpower
                 new_nwa=nwa_born[idata]/lambdaCMS_list[idata]**bpower
-                new_diff=(new_cms-new_nwa)/lambdaCMS_list[idata]
+                new_diff=(new_cms-new_nwa)/(lambdaCMS_list[idata]**diff_lambda_power)
                 CMSData.append(new_cms)
                 NWAData.append(new_nwa)
                 DiffData.append(new_diff)
             data1[r'$\displaystyle CMS\;=\;\mathcal{M}_{CMS}^{(0)}/\lambda^%d$'%bpower]=CMSData
             data1[r'$\displaystyle NWA\;=\;\mathcal{M}_{NWA}^{(0)}/\lambda^%d$'%bpower]=NWAData
-            data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda$']=DiffData
+            data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda%s$'\
+                              %('' if diff_lambda_power==1 else r'^2')]=DiffData
         else:
             # NLO result
             cms_finite=cms_res['finite']
@@ -4782,13 +4800,14 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
                 new_nwa=nwa_finite[idata]
                 new_cms=new_cms/(lambdaCMS_list[idata]*nwa_born[idata])
                 new_nwa=new_nwa/(lambdaCMS_list[idata]*nwa_born[idata])
-                new_diff=(new_cms-new_nwa)/lambdaCMS_list[idata]
+                new_diff=(new_cms-new_nwa)/(lambdaCMS_list[idata]**diff_lambda_power)
                 CMSData.append(new_cms)
                 NWAData.append(new_nwa)
                 DiffData.append(new_diff)
             data1[r'$\displaystyle CMS\;=\;(\mathcal{M}^{(1)}_{CMS}+\mathcal{M}_{CMS}^{(0)}-\mathcal{M}^{(0)}_{NWA})/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$']=CMSData
             data1[r'$\displaystyle NWA\;=\;\mathcal{M}^{(1)}_{NWA}/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$']=NWAData
-            data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda$']=DiffData
+            data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda%s$'\
+                              %('' if diff_lambda_power==1 else r'^2')]=DiffData
         process_data_plot_dict[(process,resID)]=[data1,data2, info]
                 
     # output the figures

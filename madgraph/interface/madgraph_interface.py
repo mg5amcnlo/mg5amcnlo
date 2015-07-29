@@ -502,8 +502,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("    --lambdaCMS = <python_list> : specifies the list of lambdaCMS values to ")
         logger.info("      use for the test. For example: '[(1/2.0)**exp\ for\ exp\ in\ range(0,20)]'")
         logger.info("      In the list expression, you must escape spaces. Also, this option")
-        logger.info("      *must* appear last in the otpion list. Finally, the default value is '1.0e-8'")
-        logger.info("      for which an optimal list of progressive values is picked up to 1.0e-8")
+        logger.info("      *must* appear last in the otpion list. Finally, the default value is '1.0e-6'")
+        logger.info("      for which an optimal list of progressive values is picked up to 1.0e-6")
         logger.info("    --show_plot = True or False: Whether to show plot during analysis (default is True)")
         logger.info("Comments",'$MG:color:GREEN')
         logger.info(" > If param_card is given, that param_card is used ")
@@ -921,13 +921,18 @@ class CheckValidForCmd(cmd.CheckCmd):
             # spread in each interval [1.0e-i,1.0e-(i+1)].
             # Some points close to each other will be added at the end for the
             # stability test.
-            user_options['--lambdaCMS']='(1.0e-7,5)'
+            user_options['--lambdaCMS']='(1.0e-6,5)'
             # Set the RNG seed, -1 is default (random).
             user_options['--seed']=0
             # The option below can help the user re-analyze existing pickled check
             user_options['--analyze']='None'
             # Decides whether to show plot or not during the analysis
-            user_options['--show_plot']='True'         
+            user_options['--show_plot']='True'
+            # 'secret' option to chose by which lambda power one should divide
+            # the nwa-cms difference. Useful to set to 2 when doing the Born check
+            # to see whether the NLO check will have sensitivity to the CMS
+            # implementation
+            user_options['--diff_lambda_power']='1'
         
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
@@ -3368,6 +3373,16 @@ This implies that with decay chains:
                     raise self.InvalidCmd("The option 'recompute_width' can "+\
                   "only be 'never','always', 'first_time' or 'auto' (default).")
                 CMS_options['recompute_width'] = option[1]
+            elif option[0]=='--diff_lambda_power':
+                #'secret' option to chose by which lambda power one should divide
+                # the nwa-cms difference. Useful to set to 2 when doing the Born check
+                # to see whether the NLO check will have sensitivity to the CMS
+                # implementation
+                try:
+                    CMS_options['diff_lambda_power']=int(option[1])
+                except ValueError:
+                    raise self.InvalidCmd("the '--diff_lambda_power' option"+\
+                                     " must be an integer, not '%s'."%option[1])
             elif option[0]=='--lambdaCMS':
                 try:
                     lambda_values = eval(option[1])
@@ -3743,7 +3758,8 @@ This implies that with decay chains:
         if cms_result:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
             text += process_checks.output_complex_mass_scheme(
-                      cms_result, output_path, options, self._curr_model) + '\n'             
+                      cms_result, output_path, options, self._curr_model,
+                      diff_lambda_power=CMS_options['diff_lambda_power']) + '\n'             
         if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'
             text += process_checks.output_comparisons(comparisons[0]) + '\n'
