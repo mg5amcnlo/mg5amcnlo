@@ -4408,8 +4408,9 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     else:
         CMS_test_threshold = 1e-2
     # This threshold sets how flat the diff line must be when approaching it from
-    # the right to start considering its value 
-    consideration_threshold = 1e-2
+    # the right to start considering its value. Notice that one should set this
+    # smaller than the smalled CMSThreshold used above.
+    consideration_threshold = 5e-3
     # Number of values groupes with the median technique to avoid being
     # sensitive to unstabilities
     group_val = 3
@@ -4418,6 +4419,9 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     # average instead of this asymptotic median. u d~ > e+ ve LO exhibit a \
     # difference at zero for example.
     diff_zero_threshold = 1e-3
+    # Plotting parameters. Specify the lambda range to plot. 
+    # lambda_range = [-1,-1] returns the default automatic setup
+    lambda_range = options['lambda_range']
     ##################################
     
 #   One can print out the raw results by uncommenting the line below
@@ -4588,6 +4592,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     # the test is passed or not
     # Number of last points to consider for the stability test
     nstab_points=5
+    # Store here the asymptot detected for each difference curve
+    differences_target = {}
     for process, resID in checks:
         proc_res = result[process]
         cms_res = proc_res['CMS'][resID]
@@ -4659,7 +4665,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         # Find which values to start the test at by looking at the CMSdata scaling
         # First compute the median of the last 50% of entries in the plot
         data_span = int(len(DiffData)*0.5)
-        low_diff_median = abs(sorted(DiffData[-data_span:])[data_span//2])
+        low_diff_median = sorted(DiffData[-data_span:])[data_span//2]
         
         # Now walk the values from the right of the diff plot until we reaches
         # values stable with respect to the CMS_tale_median. This value will
@@ -4669,13 +4675,13 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         current_median = 0
         # We really want to select only the very stable region
         scan_index = 0
-        reference = low_diff_median if abs(low_diff_median/diff_average)\
+        reference = abs(low_diff_median) if abs(low_diff_median/diff_average)\
                                     >=diff_zero_threshold else abs(diff_average)
         while True:
             scanner = DiffData[scan_index:group_val+scan_index]
-            current_median = abs(sorted(scanner)[len(scanner)//2])
+            current_median = sorted(scanner)[len(scanner)//2]
             # Useful for debugging
-            # misc.sprint(scanner,current_median,abs(current_median-low_diff_median)/reference,consideration_threshold)
+            #misc.sprint(scanner,current_median,abs(current_median-low_diff_median)/reference,reference,consideration_threshold)
             if abs(current_median-low_diff_median)/reference<\
                                                         consideration_threshold:
                 break;
@@ -4683,7 +4689,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             if (group_val+scan_index)>=len(DiffData):
                 # this should not happen, but in this case we arbitrarily take
                 # half of the data
-                logger.info('The median scanning failed during the CMS check.'+
+                logger.warning('The median scanning failed during the CMS check '+
+                  'for process %s'%proc_title+\
                   'This is means that the difference plot has not stable'+\
                   'intermediate region and MG5_aMC will arbitrarily consider the'+\
                                                      'left half of the values.')
@@ -4695,40 +4702,48 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         else:
             cms_check_data_range = scan_index + group_val
 
-        if scan_index >= 0:            
-            # try to find the numerical instability region
-            scan_index_2 = len(DiffData)
-            group_val_2 = max([3,group_val])
-            while True:
-                scanner = DiffData[scan_index_2-group_val_2:scan_index_2]
-                current_median = abs(sorted(scanner)[len(scanner)//2])
-                if abs(current_median-low_diff_median)/reference<\
-                                                        consideration_threshold:
-                    break;
-                scan_index_2 -= 1
-                if (scan_index_2-group_val_2)< 0:
-                    # this only happens when no stable intermediate region can be found
-                    # skip the warning here
-                    scan_index_2 = -1
-                    break;
-            # to check whether it is because of the numerical instability issue
-            # judging it is a monotonous curve or not
-            if scan_index_2 > scan_index and len(DiffData)-scan_index_2 >= 2:
-                instab_check=DiffData[scan_index_2:]
-                upper = [val for val in instab_check if val > DiffData[scan_index_2-1]]
-                lower = [val for val in instab_check if val < DiffData[scan_index_2-1]]
-                if len(upper)*len(lower) > 0:
-                    logger.info('It detects a numerical unstable region starting from '+\
-                                ('lambdaCMS < %.1e in %s.\n'%(lambdaCMS_list[scan_index_2-1],proc_title))+\
-                                'Please look at the plot (and throw more points via the '+\
-                                'option --lambdaCMS) in this region.\n'+\
-                                'Please exclude this region to pass the cms check.')
-
         res_str += "== Data range considered (min, max, n_val) = (%.1e, %.1e, %d)\n"\
                   %(lambdaCMS_list[-1],lambdaCMS_list[scan_index],
                                                  len(lambdaCMS_list)-scan_index)
         # Now setup the list of values affecting the CMScheck
         CMScheck_values = DiffData[cms_check_data_range:]
+
+        # For the purpose of checking the stability of the tale, we now do
+        # the consideration_threshold scan from the *left* and if we finsih
+        # before the end, it means that there is an unstable region.
+        if scan_index >= 0:            
+            # try to find the numerical instability region
+            scan_index = len(CMScheck_values)
+            used_group_val = max(3,group_val)
+            unstability_found = True
+            while True:
+                scanner = CMScheck_values[scan_index-used_group_val:scan_index]
+                maxdiff =  max(abs(scan-low_diff_median) for scan in scanner)
+                if maxdiff/reference<consideration_threshold:
+                    break;
+                if (scan_index-used_group_val)==0:
+                    # this only happens when no stable intermediate region can be found
+                    # Set scan_index to -99 so as to prevent warning
+                    unstability_found = False
+                    break;
+                # Proceed to th next block of data
+                scan_index -= 1
+
+            # Now report here the unstability found
+            if unstability_found:
+                unstab_check=CMScheck_values[scan_index:]
+                relative_array = [val > CMScheck_values[scan_index-1] for 
+                                                            val in unstab_check]
+                upper = relative_array.count(True)
+                lower = relative_array.count(False)
+                if not ((lower==0 and upper>=0) or (lower>=0 and upper==0)):
+                    logger.warning(
+"""For process %s, a numerically unstable region was detected starting from lambda < %.1e.
+Please look at the plot (and throw more points using the option --lambdaCMS) in this region.
+If this is a stability issue, then either decrease MLStabThreshold in MadLoop or decrease the
+minimum value of lambda to consider in the CMS check."""\
+                %(proc_title, lambdaCMS_list[cms_check_data_range+scan_index-1]))
+        
         # Now apply the same same technique, as above but to the difference plot
         diff_tale_median = sorted(CMScheck_values)[len(CMScheck_values)//2]
         scan_index = 0
@@ -4736,11 +4751,13 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         is_ref_zero = abs(diff_tale_median/diff_average)<diff_zero_threshold
         reference = abs(diff_tale_median) if not is_ref_zero else abs(diff_average)
         res_str += "== Asymptotic ref. difference value used   = %s\n"\
-          %('%.3g'%diff_tale_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)  
+          %('%.3g'%diff_tale_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)
+        # Pass information to the plotter for the difference target
+        differences_target[(process,resID)]= diff_tale_median
         while True:
             current_vals = CMScheck_values[scan_index:scan_index+group_val]
-            max_diff = max(max_diff, abs(abs(diff_tale_median)-
-                     abs(sorted(current_vals)[len(current_vals)//2]))/reference)
+            max_diff = max(max_diff, abs(diff_tale_median-
+                     sorted(current_vals)[len(current_vals)//2])/reference)
             if (scan_index+group_val)>=len(CMScheck_values):
                 break
             scan_index += 1
@@ -4812,6 +4829,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             data1[r'$\displaystyle NWA\;=\;\mathcal{M}_{NWA}^{(0)}/\lambda^%d$'%bpower]=NWAData
             data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda%s$'\
                               %('' if diff_lambda_power==1 else r'^2')]=DiffData
+            data2[r'Detected asymptot']=[differences_target[(process,resID)] 
+                                            for i in range(len(lambdaCMS_list))]
         else:
             # NLO result
             cms_finite=cms_res['finite']
@@ -4837,12 +4856,39 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             data1[r'$\displaystyle NWA\;=\;\mathcal{M}^{(1)}_{NWA}/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$']=NWAData
             data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda%s$'\
                               %('' if diff_lambda_power==1 else r'^2')]=DiffData
+            data2[r'Detected asymptot']=[differences_target[(process,resID)] 
+                                            for i in range(len(lambdaCMS_list))]
         process_data_plot_dict[(process,resID)]=[data1,data2, info]
-                
-    # output the figures
+
     try:
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_pdf import PdfPages
+
+        # output the figures
+        if lambda_range[1]>0:
+            min_lambda_index = -1
+            for i, lam in enumerate(lambdaCMS_list):
+                if lam<=lambda_range[1]:
+                    min_lambda_index = i
+                    break
+        else:
+            min_lambda_index = 0
+        if lambda_range[0]>0:
+            max_lambda_index = -1
+            for i, lam in enumerate(lambdaCMS_list):
+                if lam<=lambda_range[0]:
+                    max_lambda_index=i-1
+                    break
+        else:
+            max_lambda_index=len(lambdaCMS_list)-1
+    
+        if max_lambda_index==-1 or min_lambda_index==-1 or \
+                                             min_lambda_index==max_lambda_index:
+            raise InvalidCmd('Invalid lambda plotting range: (%.1e,%.1e)'%\
+                                              (lambda_range[0],lambda_range[1]))
+        # Trim lambda values
+        if lambda_range[0]>0.0 or lambda_range[1]>0.0:
+            lambdaCMS_list = lambdaCMS_list[min_lambda_index:max_lambda_index+1]
 
         plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
@@ -4850,6 +4896,12 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         colorlist=['b','r','g','y']
         for iproc, (process, resID) in enumerate(checks):
             data1,data2, info=process_data_plot_dict[(process,resID)]
+            # Trim dataplot if necessary
+            if lambda_range[0]>0.0 or lambda_range[1]>0.0:
+                for key in data1:
+                    data1[key]=data1[key][min_lambda_index:max_lambda_index+1]
+                for key in data2:
+                    data2[key]=data2[key][min_lambda_index:max_lambda_index+1]
             plt.figure(iproc+1)
             plt.subplot(211)
             minvalue=1e+99
@@ -4857,10 +4909,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             for i,key in enumerate(data1.keys()):
                 color=colorlist[i]
                 data_plot=data1[key]
-                if minvalue > min(data_plot):
-                    minvalue=min(data_plot)
-                if maxvalue < max(data_plot):
-                    maxvalue=max(data_plot)
+                minvalue=min(min(data_plot),minvalue)
+                maxvalue=max(max(data_plot),maxvalue)           
                 plt.plot(lambdaCMS_list, data_plot, color=color, marker='', \
                                                        linestyle='-', label=key)
 
@@ -4881,15 +4931,20 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             plt.subplot(212)
             minvalue=1e+99
             maxvalue=-1e+99
+            if 'Detected asymptot' in data2:
+                plt.plot(lambdaCMS_list, data2['Detected asymptot'], 
+                               color='0.75', marker='', linestyle='-', label='')
             for i,key in enumerate(data2.keys()):
+                # Special setup for the reference asymptot straight line
+                if key=='Detected asymptot':
+                    continue
                 color=colorlist[i]
                 data_plot=data2[key]
-                if minvalue > min(data_plot):
-                    minvalue=min(data_plot)
-                if maxvalue < max(data_plot):
-                    maxvalue=max(data_plot)
+                minvalue=min(min(data_plot),minvalue)
+                maxvalue=max(max(data_plot),maxvalue)
                 plt.plot(lambdaCMS_list, data_plot, color=color, marker='',\
                                                        linestyle='-', label=key)
+            
             plt.yscale('linear')
             plt.xscale('log')
             plt.ylabel(r'$\displaystyle \Delta$')

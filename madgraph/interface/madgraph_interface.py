@@ -933,6 +933,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             # to see whether the NLO check will have sensitivity to the CMS
             # implementation
             user_options['--diff_lambda_power']='1'
+            # Sets the range of lambda values to plot
+            user_options['--lambda_plot_range']='[-1.0,-1.0]'
         
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
@@ -3383,6 +3385,18 @@ This implies that with decay chains:
                 except ValueError:
                     raise self.InvalidCmd("the '--diff_lambda_power' option"+\
                                      " must be an integer, not '%s'."%option[1])
+            elif option[0]=='--lambda_plot_range':
+                try:
+                    plot_range=eval(option[1])
+                except Exception as e:
+                    raise self.InvalidCmd("The plot range specified %s"%option[1]+\
+                                   " is not a valid syntax. Error:\n%s"%str(e))
+                if not isinstance(plot_range,(list,tuple)) or \
+                    len(plot_range)!=2 or any(not isinstance(p,(float,int)) 
+                                                           for p in plot_range):                    
+                    raise self.InvalidCmd("The plot range specified %s"\
+                                                       %option[1]+" is invalid")
+                CMS_options['lambda_range']=list([float(p) for p in plot_range])
             elif option[0]=='--lambdaCMS':
                 try:
                     lambda_values = eval(option[1])
