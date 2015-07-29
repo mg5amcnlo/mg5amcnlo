@@ -3690,6 +3690,7 @@ This implies that with decay chains:
                                                    " and CMS_option dictionary." 
             
             if options['analyze']=='None':
+                start = time.time()
                 cms_result = process_checks.check_complex_mass_scheme(
                                           process_line,
                                           param_card = param_card,
@@ -3699,6 +3700,8 @@ This implies that with decay chains:
                                           output_path = output_path,
                                           MLOptions = MLoptions,
                                           options=options)
+                logger.debug('CMS check performed finished in %s.'\
+                                      %misc.format_time(int(time.time()-start)))
             else:
                 cms_result = save_load_object.load_from_file(
                                                              options['analyze'])

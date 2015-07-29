@@ -4901,13 +4901,13 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             medians = [abs(m) if m!=0.0 else 1.0 for m in medians]
             left_stability = (sum(abs(sd[i][0]-sd[i][-1])/m for i, m in 
                                                  enumerate(medians))/len(data2))
-            sd = [sorted(data2[key]) for key in data2]
+            sd = [sorted(data2[key][:-len(data2[key])//2]) for key in data2]
             medians = [s[len(s)//2] for s in sd]
             medians = [abs(m) if m!=0.0 else 1.0 for m in medians]
-            full_stability = (sum(abs(sd[i][0]-sd[i][-1])/m for i, m in 
+            right_stability = (sum(abs(sd[i][0]-sd[i][-1])/m for i, m in 
                                                  enumerate(medians))/len(data2))
-            left_stable =  True if full_stability==0.0 else \
-                                            (left_stability/full_stability)<0.05
+            left_stable =  False if right_stability==0.0 else \
+                                            (left_stability/right_stability)<0.1
             if sum(data2[key][0] for key in data2)>\
                     sum(min(data2[key][-len(data2[key])//2:]) for key in data2):
                 if left_stable:
