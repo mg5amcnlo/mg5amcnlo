@@ -4432,7 +4432,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     diff_zero_threshold = 1e-3
     # Plotting parameters. Specify the lambda range to plot. 
     # lambda_range = [-1,-1] returns the default automatic setup
-    lambda_range = options['lambda_range']
+    lambda_range = options['lambda_plot_range']
     ##################################
     
 #   One can print out the raw results by uncommenting the line below
@@ -4751,9 +4751,9 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
                 if not ((lower==0 and upper>=0) or (lower>=0 and upper==0)):
                     logger.warning(
 """For process %s, a numerically unstable region was detected starting from lambda < %.1e.
-Please look at the plot (and throw more points using the option --lambdaCMS) in this region.
-If this is a stability issue, then either decrease MLStabThreshold in MadLoop or decrease the
-minimum value of lambda to consider in the CMS check."""\
+Look at the plot in this region (and possibly throw more points using the option --lambdaCMS).
+If this is indeed a stability issue, then either decrease MLStabThreshold in MadLoop or decrease the
+minimum value of lambda to be considered in the CMS check."""\
                 %(proc_title, lambdaCMS_list[cms_check_data_range+scan_index-1]))
         
         # Now apply the same same technique, as above but to the difference plot
@@ -4806,8 +4806,11 @@ minimum value of lambda to consider in the CMS check."""\
             return failed_procs
         
     fig_output_file = save_path('check_cms_plots','pdf')
-    if os.path.isfile(fig_output_file):
-        os.remove(fig_output_file)
+    base_fig_name = fig_output_file[:-4]
+    suffix = 1
+    while os.path.isfile(fig_output_file):
+        fig_output_file = '%s__%d__.pdf'%(base_fig_name,suffix)
+        suffix+=1
 
     process_data_plot_dict={}
     for process, resID in checks:
@@ -4971,10 +4974,8 @@ minimum value of lambda to consider in the CMS check."""\
             left_stability = sum(abs(s[0]-s[-1]) for s in sd)
             sd = [sorted(data2[key][:-len(data2[key])//2]) for key in data2]
             right_stability = sum(abs(s[0]-s[-1]) for s in sd)
-            misc.sprint(left_stability,right_stability)
             left_stable =  False if right_stability==0.0 else \
                                             (left_stability/right_stability)<0.1
-            misc.sprint(left_stable)
             if sum(data2[key][0] for key in data2)>\
                     sum(min(data2[key][-len(data2[key])//2:]) for key in data2):
                 if left_stable:

@@ -867,15 +867,17 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd(\
                 "\"check\" not possible for v4 models")
 
-        if len(args) < 2:
+        if len(args) < 2 and not args[0].lower().endswith('options'):
             self.help_check()
             raise self.InvalidCmd("\"check\" requires a process.")
 
-        if args[0] not in self._check_opts:
+        if args[0] not in self._check_opts and \
+                                        not args[0].lower().endswith('options'):
             args.insert(0, 'full')
 
         param_card = None
-        if args[0] not in ['stability','profile','timing'] and os.path.isfile(args[1]):
+        if args[0] not in ['stability','profile','timing'] and \
+                                        len(args)>1 and os.path.isfile(args[1]):
             param_card = args.pop(1)
 
         if len(args)>1:
@@ -884,7 +886,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         else:
             args.append('-no_reuse')
 
-        if args[0] in ['timing'] and os.path.isfile(args[2]):
+        if args[0] in ['timing'] and len(args)>2 and os.path.isfile(args[2]):
             param_card = args.pop(2)
         if args[0] in ['stability', 'profile'] and len(args)>1:
             # If the first argument after 'stability' is not the integer
@@ -903,7 +905,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         user_options = {'--energy':'1000','--split_orders':'-1',
                         '--reduction':'1|2|3|4'}
         
-        if args[0] in ['full', 'cms']:
+        if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # The first argument gives the name of the coupling order in which
             # the cms expansion is carried, and the expression following the 
             # comma gives the relation of an external parameter with the
@@ -944,10 +946,11 @@ class CheckValidForCmd(cmd.CheckCmd):
                 user_options[key] = value
                 args.remove(arg)
 
-        # If we are just re-analyzing saved data, then we shouldn't check the 
-        # process format.
+        # If we are just re-analyzing saved data or displaying options then we 
+        # shouldn't check the process format.
         if not (args[0]=='cms' and '--analyze' in user_options and \
-                                             user_options['--analyze']!='None'):
+                              user_options['--analyze']!='None') and not \
+                                            args[0].lower().endswith('options'):
             
             self.check_process_format(" ".join(args[1:]))
 
@@ -3396,7 +3399,7 @@ This implies that with decay chains:
                                                            for p in plot_range):                    
                     raise self.InvalidCmd("The plot range specified %s"\
                                                        %option[1]+" is invalid")
-                CMS_options['lambda_range']=list([float(p) for p in plot_range])
+                CMS_options['lambda_plot_range']=list([float(p) for p in plot_range])
             elif option[0]=='--lambdaCMS':
                 try:
                     lambda_values = eval(option[1])
@@ -3484,6 +3487,24 @@ This implies that with decay chains:
 
             i=i-1
         args = args[:i+1]
+        
+        if args[0]=='options':
+            # Simple printout of the check command options
+            logger.info("Options for the command 'check' are:")
+            logger.info("{:<20}     {}".format('  name','default value'))
+            logger.info("-"*40)
+            for key, value in options.items():
+                logger.info("{:<20} =   {}".format('--%s'%key,str(value)))
+            return
+
+        if args[0].lower()=='cmsoptions':
+            # Simple printout of the special check cms options
+            logger.info("Special options for the command 'check cms' are:")
+            logger.info("{:<20}     {}".format('  name','default value'))
+            logger.info("-"*40)
+            for key, value in CMS_options.items():
+                logger.info("{:<20} =   {}".format('--%s'%key,str(value)))
+            return        
         
         proc_line = " ".join(args[1:])
         # Don't try to extract the process if just re-analyzing a saved run
