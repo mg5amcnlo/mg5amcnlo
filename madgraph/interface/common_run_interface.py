@@ -2568,6 +2568,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=')
             args += [arg1, arg2]
+        if '=' in args:
+            args.remove('=')
         args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:

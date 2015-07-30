@@ -3487,9 +3487,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # create the run_card
         ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
 
-        misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
-                        stdout = devnull)
-        
         # Run "make" to generate madevent.tar.gz file
         if os.path.exists(pjoin(self.dir_path,'SubProcesses', 'subproc.mg')):
             if os.path.exists(pjoin(self.dir_path,'madevent.tar.gz')):
@@ -3497,7 +3494,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             misc.call([os.path.join(self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
                         stdout = devnull, cwd=self.dir_path)
 
-
+        misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+                        stdout = devnull, cwd=self.dir_path)
 
 
 

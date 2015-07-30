@@ -307,6 +307,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 name, value = args[0].split('=')
                 args[0]= name
                 args.append(value)
+            elif len(args) == 1 and args[0] in ['onlyhelicity']:
+                args.append('True')
             else:
                 raise self.InvalidCmd('set command requires at least two argument.')
         

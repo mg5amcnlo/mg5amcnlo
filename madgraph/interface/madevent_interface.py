@@ -4274,7 +4274,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     switch['delphes'] = 'OFF'
                     
         # Check switch status for MS/reweight
-        if not MADEVENT or self.options['mg5_path']:
+        if not MADEVENT or ('mg5_path' in self.options and self.options['mg5_path']):
             available_mode.append('4')
             available_mode.append('5')
             if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
