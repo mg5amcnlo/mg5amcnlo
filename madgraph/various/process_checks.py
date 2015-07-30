@@ -59,6 +59,7 @@ import madgraph.various.rambo as rambo
 import madgraph.various.misc as misc
 import madgraph.various.progressbar as pbar
 import madgraph.various.banner as bannermod
+import madgraph.various.progressbar as pbar
 
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
@@ -3946,14 +3947,27 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         except:
             pass
 
-    for res in resonances:
+    # Display progressbar both for LO and NLO for now but not when not showing
+    # the plots
+    if (NLO or True) and options['show_plot']:
+        widgets = ['ME evaluations:', pbar.Percentage(), ' ', 
+                                                pbar.Bar(),' ', pbar.ETA(), ' ']
+        progress_bar = pbar.ProgressBar(widgets=widgets, 
+                maxval=len(options['lambdaCMS'])*len(resonances), fd=sys.stdout)
+        progress_bar.update(0)
+        # Flush stdout to force the progress_bar to appear
+        sys.stdout.flush()
+    else:
+        progress_bar = None
+
+    for resNumber, res in enumerate(resonances):
         # First add a dictionary for this resonance to the result with already
         # one key specifying the resonance
         result['resonances_result'].append({'resonance':res,'born':[]})
         if NLO:
             result['resonances_result'][-1]['finite'] = []
         # Now scan the different lambdaCMS values
-        for lambdaCMS in options['lambdaCMS']:
+        for lambdaNumber, lambdaCMS in enumerate(options['lambdaCMS']):
             # Setup the model for that value of lambdaCMS
             # The copy constructor below creates a deep copy
             new_param_card = check_param_card.ParamCard(param_card)
@@ -4030,6 +4044,11 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 ME_res = evaluator.evaluate_matrix_element(matrix_element,
                     p=res['PS_point_used'], auth_skipping=False, output='m2')[0]
                 result['resonances_result'][-1]['born'].append(ME_res)
+            if not progress_bar is None:
+                progress_bar.update(resNumber*len(options['lambdaCMS'])+\
+                                                               (lambdaNumber+1))
+                # Flush to force the printout of the progress_bar to be updated
+                sys.stdout.flush()
 
     # Restore the original model parameters
     evaluator.full_model.set_parameters_and_couplings(param_card=param_card)
