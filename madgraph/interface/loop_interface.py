@@ -227,7 +227,8 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 #                                  "\nIt is however a straight-forward extension which "+\
 #                                  "will come out with the next release.")                           
 
-        if isinstance(proc, base_objects.ProcessDefinition) and mode.startswith('ML5'):
+        if isinstance(proc, base_objects.ProcessDefinition) and mode.startswith('ML5') \
+                                                   and not mode.endswith('cms'):
             if proc.has_multiparticle_label():
                 raise self.InvalidCmd(
                   "When running ML5 standalone, multiparticle labels cannot be"+\
@@ -664,7 +665,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Now make sure the process is acceptable
         proc = " ".join(argss[1:i+1])
         myprocdef = self.extract_process(proc)
-        self.proc_validity(myprocdef,'ML5_check')
+        self.proc_validity(myprocdef,'ML5_check_cms' if argss[0]=='cms' else \
+                                                                    'ML5_check')
         
         return mg_interface.MadGraphCmd.do_check(self, line, *args,**opt)
     

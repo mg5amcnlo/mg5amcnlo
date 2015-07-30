@@ -1861,7 +1861,16 @@ def generate_loop_matrix_element(process_definition, reuse, output_path=None,
     logger.info("Generating p%s"%process_definition.nice_string()[1:])
 
     start=time.time()
-    amplitude = loop_diagram_generation.LoopAmplitude(process)
+    try:
+        amplitude = loop_diagram_generation.LoopAmplitude(process)
+    except InvalidCmd:
+        # An error about the sanity of the process can be thrown, in which case
+        # we return nothing
+        return time.time()-start, None        
+    if not amplitude.get('diagrams'):
+        # Not matrix eleemnt for this process
+        return time.time()-start, None
+
     # Make sure to disable loop_optimized_output when considering loop induced 
     # processes
     loop_optimized_output = cmd.options['loop_optimized_output']
@@ -3819,6 +3828,10 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         timing, matrix_element = generate_loop_matrix_element(process, 
                          options['reuse'], output_path=options['output_path'], 
                                       cmd = options['cmd'], proc_name=proc_name)
+        if matrix_element is None:
+            # No diagrams for this process
+            return None
+
         reusing = isinstance(matrix_element, base_objects.Process)
         proc_dir = pjoin(options['output_path'],proc_name)
 
@@ -3913,6 +3926,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             resonances= opt
     
     if len(resonances)==0:
+        logger.info("No resonance found for process %s."\
+                                                         %process.base_string())
         return None
     
     # Cache the default param_card for NLO
