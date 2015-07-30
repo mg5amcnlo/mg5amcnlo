@@ -3653,68 +3653,87 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             # Discard stable s-channels
             if width==0.0:
                 continue
-            
-            # Choose the offshellness
-            special_mass = (1.0 + options['offshellness'])*mass
-            
+
             final_state_energy = sum(
                 evaluator.full_model.get('parameter_dict')[
                 evaluator.full_model.get_particle(l.get('id')).get('mass')].real
                 for l in process.get('legs') if l.get('number') in 
                                                   resonance['FSMothersNumbers'])
+            
+            # Choose the offshellness
+            special_mass = (1.0 + options['offshellness'])*mass
+            
             # Discard impossible kinematics
             if special_mass<final_state_energy:
                 logger.warning('The offshellness specified (%s) is such'\
                   %options['offshellness']+' that the resulting kinematic is '+\
                   'impossible for resonance with PDG %d.'%resonance['ParticlePDG'])
                 continue
-            
-            # Create a fake production and decay process
-            prod_proc = base_objects.Process({'legs':base_objects.LegList(
-                 copy.copy(leg) for leg in process.get('legs') if 
-                       leg.get('number') not in resonance['FSMothersNumbers'])})
-            # Add the resonant particle as a final state
-            # ID set to -10 since its mass will be forced
-            # Number set so as to be first in the list in get_momenta
-            prod_proc.get('legs').append(base_objects.Leg({
-                    'number':max(l.get('number') for l in process.get('legs'))+1,
-                    'state':True,
-                    'id':-10}))
-            # now the decay process
-            decay_proc = base_objects.Process({'legs':base_objects.LegList(
-               copy.copy(leg) for leg in process.get('legs') if leg.get('number') 
-               in resonance['FSMothersNumbers'] and not leg.get('state')==False)})
-            # Add the resonant particle as an initial state
-            # ID set to -10 since its mass will be forced
-            # Number set to -1 as well so as to be sure it appears first in 
-            # get_momenta
-            decay_proc.get('legs').insert(0,base_objects.Leg({
-                    'number':-1,
-                    'state':False,
-                    'id':-10}))
-            prod_kinematic = evaluator.get_momenta(prod_proc, options=options,
-                                                   special_mass=special_mass)[0]
 
-            decay_kinematic = evaluator.get_momenta(decay_proc, options=options, 
-                                                   special_mass=special_mass)[0]
-            momenta = glue_momenta(prod_kinematic,decay_kinematic)
-            # Reshuffle the momentum so as to put it back in the order specified
-            # in the process definition.
-            # First the production momenta, without the special decayed particle
-            ordered_momenta = [(prod_proc.get('legs')[i].get('number'),momenta[i])
-                    for i in range(len(prod_proc.get('legs'))-1)]
-            # And then the decay ones.
-            ordered_momenta += [(decay_proc.get('legs')[-i].get('number'),
-                     momenta[-i]) for i in range(1,len(decay_proc.get('legs')))]
-
-            # And now use them put in the right order
-            resonance['PS_point_used'] = [m[1] for m in sorted(ordered_momenta,
-                                                        key = lambda el: el[0])]
+            # Chose the PS point for the resonance
+            set_PSpoint_for_resonance(resonance)
+            # Add it to the list of accepted resonances
             kept_resonances.append(resonance)
 #        misc.sprint(kept_resonances)
 #        misc.sprint(len(kept_resonances))
         return tuple(kept_resonances)
 
+    def set_PSpoint_for_resonance(resonance):
+        """ Assigns a kinematic configuration to the resonance dictionary 
+        given in argument."""
+        
+        # Get the particle mass
+        mass_string = evaluator.full_model.get_particle(
+                                       resonance['ParticlePDG']).get('mass')
+        mass  = evaluator.full_model.get('parameter_dict')[mass_string].real
+        
+        # Choose the offshellness
+        special_mass = (1.0 + options['offshellness'])*mass
+        
+        # Create a fake production and decay process
+        prod_proc = base_objects.Process({'legs':base_objects.LegList(
+             copy.copy(leg) for leg in process.get('legs') if 
+                   leg.get('number') not in resonance['FSMothersNumbers'])})
+        # Add the resonant particle as a final state
+        # ID set to -10 since its mass will be forced
+        # Number set so as to be first in the list in get_momenta
+        prod_proc.get('legs').append(base_objects.Leg({
+                'number':max(l.get('number') for l in process.get('legs'))+1,
+                'state':True,
+                'id':-10}))
+        # now the decay process
+        decay_proc = base_objects.Process({'legs':base_objects.LegList(
+           copy.copy(leg) for leg in process.get('legs') if leg.get('number') 
+           in resonance['FSMothersNumbers'] and not leg.get('state')==False)})
+        # Add the resonant particle as an initial state
+        # ID set to -10 since its mass will be forced
+        # Number set to -1 as well so as to be sure it appears first in 
+        # get_momenta
+        decay_proc.get('legs').insert(0,base_objects.Leg({
+                'number':-1,
+                'state':False,
+                'id':-10}))
+        prod_kinematic = evaluator.get_momenta(prod_proc, options=options,
+                                               special_mass=special_mass)[0]
+
+        decay_kinematic = evaluator.get_momenta(decay_proc, options=options, 
+                                               special_mass=special_mass)[0]
+        momenta = glue_momenta(prod_kinematic,decay_kinematic)
+        # Reshuffle the momentum so as to put it back in the order specified
+        # in the process definition.
+        # First the production momenta, without the special decayed particle
+        ordered_momenta = [(prod_proc.get('legs')[i].get('number'),momenta[i])
+                for i in range(len(prod_proc.get('legs'))-1)]
+        # And then the decay ones.
+        ordered_momenta += [(decay_proc.get('legs')[-i].get('number'),
+                 momenta[-i]) for i in range(1,len(decay_proc.get('legs')))]
+
+        # And now use them put in the right order
+        resonance['PS_point_used'] = [m[1] for m in sorted(ordered_momenta,
+                                                    key = lambda el: el[0])]
+        
+        # misc.sprint(resonance['PS_point_used'])        
+    
     @misc.mute_logger()
     def get_width(PDG, lambdaCMS, param_card):
         """ Returns the width to use for particle with absolute PDG 'PDG' and
@@ -3877,6 +3896,10 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             else:
                 proc_name, born_order, loop_order, resonances = \
                                        save_load_object.load_from_file(pkl_path)
+                # Make sure to rederive the phase-space point since parameters
+                # such as masses, seed, offshellness could have affected it
+                for res in resonances:
+                    set_PSpoint_for_resonance(res)
 
             # Second run (CMS), we can reuse the information if it is a dictionary
             if isinstance(opt, list):
@@ -4476,8 +4499,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     
 #   One can print out the raw results by uncommenting the line below
 #    misc.sprint(result)
-#    for i, res in enumerate(result['u d~ > e+ ve a']['CMS']):
-#        if res['resonance']['FSMothersNumbers'] == set([3, 4]):
+#    for i, res in enumerate(result['a e- > e- ve ve~ [ virt = QED QCD ]']['CMS']):
+#        if res['resonance']['FSMothersNumbers'] == set([3, 5]):
 #            misc.sprint(res['resonance']['PS_point_used'])
 #    stop
     
