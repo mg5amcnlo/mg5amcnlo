@@ -4469,7 +4469,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         
         if options['analyze']!='None':
             # Reuse the same name then
-            return '%s.%s'%(os.path.splitext(options['analyze'])[0],extension)
+            return '%s.%s'%(os.path.splitext(options['analyze'].split(',')[0])\
+                                                                  [0],extension)
     
         # Use process name if there is only one process            
         if len(result['ordered_processes'])==1:
@@ -4832,72 +4833,93 @@ minimum value of lambda to be considered in the CMS check."""\
         suffix+=1
 
     process_data_plot_dict={}
-    for process, resID in checks:
-        data1={} # for subplot 1,i.e. CMS and NWA
-        data2={} # for subplot 2,i.e. diff
-        info ={} # info to be passed to the plotter
-        proc_res = result[process]
-        cms_res = proc_res['CMS'][resID]
-        nwa_res = proc_res['NWA'][resID]
-        resonance = resonance_str(cms_res['resonance'])
-        info['title'] = format_title(process, resonance)
-        # Born result
-        cms_born=cms_res['born']
-        nwa_born=nwa_res['born']
-        if len(cms_born) != len(lambdaCMS_list) or\
-             len(nwa_born) != len(lambdaCMS_list):
-            raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
-                            ' lambdaCMS values specified for process %s'%process
-        if not pert_orders:
-            # Born result
-            bpower = guess_lambdaorder(nwa_born,lambdaCMS_list,
-                   expected=proc_res['born_order'], proc=process, res=resonance)
-
-            CMSData = []
-            NWAData = []
-            DiffData = []
-            for idata in range(len(lambdaCMS_list)):
-                new_cms=cms_born[idata]/lambdaCMS_list[idata]**bpower
-                new_nwa=nwa_born[idata]/lambdaCMS_list[idata]**bpower
-                new_diff=(new_cms-new_nwa)/(lambdaCMS_list[idata]**diff_lambda_power)
-                CMSData.append(new_cms)
-                NWAData.append(new_nwa)
-                DiffData.append(new_diff)
-            data1[r'$\displaystyle CMS\;=\;\mathcal{M}_{CMS}^{(0)}/\lambda^%d$'%bpower]=CMSData
-            data1[r'$\displaystyle NWA\;=\;\mathcal{M}_{NWA}^{(0)}/\lambda^%d$'%bpower]=NWAData
-            data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda%s$'\
-                              %('' if diff_lambda_power==1 else r'^2')]=DiffData
-            data2[r'Detected asymptot']=[differences_target[(process,resID)] 
-                                            for i in range(len(lambdaCMS_list))]
+    
+    # load possible additional results. The second element of the tuple is
+    # the dataset name.
+    all_res = [(result, None)]
+    for i, add_res in enumerate(options['analyze'].split(',')[1:]):
+        specs =re.match(r'^(?P<filename>.*)\((?P<title>.*)\)$', add_res)
+        if specs:
+            filename = specs.group('filename')
+            title    = specs.group('title')
         else:
-            # NLO result
-            cms_finite=cms_res['finite']
-            nwa_finite=nwa_res['finite']
-   
-            if len(cms_finite) != len(lambdaCMS_list) or\
-                len(nwa_finite) != len(lambdaCMS_list):
+            filename = add_res
+            title    = specs.group('#%d'%(i+1))
+
+        new_result = save_load_object.load_from_file(filename)
+        if new_result is None:
+            raise self.InvalidCmd('The complex mass scheme check result'+
+                             " file below could not be read.\n     %s"%filename)
+        if len(new_result['ordered_processes'])!=len(result['ordered_processes']) \
+                      or len(new_result['lambdaCMS'])!=len(result['lambdaCMS']):
+            raise self.InvalidCmd('The complex mass scheme check result'+
+                      " file below does not seem compatible.\n     %s"%filename)
+        all_res.append((new_result,title))
+    
+    # Prepare the data
+    for process, resID in checks:
+        data1=[] # for subplot 1,i.e. CMS and NWA
+        data2=[] # for subplot 2,i.e. diff
+        info ={} # info to be passed to the plotter
+        for res in all_res:
+            proc_res = res[0][process]
+            cms_res = proc_res['CMS'][resID]
+            nwa_res = proc_res['NWA'][resID]
+            resonance = resonance_str(cms_res['resonance'])
+            info['title'] = format_title(process, resonance)
+            # Born result
+            cms_born=cms_res['born']
+            nwa_born=nwa_res['born']
+            if len(cms_born) != len(lambdaCMS_list) or\
+                 len(nwa_born) != len(lambdaCMS_list):
                 raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
-                            ' lambdaCMS values specified for process %s'%process
-            CMSData = []
-            NWAData = []
-            DiffData = []
-            for idata in range(len(lambdaCMS_list)):
-                new_cms=cms_finite[idata]+cms_born[idata]-nwa_born[idata]
-                new_nwa=nwa_finite[idata]
-                new_cms=new_cms/(lambdaCMS_list[idata]*nwa_born[idata])
-                new_nwa=new_nwa/(lambdaCMS_list[idata]*nwa_born[idata])
-                new_diff=(new_cms-new_nwa)/(lambdaCMS_list[idata]**diff_lambda_power)
+                                ' lambdaCMS values specified for process %s'%process
+            if pert_orders:
+                cms_finite=cms_res['finite'] 
+                nwa_finite=nwa_res['finite']
+                if len(cms_finite) != len(lambdaCMS_list) or\
+                    len(nwa_finite) != len(lambdaCMS_list):
+                    raise MadGraph5Error, 'Inconsistent list of results w.r.t. the'+\
+                                ' lambdaCMS values specified for process %s'%process
+        
+            bpower = guess_lambdaorder(nwa_born,lambdaCMS_list,
+                    expected=proc_res['born_order'], proc=process, res=resonance)
+
+            CMSData  = []
+            NWAData  = []
+            DiffData = []   
+            for idata, lam in enumerate(lambdaCMS_list):
+                if not pert_orders:
+                    new_cms = cms_born[idata]/lam**bpower
+                    new_nwa = nwa_born[idata]/lam**bpower
+                else:
+                    new_cms=cms_finite[idata]+cms_born[idata]-nwa_born[idata]
+                    new_nwa=nwa_finite[idata]
+                    new_cms /= lam*nwa_born[idata]
+                    new_nwa /= lam*nwa_born[idata]
+                new_diff=(new_cms-new_nwa)/(lam**diff_lambda_power)
                 CMSData.append(new_cms)
                 NWAData.append(new_nwa)
                 DiffData.append(new_diff)
-            data1[r'$\displaystyle CMS\;=\;(\mathcal{M}^{(1)}_{CMS}+\mathcal{M}_{CMS}^{(0)}-\mathcal{M}^{(0)}_{NWA})/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$']=CMSData
-            data1[r'$\displaystyle NWA\;=\;\mathcal{M}^{(1)}_{NWA}/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$']=NWAData
-            data2[r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda%s$'\
-                              %('' if diff_lambda_power==1 else r'^2')]=DiffData
-            data2[r'Detected asymptot']=[differences_target[(process,resID)] 
-                                            for i in range(len(lambdaCMS_list))]
-        process_data_plot_dict[(process,resID)]=[data1,data2, info]
+            if res[1] is None:
+                if not pert_orders:
+                    data1.append([r'$\displaystyle CMS\;=\;\mathcal{M}_{CMS}^{(0)}/\lambda^%d$'%bpower,CMSData])
+                    data1.append([r'$\displaystyle NWA\;=\;\mathcal{M}_{NWA}^{(0)}/\lambda^%d$'%bpower,NWAData])
+                else:
+                    data1.append([r'$\displaystyle CMS\;=\;(\mathcal{M}^{(1)}_{CMS}+\mathcal{M}_{CMS}^{(0)}-\mathcal{M}^{(0)}_{NWA})/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$',CMSData])
+                    data1.append([r'$\displaystyle NWA\;=\;\mathcal{M}^{(1)}_{NWA}/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$',NWAData])
+                data2.append([r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda%s$'\
+                                  %('' if diff_lambda_power==1 else r'^2'),DiffData])
+                data2.append([r'Detected asymptot',[differences_target[(process,resID)] 
+                                                for i in range(len(lambdaCMS_list))]])
+            else:
+                data1.append([r'$\displaystyle CMS$  %s'%res[1],CMSData])
+                data1.append([r'$\displaystyle NWA$  %s'%res[1],NWAData])
+                data2.append([r'$\displaystyle\Delta$  %s'%res[1],DiffData])
+                
+        process_data_plot_dict[(process,resID)]=(data1,data2, info)
 
+    # Now turn to the actual plotting
     try:
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_pdf import PdfPages
@@ -4931,82 +4953,112 @@ minimum value of lambda to be considered in the CMS check."""\
         plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         pp=PdfPages(fig_output_file)
-        colorlist=['b','r','g','y']
+        if len(data1)<=2:
+            colorlist=['b','r']
+        else:
+            import matplotlib.colors as colors
+            import matplotlib.cm as mplcm
+            import matplotlib.colors as colors
+            
+            # Nice color maps here are 'gist_rainbow'
+            cm = plt.get_cmap('gist_rainbow')
+            cNorm  = colors.Normalize(vmin=0, vmax=(len(data1)-1))
+            scalarMap = mplcm.ScalarMappable(norm=cNorm, cmap=cm)
+            # use vmax=(len(data1)-1)*0.9 to remove pink at the end of the spectrum
+            colorlist = [scalarMap.to_rgba(i*0.9) for i in range(len(data1))]
+            # Or it is also possible to alternate colors so as to make them 
+            # as distant as possible to one another
+            # colorlist = sum([
+            #    [scalarMap.to_rgba(i),scalarMap.to_rgba(i+len(data1)//2)]
+            #                                  for i in range(len(data1)//2)],[])
+
+        legend_size = 10
         for iproc, (process, resID) in enumerate(checks):
             data1,data2, info=process_data_plot_dict[(process,resID)]
             # Trim dataplot if necessary
             if lambda_range[0]>0.0 or lambda_range[1]>0.0:
-                for key in data1:
-                    data1[key]=data1[key][min_lambda_index:max_lambda_index+1]
-                for key in data2:
-                    data2[key]=data2[key][min_lambda_index:max_lambda_index+1]
+                for i in range(len(data1)):
+                    data1[i][1]=data1[i][1][min_lambda_index:max_lambda_index+1]
+                for i in range(len(data2)):
+                    data2[i][1]=data2[i][1][min_lambda_index:max_lambda_index+1]
             plt.figure(iproc+1)
             plt.subplot(211)
             minvalue=1e+99
             maxvalue=-1e+99
-            for i,key in enumerate(data1.keys()):
+            for i, d1 in enumerate(data1):
                 color=colorlist[i]
-                data_plot=data1[key]
+                data_plot=d1[1]
                 minvalue=min(min(data_plot),minvalue)
                 maxvalue=max(max(data_plot),maxvalue)           
                 plt.plot(lambdaCMS_list, data_plot, color=color, marker='', \
-                                                       linestyle='-', label=key)
+                                                     linestyle='-', label=d1[0])
+            ymin = minvalue-(maxvalue-minvalue)/5.
+            ymax = maxvalue+(maxvalue-minvalue)/5.
 
             plt.yscale('linear')
             plt.xscale('log')
             plt.title(info['title'],fontsize=12,y=1.08)
             plt.ylabel(r'$\displaystyle \mathcal{M}$')
             #plt.xlabel('lambdaCMS')
-            if sum(data1[key][0] for key in data1)>\
-                                           sum(data1[key][-1] for key in data1):
-                plt.legend(prop={'size':12},loc='upper left')
+            if ymax*len(data1)-sum(max(d1[1][-len(d1[1])//2:]) \
+                                 for d1 in data1) > 0.5*(ymax-ymin)*len(data1):
+                plt.legend(prop={'size':legend_size},loc='upper left', frameon=False)
             else:
-                plt.legend(prop={'size':12},loc='lower left')
+                plt.legend(prop={'size':legend_size},loc='lower left', frameon=False)
                 
-            plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
-              minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
+            plt.axis([min(lambdaCMS_list),max(lambdaCMS_list), ymin, ymax])
             
             plt.subplot(212)
             minvalue=1e+99
             maxvalue=-1e+99
-            if 'Detected asymptot' in data2:
-                plt.plot(lambdaCMS_list, data2['Detected asymptot'], 
+            
+            try:
+                asymptot_index = [d2[0] for d2 in data2].index('Detected asymptot')
+                plt.plot(lambdaCMS_list, data2[asymptot_index][1], 
                                color='0.75', marker='', linestyle='-', label='')
-            for i,key in enumerate(data2.keys()):
+            except ValueError:
+                pass
+            
+            color_ID = -1
+            for d2 in data2:
                 # Special setup for the reference asymptot straight line
-                if key=='Detected asymptot':
+                if d2[0]=='Detected asymptot':
                     continue
-                color=colorlist[i]
-                data_plot=data2[key]
+                color_ID += 1
+                color=colorlist[color_ID*2]
+                data_plot=d2[1]
                 minvalue=min(min(data_plot),minvalue)
                 maxvalue=max(max(data_plot),maxvalue)
                 plt.plot(lambdaCMS_list, data_plot, color=color, marker='',\
-                                                       linestyle='-', label=key)
-            
+                                                     linestyle='-', label=d2[0])
+            ymin = minvalue-(maxvalue-minvalue)/5.
+            ymax = maxvalue+(maxvalue-minvalue)/5.
+
             plt.yscale('linear')
             plt.xscale('log')
             plt.ylabel(r'$\displaystyle \Delta$')
             plt.xlabel(r'$\displaystyle \lambda$')
             # The unreadable stuff below is just to check if the left of the 
             # plot is stable or not
-            sd = [sorted(data2[key][-len(data2[key])//2:]) for key in data2]
+            sd = [sorted(d2[1][-len(d2[1])//2:]) for d2 in data2]
             left_stability = sum(abs(s[0]-s[-1]) for s in sd)
-            sd = [sorted(data2[key][:-len(data2[key])//2]) for key in data2]
+            sd = [sorted(d2[1][:-len(d2[1])//2]) for d2 in data2]
             right_stability = sum(abs(s[0]-s[-1]) for s in sd)
             left_stable =  False if right_stability==0.0 else \
                                             (left_stability/right_stability)<0.1
-            if sum(data2[key][0] for key in data2)>\
-                    sum(min(data2[key][-len(data2[key])//2:]) for key in data2):
-                if left_stable:
-                    plt.legend(prop={'size':12},loc='upper left')                    
+ 
+            if left_stable:
+                if ymax*len(data2)-sum(max(d2[1][-len(d2[1])//2:]) \
+                                 for d2 in data2) > 0.5*(ymax-ymin)*len(data2):
+                    plt.legend(prop={'size':legend_size},loc='upper left', frameon=False)
                 else:
-                    plt.legend(prop={'size':12},loc='lower right')                    
+                    plt.legend(prop={'size':legend_size},loc='lower left', frameon=False)                
             else:
-                height = 'upper'
-                if left_stable:
-                    plt.legend(prop={'size':12},loc='lower left')
+                if ymax*len(data2)-sum(max(d2[1][:-len(d2[1])//2]) \
+                                  for d2 in data2) > 0.5*(ymax-ymin)*len(data2):
+                    plt.legend(prop={'size':legend_size},loc='upper right', frameon=False)
                 else:
-                    plt.legend(prop={'size':12},loc='upper right')
+                    plt.legend(prop={'size':legend_size},loc='lower right', frameon=False)
 
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
               minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])

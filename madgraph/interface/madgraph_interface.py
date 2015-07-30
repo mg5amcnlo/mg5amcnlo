@@ -3739,7 +3739,7 @@ This implies that with decay chains:
                                       %misc.format_time(int(time.time()-start)))
             else:
                 cms_result = save_load_object.load_from_file(
-                                                             options['analyze'])
+                                               options['analyze'].split(',')[0])
                 if cms_result is None:
                     raise self.InvalidCmd('The complex mass scheme check result'+
                        " file below could not be read.\n     %s"%options['analyze'])
