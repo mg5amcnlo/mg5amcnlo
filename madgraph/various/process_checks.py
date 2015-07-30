@@ -4953,7 +4953,7 @@ minimum value of lambda to be considered in the CMS check."""\
         plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         pp=PdfPages(fig_output_file)
-        if len(data1)<=2:
+        if len(checks)==0 or len(process_data_plot_dict[checks[0]][0])<=2:
             colorlist=['b','r']
         else:
             import matplotlib.colors as colors
