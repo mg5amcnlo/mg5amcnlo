@@ -3634,6 +3634,11 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             if resonance['ParticlePDG'] == 0:
                 continue
 
+            # Discard if the particle appears in the final state
+            if abs(resonance['ParticlePDG']) in \
+                                [abs(l.get('id')) for l in process.get('legs')]:
+                continue
+
             mass_string = evaluator.full_model.get_particle(
                                            resonance['ParticlePDG']).get('mass')
             mass  = evaluator.full_model.get('parameter_dict')[mass_string].real
