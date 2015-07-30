@@ -91,7 +91,6 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         write(*,*)'Unknown option in scale_global_reference',dynamical_scale_choice
         stop
       endif
-      endif
       rscale = scalefact*rscale
       return
       end
