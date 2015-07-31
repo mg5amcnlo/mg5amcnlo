@@ -52,7 +52,9 @@ logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
 # global to check which f2py module have been already loaded. (to avoid border effect)
-dir_to_f2py_free_mod ={}
+dir_to_f2py_free_mod = {}
+nb_f2py_module = 0 # each time the process/model is changed this number is modified to 
+                   # forced the python module to re-create an executable
 
 
 
@@ -281,15 +283,19 @@ class ReweightInterface(extended_cmd.Cmd):
     def do_change(self, line):
         """allow to define a second model/processes"""
         
+        global nb_f2py_module
+        
         args = self.split_arg(line)
         if len(args)<2:
             logger.critical("not enough argument (need at least two). Discard line")
         if args[0] == "model":
+            nb_f2py_module += 1 # tag to force the f2py to reload
             self.second_model = " ".join(args[1:])
             if self.has_standalone_dir:
                 self.terminate_fortran_executables()
                 self.has_standalone_dir = False
         elif args[0] == "process":
+            nb_f2py_module += 1
             if self.has_standalone_dir:
                 self.terminate_fortran_executables()
                 self.has_standalone_dir = False
@@ -651,13 +657,11 @@ class ReweightInterface(extended_cmd.Cmd):
         return new_p
     
     @staticmethod
-    def rename_f2py_lib(Pdir, tag, hypp_id=0):
-        dir_to_f2py_free_mod[(Pdir, hypp_id)] = tag
+    def rename_f2py_lib(Pdir, tag):
         if tag == 2:
             return
-        
         if os.path.exists(pjoin(Pdir, 'matrix%spy.so' % tag)):
-            raise Exception
+            return
         else:
             open(pjoin(Pdir, 'matrix%spy.so' % tag),'w').write(open(pjoin(Pdir, 'matrix2py.so')
                                         ).read().replace('matrix2py', 'matrix%spy' % tag))
@@ -687,24 +691,31 @@ class ReweightInterface(extended_cmd.Cmd):
             Pname = os.path.basename(Pdir)
             if hypp_id == 0:
                 if (Pdir, 0) not in dir_to_f2py_free_mod:
-                    tag = 2
+                    metag = 1
+                    dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
                 else:
-                    tag = dir_to_f2py_free_mod[(Pdir,0)] + 1
+                    metag, old_module = dir_to_f2py_free_mod[(Pdir,0)]
+                    if old_module != nb_f2py_module:
+                        metag += 1
+                        dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
+                        
                 misc.compile(['matrix2py.so'], cwd=Pdir)
-                self.rename_f2py_lib(Pdir, tag)
-                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, tag), globals(), locals(), [],-1)
+                
+                self.rename_f2py_lib(Pdir, 2*metag)
+                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag), globals(), locals(), [],-1)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = getattr(P, 'matrix%spy' % tag)
+                mymod = getattr(P, 'matrix%spy' % (2*metag))
                 with misc.chdir(Pdir):
                     mymod.initialise('param_card_orig.dat')
             if hypp_id == 1:
-                tag = dir_to_f2py_free_mod[(Pdir,0)] + 1
-                self.rename_f2py_lib(Pdir, tag)
-                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, tag), globals(), locals(), [],-1)
+                #incorrect line
+                metag = dir_to_f2py_free_mod[(Pdir,0)][0]
+                self.rename_f2py_lib(Pdir, 2*metag+1)
+                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag+1), globals(), locals(), [],-1)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = getattr(P, 'matrix%spy' % tag)
+                mymod = getattr(P, 'matrix%spy' % (2*metag+1))
                 with misc.chdir(Pdir):
                     mymod.initialise('param_card.dat') 
             space.calculator[run_id] = mymod.get_me
@@ -718,16 +729,20 @@ class ReweightInterface(extended_cmd.Cmd):
             Pname = os.path.basename(Pdir)
             misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
             if (Pdir, 1) not in dir_to_f2py_free_mod:
-                tag = 2
+                metag = 1
+                dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
             else:
-                tag = dir_to_f2py_free_mod[(Pdir, 1)] + 1
-            self.rename_f2py_lib(Pdir, tag, 1)
+                metag, old_module = dir_to_f2py_free_mod[(Pdir,1)]
+                if old_module != nb_f2py_module:
+                    metag += 1
+                    dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
+            self.rename_f2py_lib(Pdir, metag)
             with misc.chdir(Pdir):
-                mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, tag))
+                mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
                 reload(mymod)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = getattr(P, 'matrix%spy' % tag)
+                mymod = getattr(P, 'matrix%spy' % metag)
                 mymod.initialise('param_card.dat')              
             space.calculator[run_id] = mymod.get_me
             external = space.calculator[run_id]                
@@ -921,7 +936,7 @@ class ReweightInterface(extended_cmd.Cmd):
             use_mgdefault= True
             complex_mass = False
             if ' ' in self.second_model:
-                args = self.second_model
+                args = self.second_model.split()
                 if '--modelname' in args:
                     use_mgdefault = False
                 model_name = args[0]
@@ -936,6 +951,8 @@ class ReweightInterface(extended_cmd.Cmd):
                     modelpath = pjoin(os.path.dirname(modelpath), mgcmd._curr_model['name'])
                 
             commandline="import model %s " % modelpath
+            if not use_mgdefault:
+                commandline += ' -modelname '
             mgcmd.exec_cmd(commandline)
             
         # 2. compute the production matrix element -----------------------------
