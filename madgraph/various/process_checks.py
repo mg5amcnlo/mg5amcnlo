@@ -4078,7 +4078,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # Write the recomputed widths so that it can potentially be
                 # used for future runs (here the model in the NWA format)
                 if lambdaCMS==1.0:
-                    new_param_card.write(pjoin(proc_dir,
+                    tmp_param_card.write(pjoin(proc_dir,
                                     'Cards','param_card.dat_recomputed_widths'))      
                     
             # Finally ready to compute the matrix element
@@ -4456,8 +4456,7 @@ def output_unitary_feynman(comparison_results, output='text'):
         return fail_proc
 
 
-def output_complex_mass_scheme(result,output_path, options, model, output='text',
-                                                            diff_lambda_power=1):
+def output_complex_mass_scheme(result,output_path, options, model, output='text'):
     """ Outputs nicely the outcome of the complex mass scheme check performed
     by varying the width in the offshell region of resonances found for eahc process.
     Output just specifies whether text should be returned or a list of failed
@@ -4473,7 +4472,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     # parameter to 2. If the Born does not have O(\lambda) contributions
     # (i.e. if the test still pas with diff_lambda_power=2) then the NLO test
     # will not be sensitive to the CMS implementation details.
-    #
+    diff_lambda_power = options['diff_lambda_power']
     # DISLAIMER:
     # The CMS check is non trivial to automate and it is actually best done
     # manually by looking at plots for various implementation of the CMS.
@@ -4697,7 +4696,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         # Reminder if diff_lambda_power is not 1
         
         if diff_lambda_power!=1:
-            res_str += "== WARNING diff_lambda_power is not 1 but  = %d\n"%diff_lambda_power
+            res_str += "== WARNING diff_lambda_power is not 1 but  = %g\n"%diff_lambda_power
             res_str += '%s%s%s\n'%(bar('-'),'-'*8,bar('-'))
 
         born_power = guess_lambdaorder(nwa_born,lambdaCMS_list,
@@ -4962,7 +4961,8 @@ minimum value of lambda to be considered in the CMS check."""\
                     data1.append([r'$\displaystyle CMS\;=\;(\mathcal{M}^{(1)}_{CMS}+\mathcal{M}_{CMS}^{(0)}-\mathcal{M}^{(0)}_{NWA})/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$',CMSData])
                     data1.append([r'$\displaystyle NWA\;=\;\mathcal{M}^{(1)}_{NWA}/(\lambda\cdot\mathcal{M}^{(0)}_{NWA})$',NWAData])
                 data2.append([r'$\displaystyle\Delta\;=\;(CMS-NWA)/\lambda%s$'\
-                                  %('' if diff_lambda_power==1 else r'^2'),DiffData])
+                    %('' if diff_lambda_power==1 else r'^{%g}'%diff_lambda_power)
+                                                                     ,DiffData])
                 data2.append([r'Detected asymptot',[differences_target[(process,resID)] 
                                                 for i in range(len(lambdaCMS_list))]])
             else:

@@ -3393,10 +3393,10 @@ This implies that with decay chains:
                 # to see whether the NLO check will have sensitivity to the CMS
                 # implementation
                 try:
-                    CMS_options['diff_lambda_power']=int(option[1])
+                    CMS_options['diff_lambda_power']=float(option[1])
                 except ValueError:
                     raise self.InvalidCmd("the '--diff_lambda_power' option"+\
-                                     " must be an integer, not '%s'."%option[1])
+                            " must be an integer or float, not '%s'."%option[1])
             elif option[0]=='--lambda_plot_range':
                 try:
                     plot_range=eval(option[1])
@@ -3805,8 +3805,7 @@ This implies that with decay chains:
         if cms_result:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
             text += process_checks.output_complex_mass_scheme(
-                      cms_result, output_path, options, self._curr_model,
-                      diff_lambda_power=CMS_options['diff_lambda_power']) + '\n'             
+                      cms_result, output_path, options, self._curr_model) + '\n'             
         if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'
             text += process_checks.output_comparisons(comparisons[0]) + '\n'
