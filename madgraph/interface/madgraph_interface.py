@@ -937,10 +937,14 @@ class CheckValidForCmd(cmd.CheckCmd):
             user_options['--diff_lambda_power']='1'
             # Sets the range of lambda values to plot
             user_options['--lambda_plot_range']='[-1.0,-1.0]'
-        
+            # Sets a filter to apply at generation. See name of available 
+            # filters in loop_diagram_generations.py, function user_filter 
+            user_options['--loop_filter']='None'
+            
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
-                key, value = arg.split('=')
+                parsed = arg.split('=')
+                key, value = parsed[0],'='.join(parsed[1:])
                 if key not in user_options:
                     raise self.InvalidCmd, "unknown option %s" % key
                 user_options[key] = value
@@ -3378,6 +3382,11 @@ This implies that with decay chains:
                     raise self.InvalidCmd("The option 'recompute_width' can "+\
                   "only be 'never','always', 'first_time' or 'auto' (default).")
                 CMS_options['recompute_width'] = option[1]
+            elif option[0]=='--loop_filter':
+                # Specify a loop, filter. See functions get_loop_filter and
+                # user_filter in loop_diagram_generation.LoopAmplitude for
+                # information on usage.
+                CMS_options['loop_filter'] = '='.join(option[1:])
             elif option[0]=='--diff_lambda_power':
                 #'secret' option to chose by which lambda power one should divide
                 # the nwa-cms difference. Useful to set to 2 when doing the Born check

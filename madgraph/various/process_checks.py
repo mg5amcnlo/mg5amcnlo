@@ -1811,7 +1811,7 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 # Generate a loop matrix element
 #===============================================================================
 def generate_loop_matrix_element(process_definition, reuse, output_path=None,
-                                         cmd = FakeInterface(), proc_name=None):
+                        cmd = FakeInterface(), proc_name=None, loop_filter=None):
     """ Generate a loop matrix element from the process definition, and returns
     it along with the timing information dictionary.
     If reuse is True, it reuses the already output directory if found.
@@ -1862,7 +1862,8 @@ def generate_loop_matrix_element(process_definition, reuse, output_path=None,
 
     start=time.time()
     try:
-        amplitude = loop_diagram_generation.LoopAmplitude(process)
+        amplitude = loop_diagram_generation.LoopAmplitude(process,
+                                                        loop_filter=loop_filter)
     except InvalidCmd:
         # An error about the sanity of the process can be thrown, in which case
         # we return nothing
@@ -3850,8 +3851,9 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         
         # Generate the ME
         timing, matrix_element = generate_loop_matrix_element(process, 
-                         options['reuse'], output_path=options['output_path'], 
-                                      cmd = options['cmd'], proc_name=proc_name)
+                options['reuse'], output_path=options['output_path'], 
+                           cmd = options['cmd'], proc_name=proc_name, 
+                                             loop_filter=options['loop_filter'])
         if matrix_element is None:
             # No diagrams for this process
             return None
@@ -4056,21 +4058,29 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             if NLO:
                 new_param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
                 # Write the recomputed widths so that it can potentially be
-                # used for future runs
+                # used for future runs (here for the model in the CMS format)
                 if lambdaCMS==1.0 and mode=='CMS' and \
                           options['recompute_width'] in ['always','first_time']:
                     new_param_card.write(pjoin(proc_dir,
                                     'Cards','param_card.dat_recomputed_widths'))
+                    
             # If recomputing widths with MadSpin, we want to do it within
             # the NWA models with zero widths.
             if mode=='NWA' and (options['recompute_width']=='always' or (
                   options['recompute_width']=='first_time' and lambdaCMS==1.0)):
+                # The copy constructor below creates a deep copy
+                tmp_param_card = check_param_card.ParamCard(new_param_card)
                 # We don't use the result here, it is just so that it is put
                 # in the cache and reused in the CMS run that follows.
                 for decay in new_param_card['decay'].keys():
-                    _ = get_width(abs(decay[0]),lambdaCMS,new_param_card)
-
-
+                    tmp_param_card['decay'].get(decay).value = \
+                               get_width(abs(decay[0]),lambdaCMS,new_param_card)
+                # Write the recomputed widths so that it can potentially be
+                # used for future runs (here the model in the NWA format)
+                if lambdaCMS==1.0:
+                    new_param_card.write(pjoin(proc_dir,
+                                    'Cards','param_card.dat_recomputed_widths'))      
+                    
             # Finally ready to compute the matrix element
             if NLO:
                 ME_res = LoopMatrixElementEvaluator.get_me_value(process, 0, 
@@ -4499,7 +4509,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     
 #   One can print out the raw results by uncommenting the line below
 #    misc.sprint(result)
-#    for i, res in enumerate(result['a e- > e- ve ve~ [ virt = QED QCD ]']['CMS']):
+#    for i, res in enumerate(result['a e- > e- ve ve~ [ virt = QCD QED ]']['CMS']):
 #        if res['resonance']['FSMothersNumbers'] == set([3, 5]):
 #            misc.sprint(res['resonance']['PS_point_used'])
 #    stop
@@ -5122,7 +5132,7 @@ minimum value of lambda to be considered in the CMS check."""\
         
         plt.close("all")
     
-    except Exception as e:
+    except IOError as e:
         if isinstance(e, ImportError):
             res_str += "\n= Install matplotlib to get a "+\
                 "graphical display of the results of the cms check."
