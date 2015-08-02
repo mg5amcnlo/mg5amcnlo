@@ -907,14 +907,14 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         reg%s=log(arg) %s TWOPII
       else
         reg%s=log(arg)
-      endif\n"""%(mode[0],'+' if mode[1]=='logp' else '-')
+      endif\n"""%(mode[0],'+' if mode[1]=='logp' else '-',mode[0])
                         else:
                             new_line =\
 """      if(real(arg,kind=16).lt.0.0e0_16.and.imagpart(arg).lt.0.0e0_16)then
         mp_reg%s=log(arg) %s TWOPII
       else
         mp_reg%s=log(arg)
-      endif\n"""%(mode[0],'+' if mode[1]=='logp' else '-')
+      endif\n"""%(mode[0],'+' if mode[1]=='logp' else '-',mode[0])
                     else:
                         new_line = ' '*6+"%sreg%s=log(arg) %s\n"%(mp_mode,mode[0],
       ('' if mode[1]=='log' else ('+TWOPII' if mode[1]=='logp' else '-TWOPII')))
