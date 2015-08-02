@@ -881,7 +881,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         mp_mode             = None
         suffix = {'log':'','logp':r'\s*\+\s*TWOPII','logm':r'\s*\-\s*TWOPII'}
         replace_regex=r'^\s*%%sREG%s\s*=\s*LOG\(ARG\)%s'%(mode[0],suffix[mode[0]])
-
+        misc.sprint(mode[0],mode[1])
         for line in model_functions:
             # Make sure to skip split lines after the replacement
             if just_replaced:
@@ -905,19 +905,19 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                         if mp_mode=='':
                             new_line =\
 """      if(dble(arg).lt.0.0d0.and.dimag(arg).gt.0.0d0)then
-        reglogm=log(arg) %s TWOPII
+        reg%s=log(arg) %s TWOPII
       else
-        reglogm=log(arg)
-      endif\n"""%('+' if mode[1]=='logp' else '-')
+        reg%s=log(arg)
+      endif\n"""%(mode[0],'+' if mode[1]=='logp' else '-')
                         else:
                             new_line =\
 """      if(real(arg,kind=16).lt.0.0e0_16.and.imagpart(arg).lt.0.0e0_16)then
-        mp_reglogp=log(arg) %s TWOPII
+        mp_reg%s=log(arg) %s TWOPII
       else
-        mp_reglogp=log(arg)
-      endif\n"""%('+' if mode[1]=='logp' else '-')
+        mp_reg%s=log(arg)
+      endif\n"""%(mode[0],'+' if mode[1]=='logp' else '-')
                     else:
-                        new_line = ' '*6+"%sreglogp=log(arg) %s\n"%(mp_mode,
+                        new_line = ' '*6+"%sreg%s=log(arg) %s\n"%(mp_mode,mode[0]
       ('' if mode[1]=='log' else ('+TWOPII' if mode[1]=='logp' else '-TWOPII')))
                     new_model_functions.append(new_line)
                     just_replaced = True
@@ -935,7 +935,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             open(pjoin(model_path,'model_functions.f'),'w').\
                                              write(''.join(new_model_functions))
-
+        stop
         return          
                 
     def setup_ward_check(self, working_dir, file_names, mp = False):
