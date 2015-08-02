@@ -881,7 +881,6 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         mp_mode             = None
         suffix = {'log':'','logp':r'\s*\+\s*TWOPII','logm':r'\s*\-\s*TWOPII'}
         replace_regex=r'^\s*%%sREG%s\s*=\s*LOG\(ARG\)%s'%(mode[0],suffix[mode[0]])
-        misc.sprint(mode[0],mode[1])
         for line in model_functions:
             # Make sure to skip split lines after the replacement
             if just_replaced:
@@ -935,7 +934,6 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             open(pjoin(model_path,'model_functions.f'),'w').\
                                              write(''.join(new_model_functions))
-        stop
         return          
                 
     def setup_ward_check(self, working_dir, file_names, mp = False):
