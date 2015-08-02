@@ -3422,7 +3422,7 @@ This implies that with decay chains:
                                     tweak+" is incorrect. It should be of"+\
                                  " the form a->_any_function_of_(a,lambdaCMS).")
                         if param in ['logp','logm','log'] and \
-                                           replacement in ['logp','logm','log']:
+                          replacement in ['logp','logm','log']:
                             new_tweak_set['custom'].append(tweak)
                             continue
                         try:
@@ -3835,6 +3835,8 @@ This implies that with decay chains:
             else:
                 cms_result = save_load_object.load_from_file(
                                                options['analyze'].split(',')[0])
+                cms_results.append((cms_result,options['analyze'].split(',')[0],
+                                               CMS_options['tweak'][0]['name']))
                 if cms_result is None:
                     raise self.InvalidCmd('The complex mass scheme check result'+
                        " file below could not be read.\n     %s"%options['analyze'])
