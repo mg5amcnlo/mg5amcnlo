@@ -3415,6 +3415,9 @@ This implies that with decay chains:
                     for tweak in tweakset.split('&'):
                         if tweak=='default':
                             continue
+                        if tweak.startswith('seed'):
+                            new_tweak_set['custom'].append(tweak)
+                            continue
                         try:
                             param, replacement = tweak.split('->')
                         except ValueError:
@@ -3422,7 +3425,7 @@ This implies that with decay chains:
                                     tweak+" is incorrect. It should be of"+\
                                  " the form a->_any_function_of_(a,lambdaCMS).")
                         if param in ['logp','logm','log'] and \
-                          replacement in ['logp','logm','log']:
+                           replacement in ['logp','logm','log']:
                             new_tweak_set['custom'].append(tweak)
                             continue
                         try:

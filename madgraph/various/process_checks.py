@@ -3954,6 +3954,15 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     # Make sure double-check helicities is set to False
     MLoptions['DoubleCheckHelicityFilter'] = False
     
+    # Apply the seed tweak if present
+    for tweak in options['tweak']['custom']:
+        if tweak.startswith('seed'):
+            try:
+                new_seed = int(tweak[4:])
+            except ValueError:
+                raise MadGraph5Error, "Seed '%s' is not of the right format 'seed<int>'."%tweak
+            random.seed(new_seed)
+                
     mode = 'CMS' if aloha.complex_mass else 'NWA'
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
@@ -4137,6 +4146,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     # Apply custom tweaks
     had_log_tweaks=False
     for tweak in options['tweak']['custom']:
+        if tweak.startswith('seed'):
+            continue
         try:
             logstart, logend = tweak.split('->')
         except:
@@ -4196,8 +4207,6 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                     new_width = 0.0
                 new_param_card['decay'].get(decay).value= new_width
 
-            # To debug one can printout here intermediate param cards
-#            new_param_card.write(pjoin('.','BOUH_%d.dat'%int(1.0/lambdaCMS))
             # Apply these changes for the purpose of the final computation
             evaluator.full_model.set_parameters_and_couplings(
                                                       param_card=new_param_card)
@@ -4232,6 +4241,14 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                # Replace the temporary prefix used for evaluation of the 
                # substitution expression 
                orig_param = param.replace('__tmpprefix__','')
+               # Treat the special keyword 'allwidths'
+               if orig_param.lower() == 'allwidths':
+                    # Apply the rule to all widhts
+                    for decay in new_param_card['decay'].keys():
+                        orig_value = float(new_param_card['decay'].get(decay).value)
+                        new_value = eval(replacement,
+                                       {param:orig_value,'lambdacms':lambdaCMS})
+                        new_param_card['decay'].get(decay).value = new_value
                if orig_param not in name2block:
                    # It can be that some parameter are in the NWA model but not
                    # in the CMS, such as the Yukawas for example.
