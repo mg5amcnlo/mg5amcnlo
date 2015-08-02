@@ -916,7 +916,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         mp_reg%s=log(arg)
       endif\n"""%(mode[0],'+' if mode[1]=='logp' else '-')
                     else:
-                        new_line = ' '*6+"%sreg%s=log(arg) %s\n"%(mp_mode,mode[0]
+                        new_line = ' '*6+"%sreg%s=log(arg) %s\n"%(mp_mode,mode[0],
       ('' if mode[1]=='log' else ('+TWOPII' if mode[1]=='logp' else '-TWOPII')))
                     new_model_functions.append(new_line)
                     just_replaced = True
