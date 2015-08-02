@@ -3652,7 +3652,7 @@ class ProcessDefinition(Process):
         my_isids = [leg.get('ids') for leg in self.get('legs') \
               if not leg.get('state')]
         my_fsids = [leg.get('ids') for leg in self.get('legs') \
-             if leg.get('state')]
+             if leg.get('state')]            
         for i, is_id in enumerate(initial_state_ids):
             assert is_id in my_isids[i]
         for i, fs_id in enumerate(final_state_ids):

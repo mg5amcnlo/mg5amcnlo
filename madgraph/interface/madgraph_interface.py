@@ -482,11 +482,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("    --offshellness=f : f is a positive or negative float specifying ")
         logger.info("      the distance from the pole as f*particle_mass. Default is 100.0")
         logger.info("    --seed=i : to force a specific RNG integer seed i (default is fixed to 0)")
-        logger.info("    --cms=order1;order2;...,p1->f(p,lambdaCMS);p2->f2(p,lambdaCMS);...")
+        logger.info("    --cms=order1&order2;...,p1->f(p,lambdaCMS)&p2->f2(p,lambdaCMS);...")
         logger.info("      'order_i' specifies the expansion orders considered for the test.")
         logger.info("      The substitution lists specifies how internal parameter must be modified")
         logger.info("      with the width scaling 'lambdaCMS'. The default value for this option is:")
-        logger.info("        --cms=QED;QCD,aewm1->10.0/lambdaCMS,as->0.1*lambdaCMS ")
+        logger.info("        --cms=QED&QCD,aewm1->10.0/lambdaCMS&as->0.1*lambdaCMS ")
         logger.info("      The number of order and parameters don't have to be the same.")
         logger.info("      The scaling must be specified so that one occurrence of the coupling order.")
         logger.info("      brings in exactly one power of lambdaCMS.")
@@ -911,7 +911,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # comma gives the relation of an external parameter with the
             # CMS expansions parameter called 'lambdaCMS'.
             parameters = ['aewm1->10.0/lambdaCMS','as->0.1*lambdaCMS']
-            user_options['--cms']='QED;QCD,'+';'.join(parameters)
+            user_options['--cms']='QED&QCD,'+'&'.join(parameters)
             # Widths are assumed to scale linearly with lambdaCMS unless
             # --force_recompute_width='always' or 'first_time' is used.
             user_options['--recompute_width']='auto'
@@ -940,6 +940,12 @@ class CheckValidForCmd(cmd.CheckCmd):
             # Sets a filter to apply at generation. See name of available 
             # filters in loop_diagram_generations.py, function user_filter 
             user_options['--loop_filter']='None'
+            # Apply tweaks to the check like multiplying a certain width by a
+            # certain parameters or changing the analytical continuation of the 
+            # logarithms of the UV counterterms
+            user_options['--tweak']='default()'
+            # Give a name to the run for the files to be saved
+            user_options['--name']='auto'
             
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
@@ -3377,6 +3383,65 @@ This implies that with decay chains:
                 options['show_plot'] = 'true' in option[1].lower()
             elif option[0]=='--seed':
                 CMS_options['seed'] = int(option[1])
+            elif option[0]=='--name':
+                if '.' in option[1]:
+                    raise InvalidCmd("Do not specify the extension in the"+
+                                                             " name of the run")
+                CMS_options['name'] = option[1]
+            elif option[0]=='--tweak':
+                # Lists the sets of custom and widths modifications to apply
+                try:
+                    tweaks = eval(option[1])
+                    if isinstance(tweaks, str):
+                        tweaks = [option[1]]                         
+                    elif not isinstance(tweaks,list):
+                        tweaks = [option[1]]
+                except:
+                    tweaks = [option[1]]
+                if not all(isinstance(t,str) for t in tweaks):
+                    raise InvalidCmd("Invalid specificaiton of tweaks: %s"%option[1])
+                CMS_options['tweak'] = []
+                for tweakID, tweakset in enumerate(tweaks):
+                    specs =re.match(r'^(?P<tweakset>.*)\((?P<name>.*)\)$', tweakset)
+                    if specs:
+                        tweakset = specs.group('tweakset')
+                        name    = specs.group('name')
+                    else:
+                        if tweakset!='default':
+                            name = 'tweak#%d'%(tweakID+1)
+                        else:
+                            name = ''
+                    new_tweak_set = {'custom':[],'params':{},'name':name}
+                    for tweak in tweakset.split('&'):
+                        if tweak=='default':
+                            continue
+                        try:
+                            param, replacement = tweak.split('->')
+                        except ValueError:
+                            raise self.InvalidCmd("Tweak specification '%s'"%\
+                                    tweak+" is incorrect. It should be of"+\
+                                 " the form a->_any_function_of_(a,lambdaCMS).")
+                        if param in ['logp','logm','log'] and \
+                                           replacement in ['logp','logm','log']:
+                            new_tweak_set['custom'].append(tweak)
+                            continue
+                        try:
+                            # for safety prefix parameters, because 'as' for alphas
+                            # is a python reserved name for example
+                            orig_param, orig_replacement = param, replacement
+                            replacement = replacement.replace(param,
+                                                        '__tmpprefix__%s'%param)
+                            param = '__tmpprefix__%s'%param
+                            res = float(eval(replacement.lower(),
+                                         {'lambdacms':1.0,param.lower():98.85}))
+                        except:                    
+                            raise self.InvalidCmd("The substitution expression "+
+                        "'%s' for the tweaked parameter"%orig_replacement+
+                        " '%s' could not be evaluated. It must be an "%orig_param+
+                        "expression of the parameter and 'lambdaCMS'.")
+                        new_tweak_set['params'][param.lower()] = replacement.lower()
+                    CMS_options['tweak'].append(new_tweak_set)
+
             elif option[0]=='--recompute_width':
                 if option[1].lower() not in ['never','always','first_time','auto']:
                     raise self.InvalidCmd("The option 'recompute_width' can "+\
@@ -3460,9 +3525,9 @@ This implies that with decay chains:
                     raise self.InvalidCmd("CMS expansion specification '%s'"%\
                                                        args[i]+" is incorrect.")
                 CMS_options['expansion_orders'] = [expansion_order for 
-                             expansion_order in CMS_expansion_orders.split(';')]
+                             expansion_order in CMS_expansion_orders.split('&')]
                 CMS_options['expansion_parameters'] = {}
-                for expansion_parameter in CMS_expansion_parameters.split(';'):
+                for expansion_parameter in CMS_expansion_parameters.split('&'):
                     try:
                         param, replacement = expansion_parameter.split('->')
                     except ValueError:
@@ -3483,14 +3548,10 @@ This implies that with decay chains:
                         "'%s' for CMS expansion parameter"%orig_replacement+
                         " '%s' could not be evaluated. It must be an "%orig_param+
                         "expression of the parameter and 'lambdaCMS'.")
-                    if res:
-                        # Put everything lower case as it will be done when
-                        # accessing model variables
-                        CMS_options['expansion_parameters'][param.lower()]=\
+                    # Put everything lower case as it will be done when
+                    # accessing model variables
+                    CMS_options['expansion_parameters'][param.lower()]=\
                                                              replacement.lower()
-                    else:
-                      raise self.InvalidCmd("CMS expansion parameter must be"+
-                        " a function such that funct(param,lambdaCMS=1.0)=param")
             else:
                 raise self.InvalidCmd("The option '%s' is not reckognized."%option[0])
 
@@ -3582,7 +3643,7 @@ This implies that with decay chains:
         stability = []
         profile_time = []
         profile_stab = []
-        cms_result = {}
+        cms_results = []
 
         if "_cuttools_dir" in dir(self):
             CT_dir = self._cuttools_dir
@@ -3723,10 +3784,11 @@ This implies that with decay chains:
         if args[0] in ['cms']:
             
             cms_original_setup = self.options['complex_mass_scheme']
-
             process_line = " ".join(args[1:])
             # Merge in the CMS_options to the options
             for key, value in CMS_options.items():
+                if key=='tweak':
+                    continue
                 if key not in options:
                     options[key] = value
                 else:
@@ -3735,15 +3797,39 @@ This implies that with decay chains:
             
             if options['analyze']=='None':
                 start = time.time()
-                cms_result = process_checks.check_complex_mass_scheme(
-                                          process_line,
-                                          param_card = param_card,
-                                          cuttools=CT_dir,
-                                          tir=TIR_dir,
-                                          cmd = self,
-                                          output_path = output_path,
-                                          MLOptions = MLoptions,
-                                          options=options)
+                cms_results = []
+                for tweak in CMS_options['tweak']:
+                    options['tweak']=tweak
+                    # Try to guess the save path and try to load it before running
+                    guessed_proc = myprocdef.get_process(
+                      [leg.get('ids')[0] for leg in myprocdef.get('legs') 
+                                                       if not leg.get('state')],
+                      [leg.get('ids')[0] for leg in myprocdef.get('legs')
+                                                           if leg.get('state')])
+                    save_path = process_checks.CMS_save_path('pkl',
+                    {'ordered_processes':guessed_proc.base_string(),
+                     'perturbation_orders':guessed_proc.get('perturbation_couplings')}, 
+                             self._curr_model, options, output_path=output_path)
+                    if os.path.isfile(save_path):
+                        cms_result = save_load_object.load_from_file(save_path)
+                        if cms_result is None:
+                            raise self.InvalidCmd('The complex mass scheme check result'+
+                            " file below could not be read.\n     %s"%save_path)
+                    else:      
+                        cms_result = process_checks.check_complex_mass_scheme(
+                                              process_line,
+                                              param_card = param_card,
+                                              cuttools=CT_dir,
+                                              tir=TIR_dir,
+                                              cmd = self,
+                                              output_path = output_path,
+                                              MLOptions = MLoptions,
+                                              options=options)
+                        # Now set the correct save path
+                        save_path = process_checks.CMS_save_path('pkl', cms_result, 
+                             self._curr_model, options, output_path=output_path)
+                    cms_results.append((cms_result,save_path,tweak['name']))    
+
                 logger.debug('CMS check performed finished in %s.'\
                                       %misc.format_time(int(time.time()-start)))
             else:
@@ -3802,10 +3888,25 @@ This implies that with decay chains:
         if gauge_result_no_brs:
             text += 'Gauge results (switching between Unitary/Feynman):\n'
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
-        if cms_result:
+        if cms_results:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
+            cms_result = cms_results[0][0]
+            if len(cms_results)>1:
+                analyze = []
+                for i, (cms_res, save_path, tweakname) in enumerate(cms_results):
+                    save_load_object.save_to_file(save_path, cms_res)
+                    logger.info("Pickle file for tweak '%s' saved to disk at:\n ->%s"%
+                                                          (tweakname,save_path))
+                    if i==0:
+                        analyze.append(save_path)
+                    else:
+                        analyze.append('%s(%s)'%(save_path,tweakname))
+                options['analyze']=','.join(analyze)
+                options['tweak']  = CMS_options['tweak'][0]
+            
             text += process_checks.output_complex_mass_scheme(
-                      cms_result, output_path, options, self._curr_model) + '\n'             
+                    cms_result , output_path, options, self._curr_model) + '\n'
+
         if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'
             text += process_checks.output_comparisons(comparisons[0]) + '\n'

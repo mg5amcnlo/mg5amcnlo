@@ -48,6 +48,7 @@ import madgraph.iolibs.export_python as export_python
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as import_ufo
 import madgraph.iolibs.save_load_object as save_load_object
+import madgraph.iolibs.file_writers as writers
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
@@ -824,6 +825,119 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             return res_dict
     
+    @staticmethod
+    def apply_log_tweak(proc_path, mode):
+        """ Changes the file model_functions.f in the SOURCE of the process output
+        so as to change how logarithms are analytically continued and see how
+        it impacts the CMS check."""
+        valid_modes = ['default','recompile']
+        if not (mode in valid_modes or (isinstance(mode, list) and
+                len(mode)==2 and all(m in ['logp','logm','log'] for m in mode))):
+            raise MadGraph5Error("Mode '%s' not reckonized"%mode+
+                                                " in function apply_log_tweak.")
+        
+        model_path = pjoin(proc_path,'Source','MODEL')
+        directories = glob.glob(pjoin(proc_path,'SubProcesses','P0_*'))
+        if directories and os.path.isdir(directories[0]):
+            exe_path = directories[0]
+        else:
+            raise MadGraph5Error, 'Could not find a process executable '+\
+                                                      'directory in %s'%proc_dir
+        bu_path = pjoin(model_path, 'model_functions.f__backUp__')
+        
+        if mode=='default':
+            # Restore the default source file model_function.f
+            if not os.path.isfile(bu_path):
+                raise MadGraph5Error, 'Back up file %s could not be found.'%bu_path
+            shutil.move(bu_path, pjoin(model_path, 'model_functions.f'))
+            return
+
+        if mode=='recompile':
+            misc.compile(cwd=model_path)
+            # Remove the executable to insure proper recompilation
+            try:
+                os.remove(pjoin(exe_path,'check'))
+            except:
+                pass
+            misc.compile(arg=['check'], cwd=exe_path)
+            return
+        
+        if mode[0]==mode[1]:
+            return
+        
+        # Now change the logs
+        mp_prefix = 'MP_'
+        target_line = 'FUNCTION %%sREG%s(ARG)'%mode[0].lower()
+
+        # Make sure to create a backup
+        if not os.path.isfile(bu_path):
+            shutil.copy(pjoin(model_path, 'model_functions.f'), bu_path)            
+        model_functions = open(pjoin(model_path,'model_functions.f'),'r')
+        
+        new_model_functions = []
+        has_replaced        = False
+        just_replaced       = False
+        find_one_replacement= False
+        mp_mode             = None
+        suffix = {'log':'','logp':r'\s*\+\s*TWOPII','logm':r'\s*\-\s*TWOPII'}
+        replace_regex=r'^\s*%%sREG%s\s*=\s*LOG\(ARG\)%s'%(mode[0],suffix[mode[0]])
+
+        for line in model_functions:
+            # Make sure to skip split lines after the replacement
+            if just_replaced:
+                if not re.match(r'\s{6}', line):
+                    continue
+                else:
+                    just_replaced = False
+            if mp_mode is None:
+                # We are looking for the start of the function
+                new_model_functions.append(line)
+                if (target_line%mp_prefix).lower() in line.lower():
+                    mp_mode       = mp_prefix
+                elif (target_line%'').lower() in line.lower():
+                    mp_mode       = ''
+            else:
+                # Now apply the substitution
+                if not has_replaced and re.match(replace_regex%mp_mode,line,
+                                                                 re.IGNORECASE):
+                    # Apply the replacement
+                    if mode[0]=='log':
+                        if mp_mode=='':
+                            new_line =\
+"""      if(dble(arg).lt.0.0d0.and.dimag(arg).gt.0.0d0)then
+        reglogm=log(arg) %s TWOPII
+      else
+        reglogm=log(arg)
+      endif\n"""%('+' if mode[1]=='logp' else '-')
+                        else:
+                            new_line =\
+"""      if(real(arg,kind=16).lt.0.0e0_16.and.imagpart(arg).lt.0.0e0_16)then
+        mp_reglogp=log(arg) %s TWOPII
+      else
+        mp_reglogp=log(arg)
+      endif\n"""%('+' if mode[1]=='logp' else '-')
+                    else:
+                        new_line = ' '*6+"%sreglogp=log(arg) %s\n"%(mp_mode,
+      ('' if mode[1]=='log' else ('+TWOPII' if mode[1]=='logp' else '-TWOPII')))
+                    new_model_functions.append(new_line)
+                    just_replaced = True
+                    has_replaced  = True
+                    find_one_replacement = True
+                else:
+                    new_model_functions.append(line)
+                    if re.match(r'^\s*END\s*$',line,re.IGNORECASE):
+                        mp_mode      = None
+                        has_replaced = False
+        
+        if not find_one_replacement:
+            logger.warning('No replacement was found/performed for token '+
+                                                  "'%s->%s'."%(mode[0],mode[1]))
+        else:
+            open(pjoin(model_path,'model_functions.f'),'w').\
+                                             write(''.join(new_model_functions))
+
+        return          
+                
     def setup_ward_check(self, working_dir, file_names, mp = False):
         """ Modify loop_matrix.f so to have one external massless gauge boson
         polarization vector turned into its momentum. It is not a pretty and 
@@ -3439,11 +3553,17 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
         run_options['output_path'] = output_path
     else:
         run_options['output_path'] = cmd._mgme_dir
+        
     # And one for caching the widths computed along the way
-    run_options['cached_widths'] = {}
+    if 'cached_widths' not in run_options:
+        run_options['cached_widths'] = {}
     # Cached param_cards, first is param_card instance, second is
     # param_name dictionary
     run_options['cached_param_card'] = {'NWA':[None,None],'CMS':[None,None]}
+
+    if options['tweak']['name']:
+        logger.info("Now running the CMS check for tweak '%s'"\
+                                                      %options['tweak']['name'])
 
     model = multiprocess_nwa.get('model')
     # Make sure all masses are defined as external
@@ -3550,6 +3670,13 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
                 'CMS':output_cms[i][1]['resonances_result'],
                 'born_order':proc_res[1]['born_order'],
                 'loop_order':proc_res[1]['loop_order']}
+    
+    # As an optimization we propagate the widths as they could be reused when
+    # using several tweaks
+    options['cached_widths'] = run_options['cached_widths']
+    
+    # Make sure to clear the python ME definitions generated in LO runs
+    clean_added_globals(ADDED_GLOBAL)
     
     return result
 
@@ -3844,11 +3971,15 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     if NLO:
         # We must first create the matrix element, export it and set it up.
         # If the reuse option is specified, it will be recycled.
-        proc_name = "%s%s_%s%s__%s__"%(('SAVED' if options['reuse'] else ''),
+        
+        if options['name']=='auto':
+            proc_name = "%s%s_%s%s__%s__"%(('SAVED' if options['reuse'] else ''),
          temp_dir_prefix, '_'.join(process.shell_string().split('_')[1:]), 
          ('_' if process.get('perturbation_couplings') else '')+
          '_'.join(process.get('perturbation_couplings')),mode)
-        
+        else:
+            proc_name = "%s%s_%s__%s__"%(('SAVED' if options['reuse'] else ''),
+                                          temp_dir_prefix,options['name'], mode)
         # Generate the ME
         timing, matrix_element = generate_loop_matrix_element(process, 
                 options['reuse'], output_path=options['output_path'], 
@@ -4005,6 +4136,23 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     else:
         progress_bar = None
 
+    # Apply custom tweaks
+    had_log_tweaks=False
+    for tweak in options['tweak']['custom']:
+        try:
+            logstart, logend = tweak.split('->')
+        except:
+            raise Madgraph5Error, "Tweak '%s' not reckognized."%tweak
+        if logstart in ['logp','logm', 'log'] and \
+           logend in ['logp','logm', 'log']:
+            if NLO:
+                evaluator.apply_log_tweak(proc_dir, [logstart, logend])
+                had_log_tweaks = True
+        else:
+            raise Madgraph5Error, "Tweak '%s' not reckognized."%tweak
+    if had_log_tweaks:
+        evaluator.apply_log_tweak(proc_dir, 'recompile')
+            
     for resNumber, res in enumerate(resonances):
         # First add a dictionary for this resonance to the result with already
         # one key specifying the resonance
@@ -4080,7 +4228,29 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 if lambdaCMS==1.0:
                     tmp_param_card.write(pjoin(proc_dir,
                                     'Cards','param_card.dat_recomputed_widths'))      
-                    
+            
+            # Apply the params tweaks
+            for param, replacement in options['tweak']['params'].items():
+               # Replace the temporary prefix used for evaluation of the 
+               # substitution expression 
+               orig_param = param.replace('__tmpprefix__','')
+               if orig_param not in name2block:
+                   # It can be that some parameter are in the NWA model but not
+                   # in the CMS, such as the Yukawas for example.
+                   continue
+               for block, lhaid in name2block[orig_param]:
+                   orig_value = float(new_param_card[block].get(lhaid).value)
+                   new_value  = eval(replacement,
+                                       {param:orig_value,'lambdacms':lambdaCMS})
+                   new_param_card[block].get(lhaid).value=new_value
+            
+            if options['tweak']['params']:
+                # Apply the tweaked param_card one last time
+                evaluator.full_model.set_parameters_and_couplings(
+                                                      param_card=new_param_card)
+                if NLO:
+                    new_param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
+
             # Finally ready to compute the matrix element
             if NLO:
                 ME_res = LoopMatrixElementEvaluator.get_me_value(process, 0, 
@@ -4102,6 +4272,17 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                                                                (lambdaNumber+1))
                 # Flush to force the printout of the progress_bar to be updated
                 sys.stdout.flush()
+
+    # Restore the original continued log definition if necessary
+    log_reversed = False
+    for tweak in options['tweak']['custom']:
+        if tweak.startswith('log'):
+            if log_reversed:
+                continue
+            if NLO:
+                evaluator.apply_log_tweak(proc_dir, 'default')
+                evaluator.apply_log_tweak(proc_dir, 'recompile')                
+                log_reversed = True
 
     # Restore the original model parameters
     evaluator.full_model.set_parameters_and_couplings(param_card=param_card)
@@ -4455,6 +4636,43 @@ def output_unitary_feynman(comparison_results, output='text'):
     else: 
         return fail_proc
 
+def CMS_save_path(extension, cms_res, used_model, opts, output_path=None):
+    """Creates a suitable filename for saving these results."""
+    
+    if opts['name']=='auto' and opts['analyze']!='None':
+        # Reuse the same name then
+        return '%s.%s'%(os.path.splitext(opts['analyze'].split(',')[0])\
+                                                                  [0],extension)
+    # if a name is specified, use it
+    if opts['name']!='auto':
+        basename = opts['name']
+    else:
+        prefix = 'cms_check_'
+        # Use process name if there is only one process            
+        if len(cms_res['ordered_processes'])==1:
+            proc = cms_res['ordered_processes'][0]
+            replacements = {' ':'','+':'p','-':'m','~':'x', '>':'_','=':'eq'}
+            # Remove the perturbation couplings:
+            try:
+                proc=proc[:proc.index('[')]
+            except ValueError:
+                pass
+    
+            for key, value in replacements.items():
+                proc = proc.replace(key,value)
+    
+            basename =prefix+proc+'_%s_'%used_model.get('name')+\
+                      ( ('_'+'_'.join(cms_res['perturbation_orders'])) if \
+                                      cms_res['perturbation_orders']!=[] else '')
+        # Use timestamp otherwise
+        else:
+            basename = prefix+datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%Ss")
+            
+    suffix = '_%s'%opts['tweak']['name'] if opts['tweak']['name']!='' else '' 
+    if output_path:     
+        return pjoin(output_path,'%s%s.%s'%(basename,suffix,extension))
+    else:
+        return '%s%s.%s'%(basename,suffix,extension)
 
 def output_complex_mass_scheme(result,output_path, options, model, output='text'):
     """ Outputs nicely the outcome of the complex mass scheme check performed
@@ -4516,34 +4734,6 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     res_str = ''
     
     ####### BEGIN helper functions
-    def save_path(basename, extension):
-        """Creates a suitable filename for saving these results."""
-        
-        if options['analyze']!='None':
-            # Reuse the same name then
-            return '%s.%s'%(os.path.splitext(options['analyze'].split(',')[0])\
-                                                                  [0],extension)
-    
-        # Use process name if there is only one process            
-        if len(result['ordered_processes'])==1:
-            proc = result['ordered_processes'][0]
-            replacements = {' ':'','+':'p','-':'m','~':'x', '>':'_','=':'eq'}
-            # Remove the perturbation couplings:
-            try:
-                proc=proc[:proc.index('[')]
-            except ValueError:
-                pass
-
-            for key, value in replacements.items():
-                proc = proc.replace(key,value)
-
-            suffix = proc+'_%s_'%model.get('name')+\
-                      ( ('_'+'_'.join(result['perturbation_orders'])) if \
-                                      result['perturbation_orders']!=[] else '')
-        # Use timestamp otherwise
-        else:
-            suffix = datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%Ss")
-        return pjoin(output_path,'%s_%s.%s'%(basename,suffix,extension))
 
     # Chose here whether to use Latex particle names or not
     # Possible values are 'none', 'model' or 'built-in'
@@ -4641,15 +4831,17 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         else:
             return None
     ####### END helper functions
-    
-    if (options['analyze']=='None' and options['reuse']):
-        res_str += "\nThe results of this check have been stored on disk and its "+\
+    if options['analyze']=='None':
+        if options['reuse']:
+            save_path = CMS_save_path('pkl', result, model, options, 
+                                                        output_path=output_path)
+            res_str += "\nThe results of this check have been stored on disk and its "+\
               "analysis can be rerun at anytime with the MG5aMC command:\n   "+\
-            "      check cms --analyze=%s\n"%save_path('check_cms_res','pkl')
-        save_load_object.save_to_file(save_path('check_cms_res','pkl'), result)
-    else:
-        if len(result['ordered_processes'])>0:
-            res_str += "\nUse the following synthax if you want to store the raw results on disk.\n"+\
+            "      check cms --analyze=%s\n"%save_path
+            save_load_object.save_to_file(save_path, result)
+        elif len(result['ordered_processes'])>0:
+            res_str += "\nUse the following synthax if you want to store "+\
+                    "the raw results on disk.\n"+\
                     "    check cms -reuse <proc_def> <options>\n"
     
     ############################
@@ -4662,7 +4854,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
                                             range(len(result[process]['CMS']))])
         
     if options['reuse']:
-        logFile = open(save_path('check_cms_log','log'), 'w')
+        logFile = open(CMS_save_path(
+                    'log', result, model, options, output_path=output_path),'w')
     
     lambdaCMS_list=result['lambdaCMS']
     
@@ -4877,7 +5070,8 @@ minimum value of lambda to be considered in the CMS check."""\
         else:
             return failed_procs
         
-    fig_output_file = save_path('check_cms_plots','pdf')
+    fig_output_file = CMS_save_path('pdf', result, model, options, 
+                                                        output_path=output_path)
     base_fig_name = fig_output_file[:-4]
     suffix = 1
     while os.path.isfile(fig_output_file):
@@ -4966,9 +5160,9 @@ minimum value of lambda to be considered in the CMS check."""\
                 data2.append([r'Detected asymptot',[differences_target[(process,resID)] 
                                                 for i in range(len(lambdaCMS_list))]])
             else:
-                data1.append([r'$\displaystyle CMS$  %s'%res[1],CMSData])
-                data1.append([r'$\displaystyle NWA$  %s'%res[1],NWAData])
-                data2.append([r'$\displaystyle\Delta$  %s'%res[1],DiffData])
+                data1.append([r'$\displaystyle CMS$  %s'%res[1].replace('_',' '),CMSData])
+                data1.append([r'$\displaystyle NWA$  %s'%res[1].replace('_',' '),NWAData])
+                data2.append([r'$\displaystyle\Delta$  %s'%res[1].replace('_',' '),DiffData])
                 
         process_data_plot_dict[(process,resID)]=(data1,data2, info)
 
