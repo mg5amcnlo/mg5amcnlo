@@ -3815,6 +3815,8 @@ This implies that with decay chains:
                              self._curr_model, options, output_path=output_path)
                     if os.path.isfile(save_path):
                         cms_result = save_load_object.load_from_file(save_path)
+                        logger.info("The cms check for tweak %s is recycled from file:\n %s"%
+                                                      (tweak['name'],save_path))
                         if cms_result is None:
                             raise self.InvalidCmd('The complex mass scheme check result'+
                             " file below could not be read.\n     %s"%save_path)

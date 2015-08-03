@@ -4003,9 +4003,36 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         infos = evaluator.setup_process(matrix_element, proc_dir, 
                         reusing = reusing, param_card = options['param_card'], 
                                                             MLOptions=MLoptions)
+        
+        # Make sure to start from fresh if previous run was stopped
+        tmp_card_backup = pjoin(proc_dir,'Cards','param_card.dat__TemporaryBackup__')
+        if os.path.isfile(tmp_card_backup):
+            # Run was stopped mid-way, we must then restore the original card
+            logger.info("Last run in process '%s' apparently aborted."%proc_dir+\
+                           " Now reverting 'param_card.dat' to its original value.")
+            shutil.copy(tmp_card_backup, pjoin(proc_dir, 'Cards','param_card.dat'))
+        else:
+            # Create a temporary backup which will be cleaned if the run ends properly
+            shutil.copy(pjoin(proc_dir,'Cards','param_card.dat'), tmp_card_backup)
+        # Now do the same with model_functions.f
+        tmp_modelfunc_backup = pjoin(proc_dir,'Source','MODEL',
+                                         'model_functions.f__TemporaryBackup__')
+        if os.path.isfile(tmp_modelfunc_backup):
+            # Run was stopped mid-way, we must then restore the model functions
+            logger.info("Last run in process '%s' apparently aborted."%proc_dir+\
+                    " Now reverting 'model_functions.f' to its original value.")
+            shutil.copy(tmp_modelfunc_backup, pjoin(proc_dir,'Source','MODEL',
+                                                           'model_functions.f'))
+            evaluator.apply_log_tweak(proc_dir, 'recompile')
+        else:
+            # Create a temporary backup which will be cleaned if the run ends properly
+            shutil.copy(pjoin(proc_dir,'Source','MODEL','model_functions.f'),
+                                                           tmp_modelfunc_backup)
+
         # Now make sure it is setup to probe a specified PS point
         MadLoopInitializer.fix_PSPoint_in_check(pjoin(proc_dir,'SubProcesses'),
                                                     read_ps = True, npoints = 1)
+                
         # And recompile while making sure to recreate the executable and 
         # modified sources
         for dir in glob.glob(pjoin(proc_dir,'SubProcesses','P*_*')):
@@ -4219,7 +4246,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                     new_param_card.write(pjoin(proc_dir,
                                     'Cards','param_card.dat_recomputed_widths'))
                     
-            # If recomputing widths with MadSpin, we want to do it within
+            # If recomputing widths with MadWidths, we want to do it within
             # the NWA models with zero widths.
             if mode=='NWA' and (options['recompute_width']=='always' or (
                   options['recompute_width']=='first_time' and lambdaCMS==1.0)):
@@ -4249,6 +4276,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                         new_value = eval(replacement,
                                        {param:orig_value,'lambdacms':lambdaCMS})
                         new_param_card['decay'].get(decay).value = new_value
+                    continue
                if orig_param not in name2block:
                    # It can be that some parameter are in the NWA model but not
                    # in the CMS, such as the Yukawas for example.
@@ -4308,6 +4336,15 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         except:
             param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
     
+    # All should have been restored properly, so we can now clean the temporary
+    # backups
+    try:
+        os.remove(pjoin(proc_dir,'Cards','param_card.dat__TemporaryBackup__'))
+        os.remove(pjoin(proc_dir,'Source','MODEL',
+                                        'model_functions.f__TemporaryBackup__'))
+    except:
+        pass
+
     return (process.nice_string().replace('Process:', '').strip(),result)
 
 def get_value(process, evaluator, p=None, options=None):
