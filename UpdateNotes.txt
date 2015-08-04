@@ -11,6 +11,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	RF: Small fix that leads to an improvement in the phase-space generation for NLO processes
         OM: Fix a crash introduce in 2.3.0 when running sequentially in the same directory (thanks Gauthier)
         OM: Improve aloha in the case of some expression reduces to pure float.
+        OM: In MadSpin, allow to specify cut for the 1>N decay in spinmode=none.
 
 2.3.0  
      OM+VH: Automation of event generation for loop-induced processes.

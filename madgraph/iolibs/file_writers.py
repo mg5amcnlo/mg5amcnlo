@@ -19,7 +19,6 @@ Fortran, C++, etc."""
 
 import re
 import collections
-import madgraph.various.misc as misc
 
 class FileWriter(file):
     """Generic Writer class. All writers should inherit from this class."""
