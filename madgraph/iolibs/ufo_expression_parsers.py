@@ -63,7 +63,7 @@ class UFOExpressionParser(object):
 
     # List of tokens and literals
     tokens = (
-        'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
+        'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC', 'TAN',
         'SQRT', 'CONJ', 'RE', 'RE2', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
         'VARIABLE', 'NUMBER','COND','REGLOG', 'ARG'
         )
@@ -80,6 +80,9 @@ class UFOExpressionParser(object):
     def t_ACSC(self, t):
         r'(?<!\w)acsc(?=\()'
         return t
+    def t_TAN(self, t):
+        r'(?<!\w)tan(?=\()|(?<!\w)cmath.tan(?=\()'
+        return t    
     def t_ASEC(self, t):
         r'(?<!\w)asec(?=\()'
         return t
@@ -313,11 +316,14 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 		              | ARG group
                       | SQRT group
                       | CONJ group
-                      | REGLOG group'''
+                      | REGLOG group
+                      | TAN group'''
+        misc.sprint(p[1],p[2])
         if p[1] == 'csc': p[0] = '1d0/cos' + p[2]
         elif p[1] == 'sec': p[0] = '1d0/sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
+        elif p[1] in ['tan', 'cmath.tan'] : p[0] = 'tan(dble' + p[2]+')'
         elif p[1] == 're': p[0] = 'dble' + p[2]
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
         elif p[1] == 'arg': p[0] = 'arg(DCMPLX'+p[2]+')'
@@ -407,11 +413,13 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
 	                  | ARG group
                       | SQRT group
                       | CONJ group
+                      | TAN group
                       | REGLOG group'''
         if p[1] == 'csc': p[0] = '1e0_16/cos' + p[2]
         elif p[1] == 'sec': p[0] = '1e0_16/sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1e0_16/' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1e0_16/' + p[2] + ')'
+        elif p[1] in ['tan', 'cmath.tan']: p[0] = 'tan(real' + p[2]+')'
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
         elif p[1] == 'arg': p[0] = 'mp_arg(CMPLX(' + p[2] + ',KIND=16))'
@@ -503,6 +511,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | SEC group
                       | ACSC group
                       | ASEC group
+                      | TAN group
                       | RE group
                       | IM group
 		              | ARG group
@@ -513,6 +522,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'sec': p[0] = '1./sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
+        elif p[1] in ['tan', 'cmath.tan']: p[0] = 'tan' +p[2]
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
         elif p[1] == 'arg':p[0] = 'arg' + p[2]
@@ -651,12 +661,14 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
                       | IM group
                       | ARG group
                       | SQRT group
+                      | TAN group
                       | CONJ group
                       | REGLOG group'''
         if p[1] == 'csc': p[0] = 'csc' + p[2]
         elif p[1] == 'sec': p[0] = 'sec' + p[2]
         elif p[1] == 'acsc': p[0] = 'acsc' + p[2]
         elif p[1] == 'asec': p[0] = 'asec' + p[2]
+        elif p[1] in ['tan','cmath.tan']: p[0] = 'tan' + p[2]
         elif p[1] == 're': p[0] = 're' + p[2]
         elif p[1] == 'im': p[0] = 'im' + p[2]
         elif p[1] == 'arg': p[0] = 'arg' + p[2]
