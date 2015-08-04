@@ -19,6 +19,7 @@ Fortran, C++, etc."""
 
 import re
 import collections
+import madgraph.various.misc as misc
 
 class FileWriter(file):
     """Generic Writer class. All writers should inherit from this class."""
@@ -542,7 +543,7 @@ class CPPWriter(FileWriter):
             # Write } or };  and then recursively write the rest
             breakline_index = 1
             if len(myline) > 1:
-                if myline[1] == ";":
+                if myline[1] in [";", ","]:
                     breakline_index = 2
                 elif myline[1:].lstrip()[:2] == "//":
                     if myline.endswith('\n'):
@@ -552,7 +553,10 @@ class CPPWriter(FileWriter):
             res_lines.append("\n".join(self.split_line(\
                                        myline[:breakline_index],
                                        self.split_characters)) + "\n")
-            myline = myline[breakline_index + 1:].lstrip()
+            if len(myline) > breakline_index and myline[breakline_index] =='\n':
+                breakline_index +=1
+            myline = myline[breakline_index:].lstrip()
+            
             if myline:
                 # If anything is left of myline, write it recursively
                 res_lines.extend(self.write_line(myline))

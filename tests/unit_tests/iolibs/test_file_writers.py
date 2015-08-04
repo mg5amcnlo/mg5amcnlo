@@ -318,6 +318,58 @@ void Sigma2ff2fftgmZ::setIdColAcol()
         # Check that the output stays the same
         self.assertFileContains('cpp_test',
                                  goal_string)
+        
+        
+    def test_write_cplusplus_special_syntax(self):
+        """ """
+        
+        line = """mapFinalStates[{5,-5,-13,11,-12,14}] =
+{
+{ &CPPProcess::matrix_gg_ttx_bbxmupemvexvm,
+ false,
+ {std::make_pair(21,21)},
+ 256,
+ 256
+ }
+,
+{ &CPPProcess::matrix_uux_ttx_bbxmupemvexvm,
+ true,
+ {std::make_pair(2,-2),std::make_pair(4,-4),std::make_pair(1,-1),std::make_pair(3,-3)},
+ 256,
+ 36
+ }
+};"""
+        
+        goal_string = """mapFinalStates[{5, -5, -13, 11, -12, 14}] = 
+{
+  {
+    &CPPProcess::matrix_gg_ttx_bbxmupemvexvm, 
+    false, 
+    {
+      std::make_pair(21, 21)
+    }, 
+    256, 
+    256
+  }
+  , 
+  {
+    &CPPProcess::matrix_uux_ttx_bbxmupemvexvm, 
+    true, 
+    {
+      std::make_pair(2, -2), std::make_pair(4, -4), std::make_pair(1, -1),
+          std::make_pair(3, -3)
+    }, 
+    256, 
+    36
+  }
+}; """
+        writer = writers.CPPWriter(self.give_pos('cpp_test')).\
+                 writelines(line.split('\n'))
+
+        # Check that the output stays the same
+        self.assertFileContains('cpp_test',
+                                 goal_string)   
+    
 
     def test_write_cplusplus_error(self):
         """Test that a non-string gives an error"""
