@@ -3521,8 +3521,9 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
             options['recompute_width'] = 'never'
 
     # Some warnings
-    if options['recompute_width'] in ['first_time', 'always'] and not has_FRdecay:
-        logger.info('The LO width will need to be recomputed but the '+
+    if options['recompute_width'] in ['first_time', 'always'] and \
+                             not has_FRdecay and not 'cached_widths' in options:
+        logger.info('The LO widths will need to be recomputed but the '+
          'model considered does not appear to have a decay module.\nThe widths'+
          ' will need to be computed numerically and it will slow down the test.\n'+
          'Consider using a param_card already specifying correct LO widths and'+
@@ -3857,40 +3858,57 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                                                   for res in other_res_offshell]
         resonance_mass = model.get('parameter_dict')[model.get_particle(
                                      resonance['ParticlePDG']).get('mass')].real
+        
+        # List all other offshellnesses of the potential daughters of this 
+        # resonance
+        daughter_offshellnesses = [(1.0+options['offshellness'])*mass 
+              for i, mass in enumerate(all_other_res_masses) if 
+                      other_res_offshell[i]['FSMothersNumbers'].issubset(
+                                                 resonance['FSMothersNumbers'])]
+        
         if options['offshellness'] > 0.0:
-            max_mass = max((1.0+options['offshellness'])*mass for mass in 
-                                                           all_other_res_masses)
-            # A factor two to have enough phase-space
-            offshellness = max(2.0*(max_mass/resonance_mass)-1.0,
+            
+            if len(daughter_offshellnesses)>0:
+                max_mass = max(daughter_offshellnesses)
+                # A factor two to have enough phase-space
+                offshellness = max(2.0*(max_mass/resonance_mass)-1.0,
                                                         options['offshellness'])
-            # A factor two to have enough phase-space open
-            if 2.0*max_mass > options['energy']:
-                logger.warning("The user-defined energy %f seems "%options['energy']+
+            
+            if len(all_other_res_masses)>0:
+                max_mass = max((1.0+options['offshellness'])*mass for mass in \
+                                                           all_other_res_masses)
+                # A factor two to have enough phase-space open
+                if 2.0*max_mass > options['energy']:
+                    logger.warning("The user-defined energy %f seems "%options['energy']+
                   " insufficient to reach the minimum propagator invariant mass "+
                   "%f required for the chosen offshellness %f."%(max_mass,
                    options['offshellness']) + " Energy reset to %f."%(2.0*max_mass))
-                options['energy'] = 2.0*max_mass
+                    options['energy'] = 2.0*max_mass
                 
         else:
-            min_mass = min((1.0+options['offshellness'])*mass for mass in 
-                                                           all_other_res_masses)
-            # A factor one hald to have enough phase-space
-            offshellness = min(0.5*(min_mass/resonance_mass)-1.0,
+            if len(daughter_offshellnesses) > 0:
+                min_mass = min(daughter_offshellnesses)
+                # A factor one hald to have enough phase-space
+                offshellness = min(0.5*(min_mass/resonance_mass)-1.0,
                                                         options['offshellness'])
-            # A factor one-half to have enough phase-space open
-            if 0.5*min_mass < options['energy']:
-                logger.warning("The user-defined energy %f seems "%options['energy']+
-                  " too large to not overshoot the maximum propagator invariant mass "+
-                  "%f required for the chosen offshellness %f."%(min_mass,
-                   options['offshellness']) + " Energy reset to %f."%(0.5*min_mass))
-                options['energy'] = 0.5*min_mass  
+            if len(all_other_res_masses) > 0:
+                min_mass = min((1.0+options['offshellness'])*mass for mass in \
+                                                           all_other_res_masses)
+
+                # A factor one-half to have enough phase-space open
+                if 0.5*min_mass < options['energy']:
+                    logger.warning("The user-defined energy %f seems "%options['energy']+
+                      " too large to not overshoot the maximum propagator invariant mass "+
+                      "%f required for the chosen offshellness %f."%(min_mass,
+                       options['offshellness']) + " Energy reset to %f."%(0.5*min_mass))
+                    options['energy'] = 0.5*min_mass  
         
         start_energy = options['energy']
         while N_trials<max_trial:
             N_trials += 1
             if N_trials%nstep_for_energy_increase==0:
                 if allow_energy_increase > 0.0:
-                    str_res = '%s,%s'%(model.get_particle(
+                    str_res = '%s %s'%(model.get_particle(
                                  resonance['ParticlePDG']).get_name(),
                                        str(list(resonance['FSMothersNumbers'])))
                     if offshellness > 0.0:
@@ -3907,16 +3925,21 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                                    ' with reduced offshellness %f'%offshellness)
 
             candidate = get_PSpoint_for_resonance(resonance, offshellness)
+            pass_offshell_test = True
             for i, res in enumerate(other_res_offshell):
                 # Make sure other resonances are sufficiently offshell too
                 if offshellness > 0.0:
                     if invmass([candidate[j-1] for j in res['FSMothersNumbers']]) <\
                         ((1.0+options['offshellness'])*all_other_res_masses[i]):
-                        continue
+                        pass_offshell_test = False
+                        break
                 else:
                     if invmass([candidate[j-1] for j in res['FSMothersNumbers']]) >\
                         ((1.0+options['offshellness'])*all_other_res_masses[i]):
-                        continue
+                        pass_offshell_test = False
+                        break
+            if not pass_offshell_test:
+                continue
             # Make sure it is isolated
             if isolation_cuts:
                 # Set ptcut to 5% of total energy
@@ -3939,6 +3962,20 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         else:
 #            misc.sprint('PS point found in %s trials.'%N_trials)
 #            misc.sprint(PS_point_found)
+            resonance['offshellnesses'] = []
+            all_other_res_masses = [resonance_mass] + all_other_res_masses
+            other_res_offshell   = [resonance] + other_res_offshell
+            for i, res in enumerate(other_res_offshell):
+                if i==0:
+                    res_str = 'self'
+                else:
+                    res_str = '%s %s'%(model.get_particle(
+                                         res['ParticlePDG']).get_name(),
+                                             str(list(res['FSMothersNumbers'])))
+                resonance['offshellnesses'].append((res_str,(
+                    (invmass([PS_point_found[j-1] for j in 
+                       res['FSMothersNumbers']])/all_other_res_masses[i])-1.0)))
+
             resonance['PS_point_used'] = PS_point_found
         
     def get_PSpoint_for_resonance(resonance, offshellness = options['offshellness']):
@@ -4999,7 +5036,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         return r'CMS check for %s ( resonance %s )'\
                                            %(' '.join(process_string),resonance)
 
-    def guess_lambdaorder(ME_values_list,lambda_values, expected=None,
+    def guess_lambdaorder(ME_values_list, lambda_values, expected=None,
                                                            proc=None, res=None):
         """ Guess the lambda scaling from a list of ME values and return it.
         Also compare with the expected result if specified and trigger a 
@@ -5012,7 +5049,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
 
         # Pick the most representative power
         bpower = sorted([(el, bpowers.count(el)) for el in set(bpowers)],
-                                                         lambda el: el[1])[0][0]
+                                 key = lambda elem: elem[1], reverse=True)[0][0]
         if not expected:
             return bpower
         if bpower != expected:
@@ -5070,7 +5107,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     failed_procs = []
 
     # A bar printing function helper. Change the length here for esthetics
-    bar = lambda char: char*35
+    bar = lambda char: char*47
 
     # Doing the analysis to printout to the MG5 interface and determine whether
     # the test is passed or not
@@ -5096,7 +5133,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         # Reminder if diff_lambda_power is not 1
         
         if diff_lambda_power!=1:
-            res_str += "== WARNING diff_lambda_power is not 1 but  = %g\n"%diff_lambda_power
+            res_str += "== WARNING diff_lambda_power is not 1 but    = %g\n"%diff_lambda_power
             res_str += '%s%s%s\n'%(bar('-'),'-'*8,bar('-'))
 
         born_power = guess_lambdaorder(nwa_born,lambdaCMS_list,
@@ -5109,14 +5146,27 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
                          lambdaCMS_list[-nstab_points:], born_power, 'NWA Born')
         if stab_nwa_born:
             res_str += stab_nwa_born
+        # Write out the phase-space point
+        res_str += "== Kinematic configuration in GeV (E,px,pypz)\n"
+        for i, p in enumerate(cms_res['resonance']['PS_point_used']):
+            res_str += "  | p%-2.d = "%(i+1)
+            for pi in p:
+                res_str += '%-24.17g'%pi if pi<0.0 else ' %-23.17g'%pi 
+            res_str += "\n"
+        # Write out the offshellnesses specification
+        res_str += "== Offshellnesses of all detected resonances\n"
+        for res_name, offshellness in cms_res['resonance']['offshellnesses']:
+            res_str += "  | %-15s = %f\n"%(res_name, offshellness)
+        res_str += '%s%s%s\n'%(bar('-'),'-'*8,bar('-'))
+
         if not pert_orders:
-            res_str += "== Born scaling lambda^n_born. nborn       = %d\n"%born_power
+            res_str += "== Born scaling lambda^n_born. nborn         = %d\n"%born_power
         else:
             cms_finite=cms_res['finite']
             nwa_finite=nwa_res['finite']
             loop_power = guess_lambdaorder(nwa_finite,lambdaCMS_list,
                    expected=proc_res['loop_order'], proc=process, res=resonance)  
-            res_str += "== Scaling lambda^n. nborn, nloop          = %d, %d\n"\
+            res_str += "== Scaling lambda^n. nborn, nloop            = %d, %d\n"\
                                                         %(born_power,loop_power)
             stab_cms_finite = check_stability(cms_finite[-nstab_points:], 
                                   lambdaCMS_list[-nstab_points:], loop_power, 'CMS finite')
@@ -5186,7 +5236,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         else:
             cms_check_data_range = scan_index + group_val
 
-        res_str += "== Data range considered (min, max, n_val) = (%.1e, %.1e, %d)\n"\
+        res_str += "== Data range considered (min, max, n_val)   = (%.1e, %.1e, %d)\n"\
                   %(lambdaCMS_list[-1],lambdaCMS_list[scan_index],
                                                  len(lambdaCMS_list)-scan_index)
         # Now setup the list of values affecting the CMScheck
@@ -5234,7 +5284,7 @@ minimum value of lambda to be considered in the CMS check."""\
         max_diff = 0.0
         is_ref_zero = abs(diff_tale_median/diff_average)<diff_zero_threshold
         reference = abs(diff_tale_median) if not is_ref_zero else abs(diff_average)
-        res_str += "== Asymptotic ref. difference value used   = %s\n"\
+        res_str += "== Asymptotic ref. difference value used     = %s\n"\
           %('%.3g'%diff_tale_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)
         # Pass information to the plotter for the difference target
         differences_target[(process,resID)]= diff_tale_median
@@ -5247,7 +5297,7 @@ minimum value of lambda to be considered in the CMS check."""\
             scan_index += 1
         
         # Now use the CMS check result
-        res_str += "== CMS check result (threshold)            = "+\
+        res_str += "== CMS check result (threshold)              = "+\
                    "%.3g%% (%s%.3g%%)\n"%(max_diff*100.0, 
                      '>' if max_diff>CMS_test_threshold else '<',
                                                        CMS_test_threshold*100.0)
@@ -5319,7 +5369,10 @@ minimum value of lambda to be considered in the CMS check."""\
             cms_res = proc_res['CMS'][resID]
             nwa_res = proc_res['NWA'][resID]
             resonance = resonance_str(cms_res['resonance'])
-            info['title'] = format_title(process, resonance)
+            if options['resonances']!=1:
+                info['title'] = format_title(process, resonance)
+            else:
+                info['title'] = format_title(process, '')
             # Born result
             cms_born=cms_res['born']
             nwa_born=nwa_res['born']
@@ -5407,8 +5460,8 @@ minimum value of lambda to be considered in the CMS check."""\
         plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         pp=PdfPages(fig_output_file)
-        if len(checks)==0 or len(process_data_plot_dict[checks[0]][0])<=2:
-            colorlist=['b','r']
+        if len(checks)==0 or len(process_data_plot_dict[checks[0]][1])<=7:
+            colorlist=['b','r','g','k','c','m','y']
         else:
             import matplotlib.colors as colors
             import matplotlib.cm as mplcm
@@ -5416,15 +5469,15 @@ minimum value of lambda to be considered in the CMS check."""\
             
             # Nice color maps here are 'gist_rainbow'
             cm = plt.get_cmap('gist_rainbow')
-            cNorm  = colors.Normalize(vmin=0, vmax=(len(data1)-1))
+            cNorm  = colors.Normalize(vmin=0, vmax=(len(data2)-1))
             scalarMap = mplcm.ScalarMappable(norm=cNorm, cmap=cm)
             # use vmax=(len(data1)-1)*0.9 to remove pink at the end of the spectrum
-            colorlist = [scalarMap.to_rgba(i*0.9) for i in range(len(data1))]
+            colorlist = [scalarMap.to_rgba(i*0.9) for i in range(len(data2))]
             # Or it is also possible to alternate colors so as to make them 
             # as distant as possible to one another
             # colorlist = sum([
-            #    [scalarMap.to_rgba(i),scalarMap.to_rgba(i+len(data1)//2)]
-            #                                  for i in range(len(data1)//2)],[])
+            #    [scalarMap.to_rgba(i),scalarMap.to_rgba(i+len(data2)//2)]
+            #                                  for i in range(len(data2)//2)],[])
 
         legend_size = 10
         for iproc, (process, resID) in enumerate(checks):
@@ -5440,12 +5493,14 @@ minimum value of lambda to be considered in the CMS check."""\
             minvalue=1e+99
             maxvalue=-1e+99
             for i, d1 in enumerate(data1):
-                color=colorlist[i]
+                # Use the same color for NWA and CMS curve but different linestyle
+                color=colorlist[i//2]
                 data_plot=d1[1]
                 minvalue=min(min(data_plot),minvalue)
                 maxvalue=max(max(data_plot),maxvalue)           
                 plt.plot(lambdaCMS_list, data_plot, color=color, marker='', \
-                                                     linestyle='-', label=d1[0])
+                        linestyle=('-' if i%2==0 else '--'), 
+                        label=(d1[0] if (i%2==0 or i==1) else '_nolegend_'))
             ymin = minvalue-(maxvalue-minvalue)/5.
             ymax = maxvalue+(maxvalue-minvalue)/5.
 
@@ -5479,7 +5534,7 @@ minimum value of lambda to be considered in the CMS check."""\
                 if d2[0]=='Detected asymptot':
                     continue
                 color_ID += 1
-                color=colorlist[color_ID*2]
+                color=colorlist[color_ID]
                 data_plot=d2[1]
                 minvalue=min(min(data_plot),minvalue)
                 maxvalue=max(max(data_plot),maxvalue)

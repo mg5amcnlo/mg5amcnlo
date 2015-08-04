@@ -3395,22 +3395,24 @@ This implies that with decay chains:
                                                              " name of the run")
                 CMS_options['name'] = option[1]
             elif option[0]=='--resonances':
-                try:
-                    resonances=eval(option[1])
-                except:
-                    raise self.InvalidCmd("Could not evaluate 'resonances' option '%s'"%option[1])
-                if resonances=='all':
+                if option[1]=='all':
                     CMS_options['resonances']  = 'all'
-                elif isinstance(resonances,int) and resonances>0:
-                    CMS_options['resonances']  = resonances
-                elif isinstance(resonances,list) and all(len(res)==2 and 
-                    isinstance(res[0],int) and all(isinstance(i, int) for i in 
-                                                 res[1]) for res in resonances):
-                    CMS_options['resonances']  = resonances
                 else:
-                    raise self.InvalidCmd("The option 'resonances' can only be 'all'"+
-                           " or and integer or a list of tuples of the form "+
-                           "(resPDG,(res_mothers_ID)). You gave '%s'"%option[1])
+                    try:
+                        resonances=eval(option[1])
+                    except:
+                        raise self.InvalidCmd("Could not evaluate 'resonances'"+
+                                                       " option '%s'"%option[1])
+                    if isinstance(resonances,int) and resonances>0:
+                        CMS_options['resonances']  = resonances
+                    elif isinstance(resonances,list) and all(len(res)==2 and 
+                        isinstance(res[0],int) and all(isinstance(i, int) for i in 
+                                                     res[1]) for res in resonances):
+                        CMS_options['resonances']  = resonances
+                    else:
+                        raise self.InvalidCmd("The option 'resonances' can only be 'all'"+
+                               " or and integer or a list of tuples of the form "+
+                               "(resPDG,(res_mothers_ID)). You gave '%s'"%option[1])
             elif option[0]=='--tweak':
                 # Lists the sets of custom and widths modifications to apply
                 value = option[1]
