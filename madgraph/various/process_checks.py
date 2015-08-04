@@ -322,6 +322,41 @@ class MatrixElementEvaluator(object):
             m2 = data.smatrix(p,self.full_model)
             return {'m2': m2, output:getattr(data, output)}
     
+    @staticmethod
+    def pass_isolation_cuts(pmoms, ptcut=50.0, drcut=0.5):
+        """ Check whether the specified kinematic point passes isolation cuts
+        """
+
+        def Pt(pmom):
+            """ Computes the pt of a 4-momentum"""
+            return math.sqrt(pmom[1]**2+pmom[2]**2)
+
+        def DeltaR(p1,p2):
+            """ Computes the DeltaR between two 4-momenta"""
+            # First compute pseudo-rapidities
+            p1_vec=math.sqrt(p1[1]**2+p1[2]**2+p1[3]**2)
+            p2_vec=math.sqrt(p2[1]**2+p2[2]**2+p2[3]**2)    
+            eta1=0.5*math.log((p1_vec+p1[3])/(p1_vec-p1[3]))
+            eta2=0.5*math.log((p2_vec+p2[3])/(p2_vec-p2[3]))
+            # Then azimutal angle phi
+            phi1=math.atan2(p1[2],p1[1])
+            phi2=math.atan2(p2[2],p2[1])
+            dphi=abs(phi2-phi1)
+            # Take the wraparound factor into account
+            dphi=abs(abs(dphi-math.pi)-math.pi)
+            # Now return deltaR
+            return math.sqrt(dphi**2+(eta2-eta1)**2)
+
+        for i, pmom in enumerate(pmoms[2:]):
+            # Pt > 50 GeV
+            if Pt(pmom)<ptcut:
+                return False
+            # Delta_R ij > 0.5
+            for pmom2 in pmoms[3+i:]:
+                if DeltaR(pmom,pmom2)<drcut:
+                    return False
+        return True
+    
     #===============================================================================
     # Helper function get_momenta
     #===============================================================================
@@ -348,7 +383,7 @@ class MatrixElementEvaluator(object):
 
 
         sorted_legs = sorted(process.get('legs'), lambda l1, l2:\
-                             l1.get('number') - l2.get('number'))
+                                            l1.get('number') - l2.get('number'))
 
         # If an events file is given use it for getting the momentum
         if events:
@@ -464,6 +499,7 @@ class MatrixElementEvaluator(object):
 #===============================================================================
 # Helper class LoopMatrixElementEvaluator
 #===============================================================================
+
 class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     """Class taking care of matrix element evaluation for loop processes."""
 
@@ -853,6 +889,11 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             return
 
         if mode=='recompile':
+            try:
+                os.remove(pjoin(model_path,'model_functions.o'))
+                os.remove(pjoin(proc_path,'lib','libmodel.a'))
+            except:
+                pass    
             misc.compile(cwd=model_path)
             # Remove the executable to insure proper recompilation
             try:
@@ -1352,45 +1393,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 raise MadGraph5Error("Rotation id %i not implemented"%rotation)
             
             return '\n'.join([' '.join(['%.16E'%pi for pi in p]) for p in p_out])
-        
+            
         def pick_PS_point(proc, options):
             """ Randomly generate a PS point and make sure it is eligible. Then
             return it. Users can edit the cuts here if they want."""
-            def Pt(pmom):
-                """ Computes the pt of a 4-momentum"""
-                return math.sqrt(pmom[1]**2+pmom[2]**2)
-            def DeltaR(p1,p2):
-                """ Computes the DeltaR between two 4-momenta"""
-                # First compute pseudo-rapidities
-                p1_vec=math.sqrt(p1[1]**2+p1[2]**2+p1[3]**2)
-                p2_vec=math.sqrt(p2[1]**2+p2[2]**2+p2[3]**2)    
-                eta1=0.5*math.log((p1_vec+p1[3])/(p1_vec-p1[3]))
-                eta2=0.5*math.log((p2_vec+p2[3])/(p2_vec-p2[3]))
-                # Then azimutal angle phi
-                phi1=math.atan2(p1[2],p1[1])
-                phi2=math.atan2(p2[2],p2[1])
-                dphi=abs(phi2-phi1)
-                # Take the wraparound factor into account
-                dphi=abs(abs(dphi-math.pi)-math.pi)
-                # Now return deltaR
-                return math.sqrt(dphi**2+(eta2-eta1)**2)
 
-            def pass_cuts(p):
-                """ Defines the cut a PS point must pass"""
-                for i, pmom in enumerate(p[2:]):
-                    # Pt > 50 GeV
-                    if Pt(pmom)<50.0:
-                        return False
-                    # Delta_R ij > 0.5
-                    for pmom2 in p[3+i:]:
-                        if DeltaR(pmom,pmom2)<0.5:
-                            return False
-                return True
             p, w_rambo = self.get_momenta(proc, options)
             if options['events']:
                 return p
             # For 2>1 process, we don't check the cuts of course
-            while (not pass_cuts(p) and  len(p)>3):
+            while (not pass_isolation_cuts(p) and  len(p)>3):
                 p, w_rambo = self.get_momenta(proc, options)
                 
             # For a 2>1 process, it would always be the same PS point,
@@ -3795,18 +3807,143 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                   %options['offshellness']+' that the resulting kinematic is '+\
                   'impossible for resonance with PDG %d.'%resonance['ParticlePDG'])
                 continue
-
-            # Chose the PS point for the resonance
-            set_PSpoint_for_resonance(resonance)
+            
             # Add it to the list of accepted resonances
             kept_resonances.append(resonance)
+            
+        for resonance in kept_resonances:
+            # Chose the PS point for the resonance
+            set_PSpoint(resonance, force_other_res_offshell=kept_resonances)
+
 #        misc.sprint(kept_resonances)
 #        misc.sprint(len(kept_resonances))
         return tuple(kept_resonances)
 
-    def set_PSpoint_for_resonance(resonance):
+    def set_PSpoint(resonance, force_other_res_offshell=[], 
+                                allow_energy_increase=1.5, isolation_cuts=True):
+        """ Starting from the specified resonance, construct a phase space point
+        for it and possibly also enforce other resonances to be onshell. Possibly
+        allow to progressively increase enregy by steps of the integer specified
+        (negative float to forbid it) and possible enforce default isolation cuts
+        as well."""
+        
+        def invmass(momenta):
+            """ Computes the invariant mass of a list of momenta."""
+            ptot = [sum(p[i] for p in momenta) for i in range(4)]
+            return math.sqrt(ptot[0]**2-ptot[1]**2-ptot[2]**2-ptot[3]**2)
+        
+        N_trials                  = 0
+        max_trial                 = 1e4
+        nstep_for_energy_increase = 1e3
+        PS_point_found            = None
+        offshellness              = options['offshellness']
+        
+        # When offshellness is negative, it is progressively decreased every
+        # nstep_for_energy_increase attempts (not increased!), so it is more
+        # dangerous, and we therefore want the steps to be smaller
+        if options['offshellness'] < 0.0:
+            energy_increase = math.sqrt(allow_energy_increase)
+        else:
+            energy_increase = allow_energy_increase
+        # Make sure to remove the resonance itself from force_other_res_offshell
+        other_res_offshell = [res for res in force_other_res_offshell if 
+                                                                 res!=resonance]
+
+        # Now play it smart on finding starting energy and offshellness and 
+        # register all resonance masses
+        model = evaluator.full_model
+        all_other_res_masses = [model.get('parameter_dict')[
+              model.get_particle(res['ParticlePDG']).get('mass')].real
+                                                  for res in other_res_offshell]
+        resonance_mass = model.get('parameter_dict')[model.get_particle(
+                                     resonance['ParticlePDG']).get('mass')].real
+        if options['offshellness'] > 0.0:
+            max_mass = max((1.0+options['offshellness'])*mass for mass in 
+                                                           all_other_res_masses)
+            # A factor two to have enough phase-space
+            offshellness = max(2.0*(max_mass/resonance_mass)-1.0,
+                                                        options['offshellness'])
+            # A factor two to have enough phase-space open
+            if 2.0*max_mass > options['energy']:
+                logger.warning("The user-defined energy %f seems "%options['energy']+
+                  " insufficient to reach the minimum propagator invariant mass "+
+                  "%f required for the chosen offshellness %f."%(max_mass,
+                   options['offshellness']) + " Energy reset to %f."%(2.0*max_mass))
+                options['energy'] = 2.0*max_mass
+                
+        else:
+            min_mass = min((1.0+options['offshellness'])*mass for mass in 
+                                                           all_other_res_masses)
+            # A factor one hald to have enough phase-space
+            offshellness = min(0.5*(min_mass/resonance_mass)-1.0,
+                                                        options['offshellness'])
+            # A factor one-half to have enough phase-space open
+            if 0.5*min_mass < options['energy']:
+                logger.warning("The user-defined energy %f seems "%options['energy']+
+                  " too large to not overshoot the maximum propagator invariant mass "+
+                  "%f required for the chosen offshellness %f."%(min_mass,
+                   options['offshellness']) + " Energy reset to %f."%(0.5*min_mass))
+                options['energy'] = 0.5*min_mass  
+        
+        start_energy = options['energy']
+        while N_trials<max_trial:
+            N_trials += 1
+            if N_trials%nstep_for_energy_increase==0:
+                if allow_energy_increase > 0.0:
+                    str_res = '%s,%s'%(model.get_particle(
+                                 resonance['ParticlePDG']).get_name(),
+                                       str(list(resonance['FSMothersNumbers'])))
+                    if offshellness > 0.0:
+                        options['energy'] *= energy_increase
+                        offshellness      *= energy_increase
+                        logger.warning('Trying to find a valid kinematic'+\
+                               " configuration for resonance '%s'"%str_res+\
+                                 ' with increased offshellness %f'%offshellness)
+                    else:
+                        options['energy'] /= energy_increase
+                        offshellness      /= energy_increase
+                        logger.warning('Trying to find a valid kinematic'+\
+                               " configuration for resonance '%s'"%str_res+\
+                                   ' with reduced offshellness %f'%offshellness)
+
+            candidate = get_PSpoint_for_resonance(resonance, offshellness)
+            for i, res in enumerate(other_res_offshell):
+                # Make sure other resonances are sufficiently offshell too
+                if offshellness > 0.0:
+                    if invmass([candidate[j-1] for j in res['FSMothersNumbers']]) <\
+                        ((1.0+options['offshellness'])*all_other_res_masses[i]):
+                        continue
+                else:
+                    if invmass([candidate[j-1] for j in res['FSMothersNumbers']]) >\
+                        ((1.0+options['offshellness'])*all_other_res_masses[i]):
+                        continue
+            # Make sure it is isolated
+            if isolation_cuts:
+                # Set ptcut to 5% of total energy
+                if not evaluator.pass_isolation_cuts(candidate,
+                      ptcut=0.05*invmass([candidate[0],candidate[1]]), drcut=0.4):
+                    continue
+            PS_point_found = candidate
+            break
+        
+        # Restore the initial energy setup
+        options['energy'] = start_energy
+
+        if PS_point_found is None:
+            err_msg = 'Could not find a valid PS point in %d'%max_trial+\
+                ' trials. Try increasing the energy, modify the offshellness '+\
+                'or relax some constraints.'
+            if options['offshellness']<0.0:
+                err_msg +='\nTry with a positive offshellness instead.'
+            raise InvalidCmd, err_msg
+        else:
+#            misc.sprint('PS point found in %s trials.'%N_trials)
+#            misc.sprint(PS_point_found)
+            resonance['PS_point_used'] = PS_point_found
+        
+    def get_PSpoint_for_resonance(resonance, offshellness = options['offshellness']):
         """ Assigns a kinematic configuration to the resonance dictionary 
-        given in argument."""
+        given in argument."""            
         
         # Get the particle mass
         mass_string = evaluator.full_model.get_particle(
@@ -3814,7 +3951,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         mass  = evaluator.full_model.get('parameter_dict')[mass_string].real
         
         # Choose the offshellness
-        special_mass = (1.0 + options['offshellness'])*mass
+        special_mass = (1.0 + offshellness)*mass
         
         # Create a fake production and decay process
         prod_proc = base_objects.Process({'legs':base_objects.LegList(
@@ -3854,9 +3991,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         ordered_momenta += [(decay_proc.get('legs')[-i].get('number'),
                  momenta[-i]) for i in range(1,len(decay_proc.get('legs')))]
 
-        # And now use them put in the right order
-        resonance['PS_point_used'] = [m[1] for m in sorted(ordered_momenta,
-                                                    key = lambda el: el[0])]
+        # Return the PSpoint found in the right order
+        return [m[1] for m in sorted(ordered_momenta, key = lambda el: el[0])]
         
         # misc.sprint(resonance['PS_point_used'])        
     
@@ -4066,7 +4202,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # Make sure to rederive the phase-space point since parameters
                 # such as masses, seed, offshellness could have affected it
                 for res in resonances:
-                    set_PSpoint_for_resonance(res)
+                    set_PSpoint(res, force_other_res_offshell=resonances)
 
             # Second run (CMS), we can reuse the information if it is a dictionary
             if isinstance(opt, list):
@@ -4157,39 +4293,57 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         except:
             pass
 
+    # Apply custom tweaks
+    had_log_tweaks=False
+    if NLO:
+        for tweak in options['tweak']['custom']:
+            if tweak.startswith('seed'):
+                continue
+            try:
+                logstart, logend = tweak.split('->')
+            except:
+                raise Madgraph5Error, "Tweak '%s' not reckognized."%tweak
+            if logstart in ['logp','logm', 'log'] and \
+               logend in ['logp','logm', 'log']:
+                if NLO:
+                    evaluator.apply_log_tweak(proc_dir, [logstart, logend])
+                    had_log_tweaks = True
+            else:
+                raise Madgraph5Error, "Tweak '%s' not reckognized."%tweak
+        if had_log_tweaks:
+            evaluator.apply_log_tweak(proc_dir, 'recompile')
+
+    # Select what resonances should be run
+    if options['resonances']=='all':
+        resonances_to_run = resonances
+    elif isinstance(options['resonances'],int):
+        resonances_to_run = resonances[:options['resonances']]    
+    elif isinstance(options['resonances'],list):
+        resonances_to_run = []
+        for res in resonances:
+            for res_selection in options['resonances']:
+                if abs(res['ParticlePDG'])==res_selection[0] and \
+                                 res['FSMothersNumbers']==set(res_selection[1]):
+                    resonances_to_run.append(res)
+                    break
+    else:
+        raise InvalidCmd("Resonance selection '%s' not reckognized"%\
+                                                     str(options['resonances']))
+
     # Display progressbar both for LO and NLO for now but not when not showing
     # the plots
     if (NLO or True) and options['show_plot']:
         widgets = ['ME evaluations:', pbar.Percentage(), ' ', 
                                                 pbar.Bar(),' ', pbar.ETA(), ' ']
         progress_bar = pbar.ProgressBar(widgets=widgets, 
-                maxval=len(options['lambdaCMS'])*len(resonances), fd=sys.stdout)
+                maxval=len(options['lambdaCMS'])*len(resonances_to_run), fd=sys.stdout)
         progress_bar.update(0)
         # Flush stdout to force the progress_bar to appear
         sys.stdout.flush()
     else:
         progress_bar = None
 
-    # Apply custom tweaks
-    had_log_tweaks=False
-    for tweak in options['tweak']['custom']:
-        if tweak.startswith('seed'):
-            continue
-        try:
-            logstart, logend = tweak.split('->')
-        except:
-            raise Madgraph5Error, "Tweak '%s' not reckognized."%tweak
-        if logstart in ['logp','logm', 'log'] and \
-           logend in ['logp','logm', 'log']:
-            if NLO:
-                evaluator.apply_log_tweak(proc_dir, [logstart, logend])
-                had_log_tweaks = True
-        else:
-            raise Madgraph5Error, "Tweak '%s' not reckognized."%tweak
-    if had_log_tweaks:
-        evaluator.apply_log_tweak(proc_dir, 'recompile')
-            
-    for resNumber, res in enumerate(resonances):
+    for resNumber, res in enumerate(resonances_to_run):
         # First add a dictionary for this resonance to the result with already
         # one key specifying the resonance
         result['resonances_result'].append({'resonance':res,'born':[]})
@@ -4319,7 +4473,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     # Restore the original continued log definition if necessary
     log_reversed = False
     for tweak in options['tweak']['custom']:
-        if tweak.startswith('log'):
+        if tweak.startswith('log') and had_log_tweaks:
             if log_reversed:
                 continue
             if NLO:
@@ -4779,7 +4933,8 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
 #   One can print out the raw results by uncommenting the line below
 #    misc.sprint(result)
 #    for i, res in enumerate(result['a e- > e- ve ve~ [ virt = QCD QED ]']['CMS']):
-#        if res['resonance']['FSMothersNumbers'] == set([3, 5]):
+#    for i, res in enumerate(result['u d~ > e+ ve a [ virt = QCD QED ]']['CMS']):
+#        if res['resonance']['FSMothersNumbers'] == set([3, 4]):
 #            misc.sprint(res['resonance']['PS_point_used'])
 #    stop
     
@@ -5142,7 +5297,7 @@ minimum value of lambda to be considered in the CMS check."""\
             title    = specs.group('title')
         else:
             filename = add_res
-            title    = specs.group('#%d'%(i+1))
+            title    = '#%d'%(i+1)
 
         new_result = save_load_object.load_from_file(filename)
         if new_result is None:

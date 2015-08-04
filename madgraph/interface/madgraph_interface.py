@@ -480,7 +480,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   region of detected resonances and by progressively")
         logger.info("   decreasing the width. Additional options for this check are:")
         logger.info("    --offshellness=f : f is a positive or negative float specifying ")
-        logger.info("      the distance from the pole as f*particle_mass. Default is 100.0")
+        logger.info("      the distance from the pole as f*particle_mass. Default is 10.0")
         logger.info("    --seed=i : to force a specific RNG integer seed i (default is fixed to 0)")
         logger.info("    --cms=order1&order2;...,p1->f(p,lambdaCMS)&p2->f2(p,lambdaCMS);...")
         logger.info("      'order_i' specifies the expansion orders considered for the test.")
@@ -906,6 +906,8 @@ class CheckValidForCmd(cmd.CheckCmd):
                         '--reduction':'1|2|3|4'}
         
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
+            # increase the default energy to 5000
+            user_options['--energy']='5000'
             # The first argument gives the name of the coupling order in which
             # the cms expansion is carried, and the expression following the 
             # comma gives the relation of an external parameter with the
@@ -916,7 +918,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # --force_recompute_width='always' or 'first_time' is used.
             user_options['--recompute_width']='auto'
             # It can be negative so as to be offshell below the resonant mass
-            user_options['--offshellness']='100.0'
+            user_options['--offshellness']='10.0'
             # Pick the lambdaCMS values for the test. Instead of a python list
             # we specify here (low,N) which means that do_check will automatically
             # pick lambda values up to the value low and with N values uniformly
@@ -946,7 +948,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             user_options['--tweak']='default()'
             # Give a name to the run for the files to be saved
             user_options['--name']='auto'
-            
+            # Select what resonances must be run
+            user_options['--resonances']='1'
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
                 parsed = arg.split('=')
@@ -3377,6 +3380,9 @@ This implies that with decay chains:
                 MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
             elif option[0]=='--offshellness':
                 CMS_options['offshellness'] = float(option[1])
+                if CMS_options['offshellness']<=-1.0:
+                    raise self.InvalidCmd('Offshellness must be number larger or'+
+                           ' equal to -1.0, not %f'%CMS_options['offshellness'])
             elif option[0]=='--analyze':
                 options['analyze'] = option[1]
             elif option[0]=='--show_plot':
@@ -3385,21 +3391,47 @@ This implies that with decay chains:
                 CMS_options['seed'] = int(option[1])
             elif option[0]=='--name':
                 if '.' in option[1]:
-                    raise InvalidCmd("Do not specify the extension in the"+
+                    raise self.InvalidCmd("Do not specify the extension in the"+
                                                              " name of the run")
                 CMS_options['name'] = option[1]
+            elif option[0]=='--resonances':
+                try:
+                    resonances=eval(option[1])
+                except:
+                    raise self.InvalidCmd("Could not evaluate 'resonances' option '%s'"%option[1])
+                if resonances=='all':
+                    CMS_options['resonances']  = 'all'
+                elif isinstance(resonances,int) and resonances>0:
+                    CMS_options['resonances']  = resonances
+                elif isinstance(resonances,list) and all(len(res)==2 and 
+                    isinstance(res[0],int) and all(isinstance(i, int) for i in 
+                                                 res[1]) for res in resonances):
+                    CMS_options['resonances']  = resonances
+                else:
+                    raise self.InvalidCmd("The option 'resonances' can only be 'all'"+
+                           " or and integer or a list of tuples of the form "+
+                           "(resPDG,(res_mothers_ID)). You gave '%s'"%option[1])
             elif option[0]=='--tweak':
                 # Lists the sets of custom and widths modifications to apply
+                value = option[1]
+                # Set a shortcuts for applying all relevant tweaks
+                if value=='alltweaks':
+                    value=str(['default','seed667(seed667)','seed668(seed668)',
+                      'allwidths->0.9*allwidths(widths_x_0.9)',
+                      'allwidths->0.99*allwidths(widths_x_0.99)',
+                      'allwidths->1.01*allwidths(widths_x_1.01)',
+                      'allwidths->1.1*allwidths(widths_x_1.1)',                      
+                      'logp->logm(logp2logm)','logm->logp(logm2logp)'])
                 try:
-                    tweaks = eval(option[1])
+                    tweaks = eval(value)
                     if isinstance(tweaks, str):
-                        tweaks = [option[1]]                         
+                        tweaks = [value]                         
                     elif not isinstance(tweaks,list):
-                        tweaks = [option[1]]
+                        tweaks = [value]
                 except:
-                    tweaks = [option[1]]
+                    tweaks = [value]
                 if not all(isinstance(t,str) for t in tweaks):
-                    raise InvalidCmd("Invalid specificaiton of tweaks: %s"%option[1])
+                    raise self.InvalidCmd("Invalid specificaiton of tweaks: %s"%value)
                 CMS_options['tweak'] = []
                 for tweakID, tweakset in enumerate(tweaks):
                     specs =re.match(r'^(?P<tweakset>.*)\((?P<name>.*)\)$', tweakset)
@@ -3810,10 +3842,10 @@ This implies that with decay chains:
                       [leg.get('ids')[0] for leg in myprocdef.get('legs')
                                                            if leg.get('state')])
                     save_path = process_checks.CMS_save_path('pkl',
-                    {'ordered_processes':guessed_proc.base_string(),
+                    {'ordered_processes':[guessed_proc.base_string()],
                      'perturbation_orders':guessed_proc.get('perturbation_couplings')}, 
                              self._curr_model, options, output_path=output_path)
-                    if os.path.isfile(save_path):
+                    if os.path.isfile(save_path) and options['reuse']:
                         cms_result = save_load_object.load_from_file(save_path)
                         logger.info("The cms check for tweak %s is recycled from file:\n %s"%
                                                       (tweak['name'],save_path))
