@@ -5417,9 +5417,9 @@ class UFO_model_to_mg4(object):
         # If this is a leading order model or if there was no CT parameter
         # employed in this NLO model, one can directly return that the 
         # parameter is needed since only CTParameters are filtered.
-        if self.allCTparameters is None or \
-           self.usedCTparameters is None or \
-           len(self.allCTparameters)==0:
+        if not hasattr(self, 'allCTparameters') or \
+               self.allCTparameters is None or self.usedCTparameters is None or \
+               len(self.allCTparameters)==0:
             return True
          
         # We must allow the conjugate shorthand for the complex parameter as
