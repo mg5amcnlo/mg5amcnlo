@@ -58,7 +58,7 @@ contains
   character(ndecim(prcpar)+nxtr+novh+1) :: cc
   character(10) :: aa,bb
   integer :: ndec
-  real(kindr2) :: xx     !|RCTYPE=intrinsic
+  double precision :: xx     !|RCTYPE=intrinsic
 !#  real(kind(1d0)) :: xx !|RCTYPE=ddtype
 !#  real(kind(1d0)) :: xx !|RCTYPE=qdtype
 !#  real(kind(1d0)) :: xx !|RCTYPE=mptype

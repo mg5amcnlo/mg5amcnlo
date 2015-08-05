@@ -3513,6 +3513,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # Change the option 'recompute_width' to the optimal value if set to 'auto'.
     has_FRdecay = os.path.isfile(pjoin(cmd._curr_model.get('modelpath'),
                                                                    'decays.py'))
+
     if options['recompute_width']=='auto':
         if multiprocess_nwa.get('perturbation_couplings')!=[]:
             # NLO, so it is necessary to have the correct LO width for the check
@@ -3564,7 +3565,10 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
         run_options['output_path'] = output_path
     else:
         run_options['output_path'] = cmd._mgme_dir
-        
+    
+    # Add the information regarding FR decay for optimal log information
+    run_options['has_FRdecay']     = has_FRdecay
+
     # And one for caching the widths computed along the way
     if 'cached_widths' not in run_options:
         run_options['cached_widths'] = {}
@@ -3686,6 +3690,18 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # using several tweaks
     options['cached_widths'] = run_options['cached_widths']
     
+    # Add widths information to the result
+    result['recompute_width'] = options['recompute_width']
+    result['has_FRdecay']     = has_FRdecay
+    result['widths_computed'] = []
+    cached_widths = sorted(options['cached_widths'].items(), key=lambda el: \
+                                                                  abs(el[0][0]))
+    for (pdg, lambda_value), width in cached_widths:
+        if lambda_value != 1.0:
+            continue
+        result['widths_computed'].append((model.get_particle(pdg).get_name(),
+                                                                         width))
+        
     # Make sure to clear the python ME definitions generated in LO runs
     clean_added_globals(ADDED_GLOBAL)
     
@@ -4067,9 +4083,12 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             particle_name = particle.get_name()
             with misc.TMP_directory(dir=options['output_path']) as path:
                 param_card.write(pjoin(path,'tmp.dat'))
-                # 2-body decay is the maximum that can matter for NLO check.
+                # 2-body decay is the maximum that should be considered for NLO check.
+                # The default 1% accuracy is not enough when pushing to small
+                # lambdaCMS values, we need 1 per mil at least.
                 command = '%s --output=%s'%(particle_name,pjoin(path,'tmp.dat'))+\
-                    ' --path=%s --body_decay=2'%pjoin(path,'tmp.dat')
+                    ' --path=%s --body_decay=2'%pjoin(path,'tmp.dat')+\
+                    ' --precision_channel=0.001'
 #                misc.sprint(command)
                 param_card.write(pjoin(options['output_path'],'tmp.dat'))
                 # The MG5 command get_width will change the cmd._curr_model
@@ -4446,11 +4465,15 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # We don't use the result here, it is just so that it is put
                 # in the cache and reused in the CMS run that follows.
                 for decay in new_param_card['decay'].keys():
+                    particle_name = evaluator.full_model.get_particle(abs(decay[0]))
+                    if not options['has_FRdecay']:
+                        logger.info('Computing width of particle %s for lambda=%f'%\
+                                                      (particle_name,lambdaCMS))
                     tmp_param_card['decay'].get(decay).value = \
                                get_width(abs(decay[0]),lambdaCMS,new_param_card)
                 # Write the recomputed widths so that it can potentially be
                 # used for future runs (here the model in the NWA format)
-                if lambdaCMS==1.0:
+                if lambdaCMS==1.0 and NLO:
                     tmp_param_card.write(pjoin(proc_dir,
                                     'Cards','param_card.dat_recomputed_widths'))      
             
@@ -4941,19 +4964,32 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     # should typically capture the main features of the CMS implementation.
     # There will always be exceptions however.
     #
-    # Set here the global threshold sensitivity for the CMS check, 5% seems the
-    # right value to consistently report failure when the CMS is incorrectly
-    # implemented (incorrect LO width, wrong analytical continuation of logs, etc..)
-    # while returning a successful check when correctly implemented.
-    # be tighter at LO
-    if pert_orders:
-        CMS_test_threshold = 1e-1
+    if 'has_FRdecay' in result:
+        has_FRdecay = result['has_FRdecay']
     else:
-        CMS_test_threshold = 1e-2
+        has_FRdecay = False
+    # be tighter at LO
+    if not pert_orders:
+        CMS_test_threshold = 1e-3
+    else:
+        # AT NLO, a correct cancellation is typically of the order of 2% with
+        # a lowest lambda value of 10^-4. It is clear that the threshold should
+        # scale with the minimum lambda value because any little offset in the
+        # LO width value for example (acceptable when less than one 1% if the
+        # widths were computed numerically) will lead to an inaccuracy of the 
+        # cancellation scaling with lambda. 
+        if not has_FRdecay and ('recomputed_with' not in result or \
+                          result['recompute_width'] in ['always','first_time']):
+            CMS_test_threshold = 2e-2*(1.0e-4/min(result['lambdaCMS']))
+        else:
+            # If the widths were not computed numerically, then the accuracy of
+            # the cancellation should be better.
+            CMS_test_threshold = 2e-2*(1.0e-5/min(result['lambdaCMS']))
+            
     # This threshold sets how flat the diff line must be when approaching it from
-    # the right to start considering its value. Notice that one should set this
-    # smaller than the smalled CMSThreshold used above.
-    consideration_threshold = 5e-3
+    # the right to start considering its value. Notice that it cannot be larger
+    # than the CMS_test_threshold
+    consideration_threshold = min(CMS_test_threshold/10.0, 0.05)
     # Number of values groupes with the median technique to avoid being
     # sensitive to unstabilities
     group_val = 3
@@ -5109,6 +5145,23 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     # A bar printing function helper. Change the length here for esthetics
     bar = lambda char: char*47
 
+    # Write out the widths used if information is present:
+    if 'widths_computed' in result:
+        res_str += '\n%s%s%s\n'%(bar('='),' Widths ',bar('='))
+        if result['recompute_width'] == 'never':
+            res_str += '| Widths extracted from the param_card.dat'
+        else:
+            res_str += '| Widths computed %s'%('analytically' if has_FRdecay 
+                                                             else 'numerically')
+            if result['recompute_width'] == 'first_time':
+                res_str += ' for \lambda = 1'
+            elif result['recompute_width'] == 'always':
+                res_str += ' for all \lambda values'
+        res_str += " using mode '--recompute_width=%s'.\n"%result['recompute_width']
+        for particle_name, width in result['widths_computed']:
+            res_str += '| %-10s = %-11.6gGeV\n'%('Width(%s)'%particle_name,width)
+        res_str += '%s%s%s\n'%(bar('='),'='*8,bar('='))
+
     # Doing the analysis to printout to the MG5 interface and determine whether
     # the test is passed or not
     # Number of last points to consider for the stability test
@@ -5177,10 +5230,12 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             if stab_nwa_finite:
                 res_str += stab_nwa_finite
         # Now organize data
-        CMSData = []
-        NWAData = []
-        DiffData = []
+        CMSData     = []
+        NWAData     = []
+        DiffData    = []
+        BornNWAData = []
         for idata, lam in enumerate(lambdaCMS_list):
+            BornNWAData.append(nwa_born[idata]/(lam**born_power))
             if not pert_orders:
                 new_cms=cms_born[idata]/(lam**born_power)
                 new_nwa=nwa_born[idata]/(lam**born_power)
@@ -5197,9 +5252,10 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         diff_average = sum(abs(data) for data in DiffData)/len(DiffData)
 
         # Find which values to start the test at by looking at the CMSdata scaling
-        # First compute the median of the last 50% of entries in the plot
-        data_span = int(len(DiffData)*0.5)
-        low_diff_median = sorted(DiffData[-data_span:])[data_span//2]
+        # First compute the median of the middle 60% of entries in the plot
+        trim_range=int(((1.0-0.6)/2.0)*len(DiffData))
+        low_diff_median = sorted(DiffData[trim_range:-trim_range])\
+                                               [(len(DiffData)-2*trim_range)//2]
         
         # Now walk the values from the right of the diff plot until we reaches
         # values stable with respect to the CMS_tale_median. This value will
@@ -5209,8 +5265,11 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         current_median = 0
         # We really want to select only the very stable region
         scan_index = 0
-        reference = abs(low_diff_median) if abs(low_diff_median/diff_average)\
-                                    >=diff_zero_threshold else abs(diff_average)
+        reference = abs(sorted(BornNWAData)[len(BornNWAData)//2])
+        if abs(reference/diff_average)<diff_zero_threshold:
+            reference = abs(diff_average)
+#        reference = abs(low_diff_median) if abs(low_diff_median/diff_average)\
+#                                    >=diff_zero_threshold else abs(diff_average)
         while True:
             scanner = DiffData[scan_index:group_val+scan_index]
             current_median = sorted(scanner)[len(scanner)//2]
@@ -5282,10 +5341,13 @@ minimum value of lambda to be considered in the CMS check."""\
         diff_tale_median = sorted(CMScheck_values)[len(CMScheck_values)//2]
         scan_index = 0
         max_diff = 0.0
-        is_ref_zero = abs(diff_tale_median/diff_average)<diff_zero_threshold
-        reference = abs(diff_tale_median) if not is_ref_zero else abs(diff_average)
-        res_str += "== Asymptotic ref. difference value used     = %s\n"\
-          %('%.3g'%diff_tale_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)
+        res_str += "== Ref. value used in the ratios (Born NWA)  = %s\n"\
+                                                             %('%.3g'%reference)
+        res_str += "== Asymptotic difference value detected      = %s\n"\
+                                                      %('%.3g'%diff_tale_median)
+#        is_ref_zero = abs(diff_tale_median/diff_average)<diff_zero_threshold
+#        res_str += "== Asymptotic difference value detected      = %s\n"\
+#          %('%.3g'%diff_tale_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)
         # Pass information to the plotter for the difference target
         differences_target[(process,resID)]= diff_tale_median
         while True:
@@ -5351,7 +5413,7 @@ minimum value of lambda to be considered in the CMS check."""\
 
         new_result = save_load_object.load_from_file(filename)
         if new_result is None:
-            raise self.InvalidCmd('The complex mass scheme check result'+
+            raise InvalidCmd('The complex mass scheme check result'+
                              " file below could not be read.\n     %s"%filename)
         if len(new_result['ordered_processes'])!=len(result['ordered_processes']) \
                       or len(new_result['lambdaCMS'])!=len(result['lambdaCMS']):
