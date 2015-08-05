@@ -38,7 +38,7 @@ c value to the list of weights using the add_wgt subroutine
       include 'run.inc'
       include 'timing_variables.inc'
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
-     &     ,g22
+     &     ,g22,wgt4
       parameter (pi=3.1415926535897932385d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -61,6 +61,7 @@ c value to the list of weights using the add_wgt subroutine
       g2=g**(nint(2*wgtbpower))
       g22=g**(nint(2*wgtbpower+2))
       wgt1=wgtnstmp*f_nb/g22
+      wgt4=wgtnstmp_avgvirt*f_nb/g22
       if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0) then
          wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
       elseif (ickkw.eq.-1) then
@@ -78,6 +79,7 @@ c value to the list of weights using the add_wgt subroutine
       wgt2=wgtwnstmpmur*f_nb/g22
       wgt3=wgtwnstmpmuf*f_nb/g22
       call add_wgt(3,wgt1,wgt2,wgt3)
+      call add_wgt(15, wgt4, 0d0 ,0d0)
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
@@ -955,6 +957,7 @@ c     type=11: real-emission (with n-body kin.)
 c     type=12: MC subtraction with n-body kin.
 c     type=13: MC subtraction with n+1-body kin.
 c     type=14: virtual corrections
+c     type=15: virt-trick: average born contribution
 c     wgt1 : weight of the contribution not multiplying a scale log
 c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
@@ -1088,7 +1091,7 @@ c     matrix elements of this contribution.
          enddo
          H_event(icontr)=.true.
       elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
-     $        .or. type.eq.14)then
+     $        .or. type.eq.14.or.type.eq.15)then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
 c and MC subtraction terms.
          do i=1,nexternal
@@ -1504,6 +1507,7 @@ c must do MC over FKS directories.
          appl_event_weight=appl_event_weight+wgts(1,i)/vegas_wgt
          final_state_rescaling = dble(iproc_save(nFKS(i))) /
      &        dble(appl_nproc(flavour_map(nFKS(i))))
+         write(*,*) "fks_singular:1510", itype(i)
          if (itype(i).eq.1) then
 c     real
             appl_w0(1)=appl_w0(1)+wgt(1,i)*final_state_rescaling
@@ -1620,7 +1624,7 @@ c section
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).eq.2 .or. itype(i).eq.3 .or. itype(i).eq.14 .or.
-     &        itype(i).eq.7) then
+     &        itype(i).eq.7.or.itype(i).eq.15) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -1639,7 +1643,7 @@ c excluding the nbody contributions.
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).ne.2 .and. itype(i).ne.3 .and. itype(i).ne.14
-     &        .and. itype(i).ne.7) then
+     &        .and. itype(i).ne.7.and.itype(i).ne.15) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -2023,7 +2027,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
             do j=1,icontr_sum(0,i)
                ict=icontr_sum(j,i)
                if (itype(ict).ne.2 .and. itype(ict).ne.3 .and.
-     $             itype(ict).ne.14) tmp_wgt=tmp_wgt+wgts(1,ict)
+     $             itype(ict).ne.14.and.itype(ict).ne.15) tmp_wgt=tmp_wgt+wgts(1,ict)
             enddo
             n1body_wgt=n1body_wgt+abs(tmp_wgt)
          enddo
@@ -4270,7 +4274,7 @@ c      include "fks.inc"
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
-      double precision p(0:3,nexternal),bsv_wgt,born_wgt
+      double precision p(0:3,nexternal),bsv_wgt,born_wgt,avv_wgt
       double precision pp(0:3,nexternal)
       
       double complex wgt1(2)
@@ -4364,6 +4368,7 @@ c Born contribution:
          bsv_wgt=dble(wgt1(1))
          born_wgt=dble(wgt1(1))
          virt_wgt=0d0
+         avv_wgt=0d0 
 
          if (abrv.eq.'born' .or. abrv.eq.'grid') goto 549
          if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
@@ -4517,7 +4522,7 @@ c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
 c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
          endif
          if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1)
-     &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*ao2pi
+     &        avv_wgt=average_virtual*born_wgt*ao2pi
 
 c eq.(MadFKS.C.13)
          if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
@@ -4565,9 +4570,11 @@ c we need the pure NLO terms only
             wgtnstmp=bsv_wgt-born_wgt-
      #                wgtwnstmpmuf*log(q2fact(1)/QES2)-
      #                wgtwnstmpmur*log(scale**2/QES2)
+            wgtnstmp_avgvirt = avv_wgt
          else
             wgtnstmp=0d0
             wgtwnstmpmur=0.d0
+            wgtnstmp_avgvirt = 0d0
          endif
 
          if (abrv(1:2).eq.'vi') then
