@@ -31,6 +31,7 @@ import tests.unit_tests.loop.test_loop_diagram_generation as looptest
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.iolibs.save_load_object as save_load_object
+import madgraph.various.misc as misc
 import models.import_ufo as models
 from madgraph import MadGraph5Error
 
@@ -56,12 +57,12 @@ def loadLoopToyModel():
                   'color':8,
                   'mass':'ZERO',
                   'width':'ZERO',
-                  'texname':'G',
-                  'antitexname':'G',
+                  #'texname':'G',
+                  #'antitexname':'G',
                   'line':'curly',
                   'charge':0.,
                   'pdg_code':21,
-                  'propagating':True,
+                  #'propagating':True,
                   'propagator':0,                                             
                   'is_part':True,
                   'counterterm':{('QCD', ((6,),)): {0: 'UVWfct_G_1', -1: 'UVWfct_G_1_1eps'}, ('QCD', ((5,),)): {0: 'UVWfct_G_0', -1: 'UVWfct_G_0_1eps'}},
@@ -74,12 +75,12 @@ def loadLoopToyModel():
                   'color':3,
                   'mass':'ZERO',
                   'width':'ZERO',
-                  'texname':'u',
-                  'antitexname':'u',
+                  #'texname':'u',
+                  #'antitexname':'u',
                   'line':'straight',
                   'charge':2. / 3.,
                   'pdg_code':2,
-                  'propagating':True,
+                  #'propagating':True,
                   'propagator':'',                                             
                   'is_part':True,
                   'self_antipart':False}))
@@ -93,12 +94,12 @@ def loadLoopToyModel():
                   'color':3,
                   'mass':'ZERO',
                   'width':'ZERO',
-                  'texname':'d',
-                  'antitexname':'d',
+                  #'texname':'d',
+                  #'antitexname':'d',
                   'line':'straight',
                   'charge':-1. / 3.,
                   'pdg_code':1,
-                  'propagating':True,
+                  #'propagating':True,
                   'propagator':'',
                   'is_part':True,
                   'self_antipart':False}))

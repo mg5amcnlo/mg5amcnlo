@@ -185,11 +185,11 @@ def read_particles_v4(fsock):
                         raise ValueError, \
                             "Invalid color rep %s" % values[6]
 
-                    mypart.set("texname", values[7])
+                    #mypart.set("texname", values[7])
                     mypart.set("pdg_code", int(values[8]))
 
                     mypart.set('charge', 0.)
-                    mypart.set('antitexname', mypart.get('texname'))
+                    #mypart.set('antitexname', mypart.get('texname'))
 
                 except (Particle.PhysicsObjectError, ValueError), why:
                     logger.warning("Warning: %s, particle ignored" % why)

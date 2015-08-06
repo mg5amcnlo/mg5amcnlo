@@ -159,13 +159,13 @@ class DecayParticle(base_objects.Particle):
             # call the mother routine
             return DecayParticle.__bases__[0].get(self, name)
 
-    def set(self, name, value, *args):
+    def set(self, name, value, *args,**opts):
         """assign a value"""
 
         if name == 'decay_amplitudes':
             self.decay_amplitudes = value
         else:
-            out = super(DecayParticle, self).set(name, value, *args)
+            out = super(DecayParticle, self).set(name, value, *args, **opts)
             return out
     def check_vertex_condition(self, partnum, onshell, 
                               value = base_objects.VertexList(), model = {}):
