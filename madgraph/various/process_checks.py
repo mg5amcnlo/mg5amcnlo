@@ -4086,7 +4086,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         # now the decay process
         decay_proc = base_objects.Process({'legs':base_objects.LegList(
            copy.copy(leg) for leg in process.get('legs') if leg.get('number') 
-           in resonance['FSMothersNumbers'] and not leg.get('state')==False)})
+             in resonance['FSMothersNumbers'] and not leg.get('state')==False)})
         # Add the resonant particle as an initial state
         # ID set to 0 since its mass will be forced
         # Number set to -1 as well so as to be sure it appears first in 
@@ -4126,6 +4126,15 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
         particle = evaluator.full_model.get_particle(PDG)
         
+        # If it is a goldstone or a ghost, retur zero as its width should anyway
+        # not be independent. The test for checking if it is a goldstone or not
+        # will be made more general in 2.3.3 when it will be an attribute of the
+        # particle class. Normally the first statement will crash in that verison
+        # because it is not .get('ghost'). This is done in purpose so as to be
+        # sure to fix the goldstone check in due time.
+        if particle['ghost'] or particle.get_name() in ['g0','g+','g-']:
+            return 0.0
+
         # If its width is analytically set to zero, then return zero right away
         if particle.get('width')=='ZERO':
             return 0.0
@@ -4530,7 +4539,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # We don't use the result here, it is just so that it is put
                 # in the cache and reused in the CMS run that follows.
                 for decay in new_param_card['decay'].keys():
-                    particle_name = evaluator.full_model.get_particle(abs(decay[0]))
+                    particle_name = evaluator.full_model.get_particle(\
+                                                       abs(decay[0])).get_name()
                     if not options['has_FRdecay']:
                         logger.info('Computing width of particle %s for lambda=%f'%\
                                                       (particle_name,lambdaCMS))
@@ -5134,7 +5144,10 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
                 continue
             process_string.append(format_particle_name(particle))              
 
-        return r'CMS check for %s ( resonance %s )'\
+        if resonance=='':
+            return r'CMS check for %s' %(' '.join(process_string))
+        else:
+            return r'CMS check for %s ( resonance %s )'\
                                            %(' '.join(process_string),resonance)
 
     def guess_lambdaorder(ME_values_list, lambda_values, expected=None,
