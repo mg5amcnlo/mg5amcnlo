@@ -416,7 +416,7 @@ class MatrixElementEvaluator(object):
         # Find masses of particles
         mass = []
         for l in sorted_legs:
-            if l.get('id') != -10:
+            if l.get('id') != 0:
                 mass_string = self.full_model.get_particle(l.get('id')).get('mass')        
                 mass.append(self.full_model.get('parameter_dict')[mass_string].real)
             else:
@@ -429,9 +429,18 @@ class MatrixElementEvaluator(object):
 
 
 
-        # Make sure energy is large enough for incoming and outgoing particles
-        energy = max(energy, sum(mass[:nincoming]) + 200.,
-                     sum(mass[nincoming:]) + 200.)
+        # Make sure energy is large enough for incoming and outgoing particles,
+#        # Keep the special_mass case separate to be sure that nothing interferes
+#        # with the regular usage of get_momenta.
+#        if not (any(l.get('id')==0 for l in sorted_legs) and \
+#                                               isinstance(special_mass, float)):
+        energy = max(energy, sum(mass[:nincoming])*1.2,sum(mass[nincoming:])*1.2)
+#        else:
+#            incoming_mass = sum([mass[i] for i, leg in enumerate(sorted_legs) \
+#                             if leg.get('state') == False and leg.get('id')!=0])
+#            outcoming_mass = sum([mass[i] for i, leg in enumerate(sorted_legs) \
+#                             if leg.get('state') == True and leg.get('id')!=0])
+#            energy = max(energy, incoming_mass*1.2, outcoming_mass*1.2)
 
         if nfinal == 1:
             p = []
@@ -451,9 +460,8 @@ class MatrixElementEvaluator(object):
 
         if nincoming == 1:
             # Momenta for the incoming particle
-            p.append([abs(m1), 0., 0., 0.])           
+            p.append([abs(m1), 0., 0., 0.])
             p_rambo, w_rambo = rambo.RAMBO(nfinal, abs(m1), masses)
-
             # Reorder momenta from px,py,pz,E to E,px,py,pz scheme
             for i in range(1, nfinal+1):
                 momi = [p_rambo[(4,i)], p_rambo[(1,i)],
@@ -3820,9 +3828,11 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             
             # Discard impossible kinematics
             if special_mass<final_state_energy:
-                logger.warning('The offshellness specified (%s) is such'\
+                raise InvalidCmd('The offshellness specified (%s) is such'\
                   %options['offshellness']+' that the resulting kinematic is '+\
-                  'impossible for resonance with PDG %d.'%resonance['ParticlePDG'])
+                  'impossible for resonance %s %s.'%(evaluator.full_model.
+                           get_particle(resonance['ParticlePDG']).get_name(),
+                                      str(list(resonance['FSMothersNumbers']))))
                 continue
             
             # Add it to the list of accepted resonances
@@ -3849,11 +3859,25 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             ptot = [sum(p[i] for p in momenta) for i in range(4)]
             return math.sqrt(ptot[0]**2-ptot[1]**2-ptot[2]**2-ptot[3]**2)
         
+        model = evaluator.full_model
+        def getmass(pdg):
+            """ Returns the mass of a particle given the current model and its
+            pdg given in argument."""
+            return model.get('parameter_dict')[
+                                       model.get_particle(pdg).get('mass')].real
+
         N_trials                  = 0
         max_trial                 = 1e4
         nstep_for_energy_increase = 1e3
         PS_point_found            = None
-        offshellness              = options['offshellness']
+        if options['offshellness'] > 0.0:
+            offshellness              = options['offshellness']
+        else:
+            # We must undershoot the offshellness since one needs more 
+            # energy than the target mass to have a valid PS point. So we
+            # start with an offshellness 4 times larger, and progressively reduce
+            # it later
+            offshellness = (0.25*(options['offshellness']+1.0))-1.0
         
         # When offshellness is negative, it is progressively decreased every
         # nstep_for_energy_increase attempts (not increased!), so it is more
@@ -3868,12 +3892,27 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
         # Now play it smart on finding starting energy and offshellness and 
         # register all resonance masses
-        model = evaluator.full_model
-        all_other_res_masses = [model.get('parameter_dict')[
-              model.get_particle(res['ParticlePDG']).get('mass')].real
+        all_other_res_masses = [getmass(res['ParticlePDG'])
                                                   for res in other_res_offshell]
-        resonance_mass = model.get('parameter_dict')[model.get_particle(
-                                     resonance['ParticlePDG']).get('mass')].real
+        resonance_mass = getmass(resonance['ParticlePDG'])
+
+        str_res = '%s %s'%(model.get_particle(
+                            resonance['ParticlePDG']).get_name(),
+                                       str(list(resonance['FSMothersNumbers'])))
+        leg_number_to_leg = dict((l.get('number'),l) for l in process.get('legs'))
+        # Find what is the minimum possible offshellness given
+        # the mass of the daughters of this resonance.
+        # This will only be relevant when options['offshellness'] is negative
+        daughter_masses = sum(getmass(leg_number_to_leg[\
+                 number].get('id')) for number in resonance['FSMothersNumbers'])
+        min_offshellnes = 4.0*((daughter_masses*1.2)/resonance_mass)-1.0
+
+        # Compute the minimal energy given the external states, add 20% to leave
+        # enough phase-space
+        min_energy = max(sum(getmass(l.get('id')) for l in \
+                                  process.get('legs') if l.get('state')==True),
+                         sum(getmass(l.get('id')) for l in \
+                                  process.get('legs') if l.get('state')==False))
         
         # List all other offshellnesses of the potential daughters of this 
         # resonance
@@ -3882,7 +3921,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                       other_res_offshell[i]['FSMothersNumbers'].issubset(
                                                  resonance['FSMothersNumbers'])]
         
-        if options['offshellness'] > 0.0:
+        if options['offshellness'] >= 0.0:
             
             if len(daughter_offshellnesses)>0:
                 max_mass = max(daughter_offshellnesses)
@@ -3890,55 +3929,81 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 offshellness = max(2.0*(max_mass/resonance_mass)-1.0,
                                                         options['offshellness'])
             
-            if len(all_other_res_masses)>0:
-                max_mass = max((1.0+options['offshellness'])*mass for mass in \
-                                                           all_other_res_masses)
-                # A factor two to have enough phase-space open
-                if 2.0*max_mass > options['energy']:
-                    logger.warning("The user-defined energy %f seems "%options['energy']+
-                  " insufficient to reach the minimum propagator invariant mass "+
-                  "%f required for the chosen offshellness %f."%(max_mass,
-                   options['offshellness']) + " Energy reset to %f."%(2.0*max_mass))
-                    options['energy'] = 2.0*max_mass
+            max_mass = max([(1.0+options['offshellness'])*mass for mass in \
+                  all_other_res_masses]+[(1.0+offshellness)*resonance_mass])
+            
+            # Account for external_masses too
+            # A factor two to have enough phase-space open
+            target = max(min_energy*1.2,max_mass*2.0)
+            if target > options['energy']:
+                logger.warning("The user-defined energy %f seems "%options['energy']+
+              " insufficient to reach the minimum propagator invariant mass "+
+              "%f required for the chosen offshellness %f."%(max_mass,
+               options['offshellness']) + " Energy reset to %f."%target)
+                options['energy'] = target
                 
         else:
             if len(daughter_offshellnesses) > 0:
                 min_mass = min(daughter_offshellnesses)
-                # A factor one hald to have enough phase-space
-                offshellness = min(0.5*(min_mass/resonance_mass)-1.0,
+                # A factor one half to have enough phase-space
+                offshellness = min(0.25*(min_mass/resonance_mass)-1.0,
                                                         options['offshellness'])
-            if len(all_other_res_masses) > 0:
-                min_mass = min((1.0+options['offshellness'])*mass for mass in \
-                                                           all_other_res_masses)
-
-                # A factor one-half to have enough phase-space open
-                if 0.5*min_mass < options['energy']:
-                    logger.warning("The user-defined energy %f seems "%options['energy']+
-                      " too large to not overshoot the maximum propagator invariant mass "+
-                      "%f required for the chosen offshellness %f."%(min_mass,
-                       options['offshellness']) + " Energy reset to %f."%(0.5*min_mass))
-                    options['energy'] = 0.5*min_mass  
+            
+            # Make sure the chosen offshellness leaves enough energy to produce
+            # the daughter masses
+            if (1.0+offshellness)*resonance_mass < daughter_masses*1.2:
+                msg = 'The resonance %s cannot accomodate'%str_res+\
+              ' an offshellness of %f because the daughter'%options['offshellness']+\
+              ' masses are %f.'%daughter_masses
+                if options['offshellness']<min_offshellnes:
+                    msg += ' Try again with an offshellness'+\
+                  ' smaller (in absolute value) of at least %f.'%min_offshellnes
+                else:
+                  msg += ' Try again with a smalled offshellness (in absolute value).'
+                raise InvalidCmd(msg)
+            
+            min_mass = min([(1.0+options['offshellness'])*mass for mass in \
+                      all_other_res_masses]+[(1.0+offshellness)*resonance_mass])
+            # Account for external_masses too
+            # A factor two to have enough phase-space open
+            if 2.0*min_mass < options['energy']:
+                new_energy = max(min_energy*1.2, 2.0*min_mass)
+                logger.warning("The user-defined energy %f seems "%options['energy']+
+                  " too large to not overshoot the maximum propagator invariant mass "+
+                  "%f required for the chosen offshellness %f."%(min_mass,
+                   options['offshellness']) + " Energy reset to %f."%new_energy)
+                options['energy'] = new_energy  
         
-        start_energy = options['energy']
+        if options['offshellness'] < 0.0 and options['energy'] >= min_mass:
+            logger.debug("The target energy is not compatible with the mass"+
+              " of the external states for this process (%f). It is "%min_mass+
+                 "unlikely that a valid kinematic configuration will be found.")
+        
+        if options['offshellness']<0.0 and offshellness<options['offshellness'] or \
+           options['offshellness']>0.0 and offshellness>options['offshellness']:
+            logger.debug("Offshellness increased to %f"%offshellness+
+                " so as to try to find a kinematical configuration with"+
+                " offshellness at least equal to %f"%options['offshellness']+
+                                                         " for all resonances.")
+
+        start_energy = options['energy']        
         while N_trials<max_trial:
             N_trials += 1
             if N_trials%nstep_for_energy_increase==0:
                 if allow_energy_increase > 0.0:
-                    str_res = '%s %s'%(model.get_particle(
-                                 resonance['ParticlePDG']).get_name(),
-                                       str(list(resonance['FSMothersNumbers'])))
+                    old_offshellness = offshellness
                     if offshellness > 0.0:
                         options['energy'] *= energy_increase
                         offshellness      *= energy_increase
-                        logger.warning('Trying to find a valid kinematic'+\
-                               " configuration for resonance '%s'"%str_res+\
-                                 ' with increased offshellness %f'%offshellness)
                     else:
-                        options['energy'] /= energy_increase
-                        offshellness      /= energy_increase
-                        logger.warning('Trying to find a valid kinematic'+\
-                               " configuration for resonance '%s'"%str_res+\
-                                   ' with reduced offshellness %f'%offshellness)
+                        options['energy'] = max(options['energy']/energy_increase, 
+                                                                 min_energy*1.2)
+                        offshellness = max(min_offshellnes,
+                                       ((offshellness+1.0)/energy_increase)-1.0)
+                    if old_offshellness!=offshellness:
+                        logger.debug('Trying to find a valid kinematic'+\
+                           " configuration for resonance '%s'"%str_res+\
+                             ' with increased offshellness %f'%offshellness)
 
             candidate = get_PSpoint_for_resonance(resonance, offshellness)
             pass_offshell_test = True
@@ -3973,7 +4038,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 ' trials. Try increasing the energy, modify the offshellness '+\
                 'or relax some constraints.'
             if options['offshellness']<0.0:
-                err_msg +='\nTry with a positive offshellness instead.'
+                err_msg +='Try with a positive offshellness instead (or a '+\
+                                       'negative one of smaller absolute value)'
             raise InvalidCmd, err_msg
         else:
 #            misc.sprint('PS point found in %s trials.'%N_trials)
@@ -3997,7 +4063,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
     def get_PSpoint_for_resonance(resonance, offshellness = options['offshellness']):
         """ Assigns a kinematic configuration to the resonance dictionary 
         given in argument."""            
-        
+
         # Get the particle mass
         mass_string = evaluator.full_model.get_particle(
                                        resonance['ParticlePDG']).get('mass')
@@ -4011,27 +4077,26 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
              copy.copy(leg) for leg in process.get('legs') if 
                    leg.get('number') not in resonance['FSMothersNumbers'])})
         # Add the resonant particle as a final state
-        # ID set to -10 since its mass will be forced
+        # ID set to 0 since its mass will be forced
         # Number set so as to be first in the list in get_momenta
         prod_proc.get('legs').append(base_objects.Leg({
                 'number':max(l.get('number') for l in process.get('legs'))+1,
                 'state':True,
-                'id':-10}))
+                'id':0}))
         # now the decay process
         decay_proc = base_objects.Process({'legs':base_objects.LegList(
            copy.copy(leg) for leg in process.get('legs') if leg.get('number') 
            in resonance['FSMothersNumbers'] and not leg.get('state')==False)})
         # Add the resonant particle as an initial state
-        # ID set to -10 since its mass will be forced
+        # ID set to 0 since its mass will be forced
         # Number set to -1 as well so as to be sure it appears first in 
         # get_momenta
         decay_proc.get('legs').insert(0,base_objects.Leg({
                 'number':-1,
                 'state':False,
-                'id':-10}))
+                'id':0}))
         prod_kinematic = evaluator.get_momenta(prod_proc, options=options,
                                                special_mass=special_mass)[0]
-
         decay_kinematic = evaluator.get_momenta(decay_proc, options=options, 
                                                special_mass=special_mass)[0]
         momenta = glue_momenta(prod_kinematic,decay_kinematic)
