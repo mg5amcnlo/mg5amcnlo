@@ -79,7 +79,7 @@ GWcft_UV_b = CTParameter(name = 'GWcft_UV_b',
                          texname = '\delta G_{wfct\_b}')
 
 GWcft_UV_t = CTParameter(name = 'GWcft_UV_t',
-                         type = 'real ',
+                         type = 'real',
                          value = {-1:'cond(MT,0.0,-((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF)',
                                    0:'cond(MT,0.0,((G**2)/(2.0*48.0*cmath.pi**2))*4.0*TF*reglog(MT**2/MU_R**2))'
                                  },
