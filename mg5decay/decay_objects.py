@@ -909,8 +909,8 @@ class DecayParticle(base_objects.Particle):
 
                 # Add width to total width if onshell
                 if temp_channel.get_onshell(model):
-                    #if temp_channel.has_goldstone(model):
-                    #    continue
+                    if temp_channel.has_goldstone(model):
+                        continue
                     self['apx_decaywidth'] += temp_channel.get_apx_decaywidth(model)                    
 
                 # Append this channel after all the setups.
