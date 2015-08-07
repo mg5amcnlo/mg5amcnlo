@@ -61,7 +61,7 @@ c
       write(*,*)'      0 otherwise'
       read(*,*)isave
       if(isave.eq.1)then
-        isave=9
+        isave=-9
       else
         isave=0
       endif
@@ -431,9 +431,8 @@ c Restore default PDFs
 
         write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe,jfks_lhe,
      $       fksfather_lhe,ipartner_lhe, scale1_lhe,scale2_lhe, isave
-     $       ,izero,izero, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
+     $       ,mexternal,iwgtnumpartn, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
      $       ,wgtpdfmax
-
 
 c renormalize all the scale & PDF weights to have the same normalization
 c as XWGTUP
@@ -494,7 +493,7 @@ c Write the accumulated results to a file
       endif
       close(34)
 
- 201  format(a9,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
+ 201  format(a9,1x,i1,4(1x,i2),2(1x,e14.8),1x,i2,2(1x,i2),5(1x,e14.8))
 
       end
 

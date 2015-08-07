@@ -661,10 +661,11 @@ c
               stop
            endif
            write(ifile,'(a)')'  </rwgt>'
-         elseif(jwgtinfo.eq.-5) then
-           write(ifile,'(a)')'  <rwgt>'
+        endif
+        if(jwgtinfo.eq.-5.or.jwgtinfo.eq.-9.or.jwgtinfo.eq.-8) then
+           write(ifile,'(a)')'  <mgrwgt>'
            write (ifile,'(1x,d16.10,3(1x,i4))') wgtref,n_ctr_found
-     &          ,n_mom_conf,nint(wgtcpower)
+     &          ,n_mom_conf, nint(wgtcpower)
            do i=1,n_mom_conf
               do j=1,mexternal
                  write (ifile,'(4(1x,d16.10))')
@@ -674,7 +675,7 @@ c
            do i=1,n_ctr_found
               write (ifile,'(a)') trim(adjustl(n_ctr_str(i)))
            enddo
-           write(ifile,'(a)')'  </rwgt>'
+           write(ifile,'(a)')'  </mgrwgt>'
          elseif(jwgtinfo.eq.15) then
            write(ifile,'(a)')'  <unlops>'
            write(ifile,*)NUP_H
@@ -685,7 +686,8 @@ c
      $             VTIMUP_H(I),SPINUP_H(I)
            enddo
            write(ifile,'(a)')'  </unlops>'
-        elseif(jwgtinfo.eq.8)then
+        endif
+        if(jwgtinfo.eq.8.or.jwgtinfo.eq.-8)then
            write(ifile,'(a)') '  <rwgt>'
           write(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
           do i=1,numscales
@@ -697,8 +699,7 @@ c
             write(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
           enddo
           write(ifile,'(a)') '  </rwgt>'
-
-        elseif(jwgtinfo.eq.9)then
+        elseif(jwgtinfo.eq.9.or.jwgtinfo.eq.-9)then
            write(ifile,'(a)') '  <rwgt>'
            do i=1,numscales
               do j=1,numscales
@@ -904,7 +905,7 @@ c
               stop
            endif
            read(ifile,'(a)')string
-         elseif(jwgtinfo.eq.-5) then
+         elseif(jwgtinfo.eq.-5.or.jwgtinfo.eq.-8.or.jwgtinfo.eq.-9) then
            read(ifile,'(a)')string
            read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
            do i=1,n_mom_conf
@@ -916,7 +917,8 @@ c
               read (ifile,'(a)') n_ctr_str(i)
            enddo
            read(ifile,'(a)')string
-         elseif(jwgtinfo.eq.15) then
+         endif
+         if(jwgtinfo.eq.15) then
            read(ifile,'(a)') string
            read(ifile,*)NUP_H
            do i=1,NUP_H
@@ -926,7 +928,7 @@ c
      $             VTIMUP_H(I),SPINUP_H(I)
            enddo
            read(ifile,'(a)') string
-        elseif(jwgtinfo.eq.8)then
+        elseif(jwgtinfo.eq.8.or.jwgtinfo.eq.-8)then
           read(ifile,'(a)')string
           read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
           do i=1,numscales
@@ -938,7 +940,7 @@ c
             read(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
           enddo
           read(ifile,'(a)')string
-        elseif(jwgtinfo.eq.9)then
+        elseif(jwgtinfo.eq.9.or.jwgtinfo.eq.-9)then
            read(ifile,'(a)')string
            wgtref=XWGTUP
            do i=1,numscales
@@ -1156,7 +1158,7 @@ c
               stop
            endif
            read(ifile,'(a)')string
-         elseif(jwgtinfo.eq.-5) then
+         elseif(jwgtinfo.eq.-5.or.jwgtinfo.eq.-8.or.jwgtinfo.eq.-9) then
            read(ifile,'(a)')string
            read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
            do i=1,n_mom_conf
@@ -1168,7 +1170,8 @@ c
               read (ifile,'(a)') n_ctr_str(i)
            enddo
            read(ifile,'(a)')string
-         elseif(jwgtinfo.eq.15) then
+         endif
+         if(jwgtinfo.eq.15) then
            read(ifile,'(a)') string
            read(ifile,*)NUP_H
            do i=1,NUP_H
@@ -1178,7 +1181,7 @@ c
      $             VTIMUP_H(I),SPINUP_H(I)
            enddo
            read(ifile,'(a)') string
-        elseif(jwgtinfo.eq.8)then
+        elseif(jwgtinfo.eq.8.or.jwgtinfo.eq.-8)then
           read(ifile,'(a)')string
           read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
           do i=1,numscales
@@ -1190,7 +1193,7 @@ c
             read(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
           enddo
           read(ifile,'(a)')string
-        elseif(jwgtinfo.eq.9)then
+        elseif(jwgtinfo.eq.9.or.jwgtinfo.eq.-9)then
            read(ifile,'(a)')string
            wgtref=XWGTUP
            do i=1,numscales
