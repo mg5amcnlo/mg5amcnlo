@@ -700,7 +700,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         else:
             self.validate_model()
 
-        if args[0] == 'process':            
+        if args[0] == 'process':                        
             # Rejoin line
             line = ' '.join(args[1:])
             
@@ -714,6 +714,23 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             # Extract process from process definition
 
         myprocdef = self.extract_process(line)
+        # hack for multiprocess:
+        if myprocdef.has_multiparticle_label():
+            # split it in a loop
+            succes, failed = 0, 0
+            for base_proc in myprocdef:
+                print type(base_proc)
+                try:
+                    self.exec_cmd("add process %s" % base_proc.nice_string(prefix=False, print_weighted=True))
+                    succes += 1
+                except Exception:
+                    failed +=1
+            logger.info("%s/%s processes succeeded" % (succes, failed+succes))
+            if succes == 0:
+                raise
+            else:
+                return
+             
              
         # If it is a process for MadLoop standalone, make sure it has a 
         # unique ID. It is important for building a BLHA library which

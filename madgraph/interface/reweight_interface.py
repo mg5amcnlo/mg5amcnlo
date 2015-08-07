@@ -90,6 +90,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.seed = None
         self.output_type = "default"
         self.helicity_reweighting = True
+        self.rwgt_mode = None # can be LO or NLO, None is default 
         
         if event_path:
             logger.info("Extracting the banner ...")
@@ -308,6 +309,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.output_type = args[1]
         elif args[0] == "helicity":
             self.helicity_reweighting = banner.ConfigFile.format_variable(args[1], bool, "helicity")
+        elif args[0] == "mode":
+            self.nlo_mode = args[1]
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
@@ -856,6 +859,7 @@ class ReweightInterface(extended_cmd.Cmd):
         mgcmd.exec_cmd(commandline)
         
         # 2. compute the production matrix element -----------------------------
+        has_nlo = False
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
@@ -869,6 +873,7 @@ class ReweightInterface(extended_cmd.Cmd):
             if '[' not in proc:
                 commandline += "add process %s ;" % proc
             else:
+                has_nlo = True
                 commandline += self.get_LO_definition_from_NLO(proc)
         
         commandline = commandline.replace('add process', 'generate',1)
@@ -915,7 +920,60 @@ class ReweightInterface(extended_cmd.Cmd):
 
                 self.id_to_path[tag] = [order, Pdir, hel_dict]        
         
-        # 3. If we need a new model/process-------------------------------------
+        # 4. create the virtual for NLO reweighting  ---------------------------
+        if has_nlo and self.rwgt_mode != "LO":
+            # LO is kamikaze reweighting which does not use the virtual.
+            start = time.time()
+            commandline=''
+            for proc in processes:
+                if '[' not in proc:
+                    pass
+                else:
+                    proc = proc.replace('[', '[ virt=')
+                    commandline += "add process %s ;" % proc
+            
+            commandline = commandline.replace('add process', 'generate',1)
+            logger.info(commandline)
+            mgcmd.exec_cmd(commandline, precmd=True)
+            commandline = 'output standalone_rw %s' % pjoin(path_me,'rw_mevirt')
+            mgcmd.exec_cmd(commandline, precmd=True)        
+            logger.info('Done %.4g' % (time.time()-start))
+
+            # now store the id information             
+            matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()            
+            for me in matrix_elements:
+                for proc in me.get('processes'):
+                    initial = []    #filled in the next line
+                    final = [l.get('id') for l in proc.get('legs')\
+                          if l.get('state') or initial.append(l.get('id'))]
+                    order = (initial, final)
+                    tag = proc.get_initial_final_ids()
+                    decay_finals = proc.get_final_ids_after_decay()
+    
+                    if tag[1] != decay_finals:
+                        order = (initial, list(decay_finals))
+                        decay_finals.sort()
+                        tag = (tag[0], tuple(decay_finals))
+                    Pdir = pjoin(path_me, 'rw_mevirt', 'SubProcesses', 
+                                      'P%s' % me.get('processes')[0].shell_string())
+                    assert os.path.exists(Pdir), "Pdir %s do not exists" % Pdir                        
+                    if (tag,'V') in self.id_to_path:
+                        if not Pdir == self.id_to_path[(tag,'V')][1]:
+                            misc.sprint(tag, Pdir, self.id_to_path[(tag,'V')][1])
+                            raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
+                        else:
+                            continue
+                    # build the helicity dictionary
+                    hel_nb = 0
+                    hel_dict = {9:0} # unknown helicity -> use full ME
+                    for helicities in me.get_helicity_matrix():
+                        hel_nb +=1 #fortran starts at 1
+                        hel_dict[tuple(helicities)] = hel_nb
+    
+                    self.id_to_path[(tag,'V')] = [order, Pdir, hel_dict] 
+            
+        raise Exception
+        # 4. If we need a new model/process-------------------------------------
         if self.second_model or self.second_process:
             self.create_second_standalone_directory()    
 
