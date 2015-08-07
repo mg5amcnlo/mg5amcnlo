@@ -705,7 +705,6 @@ C         Loop amplitude for loop diagram with ID 16
      $     ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT)
      $     ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_37,MP__GC_37
      $     ,GC_5,MP__GC_5,GC_37,MP__GC_37,4,1,1,20,AMPL(1,20),S(20))
-          HELPICKED=HELPICKED_BU
           DO I=NCTAMPS+1,NLOOPAMPS
             IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))
      $       ) THEN
@@ -722,6 +721,7 @@ C           WRITE(*,*) 'double pole contribution    = ',AMPL(3,I)
 C           ENDIF
           ENDDO
  1227     CONTINUE
+          HELPICKED=HELPICKED_BU
           DO I=1,NLOOPAMPS
             DO J=1,NLOOPAMPS
               CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0D0)

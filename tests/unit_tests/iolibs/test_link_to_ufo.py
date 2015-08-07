@@ -49,11 +49,11 @@ class TestUFOExpressionParsers(unittest.TestCase):
         expr = 'cmath.sqrt(2)'
         converted = ufo_to_fortran.parse(expr)
         self.assertTrue(isinstance(converted, str))
-        self.assertEqual(converted, 'sqrt(2.000000d+00)')
+        self.assertEqual(converted, 'sqrt(dcmplx(2.000000d+00))')
         
         expr = 'cmath.sqrt(2.)'
         converted = ufo_to_fortran.parse(expr)
-        self.assertEqual(converted, 'sqrt(2.000000d+00)')
+        self.assertEqual(converted, 'sqrt(dcmplx(2.000000d+00))')
         
         expr = 'randomfunction(2.)'
         converted = ufo_to_fortran.parse(expr)
@@ -65,7 +65,7 @@ class TestUFOExpressionParsers(unittest.TestCase):
         
         expr = 'cmath.sqrt(2.5)'
         converted = ufo_to_fortran.parse(expr)
-        self.assertEqual(converted, 'sqrt(2.500000d+00)')
+        self.assertEqual(converted, 'sqrt(dcmplx(2.500000d+00))')
 
         expr = 'cmath.testfcn(2.00, a+b)'
         converted = ufo_to_fortran.parse(expr)
@@ -78,7 +78,7 @@ class TestUFOExpressionParsers(unittest.TestCase):
         expr = '(ee**2*IMAG/(2.*sw**2) * (cmath.sin(cmath.sqrt(2)*ee)**2/3.))'
         converted = ufo_to_fortran.parse(expr)
         self.assertEqual(converted, 
-        '(ee**2*imag/(2.000000d+00*sw**2)*(sin(sqrt(2.000000d+00)*ee)**2/3.000000d+00))')
+        '(ee**2*imag/(2.000000d+00*sw**2)*(sin(sqrt(dcmplx(2.000000d+00))*ee)**2/3.000000d+00))')
     
     def test_convert_number_to_fortran(self):
         """ test it can convert number in fortran string"""

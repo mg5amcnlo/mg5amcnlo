@@ -1783,14 +1783,15 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         param_card = lhe.banner[begin_param+6:end_param].split('\n')
         param_card = check_param_card.ParamCard(param_card)
 
-        cst = 6.58211915e-25
+        cst = 6.58211915e-25 # hbar in GeV s
+        c = 299792458000 # speed of light in mm/s
         # Loop over all events
         for event in lhe:
             for particle in event:
                 id = particle.pid
                 width = param_card['decay'].get((abs(id),)).value
                 if width:
-                    vtim = random.expovariate(width/cst)
+                    vtim = c * random.expovariate(width/cst)
                     if vtim > threshold:
                         particle.vtim = vtim
             #write this modify event
@@ -2736,6 +2737,20 @@ Beware that this can be dangerous for local multicore runs.""")
         x_improve = gen_ximprove.gen_ximprove(self, refine_opt)
         # Load the run statistics from the survey
         survey_statistics = dict(self.results.get_detail('run_statistics'))
+        # Printout survey statistics
+        if __debug__ and survey_statistics:
+            globalstat = sum_html.RunStatistics()
+            logger.debug(" === Survey statistics summary ===")
+            for key, value in survey_statistics.items():
+                globalstat.aggregate_statistics(value)
+                level = 5
+                if value.has_warning():
+                    level = 10
+                logger.log(level, 
+                  value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).
+                                                      replace(' statistics',''))
+            logger.debug(globalstat.nice_output('combined', no_warning=True))
+                        
         if survey_statistics:
             x_improve.run_statistics = survey_statistics
         
@@ -3557,14 +3572,14 @@ Beware that this can be dangerous for local multicore runs.""")
             return 
         
         tag = self.run_card['run_tag']
-        self.update_status('storring files of Previous run', level=None,\
+        self.update_status('storring files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
             if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')):
                 misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))
         
         if 'pythia' in self.to_store:
-            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
+            self.update_status('Storing Pythia files of previous run', level='pythia', error=True)
             
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
@@ -4259,7 +4274,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     switch['delphes'] = 'OFF'
                     
         # Check switch status for MS/reweight
-        if not MADEVENT or self.options['mg5_path']:
+        if not MADEVENT or ('mg5_path' in self.options and self.options['mg5_path']):
             available_mode.append('4')
             available_mode.append('5')
             if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):

@@ -143,7 +143,6 @@ c born configuration stuff
       include 'born_ngraphs.inc'
       include 'born_conf.inc'
 c      integer icomp
-
 c-----
 c  Begin Code
 c-----
@@ -172,6 +171,7 @@ c-----
 c When doing hadron-hadron collision reduce the effect collision energy.
 c Note that tests are always performed at fixed energy with Bjorken x=1.
       totmass = 0.0d0
+      include 'pmass.inc' ! make sure to set the masses after the model has been included
       do i=1,nexternal
         totmass = totmass + pmass(i)
       enddo

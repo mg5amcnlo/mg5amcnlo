@@ -3658,11 +3658,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         non-optimized mode"""
         filename = os.path.join(self.dir_path, 'Source', 'DHELAS', 'coef_specs.inc')
 
-        general_replace_dict = {}
-        general_replace_dict['max_lwf_size'] = 4 
+        replace_dict = {}
+        replace_dict['max_lwf_size'] = 4 
 
         max_loop_vertex_ranks = [me.get_max_loop_vertex_rank() for me in virt_me_list]
-        general_replace_dict['vertex_max_coefs'] = max(\
+        replace_dict['vertex_max_coefs'] = max(\
                 [q_polynomial.get_number_of_coefs_for_rank(n) 
                     for n in max_loop_vertex_ranks])
 
@@ -3671,7 +3671,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                            PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
                            INTEGER VERTEXMAXCOEFS
                            PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
-                           % general_replace_dict)
+                           % replace_dict)
         IncWriter.close()
     
 

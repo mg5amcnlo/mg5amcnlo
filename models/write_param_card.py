@@ -35,7 +35,7 @@ class ParamCardWriter(object):
     
     sm_pdg = [1,2,3,4,5,6,11,12,13,13,14,15,16,21,22,23,24,25]
     qnumber_str ="""Block QNUMBERS %(pdg)d  # %(name)s 
-        1 %(charge)d  # 3 times electric charge
+        1 %(charge)g  # 3 times electric charge
         2 %(spin)d  # number of spin states (2S+1)
         3 %(color)d  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 %(antipart)d  # Particle/Antiparticle distinction (0=own anti)\n"""

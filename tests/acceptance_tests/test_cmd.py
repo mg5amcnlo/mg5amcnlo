@@ -176,7 +176,8 @@ class TestCmdShell1(unittest.TestCase):
                     'applgrid': 'applgrid-config',
                     'cluster_size': 100,
                     'loop_color_flows': False,
-                    'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/'
+                    'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/',
+                    'max_npoint_for_channel': 0
                     }
 
         self.assertEqual(config, expected)
@@ -1151,12 +1152,8 @@ C
         proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
 
-        # Check the new contents of the symfact.dat file
-        self.assertEqual(open(os.path.join(self.out_dir,
-                                           'SubProcesses',
-                                           'P0_qq_gogo_go_qqn1_go_qqn1',
-                                           'symfact.dat')).read(),
-                         """   1   1
+
+        target =                          """   1   1
    2  -1
    3  -1
    4  -1
@@ -1168,8 +1165,18 @@ C
   10  -9
   11  -9
   12  -9
-""")
-        
+"""
+        data = [[int(i) for i in line.split()] for line in target.split('\n')]
+        result = []
+        ii=0
+        for line in open(os.path.join(self.out_dir,
+                                           'SubProcesses',
+                                           'P0_qq_gogo_go_qqn1_go_qqn1',           
+                                           'symfact.dat')):
+            info = [int(i) for i in line.split()]
+            self.assertEqual(info, data[ii])
+            ii+=1
+
     def test_madevent_subproc_group_decay_chain(self):
         """Test decay chain output using the SubProcess group functionality"""
 

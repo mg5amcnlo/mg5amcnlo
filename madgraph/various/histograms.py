@@ -957,7 +957,6 @@ class HwU(Histogram):
         elif scale_position == -2:
             wgts_to_consider = [ label for label in self.bins.weight_labels if \
                                                       isinstance(label, int) ]            
-        
         if len(wgts_to_consider)==0:
             # No envelope can be constructed, it is not worth adding the weights
             return None
@@ -986,7 +985,7 @@ class HwU(Histogram):
                     pdf_up     = 0.0
                     pdf_down   = 0.0
                     cntrl_val  = bin.wgts['central']
-                    if pdfs[-1] <= 90000:
+                    if wgts_to_consider[0] <= 90000:
                         # use Hessian method (CTEQ & MSTW)
                         if len(pdfs)>2:
                             for i in range(int((len(pdfs)-1)/2)):
@@ -1748,25 +1747,27 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
         
         # Now add the first subhistogram
         plot_lines = ["0.0 ls 999 title ''"]
-        if 'statistical' in uncertainties:
-           plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''"%\
-(HwU_name,block_position))
+        for i, histo in enumerate(self[:n_histograms]):
+            color_index = i%self.number_line_colors_defined+1
+            if 'statistical' in uncertainties:
+               plot_lines.append(
+"'%s' index %d using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls %d title ''"%\
+(HwU_name,block_position+i,color_index))
         # Then the scale variations
-        if not mu_var_pos is None:
-            plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls 11 title ''"\
-%(HwU_name,block_position,mu_var_pos+3),
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls 11 title ''"\
-%(HwU_name,block_position,mu_var_pos+4)
-            ])
-        if not PDF_var_pos is None:
-            plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls 21 title ''"\
-%(HwU_name,block_position,PDF_var_pos+3),
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls 21 title ''"\
-%(HwU_name,block_position,PDF_var_pos+4)
-            ])
+            if not mu_var_pos is None:
+                plot_lines.extend([
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,mu_var_pos+3,color_index+10),
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,mu_var_pos+4,color_index+10)
+                ])
+            if not PDF_var_pos is None:
+                plot_lines.extend([
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,PDF_var_pos+3,color_index+20),
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,PDF_var_pos+4,color_index+20)
+                ])
         
         # Add the plot lines
         if not no_uncertainties:

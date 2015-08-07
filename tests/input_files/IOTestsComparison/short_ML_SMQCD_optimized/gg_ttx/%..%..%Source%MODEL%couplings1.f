@@ -5,6 +5,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       SUBROUTINE COUP1()
 
       IMPLICIT NONE
+      INCLUDE 'model_functions.inc'
 
       DOUBLE PRECISION PI, ZERO
       PARAMETER  (PI=3.141592653589793D0)
@@ -17,6 +18,4 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       INCLUDE 'mp_input.inc'
       INCLUDE 'mp_coupl.inc'
 
-
-      INCLUDE 'model_functions.inc'
       END

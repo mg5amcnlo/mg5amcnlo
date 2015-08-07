@@ -314,11 +314,11 @@ R2_GGHt = Coupling(name = 'R2_GGHt',
 # R2 for the weak vector bosons interaction with gluons
 
 R2_GGZup = Coupling(name = 'R2_GGZup',
-                    value = {0:'AxialZUp*(1.0/2.0)*(G**2/(12.0*cmath.pi**2))'},
+                    value = {0:'2.0*AxialZUp*(G**2/(12.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':1})
 
 R2_GGZdown = Coupling(name = 'R2_GGZdown',
-                    value = {0:'AxialZDown*(1.0/2.0)*(G**2/(12.0*cmath.pi**2))'},
+                    value = {0:'2.0*AxialZDown*(G**2/(12.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':1})
 
 # EDIT VH
@@ -407,11 +407,11 @@ R2_GGGZvecDown = Coupling(name = 'R2_GGGZvecDown',
                         order = {'QCD':3,'QED':1})
 
 R2_GGGZaxialUp = Coupling(name = 'R2_GGGZaxialUp',
-                        value = {0:'complex(0,1)*AxialZUp*(9.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
+                        value = {0:'complex(0,1)*AxialZUp*(-9.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
 
 R2_GGGZaxialDown = Coupling(name = 'R2_GGGZaxialDown',
-                        value = {0:'complex(0,1)*AxialZDown*(9.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
+                        value = {0:'complex(0,1)*AxialZDown*(-9.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
 
 R2_GGGAvecUp = Coupling(name = 'R2_GGGAvecUp',

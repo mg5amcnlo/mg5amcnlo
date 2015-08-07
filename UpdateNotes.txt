@@ -1,11 +1,32 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.3.1
+2.3.2   
+        VH: Fixed the check in helas wavefunction appearance order in an helas diagrams. It failed in cases
+	    where additional wf were created during the fix of fermion flow in presence of majorana fermions.         
+	RF: Fixed a bug in the aMCFast/ApplGrid interfaced introduced in the previous version.
+        OM: Fix a crash when using mssm-no_b_mass model (due to the SLHA1-SLHA2 conversion)
+        OM: Fix a bug in the add_time_of_flight function (not called by default) where the displaced vertex information
+            was written in second and not in mm as it should. Note that this function can now be run on the flight
+	    by adding the following line in the run_card: "  1e-2 = time_of_flight #threshold for the displaced vertex" 
+	RF: Small fix that leads to an improvement in the phase-space generation for NLO processes
+        OM: Fix a crash introduce in 2.3.0 when running sequentially in the same directory (thanks Gauthier)
+        OM: Improve aloha in the case of some expression reduces to pure float.
+        OM: In MadSpin, allow to specify cut for the 1>N decay in spinmode=none.
+	RF: Fixed a bug that gave bogus results for NLO runs when using an internal PDF which is not
+            NNPDF (like for the old cteq_6m, etc).
+	RF: Fixed a bug in the PDF combination in the HwU histograms: there was no consistent use if Hessian
+            and Gaussian approaches for MSTW/CTEQ and NNPDF, respectively.
+
+2.3.0  
+     OM+VH: Automation of event generation for loop-induced processes.
+		OM: Automatic change of the p/j definition to include the b particle if the model has a massless b.
 	RF: Reduce the collision energy for the soft and collinear tests: for 100TeV collider many were failing
 	    due to numerical instabilities. 
         OM: Fixing bug associate to the epsilon_ijk structure
         OM+VH: Various bug fixing for the loop-induced processes
-
+        OM: Fix a crash in MadWidth which occurs for some 4 body decay
+        PT: Fixed a bug concerning the use of Herwig++ with LHAPDF. Bug was introduced in 2.3.0.beta
+	OM: Fix a crash in ALOHA for form-factor in presence of fermion flow violation
 
 2.3.0.beta(10/04/15) OM+VH: Adding the possibility to compute cross-section/generate events for loop-induced process
 		JB+OM: Addign matchbox output for matching in the Matchbox framework

@@ -355,6 +355,8 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
                 lines[iline] = result.group(1) + var + "=" + new
         if mod:
             open(name,'w').write('\n'.join(lines))
+            # reset it to change the next file
+            mod = False
 
 #===============================================================================
 # mute_logger (designed to work as with statement)
@@ -707,6 +709,10 @@ class TMP_directory(object):
 
     
     def __exit__(self, ctype, value, traceback ):
+        #True only for debugging:
+        if False and isinstance(value, Exception):
+            sprint("Directory %s not cleaned. This directory can be removed manually" % self.path)
+            return False
         try:
             shutil.rmtree(self.path)
         except OSError:

@@ -191,7 +191,14 @@ class AbstractRoutineBuilder(object):
     def apply_conjugation(self, pair=1):
         """ apply conjugation on self object"""
         
-        nb_fermion = len([1 for s in self.spins if s % 2 == 0])        
+        nb_fermion = len([1 for s in self.spins if s % 2 == 0])   
+        if isinstance(pair, tuple):
+            if len(pair) ==1 :
+                pair = pair[0]
+            else:
+                raise Exception
+        
+            
         if (pair > 1 or nb_fermion >2) and not self.conjg:
             # self.conjg avoif multiple check
             data = aloha_fct.get_fermion_flow(self.lorentz_expr, nb_fermion)
@@ -205,8 +212,8 @@ in presence of majorana particle/flow violation"""
         new_id = _conjugate_gap + old_id
         
         self.kernel_tag = set()
-        if not self.routine_kernel or isinstance(self.routine_kernel, str):
-            self.routine_kernel = eval(self.lorentz_expr)
+        if not self.routine_kernel or isinstance(self.routine_kernel, str):            
+            self.routine_kernel = eval(self.parse_expression(self.lorentz_expr))
         
         # We need to compute C Gamma^T C^-1 = C_ab G_cb (-1) C_cd 
         #                  = C_ac G_bc (-1) C_bd = C_ac G_bc C_db

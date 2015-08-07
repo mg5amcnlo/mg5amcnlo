@@ -372,7 +372,7 @@ C     arrays since these are not the most optimized sorting algorithms.
       INTEGER FUNCTION  FINDMINIMUM(X, MSTART, MEND)
       IMPLICIT  NONE
       INTEGER MAXNREF_EVALS
-      PARAMETER (MAXNREF_EVALS=30)
+      PARAMETER (MAXNREF_EVALS=100)
       INTEGER, DIMENSION(MAXNREF_EVALS), INTENT(IN) :: X
       INTEGER, INTENT(IN)							  :: MSTART, MEND
       INTEGER										  :: MINIMUM
@@ -414,7 +414,7 @@ C     arrays since these are not the most optimized sorting algorithms.
           SUBROUTINE  SORT(X, MSIZE)
           IMPLICIT  NONE
           INTEGER MAXNREF_EVALS
-          PARAMETER (MAXNREF_EVALS=30)
+          PARAMETER (MAXNREF_EVALS=100)
           REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(INOUT)  :: X
           INTEGER, INTENT(IN)							   :: MSIZE
           INTEGER										   :: I
@@ -436,7 +436,7 @@ C     arrays since these are not the most optimized sorting algorithms.
             REAL*8 FUNCTION  MEDIAN(X, N)
             IMPLICIT  NONE
             INTEGER MAXNREF_EVALS
-            PARAMETER (MAXNREF_EVALS=30)
+            PARAMETER (MAXNREF_EVALS=100)
             REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(IN)  :: X
             INTEGER, INTENT(IN)                			  :: N
             REAL*8, DIMENSION(MAXNREF_EVALS)              :: TEMP
@@ -503,9 +503,9 @@ C     arrays since these are not the most optimized sorting algorithms.
      $           //'                                                 '
      $           //'     .JMML.     '//CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//CHAR(27)/
-     $           /'[0m'//'v%(version)s (%(date)s), Ref: arXiv:1103.0621'
-     $           //'v2, arXiv:1405.0301'//CHAR(27)//'[32m'//'        '
-     $           //'     '//CHAR(27)//'[0m'//'       }'
+     $           /'[0m'//'v%(version)s (%(date)s), Ref: arXiv:1103.0621v'
+     $           //'2, arXiv:1405.0301'//CHAR(27)//'[32m'//'         '
+     $           //'       '//CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
      $           //'                                                 '
      $           //'                '//CHAR(27)//'[0m'//'       }'
