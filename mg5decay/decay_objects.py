@@ -1043,7 +1043,7 @@ class DecayParticle(base_objects.Particle):
                                     get_apx_decaywidth(model)
                             
                             self.get_channels(clevel, temp_c_o).append(temp_c)               
-            
+
             
             if hasattr(self, 'check_repeat_tag'):          
                 del self.check_repeat_tag
@@ -1073,7 +1073,7 @@ class DecayParticle(base_objects.Particle):
 
         # Copy the vertex to prevent the change of leg number
         new_vertex = copy.deepcopy(vertex)
-
+        
         # Setup the final leg number that is used in the channel.
         leg_num = max([l['number'] for l in sub_channel.get_final_legs()])
 
@@ -1105,8 +1105,7 @@ class DecayParticle(base_objects.Particle):
         new_vertex['legs'][-1]['number'] = \
             sub_channel.get_final_legs()[index]['number']
         new_vertex['legs'][0]['number'] = new_vertex['legs'][-1]['number']
-
-
+        
         # Combining vertex with channel
         new_channel = Channel()
 
@@ -1114,7 +1113,7 @@ class DecayParticle(base_objects.Particle):
         new_channel['vertices'].append(new_vertex)
 
         # Then extend the vertices of the old channel
-        # deepcopy is necessary to get new legs
+        # deepcopy is necessary to get new legs        
         new_channel['vertices'].extend(copy.deepcopy(sub_channel['vertices']))
 
 
@@ -1200,9 +1199,7 @@ class DecayParticle(base_objects.Particle):
                 # Do not include the first leg (initial id)
                 if sorted([l.get('id') for l in amplt['process']['legs'][1:]])\
                         == final_pid:
-                    #print 'before: ', channel.nice_string()
                     amplt.add_std_diagram(channel)
-                    #print 'after : ', channel.nice_string()
                     found = True
                     break
 
@@ -4668,6 +4665,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
         non_std_numbers = [(l.get('id'),l.get('number')) \
                                for l in new_dia.get_final_legs()]
 
+
         # initial leg
         non_std_numbers.append((new_dia.get_initial_id(model), 1))
         non_std_numbers.sort(id_num_cmp)
@@ -4685,7 +4683,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
         # Conversion from non_std_number to std_number
         converted_dict = dict([(num[1], std_numbers[i][1])\
                                    for i, num in enumerate(non_std_numbers)])
-
+        
         # 1st stage of converting all legs: change numbering without fixing
         # wrong number flows (e.g. number 3 2 > 3)
         all_numbers_goal = []
@@ -4696,26 +4694,24 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         # 2nd stage of converting all legs: fixing illegal number flows.
         # (except for the first one)
-        for vert in new_dia.get('vertices')[:-1]:
+        for pos,vert in enumerate(new_dia.get('vertices')[:-1]):
             lowest_num = vert.get('legs')[0]['number']
             for leg in vert.get('legs')[:-1]:
                 if leg['number'] < lowest_num:
                     lowest_num = leg['number']
 
             mother_leg = vert.get('legs')[-1]
-            old_id_number = (mother_leg['id'], mother_leg['number'])            
+            old_id_number = (mother_leg['id'], mother_leg['number'])
             if old_id_number[1] != lowest_num:
-
                 # Change the number of mother
                 mother_leg['number'] = lowest_num                
                 
                 # Find the leg associated with the mother of this vertex,
                 # and change its number to lowest number
                 found = False
-                for pre_vert in new_dia.get('vertices'):
+                for pre_vert in new_dia.get('vertices')[pos:]:
                     for child_leg in pre_vert['legs'][:-1]:
-                        if (child_leg['id'], child_leg['number'])\
-                                == old_id_number:
+                        if (child_leg['id'], child_leg['number']) == old_id_number:
                             child_leg['number'] = lowest_num
                             found = True
                             break
@@ -4726,7 +4722,6 @@ class DecayAmplitude(diagram_generation.Amplitude):
             vert['legs'][:-1] = sorted(vert['legs'][:-1],
                                        key=lambda leg: leg['id'],
                                        reverse = True)"""
-        
 
         new_dia.initial_setups(model, True)
 

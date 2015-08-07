@@ -377,7 +377,7 @@ class HelpToCmd(object):
         logger.info("     --nPS=<int> : Specify how many phase-space points should be tried to set up the filters.",'$MG:color:BLUE')
         
     def help_add_time_of_flight(self):
-        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--treshold=]")
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--threshold=]")
         logger.info('-- Add in the lhe files the information')
         logger.info('   of how long it takes to a particle to decay.')
         logger.info('   threshold option allows to change the minimal value required to')
@@ -1783,14 +1783,15 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         param_card = lhe.banner[begin_param+6:end_param].split('\n')
         param_card = check_param_card.ParamCard(param_card)
 
-        cst = 6.58211915e-25
+        cst = 6.58211915e-25 # hbar in GeV s
+        c = 299792458000 # speed of light in mm/s
         # Loop over all events
         for event in lhe:
             for particle in event:
                 id = particle.pid
                 width = param_card['decay'].get((abs(id),)).value
                 if width:
-                    vtim = random.expovariate(width/cst)
+                    vtim = c * random.expovariate(width/cst)
                     if vtim > threshold:
                         particle.vtim = vtim
             #write this modify event
@@ -2016,7 +2017,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.create_plot('parton')            
             self.exec_cmd('store_events', postcmd=False)            
             self.exec_cmd('reweight -from_cards', postcmd=False)            
-            self.exec_cmd('decay_events -from_cards', postcmd=False)            
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
+            if self.run_card['time_of_flight']>=0:
+                self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed    
             self.store_result()
@@ -2734,6 +2737,20 @@ Beware that this can be dangerous for local multicore runs.""")
         x_improve = gen_ximprove.gen_ximprove(self, refine_opt)
         # Load the run statistics from the survey
         survey_statistics = dict(self.results.get_detail('run_statistics'))
+        # Printout survey statistics
+        if __debug__ and survey_statistics:
+            globalstat = sum_html.RunStatistics()
+            logger.debug(" === Survey statistics summary ===")
+            for key, value in survey_statistics.items():
+                globalstat.aggregate_statistics(value)
+                level = 5
+                if value.has_warning():
+                    level = 10
+                logger.log(level, 
+                  value.nice_output(str('/'.join([key[0],'G%s'%key[1]]))).
+                                                      replace(' statistics',''))
+            logger.debug(globalstat.nice_output('combined', no_warning=True))
+                        
         if survey_statistics:
             x_improve.run_statistics = survey_statistics
         
@@ -3507,14 +3524,14 @@ Beware that this can be dangerous for local multicore runs.""")
             return 
         
         tag = self.run_card['run_tag']
-        self.update_status('storring files of Previous run', level=None,\
+        self.update_status('storring files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
             if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')):
                 misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))
         
         if 'pythia' in self.to_store:
-            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
+            self.update_status('Storing Pythia files of previous run', level='pythia', error=True)
             
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
@@ -4216,16 +4233,19 @@ Beware that this can be dangerous for local multicore runs.""")
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
-            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                switch['reweight'] = 'ON'
-            else:
-                switch['reweight'] = 'OFF'
+            if misc.which('f2py'):
+                if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                    switch['reweight'] = 'ON'
+                else:
+                    switch['reweight'] = 'OFF'
+            else: 
+                switch['reweight'] = 'Numpy python package not available.'
                  
 
 
         options = list(available_mode) + ['auto', 'done']
         for id, key in enumerate(switch_order):
-            if switch[key] != void:
+            if switch[key] not in [void, 'Numpy python package not available.']:
                 options += ['%s=%s' % (key, s) for s in ['ON','OFF']]
                 options.append(key)
         options.append('parton')    

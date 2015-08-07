@@ -2141,6 +2141,17 @@ class Vertex(PhysicsObject):
 
         return self.sorted_keys  #['id', 'legs']
 
+    def nice_string(self):
+        """return a nice string"""
+        
+        mystr = []
+        for leg in self['legs']:
+            mystr.append( str(leg['number']) + '(%s)' % str(leg['id']))
+        mystr = '(%s,id=%s ,obj_id:%s)' % (', '.join(mystr), self['id'], id(self))
+        
+        return(mystr)
+
+
     def get_s_channel_id(self, model, ninitial):
         """Returns the id for the last leg as an outgoing
         s-channel. Returns 0 if leg is t-channel, or if identity
@@ -2298,21 +2309,32 @@ class Diagram(PhysicsObject):
     def nice_string(self):
         """Returns a nicely formatted string of the diagram content."""
 
+        pass_sanity = True
         if self['vertices']:
             mystr = '('
             for vert in self['vertices']:
+                used_leg = [] 
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
                     mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
-
+                    used_leg.append(leg['number'])
+                if __debug__ and len(used_leg) != len(set(used_leg)):
+                    pass_sanity = False
+                    responsible = id(vert)
+                    
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
                 mystr = mystr + str(vert['legs'][-1]['number']) + '(%s)' % str(vert['legs'][-1]['id']) + ','
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
+                                
             mystr = mystr[:-1] + ')'
-            mystr += " (%s)" % ",".join(["%s=%d" % (key, self['orders'][key]) \
-                                     for key in sorted(self['orders'].keys())])
+            mystr += " (%s)" % (",".join(["%s=%d" % (key, self['orders'][key]) \
+                                     for key in sorted(self['orders'].keys())]))
+            
+            if not pass_sanity:
+                raise Exception, "invalid diagram: %s. vert_id: %s" % (mystr, responsible) 
+                
             return mystr
         else:
             return '()'
@@ -3396,6 +3418,10 @@ class ProcessDefinition(Process):
         """ Check that this process definition will yield a single process, as
         each multileg only has one leg"""
         
+        for process in self['decay_chains']:
+            if process.has_multiparticle_label():
+                return True
+            
         for mleg in self['legs']:
             if len(mleg['ids'])>1:
                 return True

@@ -354,6 +354,10 @@ class UFOMG5Converter(object):
             self.add_interaction(interaction_info, color_info)
 
         if self.perturbation_couplings:
+            try:
+                self.ufomodel.add_NLO()
+            except Exception, error:
+                pass 
             for interaction_info in self.ufomodel.all_CTvertices:
                 self.add_CTinteraction(interaction_info, color_info)
                     
@@ -454,11 +458,14 @@ class UFOMG5Converter(object):
                     particle.set(key,abs(value))
                     if value<0:
                         particle.set('ghost',True)
-                elif key == 'propagator' and value:
-                    if aloha.unitary_gauge:
-                        particle.set(key, str(value[0]))
-                    else: 
-                        particle.set(key, str(value[1]))
+                elif key == 'propagator':
+                    if value:
+                        if aloha.unitary_gauge:
+                            particle.set(key, str(value[0]))
+                        else: 
+                            particle.set(key, str(value[1]))
+                    else:
+                        particle.set(key, '')
                 else:
                     particle.set(key, value)    
             elif key == 'loop_particles':
@@ -1132,14 +1139,14 @@ class OrganizeModelExpression:
     def shorten_complex(self, matchobj):
         """add the short expression, and return the nice string associate"""
         
-        real = float(matchobj.group('real'))
-        imag = float(matchobj.group('imag'))
-        if real == 0 and imag ==1:
+        float_real = float(eval(matchobj.group('real')))
+        float_imag = float(eval(matchobj.group('imag')))
+        if float_real == 0 and float_imag ==1:
             new_param = base_objects.ModelVariable('complexi', 'complex(0,1)', 'complex')
             self.add_parameter(new_param)
             return 'complexi'
         else:
-            return 'complex(%s, %s)' % (real, imag)
+            return 'complex(%s, %s)' % (matchobj.group('real'), matchobj.group('imag'))
         
         
     def shorten_expo(self, matchobj):

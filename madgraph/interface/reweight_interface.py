@@ -51,6 +51,12 @@ logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
+# global to check which f2py module have been already loaded. (to avoid border effect)
+dir_to_f2py_free_mod = {}
+nb_f2py_module = 0 # each time the process/model is changed this number is modified to 
+                   # forced the python module to re-create an executable
+
+
 
 
 class ReweightInterface(extended_cmd.Cmd):
@@ -159,7 +165,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
         if '[' in process:
-            logger.warning("Do remember that the reweighting is performed at Leading Order. NLO precision is not guarantee.")
+            logger.warning("Remember that the reweighting is performed at Leading Order. NLO precision is not guarantee.")
 
         if not process:
             msg = 'Invalid proc_card information in the file (no generate line):\n %s' % self.banner['mg5proccard']
@@ -174,18 +180,22 @@ class ReweightInterface(extended_cmd.Cmd):
     def get_LO_definition_from_NLO(self, proc):
         """return the LO definitions of the process corresponding to the born/real"""
         
-        
+        # split the line definition with the part before and after the NLO tag
         process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-        commandline="add process %s --no_warning=duplicate;" % (process)
+        # add the part without any additional jet.
+        commandline="add process %s %s --no_warning=duplicate;" % (process, final)
         if not order:
+            #NO NLO tag => nothing to do actually return input
             return proc
         elif not order.startswith(('virt=','loonly=')):
+            # OK this a standard NLO process
             if '=' in order:
+                # get the type NLO QCD/QED/...
                 order = order.split('=',1)[1]
             # define the list of particles that are needed for the radiation
             pert = fks_common.find_pert_particles_interactions(self.model,
                                            pert_order = order)['soft_particles']
-            commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
+            commandline += "define pert_%s = %s;" % (order.replace(' ',''), ' '.join(map(str,pert)) )
             
             # check if we have to increase by one the born order
             if '%s=' % order in process:
@@ -200,10 +210,11 @@ class ReweightInterface(extended_cmd.Cmd):
             result = re.split('([/$@]|\w+=\w+)', process, 1)                    
             if len(result) ==3:
                 process, split, rest = result
-                commandline+="add process %s pert_%s %s%s --no_warning=duplicate;" % (process, order ,split, rest)
+                commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
             else:
-                commandline +='add process %s pert_%s  --no_warning=duplicate;' % (process,order)
+                commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
         else:
+            #just return the input. since this Madloop.
             return proc                                       
         logger.info(commandline)
         return commandline
@@ -272,18 +283,28 @@ class ReweightInterface(extended_cmd.Cmd):
     def do_change(self, line):
         """allow to define a second model/processes"""
         
+        global nb_f2py_module
+        
         args = self.split_arg(line)
         if len(args)<2:
             logger.critical("not enough argument (need at least two). Discard line")
         if args[0] == "model":
+            nb_f2py_module += 1 # tag to force the f2py to reload
             self.second_model = " ".join(args[1:])
+            if self.has_standalone_dir:
+                self.terminate_fortran_executables()
+                self.has_standalone_dir = False
         elif args[0] == "process":
+            nb_f2py_module += 1
+            if self.has_standalone_dir:
+                self.terminate_fortran_executables()
+                self.has_standalone_dir = False
             if args[-1] == "--add":
                 self.second_process.append(" ".join(args[1:-1]))
             else:
                 self.second_process = [" ".join(args[1:])]
         elif args[0] == "output":
-            if args[1] in ['default', '2.0']:
+            if args[1] in ['default', '2.0', 'unweight']:
                 self.output_type = args[1]
         elif args[0] == "helicity":
             self.helicity_reweighting = banner.ConfigFile.format_variable(args[1], bool, "helicity")
@@ -345,7 +366,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup type=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'mg_reweight_(?P<id>\d+)\'>(?P<info>[^<>]*)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'mg_reweight_(?P<id>\d+)\'>(?P<info>[^<]*)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 maxid = 0
                 for i, diff in mg_rwgt_info:
@@ -362,9 +383,7 @@ class ReweightInterface(extended_cmd.Cmd):
             header_rwgt_other = ''
             mg_rwgt_info = []
             rewgtid = 1
-        
 
-        
         
         # add the reweighting in the banner information:
         #starts by computing the difference in the cards.
@@ -375,7 +394,14 @@ class ReweightInterface(extended_cmd.Cmd):
             new_param =  check_param_card.ParamCard(s_new.splitlines())
             card_diff = old_param.create_diff(new_param)
             if card_diff == '' and not self.second_process:
-                raise self.InvalidCmd, 'original card and new card are identical'
+                logger.warning(' REWEIGHTING: original card and new card are identical. Is this really the run that you expect?')
+                #raise self.InvalidCmd, 'original card and new card are identical'
+            try:
+                if old_param['sminputs'].get(3)- new_param['sminputs'].get(3) > 1e-3 * new_param['sminputs'].get(3):
+                    logger.warning("We found different value of alpha_s. Note that the value of alpha_s used is the one associate with the event and not the one from the cards.")
+            except Exception, error:
+                logger.debug("error in check of alphas: %s" % str(error))
+                pass #this is a security                
             if not self.second_process:
                 mg_rwgt_info.append((str(rewgtid), card_diff))
             else:
@@ -420,8 +446,6 @@ class ReweightInterface(extended_cmd.Cmd):
             self.run_card['run_tag'] = 'reweight_%s' % rewgtid
             new_banner['slha'] = s_new   
             del new_banner['initrwgt']
-            #ensure that original banner is kept untouched
-            assert new_banner['slha'] != self.banner['slha'] or self.second_process
             assert 'initrwgt' in self.banner 
             ff = open(pjoin(self.mother.me_dir,'Events',self.mother.run_name, '%s_%s_banner.txt' % \
                           (self.mother.run_name, self.run_card['run_tag'])),'w') 
@@ -436,6 +460,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
+            misc.sprint("using", self.lhe_input.name)
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
 #        Multicore option not really stable -> not use it
@@ -488,6 +513,12 @@ class ReweightInterface(extended_cmd.Cmd):
             for t in multicore.demons:
                 cross += t.local.cross
                 
+        # check normalisation of the events:
+        if 'event_norm' in self.run_card:
+            if self.run_card['event_norm'] == 'average':
+                cross /= event_nb+1
+
+                
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
         
@@ -536,12 +567,27 @@ class ReweightInterface(extended_cmd.Cmd):
                 #self.run_card['run_tag'] = self.run_card['run_tag'][9:]
                 #self.mother.run_name = old_name
         self.lhe_input.close()
-        if self.output_type == "default" and self.mother:
-            files.mv(output.name, self.lhe_input.name)
-        elif self.mother:
-            files.mv(output2.name, pjoin(self.mother.me_dir, 'Events', run_name, 'events.lhe'))
+        if not self.mother or self.output_type != "default" :
+            target = pjoin(self.mother.me_dir, 'Events', run_name, 'events.lhe')
         else:
-            files.mv(output2.name, self.lhe_input.name)      
+            target = self.lhe_input.name
+        
+        if self.output_type == "default":
+            files.mv(output.name, target)
+        elif self.output_type == "unweight":
+            output2.close()
+            lhe = lhe_parser.EventFile(output2.name)
+            nb_event = lhe.unweight(target)
+            if self.mother and  hasattr(self.mother, 'results'):
+                results = self.mother.results
+                results.add_detail('nb_event', nb_event)
+                results.current.parton.append('lhe')
+                
+        else:
+            files.mv(output2.name, self.lhe_input.name)     
+            if self.mother and  hasattr(self.mother, 'results'):
+                results = self.mother.results
+                results.current.parton.append('lhe')   
 
         logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         logger.info('new cross-section is : %g pb (indicative error: %g pb)' % (cross,error))
@@ -610,6 +656,16 @@ class ReweightInterface(extended_cmd.Cmd):
                 new_p[j][i] = x
         return new_p
     
+    @staticmethod
+    def rename_f2py_lib(Pdir, tag):
+        if tag == 2:
+            return
+        if os.path.exists(pjoin(Pdir, 'matrix%spy.so' % tag)):
+            return
+        else:
+            open(pjoin(Pdir, 'matrix%spy.so' % tag),'w').write(open(pjoin(Pdir, 'matrix2py.so')
+                                        ).read().replace('matrix2py', 'matrix%spy' % tag))
+    
     def calculate_matrix_element(self, event, hypp_id, space):
         """routine to return the matrix element"""
 
@@ -623,7 +679,7 @@ class ReweightInterface(extended_cmd.Cmd):
         run_id = (tag, hypp_id)
 
 
-
+        assert space == self
         start = False
         if run_id in space.calculator:
             external = space.calculator[run_id]
@@ -633,22 +689,33 @@ class ReweightInterface(extended_cmd.Cmd):
             if self.me_dir not in sys.path:
                 sys.path.insert(0,self.me_dir)
             Pname = os.path.basename(Pdir)
-            if hypp_id == 0:         
+            if hypp_id == 0:
+                if (Pdir, 0) not in dir_to_f2py_free_mod:
+                    metag = 1
+                    dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
+                else:
+                    metag, old_module = dir_to_f2py_free_mod[(Pdir,0)]
+                    if old_module != nb_f2py_module:
+                        metag += 1
+                        dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
+                        
                 misc.compile(['matrix2py.so'], cwd=Pdir)
-                mymod = __import__('rw_me.SubProcesses.%s.matrix2py' % Pname, globals(), locals(), [],-1)
+                
+                self.rename_f2py_lib(Pdir, 2*metag)
+                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag), globals(), locals(), [],-1)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = P.matrix2py
+                mymod = getattr(P, 'matrix%spy' % (2*metag))
                 with misc.chdir(Pdir):
                     mymod.initialise('param_card_orig.dat')
             if hypp_id == 1:
-                if not os.path.exists(pjoin(Pdir, 'matrix3py.so')):
-                    open(pjoin(Pdir, 'matrix3py.so'),'w').write(open(pjoin(Pdir, 'matrix2py.so')
-                                        ).read().replace('matrix2py', 'matrix3py'))
-                mymod = __import__('rw_me.SubProcesses.%s.matrix3py' % Pname, globals(), locals(), [],-1)
+                #incorrect line
+                metag = dir_to_f2py_free_mod[(Pdir,0)][0]
+                self.rename_f2py_lib(Pdir, 2*metag+1)
+                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag+1), globals(), locals(), [],-1)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = P.matrix3py
+                mymod = getattr(P, 'matrix%spy' % (2*metag+1))
                 with misc.chdir(Pdir):
                     mymod.initialise('param_card.dat') 
             space.calculator[run_id] = mymod.get_me
@@ -661,11 +728,21 @@ class ReweightInterface(extended_cmd.Cmd):
             assert hypp_id == 1
             Pname = os.path.basename(Pdir)
             misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
+            if (Pdir, 1) not in dir_to_f2py_free_mod:
+                metag = 1
+                dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
+            else:
+                metag, old_module = dir_to_f2py_free_mod[(Pdir,1)]
+                if old_module != nb_f2py_module:
+                    metag += 1
+                    dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
+            self.rename_f2py_lib(Pdir, metag)
             with misc.chdir(Pdir):
-                mymod = __import__("rw_me_second.SubProcesses.%s.matrix2py" % Pname)
+                mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
+                reload(mymod)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = P.matrix2py
+                mymod = getattr(P, 'matrix%spy' % metag)
                 mymod.initialise('param_card.dat')              
             space.calculator[run_id] = mymod.get_me
             external = space.calculator[run_id]                
@@ -859,7 +936,7 @@ class ReweightInterface(extended_cmd.Cmd):
             use_mgdefault= True
             complex_mass = False
             if ' ' in self.second_model:
-                args = self.second_model
+                args = self.second_model.split()
                 if '--modelname' in args:
                     use_mgdefault = False
                 model_name = args[0]
@@ -874,6 +951,8 @@ class ReweightInterface(extended_cmd.Cmd):
                     modelpath = pjoin(os.path.dirname(modelpath), mgcmd._curr_model['name'])
                 
             commandline="import model %s " % modelpath
+            if not use_mgdefault:
+                commandline += ' -modelname '
             mgcmd.exec_cmd(commandline)
             
         # 2. compute the production matrix element -----------------------------
@@ -895,7 +974,7 @@ class ReweightInterface(extended_cmd.Cmd):
             elif 'sqrvirt' in proc:
                 commandline+="add process %s ;" % proc
             else:
-                raise self.InvalidCmd('NLO processes can\'t be reweight (for Loop induce use [sqrvirt =]')
+                raise self.InvalidCmd('NLO processes can\'t be reweight (for Loop induced reweighting use [sqrvirt =])')
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)

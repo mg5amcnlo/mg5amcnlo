@@ -545,7 +545,6 @@ class Amplitude(base_objects.PhysicsObject):
         process = self.get('process')
         model = process.get('model')
         legs = process.get('legs')
-
         # Make sure orders is the minimum of orders and overall_orders
         for key in process.get('overall_orders').keys():
             try:
@@ -757,7 +756,7 @@ class Amplitude(base_objects.PhysicsObject):
                             break
                     else:
                         newres.append(diagram)
-                newres = base_objects.DiagramList(newres)
+                res = base_objects.DiagramList(newres)
                 
 
         # Mark forbidden (onshell) s-channel propagators, to forbid onshell

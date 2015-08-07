@@ -425,6 +425,10 @@ class gensym(object):
             fsock  = misc.mult_try_open(pjoin(path, 'grid_information'))
             grid_calculator.add_one_grid_information(fsock)
             fsock.close()
+            os.remove(pjoin(path, 'results.dat'))
+            #os.remove(pjoin(path, 'grid_information'))
+            
+            
              
         #2. combine the information about the total crossection / error
         # start by keep the interation in memory
@@ -482,7 +486,13 @@ For offline investigation, the problematic discarded events are stored in:
                         # Keep only the event with a maximum weight, as it surely
                         # is the problematic one.
                         evtRecord = open(pjoin(discardedPath,'discarded_G%s.dat'%G),'a')
-                        evtRecord.write('\n'+str(max(lhe_file,key=lambda evt:abs(evt.wgt))))
+                        lhe_file.seek(0) #rewind the file
+                        try:
+                            evtRecord.write('\n'+str(max(lhe_file,key=lambda evt:abs(evt.wgt))))
+                        except Exception:
+                            #something wrong write the full file.
+                            lhe_file.close()
+                            evtRecord.write(pjoin(gPath,'events.lhe').read())
                         evtRecord.close()
                 
                 return self.combine_grid(Pdir, G, step, exclude_sub_jobs)
@@ -529,9 +539,12 @@ For offline investigation, the problematic discarded events are stored in:
 
         # Clean up grid_information to avoid border effects in case of a crash
         for i in range(self.splitted_for_dir(Pdir, G)):
-            path = pjoin(Pdir, "G%s_%s" % (G, i+1)) 
-            os.remove(pjoin(path, 'grid_information'))
-
+            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            try: 
+                os.remove(pjoin(path, 'grid_information'))
+            except OSError, oneerror:
+                if oneerror.errno != 2:
+                    raise
         return grid_calculator, cross, error
 
     def warnings_from_statistics(self,G,stats):
@@ -1265,6 +1278,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
             
             #1. Compute the number of points are needed to reach target
             needed_event = goal_lum*C.get('axsec')
+            if needed_event == 0:
+                continue
             #2. estimate how many points we need in each iteration
             if C.get('nunwgt') > 0:
                 nevents =  needed_event * (C.get('nevents') / C.get('nunwgt'))
@@ -1281,7 +1296,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
                     nevents = self.max_event_in_iter * nb_split
 
             if nevents > self.max_splitting*self.max_event_in_iter:
-                logger.warning("Channel %s has a very low efficiency of unweighting. Might not be possible to reach target" % C.name)
+                logger.warning("Channel %s/%s has a very low efficiency of unweighting. Might not be possible to reach target" % \
+                                                (C.name, C.parent_name))
                 nevents = self.max_event_in_iter * self.max_splitting 
                 
             total_ps_points += nevents 
@@ -1313,7 +1329,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 submit_ps = max(submit_ps, self.min_event_in_iter)
             self.create_resubmit_one_iter(C.parent_name, C.name[1:], submit_ps, nb_job, step=0)
             needed_event = goal_lum*C.get('xsec')
-            logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_job, submit_ps)
+            logger.debug("%s/%s : need %s event. Need %s split job of %s points", C.parent_name, C.name, needed_event, nb_job, submit_ps)
             
         
     def combine_iteration(self, Pdir, G, step):
@@ -1330,7 +1346,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 
         # Check how many events are going to be kept after un-weighting.
         needed_event = cross * self.goal_lum
-        
+        if needed_event == 0:
+            return 0
         # check that the number of events requested is not higher than the actual
         #  total number of events to generate.
         if self.err_goal >=1:
@@ -1340,7 +1357,15 @@ class gen_ximprove_share(gen_ximprove, gensym):
         if (Pdir, G) in self.generated_events:
             old_nunwgt, old_maxwgt = self.generated_events[(Pdir, G)]
         else:
-            old_nunwgt, old_maxwgt = 0, 0  
+            old_nunwgt, old_maxwgt = 0, 0
+        
+        if old_nunwgt == 0 and os.path.exists(pjoin(Pdir,"G%s" % G, "events.lhe")):
+            # possible for second refine.
+            lhe = lhe_parser.EventFile(pjoin(Pdir,"G%s" % G, "events.lhe"))
+            old_nunwgt = lhe.unweight(None, trunc_error=0.005, log_level=0)
+            old_maxwgt = lhe.max_wgt
+            
+              
 
         maxwgt = max(grid_calculator.get_max_wgt(), old_maxwgt)
         new_evt = grid_calculator.get_nunwgt(maxwgt)
@@ -1351,13 +1376,17 @@ class gen_ximprove_share(gen_ximprove, gensym):
         # check the number of event for this iteration alone
         one_iter_nb_event = grid_calculator.get_nunwgt()
         drop_previous_iteration = False
-        if one_iter_nb_event > nunwgt and step < self.min_iter + 1:
+        # compare the number of events to generate if we discard the previous iteration
+        n_target_one_iter = (needed_event-one_iter_nb_event) / ( one_iter_nb_event/ sum([R.nevents for R in grid_calculator.results])) 
+        n_target_combined = (needed_event-nunwgt) / efficiency
+        if n_target_one_iter < n_target_combined:
             # the last iteration alone has more event that the combine iteration.
             # it is therefore interesting to drop previous iteration.          
             drop_previous_iteration = True
             nunwgt = one_iter_nb_event
             maxwgt = grid_calculator.get_max_wgt()
             new_evt = nunwgt
+            efficiency = ( one_iter_nb_event/ sum([R.nevents for R in grid_calculator.results])) 
             
         try:
             if drop_previous_iteration:
@@ -1393,6 +1422,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
 
         nb_split_before = len(grid_calculator.results)
         nevents = grid_calculator.results[0].nevents
+        if nevents == 0: # possible if some integral returns 0
+            nevents = max(g.nevents for g in grid_calculator.results)
         
         need_ps_point = (needed_event - nunwgt)/(efficiency+1e-99)
         need_job = need_ps_point // nevents + 1        

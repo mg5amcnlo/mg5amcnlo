@@ -1341,8 +1341,11 @@
       MW=Decay_MW
       MH=Decay_MH
       MZ=Decay_MZ
-      GW=SMWWidth(1,1)
-      GZ=SMZWidth(1,1)
+      !GW=SMWWidth(1,1)
+      !GZ=SMZWidth(1,1)
+      ! use the LO width to get the correct finite-width effect
+      GW=SMWWidth(0,0)
+      GZ=SMZWidth(0,0)
       res=(0.00003149563909492138*
      -    EL**4*MZ**2*
      -    (GZ**2 + MZ**2)*

@@ -93,7 +93,7 @@ class Particle(object):
     
     def __str__(self):
         """string representing the particles"""
-        return " %8d %2d %4d %4d %4d %4d %+13.7e %+13.7e %+13.7e %14.8e %14.8e %10.4e %10.4e" \
+        return " %8d %2d %4d %4d %4d %4d %+13.10e %+13.10e %+13.10e %14.10e %14.10e %10.4e %10.4e" \
             % (self.pid, 
                self.status,
                self.mother1.event_id+1 if self.mother1 else 0,
@@ -150,7 +150,14 @@ class EventFile(object):
     def __new__(self, path, mode='r', *args, **opt):
 
         if  path.endswith(".gz"):
-            return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
+            try:
+                return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
+            except IOError, error:
+                raise
+            except Exception, error:
+                if mode == 'r':
+                    misc.gunzip(path)
+                return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
         else:
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
     
@@ -168,7 +175,7 @@ class EventFile(object):
                     self.seek(0)
                     self.banner = ''
                     break 
-                if "<event>" in line.lower():
+                if "<event" in line.lower():
                     self.seek(0)
                     self.banner = ''
                     break                     
@@ -276,6 +283,7 @@ class EventFile(object):
             def weight(event):
                 return event.wgt
             get_wgt  = weight
+            unwgt_name = "central weight"
         elif isinstance(get_wgt, str):
             unwgt_name =get_wgt 
             def get_wgt(event):
@@ -364,6 +372,7 @@ class EventFile(object):
                             break   
                         else:
                             break
+                        
             #create output file (here since we are sure that we have to rewrite it)
             if outputpath:
                 outfile = EventFile(outputpath, "w")
@@ -395,16 +404,16 @@ class EventFile(object):
                     event.wgt = -1 * max(abs(wgt), max_wgt)
                     if abs(wgt) > max_wgt:
                         trunc_cross += abs(wgt) - max_wgt
-                    if event_target ==0 or nb_keep <= event_target: 
+                    if outputpath and (event_target ==0 or nb_keep <= event_target):
                         outfile.write(str(event))
             
             if event_target and nb_keep > event_target:
-                if event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
+                if not outputpath:
+                    #no outputpath define -> wants only the nb of unweighted events
+                    continue
+                elif event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
                     outfile.close()
 #                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
-                    continue
-                elif not outputpath:
-                    #no outputpath define -> wants only the nb of unweighted events
                     continue
                 else:
                     outfile.write("</LesHouchesEvents>\n")
@@ -451,7 +460,7 @@ class EventFile(object):
             shutil.move(tmpname, outputpath)
             
      
-     
+        self.max_wgt = max_wgt
         return nb_keep
     
     def apply_fct_on_event(self, *fcts, **opts):
@@ -511,7 +520,7 @@ class MultiEventFile(EventFile):
         if start_list:
             for p in start_list:
                 self.add(p)
-        self.configure = False
+        self._configure = False
         
     def add(self, path, cross, error, across):
         """ add a file to the pool, across allow to reweight the sum of weight 
@@ -532,14 +541,14 @@ class MultiEventFile(EventFile):
         self.error.append(error)
         self.scales.append(1)
         self.files.append(obj)
-        self.configure = False
+        self._configure = False
         
     def __iter__(self):
         return self
     
     def next(self):
 
-        if not self.configure:
+        if not self._configure:
             self.configure()
 
         remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
@@ -670,15 +679,15 @@ class MultiEventFile(EventFile):
         nb_keep = max(20, int(total_event*trunc_error*10))
         all_wgt = all_wgt[-nb_keep:]  
         self.seek(0)
-        self.configure = True
+        self._configure = True
         return all_wgt, sum_cross, total_event
     
     def configure(self):
         
-        self.configure = True
+        self._configure = True
         for i,f in enumerate(self.files):
-            self.initial_nb_events = len(f)
-    
+            self.initial_nb_events[i] = len(f)
+        self.total_event_in_files = sum(self.initial_nb_events)
     
     def __len__(self):
         
@@ -758,6 +767,13 @@ class Event(list):
             if line.startswith('#'):
                 self.comment += '%s\n' % line
                 continue
+            if "<event" in line:
+                continue
+            
+            if 'first' == status:
+                if '<rwgt>' in line:
+                    status = 'tag'
+                    
             if 'first' == status:
                 self.assign_scale_line(line)
                 status = 'part' 
@@ -779,9 +795,17 @@ class Event(list):
                     Event.warning_order = False
                                    
             if particle.mother1:
-                particle.mother1 = self[int(particle.mother1) -1]
+                try:
+                    particle.mother1 = self[int(particle.mother1) -1]
+                except Exception:
+                    logger.warning("WRONG MOTHER INFO %s", self)
+                    particle.mother1 = 0
             if particle.mother2:
-                particle.mother2 = self[int(particle.mother2) -1]
+                try:
+                    particle.mother2 = self[int(particle.mother2) -1]
+                except Exception:
+                    logger.warning("WRONG MOTHER INFO %s", self)
+                    particle.mother2 = 0
 
    
     def parse_reweight(self):
@@ -816,7 +840,7 @@ class Event(list):
         pattern  = re.compile("<scales\s|</scales>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
-            return
+            return []
         else:
             tmp = {}
             start,content, end = data
@@ -830,12 +854,8 @@ class Event(list):
                 
         return self.matched_scale_data
             
-            
-        misc.sprint(content)
-            
-        # content should be 
-        #<scales pt_clust_1="13000.00000" pt_clust_2="48.99743"></scales>
-        
+
+
 
 
     def add_decay_to_particle(self, position, decay_event):
@@ -1288,6 +1308,17 @@ class Event(list):
         return out
 
     
+    
+    def get_ht_scale(self, prefactor=1):
+        
+        scale = 0 
+        for particle in self:
+            if particle.status != 1:
+                continue 
+            scale += particle.mass**2 + particle.momentum.pt**2
+    
+        return prefactor * scale
+    
     def get_momenta_str(self, get_order, allow_reversed=True):
         """return the momenta str in the order asked for"""
         
@@ -1298,6 +1329,52 @@ class Event(list):
         out = [format_line % one for one in out]
         out = ''.join(out).replace('e','d')
         return out    
+
+class WeightFile(EventFile):
+    """A class to allow to read both gzip and not gzip file.
+       containing only weight from pythia --generated by SysCalc"""
+
+    def __new__(self, path, mode='r', *args, **opt):
+        if  path.endswith(".gz"):
+            try:
+                return gzip.GzipFile.__new__(WeightFileGzip, path, mode, *args, **opt)
+            except IOError, error:
+                raise
+            except Exception, error:
+                if mode == 'r':
+                    misc.gunzip(path)
+                return file.__new__(WeightFileNoGzip, path[:-3], mode, *args, **opt)
+        else:
+            return file.__new__(WeightFileNoGzip, path, mode, *args, **opt)
+    
+    
+    def __init__(self, path, mode='r', *args, **opt):
+        """open file and read the banner [if in read mode]"""
+        
+        super(EventFile, self).__init__(path, mode, *args, **opt)
+        self.banner = ''
+        if mode == 'r':
+            line = ''
+            while '</header>' not in line.lower():
+                try:
+                    line  = super(EventFile, self).next()
+                except StopIteration:
+                    self.seek(0)
+                    self.banner = ''
+                    break 
+                if "<event" in line.lower():
+                    self.seek(0)
+                    self.banner = ''
+                    break                     
+
+                self.banner += line
+
+
+class WeightFileGzip(WeightFile, EventFileGzip):
+    pass
+
+class WeightFileNoGzip(WeightFile, EventFileNoGzip):
+    pass
 
 
 class FourMomentum(object):

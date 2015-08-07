@@ -626,8 +626,8 @@ void Sigma_sm_qqx_qqx::setIdColAcol()
   setId(id1, id2, id3, id4); 
   // Pick color flow
   int ncolor[1] = {2}; 
-  if(id1 == 2 && id2 == -2 && id3 == 2 && id4 == -2 || id1 == 4 && id2 == -4 &&
-      id3 == 4 && id4 == -4)
+  if((id1 == 2 && id2 == -2 && id3 == 2 && id4 == -2) || (id1 == 4 && id2 == -4
+      && id3 == 4 && id4 == -4))
   {
     vector<double> probs; 
     double sum = jamp2[0][0] + jamp2[0][1]; 
@@ -939,7 +939,7 @@ void Sigma_sm_qq_six::setIdColAcol()
   setId(id1, id2, id3); 
   // Pick color flow
   int ncolor[1] = {1}; 
-  if(id1 == 2 && id2 == 2 && id3 == 6000001)
+  if((id1 == 2 && id2 == 2 && id3 == 6000001))
   {
     vector<double> probs; 
     double sum = jamp2[0][0]; 
