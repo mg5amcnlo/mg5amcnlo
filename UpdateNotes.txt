@@ -12,6 +12,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM: Fix a crash introduce in 2.3.0 when running sequentially in the same directory (thanks Gauthier)
         OM: Improve aloha in the case of some expression reduces to pure float.
         OM: In MadSpin, allow to specify cut for the 1>N decay in spinmode=none.
+	RF: Fixed a bug that gave bogus results for NLO runs when using an internal PDF which is not
+            NNPDF (like for the old cteq_6m, etc).
 
 2.3.0  
      OM+VH: Automation of event generation for loop-induced processes.
