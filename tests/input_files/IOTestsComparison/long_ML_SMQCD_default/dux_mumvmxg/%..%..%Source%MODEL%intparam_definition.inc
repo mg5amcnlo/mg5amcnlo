@@ -38,13 +38,11 @@ C
 
         MDL_MH__EXP__2 = MDL_MH**2
 
-        MDL_NCOL__EXP__2_M_1_0 = MDL_NCOL**2-1.000000D+00
+        MDL_NCOL__EXP__2 = MDL_NCOL**2
 
         MDL_MB__EXP__2 = MDL_MB**2
 
         MDL_MT__EXP__2 = MDL_MT**2
-
-        MDL_NCOL__EXP__2_M_1 = MDL_NCOL**2-1.000000D+00
 
         MDL_AEW = 1.000000D+00/AEWM1
 
@@ -157,8 +155,8 @@ C
       MDL_G__EXP__2 = G**2
 
       MDL_R2MIXEDFACTOR_FIN_ = -(MDL_G__EXP__2*(1.000000D+00+MDL_LHV)
-     $ *(MDL_NCOL__EXP__2_M_1_0))/(2.000000D+00*MDL_NCOL*1.600000D
-     $ +01*PI**2)
+     $ *(MDL_NCOL__EXP__2-1.000000D+00))/(2.000000D+00*MDL_NCOL
+     $ *1.600000D+01*PI**2)
 
       MDL_G_UVG_1EPS_ = -((MDL_G__EXP__2)/(2.000000D+00*4.800000D
      $ +01*PI**2))*1.100000D+01*MDL_CA

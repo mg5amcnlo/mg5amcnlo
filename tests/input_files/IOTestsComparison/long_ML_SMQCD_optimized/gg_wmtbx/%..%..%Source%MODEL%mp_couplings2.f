@@ -48,8 +48,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       MP__R2_3GG = MP__MDL_NCOL*MP__MDL_G__EXP__3/(4.800000E+01_16
      $ *MP__PI**2)*(7.000000E+00_16/4.000000E+00_16+MP__MDL_LHV)
       MP__R2_GQQ = -MP__MDL_COMPLEXI*MP__MDL_G__EXP__3/(1.600000E
-     $ +01_16*MP__PI**2)*((MP__MDL_NCOL__EXP__2_M_1)/(2.000000E
-     $ +00_16*MP__MDL_NCOL))*(1.000000E+00_16+MP__MDL_LHV)
+     $ +01_16*MP__PI**2)*((MP__MDL_NCOL__EXP__2-1.000000E+00_16)
+     $ /(2.000000E+00_16*MP__MDL_NCOL))*(1.000000E+00_16+MP__MDL_LHV)
       MP__R2_GGQ = (2.000000E+00_16)*MP__MDL_COMPLEXI*MP__MDL_G__EXP__2
      $ /(4.800000E+01_16*MP__PI**2)
       MP__R2_GGB = (2.000000E+00_16)*MP__MDL_COMPLEXI*MP__MDL_G__EXP__2
@@ -64,12 +64,12 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       MP__R2_GGG_2 = -(2.000000E+00_16)*MP__MDL_COMPLEXI*MP__MDL_G__EXP
      $ __2*MP__MDL_NCOL/(4.800000E+01_16*MP__PI**2)*MP__MDL_LHV
       MP__R2_QQQ = MP__MDL_LHV*MP__MDL_COMPLEXI*MP__MDL_G__EXP__2
-     $ *(MP__MDL_NCOL__EXP__2_M_1)/(3.200000E+01_16*MP__PI**2
-     $ *MP__MDL_NCOL)
+     $ *(MP__MDL_NCOL__EXP__2-1.000000E+00_16)/(3.200000E+01_16*MP__PI
+     $ **2*MP__MDL_NCOL)
       MP__R2_QQB = MP__MDL_LHV*MP__MDL_COMPLEXI*MP__MDL_G__EXP__2
-     $ *(MP__MDL_NCOL__EXP__2_M_1)*(2.000000E+00_16*MP__MDL_MB)
-     $ /(3.200000E+01_16*MP__PI**2*MP__MDL_NCOL)
+     $ *(MP__MDL_NCOL__EXP__2-1.000000E+00_16)*(2.000000E+00_16
+     $ *MP__MDL_MB)/(3.200000E+01_16*MP__PI**2*MP__MDL_NCOL)
       MP__R2_QQT = MP__MDL_LHV*MP__MDL_COMPLEXI*MP__MDL_G__EXP__2
-     $ *(MP__MDL_NCOL__EXP__2_M_1)*(2.000000E+00_16*MP__MDL_MT)
-     $ /(3.200000E+01_16*MP__PI**2*MP__MDL_NCOL)
+     $ *(MP__MDL_NCOL__EXP__2-1.000000E+00_16)*(2.000000E+00_16
+     $ *MP__MDL_MT)/(3.200000E+01_16*MP__PI**2*MP__MDL_NCOL)
       END

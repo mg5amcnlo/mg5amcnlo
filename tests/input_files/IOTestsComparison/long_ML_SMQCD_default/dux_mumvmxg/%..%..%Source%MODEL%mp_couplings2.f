@@ -29,11 +29,11 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       MP__GC_4 = -MP__G
       MP__GC_5 = MP__MDL_COMPLEXI*MP__G
       MP__R2_GQQ = -MP__MDL_COMPLEXI*MP__MDL_G__EXP__3/(1.600000E
-     $ +01_16*MP__PI**2)*((MP__MDL_NCOL__EXP__2_M_1)/(2.000000E
-     $ +00_16*MP__MDL_NCOL))*(1.000000E+00_16+MP__MDL_LHV)
+     $ +01_16*MP__PI**2)*((MP__MDL_NCOL__EXP__2-1.000000E+00_16)
+     $ /(2.000000E+00_16*MP__MDL_NCOL))*(1.000000E+00_16+MP__MDL_LHV)
       MP__R2_QQQ = MP__MDL_LHV*MP__MDL_COMPLEXI*MP__MDL_G__EXP__2
-     $ *(MP__MDL_NCOL__EXP__2_M_1)/(3.200000E+01_16*MP__PI**2
-     $ *MP__MDL_NCOL)
+     $ *(MP__MDL_NCOL__EXP__2-1.000000E+00_16)/(3.200000E+01_16*MP__PI
+     $ **2*MP__MDL_NCOL)
       MP__UV_GQQG_1EPS = MP__MDL_COMPLEXI*MP__MDL_G_UVG_1EPS_*MP__G
       MP__UV_GQQQ_1EPS = MP__MDL_COMPLEXI*MP__MDL_G_UVQ_1EPS_*MP__G
       MP__UVWFCT_G_2_1EPS = MP_COND(CMPLX(MP__MDL_MT,KIND=16)

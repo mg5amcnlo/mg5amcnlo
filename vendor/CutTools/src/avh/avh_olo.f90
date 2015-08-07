@@ -545,7 +545,7 @@ contains
   character(ndecim(prcpar)+nxtr+novh+1) :: cc
   character(10) :: aa,bb
   integer :: ndec
-  real(kindr2) :: xx     
+  double precision :: xx     
   xx = xx_in
   if (present(ndec_in)) then ;ndec=ndec_in
                         else ;ndec=ndecim(prcpar)+nxtr

@@ -39,13 +39,11 @@ C
 
         MP__MDL_MH__EXP__2 = MP__MDL_MH**2
 
-        MP__MDL_NCOL__EXP__2_M_1_0 = MP__MDL_NCOL**2-1.000000E+00_16
+        MP__MDL_NCOL__EXP__2 = MP__MDL_NCOL**2
 
         MP__MDL_MB__EXP__2 = MP__MDL_MB**2
 
         MP__MDL_MT__EXP__2 = MP__MDL_MT**2
-
-        MP__MDL_NCOL__EXP__2_M_1 = MP__MDL_NCOL**2-1.000000E+00_16
 
         MP__MDL_AEW = 1.000000E+00_16/MP__AEWM1
 

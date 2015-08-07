@@ -1188,7 +1188,7 @@ class OrganizeModelExpression:
     
     # regular expression to shorten the expressions
     complex_number = re.compile(r'''complex\((?P<real>[^,\(\)]+),(?P<imag>[^,\(\)]+)\)''')
-    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>[\d.+-]+)''')
+    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>[+-]?[\d.]+)''')
     cmath_expr = re.compile(r'''cmath.(?P<operation>\w+)\((?P<expr>\w+)\)''')
     #operation is usualy sqrt / sin / cos / tan
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')

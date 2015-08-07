@@ -38,13 +38,11 @@ C
 
         MDL_MH__EXP__2 = MDL_MH**2
 
-        MDL_NCOL__EXP__2_M_1_0 = MDL_NCOL**2-1.000000D+00
+        MDL_NCOL__EXP__2 = MDL_NCOL**2
 
         MDL_MB__EXP__2 = MDL_MB**2
 
         MDL_MT__EXP__2 = MDL_MT**2
-
-        MDL_NCOL__EXP__2_M_1 = MDL_NCOL**2-1.000000D+00
 
         MDL_AEW = 1.000000D+00/AEWM1
 
