@@ -14,6 +14,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM: In MadSpin, allow to specify cut for the 1>N decay in spinmode=none.
 	RF: Fixed a bug that gave bogus results for NLO runs when using an internal PDF which is not
             NNPDF (like for the old cteq_6m, etc).
+	RF: Fixed a bug in the PDF combination in the HwU histograms: there was no consistent use if Hessian
+            and Gaussian approaches for MSTW/CTEQ and NNPDF, respectively.
 
 2.3.0  
      OM+VH: Automation of event generation for loop-induced processes.
