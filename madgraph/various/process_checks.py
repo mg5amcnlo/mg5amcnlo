@@ -5422,21 +5422,22 @@ minimum value of lambda to be considered in the CMS check."""\
                 %(proc_title, lambdaCMS_list[cms_check_data_range+scan_index-1]))
         
         # Now apply the same same technique, as above but to the difference plot
-        diff_tale_median = sorted(CMScheck_values)[len(CMScheck_values)//2]
+        # Now we will use low_diff_median instead of diff_tale_median
+        #diff_tale_median = sorted(CMScheck_values)[len(CMScheck_values)//2]
         scan_index = 0
         max_diff = 0.0
         res_str += "== Ref. value used in the ratios (Born NWA)  = %s\n"\
                                                              %('%.3g'%reference)
         res_str += "== Asymptotic difference value detected      = %s\n"\
-                                                      %('%.3g'%diff_tale_median)
-#        is_ref_zero = abs(diff_tale_median/diff_average)<diff_zero_threshold
+                                                       %('%.3g'%low_diff_median)
+#        is_ref_zero = abs(low_diff_median/diff_average)<diff_zero_threshold
 #        res_str += "== Asymptotic difference value detected      = %s\n"\
-#          %('%.3g'%diff_tale_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)
+#          %('%.3g'%low_diff_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)
         # Pass information to the plotter for the difference target
-        differences_target[(process,resID)]= diff_tale_median
+        differences_target[(process,resID)]= low_diff_median
         while True:
             current_vals = CMScheck_values[scan_index:scan_index+group_val]
-            max_diff = max(max_diff, abs(diff_tale_median-
+            max_diff = max(max_diff, abs(low_diff_median-
                      sorted(current_vals)[len(current_vals)//2])/reference)
             if (scan_index+group_val)>=len(CMScheck_values):
                 break
