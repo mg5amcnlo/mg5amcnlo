@@ -903,7 +903,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                        '--reduction':'1|2|3|4'}
+                   '--reduction':'1|2|3|4','--CTModeRun':'-1','--helicity':'-1'}
         
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
@@ -3376,8 +3376,20 @@ This implies that with decay chains:
                 options['energy']=float(option[1])
             elif option[0]=='--split_orders':
                 options['split_orders']=int(option[1])
+            elif option[0]=='--helicity':
+                try:
+                    options['helicity']=int(option[1])
+                except ValueError:
+                    raise self.InvalidCmd("The value of the 'helicity' option"+\
+                                       " must be an integer, not %s."%option[1])
             elif option[0]=='--reduction':
                 MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
+            elif option[0]=='--CTModeRun':
+                try:
+                    MLoptions['CTModeRun']=int(option[1])  
+                except ValueError:
+                    raise self.InvalidCmd("The value of the 'CTModeRun' option"+\
+                                       " must be an integer, not %s."%option[1])
             elif option[0]=='--offshellness':
                 CMS_options['offshellness'] = float(option[1])
                 if CMS_options['offshellness']<=-1.0:

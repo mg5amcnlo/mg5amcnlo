@@ -709,9 +709,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 raise Exception, 'The MadLoop options %s specified in function'%key+\
                   ' fix_MadLoopParamCard does not correspond to an option defined'+\
                   ' MadLoop nor is it specially handled in this function.'
-
-        MLCard.set('CTModeRun',mode)
-        MLCard.set('CTModeInit',mode)
+        if not mode is None:
+            MLCard.set('CTModeRun',mode)
+            MLCard.set('CTModeInit',mode)
         MLCard.set('UseLoopFilter',loop_filter)
         MLCard.set('DoubleCheckHelicityFilter',DoubleCheckHelicityFilter)
         MLCard.write(pjoin(dir_name,os.pardir,'SubProcesses','MadLoopParams.dat'))
@@ -3516,6 +3516,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
 
     # Generate a list of unique processes in the NWA scheme
     cmd.do_set('complex_mass_scheme False', log=False)
+#    cmd.do_import('model loop_qcd_qed_sm-NWA')
     multiprocess_nwa = cmd.extract_process(process_line)
 
     # Change the option 'recompute_width' to the optimal value if set to 'auto'.
@@ -3647,6 +3648,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
 
     # Generate a list of unique processes in the CMS scheme
     cmd.do_set('complex_mass_scheme True', log=False)
+#    cmd.do_import('model loop_qcd_qed_sm__CMS__-CMS')
     model = multiprocess_nwa.get('model')
 
     multiprocess_cms = cmd.extract_process(process_line)    
@@ -4269,6 +4271,9 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         infos = evaluator.setup_process(matrix_element, proc_dir, 
                         reusing = reusing, param_card = options['param_card'], 
                                                             MLOptions=MLoptions)
+        # Make sure the right MLoptions are set
+        evaluator.fix_MadLoopParamCard(pjoin(proc_dir,'Cards'),
+                              mp = None, loop_filter = True,MLOptions=MLoptions)
         
         # Make sure to start from fresh if previous run was stopped
         tmp_card_backup = pjoin(proc_dir,'Cards','param_card.dat__TemporaryBackup__')
@@ -4295,10 +4300,11 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             shutil.copy(pjoin(proc_dir,'Source','MODEL','model_functions.f'),
                                                            tmp_modelfunc_backup)
 
-        # Now make sure it is setup to probe a specified PS point
+        # Make sure to setup correctly the helicity
         MadLoopInitializer.fix_PSPoint_in_check(pjoin(proc_dir,'SubProcesses'),
-                                                    read_ps = True, npoints = 1)
-                
+              read_ps = True, npoints = 1, hel_config = options['helicity'], 
+                                           split_orders=options['split_orders'])
+   
         # And recompile while making sure to recreate the executable and 
         # modified sources
         for dir in glob.glob(pjoin(proc_dir,'SubProcesses','P*_*')):
@@ -4550,7 +4556,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # used for future runs (here the model in the NWA format)
                 if lambdaCMS==1.0 and NLO:
                     tmp_param_card.write(pjoin(proc_dir,
-                                    'Cards','param_card.dat_recomputed_widths'))      
+                                    'Cards','param_card.dat_recomputed_widths'))
             
             # Apply the params tweaks
             for param, replacement in options['tweak']['params'].items():
