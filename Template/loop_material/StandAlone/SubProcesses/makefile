@@ -93,11 +93,11 @@ libMadLoop.dylib: ../$(OLP)
 matrix2py.so: ../$(OLP)
 	touch __init__.py
 	@ if [ -f `which f2py` ]; then \
-		f2py -L. -lMadLoop -m matrix2py -c check_sa.f;\
+		f2py -L. -lMadLoop -m matrix2py -c check_sa.f --fcompiler=$(FC);\
 	  else \
 		if [ -f `which f2py-2.7` ]; then \
-			f2py-2.7 -L. -lMadLoop -m matrix2py -c check_sa.f;\
+			f2py-2.7 -L. -lMadLoop -m matrix2py -c check_sa.f --fcompiler=$(FC);\
 		else \
-			f2py-2.6 -L. -lMadLoop -m matrix2py -c check_sa.f;\
+			f2py-2.6 -L. -lMadLoop -m matrix2py -c check_sa.f --fcompiler=$(FC);\
 		fi; \
 	  fi
