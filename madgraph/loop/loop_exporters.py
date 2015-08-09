@@ -1853,6 +1853,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if max_spin>3:
             raise MadGraph5Error, "ML5 can only handle loop particles with"+\
                                                                " spin 1 at most"
+            matrix_element.rep_dict['max_lwf_size']=16
+                 
         matrix_element.rep_dict['max_lwf_size']=4
         matrix_element.rep_dict['nloops']=len(\
                         [1 for ldiag in matrix_element.get_loop_diagrams() for \
@@ -2190,7 +2192,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         writer.writelines(file,context=self.get_context(matrix_element))
     
-    def fix_coef_specs(self, overall_max_lwf_size, overall_max_loop_vert_rank):
+    def fix_coef_specs(self, overall_max_spin, overall_max_loop_vert_rank):
         """ If processes with different maximum loop wavefunction size or
         different maximum loop vertex rank have to be output together, then
         the file 'coef.inc' in the HELAS Source folder must contain the overall
@@ -2201,9 +2203,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         coef_specs_path=os.path.join(self.dir_path,'Source','DHELAS',\
                                                                'coef_specs.inc')
         os.remove(coef_specs_path)
-        
-        new_lwf = 4 # looks like this is always this value in set_optimized_output_specific_replace_dict_entries
-        new_vert_rank = q_polynomial.get_number_of_coefs_for_rank(overall_max_loop_vert_rank)
+        if overall_max_spin == 1:
+            new_lwf = 4 
+        elif overall_max_spin in [2,3]:
+            new_lwf = 4 
+        else:   
+            new_lwf = 16 
+            
+        new_maxcoeff = q_polynomial.get_number_of_coefs_for_rank(overall_max_loop_vert_rank)
         # Replace it by the appropriate value
         IncWriter=writers.FortranWriter(coef_specs_path,'w')
         IncWriter.writelines("""INTEGER MAXLWFSIZE
@@ -2211,7 +2218,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                            INTEGER VERTEXMAXCOEFS
                            PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
                            %{'max_lwf_size': new_lwf,
-                             'vertex_max_coefs': new_vert_rank})
+                             'vertex_max_coefs': new_maxcoeff})
         IncWriter.close()
 
     def setup_check_sa_replacement_dictionary(self, matrix_element, \
