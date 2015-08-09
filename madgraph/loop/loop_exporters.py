@@ -2202,14 +2202,16 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                                'coef_specs.inc')
         os.remove(coef_specs_path)
         
+        new_lwf = 4 # looks like this is always this value in set_optimized_output_specific_replace_dict_entries
+        new_vert_rank = q_polynomial.get_number_of_coefs_for_rank(overall_max_loop_vert_rank)
         # Replace it by the appropriate value
         IncWriter=writers.FortranWriter(coef_specs_path,'w')
         IncWriter.writelines("""INTEGER MAXLWFSIZE
                            PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
                            INTEGER VERTEXMAXCOEFS
                            PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
-                           %{'max_lwf_size':overall_max_lwf_size,
-                             'vertex_max_coefs':overall_max_loop_vert_rank})
+                           %{'max_lwf_size': new_lwf,
+                             'vertex_max_coefs': new_vert_rank})
         IncWriter.close()
 
     def setup_check_sa_replacement_dictionary(self, matrix_element, \
