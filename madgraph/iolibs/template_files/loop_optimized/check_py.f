@@ -87,8 +87,8 @@ C      chosen
         ENDIF
       ENDDO
 
-C       Update the couplings with the new MU_R
-        CALL UPDATE_AS_PARAM2(2*P(0,1)*P(0,2), ALPHAS)
+C       Update the couplings with the new ALPHAS
+        CALL UPDATE_AS_PARAM2(0d0, ALPHAS)
 
 C       
 C       Now we can call the matrix element

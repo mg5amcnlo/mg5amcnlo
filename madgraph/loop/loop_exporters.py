@@ -977,11 +977,12 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             'write_so_born_results','write_so_loop_results','set_coupling_target']:
             if key not in replace_dict.keys():
                 replace_dict[key]=''
-        if matrix_element.get('processes')[0].get('has_born'):
-            file = open(os.path.join(self.template_dir,'check_sa.inc')).read()
-        elif self.opt['mode'] == 'reweight':
+        if self.opt['mode'] == 'reweight':
             file = open(os.path.join(self.template_dir,\
-                                          'check_py.f')).read()            
+                                          'check_py.f')).read()   
+        elif matrix_element.get('processes')[0].get('has_born'):
+            file = open(os.path.join(self.template_dir,'check_sa.inc')).read()
+         
         else:
             file = open(os.path.join(self.template_dir,\
                                           'check_sa_loop_induced.inc')).read()

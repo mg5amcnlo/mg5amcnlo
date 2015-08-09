@@ -719,7 +719,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             # split it in a loop
             succes, failed = 0, 0
             for base_proc in myprocdef:
-                print type(base_proc)
                 try:
                     self.exec_cmd("add process %s" % base_proc.nice_string(prefix=False, print_weighted=True))
                     succes += 1

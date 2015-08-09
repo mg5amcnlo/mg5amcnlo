@@ -3518,9 +3518,13 @@ class ProcessDefinition(Process):
         fsids = [leg['ids'] for leg in self['legs'] \
                  if leg['state'] == True]
 
+        red_isidlist = []
         # Generate all combinations for the initial state
         for prod in itertools.product(*isids):
-            islegs = [Leg({'id':id, 'state': False}) for id in prod]        
+            islegs = [Leg({'id':id, 'state': False}) for id in prod]  
+            if tuple(sorted(prod)) in red_isidlist:
+                    continue        
+            red_isidlist.append(tuple(sorted(prod)))      
             red_fsidlist = []
             for prod in itertools.product(*fsids):
                 # Remove double counting between final states

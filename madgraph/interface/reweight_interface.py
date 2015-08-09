@@ -972,7 +972,6 @@ class ReweightInterface(extended_cmd.Cmd):
     
                     self.id_to_path[(tag,'V')] = [order, Pdir, hel_dict] 
             
-        raise Exception
         # 4. If we need a new model/process-------------------------------------
         if self.second_model or self.second_process:
             self.create_second_standalone_directory()    

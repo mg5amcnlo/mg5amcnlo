@@ -5573,7 +5573,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'""")
         fsock.writelines("""
-                            MU_R = mu_r2
+                            if (mu_r2.gt.0d0) MU_R = mu_r2
                             G = SQRT(4.0d0*PI*AS2) 
                             AS = as2
 
