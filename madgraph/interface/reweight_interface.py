@@ -724,6 +724,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 try:
                     mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag+1), globals(), locals(), [],-1)
                 except Exception, error:
+                    os.remove(pjoin(Pdir, 'matrix%spy.so' % (2*metag+1)))
                     os.environ['MENUM'] = str(2*metag+1) 
                     misc.compile(['matrix%spy.so' % (2*metag+1)], cwd=Pdir)
                     mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag+1), globals(), locals(), [],-1)
@@ -757,6 +758,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 try:
                     mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
                 except ImportError:
+                    os.remove(pjoin(Pdir, 'matrix%spy.so' % metag ))
                     os.environ['MENUM'] = str(metag)
                     misc.compile(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
                     mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
