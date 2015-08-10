@@ -9,13 +9,12 @@ C
 C  
 C CONSTANTS 
 C 
+      include 'polynomial_specs.inc'
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       LOGICAL checkPConservation

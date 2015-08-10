@@ -4,6 +4,8 @@ C MULTIPLY BY THE BORN
 
       SUBROUTINE %(mp_prefix)s%(proc_prefix)sCREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER,COLOR_ID,HELCONFIG)
 	  implicit none
+	  include 'coef_specs.inc'
+	  include 'polynomial_specs.inc'
 C  
 C CONSTANTS 
 C 
@@ -17,10 +19,6 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
 	  %(complex_format)s CMPLX_ZERO
 	  PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
-	  INTEGER MAXLWFSIZE
-	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
-	  INTEGER LOOPMAXCOEFS
-	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
       INTEGER    NCOLORROWS
 	  PARAMETER (NCOLORROWS=%(nloopamps)d)
 	  INTEGER    NLOOPGROUPS
@@ -100,6 +98,8 @@ C amplitude level so that no multiplication is performed.
 
       SUBROUTINE %(mp_prefix)s%(proc_prefix)sCREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER)
 	  implicit none
+      include 'coef_specs.inc'
+      include 'polynomial_specs.inc'
 C  
 C CONSTANTS 
 C 
@@ -109,10 +109,6 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
 	  %(complex_format)s CMPLX_ZERO
 	  PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
-	  INTEGER MAXLWFSIZE
-	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
-	  INTEGER LOOPMAXCOEFS
-	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
 	  INTEGER    NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 	  INTEGER    NCOMB

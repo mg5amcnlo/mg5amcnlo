@@ -535,24 +535,16 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                             me, self._curr_fortran_model)
             # If all ME's do not share the same maximum loop vertex rank and the
             # same loop maximum wavefunction size, we need to set the maximum
-            # in coef_specs.inc of the HELAS Source and warn the user that this
-            # might be a problem
+            # in coef_specs.inc of the HELAS Source. The SubProcesses/P* directory
+            # all link this file, so it should be properly propagated
             if self.options['loop_optimized_output'] and len(matrix_elements)>1:
                 max_lwfspins = [m.get_max_loop_particle_spin() for m in \
                                                                 matrix_elements]
-                try:
-                    max_loop_vert_ranks = [me.get_max_loop_vertex_rank() for me in \
+                max_loop_vert_ranks = [me.get_max_loop_vertex_rank() for me in \
                                                                 matrix_elements]
-                except MadGraph5Error:
-                    pass
-                else:
-                    if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
-                        self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
+                if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
+                    self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
                                                        max(max_loop_vert_ranks))
-                        logger.warning('ML5 has just output processes which do not'+\
-                      ' share the same maximum loop wavefunction size or the '+\
-                      ' same maximum loop vertex rank. This is potentially '+\
-                      ' dangerous. Please prefer to output them separately.')
 
         # Just the matrix.f files
         if self._export_format == 'matrix':

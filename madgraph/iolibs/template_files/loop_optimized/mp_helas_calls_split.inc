@@ -1,6 +1,8 @@
       SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
 C  
       IMPLICIT NONE
+      include 'coef_specs.inc'
+      include 'polynomial_specs.inc'
 C  
 C CONSTANTS
 C  
@@ -19,10 +21,6 @@ C
 	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
-	  INTEGER MAXLWFSIZE
-	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
-	  INTEGER LOOPMAXCOEFS, VERTEXMAXCOEFS
-	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d, VERTEXMAXCOEFS=%(vertex_max_coefs)d)
 	  %(real_mp_format)s     ZERO
       PARAMETER (ZERO=0.0e0_16)
 	  %(complex_mp_format)s     IZERO

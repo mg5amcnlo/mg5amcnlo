@@ -9,6 +9,8 @@ C
 %(process_lines)s
 C  
       IMPLICIT NONE
+      include 'coef_specs.inc'
+      include 'polynomial_specs.inc'
 C  
 C CONSTANTS
 C
@@ -28,10 +30,6 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
-	  INTEGER MAXLWFSIZE
-	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
-	  INTEGER LOOPMAXCOEFS, VERTEXMAXCOEFS
-	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d, VERTEXMAXCOEFS=%(vertex_max_coefs)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
 	  %(real_mp_format)s    ZERO

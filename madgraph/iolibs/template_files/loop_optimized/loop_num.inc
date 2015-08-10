@@ -4,10 +4,9 @@ C THE CORE SUBROUTINE CALLED BY CUTTOOLS WHICH CONTAINS THE HELAS CALLS BUILDING
 C  
 C CONSTANTS 
 C 
+      include 'polynomial_specs.inc'
       INTEGER    NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
-      INTEGER LOOPMAXCOEFS
-	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
 C     These are constants related to the split orders
       INTEGER    NSQUAREDSO
 	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
@@ -48,6 +47,7 @@ C
 C MODULE
 C
       INCLUDE 'cts_mprec.h'
+      include 'polynomial_specs.inc'
 C  
 C CONSTANTS 
 C 
@@ -55,8 +55,6 @@ C
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-	  INTEGER LOOPMAXCOEFS
-	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
 C     These are constants related to the split orders
       INTEGER    NSQUAREDSO
 	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d)

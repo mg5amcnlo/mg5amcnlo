@@ -3279,18 +3279,27 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         filename = os.path.join(self.dir_path, 'Source', 'DHELAS', 'coef_specs.inc')
 
         replace_dict = {}
-        replace_dict['max_lwf_size'] = 4 
+        max_spin = max(me.get_max_loop_particle_spin() for me in virt_me_list)
+        
+        if max_spin == 1:
+            replace_dict['max_lwf_s'] = 1
+        elif max_spin in [2,3]:
+            replace_dict['max_lwf_s'] = 4
+        elif max_spin in [4,5]:
+            replace_dict['max_lwf_s'] = 16
+        else:
+            raise MadGraph5Error, "Unsupported spin 2m+1=%d."%max_spin
 
         max_loop_vertex_ranks = [me.get_max_loop_vertex_rank() for me in virt_me_list]
-        replace_dict['vertex_max_coefs'] = max(\
-                [q_polynomial.get_number_of_coefs_for_rank(n) 
-                    for n in max_loop_vertex_ranks])
+        replace_dict['vert_max_coefs'] = max(\
+                                [q_polynomial.get_number_of_coefs_for_rank(n) 
+                                                for n in max_loop_vertex_ranks])
 
         IncWriter=writers.FortranWriter(filename,'w')
         IncWriter.writelines("""INTEGER MAXLWFSIZE
-                           PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
+                           PARAMETER (MAXLWFSIZE=%(max_lwf_s)d)
                            INTEGER VERTEXMAXCOEFS
-                           PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
+                           PARAMETER (VERTEXMAXCOEFS=%(vert_max_coefs)d)"""\
                            % replace_dict)
         IncWriter.close()
     
