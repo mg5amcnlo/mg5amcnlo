@@ -2054,7 +2054,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             options['nPS'] = new_n_PS
 
         MadLoopInitializer.init_MadLoop(self.me_dir,n_PS=options['nPS'],
-                                   subproc_prefix='PV', MG_options=self.options)
+                   subproc_prefix='PV', MG_options=self.options, interface=self)
 
     def do_launch(self, line, *args, **opt):
         """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
@@ -4845,7 +4845,7 @@ class MadLoopInitializer(object):
         else:
             MLCard      = banner_mod.MadLoopParam(MLCardPath) 
             MLCard_orig = banner_mod.MadLoopParam(MLCard)
-
+        
         # Make sure that LoopFilter really is needed.
         if not MLCard['UseLoopFilter']:
             try:
@@ -4858,7 +4858,7 @@ class MadLoopInitializer(object):
                 my_req_files.remove('HelFilter.dat')
             except ValueError:
                 pass
-        
+
         def need_init():
             """ True if init not done yet."""
             proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
@@ -4882,6 +4882,7 @@ class MadLoopInitializer(object):
         curr_attempt = 1
 
         MLCard.set('WriteOutFilters',True)  
+        
         while to_attempt!=[] and need_init():
             curr_attempt = to_attempt.pop()
             # if the attempt is a negative number it means we must force 
@@ -4948,7 +4949,7 @@ class MadLoopInitializer(object):
                 req_files.remove('HelFilter.dat')
             except ValueError:
                 pass
-        
+
         for v_folder in glob.iglob(pjoin(proc_dir,'SubProcesses',
                                                          '%s*'%subproc_prefix)):        
             # Make sure it is a valid MadLoop directory
@@ -4965,7 +4966,8 @@ class MadLoopInitializer(object):
         return False
 
     @staticmethod
-    def init_MadLoop(proc_dir, n_PS=None, subproc_prefix='PV', MG_options=None):
+    def init_MadLoop(proc_dir, n_PS=None, subproc_prefix='PV', MG_options=None,
+                                                              interface = None):
         """Advanced commands: Compiles and run MadLoop on RAMBO random PS points to initilize the
         filters."""
 
@@ -4974,7 +4976,11 @@ class MadLoopInitializer(object):
         # Initialize all the virtuals directory, so as to generate the necessary
         # filters (essentially Helcity filter).
         # Make sure that the MadLoopCard has the loop induced settings
-        misc.compile(arg=['treatCardsLoopNoInit'], cwd=pjoin(proc_dir,'Source'))
+        if interface is None:
+            misc.compile(arg=['treatCardsLoopNoInit'], cwd=pjoin(proc_dir,'Source'))
+        else:
+            interface.do_treatcards('all --no_MadLoopInit')
+        
         # First make sure that IREGI and CUTTOOLS are compiled if needed
         if os.path.exists(pjoin(proc_dir,'Source','CUTTOOLS')):
             misc.compile(arg=['libcuttools'],cwd=pjoin(proc_dir,'Source'))
