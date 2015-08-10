@@ -85,15 +85,15 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_add(self,args)
     
-    def check_output(self, args):
+    def check_output(self, args, default='standalone'):
         """ Check the arguments of the output command in the context
         of the Loop interface."""
-        
-        mg_interface.MadGraphCmd.check_output(self,args)
-        
+       
+        mg_interface.MadGraphCmd.check_output(self,args, default=default)
 
         if self._export_format not in self.supported_ML_format:
             raise self.InvalidCmd, "not supported format %s" % self._export_format
+
         
     def check_launch(self, args, options):
         """ Further check that only valid options are given to the MadLoop

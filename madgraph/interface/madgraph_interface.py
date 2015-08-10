@@ -1355,14 +1355,14 @@ This will take effect only in a NEW terminal
             raise self.InvalidCmd('No default path for this file')
 
 
-    def check_output(self, args):
+    def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
 
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         else:
-            self._export_format = 'madevent'
+            self._export_format = default
 
         if not self._curr_model:
             text = 'No model found. Please import a model first and then retry.'
@@ -1671,11 +1671,11 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """ not authorize on web"""
         raise self.WebRestriction('\"open\" command not authorize online')
 
-    def check_output(self, args):
+    def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
         # first pass to the default
-        CheckValidForCmd.check_output(self, args)
+        CheckValidForCmd.check_output(self, args, default=default)
         args[:] = ['.', '-f']
 
         self._export_dir = os.path.realpath(os.getcwd())
