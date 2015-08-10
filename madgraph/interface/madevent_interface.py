@@ -4933,7 +4933,6 @@ class MadLoopInitializer(object):
                 req_files.remove('HelFilter.dat')
             except ValueError:
                 pass
-        
         for v_folder in glob.iglob(pjoin(proc_dir,'SubProcesses',
                                                          '%s*'%subproc_prefix)):        
             # Make sure it is a valid MadLoop directory

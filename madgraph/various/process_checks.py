@@ -3516,7 +3516,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
 
     # Generate a list of unique processes in the NWA scheme
     cmd.do_set('complex_mass_scheme False', log=False)
-#    cmd.do_import('model loop_qcd_qed_sm-NWA')
+    cmd.do_import('model loop_qcd_qed_sm-NWA')
     multiprocess_nwa = cmd.extract_process(process_line)
 
     # Change the option 'recompute_width' to the optimal value if set to 'auto'.
@@ -3648,7 +3648,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
 
     # Generate a list of unique processes in the CMS scheme
     cmd.do_set('complex_mass_scheme True', log=False)
-#    cmd.do_import('model loop_qcd_qed_sm__CMS__-CMS')
+    cmd.do_import('model loop_qcd_qed_sm__CMS__-CMS')
     model = multiprocess_nwa.get('model')
 
     multiprocess_cms = cmd.extract_process(process_line)    
@@ -5317,9 +5317,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         CMSData     = []
         NWAData     = []
         DiffData    = []
-        BornNWAData = []
         for idata, lam in enumerate(lambdaCMS_list):
-            BornNWAData.append(nwa_born[idata]/(lam**born_power))
             if not pert_orders:
                 new_cms=cms_born[idata]/(lam**born_power)
                 new_nwa=nwa_born[idata]/(lam**born_power)
@@ -5333,7 +5331,6 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
 
                     
         # NWA Born median
-        diff_average = sum(abs(data) for data in DiffData)/len(DiffData)
 
         # Find which values to start the test at by looking at the CMSdata scaling
         # First compute the median of the middle 60% of entries in the plot
@@ -5349,11 +5346,9 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         current_median = 0
         # We really want to select only the very stable region
         scan_index = 0
-        reference = abs(sorted(BornNWAData)[len(BornNWAData)//2])
-        if abs(reference/diff_average)<diff_zero_threshold:
-            reference = abs(diff_average)
-#        reference = abs(low_diff_median) if abs(low_diff_median/diff_average)\
-#                                    >=diff_zero_threshold else abs(diff_average)
+        reference = abs(sorted(NWAData)[len(NWAData)//2])
+        if abs(reference/low_diff_median)<diff_zero_threshold:
+            reference = abs(low_diff_median)
         while True:
             scanner = DiffData[scan_index:group_val+scan_index]
             current_median = sorted(scanner)[len(scanner)//2]
@@ -5435,6 +5430,7 @@ minimum value of lambda to be considered in the CMS check."""\
 #          %('%.3g'%low_diff_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)
         # Pass information to the plotter for the difference target
         differences_target[(process,resID)]= low_diff_median
+        misc.sprint('Now doing resonance %s.'%res_str)
         while True:
             current_vals = CMScheck_values[scan_index:scan_index+group_val]
             max_diff = max(max_diff, abs(low_diff_median-
