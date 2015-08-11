@@ -3516,7 +3516,9 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
 
     # Generate a list of unique processes in the NWA scheme
     cmd.do_set('complex_mass_scheme False', log=False)
-    cmd.do_import('model loop_qcd_qed_sm-NWA')
+    if aloha.complex_mass:
+        cmd.do_import('model '+cmd._curr_model['name'])
+    #cmd.do_import('model loop_qcd_qed_sm-NWA')
     multiprocess_nwa = cmd.extract_process(process_line)
 
     # Change the option 'recompute_width' to the optimal value if set to 'auto'.
@@ -3648,7 +3650,9 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
 
     # Generate a list of unique processes in the CMS scheme
     cmd.do_set('complex_mass_scheme True', log=False)
-    cmd.do_import('model loop_qcd_qed_sm__CMS__-CMS')
+    if not aloha.complex_mass:
+        cmd.do_import('model '+cmd._curr_model['name'])
+    #cmd.do_import('model loop_qcd_qed_sm__CMS__-CMS')
     model = multiprocess_nwa.get('model')
 
     multiprocess_cms = cmd.extract_process(process_line)    
@@ -4589,6 +4593,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 if NLO:
                     new_param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
 
+            new_param_card.write(pjoin("/Users/erdissshaw/Works/2.3.1_CMS/CardCheck",\
+                                       'param_card_%s_%f.dat'%(mode,lambdaCMS)))
             # Finally ready to compute the matrix element
             if NLO:
                 ME_res = LoopMatrixElementEvaluator.get_me_value(process, 0, 

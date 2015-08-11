@@ -228,7 +228,7 @@ def import_full_model(model_path, decay=False, prefix=''):
     # Load the Parameter/Coupling in a convenient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main(\
              additional_couplings =(ufo2mg5_converter.wavefunction_CT_couplings if ufo2mg5_converter.perturbation_couplings else []))
-    
+
     model.set('parameters', parameters)
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)

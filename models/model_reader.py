@@ -31,6 +31,7 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 import models.check_param_card as card_reader
 from madgraph import MadGraph5Error, MG5DIR
 import madgraph.various.misc as misc
+import aloha
 
 ZERO = 0
 
@@ -162,6 +163,12 @@ class ModelReader(loop_base_objects.LoopModel):
 
         # Now calculate derived parameters
         for param in derived_parameters:
+            # special treatment of CMSParam
+            if 'CMSParam' in param.name:
+                if aloha.complex_mass:
+                    param.expr='1.0'
+                else:
+                    param.expr='0.0'
             try:
                 exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
             except Exception as error:
