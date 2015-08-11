@@ -4730,7 +4730,8 @@ This implies that with decay chains:
                     aloha.aloha_prefix=''
                 
                 try:
-                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix)
+                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
+                        complex_mass_scheme=self.options['complex_mass_scheme'])
                 except import_ufo.UFOImportError, error:
                     if 'not a valid UFO model' in str(error):
                         logger_stderr.warning('WARNING: %s' % error)
@@ -4738,10 +4739,6 @@ This implies that with decay chains:
                          'automatically `import model_v4 %s` instead.'% args[1])
                     self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
                     return
-                if self.options['complex_mass_scheme']:
-                    self._curr_model.change_mass_to_complex_scheme()
-                    if hasattr(self._curr_model, 'set_parameters_and_couplings'):
-                        self._curr_model.set_parameters_and_couplings()
                 if self.options['gauge']=='unitary':
                     if not force and isinstance(self._curr_model,\
                                               loop_base_objects.LoopModel) and \
@@ -6043,8 +6040,8 @@ This implies that with decay chains:
             self.write_configuration(filepath, basefile, basedir, to_define)
 
     # Set an option
-    def do_set(self, line, log=True):
-        """Set an option, which will be default for coming generations/outputs
+    def do_set(self, line, log=True, model_reload=True):
+        """Set an option, which will be default for coming generations/outputs.
         """
 
         # Be careful:
@@ -6102,18 +6099,13 @@ This implies that with decay chains:
             self.options[args[0]] = eval(args[1])
             aloha.complex_mass = eval(args[1])
             aloha_lib.KERNEL.clean()
-            if not self._curr_model:
-                pass
-            elif self.options[args[0]]:
+            if self.options[args[0]]:
                 if old:
                     if log:
                         logger.info('Complex mass already activated.')
                     return
                 if log:
                     logger.info('Activate complex mass scheme.')
-                self._curr_model.change_mass_to_complex_scheme()
-                if hasattr(self._curr_model, 'set_parameters_and_couplings'):
-                        self._curr_model.set_parameters_and_couplings()
             else:
                 if not old:
                     if log:
@@ -6121,7 +6113,9 @@ This implies that with decay chains:
                     return
                 if log:
                     logger.info('Desactivate complex mass scheme.')
-                self.exec_cmd('import model %s' % self._curr_model.get('name'))
+            if not self._curr_model:
+                return
+            self.exec_cmd('import model %s' % self._curr_model.get('name'))
 
         elif args[0] == "gauge":
             # Treat the case where they are no model loaded

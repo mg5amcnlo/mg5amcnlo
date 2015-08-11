@@ -73,7 +73,8 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
+def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
+                                                    complex_mass_scheme = None):
     """ a practical and efficient way to import a model"""
     
     # check if this is a valid path or if this include restriction file       
@@ -110,7 +111,12 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
     
     #import the FULL model
     model = import_full_model(model_path, decay, prefix)
-    
+    # Change to complex mass scheme if necessary
+    if complex_mass_scheme is None:
+        model.change_mass_to_complex_scheme(toCMS=aloha.complex_mass)
+    else:
+        model.change_mass_to_complex_scheme(toCMS=complex_mass_scheme)
+        
     if os.path.exists(pjoin(model_path, "README")):
         logger.info("Please read carefully the README of the model file for instructions/restrictions of the model.",'$MG:color:BLACK') 
     # restore the model name
@@ -135,7 +141,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
         else:
             keep_external=False
         model.restrict_model(restrict_file, rm_parameter=not decay,
-                                            keep_external=keep_external)
+           keep_external=keep_external, complex_mass_scheme=complex_mass_scheme)
         model.path = model_path
 
     return model
@@ -262,8 +268,8 @@ def import_full_model(model_path, decay=False, prefix=''):
     # save in a pickle files to fasten future usage
     if ReadWrite:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
-                                   model, log=False) 
- 
+                                   model, log=False)
+
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
     #    model = import_ufo.RestrictModel(model)
@@ -1226,7 +1232,8 @@ class RestrictModel(model_reader.ModelReader):
         self.rule_card = check_param_card.ParamCardRule()
         self.restrict_card = None
      
-    def restrict_model(self, param_card, rm_parameter=True, keep_external=False):
+    def restrict_model(self, param_card, rm_parameter=True, keep_external=False,
+                                                      complex_mass_scheme=None):
         """apply the model restriction following param_card.
         rm_parameter defines if the Zero/one parameter are removed or not from
         the model.
@@ -1239,7 +1246,9 @@ class RestrictModel(model_reader.ModelReader):
         self.set('particles', self.get('particles'))
 
         # compute the value of all parameters
-        self.set_parameters_and_couplings(param_card)
+        self.set_parameters_and_couplings(param_card, 
+                                        complex_mass_scheme=complex_mass_scheme)
+        
         # associate to each couplings the associated vertex: def self.coupling_pos
         self.locate_coupling()
         # deal with couplings

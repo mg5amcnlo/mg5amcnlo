@@ -3515,10 +3515,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
         raise InvalidCmd("Proces definition must be given as a stirng for this check")
 
     # Generate a list of unique processes in the NWA scheme
-    orig_complex_mass = aloha.complex_mass
     cmd.do_set('complex_mass_scheme False', log=False)
-    if orig_complex_mass:
-        cmd.do_import('model '+cmd._curr_model['name'])
     #cmd.do_import('model loop_qcd_qed_sm-NWA')
     multiprocess_nwa = cmd.extract_process(process_line)
 
@@ -3558,11 +3555,12 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     if options['recompute_width'] in ['first_time', 'always'] and has_FRdecay:
         modelname = cmd._curr_model.get('modelpath+restriction')
         with misc.MuteLogger(['madgraph'], ['INFO']):
-            model = import_ufo.import_model(modelname, decay=True)
+            model = import_ufo.import_model(modelname, decay=True,
+                                                      complex_mass_scheme=False)
         multiprocess_nwa.set('model', model)
 
     run_options = copy.deepcopy(options)
-    
+
     # Set the seed if chosen by user
     if options['seed'] > 0:
         random.seed(options['seed'])
@@ -3650,10 +3648,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     clean_added_globals(ADDED_GLOBAL)
 
     # Generate a list of unique processes in the CMS scheme
-    orig_complex_mass =aloha.complex_mass
     cmd.do_set('complex_mass_scheme True', log=False)
-    if not orig_complex_mass:
-        cmd.do_import('model '+cmd._curr_model['name'])
     #cmd.do_import('model loop_qcd_qed_sm__CMS__-CMS')
     model = multiprocess_nwa.get('model')
 
@@ -4595,8 +4590,6 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 if NLO:
                     new_param_card.write(pjoin(proc_dir,'Cards','param_card.dat'))
 
-            new_param_card.write(pjoin("/Users/erdissshaw/Works/2.3.1_CMS/CardCheck",\
-                                       'param_card_%s_%f.dat'%(mode,lambdaCMS)))
             # Finally ready to compute the matrix element
             if NLO:
                 ME_res = LoopMatrixElementEvaluator.get_me_value(process, 0, 

@@ -892,12 +892,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         #base_model = import_ufo.import_model(model_path)
 
         # Import model
-        base_model = import_ufo.import_model(name, decay=True)
+        base_model = import_ufo.import_model(name, decay=True,
+                                               complex_mass_scheme=complex_mass)
 
         if use_mg_default:
             base_model.pass_particles_name_in_mg_default()
-        if complex_mass:
-            base_model.change_mass_to_complex_scheme()
         
         self.model = base_model
         self.mg5cmd._curr_model = self.model

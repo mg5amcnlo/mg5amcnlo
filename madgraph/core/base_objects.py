@@ -1643,17 +1643,19 @@ class Model(PhysicsObject):
             else:
                 return False
 
-    def change_mass_to_complex_scheme(self):
+    def change_mass_to_complex_scheme(self, toCMS=True):
         """modify the expression changing the mass to complex mass scheme"""
         
         # 1) Change the 'CMSParam' of loop_qcd_qed model to 1.0 so as to remove
         #    the 'real' prefix fromall UVCT wf renormalization expressions.
+        #    If toCMS is False, then it makes sure CMSParam is 0.0 and returns
+        #    immediatly.
         # 2) Find All input parameter mass and width associated
         #   Add a internal parameter and replace mass with that param
         # 3) Find All mass fixed by the model and width associated
         #   -> Both need to be fixed with a real() /Imag()
-        # 4) Find All width fixed by the model
-        #   -> Need to be fixed with a real()
+        # 4) Find All width set by the model
+        #   -> Need to be set with a real()
         # 5) Fix the Yukawa mass to the value of the complex mass/ real mass
         # 6) Loop through all expression and modify those accordingly
         #    Including all parameter expression as complex
@@ -1665,9 +1667,16 @@ class Model(PhysicsObject):
                 CMSParam = self.get_parameter('mdl_CMSParam')
             except KeyError:
                 CMSParam = None
+                
+        # Handle the case where we want to make sure the CMS is turned off
+        if not toCMS:
+            if CMSParam:
+                CMSParam.expr = '0.0'
+            return            
+        
+        # Now handle the case where we want to turn to CMS.    
         if CMSParam:
             CMSParam.expr = '1.0'
-
         
         to_change = {}
         mass_widths = [] # parameter which should stay real

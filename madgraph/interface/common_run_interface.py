@@ -221,19 +221,17 @@ class CheckValidForCmd(object):
             #restrict_file = None
             #if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
             #    restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            
+            force_CMS = self.mother and self.mother.options['complex_mass_scheme']
             model = import_ufo.import_model(modelname, decay=True, 
-                        restrict=True)
-            if self.mother and self.mother.options['complex_mass_scheme']:
-                model.change_mass_to_complex_scheme()
+                                   restrict=True, complex_mass_scheme=force_CMS)
         else:
-            model = import_ufo.import_model(pjoin(
-                           self.me_dir,'bin','internal', 'ufomodel'),decay=True)
             #pattern for checking complex mass scheme.
             has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
-            if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
-                                   ).read()):
-                model.change_mass_to_complex_scheme()
-   
+            force_CMS =  has_cms.search(open(pjoin(self.me_dir,'Cards',
+                                                   'proc_card_mg5.dat')).read())
+            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal',
+                         'ufomodel'), decay=True, complex_mass_scheme=force_CMS)
             
 #        if not hasattr(model.get('particles')[0], 'partial_widths'):
 #            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
