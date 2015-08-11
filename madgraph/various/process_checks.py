@@ -3515,8 +3515,9 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
         raise InvalidCmd("Proces definition must be given as a stirng for this check")
 
     # Generate a list of unique processes in the NWA scheme
+    orig_complex_mass = aloha.complex_mass
     cmd.do_set('complex_mass_scheme False', log=False)
-    if aloha.complex_mass:
+    if orig_complex_mass:
         cmd.do_import('model '+cmd._curr_model['name'])
     #cmd.do_import('model loop_qcd_qed_sm-NWA')
     multiprocess_nwa = cmd.extract_process(process_line)
@@ -3649,8 +3650,9 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     clean_added_globals(ADDED_GLOBAL)
 
     # Generate a list of unique processes in the CMS scheme
+    orig_complex_mass =aloha.complex_mass
     cmd.do_set('complex_mass_scheme True', log=False)
-    if not aloha.complex_mass:
+    if not orig_complex_mass:
         cmd.do_import('model '+cmd._curr_model['name'])
     #cmd.do_import('model loop_qcd_qed_sm__CMS__-CMS')
     model = multiprocess_nwa.get('model')
