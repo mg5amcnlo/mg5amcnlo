@@ -5490,6 +5490,7 @@ This implies that with decay chains:
 
 
         all_categories = self.ask('','0',[], ask_class=AskforCustomize)
+        put_to_one = []
         ## Make a Temaplate for  the restriction card. (card with no restrict)
         for block in param_card:
             value_dict = {}
@@ -5498,7 +5499,9 @@ This implies that with decay chains:
                 if value == 0:
                     param.value = 0.000001e-99
                 elif value == 1:
-                    param.value = 9.999999e-1
+                    if block != 'qnumbers':
+                        put_to_one.append((block,param.lhacode))
+                        param.value = random.random()
                 elif abs(value) in value_dict:
                     param.value += value_dict[abs(value)] * 1e-4 * param.value
                     value_dict[abs(value)] += 1
@@ -5529,7 +5532,26 @@ This implies that with decay chains:
             param_card.write(path)
             self._curr_model['name'] += '-%s' % name
 
+        # if some need to put on one
+        if put_to_one:
+            out_path = StringIO.StringIO()
+            param_writer.ParamCardWriter(self._curr_model, out_path)
+            # and load it to a python object
+            param_card = check_param_card.ParamCard(out_path.getvalue().split('\n'))
+            
+            for (block, lhacode) in put_to_one:
+                misc.sprint(block, lhacode)
+                try:
+                    param_card[block].get(lhacode).value = 1
+                except:
+                    pass # was removed of the model!
+            self._curr_model.set_parameters_and_couplings(param_card)
 
+            if args:
+                name = args[0].split('=',1)[1]
+                path = pjoin(model_path,'paramcard_%s.dat' % name)
+                logger.info('Save default card file as %s' % path)
+                param_card.write(path)
 
     def do_save(self, line, check=True, to_keep={}, log=True):
         """Not in help: Save information to file"""

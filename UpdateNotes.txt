@@ -18,6 +18,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             NNPDF (like for the old cteq_6m, etc).
 	RF: Fixed a bug in the PDF combination in the HwU histograms: there was no consistent use if Hessian
             and Gaussian approaches for MSTW/CTEQ and NNPDF, respectively.
+        OM: Fixed a small bug in EWdim6 which was removing a coupling in AZHH interaction.
+        OM: improve customize_model function to avoid problem with unity coupling.
 
 2.3.0  
      OM+VH: Automation of event generation for loop-induced processes.
