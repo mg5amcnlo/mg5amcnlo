@@ -1,6 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.3.2   
+	OM: change the kt-durham cut (at LO) such that particle comming from decay are not impacted if cut_decays
+            is on False.
         VH: Fixed the check in helas wavefunction appearance order in an helas diagrams. It failed in cases
 	    where additional wf were created during the fix of fermion flow in presence of majorana fermions.         
 	RF: Fixed a bug in the aMCFast/ApplGrid interfaced introduced in the previous version.
