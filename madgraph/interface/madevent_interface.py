@@ -362,7 +362,9 @@ class HelpToCmd(object):
         logger.info("   Those steps are performed if the related program are installed")
         logger.info("   and if the related card are present in the Cards directory.")
         self.run_options_help([('-f', 'Use default for all questions.'),
-                               ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
+                               ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.'),
+                               ('-M', 'in order to add MadSpin'),
+                               ('-R', 'in order to add the reweighting module')])
 
     def help_initMadLoop(self):
         logger.info("syntax: initMadLoop [options]",'$MG:color:GREEN')
@@ -774,10 +776,11 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('''delphes not install. Please install this package first. 
                 To do so type: \'install Delphes\' in the mg5 interface''')
             del args[-1]
+
                                 
-        if len(args) > 1:
-            self.help_generate_events()
-            raise self.InvalidCmd('Too many argument for generate_events command: %s' % cmd)
+        #if len(args) > 1:
+        #    self.help_generate_events()
+        #    raise self.InvalidCmd('Too many argument for generate_events command: %s' % cmd)
                     
         return run
 
@@ -1962,7 +1965,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
-        self.ask_run_configuration(mode)
+        self.ask_run_configuration(mode, args)
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -4186,7 +4189,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
 
     ############################################################################
-    def ask_run_configuration(self, mode=None):
+    def ask_run_configuration(self, mode=None, args=[]):
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0']
@@ -4241,7 +4244,13 @@ Beware that this can be dangerous for local multicore runs.""")
             else: 
                 switch['reweight'] = 'Numpy python package not available.'
                  
-
+        if '-R' in args or '--reweight' in args:
+            if switch['reweight'] == 'OFF':
+                switch['reweight'] = 'ON'
+            elif switch['reweight'] != 'ON':
+                logger.critical("Can not run reweight: %s", switch['reweight'])
+        if '-M' in args or '--madspin' in args:
+            switch['madspin'] = 'ON'
 
         options = list(available_mode) + ['auto', 'done']
         for id, key in enumerate(switch_order):
@@ -4257,7 +4266,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 if mode:
                     answer = mode
                 else:      
-                    switch_format = " %i %-50s %10s=%s\n"
+                    switch_format = " %i %-61s %10s=%s\n"
                     question = "The following switches determine which programs are run:\n"
                     for id, key in enumerate(switch_order):
                         question += switch_format % (id+1, description[key], key, switch[key])

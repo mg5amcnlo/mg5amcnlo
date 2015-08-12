@@ -6882,6 +6882,10 @@ _launch_parser.add_option("-i", "--interactive", default=False, action='store_tr
                                 help="Use Interactive Console [if available]")
 _launch_parser.add_option("-s", "--laststep", default='',
                                 help="last program run in MadEvent run. [auto|parton|pythia|pgs|delphes]")
+_launch_parser.add_option("-R", "--reweight", default=False, action='store_true',
+                            help="Run the reweight module (reweighting by different model parameter")
+_launch_parser.add_option("-M", "--madspin", default=False, action='store_true',
+                            help="Run the madspin package")
 
 #===============================================================================
 # Interface for customize question.

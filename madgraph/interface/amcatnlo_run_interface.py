@@ -4103,7 +4103,17 @@ Integrated cross-section
                 switch['reweight'] = 'ON'
             else:
                 switch['reweight'] = 'OFF'
-            
+        
+        if options['do_reweight']:
+            if switch['reweight'] == "OFF":
+                switch['reweight'] = "ON"
+            elif switch['reweight'] != "ON":
+                logger.critical("Can not run REWEIGTH module: %s" % switch['reweight'])
+        if options['do_madspin']:
+            switch['madspin'] = 'ON'
+                     
+                    
+                    
         answers = list(available_mode) + ['auto', 'done']
         alias = {}
         for id, key in enumerate(switch_order):
@@ -4115,7 +4125,7 @@ Integrated cross-section
         answers += special_values
         
         def create_question(switch):
-            switch_format = " %i %-60s %12s=%s\n"
+            switch_format = " %i %-61s %12s=%s\n"
             question = "The following switches determine which operations are executed:\n"
             for id, key in enumerate(switch_order):
                 question += switch_format % (id+1, description[key], key, switch[key])
@@ -4340,6 +4350,11 @@ _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
 _launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
                             help="For use with APPLgrid only: start from existing grids")
+_launch_parser.add_option("-R", "--reweight", default=False, dest='do_reweight', action='store_true',
+                            help="Run the reweight module (reweighting by different model parameter")
+_launch_parser.add_option("-M", "--madspin", default=False, dest='do_madspin', action='store_true',
+                            help="Run the madspin package")
+
 
 
 _generate_events_usage = "generate_events [MODE] [options]\n" + \

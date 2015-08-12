@@ -217,7 +217,6 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             #just return the input. since this Madloop.
             return proc                                       
-        logger.info(commandline)
         return commandline
 
 
