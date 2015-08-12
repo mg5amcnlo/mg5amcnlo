@@ -3306,7 +3306,10 @@ Beware that this can be dangerous for local multicore runs.""")
             else:
                 for match in glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt')):
                     run = match.rsplit(os.path.sep,2)[1]
+#                    if self.force:
+#                        args.append('-f')
                     try:
+                        misc.sprint('remove %s %s' % (run, ' '.join(args[1:]) ))
                         self.exec_cmd('remove %s %s' % (run, ' '.join(args[1:]) ) )
                     except self.InvalidCmd, error:
                         logger.info(error)
