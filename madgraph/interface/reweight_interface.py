@@ -720,18 +720,20 @@ class ReweightInterface(extended_cmd.Cmd):
             if hypp_id == 1:
                 #incorrect line
                 metag = dir_to_f2py_free_mod[(Pdir,0)][0]
-                self.rename_f2py_lib(Pdir, 2*metag+1)
+                newtag = 2*metag+1
+                self.rename_f2py_lib(Pdir, newtag)
                 try:
-                    mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag+1), globals(), locals(), [],-1)
+                    mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, newtag), globals(), locals(), [],-1)
                 except Exception, error:
-                    os.remove(pjoin(Pdir, 'matrix%spy.so' % (2*metag+1)))
-                    os.environ['MENUM'] = str(2*metag+1) 
-                    misc.compile(['matrix%spy.so' % (2*metag+1)], cwd=Pdir)
-                    mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag+1), globals(), locals(), [],-1)
+                    os.remove(pjoin(Pdir, 'matrix%spy.so' % newtag))
+                    newtag  = "L%s" % newtag
+                    os.environ['MENUM'] = newtag
+                    misc.compile(['matrix%spy.so' % newtag], cwd=Pdir)
+                    mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, newtag), globals(), locals(), [],-1)
                 
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
-                mymod = getattr(P, 'matrix%spy' % (2*metag+1))
+                mymod = getattr(P, 'matrix%spy' % newtag)
                 with misc.chdir(Pdir):
                     mymod.initialise('param_card.dat') 
             space.calculator[run_id] = mymod.get_me
@@ -759,6 +761,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
                 except ImportError:
                     os.remove(pjoin(Pdir, 'matrix%spy.so' % metag ))
+                    metag = "L" % metag
                     os.environ['MENUM'] = str(metag)
                     misc.compile(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
                     mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))

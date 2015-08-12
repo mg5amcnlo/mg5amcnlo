@@ -4198,7 +4198,7 @@ Beware that this can be dangerous for local multicore runs.""")
                        'pgs': 'Run PGS as detector simulator:',
                        'delphes':'Run Delphes as detector simulator:',
                        'madspin':'Decay particles with the MadSpin module:',
-                       'reweight':'Add weight to events based on coupling parameters:',
+                       'reweight':'Add weights to the events based on changing model parameters:',
                        }
         force_switch = {('pythia', 'OFF'): {'pgs': 'OFF', 'delphes': 'OFF'},
                        ('pgs', 'ON'): {'pythia':'ON'},

@@ -4058,7 +4058,7 @@ Integrated cross-section
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
                        'shower': 'Shower the generated events:',
                        'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight': 'Add weight to events based on coupling parameters'}
+                       'reweight': 'Add weights to the events based on changing model parameters:'}
 
         force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
                        ('madspin', 'ON'): {'fixed_order':'OFF'},
