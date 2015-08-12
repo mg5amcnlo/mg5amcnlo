@@ -91,6 +91,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.output_type = "default"
         self.helicity_reweighting = True
         self.rwgt_mode = None # can be LO or NLO, None is default 
+        self.has_nlo = False
         
         if event_path:
             logger.info("Extracting the banner ...")
@@ -636,18 +637,44 @@ class ReweightInterface(extended_cmd.Cmd):
         
         if not space: 
             space = self
-        
-        event.parse_reweight()
-        
-        w_orig = self.calculate_matrix_element(event, 0, space)
-        w_new =  self.calculate_matrix_element(event, 1, space)
-        if w_orig == 0:
-            tag, order = event.get_tag_and_order()
-            orig_order, Pdir, hel_dict = self.id_to_path[tag]
-            misc.sprint(w_orig, w_new)
-            misc.sprint(event)
-            raise Exception, "Invalid matrix element for original computation (weight=0)"
-        return w_new/w_orig*event.wgt
+        event.parse_reweight()                    
+        if self.has_nlo and self.rwgt_mode != "LO":
+            event.parse_nlo_weight()
+            
+            for cevent in event.nloweight.cevents:
+                #check if we need to compute the virtual for that cevent
+                need_V = False # the real is nothing else than the born for a N+1 config
+                all_ctype = [w.type for w in cevent.wgts]
+                if any(c in all_ctype for c in [2,14,15]):
+                    need_V =True    
+                w_orig = self.calculate_matrix_element(cevent, 0, space)
+                w_new =  self.calculate_matrix_element(cevent, 1, space)
+                ratio = w_new/w_orig
+                return ratio
+#                if need_V:
+                                    
+
+
+
+            return 0
+                
+            
+
+
+
+            
+            
+        else:    
+            # LO reweighting    
+            w_orig = self.calculate_matrix_element(event, 0, space)
+            w_new =  self.calculate_matrix_element(event, 1, space)
+            if w_orig == 0:
+                tag, order = event.get_tag_and_order()
+                orig_order, Pdir, hel_dict = self.id_to_path[tag]
+                misc.sprint(w_orig, w_new)
+                misc.sprint(event)
+                raise Exception, "Invalid matrix element for original computation (weight=0)"
+            return w_new/w_orig*event.wgt
      
     @staticmethod   
     def invert_momenta(p):
@@ -859,7 +886,7 @@ class ReweightInterface(extended_cmd.Cmd):
         mgcmd.exec_cmd(commandline)
         
         # 2. compute the production matrix element -----------------------------
-        has_nlo = False
+        self.has_nlo = False
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
@@ -873,7 +900,7 @@ class ReweightInterface(extended_cmd.Cmd):
             if '[' not in proc:
                 commandline += "add process %s ;" % proc
             else:
-                has_nlo = True
+                self.has_nlo = True
                 commandline += self.get_LO_definition_from_NLO(proc)
         
         commandline = commandline.replace('add process', 'generate',1)
@@ -902,6 +929,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     order = (initial, list(decay_finals))
                     decay_finals.sort()
                     tag = (tag[0], tuple(decay_finals))
+                misc.sprint(tag)
                 Pdir = pjoin(path_me, 'rw_me', 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
                 assert os.path.exists(Pdir), "Pdir %s do not exists" % Pdir                        
@@ -921,7 +949,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.id_to_path[tag] = [order, Pdir, hel_dict]        
         
         # 4. create the virtual for NLO reweighting  ---------------------------
-        if has_nlo and self.rwgt_mode != "LO":
+        if self.has_nlo and self.rwgt_mode != "LO":
             # LO is kamikaze reweighting which does not use the virtual.
             start = time.time()
             commandline=''

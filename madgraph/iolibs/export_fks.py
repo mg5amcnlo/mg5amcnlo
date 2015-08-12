@@ -1564,6 +1564,11 @@ end
         for file in linkfiles:
             ln('../../../lib/%s' % file)
 
+        linkfiles = ['coef_specs.inc']
+
+        for file in linkfiles:        
+            ln('../../../Source/DHELAS/%s' % file)
+
         # Return to original PWD
         os.chdir(cwd)
 
@@ -3261,6 +3266,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         for file in linkfiles:
             ln('../../../lib/%s' % file)
+
+        linkfiles = ['coef_specs.inc']
+
+        for file in linkfiles:        
+            ln('../../../Source/DHELAS/%s' % file)
 
         # Return to original PWD
         os.chdir(cwd)

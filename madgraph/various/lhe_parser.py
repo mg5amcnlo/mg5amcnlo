@@ -828,6 +828,18 @@ class Event(list):
             self.tag = self.tag[:start] + self.tag[stop+7:]
         return self.reweight_data
     
+    def parse_nlo_weight(self):
+        """ """
+        if hasattr(self, 'nloweight'):
+            return self.nloweight
+        
+        start, stop = self.tag.find('<mgrwgt>'), self.tag.find('</mgrwgt>')
+        if start != -1 != stop :
+        
+            text = self.tag[start+8:stop]
+            self.nloweight = NLO_PARTIALWEIGHT(text, self)
+        
+            
     def parse_matching_scale(self):
         """Parse the line containing the starting scale for the shower"""
         
@@ -1391,14 +1403,27 @@ class FourMomentum(object):
             py = obj.py
             pz = obj.pz
             E = obj.E
+        elif isinstance(obj, list):
+            assert len(obj) ==4
+            E = obj[0]
+            px = obj[1]
+            py = obj[2] 
+            pz = obj[3]
+        elif  isinstance(obj, str):
+            obj = [float(i) for i in obj.split()]
+            assert len(obj) ==4
+            E = obj[0]
+            px = obj[1]
+            py = obj[2] 
+            pz = obj[3]            
         else:
             E =obj
 
             
-        self.E = E
-        self.px = px
-        self.py = py
-        self.pz =pz
+        self.E = float(E)
+        self.px = float(px)
+        self.py = float(py)
+        self.pz = float(pz)
 
     @property
     def mass(self):
@@ -1466,6 +1491,210 @@ class FourMomentum(object):
         else:
             return FourMomentum(mom)
                 
+
+class OneNLOWeight(object):
+        
+    def __init__(self, input):
+        """ """
+
+        if isinstance(input, str):
+            self.parse(input)
+        
+    def parse(self, text):
+#0.473706252575d-01 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 0 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1  2  1 0.106660059627d+03        
+                       
+        data = text.split()
+        
+        self.nexternal = int(data[3])
+        self.wgt = [float(f) for f in data[:3]]
+        self.pdgs = [int(i) for i in data[4:4+self.nexternal]]
+        flag = 4+self.nexternal
+        self.qcdpower = int(data[flag])
+        self.bjks = [float(f) for f in data[flag+1:flag+3]]
+        self.scales2 = [float(f) for f in data[flag+3:flag+6]]
+        self.momenta_config = int(data[flag+6])
+        self.type = int(data[flag+7])
+        self.nfks = int(data[flag+8])
+        self.pdfwgt = float(data[flag+9])
+        
+
+        
+                
+
+class NLO_PARTIALWEIGHT(object):
+
+    class BasicEvent(list):
+        
+        def __init__(self, momenta, wgts, event):
+            list.__init__(self, momenta)
+            
+            assert self
+            self.wgts = wgts
+            self.event = event
+            
+            #check if the last momenta is zero if so drop it
+            if self[-1].E == 0:
+                self.pop(-1)
+                for wgt in self.wgts:
+                    wgt.nexternal -=1
+                    pdg = wgt.pdgs.pop(-1)
+
+                    
+        def get_pdg_code(self):
+            return self.wgts[0].pdgs
+        
+        def get_tag_and_order(self):
+            """ return the tag and order for this basic event""" 
+            (initial, _), _ = self.event.get_tag_and_order()
+            order = self.get_pdg_code()
+            
+            
+            initial, out = order[:len(initial)], order[len(initial):]
+            initial.sort()
+            out.sort()
+            return (tuple(initial), tuple(out)), order
+        
+        def get_momenta(self, get_order, allow_reversed=True):
+            """return the momenta vector in the order asked for"""
+        
+            #avoid to modify the input
+            order = [list(get_order[0]), list(get_order[1])] 
+            out = [''] *(len(order[0])+len(order[1]))
+            pdgs = self.get_pdg_code()
+            for pos, part in enumerate(self):
+                if pos < len(get_order[0]): #initial
+                    try:
+                        ind = order[0].index(pdgs[pos])
+                    except ValueError, error:
+                        if not allow_reversed:
+                            raise error
+                        else:
+                            order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
+                            try:
+                                return self.get_momenta(order, False)
+                            except ValueError:
+                                raise error   
+                            
+                                                 
+                    position =  ind
+                    order[0][ind] = 0             
+                else: #final   
+                    try:
+                        ind = order[1].index(pdgs[pos])
+                    except ValueError, error:
+                        if not allow_reversed:
+                            raise error
+                        else:
+                            order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
+                            try:
+                                return self.get_momenta(order, False)
+                            except ValueError:
+                                raise error     
+                    position = len(order[0]) + ind
+                    order[1][ind] = 0   
+    
+                out[position] = (part.E, part.px, part.py, part.pz)
+                
+            return out
+            
+            
+        def get_helicity(self, *args):
+            return [9] * len(self)
+        
+        @property
+        def aqcd(self):
+            return self.event.aqcd
+            
+    def __init__(self, input, event):
+        
+        self.event = event
+        if isinstance(input, str):
+            self.parse(input)
+            
+        
+    def parse(self, text):
+        """create the object from the string information (see example below)"""
+#0.2344688900d+00    8    2    0
+#0.4676614699d+02 0.0000000000d+00 0.0000000000d+00 0.4676614699d+02
+#0.4676614699d+02 0.0000000000d+00 0.0000000000d+00 -.4676614699d+02
+#0.4676614699d+02 0.2256794794d+02 0.4332148227d+01 0.4073073437d+02
+#0.4676614699d+02 -.2256794794d+02 -.4332148227d+01 -.4073073437d+02
+#0.0000000000d+00 -.0000000000d+00 -.0000000000d+00 -.0000000000d+00
+#0.4780341163d+02 0.0000000000d+00 0.0000000000d+00 0.4780341163d+02
+#0.4822581633d+02 0.0000000000d+00 0.0000000000d+00 -.4822581633d+02
+#0.4729127470d+02 0.2347155377d+02 0.5153455534d+01 0.4073073437d+02
+#0.4627255267d+02 -.2167412893d+02 -.3519736379d+01 -.4073073437d+02
+#0.2465400591d+01 -.1797424844d+01 -.1633719155d+01 -.4224046944d+00
+#0.473706252575d-01 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 0 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1  2  1 0.106660059627d+03
+#-.101626389492d-02 0.000000000000d+00 -.181915673961d-03  5 -3 3 -11 11 21 2 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1  3  1 -.433615206719d+01
+#0.219583436285d-02 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 2 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1 15  1 0.936909375537d+01
+#0.290043597283d-03 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 2 0.12292838d-02 0.43683926d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  1 12  1 0.118841547979d+01
+#-.856330613460d-01 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 2 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1  4  1 -.365375546483d+03
+#0.854918237609d-01 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 2 0.12112732d-02 0.45047393d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  2 11  1 0.337816057347d+03
+#0.359257891118d-05 0.000000000000d+00 0.000000000000d+00  5 21 3 -11 11 3 2 0.12292838d-02 0.43683926d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  1 12  3 0.334254554762d+00
+#0.929944817736d-03 0.000000000000d+00 0.000000000000d+00  5 21 3 -11 11 3 2 0.12112732d-02 0.45047393d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  2 11  3 0.835109616010d+02
+        
+        text = text.lower().replace('d','e')
+        all_line = text.split('\n')
+        #get global information
+        first_line =''
+        while not first_line.strip():
+            first_line = all_line.pop(0)
+            
+        wgt, nb_wgt, nb_event, _ = first_line.split()
+        
+        momenta = []
+        wgts = []
+        for line in all_line:
+            data = line.split()
+            if len(data) == 4:
+                p = FourMomentum(data)
+                momenta.append(p)
+            elif len(data)>0:
+                wgt = OneNLOWeight(line)
+                wgts.append(wgt)
+        
+        assert len(wgts) == int(nb_wgt)
+        
+        get_weights_for_momenta = {}
+        size_momenta = {}
+        for wgt in wgts:
+            if wgt.momenta_config in get_weights_for_momenta:
+                get_weights_for_momenta[wgt.momenta_config].append(wgt)
+            else: 
+                size_momenta[wgt.momenta_config] = wgt.nexternal
+                get_weights_for_momenta[wgt.momenta_config] = [wgt]
+    
+        assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), "%s != %s" % (sum(len(c) for c in get_weights_for_momenta.values()), nb_wgt)
+    
+    
+    
+        self.cevents = []   
+        for key in range(1, len(get_weights_for_momenta)+1): 
+            wgt = get_weights_for_momenta[key]
+            nb_p = size_momenta[key]
+            evt = self.BasicEvent(momenta[:nb_p], get_weights_for_momenta[key], self.event) 
+            self.cevents.append(evt)
+            momenta = momenta[nb_p:]
+           
+        nb_wgt_check = 0 
+        for cevt in self.cevents:
+            nb_wgt_check += len(cevt.wgts)
+        assert nb_wgt_check == int(nb_wgt)
+            
+            
+                
+                
+                
+        
+        
+        
+            
+        
+        
+
+        
+
 
 if '__main__' == __name__:   
     
