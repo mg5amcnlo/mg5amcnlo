@@ -431,7 +431,7 @@ c Restore default PDFs
 
         write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe,jfks_lhe,
      $       fksfather_lhe,ipartner_lhe, scale1_lhe,scale2_lhe, isave
-     $       ,mexternal,iwgtnumpartn, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
+     $       ,izero,izero, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
      $       ,wgtpdfmax
 
 c renormalize all the scale & PDF weights to have the same normalization
@@ -573,16 +573,25 @@ c do the same as above for the counterevents
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'reweight0.inc'
-      integer i,idum,j,k,momenta_conf
+      integer i,idum,j,k,momenta_conf(2),ii
       icontr=n_ctr_found
       iwgt=1
       do i=1,icontr
-         read(n_ctr_str(i),*)(wgt(j,i),j=1,3),idum,(pdg(j,i),j=1
-     &        ,nexternal),QCDpower(i),(bjx(j,i),j=1,2),(scales2(j,i),j=1
-     &        ,3),momenta_conf,itype(i),nFKS(i),wgts(1,i)
-         do j=1,nexternal
-            do k=0,3
-               momenta(k,j,i)=momenta_str(k,j,momenta_conf)
+         read(n_ctr_str(i),*)(wgt(j,i),j=1,3),(wgt_ME_tree(j,i),j=1,2)
+     $        ,idum,(pdg(j,i),j=1,nexternal),QCDpower(i),(bjx(j,i),j=1
+     $        ,2),(scales2(j,i),j=1,3),(momenta_conf(j),j=1,2),itype(i)
+     $        ,nFKS(i),idum,idum,idum,wgts(1,i)
+         do ii=1,2
+            do j=1,nexternal
+               do k=0,3
+                  if (momenta_conf(ii).gt.0) then
+                     momenta_m(k,j,ii,i)=momenta_str(k,j
+     $                                               ,momenta_conf(ii))
+                  else
+                     momenta_m(k,j,ii,i)=-99d0
+                     exit
+                  endif
+               enddo
             enddo
          enddo
       enddo

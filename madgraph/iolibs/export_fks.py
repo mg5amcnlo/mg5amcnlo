@@ -2615,9 +2615,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
             lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
             lines.append('DATA IDEN_VALUES /' + \
                          ', '.join(['%d' % ( 
-                         fks_born.born_matrix_element.get_denominator_factor() / \
-                         fks_born.born_matrix_element['identical_particle_factor'] * \
-                         fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
+                         fks_born.born_matrix_element.get_denominator_factor() ) \
                          for info in info_list]) + '/')
         else:
             # otherwise use the born
