@@ -443,15 +443,15 @@ class ParamCard(dict):
         if not internal_param[0] in [('mass',(24,)), ('sminputs',(2,))]:
             raise InvalidParamCard, ' The only EW input scheme currently supported'+\
                         ' are those with either the W mass or GF left internal.'
-            
+        
         # Now if the Wmass is internal, then we must change the scheme
         if internal_param[0] == ('mass',(24,)):
             aewm1 = EW_input[('sminputs',(1,))]
             Gf    = EW_input[('sminputs',(2,))]
             Mz    = EW_input[('mass',(23,))]
             try:
-                Mw = math.sqrt(Mz**2+math.sqrt(Mz**4-(((1.0/aewm1)*Mz**2*math.pi)
-                                                           /(Gf*math.sqrt(2)))))
+                Mw = math.sqrt((Mz**2/2.0)+math.sqrt((Mz**4/4.0)-((
+                              (1.0/aewm1)*math.pi*Mz**2)/(Gf*math.sqrt(2.0)))))
             except:
                 InvalidParamCard, 'The EW inputs 1/a_ew=%f, Gf=%f, Mz=%f are inconsistent'%\
                                                                    (aewm1,Gf,Mz)

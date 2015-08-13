@@ -3629,7 +3629,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
                                            auth_skipping = False, 
                                            output_path=output_path,
                                            reuse = False)
-        
+
     cached_information = []
     output_nwa = run_multiprocs_no_crossings(check_complex_mass_scheme_process,
                                            multiprocess_nwa,
@@ -3641,8 +3641,6 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # we are doing nwa. It will then be converted to a dictionary when doing cms.
                                            opt = cached_information,
                                            options=run_options)
-    
-    model = multiprocess_nwa.get('model')
 
     # Make sure to start from fresh for LO runs
     clean_added_globals(ADDED_GLOBAL)
@@ -3650,7 +3648,6 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # Generate a list of unique processes in the CMS scheme
     cmd.do_set('complex_mass_scheme True', log=False)
     #cmd.do_import('model loop_qcd_qed_sm__CMS__-CMS')
-    model = multiprocess_nwa.get('model')
 
     multiprocess_cms = cmd.extract_process(process_line)    
     model = multiprocess_cms.get('model')
@@ -4548,11 +4545,13 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 for decay in new_param_card['decay'].keys():
                     particle_name = evaluator.full_model.get_particle(\
                                                        abs(decay[0])).get_name()
-                    if not options['has_FRdecay']:
-                        logger.info('Computing width of particle %s for lambda=%f'%\
-                                                      (particle_name,lambdaCMS))
-                    tmp_param_card['decay'].get(decay).value = \
-                               get_width(abs(decay[0]),lambdaCMS,new_param_card)
+                    new_width = get_width(abs(decay[0]),lambdaCMS,new_param_card)
+                    tmp_param_card['decay'].get(decay).value = new_width
+                    if not options['has_FRdecay'] and new_width != 0.0:
+                        logger.info('Numerically computed width of particle'+\
+                                        ' %s for lambda=%.4g : %-9.6gGeV'%
+                                            (particle_name,lambdaCMS,new_width))
+
                 # Write the recomputed widths so that it can potentially be
                 # used for future runs (here the model in the NWA format)
                 if lambdaCMS==1.0 and NLO:
@@ -5348,8 +5347,9 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         # We really want to select only the very stable region
         scan_index = 0
         reference = abs(sorted(NWAData)[len(NWAData)//2])
-        if abs(reference/low_diff_median)<diff_zero_threshold:
-            reference = abs(low_diff_median)
+        if low_diff_median!= 0.0:
+            if abs(reference/low_diff_median)<diff_zero_threshold:
+                reference = abs(low_diff_median)
         while True:
             scanner = DiffData[scan_index:group_val+scan_index]
             current_median = sorted(scanner)[len(scanner)//2]
@@ -5426,12 +5426,9 @@ minimum value of lambda to be considered in the CMS check."""\
                                                              %('%.3g'%reference)
         res_str += "== Asymptotic difference value detected      = %s\n"\
                                                        %('%.3g'%low_diff_median)
-#        is_ref_zero = abs(low_diff_median/diff_average)<diff_zero_threshold
-#        res_str += "== Asymptotic difference value detected      = %s\n"\
-#          %('%.3g'%low_diff_median if not is_ref_zero else 'ZERO->%.3g'%diff_average)
         # Pass information to the plotter for the difference target
         differences_target[(process,resID)]= low_diff_median
-        misc.sprint('Now doing resonance %s.'%res_str)
+#        misc.sprint('Now doing resonance %s.'%res_str)
         while True:
             current_vals = CMScheck_values[scan_index:scan_index+group_val]
             max_diff = max(max_diff, abs(low_diff_median-

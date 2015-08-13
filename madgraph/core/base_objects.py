@@ -1686,14 +1686,16 @@ class Model(PhysicsObject):
                 continue
             mass_widths.append(particle.get('width'))
             mass_widths.append(particle.get('mass'))
-            if particle.get('width') == 'ZERO':
+            width = self.get_parameter(particle.get('width'))
+            if (isinstance(width.value, (complex,float)) and abs(width.value)==0.0) or \
+                                                    width.name.lower() =='zero':
                 #everything is fine since the width is zero
                 continue
-            width = self.get_parameter(particle.get('width'))
             if not isinstance(width, ParamCardVariable):
                 width.expr = 're(%s)' % width.expr
-            if particle.get('mass') != 'ZERO':
-                mass = self.get_parameter(particle.get('mass'))
+            mass = self.get_parameter(particle.get('mass'))
+            if (isinstance(width.value, (complex,float)) and abs(width.value)!=0.0) or \
+                                                    mass.name.lower() != 'zero':
                 # special SM treatment to change the gauge scheme automatically.
                 if particle.get('pdg_code') == 24 and isinstance(mass, 
                                                                  ModelVariable):

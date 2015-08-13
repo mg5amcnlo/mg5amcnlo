@@ -111,18 +111,16 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
     
     #import the FULL model
     model = import_full_model(model_path, decay, prefix)
-    # Change to complex mass scheme if necessary
-    if complex_mass_scheme is None:
-        model.change_mass_to_complex_scheme(toCMS=aloha.complex_mass)
-    else:
-        model.change_mass_to_complex_scheme(toCMS=complex_mass_scheme)
-        
+
     if os.path.exists(pjoin(model_path, "README")):
         logger.info("Please read carefully the README of the model file for instructions/restrictions of the model.",'$MG:color:BLACK') 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name
     
+    # Decide whether complex mass scheme is on or not
+    useCMS = (complex_mass_scheme is None and aloha.complex_mass) or \
+                                                      complex_mass_scheme==True
     #restrict it if needed       
     if restrict_file:
         try:
@@ -135,7 +133,21 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
-        
+
+        # Change to complex mass scheme if necessary. This must be done BEFORE
+        # the restriction.
+        if useCMS:
+            # We read the param_card a first time so that the function 
+            # change_mass_to_complex_scheme can know if a particle is to
+            # be considered massive or not and with zero width or not.
+            # So we read the restrict card a first time, with the CMS set to
+            # False because we haven't changed the model yet.
+            model.set_parameters_and_couplings(param_card = restrict_file,
+                                                      complex_mass_scheme=False)
+            model.change_mass_to_complex_scheme(toCMS=True)
+        else:
+            model.change_mass_to_complex_scheme(toCMS=False)
+
         if model_name == 'mssm' or os.path.basename(model_name) == 'mssm':
             keep_external=True
         else:
@@ -143,7 +155,14 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
         model.restrict_model(restrict_file, rm_parameter=not decay,
            keep_external=keep_external, complex_mass_scheme=complex_mass_scheme)
         model.path = model_path
+    else:
+        # Change to complex mass scheme if necessary
+        if useCMS:
+            model.change_mass_to_complex_scheme(toCMS=True)
+        else:
+            model.change_mass_to_complex_scheme(toCMS=False)
 
+        
     return model
     
 
@@ -1248,6 +1267,8 @@ class RestrictModel(model_reader.ModelReader):
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card, 
                                         complex_mass_scheme=complex_mass_scheme)
+        
+        
         
         # associate to each couplings the associated vertex: def self.coupling_pos
         self.locate_coupling()
