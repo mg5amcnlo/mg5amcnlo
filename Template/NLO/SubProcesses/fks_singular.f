@@ -2224,10 +2224,11 @@ c iproc_picked:
                n_ctr_str(n_ctr_found) =
      &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &              //trim(adjustl(procid))
-               write (str_temp,'(i2,5(1x,d14.8),7(1x,i2),1x,d18.12)')
+               write (str_temp,'(i2,6(1x,d14.8),7(1x,i2),1x,d18.12)')
      &              QCDpower(ict),
      &              (bjx(j,ict),j=1,2),
      &              (scales2(j,ict),j=1,3),
+     &              g_strong(ict),
      &              (momenta_conf(j),j=1,2),
      &              itype(ict),
      &              nFKS(ict),
@@ -2255,10 +2256,11 @@ c H-event
             n_ctr_str(n_ctr_found) =
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(procid))
-            write (str_temp,'(i2,5(1x,d14.8),7(1x,i2),1x,d18.12)')
+            write (str_temp,'(i2,6(1x,d14.8),7(1x,i2),1x,d18.12)')
      &           QCDpower(ict),
      &           (bjx(j,ict),j=1,2),
      &           (scales2(j,ict),j=1,3),
+     &           g_strong(ict),
      &           (momenta_conf(j),j=1,2),
      &           itype(ict),
      &           nFKS(ict),
