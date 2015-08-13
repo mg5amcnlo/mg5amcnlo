@@ -440,7 +440,8 @@ class ParamCard(dict):
                 ' unknown: [%s]'%(','.join([str(elem) for elem in internal_param]))
         
         
-        if not internal_param[0] in [('mass',(24,)), ('sminputs',(2,))]:
+        if not internal_param[0] in [('mass',(24,)), ('sminputs',(2,)),
+                                                             ('sminputs',(1,))]:
             raise InvalidParamCard, ' The only EW input scheme currently supported'+\
                         ' are those with either the W mass or GF left internal.'
         

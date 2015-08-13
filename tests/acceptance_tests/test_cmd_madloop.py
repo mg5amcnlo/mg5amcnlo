@@ -276,6 +276,102 @@ class TestCmdLoop(unittest.TestCase):
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
+    def test_ML_check_cms_aem_emvevex(self):
+        """ Test that check cms a e- > e- ve ve~ [virt=QCD QED] works fine """
+
+        self.setup_logFile_for_logger('madgraph.check_cmd')
+        files = ['acceptance_test_aem_emvevex.pkl',
+                 'acceptance_test_aem_emvevex.log',
+                 'acceptance_test_aem_emvevex_widths_increased.pkl',
+                 'acceptance_test_aem_emvevex_widths_increased.log']
+        output_name = 'SAVEDTMP_CHECK_acceptance_test_aem_emvevex__%s__'
+        
+        try:
+            cwd = os.getcwd()
+            
+            # Change this when we will make the CMS-ready EW model the default
+            self.do('import model loop_qcd_qed_sm__RECMS__')
+            for mode in ['NWA','CMS']:
+                if path.isdir(pjoin(MG5DIR,output_name%mode)):
+                    shutil.rmtree(pjoin(MG5DIR,output_name%mode))
+            
+            # Make sure it works for an initial run
+            command = 'check cms -reuse a e- > e- ve ve~ [virt=QCD QED] '
+            options = {'name':'acceptance_test_udx_epvea',
+                       'lambdaCMS':'(1.0e-6,2)',
+                       'show_plot':'False',
+                       'seed':'666',
+                       'recompute_width':'first_time'}
+            self.do(command+' '.join('--%s=%s'%(opt, value) for opt, value in 
+                                                               options.items()))
+            self.assertEqual(cwd, os.getcwd())
+            for mode in ['NWA','CMS']:
+                self.assertTrue(path.isdir(pjoin(MG5DIR,output_name%mode)))
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                                            'acceptance_test_aem_emvevex.pkl')))
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                                            'acceptance_test_aem_emvevex.log')))
+            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+            res = open('/tmp/madgraph.check_cmd.log').read()
+            
+            
+            self.assertTrue('Generation time total' in res)
+            self.assertTrue('Executable size' in res)
+            self.assertTrue('Tool (DoublePrec for CT)' in res)
+            self.assertTrue('Number of Unstable PS points' in res)
+            self.assertTrue(res.count('NA')<=3)
+
+            # Now for a Reuse-run with the widths modified by 1%
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            self.setup_logFile_for_logger('madgraph.check_cmd')
+            # Now copy the card with recomputed widths in it
+            for mode in ['NWA','CMS']:
+                self.assertTrue(path.isfile(pjoin(MG5DIR,output_name%mode,
+                                   'Cards','param_card.dat_recomputed_widths')))
+                shutil.copy(pjoin(MG5DIR,output_name%mode,'Cards',
+                                     'param_card.dat_recomputed_widths'),
+                        pjoin(MG5DIR,output_name%mode,'Cards','param_card.dat'))
+            options['tweak']='allwidths->1.1*allwidths(widths_increased)'
+            options['recompute_width']='never'
+            self.do(command+' '.join('--%s=%s'%(opt, value) for opt, value in 
+                                                               options.items()))
+            self.assertEqual(cwd, os.getcwd())
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                           'acceptance_test_aem_emvevex_widths_increased.pkl')))
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                           'acceptance_test_aem_emvevex_widths_increased.log')))
+
+            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
+            res = open('/tmp/madgraph.check_cmd.log').read()            
+
+            self.assertTrue('Generation time total' in res)
+            self.assertTrue('Executable size' in res)
+            self.assertTrue('Tool (DoublePrec for CT)' in res)
+            self.assertTrue('Number of Unstable PS points' in res)
+            self.assertTrue(res.count('NA')<=11)
+            
+            # Clean up duties
+            for mode in ['NWA','CMS']:
+                shutil.rmtree(pjoin(MG5DIR,output_name%mode))
+            for file in files:
+                try:
+                    os.remove(pjoin(MG5DIR,file))
+                except:
+                    pass
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
+        except:
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            for mode in ['NWA','CMS']:
+                shutil.rmtree(pjoin(MG5DIR,output_name%mode))
+            for file in files:
+                try:
+                    os.remove(pjoin(MG5DIR,file))
+                except:
+                    pass
+            raise
+        self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
 class TestCmdMatchBox(IOTests.IOTestManager):
     
     def setUp(self):
