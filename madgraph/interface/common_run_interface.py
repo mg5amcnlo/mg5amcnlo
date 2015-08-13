@@ -754,6 +754,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
+            
 
 
     @staticmethod

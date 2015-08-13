@@ -333,6 +333,7 @@ class ReweightInterface(extended_cmd.Cmd):
         square matrix element by the squared matrix element of production.
         All scale are kept fix for this re-weighting.''')
 
+
     #@misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
@@ -366,7 +367,9 @@ class ReweightInterface(extended_cmd.Cmd):
         ff.write(self.banner['slha'])
         ff.close()        
         cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
-                                   ask=self.ask, pwd=rw_dir)
+                                   ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line)
+        self.stored_line = None
+        #self.define_child_cmd_interface(cmd, interface=False)
         new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()        
         # check if "Auto" is present for a width parameter
         if "auto" in new_card.lower():            
@@ -406,7 +409,8 @@ class ReweightInterface(extended_cmd.Cmd):
             new_param =  check_param_card.ParamCard(s_new.splitlines())
             card_diff = old_param.create_diff(new_param)
             if card_diff == '' and not self.second_process:
-                logger.warning(' REWEIGHTING: original card and new card are identical. Is this really the run that you expect?')
+                logger.warning(' REWEIGHTING: original card and new card are identical. Bypass this run')
+                return
                 #raise self.InvalidCmd, 'original card and new card are identical'
             try:
                 if old_param['sminputs'].get(3)- new_param['sminputs'].get(3) > 1e-3 * new_param['sminputs'].get(3):
@@ -600,7 +604,25 @@ class ReweightInterface(extended_cmd.Cmd):
         self.terminate_fortran_executables(new_card_only=True)
         #store result
         self.all_cross_section[rewgtid] = (cross, error)
+    
+    def do_set(self, line):
+        "Not in help"
         
+        logger.warning("Invalid Syntax. The command 'set' should be placed after the 'launch' one. Continuing by adding automatically 'launch'")
+        self.stored_line = "set %s" % line
+        return self.exec_cmd("launch")
+    
+    def default(self, line, log=True):
+        """Default action if line is not recognized"""
+
+        if os.path.isfile(line):
+            if log:
+                logger.warning("Invalid Syntax. The path to a param_card' should be placed after the 'launch' command. Continuing by adding automatically 'launch'")
+            self.stored_line =  line
+            return self.exec_cmd("launch")
+        else:
+            return super(ReweightInterface,self).default(line, log=log)
+    
     def write_reweighted_event(self, event, tag_name, **opt):
         """a function for running in multicore"""
         
