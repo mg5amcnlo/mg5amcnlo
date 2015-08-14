@@ -283,7 +283,7 @@ class TestCmdLoop(unittest.TestCase):
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
-    def test_ML_check_cms_al_lvlvl_LO(self):
+    def test_ML_check_cms_al_lvlvlx_LO(self):
         """ Test that check cms a l- > l- vl vl~ passes at leading order."""
 
         try:
