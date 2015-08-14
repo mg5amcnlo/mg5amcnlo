@@ -4103,8 +4103,10 @@ Integrated cross-section
             elif switch['reweight'] != "ON":
                 logger.critical("Can not run REWEIGTH module: %s" % switch['reweight'])
         if options['do_madspin']:
-            switch['madspin'] = 'ON'
-                     
+            if switch['madspin'] == "OFF":
+                switch['madspin'] = 'ON'
+            elif switch['madspin'] != "ON":
+                logger.critical("Can not run MadSpin module: %s" % switch['reweight'])
                     
                     
         answers = list(available_mode) + ['auto', 'done']
@@ -4142,8 +4144,8 @@ Integrated cross-section
                 return 
             elif answer in special_values:
                 logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
-                assign_switch('reweight', 'OFF')
-                assign_switch('madspin', 'OFF')
+                #assign_switch('reweight', 'OFF')
+                #assign_switch('madspin', 'OFF')
                 if answer == 'LO':
                     switch['order'] = 'LO'
                     switch['fixed_order'] = 'ON'
@@ -4215,7 +4217,7 @@ Integrated cross-section
         if mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")            
-            
+
         
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
