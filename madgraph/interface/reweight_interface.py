@@ -355,7 +355,11 @@ class ReweightInterface(extended_cmd.Cmd):
         ff.close()
         ff = open(pjoin(self.me_dir, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
         ff.write(self.banner['slha'])
-        ff.close()        
+        ff.close()
+        if self.has_nlo and self.rwgt_mode != "LO":
+            files.ln(ff.name, starting_dir=pjoin(self.me_dir, 'rw_mevirt','Cards'))
+        
+                
         cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
                                    ask=self.ask, pwd=rw_dir)
         new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()        
@@ -649,8 +653,14 @@ class ReweightInterface(extended_cmd.Cmd):
                     need_V =True    
                 w_orig = self.calculate_matrix_element(cevent, 0, space)
                 w_new =  self.calculate_matrix_element(cevent, 1, space)
-                ratio = w_new/w_orig
-                return ratio
+                ratio_T = w_new/w_orig
+                if need_V:
+                    w_origV = self.calculate_matrix_element(cevent, 'V0', space)
+                    w_newV =  self.calculate_matrix_element(cevent, 'V1', space)                    
+                    ratio_V = (w_newV + w_new) / (w_origV + w_orig)  
+                    return ratio_V
+                   
+            return ratio_T
 #                if need_V:
                                     
 
@@ -700,6 +710,12 @@ class ReweightInterface(extended_cmd.Cmd):
         """routine to return the matrix element"""
 
         tag, order = event.get_tag_and_order()
+        if isinstance(hypp_id, str) and hypp_id.startswith('V'):
+            tag = (tag,'V')
+            hypp_id = int(hypp_id[1:])
+            base = "rw_mevirt"
+        else:
+            base = "rw_me"
         
         if (not self.second_model and not self.second_process) or hypp_id==0:
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
@@ -715,7 +731,7 @@ class ReweightInterface(extended_cmd.Cmd):
             external = space.calculator[run_id]
         elif (not self.second_model and not self.second_process) or hypp_id==0:
             # create the executable for this param_card  
-            subdir = pjoin(self.me_dir,'rw_me ', 'SubProcesses')
+            subdir = pjoin(self.me_dir,base, 'SubProcesses')
             if self.me_dir not in sys.path:
                 sys.path.insert(0,self.me_dir)
             Pname = os.path.basename(Pdir)
@@ -732,7 +748,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 misc.compile(['matrix2py.so'], cwd=Pdir)
                 
                 self.rename_f2py_lib(Pdir, 2*metag)
-                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag), globals(), locals(), [],-1)
+                with misc.chdir(Pdir):
+                    mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
                 mymod = getattr(P, 'matrix%spy' % (2*metag))
@@ -742,7 +759,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 #incorrect line
                 metag = dir_to_f2py_free_mod[(Pdir,0)][0]
                 self.rename_f2py_lib(Pdir, 2*metag+1)
-                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag+1), globals(), locals(), [],-1)
+                mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag+1), globals(), locals(), [],-1)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
                 mymod = getattr(P, 'matrix%spy' % (2*metag+1))
@@ -751,7 +768,7 @@ class ReweightInterface(extended_cmd.Cmd):
             space.calculator[run_id] = mymod.get_me
             external = space.calculator[run_id]                      
         else:
-            subdir = pjoin(self.me_dir,'rw_me_second', 'SubProcesses')
+            subdir = pjoin(self.me_dir,'%_second' % base, 'SubProcesses')
             if self.me_dir not in sys.path:
                 sys.path.append(self.me_dir)
 
@@ -768,7 +785,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
             self.rename_f2py_lib(Pdir, metag)
             with misc.chdir(Pdir):
-                mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
+                mymod = __import__("%s_second.SubProcesses.%s.matrix%spy" % (base, Pname, metag))
                 reload(mymod)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
@@ -847,6 +864,10 @@ class ReweightInterface(extended_cmd.Cmd):
         path_me = self.me_dir
         try:
             shutil.rmtree(pjoin(path_me,'rw_me'))
+        except Exception: 
+            pass
+        try:
+            shutil.rmtree(pjoin(path_me,'rw_mevirt'))
         except Exception: 
             pass
 
@@ -963,7 +984,7 @@ class ReweightInterface(extended_cmd.Cmd):
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
-            commandline = 'output standalone_rw %s' % pjoin(path_me,'rw_mevirt')
+            commandline = 'output standalone_rw %s -f' % pjoin(path_me,'rw_mevirt')
             mgcmd.exec_cmd(commandline, precmd=True)        
             logger.info('Done %.4g' % (time.time()-start))
 

@@ -1501,25 +1501,83 @@ class OneNLOWeight(object):
             self.parse(input)
         
     def parse(self, text):
-#0.473706252575d-01 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 0 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1  2  1 0.106660059627d+03        
-                       
+        """parse the line and create the related object"""
+        #0.546601845792D+00 0.000000000000D+00 0.000000000000D+00 0.119210435309D+02 0.000000000000D+00  5 -1 2 -11 12 21 0 0.24546101D-01 0.15706890D-02 0.12586055D+04 0.12586055D+04 0.12586055D+04  1  2  2  2  5  2  2 0.539995789976D+04
+        # below comment are from Rik description email
+        
         data = text.split()
-        
-        self.nexternal = int(data[3])
-        self.wgt = [float(f) for f in data[:3]]
-        self.pdgs = [int(i) for i in data[4:4+self.nexternal]]
-        flag = 4+self.nexternal
+        # 1. The first three doubles are, as before, the 'wgt', i.e., the overall event of this contribution, and the ones multiplying the log[mu_R/QES] and the log[mu_F/QES], stripped of alpha_s and the PDFs.
+        self.pwgt = [float(f) for f in data[:3]]
+        # 2. The next two doubles are the values of the (corresponding) Born and 
+        #    real-emission matrix elements. You can either use these values to check 
+        #    that the newly computed original matrix element weights are correct, 
+        #    or directly use these so that you don't have to recompute the original weights. 
+        #    For contributions for which the real-emission matrix elements were 
+        #    not computed, the 2nd of these numbers is zero. The opposite is not true, 
+        #    because each real-emission phase-space configuration has an underlying Born one 
+        #    (this is not unique, but on our code we made a specific choice here). 
+        #    This latter information is useful if the real-emission matrix elements 
+        #    are unstable; you can then reweight with the Born instead. 
+        #    (see also point 9 below, where the momentum configurations are assigned). 
+        #    I don't think this instability is real problem when reweighting the real-emission 
+        #    with tree-level matrix elements (as we generally would do), but is important 
+        #    when reweighting with loop-squared contributions as we have been doing for gg->H. 
+        #    (I'm not sure that reweighting tree-level with loop^2 is something that 
+        #    we can do in general, because we don't really know what to do with the 
+        #    virtual matrix elements because we cannot generate 2-loop diagrams.)
+        self.born = float(data[3])
+        self.real = float(data[4])
+        # 3. integer: number of external particles of the real-emission configuration  (as before)
+        self.nexternal = int(data[5])
+        # 4. PDG codes corresponding to the real-emission configuration (as before)
+        self.pdgs = [int(i) for i in data[6:6+self.nexternal]]
+        flag = 6+self.nexternal # new starting point for the position
+        # 5. next integer is the power of g_strong in the matrix elements (as before)
         self.qcdpower = int(data[flag])
+        # 6. 2 doubles: The bjorken x's used for this contribution (as before)
         self.bjks = [float(f) for f in data[flag+1:flag+3]]
+        # 7. 3 doubles: The Ellis-sexton scale, the renormalisation scale and the factorisation scale, all squared, used for this contribution (as before)
         self.scales2 = [float(f) for f in data[flag+3:flag+6]]
-        self.momenta_config = int(data[flag+6])
-        self.type = int(data[flag+7])
-        self.nfks = int(data[flag+8])
-        self.pdfwgt = float(data[flag+9])
-        
+        # 8.the value of g_strong
+        self.gs = float(data[flag+6])
+        # 9. 2 integers: the corresponding Born and real-emission type kinematics. (in the list of momenta)
+        #    Note that also the Born-kinematics has n+1 particles, with, in general, 
+        #    one particle with zero momentum (this is not ALWAYS the case, 
+        #    there could also be 2 particles with perfectly collinear momentum). 
+        #    To convert this from n+1 to a n particles, you have to sum the momenta 
+        #    of the two particles that 'merge', see point 12 below.
+        self.born_related = int(data[flag+7])
+        self.real_related = int(data[flag+8])
+        # 10. 1 integer: the 'type'. This is the information you should use to determine 
+        #     if to reweight with Born, virtual or real-emission matrix elements. 
+        #     (Apart from the possible problems with complicated real-emission matrix elements
+        #     that need to be computed very close to the soft/collinear limits, see point 2 above. 
+        #     I guess that for tree-level this is always okay, but when reweighting 
+        #     a tree-level contribution with a one-loop squared one, as we do 
+        #     for gg->Higgs, this is important). 
+        self.type = int(data[flag+9])
+        # 11. 1 integer: The FKS configuration for this contribution (not really 
+        #     relevant for anything, but is used in checking the reweighting to 
+        #     get scale & PDF uncertainties). 
+        self.nfks = int(data[flag+10])
+        # 12. 2 integers: the two particles that should be merged to form the 
+        #     born contribution from the real-emission one. Remove these two particles
+        #     from the (ordered) list of PDG codes, and insert a newly created particle
+        #     at the location of the minimum of the two particles removed. 
+        #     I.e., if you merge particles 2 and 4, you have to insert the new particle 
+        #     as the 2nd particle. And particle 5 and above will be shifted down by one.
+        self.to_merge_pdg = [int (f) for f in data[flag+11:flag+13]]
+        # 13. 1 integer: the PDG code of the particle that is created after merging the two particles at point 12.
+        self.merge_new_pdg = int(data[flag+13])
+        # 14. 1 double: the reference number that one should be able to reconstruct form the weights (point 1 above) and the rest of the information of this line. This is really the contribution to this event as computed by the code (and is passed to the integrator). It contains everything. 
+        self.ref_wgt = float(data[flag+14])
 
-        
-                
+        #check the momenta configuration linked to the event
+        if self.type in [1,11]:
+            self.momenta_config = self.real_related
+        else:
+            self.momenta_config = self.born_related
+
 
 class NLO_PARTIALWEIGHT(object):
 
@@ -1531,6 +1589,22 @@ class NLO_PARTIALWEIGHT(object):
             assert self
             self.wgts = wgts
             self.event = event
+            
+            if wgts[0].momenta_config == wgts[0].born_related:
+                # need to remove one momenta.
+                ind1, ind2 = [ind-1 for ind in wgts[0].to_merge_pdg] 
+                if ind1> ind2: 
+                    ind1, ind2 = ind2, ind1
+                new_p = self[ind1] + self[ind2]
+                self.pop(ind1) #-1 due to fortran convention
+                self.insert(ind1, new_p)
+                self.pop(ind2) #-1 due to fortran convention
+                #update the pdgs
+                wgts[0].pdgs.pop(ind1)
+                wgts[0].pdgs.insert(ind1, wgts[0].merge_new_pdg)
+                wgts[0].pdgs.pop(ind2) #-1 due to fortran convention                
+
+                
             
             #check if the last momenta is zero if so drop it
             if self[-1].E == 0:
@@ -1642,6 +1716,7 @@ class NLO_PARTIALWEIGHT(object):
             first_line = all_line.pop(0)
             
         wgt, nb_wgt, nb_event, _ = first_line.split()
+        nb_wgt, nb_event = int(nb_wgt), int(nb_event)
         
         momenta = []
         wgts = []
@@ -1657,25 +1732,26 @@ class NLO_PARTIALWEIGHT(object):
         assert len(wgts) == int(nb_wgt)
         
         get_weights_for_momenta = {}
-        size_momenta = {}
+        size_momenta = 0
         for wgt in wgts:
             if wgt.momenta_config in get_weights_for_momenta:
                 get_weights_for_momenta[wgt.momenta_config].append(wgt)
             else: 
-                size_momenta[wgt.momenta_config] = wgt.nexternal
+                if size_momenta == 0: size_momenta = wgt.nexternal
+                assert size_momenta == wgt.nexternal
                 get_weights_for_momenta[wgt.momenta_config] = [wgt]
     
         assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), "%s != %s" % (sum(len(c) for c in get_weights_for_momenta.values()), nb_wgt)
     
-    
+         
     
         self.cevents = []   
-        for key in range(1, len(get_weights_for_momenta)+1): 
-            wgt = get_weights_for_momenta[key]
-            nb_p = size_momenta[key]
-            evt = self.BasicEvent(momenta[:nb_p], get_weights_for_momenta[key], self.event) 
-            self.cevents.append(evt)
-            momenta = momenta[nb_p:]
+        for key in range(1, nb_event+1): 
+            if key in get_weights_for_momenta:
+                wgt = get_weights_for_momenta[key]
+                evt = self.BasicEvent(momenta[:size_momenta], get_weights_for_momenta[key], self.event) 
+                self.cevents.append(evt)
+            momenta = momenta[size_momenta:]
            
         nb_wgt_check = 0 
         for cevt in self.cevents:

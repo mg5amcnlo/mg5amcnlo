@@ -665,7 +665,7 @@ c
         if(jwgtinfo.eq.-5.or.jwgtinfo.eq.-9.or.jwgtinfo.eq.-8) then
            write(ifile,'(a)')'  <mgrwgt>'
            write (ifile,'(1x,d16.10,3(1x,i4))') wgtref,n_ctr_found
-     &          ,n_mom_conf,nint(wgtcpower)
+     &          ,n_mom_conf, nint(wgtcpower)
            do i=1,n_mom_conf
               do j=1,mexternal
                  write (ifile,'(4(1x,d16.10))')
