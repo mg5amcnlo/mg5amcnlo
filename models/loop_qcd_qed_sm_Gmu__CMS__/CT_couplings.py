@@ -1754,7 +1754,7 @@ R2_ddA2Cm_t = Coupling(name = 'R2_ddA2Cm_t',
                      order = {'QED':3})
 
 R2_ssA2Cm = Coupling(name = 'R2_ssA2Cm',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)+MS**2/(8*sw**2*MW**2)*(-1./3.))*(1./2.))*(-complex(0,1)*R2SFF)',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)+MS**2/(8*sw**2*MW**2)*(-1./3.)*(1./2.))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssA2Cm_u = Coupling(name = 'R2_ssA2Cm_u',
@@ -7019,7 +7019,7 @@ c_UVuxbGp2EW = Coupling(name = 'c_UVuxbGp2EW',
 
 
 c_UVcxbGp1EW = Coupling(name = 'c_UVcxbGp1EW',
-                        value = '(ee*complexconjugate(CKM23)*(-2*MB*SWCoup_UV_EW*MW**2 + MB*MW**2*sw*complexconjugate(bWcft_UV_EW_R) + sw*(-MB*WMass2_UV_EW + MW**2*(2*eCoup_UV_EW*MB + GpWcft_UV_EW*MB + + 2*dMB_bMass_UV_EW + cWcft_UV_EW_L*MB))))/(2.*cmath.sqrt(2)*MW**3*sw**2)',
+                        value = '(ee*complexconjugate(CKM23)*(-2*MB*SWCoup_UV_EW*MW**2 + MB*MW**2*sw*complexconjugate(bWcft_UV_EW_R) + sw*(-MB*WMass2_UV_EW + MW**2*(2*eCoup_UV_EW*MB + GpWcft_UV_EW*MB + 2*dMB_bMass_UV_EW + cWcft_UV_EW_L*MB))))/(2.*cmath.sqrt(2)*MW**3*sw**2)',
                         order = {'QED' : 3})
 
 
