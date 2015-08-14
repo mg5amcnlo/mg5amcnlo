@@ -384,7 +384,7 @@ class TestCmdLoop(unittest.TestCase):
             cwd = os.getcwd()
             
             # Change this when we will make the CMS-ready EW model the default
-            self.do('import model loop_qcd_qed_sm__RECMS__')
+            self.do('import model loop_qcd_qed_sm')
             for mode in ['NWA','CMS']:
                 if path.isdir(pjoin(MG5DIR,output_name%mode)):
                     shutil.rmtree(pjoin(MG5DIR,output_name%mode))
