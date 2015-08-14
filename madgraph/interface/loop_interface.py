@@ -611,14 +611,17 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)
-
+            
+        compiler = {'fortran': self.options['fortran_compiler'],
+                    'f2py': self.options['f2py_compiler']}
+        
         if self._export_format in self.supported_ML_format:
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'])
+                                           compiler)
 
         if self._export_format in self.supported_ML_format:
             logger.info('Output to directory ' + self._export_dir + ' done.')
