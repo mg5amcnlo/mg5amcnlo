@@ -691,7 +691,7 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
 
     def p_expression_recms(self, p):
         "expression : RECMS '(' boolexpression ',' expression ')'"
-        p[0] = 'RECMS('+p[3]+','+p[5]+')'
+        p[0] = 'recms('+p[3]+','+p[5]+')'
 
     def p_expression_func(self, p):
         '''expression : CSC group
@@ -706,8 +706,7 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
                       | CONJ group
                       | REGLOG group
                       | REGLOGP group
-                      | REGLOGM group
-                      | RECMS group'''
+                      | REGLOGM group'''
         if p[1] == 'csc': p[0] = 'csc' + p[2]
         elif p[1] == 'sec': p[0] = 'sec' + p[2]
         elif p[1] == 'acsc': p[0] = 'acsc' + p[2]
@@ -721,7 +720,6 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
         elif p[1] == 'reglogp': p[0] = 'reglogp' + p[2]
         elif p[1] == 'reglogm': p[0] = 'reglogm' + p[2]
-        elif p[1] == 'recms': p[0] = 'recms' + p[2]
 
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''
