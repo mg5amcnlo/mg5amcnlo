@@ -85,15 +85,15 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_add(self,args)
     
-    def check_output(self, args):
+    def check_output(self, args, default='standalone'):
         """ Check the arguments of the output command in the context
         of the Loop interface."""
-        
-        mg_interface.MadGraphCmd.check_output(self,args)
-        
+       
+        mg_interface.MadGraphCmd.check_output(self,args, default=default)
 
         if self._export_format not in self.supported_ML_format:
             raise self.InvalidCmd, "not supported format %s" % self._export_format
+
         
     def check_launch(self, args, options):
         """ Further check that only valid options are given to the MadLoop
@@ -603,14 +603,17 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)
-
+            
+        compiler = {'fortran': self.options['fortran_compiler'],
+                    'f2py': self.options['f2py_compiler']}
+        
         if self._export_format in self.supported_ML_format:
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'])
+                                           compiler)
 
         if self._export_format in self.supported_ML_format:
             logger.info('Output to directory ' + self._export_dir + ' done.')

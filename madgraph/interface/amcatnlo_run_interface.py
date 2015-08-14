@@ -4058,7 +4058,7 @@ Integrated cross-section
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
                        'shower': 'Shower the generated events:',
                        'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight': 'Add weight to events based on coupling parameters'}
+                       'reweight': 'Add weights to the events based on changing model parameters:'}
 
         force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
                        ('madspin', 'ON'): {'fixed_order':'OFF'},
@@ -4089,7 +4089,8 @@ Integrated cross-section
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
-            if misc.which('f2py'):
+            if misc.has_f2py() or self.options['f2py_compiler']:
+                available_mode.append('5')
                 if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                     switch['reweight'] = 'ON'
                 else:
@@ -4097,13 +4098,18 @@ Integrated cross-section
             else:
                 switch['reweight'] = 'Numpy python package not available.'
 
-        if not aMCatNLO or self.options['mg5_path']:
-            available_mode.append('5')
-            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                switch['reweight'] = 'ON'
-            else:
-                switch['reweight'] = 'OFF'
-            
+        if options['do_reweight']:
+            if switch['reweight'] == "OFF":
+                switch['reweight'] = "ON"
+            elif switch['reweight'] != "ON":
+                logger.critical("Can not run REWEIGTH module: %s" % switch['reweight'])
+        if options['do_madspin']:
+            if switch['madspin'] == "OFF":
+                switch['madspin'] = 'ON'
+            elif switch['madspin'] != "ON":
+                logger.critical("Can not run MadSpin module: %s" % switch['reweight'])
+                    
+                    
         answers = list(available_mode) + ['auto', 'done']
         alias = {}
         for id, key in enumerate(switch_order):
@@ -4115,7 +4121,7 @@ Integrated cross-section
         answers += special_values
         
         def create_question(switch):
-            switch_format = " %i %-60s %12s=%s\n"
+            switch_format = " %i %-61s %12s=%s\n"
             question = "The following switches determine which operations are executed:\n"
             for id, key in enumerate(switch_order):
                 question += switch_format % (id+1, description[key], key, switch[key])
@@ -4139,8 +4145,8 @@ Integrated cross-section
                 return 
             elif answer in special_values:
                 logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
-                assign_switch('reweight', 'OFF')
-                assign_switch('madspin', 'OFF')
+                #assign_switch('reweight', 'OFF')
+                #assign_switch('madspin', 'OFF')
                 if answer == 'LO':
                     switch['order'] = 'LO'
                     switch['fixed_order'] = 'ON'
@@ -4212,7 +4218,7 @@ Integrated cross-section
         if mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")            
-            
+
         
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
@@ -4340,6 +4346,11 @@ _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
 _launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
                             help="For use with APPLgrid only: start from existing grids")
+_launch_parser.add_option("-R", "--reweight", default=False, dest='do_reweight', action='store_true',
+                            help="Run the reweight module (reweighting by different model parameter")
+_launch_parser.add_option("-M", "--madspin", default=False, dest='do_madspin', action='store_true',
+                            help="Run the madspin package")
+
 
 
 _generate_events_usage = "generate_events [MODE] [options]\n" + \

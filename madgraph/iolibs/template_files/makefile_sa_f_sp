@@ -18,14 +18,10 @@ $(PROG_SPLITORDERS): $(PROCESS) $(CHECK_SA_SPLITORDERS) makefile $(LIBS)
 driver.f: nexternal.inc pmass.inc ngraphs.inc coupl.inc
 
 # For python linking (require f2py part of numpy)
-matrix2py.so: matrix.f makefile $(LIBS)
+ifeq ($(origin MENUM),undefined)
+  MENUM=2
+endif
+
+matrix$(MENUM)py.so: matrix.f makefile $(LIBS)
 	touch __init__.py
-	@ if [ -f `which f2py` ]; then \
-		f2py $(LINKLIBS) -c  matrix.f -m matrix2py;\
-	  else \
-		if [ -f `which f2py-2.7` ]; then \
-			f2py-2.7 $(LINKLIBS) -c  matrix.f -m matrix2py;\
-		else \
-			f2py-2.6 $(LINKLIBS) -c  matrix.f -m matrix2py;\
-		fi; \
-	  fi
+	$(F2PY) $(LINKLIBS) -c  matrix.f -m matrix$(MENUM)py --fcompiler=$(FC)
