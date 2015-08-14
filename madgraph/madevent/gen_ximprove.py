@@ -539,9 +539,12 @@ For offline investigation, the problematic discarded events are stored in:
 
         # Clean up grid_information to avoid border effects in case of a crash
         for i in range(self.splitted_for_dir(Pdir, G)):
-            path = pjoin(Pdir, "G%s_%s" % (G, i+1)) 
-            os.remove(pjoin(path, 'grid_information'))
-
+            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            try: 
+                os.remove(pjoin(path, 'grid_information'))
+            except OSError, oneerror:
+                if oneerror.errno != 2:
+                    raise
         return grid_calculator, cross, error
 
     def warnings_from_statistics(self,G,stats):
@@ -900,7 +903,7 @@ class gen_ximprove_v4(gen_ximprove):
 
     def reset_multijob(self):
 
-        for path in glob.glob(pjoin(self.me_dir, 'Subprocesses', '*', 
+        for path in glob.glob(pjoin(self.me_dir, 'SubProcesses', '*', 
                                                            '*','multijob.dat')):
             open(path,'w').write('0\n')
             
@@ -1275,6 +1278,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
             
             #1. Compute the number of points are needed to reach target
             needed_event = goal_lum*C.get('axsec')
+            if needed_event == 0:
+                continue
             #2. estimate how many points we need in each iteration
             if C.get('nunwgt') > 0:
                 nevents =  needed_event * (C.get('nevents') / C.get('nunwgt'))
@@ -1291,7 +1296,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
                     nevents = self.max_event_in_iter * nb_split
 
             if nevents > self.max_splitting*self.max_event_in_iter:
-                logger.warning("Channel %s has a very low efficiency of unweighting. Might not be possible to reach target" % C.name)
+                logger.warning("Channel %s/%s has a very low efficiency of unweighting. Might not be possible to reach target" % \
+                                                (C.name, C.parent_name))
                 nevents = self.max_event_in_iter * self.max_splitting 
                 
             total_ps_points += nevents 
@@ -1323,7 +1329,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 submit_ps = max(submit_ps, self.min_event_in_iter)
             self.create_resubmit_one_iter(C.parent_name, C.name[1:], submit_ps, nb_job, step=0)
             needed_event = goal_lum*C.get('xsec')
-            logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_job, submit_ps)
+            logger.debug("%s/%s : need %s event. Need %s split job of %s points", C.parent_name, C.name, needed_event, nb_job, submit_ps)
             
         
     def combine_iteration(self, Pdir, G, step):
@@ -1340,7 +1346,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 
         # Check how many events are going to be kept after un-weighting.
         needed_event = cross * self.goal_lum
-        
+        if needed_event == 0:
+            return 0
         # check that the number of events requested is not higher than the actual
         #  total number of events to generate.
         if self.err_goal >=1:
@@ -1415,6 +1422,8 @@ class gen_ximprove_share(gen_ximprove, gensym):
 
         nb_split_before = len(grid_calculator.results)
         nevents = grid_calculator.results[0].nevents
+        if nevents == 0: # possible if some integral returns 0
+            nevents = max(g.nevents for g in grid_calculator.results)
         
         need_ps_point = (needed_event - nunwgt)/(efficiency+1e-99)
         need_job = need_ps_point // nevents + 1        

@@ -29,6 +29,7 @@ import models.import_ufo as import_ufo
 import aloha.create_aloha as create_aloha
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
+import re
 
 # Set logging level to error
 logging.basicConfig(level=vars(logging)['INFO'],
@@ -39,11 +40,12 @@ class Compile_MG5:
     
     def __init__(self):
         """ launch all the compilation """
-
+        
         self.make_UFO_pkl()
         self.make_v4_pkl()
         self.make_stdHep()
         self.make_CutTools()
+        self.make_IREGI()
 
         #important for UCL cluster
         files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'),
@@ -163,6 +165,90 @@ class Compile_MG5:
         open(path, 'w').writelines(text)
 
         misc.compile(cwd = os.path.join(MG5DIR, 'vendor', 'CutTools'))
+
+    @staticmethod
+    def make_IREGI():
+        print "Compiling IREGI in %s."%str(os.path.join(MG5DIR, 'vendor', 'IREGI','src'))
+        # Set the correct fortran compiler
+        if 'FC' not in os.environ or not os.environ['FC']:
+            if misc.which('gfortran'):
+                compiler = 'FC=gfortran'
+            else:
+                raise self.InvalidCmd('Require gfortran compiler')
+        else:
+            compiler = '#FC=gfortran'
+
+        iregi_path = os.path.join(MG5DIR, 'vendor', 'IREGI')
+        # replace the current compiler to be gfortran
+        if compiler == 'FC=gfortran':
+            # in case there is #FC -> FC 
+            #search file in src
+            file_to_change=misc.find_makefile_in_dir(os.path.join(iregi_path,'src'))
+            comp_re = re.compile('^(\s*)#FC\s*=\s*(.+)\s*$')
+            var = 'FC'
+            mod = False
+            for name in file_to_change:
+                lines = open(name,'r').read().split('\n')
+                for iline, line in enumerate(lines):
+                    result = comp_re.match(line)
+                    if result:
+                        mod = True
+                        lines[iline] = result.group(1) + var + "=" + result.group(2)
+                if mod:
+                    open(name,'w').write('\n'.join(lines))
+                    mod = False
+            # search file in src/oneloop
+            file_to_change=misc.find_makefile_in_dir(os.path.join(iregi_path,'src','oneloop'))
+            mod = False
+            for name in file_to_change:
+                lines = open(name,'r').read().split('\n')
+                for iline, line in enumerate(lines):
+                    result = comp_re.match(line)
+                    if result:
+                        mod = True
+                        lines[iline] = result.group(1) + var + "=" + result.group(2)
+                if mod:
+                    open(name,'w').write('\n'.join(lines))
+                    mod = False
+            # change FC = current  to FC = new
+            current = misc.detect_current_compiler(
+                os.path.join(iregi_path,'src','makefile_ML5_lib'))
+            new = 'gfortran'
+            if current != new:
+                misc.mod_compilator(os.path.join(iregi_path,'src'), new,current)
+                misc.mod_compilator(os.path.join(iregi_path,'src','oneloop'),
+                                    new, current)
+        else:
+            #search file in src
+            file_to_change=misc.find_makefile_in_dir(os.path.join(iregi_path,'src'))
+            comp_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
+            var = 'FC'
+            mod = False
+            for name in file_to_change:
+                lines = open(name,'r').read().split('\n')
+                for iline, line in enumerate(lines):
+                    result = comp_re.match(line)
+                    if result:
+                        mod = True
+                        lines[iline] = '#'+result.group(1) + var + "=" + result.group(2)
+                if mod:
+                    open(name,'w').write('\n'.join(lines))
+                    mod = False
+            # search file in src/oneloop
+            file_to_change=misc.find_makefile_in_dir(os.path.join(iregi_path,'src','oneloop'))
+            mod = False
+            for name in file_to_change:
+                lines = open(name,'r').read().split('\n')
+                for iline, line in enumerate(lines):
+                    result = comp_re.match(line)
+                    if result:
+                        mod = True
+                        lines[iline] = '#'+result.group(1) + var + "=" + result.group(2)
+                if mod:
+                    open(name,'w').write('\n'.join(lines))
+                    mod = False
+
+        misc.compile(cwd = os.path.join(iregi_path,'src'))        
 
     def install_package(self):
         print "installing external package"

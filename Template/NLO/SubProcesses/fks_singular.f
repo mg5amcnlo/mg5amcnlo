@@ -1480,7 +1480,7 @@ c must do MC over FKS directories.
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
-      if (icontr.gt.6) then
+      if (icontr.gt.7) then
          write (*,*) 'ERROR: too many applgrid weights. '/
      &        /'Should have at most one of each itype.',icontr
          stop 1
@@ -1522,8 +1522,9 @@ c     born
             appl_QES2(2)=scales2(1,i)
             appl_muR2(2)=scales2(2,i)
             appl_muF2(2)=scales2(3,i)
-         elseif (itype(i).eq.3 .or. itype(i).eq.4) then
-c     soft-virtual or soft-counter
+         elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14)
+     $           then
+c     virtual, soft-virtual or soft-counter
             appl_w0(2)=appl_w0(2)+wgt(1,i)*final_state_rescaling
             appl_wR(2)=appl_wR(2)+wgt(2,i)*final_state_rescaling
             appl_wF(2)=appl_wF(2)+wgt(3,i)*final_state_rescaling
@@ -1975,7 +1976,7 @@ c on the imode we should or should not include the virtual corrections.
       include 'mint.inc'
       integer i,j,ict
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
-     $     ,n1body_wgt,tmp_wgt
+     $     ,n1body_wgt,tmp_wgt,max_weight
       double precision           virt_wgt_mint,born_wgt_mint
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
@@ -1987,6 +1988,7 @@ c on the imode we should or should not include the virtual corrections.
       sigint1=0d0
       sigint_ABS=0d0
       n1body_wgt=0d0
+      max_weight=0d0
       if (icontr.eq.0) then
          sigint_ABS=0d0
          sigint=0d0
@@ -1994,25 +1996,41 @@ c on the imode we should or should not include the virtual corrections.
       else
          do i=1,icontr
             sigint=sigint+wgts(1,i)
+            max_weight=max(max_weight,abs(wgts(1,i)))
             if (icontr_sum(0,i).eq.0) cycle
             do j=1,niproc(i)
                sigint_ABS=sigint_ABS+abs(unwgt(j,i))
                sigint1=sigint1+unwgt(j,i) ! for consistency check
+               max_weight=max(max_weight,abs(unwgt(j,i)))
             enddo
          enddo
-c check the consistency of the results
+c check the consistency of the results up to machine precision (10^-13 here)
          if (imode.ne.1 .or. only_virt) then
-            if (abs((sigint-sigint1)/(sigint+sigint1)).gt.1d-3) then
+            if (abs((sigint-sigint1)/max_weight).gt.1d-13) then
                write (*,*) 'ERROR: inconsistent integrals #0',sigint
-     $              ,sigint1,abs((sigint-sigint1)/(sigint+sigint1))
+     $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
+               do i=1, icontr
+                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
+                  if (icontr_sum(0,i).eq.0) cycle
+                  do j=1,niproc(i)
+                     write (*,*) j,unwgt(j,i)
+                  enddo
+               enddo
                stop 1
             endif
          else
             sigint1=sigint1+virt_wgt_mint
-            if (abs((sigint-sigint1)/(sigint+sigint1)).gt.1d-3) then
+            if (abs((sigint-sigint1)/max_weight).gt.1d-13) then
                write (*,*) 'ERROR: inconsistent integrals #1',sigint
-     $              ,sigint1,abs((sigint-sigint1)/(sigint+sigint1))
+     $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
      $              ,virt_wgt_mint
+               do i=1, icontr
+                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
+                  if (icontr_sum(0,i).eq.0) cycle
+                  do j=1,niproc(i)
+                     write (*,*) j,unwgt(j,i)
+                  enddo
+               enddo
                stop 1
             endif
          endif

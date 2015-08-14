@@ -235,7 +235,7 @@ Block MASS
 ## INFORMATION FOR TD
 ###################################
 Block TD 
-    3   3 -1.106937e+02 # Rtd33 
+    3   3 0.000000e+00 # Rtd33 
 
 ###################################
 ## INFORMATION FOR TE

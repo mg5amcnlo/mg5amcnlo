@@ -85,8 +85,14 @@ class LoopColorBasis(color_amp.ColorBasis):
                 # Now compute the Nc power *after* the loop color flow is sewed 
                 # together and again compute the overall maximum power of Nc 
                 # appearing in this simplified sewed structure.
+                simplified_cs = color_algebra.ColorFactor([CS]).full_simplify()
+                if not simplified_cs:
+                    # It can be that the color structure simplifies to zero.
+                    CS.loop_Nc_power = 0
+                    break
+
                 max_CS_loop_diag_Nc_power = max(cs.Nc_power \
-                      for cs in color_algebra.ColorFactor([CS]).full_simplify())
+                                                        for cs in simplified_cs)
                 # We can now set the power of Nc brought by the potential loop
                 # color trace to the corresponding attribute of this ColorStructure
                 CS.loop_Nc_power =  max_CS_loop_diag_Nc_power - \
@@ -94,7 +100,7 @@ class LoopColorBasis(color_amp.ColorBasis):
             else:
                 # When not computing loop_nc (whcih is typically used for now
                 # only when doing LoopInduced + Madevent, we set the
-                # CS.loop_Nc_power None so that it will cause problems if used.
+                # CS.loop_Nc_power to None so that it will cause problems if used.
                 CS.loop_Nc_power = None
 
     def create_loop_color_dict_list(self, amplitude):

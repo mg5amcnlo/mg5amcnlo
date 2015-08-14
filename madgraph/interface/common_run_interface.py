@@ -1312,7 +1312,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_pdf_input_filename(self):
         """return the name of the file which is used by the pdfset"""
 
-        if self.options["cluster_local_path"] and self.options['run_mode'] ==1:
+        if self.options["cluster_local_path"] and \
+               os.path.exists(self.options["cluster_local_path"]) and \
+               self.options['run_mode'] ==1:
             # no need to transfer the pdf.
             return ''
         
@@ -2579,6 +2581,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=')
             args += [arg1, arg2]
+        if '=' in args:
+            args.remove('=')
         args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:

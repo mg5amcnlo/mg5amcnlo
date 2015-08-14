@@ -21,9 +21,12 @@ import logging
 import os
 import re
 import sys
+import copy
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir))
+
+import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error
 import vendor.ply.lex as lex
@@ -60,7 +63,7 @@ class UFOExpressionParser(object):
 
     # List of tokens and literals
     tokens = (
-        'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
+        'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC', 'TAN',
         'SQRT', 'CONJ', 'RE', 'RE2', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
         'VARIABLE', 'NUMBER','COND','REGLOG', 'REGLOGP', 'REGLOGM','RECMS','ARG'
         )
@@ -77,6 +80,9 @@ class UFOExpressionParser(object):
     def t_ACSC(self, t):
         r'(?<!\w)acsc(?=\()'
         return t
+    def t_TAN(self, t):
+        r'(?<!\w)tan(?=\()|(?<!\w)cmath.tan(?=\()'
+        return t    
     def t_ASEC(self, t):
         r'(?<!\w)asec(?=\()'
         return t
@@ -274,7 +280,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
     def p_expression_number(self, p):
         "expression : NUMBER"
         if p[1].endswith('j'):
-            p[0] = ('DCOMPLX(0d0, %e)' % float(p[1][:-1])).replace('e', 'd')
+            p[0] = ('DCMPLX(0d0, %e)' % float(p[1][:-1])).replace('e', 'd')
         else:
             p[0] = ('%e' % float(p[1])).replace('e', 'd')
 
@@ -328,15 +334,18 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | CONJ group
                       | REGLOG group
                       | REGLOGP group
-                      | REGLOGM group'''
+                      | REGLOGM group
+                      | TAN group'''
+
         if p[1] == 'csc': p[0] = '1d0/cos' + p[2]
         elif p[1] == 'sec': p[0] = '1d0/sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
+        elif p[1] in ['tan', 'cmath.tan'] : p[0] = 'tan(dble' + p[2]+')'
         elif p[1] == 're': p[0] = 'dble' + p[2]
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
         elif p[1] == 'arg': p[0] = 'arg(DCMPLX'+p[2]+')'
-        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
+        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt(dcmplx' + p[2]+')'
         elif p[1] == 'complexconjugate': p[0] = 'conjg(DCMPLX' + p[2]+')'
         elif p[1] == 'reglog': p[0] = 'reglog(DCMPLX' + p[2] +')'
         elif p[1] == 'reglogp': p[0] = 'reglogp(DCMPLX' + p[2] + ')'
@@ -430,15 +439,18 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                       | CONJ group
                       | REGLOG group
                       | REGLOGP group
-                      | REGLOGM group'''
+                      | REGLOGM group
+                      | TAN group'''
+        
         if p[1] == 'csc': p[0] = '1e0_16/cos' + p[2]
         elif p[1] == 'sec': p[0] = '1e0_16/sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1e0_16/' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1e0_16/' + p[2] + ')'
+        elif p[1] in ['tan', 'cmath.tan']: p[0] = 'tan(real' + p[2]+')'
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
         elif p[1] == 'arg': p[0] = 'mp_arg(CMPLX(' + p[2] + ',KIND=16))'
-        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
+        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt(CMPLX(' + p[2] + ',KIND=16))'
         elif p[1] == 'complexconjugate': p[0] = 'conjg(CMPLX(' + p[2] + ',KIND=16))'
         elif p[1] == 'reglog': p[0] = 'mp_reglog(CMPLX(' + p[2] +',KIND=16))'
         elif p[1] == 'reglogp': p[0] = 'mp_reglogp(CMPLX(' + p[2] + ',KIND=16))'
@@ -532,6 +544,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | SEC group
                       | ACSC group
                       | ASEC group
+                      | TAN group
                       | RE group
                       | IM group
                       | ARG group
@@ -544,6 +557,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'sec': p[0] = '1./sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
+        elif p[1] in ['tan', 'cmath.tan']: p[0] = 'tan' +p[2]
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
         elif p[1] == 'arg':p[0] = 'arg' + p[2]
@@ -572,6 +586,141 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         '''expression : PI'''
         p[0] = 'M_PI'
            
+class UFOExpressionParserPythonIF(UFOExpressionParser):
+    """An ad hoc parser for UFO algebraic expressions with if statement, outputting
+    Python-style code, with the conditional 'if' expressions simplified using
+    pre-defined set of variables specified when instanciating this parser."""
+
+    logical_equiv = {'==':'==',
+                     '>=':'>=',
+                     '<=':'<=',
+                     '!=':'!=',
+                     '>':'>',
+                     '<':'<',
+                     'or':' or ',
+                     'and':' and '}
+
+    def __init__(self, *args,**kw):
+        """Initialize the lex and yacc"""
+
+        self.changes_performed = 0
+        
+        if len(args) > 0:
+            if isinstance(args[0],dict):
+                self.defined_variables = copy.copy(args[0])
+            elif isinstance(args[0],str):
+                try:
+                    self.defined_variables = eval(args[0])
+                except:
+                    raise ModelError, 'The expression "%s"'%str(args[0])+\
+                      " given as defined variables for the UFOExpressionParserPythonIF"+\
+                      " does not have a correct syntax."
+                if not isinstance(self.defined_variables, dict):
+                    raise ModelError, 'The argument "%s"'%str(args[0])+\
+                      " given as defined variables for the UFOExpressionParserPythonIF"+\
+                      " is not a dictionary."
+            else:
+                raise ModelError, "The argument %s"%str(args[0])+\
+                      " given as defined variables for the UFOExpressionParserPythonIF"+\
+                      " must be either a dictionary or a string."
+            args = args[1:]
+            for key, value in self.defined_variables.items():
+                if not isinstance(key,str) or \
+                      not any(isinstance(value,t) for t in [float,complex,int]):
+                    # This is not a valid environment variable for the parser
+                    del self.defined_variables[key]
+
+        else:
+            # If the user doesn't specify any defined variable for this parser, this means
+            # that it shouldn't do anything, not even simplify trivial conditional expressions
+            # such as '1 if True else 2'
+            self.defined_variables = None
+  
+        super(UFOExpressionParserPythonIF,self).__init__(*args, **kw)
+        
+    def parse(self, *args, **kw):
+        """ Wrapper around the parse function so as to also return the number
+        of if substitutions made."""
+        self.changes_performed = 0
+        new_expression = super(UFOExpressionParserPythonIF,self).parse(*args, **kw)
+        return new_expression, self.changes_performed
+        
+    def p_expression_number(self, p):
+        "expression : NUMBER"
+        p[0] = p[1]
+
+    def p_expression_variable(self, p):
+        "expression : VARIABLE"
+        p[0] = p[1]
+
+    def p_expression_power(self, p):
+        'expression : expression POWER expression'
+        p[0] = p[1] + "**" + p[3]
+    
+    def p_expression_if(self,p):
+        "expression :   expression IF boolexpression ELSE expression "
+        if self.defined_variables is None:
+            p[0] = '%s if %s else %s'%(p[1],p[3],p[5])
+            return
+        try:
+            p[0] = '%s'%p[1] if eval(p[3],self.defined_variables) else '%s'%p[5]
+            self.changes_performed += 1
+        except Exception:
+            p[0] = '%s if %s else %s'%(p[1],p[3],p[5])
+            
+    def p_expression_ifimplicit(self,p):
+        "expression :   expression IF expression ELSE expression "
+        if self.defined_variables is None:
+            p[0] = '%s if %s!=0.0 else %s'%(p[1],p[3],p[5])
+            return
+        try:
+            p[0] = '%s'%p[1] if eval(p[3]+'!= 0.0',self.defined_variables) else '%s'%p[5]
+            self.changes_performed += 1
+        except Exception:
+            p[0] = '%s if %s!=0.0 else %s'%(p[1],p[3],p[5])
+                                                             
+    def p_expression_cond(self, p):
+        "expression :  COND '(' expression ',' expression ',' expression ')'"
+        # We assume the cond syntax is used by the Model builder when he doesn't want it to 
+        # get simplified, ever.
+        p[0] = 'cond('+p[3]+','+p[5]+','+p[7]+')'
+
+    def p_expression_complex(self, p):
+        "expression : COMPLEX '(' expression ',' expression ')'"
+        p[0] = 'complex(' + p[3] + ',' + p[5] + ')'
+
+    def p_expression_func(self, p):
+        '''expression : CSC group
+                      | SEC group
+                      | ACSC group
+                      | ASEC group
+                      | RE group
+                      | IM group
+                      | ARG group
+                      | SQRT group
+                      | TAN group
+                      | CONJ group
+                      | REGLOG group'''
+        if p[1] == 'csc': p[0] = 'csc' + p[2]
+        elif p[1] == 'sec': p[0] = 'sec' + p[2]
+        elif p[1] == 'acsc': p[0] = 'acsc' + p[2]
+        elif p[1] == 'asec': p[0] = 'asec' + p[2]
+        elif p[1] in ['tan','cmath.tan']: p[0] = 'tan' + p[2]
+        elif p[1] == 're': p[0] = 're' + p[2]
+        elif p[1] == 'im': p[0] = 'im' + p[2]
+        elif p[1] == 'arg': p[0] = 'arg' + p[2]
+        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'cmath.sqrt' + p[2]
+        elif p[1] == 'complexconjugate': p[0] = 'complexconjugate' + p[2]
+        elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
+
+    def p_expression_real(self, p):
+        ''' expression : expression RE2 '''
+        p[0] = p[1]+p[2]                   
+
+    def p_expression_pi(self, p):
+        '''expression : PI'''
+        p[0] = 'cmath.pi'
+         
 
 
 # Main program, allows to interactively test the parser
@@ -588,9 +737,16 @@ if __name__ == '__main__':
         calc = UFOExpressionParserCPP()
     elif sys.argv[1] == "aloha":
         calc = UFOExpressionParserCPP()
+    elif sys.argv[1] == "pythonif":
+        if len(sys.argv) > 2:
+            calc = UFOExpressionParserPythonIF(sys.argv[2])
+        else:
+            calc = UFOExpressionParserPythonIF()
     else:
-        print "Please specify a parser: fortran, mpfortran or c++"
+        print "Please specify a parser: fortran, mpfortran, c++ or pythonif"
         print "You gave", sys.argv[1]
+        if len(sys.argv) > 2:
+            print "with the second argument",sys.argv[2]
         exit()
 
     while 1:
@@ -600,3 +756,4 @@ if __name__ == '__main__':
             break
         if not s: continue
         print calc.parse(s)
+    

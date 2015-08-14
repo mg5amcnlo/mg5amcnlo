@@ -755,13 +755,13 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("       copied and compiled locally in the output directory.")
         logger.info("     o environment_paths: The location of all libraries the ")
         logger.info("       output depends on should be found in your env. paths.")        
-        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
-        logger.info(" > (default '0') [Used for loop-induced outputs]")
-        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
-        logger.info(" > setting up the integration multichannels.") 
-        logger.info(" > The default value of zero automatically picks the apparent")
-        logger.info(" > appropriate choice which is to sometimes pick box loops")
-        logger.info(" > but never higher n-points ones.")
+#        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
+#        logger.info(" > (default '0') [Used for loop-induced outputs]")
+#        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
+#        logger.info(" > setting up the integration multichannels.") 
+#        logger.info(" > The default value of zero automatically picks the apparent")
+#        logger.info(" > appropriate choice which is to sometimes pick box loops")
+#        logger.info(" > but never higher n-points ones.")
 
 #===============================================================================
 # CheckValidForCmd
@@ -4965,6 +4965,8 @@ This implies that with decay chains:
 
         scheme = "old"
         for qcd_container in ['p', 'j']:
+            if qcd_container not in self._multiparticles:
+                continue
             multi = self._multiparticles[qcd_container]
             b = self._curr_model.get_particle(5)
             if not b:
@@ -5708,7 +5710,7 @@ This implies that with decay chains:
                     else:
                         # Try to look for it locally
                         local_install = {'pjfry':'PJFRY', 'golem':'golem95'}
-                        if os.path.isdir(pjoin(MG5DIR,local_install[key])):
+                        if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
                         else:
                             self.options[key]=None
@@ -5938,6 +5940,7 @@ This implies that with decay chains:
 
 
         all_categories = self.ask('','0',[], ask_class=AskforCustomize)
+        put_to_one = []
         ## Make a Temaplate for  the restriction card. (card with no restrict)
         for block in param_card:
             value_dict = {}
@@ -5946,7 +5949,9 @@ This implies that with decay chains:
                 if value == 0:
                     param.value = 0.000001e-99
                 elif value == 1:
-                    param.value = 9.999999e-1
+                    if block != 'qnumbers':
+                        put_to_one.append((block,param.lhacode))
+                        param.value = random.random()
                 elif abs(value) in value_dict:
                     param.value += value_dict[abs(value)] * 1e-4 * param.value
                     value_dict[abs(value)] += 1
@@ -5977,7 +5982,26 @@ This implies that with decay chains:
             param_card.write(path)
             self._curr_model['name'] += '-%s' % name
 
+        # if some need to put on one
+        if put_to_one:
+            out_path = StringIO.StringIO()
+            param_writer.ParamCardWriter(self._curr_model, out_path)
+            # and load it to a python object
+            param_card = check_param_card.ParamCard(out_path.getvalue().split('\n'))
+            
+            for (block, lhacode) in put_to_one:
+                misc.sprint(block, lhacode)
+                try:
+                    param_card[block].get(lhacode).value = 1
+                except:
+                    pass # was removed of the model!
+            self._curr_model.set_parameters_and_couplings(param_card)
 
+            if args:
+                name = args[0].split('=',1)[1]
+                path = pjoin(model_path,'paramcard_%s.dat' % name)
+                logger.info('Save default card file as %s' % path)
+                param_card.write(path)
 
     def do_save(self, line, check=True, to_keep={}, log=True):
         """Not in help: Save information to file"""
@@ -6074,7 +6098,7 @@ This implies that with decay chains:
                 self.options[args[0]] = args[1]
             if log:
                 logger.info('Set group_subprocesses to %s' % \
-                        str(self.options[args[0]]))
+                                                    str(self.options[args[0]]))
                 logger.info('Note that you need to regenerate all processes')
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -6428,9 +6452,41 @@ This implies that with decay chains:
             else:
                 shutil.rmtree(self._export_dir)
 
+        # Choose here whether to group subprocesses or not, if the option was
+        # set to 'Auto' and propagate this choice down the line:
+        if self.options['group_subprocesses'] in [True, False]:
+            group_processes = self.options['group_subprocesses']
+        elif self.options['group_subprocesses'] == 'Auto':
+            # By default we set it to True
+            group_processes = True
+            # But we turn if off for decay processes which
+            # have been defined with multiparticle labels, because then
+            # branching ratios necessitates to keep subprocesses independent.
+            # That applies only if there is more than one subprocess of course.
+            if self._curr_amps[0].get_ninitial() == 1 and \
+                                                     len(self._curr_amps)>1:
+                processes = [amp.get('process') for amp in self._curr_amps]            
+                if len(set(proc.get('id') for proc in processes))!=len(processes):
+                    # Special warning for loop-induced
+                    if any(proc['perturbation_couplings'] != [] for proc in
+                               processes) and self._export_format == 'madevent':
+                        logger.warning("""
+|| The loop-induced decay process you have specified contains several
+|| subprocesses and, in order to be able to compute individual branching ratios, 
+|| MG5_aMC will *not* group them. Integration channels will also be considered
+|| for each diagrams and as a result integration will be inefficient.
+|| It is therefore recommended to perform this simulation by setting the MG5_aMC
+|| option 'group_subprocesses' to 'True' (before the output of the process).
+|| Notice that when doing so, processes for which one still wishes to compute
+|| branching ratios independently can be specified using the syntax:
+||   -> add process <proc_def>
+""")
+                    group_processes = False
+
         #Exporter + Template
         if options['exporter'] == 'v4':
-            self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
+            self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
+                                             group_subprocesses=group_processes)
             if options['output'] == 'Template':
                 self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
         if  options['exporter'] == 'cpp' and options['output'] == 'Template':
@@ -6448,33 +6504,10 @@ This implies that with decay chains:
             if self.options['max_npoint_for_channel']:
                 base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
             else:
-                #if default forbid 4 point channel for matching.
-                min_particle = 999
-                max_particle = 0
-                for amp in self._curr_amps:
-                    from madgraph.loop.loop_diagram_generation import LoopAmplitude
-                    if not isinstance(amp, LoopAmplitude):
-                        break
-                    nb = len(amp["process"].get_final_ids())
-                    min_particle = min(min_particle, nb)
-                    max_particle = max(max_particle, nb)
-                if min_particle != max_particle:
-                    base_objects.Vertex.max_n_loop_for_multichanneling = 3
-                else:
-                    #check if H+jet since in that case the box slow down the code
-                    last_proc = amp["process"].get_final_ids()
-                    not_hj = [i for i in last_proc if i not in range(-5,6)+[21,25]]
-                    if not not_hj and 25 in last_proc:
-                        base_objects.Vertex.max_n_loop_for_multichanneling = 3
-                    else:
-                        base_objects.Vertex.max_n_loop_for_multichanneling = 4
-
-                    # Ignore boxes for decay processes
-                    if len(amp["process"].get_initial_ids())==1:
-                        base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
+                base_objects.Vertex.max_n_loop_for_multichanneling = 3                        
 
         # Perform export and finalize right away
-        self.export(nojpeg, main_file_name, args)
+        self.export(nojpeg, main_file_name, group_processes, args)
 
         # Automatically run finalize
         self.finalize(nojpeg, flaglist=flaglist)
@@ -6486,12 +6519,16 @@ This implies that with decay chains:
         self._export_dir = None
 
     # Export a matrix element
-    def export(self, nojpeg = False, main_file_name = "", args=[]):
-        """Export a generated amplitude to file"""
+    def export(self, nojpeg = False, main_file_name = "", group_processes=True, 
+                                                                       args=[]):
+        """Export a generated amplitude to file."""
 
-        def generate_matrix_elements(self):
+        def generate_matrix_elements(self, group_processes=True):
             """Helper function to generate the matrix elements before
-            exporting"""
+            exporting. Uses the main function argument 'group_processes' to decide 
+            whether to use group_subprocess or not. (it has been set in do_output to
+            the appropriate value if the MG5 option 'group_subprocesses' was set
+            to 'Auto'."""
 
             if self._export_format in ['standalone_msP', 'standalone_msF', 'standalone_mw']:
                 to_distinguish = []
@@ -6504,20 +6541,10 @@ This implies that with decay chains:
             self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
                                  a1.get_number_of_diagrams())
 
-            # Check if we need to group the SubProcesses or not
-            group = True
-            if self.options['group_subprocesses'] is False:
-                group = False
-            elif self.options['group_subprocesses'] == 'Auto' and \
-                                         self._curr_amps[0].get_ninitial() == 1:
-                group = False
-
-
-
             cpu_time1 = time.time()
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
-                if group:
+                if group_processes:
                     cpu_time1 = time.time()
                     dc_amps = diagram_generation.DecayChainAmplitudeList(\
                         [amp for amp in self._curr_amps if isinstance(amp, \
@@ -6587,10 +6614,8 @@ This implies that with decay chains:
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine
-
-
-
-        ndiags, cpu_time = generate_matrix_elements(self)
+        
+        ndiags, cpu_time = generate_matrix_elements(self,group_processes)
 
         calls = 0
 
