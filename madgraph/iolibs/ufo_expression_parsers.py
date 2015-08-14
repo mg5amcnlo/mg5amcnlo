@@ -683,7 +683,9 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
                       | SQRT group
                       | TAN group
                       | CONJ group
-                      | REGLOG group'''
+                      | REGLOG group
+                      | REGLOGP group
+                      | REGLOGM group'''
         if p[1] == 'csc': p[0] = 'csc' + p[2]
         elif p[1] == 'sec': p[0] = 'sec' + p[2]
         elif p[1] == 'acsc': p[0] = 'acsc' + p[2]
@@ -695,6 +697,8 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'cmath.sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'complexconjugate' + p[2]
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
+        elif p[1] == 'reglogp': p[0] = 'reglogp' + p[2]
+        elif p[1] == 'reglogm': p[0] = 'reglogm' + p[2]
 
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''
