@@ -177,9 +177,13 @@ def has_f2py():
     elif sys.version_info[1] == 6:
         if which('f2py-2.6'):
             has_f2py = True
+        elif which('f2py2.6'):
+            has_f2py = True                 
     else:
         if which('f2py-2.7'):
             has_f2py = True 
+        elif which('f2py2.7'):
+            has_f2py = True  
     return has_f2py       
         
         

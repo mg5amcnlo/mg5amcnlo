@@ -2487,6 +2487,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'f2py_compiler':None,
                        'cpp_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
@@ -5734,6 +5735,14 @@ This implies that with decay chains:
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
+        elif args[0] == 'f2py_compiler':
+            if args[1] != 'None':
+                if log:
+                    logger.info('set f2py compiler to %s' % args[1])
+                self.options['f2py_compiler'] = args[1]
+            else:
+                self.options['f2py_compiler'] = None
+            
         elif args[0] == 'loop_optimized_output':
             if log:
                     logger.info('set loop optimized output to %s' % args[1])
@@ -6293,6 +6302,11 @@ This implies that with decay chains:
     def finalize(self, nojpeg, online = False, flaglist=[]):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
+
+        compiler_dict = {'fortran': self.options['fortran_compiler'],
+                             'cpp': self.options['cpp_compiler'],
+                             'f2py': self.options['f2py_compiler']}
+
         
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
                                    'standalone_msF', 'standalone_rw', 'NLO', 'madweight',
@@ -6355,8 +6369,7 @@ This implies that with decay chains:
                         ('%s/Cards/amcatnlo_configuration.txt file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-            compiler_dict = {'fortran': self.options['fortran_compiler'],
-                             'cpp': self.options['cpp_compiler']}
+
 
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
@@ -6364,7 +6377,7 @@ This implies that with decay chains:
                                            not nojpeg,
                                            online,
                                            compiler_dict,
-              output_dependencies = self.options['output_dependencies'],
+                                           output_dependencies = self.options['output_dependencies'],
                                            MG5DIR = MG5DIR)
             
             # Create configuration file [path to executable] for amcatnlo
@@ -6392,7 +6405,7 @@ This implies that with decay chains:
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'])
+                                           compiler_dict)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')

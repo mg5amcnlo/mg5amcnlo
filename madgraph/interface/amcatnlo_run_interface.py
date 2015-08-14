@@ -4089,7 +4089,7 @@ Integrated cross-section
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
-            if misc.which('f2py'):
+            if misc.has_f2py() or self.options['f2py_compiler']:
                 if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                     switch['reweight'] = 'ON'
                 else:
@@ -4097,13 +4097,6 @@ Integrated cross-section
             else:
                 switch['reweight'] = 'Numpy python package not available.'
 
-        if not aMCatNLO or self.options['mg5_path']:
-            available_mode.append('5')
-            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                switch['reweight'] = 'ON'
-            else:
-                switch['reweight'] = 'OFF'
-        
         if options['do_reweight']:
             if switch['reweight'] == "OFF":
                 switch['reweight'] = "ON"

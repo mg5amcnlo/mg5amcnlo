@@ -24,12 +24,4 @@ endif
 
 matrix$(MENUM)py.so: matrix.f makefile $(LIBS)
 	touch __init__.py
-	@ if [ -f `which f2py` ]; then \
-		f2py $(LINKLIBS) -c  matrix.f -m matrix$(MENUM)py --fcompiler=$(FC);\
-	  else \
-		if [ -f `which f2py-2.7` ]; then \
-			f2py-2.7 $(LINKLIBS) -c  matrix.f -m matrix$(MENUM)py --fcompiler=$(FC);\
-		else \
-			f2py-2.6 $(LINKLIBS) -c  matrix.f -m matrix$(MENUM)py --fcompiler=$(FC);\
-		fi; \
-	  fi
+	$(F2PY) $(LINKLIBS) -c  matrix.f -m matrix$(MENUM)py --fcompiler=$(FC)
