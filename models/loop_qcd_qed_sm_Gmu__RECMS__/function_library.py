@@ -80,4 +80,4 @@ recms = Function(name= 'recms',
 # Overwriting of original definition of reglog for the CMS
 reglog = Function(name = 'reglog',
                 arguments = ('z'),
-                expression = '(0.0 if z.imag==z.real==0.0 else ( cmath.log(z) - 2*math.pi*1j if (z.real < 0.0 and z.imag > 0.0) else cmath.log(z) ) )')
+                expression = '(0.0 if z.imag==0.0 and z.real==0.0 else ( cmath.log(z) - 2*math.pi*1j if (z.real < 0.0 and z.imag > 0.0) else cmath.log(z) ) )')
