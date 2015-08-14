@@ -5249,7 +5249,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     # Doing the analysis to printout to the MG5 interface and determine whether
     # the test is passed or not
     # Number of last points to consider for the stability test
-    nstab_points=5
+    nstab_points=group_val
     # Store here the asymptot detected for each difference curve
     differences_target = {}
     for process, resID in checks:
@@ -5430,7 +5430,7 @@ minimum value of lambda to be considered in the CMS check."""\
         differences_target[(process,resID)]= low_diff_median
 #        misc.sprint('Now doing resonance %s.'%res_str)
         while True:
-            current_vals = CMScheck_values[scan_index:scan_index+group_val]
+            current_vals = CMScheck_values[scan_index:scan_index+group_val]      
             max_diff = max(max_diff, abs(low_diff_median-
                      sorted(current_vals)[len(current_vals)//2])/reference)
             if (scan_index+group_val)>=len(CMScheck_values):
