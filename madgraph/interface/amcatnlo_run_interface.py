@@ -4090,6 +4090,7 @@ Integrated cross-section
             else:
                 switch['madspin'] = 'OFF'
             if misc.has_f2py() or self.options['f2py_compiler']:
+                available_mode.append('5')
                 if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                     switch['reweight'] = 'ON'
                 else:
