@@ -10,6 +10,7 @@ import write_param_card
 import coupling_orders
 import function_library
 
+gauge = [1]
 
 all_particles = particles.all_particles
 all_vertices = vertices.all_vertices
