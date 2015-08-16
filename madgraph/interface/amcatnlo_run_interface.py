@@ -4098,12 +4098,13 @@ Integrated cross-section
             else:
                 switch['reweight'] = 'Numpy python package not available.'
 
-        if options['do_reweight']:
+        
+        if 'do_reweight' in options and options['do_reweight']:
             if switch['reweight'] == "OFF":
                 switch['reweight'] = "ON"
             elif switch['reweight'] != "ON":
                 logger.critical("Can not run REWEIGTH module: %s" % switch['reweight'])
-        if options['do_madspin']:
+        if 'do_madspin' in options and  options['do_madspin']:
             if switch['madspin'] == "OFF":
                 switch['madspin'] = 'ON'
             elif switch['madspin'] != "ON":

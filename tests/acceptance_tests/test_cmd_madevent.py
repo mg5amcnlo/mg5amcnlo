@@ -461,7 +461,7 @@ class TestMEfromfile(unittest.TestCase):
                  generate_events
                  parton
                  set nevents 100
-                 add_time_of_flight --threshold=3e-26
+                 add_time_of_flight --threshold=4e-14
                  pythia
                  """ %self.run_dir
         open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
@@ -489,7 +489,7 @@ class TestMEfromfile(unittest.TestCase):
         for event in lhe_parser.EventFile(event):
             for particle in event:
                 if particle.pid in [23,25]:
-                    self.assertTrue(particle.vtim ==0 or particle.vtim > 3e-26)
+                    self.assertTrue(particle.vtim ==0 or particle.vtim > 4e-14)
                     if particle.vtim == 0 :
                         has_zero = True
                     else:

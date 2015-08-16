@@ -9,6 +9,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       LOGICAL READLHA
       PARAMETER  (PI=3.141592653589793D0)
       PARAMETER  (ZERO=0D0)
+      INCLUDE 'model_functions.inc'
       REAL*16 MP__PI, MP__ZERO
       PARAMETER (MP__PI=3.1415926535897932384626433832795E0_16)
       PARAMETER (MP__ZERO=0E0_16)
@@ -38,6 +39,7 @@ C
       LOGICAL READLHA
       PARAMETER  (PI=3.141592653589793D0)
       PARAMETER  (ZERO=0D0)
+      INCLUDE 'model_functions.inc'
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'
       READLHA = .FALSE.
@@ -59,6 +61,7 @@ C
       DOUBLE PRECISION PI
       PARAMETER  (PI=3.141592653589793D0)
       DOUBLE PRECISION MU_R2, AS2
+      INCLUDE 'model_functions.inc'
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'
 
@@ -76,6 +79,7 @@ C
 
       IMPLICIT NONE
       LOGICAL READLHA
+      INCLUDE 'model_functions.inc'
       REAL*16 MP__PI, MP__ZERO
       PARAMETER (MP__PI=3.1415926535897932384626433832795E0_16)
       PARAMETER (MP__ZERO=0E0_16)

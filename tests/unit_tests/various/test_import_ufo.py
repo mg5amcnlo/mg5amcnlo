@@ -92,6 +92,10 @@ class TestImportUFONoSideEffect(unittest.TestCase):
 
         ufo2mg5_converter = import_ufo.UFOMG5Converter(ufo_model)
         model = ufo2mg5_converter.load_model()
+        # It is important to run import_ufo.OrganizeModelExpression(ufo_model).main() 
+        # since this reverts some of the changes done in load_model()
+        # There *is* side effects in-between, namely the expression of the CTcouplings
+        # which contained CTparameters have been substituted to dictionaries.
         parameters, couplings = import_ufo.OrganizeModelExpression(ufo_model).main()        
 
         self.assertEqual(original_all_particles,ufo_model.all_particles)        
@@ -118,6 +122,10 @@ class TestImportUFONoSideEffect(unittest.TestCase):
 
         ufo2mg5_converter = import_ufo.UFOMG5Converter(ufo_model)
         model = ufo2mg5_converter.load_model()
+        # It is important to run import_ufo.OrganizeModelExpression(ufo_model).main() 
+        # since this reverts some of the changes done in load_model()
+        # There *is* side effects in-between, namely the expression of the CTcouplings
+        # which contained CTparameters have been substituted to dictionaries.
         parameters, couplings = import_ufo.OrganizeModelExpression(ufo_model).main()        
 
         self.assertEqual(original_all_particles,ufo_model.all_particles)

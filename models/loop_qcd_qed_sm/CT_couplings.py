@@ -7019,7 +7019,7 @@ c_UVuxbGp2EW = Coupling(name = 'c_UVuxbGp2EW',
 
 
 c_UVcxbGp1EW = Coupling(name = 'c_UVcxbGp1EW',
-                        value = '(ee*complexconjugate(CKM23)*(-2*MB*SWCoup_UV_EW*MW**2 + MB*MW**2*sw*complexconjugate(bWcft_UV_EW_R) + sw*(-MB*WMass2_UV_EW + MW**2*(2*eCoup_UV_EW*MB + GpWcft_UV_EW*MB + + 2*dMB_bMass_UV_EW + cWcft_UV_EW_L*MB))))/(2.*cmath.sqrt(2)*MW**3*sw**2)',
+                        value = '(ee*complexconjugate(CKM23)*(-2*MB*SWCoup_UV_EW*MW**2 + MB*MW**2*sw*complexconjugate(bWcft_UV_EW_R) + sw*(-MB*WMass2_UV_EW + MW**2*(2*eCoup_UV_EW*MB + GpWcft_UV_EW*MB + 2*dMB_bMass_UV_EW + cWcft_UV_EW_L*MB))))/(2.*cmath.sqrt(2)*MW**3*sw**2)',
                         order = {'QED' : 3})
 
 
